@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use {
     bt_avctp::{self as avctp, AvctpCommand},
-    fuchsia_syslog::{fx_log_err, fx_vlog},
     futures::{self, Future},
+    log::{error, trace},
     std::{convert::TryFrom, sync::Arc},
 };
 
@@ -32,14 +32,14 @@ impl BrowseChannelHandler {
         let packet_body = command.body();
         if !command.header().is_type(&avctp::AvctpMessageType::Command) {
             // Invalid header type. Send back general reject.
-            fx_vlog!(tag: "avrcp", 2, "Received AVCTP request that is not a command: {:?}", command.header());
+            trace!("Received AVCTP request that is not a command: {:?}", command.header());
             return Err(Error::InvalidMessage);
         }
 
         let packet = match BrowsePreamble::decode(packet_body) {
             Err(e) => {
                 // There was an issue parsing the AVCTP Preamble. Send back a general reject.
-                fx_vlog!(tag: "avrcp", 2,"Invalid AVCTP Preamble: {:?}", e);
+                trace!("Invalid AVCTP Preamble: {:?}", e);
                 return Err(Error::InvalidMessage);
             }
             Ok(p) => p,
@@ -47,7 +47,7 @@ impl BrowseChannelHandler {
 
         let pdu_id = match PduId::try_from(packet.pdu_id) {
             Err(e) => {
-                fx_vlog!(tag: "avrcp", 2, "Received unsupported PduId {:?}: {:?}", packet.pdu_id, e);
+                trace!("Received unsupported PduId {:?}: {:?}", packet.pdu_id, e);
                 // There was an issue parsing the packet PDU ID. Send back a general reject.
                 return Err(Error::InvalidParameter);
             }
@@ -71,7 +71,7 @@ impl BrowseChannelHandler {
             PduId::GetFolderItems => {
                 let get_folder_items_cmd = GetFolderItemsCommand::decode(&parameters)
                     .map_err(|_| StatusCode::InvalidParameter)?;
-                fx_vlog!(tag: "avrcp", 2, "Received GetFolderItems Command {:?}", get_folder_items_cmd);
+                trace!("Received GetFolderItems Command {:?}", get_folder_items_cmd);
 
                 // Currently, for GetFolderItems, we only support MediaPlayerList scope.
                 if get_folder_items_cmd.scope() != Scope::MediaPlayerList {
@@ -103,7 +103,7 @@ impl BrowseChannelHandler {
             PduId::GetTotalNumberOfItems => {
                 let get_total_items_cmd = GetTotalNumberOfItemsCommand::decode(&parameters)
                     .map_err(|_| StatusCode::InvalidParameter)?;
-                fx_vlog!(tag: "avrcp", 2, "Received GetTotalNumberOfItems Command {:?}", get_total_items_cmd);
+                trace!("Received GetTotalNumberOfItems Command {:?}", get_total_items_cmd);
 
                 // Currently, for GetTotalNumberOfItems, we only support MediaPlayerList scope.
                 if get_total_items_cmd.scope() != Scope::MediaPlayerList {
@@ -122,7 +122,7 @@ impl BrowseChannelHandler {
                 Ok(buf)
             }
             _ => {
-                fx_vlog!(tag: "avrcp", 2, "Browse channel Pdu not handled: {:?}", pdu_id);
+                trace!("Browse channel Pdu not handled: {:?}", pdu_id);
                 return Err(StatusCode::InvalidParameter);
             }
         }
@@ -173,7 +173,7 @@ impl BrowseChannelHandler {
             response_packet.encode(&mut response_buf[..]).expect("Encoding should work");
 
             if let Err(e) = command.send_response(&response_buf[..]) {
-                fx_log_err!("Error sending response: {:?}", e);
+                error!("Error sending response: {:?}", e);
             }
 
             Ok(())
@@ -192,7 +192,7 @@ fn send_general_reject(command: AvctpCommand, status_code: StatusCode) {
     let mut buf = vec![0; reject_response.encoded_len()];
     reject_response.encode(&mut buf[..]).expect("unable to encode reject packet");
     if let Err(e) = command.send_response(&buf[..]) {
-        fx_log_err!("Error sending general reject: {:?}", e);
+        error!("Error sending general reject: {:?}", e);
     }
 }
 

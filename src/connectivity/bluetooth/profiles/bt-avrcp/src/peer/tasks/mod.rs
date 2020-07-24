@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    super::*, fidl_fuchsia_bluetooth_bredr::ChannelParameters, fuchsia_async::DurationExt,
-    fuchsia_syslog::fx_log_info, fuchsia_zircon as zx, notification_stream::NotificationStream,
+    super::*,
+    fidl_fuchsia_bluetooth_bredr::ChannelParameters,
+    fuchsia_async::DurationExt,
+    fuchsia_zircon as zx,
+    log::{error, info, trace},
+    notification_stream::NotificationStream,
     rand::Rng,
 };
 
@@ -38,8 +42,8 @@ async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
         })
         .await
     {
-        Ok(_) => fx_log_info!("Peer {} command stream closed", id),
-        Err(e) => fx_log_err!("Peer {} command returned error {:?}", id, e),
+        Ok(_) => info!("Peer {} command stream closed", id),
+        Err(e) => error!("Peer {} command returned error {:?}", id, e),
     }
 
     // Command stream closed/errored. Disconnect the peer.
@@ -73,8 +77,8 @@ async fn process_browse_stream(peer: Arc<RwLock<RemotePeer>>) {
         })
         .await
     {
-        Ok(_) => fx_log_info!("Peer command stream closed"),
-        Err(e) => fx_log_err!("Peer command returned error {:?}", e),
+        Ok(_) => info!("Peer command stream closed"),
+        Err(e) => error!("Peer command returned error {:?}", e),
     }
 
     // Browse channel closed or errored. Do nothing because the control channel can still exist.
@@ -87,7 +91,7 @@ fn handle_notification(
     peer: &Arc<RwLock<RemotePeer>>,
     data: &[u8],
 ) -> Result<bool, Error> {
-    fx_vlog!(tag: "avrcp", 2, "received notification for {:?} {:?}", notif, data);
+    trace!("received notification for {:?} {:?}", notif, data);
 
     let preamble = VendorDependentPreamble::decode(data).map_err(|e| Error::PacketError(e))?;
 
@@ -143,7 +147,7 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                 MIN_CONNECTION_EST_TIME.into_nanos(),
                 MAX_CONNECTION_EST_TIME.into_nanos(),
             ));
-        fx_vlog!(tag: "avrcp", 2,
+        trace!(
             "AVRCP waiting {:?} millis before establishing connection",
             random_delay.into_millis()
         );
@@ -164,13 +168,13 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
         {
             Err(fidl_err) => {
                 let mut peer_guard = peer.write();
-                fx_log_err!("Profile service connect error: {:?}", fidl_err);
+                error!("Profile service connect error: {:?}", fidl_err);
                 peer_guard.reset_connection(false);
             }
             Ok(Ok(channel)) => {
                 let mut peer_guard = peer.write();
                 if channel.socket.is_none() {
-                    fx_log_err!("Connect didn't return a socket?!");
+                    error!("Connect didn't return a socket?!");
                     peer_guard.reset_connection(false);
                     return;
                 }
@@ -178,16 +182,22 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                 match peer_guard.control_channel {
                     PeerChannel::Connecting => match AvcPeer::new(socket) {
                         Ok(peer) => {
-                            fx_vlog!(tag: "avrcp", 2, "Successfully established outgoing connection for peer {}", peer_id);
+                            trace!(
+                                "Successfully established outgoing connection for peer {}",
+                                peer_id
+                            );
                             peer_guard.set_control_connection(peer);
                         }
                         Err(e) => {
-                            fx_log_err!("Unable to make peer {} from socket: {:?}", peer_id, e);
+                            error!("Unable to make peer {} from socket: {:?}", peer_id, e);
                             peer_guard.reset_connection(false);
                         }
                     },
                     _ => {
-                        fx_vlog!(tag: "avrcp", 2, "Incoming connection by peer {} established while making outgoing.", peer_id);
+                        trace!(
+                            "Incoming connection by peer {} established while making outgoing.",
+                            peer_id
+                        );
 
                         // An incoming l2cap connection was made while we were making an
                         // outgoing one. Drop both connections, per spec, and attempt
@@ -197,14 +207,15 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
                 };
             }
             Ok(Err(e)) => {
-                fx_log_err!("Couldn't connect to peer {}: {:?}", peer_id, e);
+                error!("Couldn't connect to peer {}: {:?}", peer_id, e);
                 let mut peer_guard = peer.write();
                 if let PeerChannel::Connecting = peer_guard.control_channel {
                     peer_guard.reset_connection(false);
                 }
             }
         }
-    }).detach()
+    })
+    .detach()
 }
 
 /// Checks for supported notification on the peer and registers for notifications.
@@ -236,7 +247,7 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
     let mut notification_streams = SelectAll::new();
 
     for notif in supported_notifications {
-        fx_vlog!(tag: "avrcp", 2, "creating notification stream for {:?}", notif);
+        trace!("creating notification stream for {:?}", notif);
         let stream =
             NotificationStream::new(peer.clone(), notif, 1).map_ok(move |data| (notif, data));
         notification_streams.push(stream);
@@ -249,7 +260,7 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
                 match event_result {
                     Ok((notif, data)) => {
                         handle_notification(&notif, &peer, &data[..])
-                            .unwrap_or_else(|e| { fx_log_err!("Error decoding packet from peer {:?}", e); true} )
+                            .unwrap_or_else(|e| { error!("Error decoding packet from peer {:?}", e); true} )
                     },
                     Err(Error::CommandNotSupported) => false,
                     Err(_) => true,
@@ -261,7 +272,7 @@ async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
             break;
         }
     }
-    fx_vlog!(tag: "avrcp", 2, "stopping notifications for {:?}", peer.read().peer_id);
+    trace!("stopping notifications for {:?}", peer.read().peer_id);
 }
 
 /// Starts a task to poll notifications on the remote peer. Aborted when the peer connection is
@@ -324,7 +335,7 @@ fn start_browse_stream_processing_task(peer: Arc<RwLock<RemotePeer>>) -> AbortHa
 /// connections, processing the incoming control messages, and registering for notifications on the
 /// remote peer.
 pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
-    fx_vlog!(tag: "avrcp", 2, "state_watcher starting");
+    trace!("state_watcher starting");
     let mut change_stream = peer.read().state_change_listener.take_change_stream();
     let peer_weak = Arc::downgrade(&peer);
     drop(peer);
@@ -334,7 +345,7 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
     let mut notification_poll_abort_handle: Option<AbortHandle> = None;
 
     while let Some(_) = change_stream.next().await {
-        fx_vlog!(tag: "avrcp", 2, "state_watcher command received");
+        trace!("state_watcher command received");
         if let Some(peer) = peer_weak.upgrade() {
             let mut peer_guard = peer.write();
 
@@ -344,14 +355,14 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
             // constantly clearing the tasks.
             if peer_guard.cancel_tasks {
                 control_channel_abort_handle.take().map(|a| {
-                    fx_vlog!(tag: "avrcp", 2, "state_watcher: clearing previous control channel task.");
+                    trace!("state_watcher: clearing previous control channel task.");
                     a.abort()
                 });
                 notification_poll_abort_handle.take().map(|a| a.abort());
                 peer_guard.cancel_tasks = false;
             }
 
-            fx_vlog!(tag: "avrcp", 2, "state_watcher control channel {:?}", peer_guard.control_channel);
+            trace!("state_watcher control channel {:?}", peer_guard.control_channel);
             match peer_guard.control_channel {
                 PeerChannel::Connecting => {}
                 PeerChannel::Disconnected => {
@@ -360,7 +371,7 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                         || peer_guard.controller_descriptor.is_some())
                         && peer_guard.attempt_connection
                     {
-                        fx_vlog!(tag: "avrcp", 2, "Starting make_connection task for peer {:?}", peer_guard.peer_id);
+                        trace!("Starting make_connection task for peer {:?}", peer_guard.peer_id);
                         peer_guard.attempt_connection = false;
                         peer_guard.control_channel = PeerChannel::Connecting;
                         start_make_connection_task(peer.clone());
@@ -373,7 +384,10 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
                         || peer_guard.controller_descriptor.is_some())
                         && control_channel_abort_handle.is_none()
                     {
-                        fx_vlog!(tag: "avrcp", 2, "state_watcher: Starting control stream task for peer {}", peer_guard.id());
+                        trace!(
+                            "state_watcher: Starting control stream task for peer {}",
+                            peer_guard.id()
+                        );
                         control_channel_abort_handle =
                             Some(start_control_stream_processing_task(peer.clone()));
                     }
@@ -412,7 +426,7 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
         }
     }
 
-    fx_vlog!(tag: "avrcp", 2, "state_watcher shutting down. aborting processors");
+    trace!("state_watcher shutting down. aborting processors");
 
     // Stop processing state changes on the browse channel.
     // This needs to happen before stopping the control channel.

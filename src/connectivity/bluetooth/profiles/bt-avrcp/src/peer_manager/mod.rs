@@ -11,9 +11,9 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileProxy,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_syslog::{self, fx_log_err, fx_vlog},
     fuchsia_zircon as zx,
     futures::{self, channel::oneshot, stream::StreamExt},
+    log::{error, trace},
     parking_lot::{Mutex, RwLock},
     std::{collections::HashMap, sync::Arc},
 };
@@ -115,11 +115,11 @@ impl PeerManager {
         let peer_handle = self.get_remote_peer(peer_id);
         match AvcPeer::new(channel) {
             Ok(peer) => {
-                fx_vlog!(tag: "avrcp", 1, "new control peer {:#?}", peer);
+                trace!("new control peer {:#?}", peer);
                 peer_handle.set_control_connection(peer);
             }
             Err(e) => {
-                fx_log_err!("Unable to make peer from socket {}: {:?}", peer_id, e);
+                error!("Unable to make peer from socket {}: {:?}", peer_id, e);
             }
         }
     }
@@ -129,17 +129,17 @@ impl PeerManager {
         let peer_handle = self.get_remote_peer(peer_id);
         match AvctpPeer::new(channel) {
             Ok(peer) => {
-                fx_vlog!(tag: "avrcp", 1, "new browse peer {:#?}", peer);
+                trace!("new browse peer {:#?}", peer);
                 peer_handle.set_browse_connection(peer);
             }
             Err(e) => {
-                fx_log_err!("Unable to make peer from socket {}: {:?}", peer_id, e);
+                error!("Unable to make peer from socket {}: {:?}", peer_id, e);
             }
         }
     }
 
     pub fn services_found(&mut self, peer_id: &PeerId, services: Vec<AvrcpService>) {
-        fx_vlog!(tag: "avrcp", 2, "ServicesDiscovered {} {:#?}", peer_id, services);
+        trace!("ServicesDiscovered {} {:#?}", peer_id, services);
         let peer_handle = self.get_remote_peer(&peer_id);
         for service in services {
             match service {

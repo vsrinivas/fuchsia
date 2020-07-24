@@ -13,7 +13,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{
         self,
@@ -22,6 +21,7 @@ use {
         stream::{StreamExt, TryStreamExt},
         Future,
     },
+    log::{error, info, warn},
     std::collections::VecDeque,
 };
 
@@ -372,7 +372,7 @@ pub fn spawn_avrcp_client_controller(controller: Controller, fidl_stream: Contro
             Ok(())
         }
         .boxed()
-        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
     )
     .detach();
 }
@@ -389,17 +389,17 @@ pub fn spawn_test_avrcp_client_controller(
             Ok(())
         }
         .boxed()
-        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
     )
     .detach();
 }
 
 /// Spawns a future that listens and responds to requests for a controller object over FIDL.
 fn spawn_avrcp_client(stream: PeerManagerRequestStream, sender: mpsc::Sender<ServiceRequest>) {
-    fx_log_info!("Spawning avrcp client handler");
+    info!("Spawning avrcp client handler");
     fasync::Task::spawn(
         avrcp_client_stream_handler(stream, sender, &spawn_avrcp_client_controller)
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
     )
     .detach();
 }
@@ -419,11 +419,11 @@ where
             PeerManagerRequest::GetControllerForTarget { peer_id, client, responder } => {
                 let client: fidl::endpoints::ServerEnd<ControllerMarker> = client;
 
-                fx_log_info!("New connection request for {}", peer_id);
+                info!("New connection request for {}", peer_id);
 
                 match client.into_stream() {
                     Err(err) => {
-                        fx_log_warn!("Err unable to create server end point from stream {:?}", err);
+                        warn!("Err unable to create server end point from stream {:?}", err);
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
@@ -481,10 +481,10 @@ fn spawn_test_avrcp_client(
     stream: PeerManagerExtRequestStream,
     sender: mpsc::Sender<ServiceRequest>,
 ) {
-    fx_log_info!("Spawning test avrcp client handler");
+    info!("Spawning test avrcp client handler");
     fasync::Task::spawn(
         test_avrcp_client_stream_handler(stream, sender, &spawn_test_avrcp_client_controller)
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
     )
     .detach();
 }
@@ -503,11 +503,11 @@ where
             PeerManagerExtRequest::GetControllerForTarget { peer_id, client, responder } => {
                 let client: fidl::endpoints::ServerEnd<ControllerExtMarker> = client;
 
-                fx_log_info!("New connection request for {}", peer_id);
+                info!("New connection request for {}", peer_id);
 
                 match client.into_stream() {
                     Err(err) => {
-                        fx_log_warn!("Err unable to create server end point from stream {:?}", err);
+                        warn!("Err unable to create server end point from stream {:?}", err);
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
@@ -540,7 +540,7 @@ pub fn run_services(
             spawn_avrcp_client(stream, sender_avrcp.clone());
         });
     fs.take_and_serve_directory_handle()?;
-    fx_log_info!("Running fidl service");
+    info!("Running fidl service");
     Ok(fs.collect::<()>().map(|_| Err(format_err!("FIDL service listener returned"))))
 }
 

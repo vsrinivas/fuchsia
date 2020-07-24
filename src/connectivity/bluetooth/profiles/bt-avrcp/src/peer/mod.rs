@@ -13,7 +13,6 @@ use {
     fidl_fuchsia_bluetooth_bredr::{ProfileProxy, PSM_AVCTP},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
         self,
@@ -22,6 +21,7 @@ use {
         stream::{FusedStream, SelectAll, StreamExt, TryStreamExt},
         Future, Stream,
     },
+    log::{error, info, trace},
     parking_lot::RwLock,
     pin_utils::pin_mut,
     std::{
@@ -174,10 +174,9 @@ impl RemotePeer {
         self.controller_listeners.retain(|i| !i.is_closed());
         for sender in self.controller_listeners.iter_mut() {
             if let Err(send_error) = sender.try_send(event.clone()) {
-                fx_log_err!(
+                error!(
                     "unable to send event to peer controller stream for {} {:?}",
-                    self.peer_id,
-                    send_error
+                    self.peer_id, send_error
                 );
             }
         }
@@ -192,7 +191,7 @@ impl RemotePeer {
 
     /// Reset all known state about the remote peer to default values.
     fn reset_peer_state(&mut self) {
-        fx_vlog!(tag: "avrcp", 2, "reset_peer_state {:?}", self.peer_id);
+        trace!("reset_peer_state {:?}", self.peer_id);
         self.notification_cache.clear();
         self.browse_command_handler.reset();
         self.control_command_handler.reset();
@@ -201,7 +200,7 @@ impl RemotePeer {
     /// `attempt_reconnection` will cause state_watcher to attempt to make an outgoing connection when
     /// woken.
     fn reset_connection(&mut self, attempt_reconnection: bool) {
-        fx_vlog!(tag: "avrcp", 2, "reset_connection {:?}", self.peer_id);
+        trace!("reset_connection {:?}", self.peer_id);
         self.reset_peer_state();
         self.browse_channel = PeerChannel::Disconnected;
         self.control_channel = PeerChannel::Disconnected;
@@ -226,7 +225,7 @@ impl RemotePeer {
 
     fn set_control_connection(&mut self, peer: AvcPeer) {
         let current_time = fasync::Time::now();
-        fx_vlog!(tag: "avrcp", 2, "set_control_connection {:?} at {}", self.peer_id, current_time.into_nanos());
+        trace!("set_control_connection {:?} at {}", self.peer_id, current_time.into_nanos());
 
         // If the current connection establishment is within a threshold amount of time from the
         // most recent connection establishment, both connections should be dropped, and should
@@ -234,7 +233,7 @@ impl RemotePeer {
         if let Some(previous_time) = self.last_connected_time.take() {
             let diff = (current_time - previous_time).into_nanos().abs();
             if diff < CONNECTION_THRESHOLD.into_nanos() {
-                fx_vlog!(tag: "avrcp", 2, "Control connection establishment collision. Time diff: {}", diff);
+                trace!("Control connection establishment collision. Time diff: {}", diff);
                 self.reset_connection(true);
                 return;
             }
@@ -248,28 +247,28 @@ impl RemotePeer {
     }
 
     fn set_browse_connection(&mut self, peer: AvctpPeer) {
-        fx_vlog!(tag: "avrcp", 2, "set_browse_connection {:?}", self.peer_id);
+        trace!("set_browse_connection {:?}", self.peer_id);
         let browse_peer = Arc::new(peer);
         self.browse_channel = PeerChannel::Connected(browse_peer);
         self.wake_state_watcher();
     }
 
     fn set_target_descriptor(&mut self, service: AvrcpService) {
-        fx_vlog!(tag: "avrcp", 2, "set_target_descriptor {:?}", self.peer_id);
+        trace!("set_target_descriptor {:?}", self.peer_id);
         self.target_descriptor = Some(service);
         self.attempt_connection = true;
         self.wake_state_watcher();
     }
 
     fn set_controller_descriptor(&mut self, service: AvrcpService) {
-        fx_vlog!(tag: "avrcp", 2, "set_controller_descriptor {:?}", self.peer_id);
+        trace!("set_controller_descriptor {:?}", self.peer_id);
         self.controller_descriptor = Some(service);
         self.attempt_connection = true;
         self.wake_state_watcher();
     }
 
     fn wake_state_watcher(&self) {
-        fx_vlog!(tag: "avrcp", 2, "wake_state_watcher {:?}", self.peer_id);
+        trace!("wake_state_watcher {:?}", self.peer_id);
         self.state_change_listener.state_changed();
     }
 }
@@ -294,7 +293,7 @@ async fn send_vendor_dependent_command_internal(
         let response = loop {
             let result = stream.next().await.ok_or(Error::CommandFailed)?;
             let response: AvcCommandResponse = result.map_err(|e| Error::AvctpError(e))?;
-            fx_vlog!(tag: "avrcp", 1, "vendor response {:?}", response);
+            trace!("vendor response {:?}", response);
             match (response.response_type(), command.command_type()) {
                 (AvcResponseType::Interim, _) => continue,
                 (AvcResponseType::NotImplemented, _) => return Err(Error::CommandNotSupported),
@@ -319,7 +318,7 @@ async fn send_vendor_dependent_command_internal(
                 }
             }
             Err(e) => {
-                fx_log_info!("Unable to parse vendor dependent preamble: {:?}", e);
+                info!("Unable to parse vendor dependent preamble: {:?}", e);
                 return Err(Error::PacketError(e));
             }
         };
@@ -337,7 +336,7 @@ async fn get_supported_events_internal(
     peer: Arc<RwLock<RemotePeer>>,
 ) -> Result<Vec<NotificationEventId>, Error> {
     let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
-    fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:?}", cmd);
+    trace!("get_capabilities(events) send command {:?}", cmd);
     let buf = send_vendor_dependent_command_internal(peer.clone(), &cmd).await?;
     let capabilities =
         GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
@@ -402,18 +401,17 @@ impl RemotePeerHandle {
             match response {
                 Ok(AvcCommandResponse(AvcResponseType::Accepted, _)) => Ok(()),
                 Ok(AvcCommandResponse(AvcResponseType::Rejected, _)) => {
-                    fx_log_info!("avrcp command rejected {:?}: {:?}", peer_id, response);
+                    info!("avrcp command rejected {:?}: {:?}", peer_id, response);
                     Err(Error::CommandNotSupported)
                 }
                 Err(e) => {
-                    fx_log_err!("error sending avc command to {:?}: {:?}", peer_id, e);
+                    error!("error sending avc command to {:?}: {:?}", peer_id, e);
                     Err(Error::CommandFailed)
                 }
                 _ => {
-                    fx_log_err!(
+                    error!(
                         "error sending avc command. unhandled response {:?}: {:?}",
-                        peer_id,
-                        response
+                        peer_id, response
                     );
                     Err(Error::CommandFailed)
                 }
@@ -445,10 +443,9 @@ impl RemotePeerHandle {
         let mut peer_guard = self.peer.write();
         for (_, event) in &peer_guard.notification_cache {
             if let Err(send_error) = sender.try_send(event.clone()) {
-                fx_log_err!(
+                error!(
                     "unable to send event to peer controller stream for {} {:?}",
-                    peer_guard.peer_id,
-                    send_error
+                    peer_guard.peer_id, send_error
                 );
             }
         }

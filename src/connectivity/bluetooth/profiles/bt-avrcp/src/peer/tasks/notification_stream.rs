@@ -4,7 +4,7 @@
 
 use super::*;
 
-use futures::ready;
+use {futures::ready, log::trace};
 
 /// NotificationStream returns each INTERIM response for a given NotificationEventId on a peer.
 ///
@@ -119,7 +119,7 @@ impl Stream for NotificationStream {
             let result = ready!(stream.poll_next(cx));
             let return_result = match result {
                 Some(Ok(response)) => {
-                    fx_vlog!(tag: "avrcp", 2, "received event response {:?}", response);
+                    trace!("received event response {:?}", response);
                     match self.handle_response(response) {
                         Ok(response) => Ok(Some(response)),
                         Err(e) => {

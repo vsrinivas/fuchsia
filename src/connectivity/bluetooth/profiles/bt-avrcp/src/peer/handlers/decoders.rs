@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 use super::*;
 
-use thiserror::Error;
+use {
+    log::{error, trace},
+    thiserror::Error,
+};
 
 /// The error types during decode
 #[derive(Error, Debug)]
@@ -63,11 +66,11 @@ macro_rules! decoder_enum {
                 match match_pdu() {
                     Ok(Some(command)) => Ok(command),
                     Ok(None) => {
-                        fx_vlog!(tag: "avrcp", 2, "Received known but unhandled vendor command {:?}", pdu_id);
+                        trace!("Received known but unhandled vendor command {:?}", pdu_id);
                         Err(DecodeError::VendorPduNotImplemented(u8::from(&pdu_id)))
                     }
                     Err(e) => {
-                        fx_vlog!(tag: "avrcp", 2, "Unable to decode vendor packet {:?}", pdu_id);
+                        trace!("Unable to decode vendor packet {:?}", pdu_id);
                         Err(DecodeError::VendorPacketDecodeError(AvcCommandType::$cmd_type, pdu_id, e))
                     }
                 }
@@ -131,7 +134,7 @@ impl VendorSpecificCommand {
 
         let end = offset + preamble.parameter_length as usize;
         if packet_body.len() < end {
-            fx_log_err!(
+            error!(
                 "Received command is truncated. expected: {}, Received: {}",
                 preamble.parameter_length,
                 end - packet_body.len()
@@ -153,7 +156,7 @@ impl VendorSpecificCommand {
         // error.
         match packet_type {
             AvcPacketType::Command(AvcCommandType::Notify) => {
-                fx_vlog!(tag: "avrcp", 2, "Received ctype=notify command {:?}", pdu_id);
+                trace!("Received ctype=notify command {:?}", pdu_id);
 
                 // The only PDU that you can send a Notify on is RegisterNotification.
                 if pdu_id != PduId::RegisterNotification {
@@ -168,15 +171,15 @@ impl VendorSpecificCommand {
                 }
             }
             AvcPacketType::Command(AvcCommandType::Status) => {
-                fx_vlog!(tag: "avrcp", 2, "Received ctype=status command {:?}", pdu_id);
+                trace!("Received ctype=status command {:?}", pdu_id);
                 Ok(VendorSpecificCommand::Status(StatusCommand::decode_command(pdu_id, body)?))
             }
             AvcPacketType::Command(AvcCommandType::Control) => {
-                fx_vlog!(tag: "avrcp", 2, "Received ctype=command command {:?}", pdu_id);
+                trace!("Received ctype=command command {:?}", pdu_id);
                 Ok(VendorSpecificCommand::Control(ControlCommand::decode_command(pdu_id, body)?))
             }
             _ => {
-                fx_vlog!(tag: "avrcp", 2, "Received unhandled packet type");
+                trace!("Received unhandled packet type");
                 Err(DecodeError::VendorPacketTypeNotImplemented(packet_type))
             }
         }

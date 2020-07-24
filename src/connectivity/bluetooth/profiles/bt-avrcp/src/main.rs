@@ -7,8 +7,8 @@ use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async as fasync,
-    fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{channel::mpsc, stream::StreamExt, FutureExt},
+    log::{error, info},
 };
 
 mod packets;
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Error> {
                 };
                 let ConnectionReceiverRequest::Connected { peer_id, channel, protocol, .. } = connected;
                 if channel.socket.is_none() {
-                    fx_log_info!("BR/EDR connection target didn't provide socket?!");
+                    info!("BR/EDR connection target didn't provide socket?!");
                     continue;
                 }
 
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Error> {
                         peer_manager.new_browse_connection(&peer_id.into(), channel.socket.unwrap());
                     }
                     None => {
-                        fx_log_info!("Received connection over non-AVRCP protocol: {:?}", protocol);
+                        info!("Received connection over non-AVRCP protocol: {:?}", protocol);
                         continue
                     }
                 }
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Error> {
                 let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
 
                 if let Some(service) = AvrcpService::from_attributes(attributes) {
-                    fx_log_info!("Service found on {:?}: {:?}", peer_id, service);
+                    info!("Service found on {:?}: {:?}", peer_id, service);
                     peer_manager.services_found(&peer_id.into(), vec![service]);
                 }
                 responder.send().context("FIDL response for search failed")?;
@@ -90,7 +90,7 @@ async fn main() -> Result<(), Error> {
                 peer_manager.handle_service_request(request);
             },
             service_result = service_fut => {
-                fx_log_err!("Publishing Service finished unexpectedly: {:?}", service_result);
+                error!("Publishing Service finished unexpectedly: {:?}", service_result);
                 break;
             },
             complete => break,

@@ -9,6 +9,7 @@ use {
     fuchsia_async::Time,
     fuchsia_zircon::Duration,
     futures::future::Either,
+    log::{error, trace},
     parking_lot::Mutex,
     std::collections::hash_map::Entry::{Occupied, Vacant},
     std::collections::VecDeque,
@@ -136,7 +137,7 @@ impl ControlChannelHandler {
         &self,
         command: impl IncomingTargetCommand,
     ) -> impl Future<Output = Result<(), Error>> {
-        fx_vlog!(tag: "avrcp", 2, "handle_command {:#?}", command);
+        trace!("handle_command {:#?}", command);
         let inner = self.inner.clone();
 
         async move {
@@ -194,7 +195,7 @@ fn send_decode_error_response(
     decode_error: DecodeError,
     command: impl IncomingTargetCommand,
 ) -> Result<(), Error> {
-    fx_vlog!(tag: "avrcp", 2, "target incoming command decode error {:?}", decode_error);
+    trace!("target incoming command decode error {:?}", decode_error);
     match decode_error {
         DecodeError::PassthroughInvalidPanelKey => command
             .send_response(AvcResponseType::NotImplemented, &[])
@@ -330,7 +331,7 @@ fn send_notification(
                 .send_response(success_response_type, &packet[..])
                 .map_err(|e| Error::AvctpError(e)),
             Err(e) => {
-                fx_log_err!("unable to encode target response packet {:?}", e);
+                error!("unable to encode target response packet {:?}", e);
                 send_avc_reject(
                     command,
                     PduId::RegisterNotification as u8,
@@ -363,7 +364,7 @@ async fn handle_notify_command(
 
     let notification: Notification = futures::select! {
         _ = interim_timer => {
-            fx_log_err!("target handler timed out with interim response");
+            error!("target handler timed out with interim response");
             return send_avc_reject(&command, pdu_id, StatusCode::InternalError);
         }
         result = notification_fut => {
@@ -406,7 +407,7 @@ async fn handle_get_capabilities(
     cmd: GetCapabilitiesCommand,
     target_delegate: Arc<TargetDelegate>,
 ) -> Result<Box<dyn PacketEncodable>, StatusCode> {
-    fx_vlog!(tag: "avrcp", 2, "Received GetCapabilities Command {:#?}", cmd);
+    trace!("Received GetCapabilities Command {:#?}", cmd);
 
     match cmd.capability_id() {
         GetCapabilitiesCapabilityId::CompanyId => {
@@ -474,7 +475,7 @@ async fn handle_get_element_attributes(
                 response.playing_time = element_attributes.playing_time.clone();
             }
             _ => {
-                fx_log_err!("Support for attribute {:?} not implemented.", attribute);
+                error!("Support for attribute {:?} not implemented.", attribute);
             }
         }
     }
@@ -603,12 +604,12 @@ fn send_status_response(
                     .map_err(|e| Error::AvctpError(e))
             }
             Err(e) => {
-                fx_log_err!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
+                error!("Error trying to encode response packet. Sending internal_error rejection to peer {:?}", e);
                 send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
             }
         },
         Err(status_code) => {
-            fx_log_err!(
+            error!(
                 "Error trying to encode response packet. Sending rejection to peer {:?}",
                 status_code
             );
@@ -681,10 +682,9 @@ fn send_control_response(
 ) -> Result<(), Error> {
     let encodable = match result {
         Err(status_code) => {
-            fx_log_err!(
+            error!(
                 "Error handling command for {:?} - responding {:?} to peer",
-                pdu_id,
-                status_code
+                pdu_id, status_code
             );
             return send_avc_reject(&command, u8::from(&pdu_id), status_code);
         }
@@ -695,7 +695,7 @@ fn send_control_response(
             .send_response(AvcResponseType::Accepted, &packet[..])
             .map_err(|e| Error::AvctpError(e)),
         Err(e) => {
-            fx_log_err!("Error encoding response - sending InternalError to peer: {:?}", e);
+            error!("Error encoding response - sending InternalError to peer: {:?}", e);
             send_avc_reject(&command, u8::from(&pdu_id), StatusCode::InternalError)
         }
     }
@@ -713,7 +713,7 @@ async fn handle_set_player_application_setting_value(
         .await?;
 
     // Log the resulting set_settings, as it is valid for it to be different than the `requested_settings`.
-    fx_vlog!(tag: "avrcp", 2, "Media set player application settings: {:?}", set_settings);
+    trace!("Media set player application settings: {:?}", set_settings);
 
     let response = SetPlayerApplicationSettingValueResponse::new();
     Ok(Box::new(response))

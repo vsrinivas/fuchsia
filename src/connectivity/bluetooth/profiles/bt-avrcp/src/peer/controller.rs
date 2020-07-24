@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use super::*;
+
+use {log::trace, std::convert::TryInto};
+
 use crate::packets::{SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED};
-use std::convert::TryInto;
 
 #[derive(Debug, Clone)]
 pub enum ControllerEvent {
@@ -46,11 +48,11 @@ impl Controller {
     /// Returns the volume as reported by the peer.
     pub async fn set_absolute_volume(&self, volume: u8) -> Result<u8, Error> {
         let cmd = SetAbsoluteVolumeCommand::new(volume).map_err(|e| Error::PacketError(e))?;
-        fx_vlog!(tag: "avrcp", 1, "set_absolute_volume send command {:#?}", cmd);
+        trace!("set_absolute_volume send command {:#?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response =
             SetAbsoluteVolumeResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
-        fx_vlog!(tag: "avrcp", 1, "set_absolute_volume received response {:#?}", response);
+        trace!("set_absolute_volume received response {:#?}", response);
         Ok(response.volume())
     }
 
@@ -59,11 +61,11 @@ impl Controller {
     pub async fn get_media_attributes(&self) -> Result<MediaAttributes, Error> {
         let mut media_attributes = MediaAttributes::new_empty();
         let cmd = GetElementAttributesCommand::all_attributes();
-        fx_vlog!(tag: "avrcp", 1, "get_media_attributes send command {:#?}", cmd);
+        trace!("get_media_attributes send command {:#?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response =
             GetElementAttributesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
-        fx_vlog!(tag: "avrcp", 1, "get_media_attributes received response {:#?}", response);
+        trace!("get_media_attributes received response {:#?}", response);
         media_attributes.title = response.title;
         media_attributes.artist_name = response.artist_name;
         media_attributes.album_name = response.album_name;
@@ -84,11 +86,11 @@ impl Controller {
     /// Returns the PlayStatus of current media on the peer, or an error.
     pub async fn get_play_status(&self) -> Result<PlayStatus, Error> {
         let cmd = GetPlayStatusCommand::new();
-        fx_vlog!(tag: "avrcp", 1, "get_play_status send command {:?}", cmd);
+        trace!("get_play_status send command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response =
             GetPlayStatusResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
-        fx_vlog!(tag: "avrcp", 1, "get_play_status received response {:?}", response);
+        trace!("get_play_status received response {:?}", response);
         let mut play_status = PlayStatus::new_empty();
         play_status.song_length = if response.song_length != SONG_LENGTH_NOT_SUPPORTED {
             Some(response.song_length)
@@ -109,7 +111,7 @@ impl Controller {
         attribute_ids: Vec<PlayerApplicationSettingAttributeId>,
     ) -> Result<PlayerApplicationSettings, Error> {
         let cmd = GetCurrentPlayerApplicationSettingValueCommand::new(attribute_ids);
-        fx_vlog!(tag: "avrcp", 1, "get_current_player_application_settings command {:?}", cmd);
+        trace!("get_current_player_application_settings command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response = GetCurrentPlayerApplicationSettingValueResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
@@ -121,7 +123,7 @@ impl Controller {
     ) -> Result<PlayerApplicationSettings, Error> {
         // Get all the supported attributes.
         let cmd = ListPlayerApplicationSettingAttributesCommand::new();
-        fx_vlog!(tag: "avrcp", 1, "list_player_application_setting_attributes command {:?}", cmd);
+        trace!("list_player_application_setting_attributes command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let response = ListPlayerApplicationSettingAttributesResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
@@ -131,7 +133,7 @@ impl Controller {
         let cmd = GetPlayerApplicationSettingAttributeTextCommand::new(
             response.player_application_setting_attribute_ids().clone(),
         );
-        fx_vlog!(tag: "avrcp", 1, "get_player_application_setting_attribute_text command {:?}", cmd);
+        trace!("get_player_application_setting_attribute_text command {:?}", cmd);
         let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
         let _text_response = GetPlayerApplicationSettingAttributeTextResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
@@ -139,7 +141,7 @@ impl Controller {
         // For each attribute returned, get the set of possible values and text.
         for attribute in response.player_application_setting_attribute_ids() {
             let cmd = ListPlayerApplicationSettingValuesCommand::new(attribute);
-            fx_vlog!(tag: "avrcp", 1, "list_player_application_setting_values command {:?}", cmd);
+            trace!("list_player_application_setting_values command {:?}", cmd);
             let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
             let list_response = ListPlayerApplicationSettingValuesResponse::decode(&buf[..])
                 .map_err(|e| Error::PacketError(e))?;
@@ -149,12 +151,12 @@ impl Controller {
                 attribute,
                 list_response.player_application_setting_value_ids(),
             );
-            fx_vlog!(tag: "avrcp", 1, "get_player_application_setting_value_text command {:?}", cmd);
+            trace!("get_player_application_setting_value_text command {:?}", cmd);
             let buf = self.peer.send_vendor_dependent_command(&cmd).await?;
             let value_text_response =
                 GetPlayerApplicationSettingValueTextResponse::decode(&buf[..])
                     .map_err(|e| Error::PacketError(e))?;
-            fx_vlog!(tag: "avrcp", 1,
+            trace!(
                 "Response from get_player_application_setting_value_text: {:?}",
                 value_text_response
             );
@@ -192,7 +194,7 @@ impl Controller {
         // this in the returned `set_settings`.
         for setting in settings_vec {
             let cmd = SetPlayerApplicationSettingValueCommand::new(vec![setting]);
-            fx_vlog!(tag: "avrcp", 1, "set_player_application_settings command {:?}", cmd);
+            trace!("set_player_application_settings command {:?}", cmd);
             let response_buf = self.peer.send_vendor_dependent_command(&cmd).await;
 
             match response_buf {

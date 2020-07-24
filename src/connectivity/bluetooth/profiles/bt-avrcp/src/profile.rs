@@ -9,7 +9,7 @@ use {
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_bluetooth::{profile::elem_to_profile_descriptor, types::Uuid},
-    fuchsia_syslog::fx_log_info,
+    log::info,
     std::fmt::Debug,
 };
 
@@ -278,7 +278,7 @@ pub fn connect_and_advertise(
         connection_client,
     )?;
 
-    fx_log_info!("Advertised Service");
+    info!("Advertised Service");
 
     Ok((profile_svc, connection_requests, search_results_requests))
 }
