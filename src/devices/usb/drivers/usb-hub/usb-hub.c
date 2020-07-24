@@ -414,7 +414,7 @@ static int usb_hub_thread(void* arg) {
     usb_request_queue(&hub->usb, req, &complete);
     sync_completion_wait(&hub->completion, ZX_TIME_INFINITE);
     if (req->response.status != ZX_OK || atomic_load(&hub->thread_done)) {
-      device_remove_deprecated(hub->zxdev);
+      device_async_remove(hub->zxdev);
       return ZX_ERR_IO_INVALID;
     }
 
