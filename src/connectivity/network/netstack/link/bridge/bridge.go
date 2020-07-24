@@ -94,25 +94,7 @@ func (ep *Endpoint) Up() error {
 // This causes each bridgeable endpoint to go back to its state before
 // bridging, dispatching up the stack to the default NetworkDispatcher
 // implementation directly.
-//
-// Down and Close are the same, except they call the OnStateChange callback
-// with link.StateDown and link.StateClose respectively.
 func (ep *Endpoint) Down() error {
-	for _, l := range ep.links {
-		l.SetBridge(nil)
-	}
-	return nil
-}
-
-// Close calls SetBridge(nil) on all the constituent links of a bridge.
-//
-// This causes each bridgeable endpoint to go back to its state before
-// bridging, dispatching up the stack to the default NetworkDispatcher
-// implementation directly.
-//
-// Down and Close are the same, except they call the OnStateChange callback
-// with link.StateDown and link.StateClose respectively.
-func (ep *Endpoint) Close() error {
 	for _, l := range ep.links {
 		l.SetBridge(nil)
 	}
@@ -185,6 +167,11 @@ func (ep *Endpoint) WriteRawPacket(packet buffer.VectorisedView) *tcpip.Error {
 
 func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {
 	ep.dispatcher = d
+	if d == nil {
+		for _, l := range ep.links {
+			l.SetBridge(nil)
+		}
+	}
 }
 
 func (ep *Endpoint) IsAttached() bool {

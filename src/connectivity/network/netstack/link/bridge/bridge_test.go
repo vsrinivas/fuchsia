@@ -619,9 +619,7 @@ func TestBridge(t *testing.T) {
 				})
 			}
 
-			if err := b.Close(); err != nil {
-				t.Fatal(err)
-			}
+			b.Attach(nil)
 
 			// verify that the endpoint from the constituent link on sb is still accessible
 			// and the bridge endpoint and endpoint on s2 are no longer accessible from s1
