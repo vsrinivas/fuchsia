@@ -3,8 +3,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_UTEST_CORE_THREADS_THREAD_FUNCTIONS_THREAD_FUNCTIONS_H_
-#define ZIRCON_SYSTEM_UTEST_CORE_THREADS_THREAD_FUNCTIONS_THREAD_FUNCTIONS_H_
+#pragma once
 
 #include <zircon/types.h>
 
@@ -53,9 +52,3 @@ int atomic_load(volatile int* addr);
 
 // The arg is a |volatile int*|. The function loops storing 1 there.
 void threads_test_atomic_store(void* arg);
-
-// The arg is an event. It will first send a signal 0 to indicate begin running then wiat for a
-// signal 1 to stop running.
-void threads_test_run_fn(void* arg);
-
-#endif  // ZIRCON_SYSTEM_UTEST_CORE_THREADS_THREAD_FUNCTIONS_THREAD_FUNCTIONS_H_

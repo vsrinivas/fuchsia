@@ -138,9 +138,3 @@ void threads_test_atomic_store(void* arg) {
   }
   __builtin_trap();
 }
-
-void threads_test_run_fn(void* arg) {
-  zx_handle_t event = *(zx_handle_t*)arg;
-  zx_object_signal(event, 0u, ZX_USER_SIGNAL_0);
-  zx_object_wait_one(event, ZX_USER_SIGNAL_1, ZX_TIME_INFINITE, NULL);
-}
