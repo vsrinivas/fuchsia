@@ -17,6 +17,9 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
+// Ignore unused imports so that GIDL tests can be commented out without error.
+// ignore_for_file: unused_import
+
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
