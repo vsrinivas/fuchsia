@@ -7,6 +7,15 @@ import("//build/testing/aemu.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/platforms.gni")
 
+_max_severity_allowed_val = [
+  "FATAL",
+  "ERROR",
+  "WARN",
+  "INFO",
+  "DEBUG",
+  "TRACE",
+]
+
 # Describes the target device environment in which a test should run. This
 # specification is written in JSON to the build directory, to be aggregated
 # at test-time.
@@ -47,6 +56,17 @@ import("//build/testing/platforms.gni")
 #         the Infrastructure team. Labels are used as an escape hatch from the
 #         default testing pipeline for special tests or environments.
 #
+#    log_settings (optional, default: see below properties)
+#      [json] Properties of logs produced by this test run.
+#
+#      Following properties are supported:
+#
+#      max_severity (optional, default: WARN)
+#        [string] Defines maximum severity of logs which can be produced by test
+#        environment. This can only be defined for test components. Test will fail
+#        if any component in its environment produces log with greater severity
+#        than defined here.
+#
 template("test_spec") {
   testonly = true
 
@@ -74,6 +94,21 @@ template("test_spec") {
     }
     assert(defined(env.dimensions) && env.dimensions != empty_scope,
            "each environment must specify dimensions")
+  }
+
+  if (is_fuchsia) {
+    _log_settings = {
+    }
+    if (defined(invoker.log_settings)) {
+      _log_settings = invoker.log_settings
+    }
+    if (!defined(_log_settings.max_severity)) {
+      _log_settings.max_severity = "WARN"
+    }
+
+    assert(_max_severity_allowed_val + [ _log_settings.max_severity ] -
+               [ _log_settings.max_severity ] != _max_severity_allowed_val,
+           "Invalid 'log_settings.max_severity': " + _log_settings.max_severity)
   }
 
   # TODO(51418): Remove after AEMU is generally available and all existing
@@ -263,6 +298,9 @@ template("test_spec") {
                                "package_url",
                              ])
       label = get_label_info(invoker.target, "label_with_toolchain")
+      if (is_fuchsia) {
+        log_settings = _log_settings
+      }
 
       if (defined(package_url)) {
         name = package_url

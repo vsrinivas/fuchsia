@@ -93,6 +93,17 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #             from the Infrastructure team. Labels are used as an escape hatch
 #             from the default testing pipeline for special tests or environments.
 #
+#      log_settings (optional, default: see below properties)
+#        [json] Properties of logs produced by this test run.
+#
+#        Following properties are supported:
+#
+#        max_severity (optional, default: WARN)
+#          [string] Defines maximum severity of logs which can be produced by test
+#          environment. This can only be defined for test components. Test will fail
+#          if any component in its environment produces log with greater severity
+#          than defined here.
+#
 #   drivers (optional)
 #     [list of scopes] Defines the drivers in the package. A driver is
 #     typically produced by the build system and is placed in the `driver/`
@@ -421,6 +432,9 @@ template("package") {
           }
         }
         url += url_resource_path
+      } else {
+        assert(!defined(test.log_settings),
+               "Only test components can define 'log_settings'.")
       }
 
       if (!is_disabled) {
@@ -433,7 +447,11 @@ template("package") {
           if (!bootfs_only) {
             package_url = url
           }
-          forward_variables_from(test, [ "environments" ])
+          forward_variables_from(test,
+                                 [
+                                   "environments",
+                                   "log_settings",
+                                 ])
         }
       } else {
         not_needed([
