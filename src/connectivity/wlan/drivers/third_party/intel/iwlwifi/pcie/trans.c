@@ -148,7 +148,7 @@ static void iwl_trans_pcie_sw_reset(struct iwl_trans* trans) {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(6)));
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_pcie_free_fw_monitor(struct iwl_trans* trans) {
     int i;
 
@@ -165,7 +165,7 @@ static void iwl_pcie_free_fw_monitor(struct iwl_trans* trans) {
 
 static void iwl_pcie_alloc_fw_monitor_block(struct iwl_trans* trans, uint8_t max_power,
                                             uint8_t min_power) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     void* cpu_addr = NULL;
     dma_addr_t phys = 0;
     uint32_t size = 0;
@@ -235,7 +235,7 @@ static void iwl_pcie_set_pwr(struct iwl_trans* trans, bool vaux) {
     return;
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     // We don't support D3 lower-power state yet.
     if (vaux && pci_pme_capable(to_pci_dev(trans->dev), PCI_D3cold))
         iwl_set_bits_mask_prph(trans, APMG_PS_CTRL_REG, APMG_PS_CTRL_VAL_PWR_SRC_VAUX,
@@ -981,7 +981,7 @@ static zx_status_t iwl_pcie_load_given_ucode(struct iwl_trans* trans, const stru
 
   /* supported for 7000 only for the moment */
   if (iwlwifi_mod_params.fw_monitor && trans->cfg->device_family == IWL_DEVICE_FAMILY_7000) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         iwl_pcie_alloc_fw_monitor(trans, 0);
 
         if (trans->fw_mon[0].size) {
@@ -1217,7 +1217,7 @@ static void _iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power)
 
   trans_pcie->is_down = true;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* Stop dbgc before stopping device */
     _iwl_fw_dbg_stop_recording(trans, NULL);
 #endif  // NEEDS_PORTING
@@ -1287,7 +1287,7 @@ static void _iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power)
   iwl_pcie_prepare_card_hw(trans);
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 // TODO(43123): implement this function
 void iwl_pcie_synchronize_irqs(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -1327,7 +1327,7 @@ static zx_status_t iwl_trans_pcie_start_fw(struct iwl_trans* trans, const struct
    */
   iwl_disable_interrupts(trans);
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* Make sure it finished running */
     iwl_pcie_synchronize_irqs(trans);
 #endif  // NEEDS_PORTING
@@ -1444,20 +1444,20 @@ void iwl_trans_pcie_rf_kill(struct iwl_trans* trans, bool state) {
 
   IWL_WARN(trans, "reporting RF_KILL (radio %s)\n", state ? "disabled" : "enabled");
   if (iwl_op_mode_hw_rf_kill(trans->op_mode, state)) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         if (trans->cfg->gen2) {
             _iwl_trans_pcie_gen2_stop_device(trans, true);
         } else {
 #endif  // NEEDS_PORTING
     _iwl_trans_pcie_stop_device(trans, true);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         }
 #endif  // NEEDS_PORTING
   }
 }
 
 static void iwl_trans_pcie_d3_suspend(struct iwl_trans* trans, bool test, bool reset) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     if (!reset) {
         /* Enable persistence mode to avoid reset */
         iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_PERSIST_MODE);
@@ -1494,7 +1494,7 @@ static void iwl_trans_pcie_d3_suspend(struct iwl_trans* trans, bool test, bool r
 
 static int iwl_trans_pcie_d3_resume(struct iwl_trans* trans, enum iwl_d3_status* status, bool test,
                                     bool reset) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     uint32_t val;
     int ret;
@@ -1563,7 +1563,7 @@ static zx_status_t iwl_pcie_set_interrupt_capa(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
   // MSI-X is not yet supported.
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     if (!trans->cfg->mq_rx_supported || iwlwifi_mod_params.disable_msix) { goto enable_msi; }
 
     int max_irqs = min_t(uint32_t, num_online_cpus() + 2, IWL_MAX_RX_HW_QUEUES);
@@ -1606,23 +1606,10 @@ static zx_status_t iwl_pcie_set_interrupt_capa(struct iwl_trans* trans) {
 enable_msi:
 #endif  // NEEDS_PORTING
 
-  uint32_t irq_count = 0;
-  if ((pci_query_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_count) == ZX_OK) &&
-      (pci_set_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
-    IWL_DEBUG_INFO(trans, "Using MSI mode\n");
-    return ZX_OK;
-  }
-
-  if ((pci_query_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_count) == ZX_OK) &&
-      (pci_set_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
-    IWL_DEBUG_INFO(trans, "Using legacy IRQ mode\n");
-    return ZX_OK;
-  }
-
-  return ZX_ERR_NOT_SUPPORTED;
+  return pci_configure_irq_mode(trans_pcie->pci, 1);
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_pcie_irq_set_affinity(struct iwl_trans* trans) {
     int iter_rx_q, i, ret, cpu, offset;
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -1708,7 +1695,7 @@ static zx_status_t _iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_po
   /* ...rfkill can call stop_device and set it false if needed */
   iwl_pcie_check_hw_rf_kill(trans);
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* Make sure we sync here, because we'll need full access later */
     if (low_power) { pm_runtime_resume(trans->dev); }
 #endif  // NEEDS_PORTING
@@ -1728,7 +1715,7 @@ static zx_status_t iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_pow
 }
 
 static void iwl_trans_pcie_op_mode_leave(struct iwl_trans* trans) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     mutex_lock(&trans_pcie->mutex);
@@ -1814,7 +1801,7 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
   trans->command_groups = trans_cfg->command_groups;
   trans->command_groups_size = trans_cfg->command_groups_size;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /* Initialize NAPI here - it should be before registering to mac80211
      * in the opmode but after the HW struct is allocated.
      * As this function may be called again in some corner cases don't
@@ -1829,7 +1816,7 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
 void iwl_trans_pcie_free(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   zx_handle_close(trans_pcie->bti);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     int i;
 
     iwl_pcie_synchronize_irqs(trans);
@@ -1894,7 +1881,7 @@ static void iwl_trans_pcie_removal_wk(struct work_struct* wk) {
     pci_dev_put(pdev);
     pci_stop_and_remove_bus_device(pdev);
     pci_unlock_rescan_remove();
-#endif  /* LINUX_VERSION_IS_LESS(3,14,0) */
+#endif /* LINUX_VERSION_IS_LESS(3,14,0) */
 
     kfree(removal);
     module_put(THIS_MODULE);
@@ -1955,7 +1942,7 @@ static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned lon
 
       IWL_ERR(trans, "Device gone - exit!\n");
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
             struct iwl_trans_pcie_removal* removal;
 
             IWL_ERR(trans, "Device gone - scheduling removal!\n");
@@ -2019,7 +2006,7 @@ static void iwl_trans_pcie_release_nic_access(struct iwl_trans* trans, unsigned 
   }
 
   __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     /*
      * Above we read the CSR_GP_CNTRL register, which will flush
      * any previous writes, but we need the write that clears the
@@ -2072,7 +2059,7 @@ static zx_status_t iwl_trans_pcie_write_mem(struct iwl_trans* trans, uint32_t ad
 
 static void iwl_trans_pcie_freeze_txq_timer(struct iwl_trans* trans, unsigned long txqs,
                                             bool freeze) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int queue;
 
@@ -2120,7 +2107,7 @@ static void iwl_trans_pcie_freeze_txq_timer(struct iwl_trans* trans, unsigned lo
 }
 
 static void iwl_trans_pcie_block_txq_ptrs(struct iwl_trans* trans, bool block) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int i;
 
@@ -2174,7 +2161,7 @@ void iwl_trans_pcie_log_scd_error(struct iwl_trans* trans, struct iwl_txq* txq) 
           iwl_read_direct32(trans, FH_TX_TRB_REG(fifo)));
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static int iwl_trans_pcie_rxq_dma_data(struct iwl_trans* trans, int queue,
                                        struct iwl_trans_rxq_dma_data* data) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -2228,7 +2215,7 @@ static int iwl_trans_pcie_wait_txq_empty(struct iwl_trans* trans, int txq_idx) {
 #endif  // NEEDS_PORTING
 
 static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_bm) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int cnt;
     int ret = 0;
@@ -2934,7 +2921,7 @@ static int iwl_trans_get_fw_monitor_len(struct iwl_trans* trans, int* len) {
 
 static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* trans,
                                                             uint32_t dump_mask) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_fw_error_dump_data* data;
     struct iwl_txq* cmdq = trans_pcie->txq[trans_pcie->cmd_queue];
@@ -3160,17 +3147,17 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
   struct iwl_trans* trans;
   zx_status_t status;
   int addr_size;
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     int ret, addr_size;
 #endif  // NEEDS_PORTING
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   if (device->config->gen2) {
     trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie_gen2);
   } else {
 #endif  // NEEDS_PORTING
   trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
   }
 #endif  // NEEDS_PORTING
 
@@ -3186,7 +3173,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
   mtx_init(&trans_pcie->reg_lock, mtx_plain);
   mtx_init(&trans_pcie->mutex, mtx_plain);
   sync_completion_reset(&trans_pcie->ucode_write_waitq);
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     trans_pcie->tso_hdr_page = alloc_percpu(struct iwl_tso_hdr_page);
     if (!trans_pcie->tso_hdr_page) {
         ret = -ENOMEM;
@@ -3230,7 +3217,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
     goto out_no_pci;
   }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(addr_size));
     if (!ret) { ret = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(addr_size)); }
     if (ret) {
@@ -3269,7 +3256,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
    * "dash" value). To keep hw_rev backwards compatible - we'll store it
    * in the old format.
    */
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
         unsigned long flags;
 
@@ -3404,13 +3391,13 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
   /* Initialize the wait queue for commands */
   trans_pcie->wait_command_queue = SYNC_COMPLETION_INIT;
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     init_waitqueue_head(&trans_pcie->d0i3_waitq);
 #endif  // NEEDS_PORTING
 
   if (trans_pcie->msix_enabled) {
     IWL_ERR(trans, "MSIX is not supported\n");
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
         ret = iwl_pcie_init_msix_handler(pdev, trans_pcie);
         if (ret) { goto out_no_pci; }
 #endif  // NEEDS_PORTING
@@ -3447,7 +3434,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
 out_free_ict:
   iwl_pcie_free_ict(trans);
 out_no_pci:
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     free_percpu(trans_pcie->tso_hdr_page);
 #endif  // NEEDS_PORTING
   iwl_trans_free(trans);
