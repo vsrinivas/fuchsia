@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod lib;
+mod protocol;
 
 use anyhow::Error;
 use clap::{App, SubCommand};

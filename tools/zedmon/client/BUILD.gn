@@ -14,8 +14,14 @@ rustc_binary("bin") {
   deps = [
     "//src/lib/usb_bulk/rust:lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:num",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:thiserror",
   ]
 
   enforce_source_listing = true
@@ -23,6 +29,7 @@ rustc_binary("bin") {
   sources = [
     "src/lib.rs",
     "src/main.rs",
+    "src/protocol.rs",
   ]
 }
 
