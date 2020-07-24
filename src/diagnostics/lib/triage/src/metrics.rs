@@ -328,6 +328,15 @@ pub enum Function {
     BootlogHas,
 }
 
+// Behavior for short circuiting execution when applying operands.
+#[derive(Copy, Clone, Debug)]
+enum ShortCircuitBehavior {
+    // Short circuit when the first true value is found.
+    True,
+    // Short circuit when the first false value is found.
+    False,
+}
+
 fn demand_numeric(value: &MetricValue) -> MetricValue {
     match value {
         MetricValue::Int(_) | MetricValue::Float(_) => {
@@ -546,8 +555,12 @@ impl<'a> MetricState<'a> {
             Function::NotEq => self.apply_metric_cmp(namespace, &|a, b| a != b, operands),
             Function::Max => self.fold_math(namespace, &|a, b| if a > b { a } else { b }, operands),
             Function::Min => self.fold_math(namespace, &|a, b| if a < b { a } else { b }, operands),
-            Function::And => self.fold_bool(namespace, &|a, b| a && b, operands),
-            Function::Or => self.fold_bool(namespace, &|a, b| a || b, operands),
+            Function::And => {
+                self.fold_bool(namespace, &|a, b| a && b, operands, ShortCircuitBehavior::False)
+            }
+            Function::Or => {
+                self.fold_bool(namespace, &|a, b| a || b, operands, ShortCircuitBehavior::True)
+            }
             Function::Not => self.not_bool(namespace, operands),
             Function::KlogHas | Function::SyslogHas | Function::BootlogHas => {
                 self.log_contains(function, namespace, operands)
@@ -719,6 +732,7 @@ impl<'a> MetricState<'a> {
         namespace: &str,
         function: &dyn (Fn(bool, bool) -> bool),
         operands: &Vec<Expression>,
+        short_circuit_behavior: ShortCircuitBehavior,
     ) -> MetricValue {
         if operands.len() == 0 {
             return MetricValue::Missing("No operands in boolean expression".into());
@@ -731,6 +745,15 @@ impl<'a> MetricState<'a> {
             bad => return MetricValue::Missing(format!("{:?} is not boolean", bad)),
         };
         for operand in operands[1..].iter() {
+            match (result, short_circuit_behavior) {
+                (true, ShortCircuitBehavior::True) => {
+                    break;
+                }
+                (false, ShortCircuitBehavior::False) => {
+                    break;
+                }
+                _ => {}
+            };
             result = match self.evaluate(namespace, operand) {
                 MetricValue::Bool(value) => function(result, value),
                 MetricValue::Missing(reason) => {
@@ -896,7 +919,12 @@ mod test {
             }]"#;
             vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
         };
+        static ref EMPTY_F: Vec<DiagnosticData> = {
+            let s = r#"[]"#;
+            vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
+        };
         static ref BAR_99_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&LOCAL_F);
+        static ref EMPTY_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&EMPTY_F);
         static ref BAR_SELECTOR: SelectorString =
             SelectorString::try_from("INSPECT:bar.cmx:root:bar".to_owned()).unwrap();
         static ref WRONG_SELECTOR: SelectorString =
@@ -1070,4 +1098,76 @@ mod test {
 
     // Correct operation of the klog, syslog, and bootlog fields of TrialDataFetcher are tested
     // in the integration test via log_tests.triage.
+
+    // Test evaluation on static values.
+    #[test]
+    fn test_evaluation() {
+        let metrics: Metrics = [(
+            "root".to_string(),
+            [
+                ("is42".to_string(), Metric::Eval("42".to_string())),
+                ("isOk".to_string(), Metric::Eval("'OK'".to_string())),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
+        )]
+        .iter()
+        .cloned()
+        .collect();
+        let state = MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()));
+
+        // Can read a value.
+        assert_eq!(state.eval_value("root", "is42"), MetricValue::Int(42));
+
+        // Basic arithmetic
+        assert_eq!(state.eval_value("root", "is42 + 1"), MetricValue::Int(43));
+        assert_eq!(state.eval_value("root", "is42 - 1"), MetricValue::Int(41));
+        assert_eq!(state.eval_value("root", "is42 * 2"), MetricValue::Int(84));
+        // Automatic float conversion and truncating divide.
+        assert_eq!(state.eval_value("root", "is42 / 4"), MetricValue::Float(10.5));
+        assert_eq!(state.eval_value("root", "is42 // 4"), MetricValue::Int(10));
+
+        // Order of operations
+        assert_eq!(state.eval_value("root", "is42 + 10 / 2 * 10 - 2 "), MetricValue::Float(90.0));
+        assert_eq!(state.eval_value("root", "is42 + 10 // 2 * 10 - 2 "), MetricValue::Int(90));
+
+        // Boolean
+        assert_eq!(
+            state.eval_value("root", "And(is42 == 42, is42 < 100)"),
+            MetricValue::Bool(true)
+        );
+        assert_eq!(
+            state.eval_value("root", "And(is42 == 42, is42 > 100)"),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(state.eval_value("root", "Or(is42 == 42, is42 > 100)"), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("root", "Or(is42 != 42, is42 < 100)"), MetricValue::Bool(true));
+        assert_eq!(
+            state.eval_value("root", "Or(is42 != 42, is42 > 100)"),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(state.eval_value("root", "Not(is42 == 42)"), MetricValue::Bool(false));
+
+        // Read strings
+        assert_eq!(state.eval_value("root", "isOk"), MetricValue::String("OK".to_string()));
+
+        // Missing value
+        assert_eq!(
+            state.eval_value("root", "missing"),
+            MetricValue::Missing("Metric 'missing' Not Found in 'root'".to_string())
+        );
+
+        // Booleans short circuit
+        assert_eq!(
+            state.eval_value("root", "Or(is42 != 42, missing)"),
+            MetricValue::Missing("Metric 'missing' Not Found in 'root'".to_string())
+        );
+        assert_eq!(state.eval_value("root", "Or(is42 == 42, missing)"), MetricValue::Bool(true));
+        assert_eq!(
+            state.eval_value("root", "And(is42 == 42, missing)"),
+            MetricValue::Missing("Metric 'missing' Not Found in 'root'".to_string())
+        );
+        assert_eq!(state.eval_value("root", "And(is42 != 42, missing)"), MetricValue::Bool(false));
+    }
 }
