@@ -1,0 +1,23 @@
+// The errors that pertain to the I18N system.
+// File issues at: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3AI18N
+{
+    act: {
+        // Every component should be able to find its tzdata configuration, to ensure that all
+        // components that need them use exactly the same data.  This is not fatal, but we must
+        // ensure that, in the limit, all such components get their tzdata configs, for the best
+        // user experience.
+        icu_config_absent: {
+            type: "Warning",
+            trigger: "SyslogHas('/config/data/tzdata/icu/44/le')",
+            print: "INTL: A component can not find the tzdata configuration. See: https://fuchsia.dev/fuchsia-src/development/internationalization/icu_data",
+        },
+    },
+    test: {
+        test_tzdata_config_absent: {
+            yes: [
+                "icu_config_absent",
+            ],
+            syslog: "1/30/2020, 2:31:13 PM [46274][46278][cast_agent_exe] ERROR: icu_util.cc(227) Could not open: '/config/data/tzdata/icu/44/le', proceeding without loading the timezone database: No such file or directory (2)",
+        },
+    },
+}

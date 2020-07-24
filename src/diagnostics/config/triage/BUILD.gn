@@ -19,6 +19,7 @@ if (is_host) {
     sources = [
       "crashes.triage",
       "disk.triage",
+      "intl.triage",
       "stash.triage",
       "stash_secure.triage",
       "timezone.triage",
