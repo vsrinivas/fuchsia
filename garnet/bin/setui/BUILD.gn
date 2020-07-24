@@ -246,6 +246,7 @@ config_data("tests_config") {
     "src/tests/testdata/fake_config_data.json",
     "src/tests/testdata/fake_invalid_config_data.json",
     "src/tests/testdata/service_configuration.json",
+    "src/tests/testdata/service_flags.json",
     "src/tests/testdata/volume-changed.wav",
     "src/tests/testdata/volume-max.wav",
   ]
@@ -329,12 +330,19 @@ unittest_package("sample-setui-config-test") {
       path = rebase_path("src/tests/testdata/service_configuration.json")
       dest = "service_configuration.json"
     },
+    {
+      path = rebase_path("src/tests/testdata/service_flags.json")
+      dest = "service_flags.json"
+    },
   ]
 
   tests = [
     {
       name = "setui_config_test"
-      args = [ "/pkg/data/service_configuration.json" ]
+      args = [
+        "/pkg/data/service_configuration.json",
+        "/pkg/data/service_flags.json",
+      ]
     },
   ]
 }

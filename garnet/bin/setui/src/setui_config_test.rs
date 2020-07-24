@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{bail, Context, Error};
-use settings::ServiceConfiguration;
+use settings::{EnabledServicesConfiguration, ServiceFlags};
 use std::fs::File;
 use std::io::Read;
 
@@ -15,13 +15,26 @@ fn main() -> Result<(), Error> {
 
     // Skip program name.
     let _ = args.next();
-    // Get path to config.
-    let path = &args.next().unwrap();
-    let mut file =
-        File::open(path).with_context(|| format!("Couldn't open arg path `{}`", path))?;
-    let mut config_string = String::new();
-    file.read_to_string(&mut config_string).context("Couldn't read config")?;
-    let _ = serde_json::from_str::<ServiceConfiguration>(&config_string)
-        .context("Failed to deserialize config")?;
+    {
+        // Get path to config.
+        let path = &args.next().unwrap();
+        let mut file =
+            File::open(path).with_context(|| format!("Couldn't open config path `{}`", path))?;
+        let mut config_string = String::new();
+        file.read_to_string(&mut config_string).context("Couldn't read services configuration")?;
+        let _ = serde_json::from_str::<EnabledServicesConfiguration>(&config_string)
+            .context("Failed to deserialize services configuration")?;
+    }
+
+    // There might be an additional path for flags.
+    if let Some(ref path) = args.next() {
+        let mut file =
+            File::open(path).with_context(|| format!("Couldn't open flags path `{}`", path))?;
+        let mut config_string = String::new();
+        file.read_to_string(&mut config_string).context("Couldn't read flags configuration")?;
+        let _ = serde_json::from_str::<ServiceFlags>(&config_string)
+            .context("Failed to deserialize flag configuration")?;
+    }
+
     Ok(())
 }

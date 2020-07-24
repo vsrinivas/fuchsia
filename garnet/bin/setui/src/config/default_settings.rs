@@ -9,17 +9,14 @@ use std::io::BufReader;
 
 pub struct DefaultSetting<T: DeserializeOwned + Clone> {
     default_value: T,
+    // TODO(fxb/56942) Switch to Option<AsRef<Path>>
     config_file_path: Option<String>,
     cached_value: Option<T>,
 }
 
 impl<T: DeserializeOwned + Clone> DefaultSetting<T> {
     pub fn new(default_value: T, config_file_path: Option<String>) -> Self {
-        DefaultSetting {
-            default_value: default_value,
-            config_file_path: config_file_path,
-            cached_value: None,
-        }
+        DefaultSetting { default_value, config_file_path, cached_value: None }
     }
 
     pub fn get_default_value(&mut self) -> T {
@@ -36,7 +33,7 @@ impl<T: DeserializeOwned + Clone> DefaultSetting<T> {
         }
 
         let file_path = self.config_file_path.as_ref().unwrap();
-        let file = match File::open(file_path.clone()) {
+        let file = match File::open(file_path) {
             Ok(f) => f,
             Err(e) => {
                 fx_log_info!("unable to open {}, using defaults: {:?}", file_path, e);

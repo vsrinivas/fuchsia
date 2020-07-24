@@ -49,7 +49,7 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::StreamExt,
-    serde::{Deserialize, Serialize},
+    serde::Deserialize,
     std::collections::{HashMap, HashSet},
     std::sync::Arc,
 };
@@ -93,16 +93,31 @@ enum Runtime {
     Nested(&'static str),
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Deserialize)]
+pub struct EnabledServicesConfiguration {
+    pub services: HashSet<SettingType>,
+}
+
+impl EnabledServicesConfiguration {
+    pub fn with_services(services: HashSet<SettingType>) -> Self {
+        Self { services }
+    }
+}
+
+#[derive(Default, Debug, Clone, Deserialize)]
+pub struct ServiceFlags {
+    pub controller_flags: HashSet<ControllerFlag>,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub struct ServiceConfiguration {
     pub services: HashSet<SettingType>,
-    #[serde(default)]
     pub controller_flags: HashSet<ControllerFlag>,
 }
 
 impl ServiceConfiguration {
-    pub fn with_services(services: HashSet<SettingType>) -> Self {
-        Self { services, controller_flags: HashSet::new() }
+    pub fn from(services: EnabledServicesConfiguration, flags: ServiceFlags) -> Self {
+        Self { services: services.services, controller_flags: flags.controller_flags }
     }
 }
 
@@ -116,7 +131,7 @@ pub struct Environment {
 
 impl Environment {
     pub fn new(nested_environment: Option<NestedEnvironment>) -> Environment {
-        Environment { nested_environment: nested_environment }
+        Environment { nested_environment }
     }
 }
 
@@ -161,7 +176,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             configuration: None,
             agent_blueprints: vec![],
             event_subscriber_blueprints: vec![],
-            storage_factory: storage_factory,
+            storage_factory,
             generate_service: None,
             handlers: HashMap::new(),
         }

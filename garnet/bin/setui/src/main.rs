@@ -13,8 +13,10 @@ use {
     settings::config::default_settings::DefaultSetting,
     settings::registry::device_storage::StashDeviceStorageFactory,
     settings::switchboard::base::get_default_setting_types,
+    settings::EnabledServicesConfiguration,
     settings::EnvironmentBuilder,
     settings::ServiceConfiguration,
+    settings::ServiceFlags,
     std::sync::Arc,
 };
 
@@ -31,13 +33,22 @@ fn main() -> Result<(), Error> {
         connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );
 
-    let default_configuration = ServiceConfiguration::with_services(get_default_setting_types());
+    let default_configuration =
+        EnabledServicesConfiguration::with_services(get_default_setting_types());
 
     let configuration = DefaultSetting::new(
         default_configuration,
         Some("/config/data/service_configuration.json".to_string()),
     )
     .get_default_value();
+
+    let flags = DefaultSetting::new(
+        ServiceFlags::default(),
+        Some("/config/data/service_flags.json".to_string()),
+    )
+    .get_default_value();
+
+    let configuration = ServiceConfiguration::from(configuration, flags);
 
     // EnvironmentBuilder::spawn returns a future that can be awaited for the
     // result of the startup. Since main is a synchronous function, we cannot

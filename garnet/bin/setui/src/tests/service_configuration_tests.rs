@@ -7,8 +7,10 @@ use {
     crate::config::default_settings::DefaultSetting,
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::SettingType,
+    crate::EnabledServicesConfiguration,
     crate::EnvironmentBuilder,
     crate::ServiceConfiguration,
+    crate::ServiceFlags,
     fidl_fuchsia_settings::{AccessibilityMarker, PrivacyMarker},
     std::collections::HashSet,
 };
@@ -23,12 +25,17 @@ pub fn get_test_settings_types() -> HashSet<SettingType> {
 async fn test_no_configuration_provided() {
     let factory = InMemoryStorageFactory::create();
 
-    let default_configuration = ServiceConfiguration::with_services(get_test_settings_types());
+    let default_configuration =
+        EnabledServicesConfiguration::with_services(get_test_settings_types());
 
     // Don't load a real configuration, use the default configuration.
     let configuration =
         DefaultSetting::new(default_configuration, Some("not_a_real_path.json".to_string()))
             .get_default_value();
+    let flags =
+        DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json".to_string()))
+            .get_default_value();
+    let configuration = ServiceConfiguration::from(configuration, flags);
 
     let env = EnvironmentBuilder::new(factory)
         .configuration(configuration)
@@ -46,7 +53,8 @@ async fn test_no_configuration_provided() {
 async fn test_default_configuration_provided() {
     let factory = InMemoryStorageFactory::create();
 
-    let default_configuration = ServiceConfiguration::with_services(get_test_settings_types());
+    let default_configuration =
+        EnabledServicesConfiguration::with_services(get_test_settings_types());
 
     // Load test configuration, which only has Accessibility, default will not be used.
     let configuration = DefaultSetting::new(
@@ -54,6 +62,10 @@ async fn test_default_configuration_provided() {
         Some("/config/data/service_configuration.json".to_string()),
     )
     .get_default_value();
+    let flags =
+        DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json".to_string()))
+            .get_default_value();
+    let configuration = ServiceConfiguration::from(configuration, flags);
 
     let env = EnvironmentBuilder::new(factory)
         .configuration(configuration)
