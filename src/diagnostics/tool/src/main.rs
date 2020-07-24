@@ -270,7 +270,7 @@ fn filter_data_to_lines(
 
     // Filter the source data that we diff against to only contain the component
     // of interest.
-    let diffable_source: Vec<InspectSchema> = match requested_name_opt {
+    let mut diffable_source: Vec<InspectSchema> = match requested_name_opt {
         Some(requested_name) => data
             .into_iter()
             .cloned()
@@ -286,11 +286,28 @@ fn filter_data_to_lines(
         None => data.to_vec(),
     };
 
-    let filtered_node_hierarchies: Vec<InspectSchema> = diffable_source
+    let mut filtered_node_hierarchies: Vec<InspectSchema> = diffable_source
         .clone()
         .into_iter()
         .filter_map(|schema| filter_json_schema_by_selectors(schema, &selector_vec))
         .collect();
+
+    let moniker_cmp = |a: &InspectSchema, b: &InspectSchema| {
+        a.moniker.partial_cmp(&b.moniker).expect("schema comparison")
+    };
+
+    diffable_source.sort_by(moniker_cmp);
+    filtered_node_hierarchies.sort_by(moniker_cmp);
+
+    let sort_payload = |schema: &mut InspectSchema| match &mut schema.payload {
+        Some(payload) => {
+            payload.sort();
+        }
+        _ => {}
+    };
+
+    diffable_source.iter_mut().for_each(sort_payload);
+    filtered_node_hierarchies.iter_mut().for_each(sort_payload);
 
     let orig_str = serde_json::to_string_pretty(&diffable_source).unwrap();
     let new_str = serde_json::to_string_pretty(&filtered_node_hierarchies).unwrap();

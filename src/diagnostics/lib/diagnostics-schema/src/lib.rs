@@ -19,8 +19,15 @@ lazy_static! {
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum DataSource {
+    Unknown,
     Inspect,
     LifecycleEvent,
+}
+
+impl Default for DataSource {
+    fn default() -> Self {
+        DataSource::Unknown
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]
@@ -39,8 +46,15 @@ pub enum LifecycleType {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum Metadata {
+    Empty,
     Inspect(InspectMetadata),
     LifecycleEvent(LifecycleEventMetadata),
+}
+
+impl Default for Metadata {
+    fn default() -> Self {
+        Metadata::Empty
+    }
 }
 
 /// Wraps a time for serialization and deserialization purposes.
@@ -103,9 +117,11 @@ pub struct InspectMetadata {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Schema<Key: AsRef<str> + Hash + Eq + FromStr + Clone> {
     /// Enum specifying that this schema is encoding data.
+    #[serde(default)]
     pub data_source: DataSource,
 
     /// The metadata for the diagnostics payload.
+    #[serde(default)]
     pub metadata: Metadata,
 
     /// Moniker of the component that generated the payload.
@@ -115,6 +131,7 @@ pub struct Schema<Key: AsRef<str> + Hash + Eq + FromStr + Clone> {
     pub payload: Option<NodeHierarchy<Key>>,
 
     /// Schema version.
+    #[serde(default)]
     pub version: u64,
 }
 
