@@ -14,6 +14,29 @@
 
 namespace {
 
+// A ZX_EXCP_SW_BREAKPOINT requires some registers tune-up in order to be handled correctly
+// depending on the architecture. This functions takes care of the correct setup of the program
+// counter so that the exception can be resumed successfully.
+zx_status_t cleanup_breakpoint(zx_handle_t thread) {
+#if defined(__x86_64__)
+  // On x86, the pc is left at one past the s/w break insn,
+  // so there's nothing more we need to do.
+  return ZX_OK;
+#elif defined(__aarch64__)
+  // Skip past the brk instruction.
+  zx_thread_state_general_regs_t regs = {};
+  zx_status_t status =
+      zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  if (status != ZX_OK)
+    return status;
+
+  regs.pc += 4;
+  return zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+#else
+  return ZX_ERR_NOT_SUPPORTED;
+#endif
+}
+
 struct dyn_break_on_load_state_t {
   zx_handle_t process_handle = ZX_HANDLE_INVALID;
   int dyn_load_count = 0;
@@ -77,7 +100,7 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
       // The breakpoint should be exactly the same as informed by the dynamic loader.
       ASSERT_EQ(rip, dl_debug.r_brk_on_load);
 
-      ASSERT_EQ(tu_cleanup_breakpoint(thread.get()), ZX_OK);
+      ASSERT_EQ(cleanup_breakpoint(thread.get()), ZX_OK);
 
       break;
     }

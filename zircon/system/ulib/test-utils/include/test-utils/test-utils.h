@@ -90,11 +90,6 @@ int tu_process_get_return_code(zx_handle_t process);
 
 int tu_process_wait_exit(zx_handle_t process);
 
-// A ZX_EXCP_SW_BREAKPOINT requires some registers tune-up in order to be handled correctly
-// depending on the architecture. This functions takes care of the correct setup of the program
-// counter so that the exception can be resumed successfully.
-zx_status_t tu_cleanup_breakpoint(zx_handle_t thread);
-
 // Add |handle| to the list of things |port| watches.
 // When |handle| is signaled with a signal in |signals| a zx_packet_signal_t
 // packet is sent to |port| with the key being the koid of |handle|.

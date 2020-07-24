@@ -285,26 +285,6 @@ int tu_process_wait_exit(zx_handle_t process) {
   return tu_process_get_return_code(process);
 }
 
-zx_status_t tu_cleanup_breakpoint(zx_handle_t thread) {
-#if defined(__x86_64__)
-  // On x86, the pc is left at one past the s/w break insn,
-  // so there's nothing more we need to do.
-  return ZX_OK;
-#elif defined(__aarch64__)
-  // Skip past the brk instruction.
-  zx_thread_state_general_regs_t regs = {};
-  zx_status_t status =
-      zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-  if (status != ZX_OK)
-    return status;
-
-  regs.pc += 4;
-  return zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
-#else
-  return ZX_ERR_NOT_SUPPORTED;
-#endif
-}
-
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals) {
   zx_info_handle_basic_t info;
   zx_status_t status =
