@@ -54,7 +54,7 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 	if !ok {
 		return fmt.Errorf("base packages doesn't include update-bin/0 package")
 	}
-	return c.ExpectReboot(ctx, func() error {
+	err = c.ExpectReboot(ctx, func() error {
 		server, err := c.ServePackageRepository(ctx, u.repo, "trigger-ota", true)
 		if err != nil {
 			return fmt.Errorf("error setting up server: %w", err)
