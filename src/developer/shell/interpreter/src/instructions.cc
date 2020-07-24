@@ -39,7 +39,7 @@ void VariableDefinition::Compile(ExecutionContext* context, code::Code* code) {
     return;
   }
   Variable* variable = type_->CreateVariable(
-      context, context->interpreter()->isolate()->global_scope(), id(), name_);
+      context, context->interpreter()->isolate()->global_scope(), id(), name_, is_mutable_);
   if (variable == nullptr) {
     return;
   }
@@ -60,6 +60,20 @@ void EmitResult::Compile(ExecutionContext* context, code::Code* code) {
   std::unique_ptr<Type> type = expression_->InferType(context);
   expression_->Compile(context, code, type.get());
   code->EmitResult(std::move(type));
+}
+
+// - Assignment ------------------------------------------------------------------------------------
+
+void Assignment::Dump(std::ostream& os) const { os << *destination_ << " = " << *source_ << '\n'; }
+
+void Assignment::Compile(ExecutionContext* context, code::Code* code) {
+  std::unique_ptr<Type> type = destination_->InferType(context);
+  if (type == nullptr) {
+    context->EmitError(destination_->id(), "Can't infer type for assignment's destination.");
+    return;
+  }
+  source_->Compile(context, code, type.get());
+  destination_->Assign(context, code);
 }
 
 }  // namespace interpreter

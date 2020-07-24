@@ -245,6 +245,10 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                      uint64_t node_node_id, const llcpp::fuchsia::shell::NodeId& node,
                      bool root_node);
 
+  void AddAssignment(ServerInterpreterContext* context, uint64_t node_file_id,
+                     uint64_t node_node_id, const llcpp::fuchsia::shell::Assignment& node,
+                     bool root_node);
+
   void AddAddition(ServerInterpreterContext* context, uint64_t node_file_id, uint64_t node_node_id,
                    const llcpp::fuchsia::shell::Addition& node, bool root_node);
 

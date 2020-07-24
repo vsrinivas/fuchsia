@@ -143,6 +143,19 @@ bool ExpressionVariable::Compile(ExecutionContext* context, code::Code* code,
   return for_type->GenerateVariable(context, code, id(), definition);
 }
 
+void ExpressionVariable::Assign(ExecutionContext* context, code::Code* code) const {
+  const Variable* definition = context->interpreter()->SearchGlobal(name_);
+  if (definition == nullptr) {
+    context->EmitError(id(), "Can't find variable " + name_ + ".");
+    return;
+  }
+  if (!definition->is_mutable()) {
+    context->EmitError(id(), "Can't assign constant " + name_ + ".");
+    return;
+  }
+  definition->type()->GenerateAssignVariable(context, code, id(), definition);
+}
+
 // - Addition --------------------------------------------------------------------------------------
 
 void Addition::Dump(std::ostream& os) const {

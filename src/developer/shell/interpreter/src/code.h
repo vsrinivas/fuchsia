@@ -87,6 +87,9 @@ enum class Opcode : uint64_t {
   kStoreRaw32,
   // Pops a value from the thread's value stack and stores it into a 64 bit global variable.
   kStoreRaw64,
+  // Pops a value from the stack, releases the old value of the global variable and stores the new
+  // value.
+  kStoreReferenceCounted,
   // Pops several strings from the stack, concatenates them and pushes the result to the stack.
   kStringConcatenation,
   // Pops two 8 bit unsigned integers from the stack, adds them and pushes the result to the stack.
@@ -200,6 +203,12 @@ class Code {
       default:
         FX_LOGS(FATAL) << "Bad builtin size " << size;
     }
+    code_.emplace_back(index);
+  }
+
+  // Adds a reference counted global variable store operation.
+  void StoreReferenceCounted(uint64_t index) {
+    emplace_back_opcode(Opcode::kStoreReferenceCounted);
     code_.emplace_back(index);
   }
 

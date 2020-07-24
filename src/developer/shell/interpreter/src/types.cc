@@ -30,8 +30,8 @@ void TypeUndefined::Dump(std::ostream& os) const { os << "undefined"; }
 // - type builtin ----------------------------------------------------------------------------------
 
 Variable* TypeBuiltin::CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
-                                      const std::string& name) const {
-  return scope->CreateVariable(id, name, Duplicate());
+                                      const std::string& name, bool is_mutable) const {
+  return scope->CreateVariable(id, name, Duplicate(), is_mutable);
 }
 
 // - type raw -------------------------------------------------------------------------------------
@@ -50,6 +50,11 @@ bool TypeRaw::GenerateVariable(ExecutionContext* context, code::Code* code, cons
   }
   code->LoadRaw(variable->index(), variable->type()->Size());
   return true;
+}
+
+void TypeRaw::GenerateAssignVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                                     const Variable* variable) const {
+  code->StoreRaw(variable->index(), variable->type()->Size());
 }
 
 // - type bool -------------------------------------------------------------------------------------
@@ -91,6 +96,11 @@ bool TypeString::GenerateVariable(ExecutionContext* context, code::Code* code, c
   }
   code->LoadReferenceCounted(variable->index());
   return true;
+}
+
+void TypeString::GenerateAssignVariable(ExecutionContext* context, code::Code* code,
+                                        const NodeId& id, const Variable* variable) const {
+  code->StoreReferenceCounted(variable->index());
 }
 
 bool TypeString::GenerateAddition(ExecutionContext* context, code::Code* code,
@@ -389,8 +399,8 @@ void TypeObject::GenerateInitialization(ExecutionContext* context, code::Code* c
 }
 
 Variable* TypeObject::CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
-                                     const std::string& name) const {
-  return scope->CreateVariable(id, name, Duplicate());
+                                     const std::string& name, bool is_mutable) const {
+  return scope->CreateVariable(id, name, Duplicate(), is_mutable);
 }
 
 bool TypeObject::GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
@@ -403,6 +413,11 @@ bool TypeObject::GenerateVariable(ExecutionContext* context, code::Code* code, c
   }
   code->LoadReferenceCounted(variable->index());
   return true;
+}
+
+void TypeObject::GenerateAssignVariable(ExecutionContext* context, code::Code* code,
+                                        const NodeId& id, const Variable* variable) const {
+  code->StoreReferenceCounted(variable->index());
 }
 
 void TypeObject::LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const {

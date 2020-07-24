@@ -26,13 +26,15 @@ class Thread;
 // Base class for all scope variables.
 class Variable {
  public:
-  Variable(NodeId id, const std::string& name, size_t index, std::unique_ptr<Type> type)
-      : id_(id), name_(name), index_(index), type_(std::move(type)) {}
+  Variable(NodeId id, const std::string& name, size_t index, std::unique_ptr<Type> type,
+           bool is_mutable)
+      : id_(id), name_(name), index_(index), type_(std::move(type)), is_mutable_(is_mutable) {}
 
   NodeId id() const { return id_; }
   const std::string& name() const { return name_; }
   size_t index() const { return index_; }
   const Type* type() const { return type_.get(); }
+  bool is_mutable() const { return is_mutable_; }
 
   // Clear the variable for this execution scope. For reference counted objects, that also releases
   // the object.
@@ -47,6 +49,8 @@ class Variable {
   const size_t index_;
   // The type of the variable.
   std::unique_ptr<Type> type_;
+  // True if we can modify the variable initial value.
+  const bool is_mutable_;
 };
 
 // Defines a scope. This can be a global scope (at the isolate level) or a scope associated to
@@ -77,11 +81,13 @@ class Scope {
   }
 
   // Creates a variable.
-  Variable* CreateVariable(NodeId id, const std::string& name, std::unique_ptr<Type> type) {
+  Variable* CreateVariable(NodeId id, const std::string& name, std::unique_ptr<Type> type,
+                           bool is_mutable) {
     size_t size = type->Size();
     FX_DCHECK(size > 0);
     AlignIndex(size);
-    auto variable = std::make_unique<Variable>(id, name, current_index_, std::move(type));
+    auto variable =
+        std::make_unique<Variable>(id, name, current_index_, std::move(type), is_mutable);
     auto returned_value = variable.get();
     variables_.emplace(std::make_pair(name, std::move(variable)));
     current_index_ += size;

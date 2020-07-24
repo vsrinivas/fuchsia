@@ -110,7 +110,7 @@ class Type {
 
   // Creates a variable of this type in the scope.
   virtual Variable* CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
-                                   const std::string& name) const;
+                                   const std::string& name, bool is_mutable) const;
 
   // Generates a default value for this type. When the generated code is executed, it pushes the
   // value to the thread's stack values.
@@ -131,6 +131,10 @@ class Type {
   // Generates a variable load. It pushes the variable value to the stack.
   virtual bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
                                 const Variable* variable) const;
+
+  // Generates a variable store. It pops a value from the stack and assigns the variable with it.
+  virtual void GenerateAssignVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                                      const Variable* variable) const;
 
   // Generates an addition. it pops two values, do an addition and pushes the result. It generates
   // an error if the type doesn't support the addition or if the operand types are not supported.
@@ -209,6 +213,9 @@ class Expression : public Node {
   // Returns the number of strings generated (pushed to the stack).
   virtual size_t GenerateStringTerms(ExecutionContext* context, code::Code* code,
                                      const Type* for_type) const;
+
+  // Generates code which will assign this expression with the last value pushed to the stack.
+  virtual void Assign(ExecutionContext* context, code::Code* code) const;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Expression& expression) {

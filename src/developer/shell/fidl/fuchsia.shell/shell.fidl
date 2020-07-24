@@ -121,7 +121,15 @@ struct VariableDefinition {
     NodeId initial_value;
 };
 
-// Defines an addition.
+/// Defines an assignment.
+struct Assignment {
+    /// The destination. It must be a L Value.
+    NodeId destination;
+    /// The source. It's an expression.
+    NodeId source;
+};
+
+/// Defines an addition.
 struct Addition {
     /// Throws an exception if we have an overflow or an underflow.
     bool with_exceptions;
@@ -152,8 +160,10 @@ union Node {
     8: string:MAX variable;
     /// Emits a result. The value of the expression is sent back to the client using OnResult.
     9: NodeId emit_result;
+    /// Assign an expression (L Value) with the computed value of another expression.
+    10: Assignment assignment;
     /// An addition.
-    10: Addition addition;
+    11: Addition addition;
 };
 
 /// Defines a node which has to be inserted in the AST. The node will stay pending until it is used

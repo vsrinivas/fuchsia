@@ -20,6 +20,11 @@
 #include "src/developer/shell/common/result.h"
 #include "src/developer/shell/console/ast_builder.h"
 
+shell::console::AstBuilder::NodePair AddObject(
+    shell::console::AstBuilder& builder, std::vector<std::string>& names,
+    std::vector<shell::console::AstBuilder::NodeId>& values,
+    std::vector<llcpp::fuchsia::shell::ShellType>&& types);
+
 struct InterpreterTestContext {
   InterpreterTestContext(uint64_t new_id) : id(new_id) {}
 

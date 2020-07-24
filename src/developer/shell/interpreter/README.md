@@ -248,3 +248,58 @@ The versions are:
 *   32 bit integers
 
 *   64 bit integers
+
+# Assignments
+
+When an object is assigned to a variable or a field, we only assign a reference. That means that
+two variables or fields can reference the same data in memory even if, semantically, this data
+represents two different objects.
+
+When we need to assign a field of an object which has more than one reference, we need to do a copy
+on write (COW). That means that we do a simple copy of the object (not a deep copy: all the fields
+in the copy have the same value as the original). Then, we are able to assign the field.
+
+## Considered implementation for COW
+
+For assignment of fields, we have two operations. First we need to get the value (the internal
+reference) of the object. We can get the value from a variable or from a field. If the value we
+extract has more than one link, that means we need to do a copy. Second, when the potential copy
+is done, we assign the field as usual.
+
+To do a copy, we need to recursively do the copy.
+When we have:
+a.x.y = 2
+
+If the object referenced by "a.x" has more than one link, we need a copy of "a.x". That means
+assigning a new value to "a.x".
+
+To be able to assign a new value to "a.x", if the object referenced by "a" has more than one link,
+we need to need a copy of the object referenced by "a".
+
+In that final case, the operations will be:
+
+Do a copy of "a". This is not a deep copy: all the fields in "a" (including those that reference
+an object) have the same value in the copy.
+
+Assign the copy to "a"
+
+Do a copy of "a.x" (which is also a copy of "(copy of a).x"
+
+Assign "a.x" with the copy of "a.x"
+
+Assign "a.x.y"
+
+From an opcode point of view, you will have only two opcodes.
+
+*   get a writable reference on a.x (which will be a recursive operation)
+
+*   assign the field "y" of the writable reference
+
+We may have one opcode to access an object for reading. Then, we may have an opcode to access an
+object for writing. This will compute the pointer to the object and, most of all, the source for
+the object. If we need to access several fields we will have a linked list of all the accesses.
+
+Then will will probably have an opcode which will tell "I want to write to this object computed using the opcode field access for writing" which will use the linked list to perform the needed
+copies.
+
+After eventually duplicating some objects, this will free the linked list and return a pointer to an object which is writable.

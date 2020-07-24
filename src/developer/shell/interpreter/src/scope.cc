@@ -234,6 +234,15 @@ void ExecutionScope::Execute(ExecutionContext* context, Thread* thread,
         *destination = thread->Pop();
         break;
       }
+      case code::Opcode::kStoreReferenceCounted: {
+        uint64_t index = code->code()[pc++];
+        auto destination =
+            thread->isolate()->global_execution_scope()->Data<ReferenceCountedBase*>(index);
+        ReferenceCountedBase* old_value = *destination;
+        old_value->Release();
+        *destination = reinterpret_cast<ReferenceCountedBase*>(thread->Pop());
+        break;
+      }
       case code::Opcode::kStringConcatenation: {
         StringConcatenation(thread, code->code()[pc++]);
         break;

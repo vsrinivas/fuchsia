@@ -16,9 +16,10 @@ namespace interpreter {
 // - Type ------------------------------------------------------------------------------------------
 
 Variable* Type::CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
-                               const std::string& name) const {
+                               const std::string& name, bool is_mutable) const {
   std::stringstream ss;
-  ss << "Can't create variable '" << name << "' of type " << *this << " (not implemented yet).";
+  ss << "Can't create " << (is_mutable ? "variable" : "constant") << " '" << name << "' of type "
+     << *this << " (not implemented yet).";
   context->EmitError(id, ss.str());
   return nullptr;
 }
@@ -48,9 +49,16 @@ bool Type::GenerateStringLiteral(ExecutionContext* context, code::Code* code,
 bool Type::GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
                             const Variable* variable) const {
   std::stringstream ss;
-  ss << "Can't use variable of type " << *this << ".";
+  ss << "Can't use " << variable->name() << ", a variable of type " << *this << ".";
   context->EmitError(id, ss.str());
   return false;
+}
+
+void Type::GenerateAssignVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                                  const Variable* variable) const {
+  std::stringstream ss;
+  ss << "Can't assign " << variable->name() << ", a variable of type " << *this << ".";
+  context->EmitError(id, ss.str());
 }
 
 bool Type::GenerateAddition(ExecutionContext* context, code::Code* code,
@@ -94,6 +102,12 @@ Node::~Node() { interpreter_->RemoveNode(id_.file_id, id_.node_id); }
 size_t Expression::GenerateStringTerms(ExecutionContext* context, code::Code* code,
                                        const Type* for_type) const {
   return Compile(context, code, for_type) ? 1 : 0;
+}
+
+void Expression::Assign(ExecutionContext* context, code::Code* code) const {
+  std::stringstream ss;
+  ss << "Can't assign " << *this << ".";
+  context->EmitError(id(), ss.str());
 }
 
 }  // namespace interpreter

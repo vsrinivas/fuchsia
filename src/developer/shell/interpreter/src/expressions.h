@@ -135,6 +135,8 @@ class ExpressionVariable : public Expression {
 
   bool Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
 
+  void Assign(ExecutionContext* context, code::Code* code) const override;
+
  private:
   const std::string name_;
 };

@@ -419,6 +419,9 @@ void Service::AddNodes(uint64_t context_id,
       } else if (node.node.is_emit_result()) {
         AddEmitResult(context, node.node_id.file_id, node.node_id.node_id, node.node.emit_result(),
                       node.root_node);
+      } else if (node.node.is_assignment()) {
+        AddAssignment(context, node.node_id.file_id, node.node_id.node_id, node.node.assignment(),
+                      node.root_node);
       } else if (node.node.is_addition()) {
         AddAddition(context, node.node_id.file_id, node.node_id.node_id, node.node.addition(),
                     node.root_node);
@@ -610,6 +613,20 @@ void Service::AddEmitResult(ServerInterpreterContext* context, uint64_t node_fil
                                   NodeId(node.file_id, node.node_id));
   auto result = std::make_unique<EmitResult>(interpreter(), node_file_id, node_node_id,
                                              std::move(expression));
+  interpreter_->AddInstruction(context, std::move(result), root_node);
+}
+
+void Service::AddAssignment(ServerInterpreterContext* context, uint64_t node_file_id,
+                            uint64_t node_node_id, const llcpp::fuchsia::shell::Assignment& node,
+                            bool root_node) {
+  std::unique_ptr<Expression> destination =
+      interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "destination",
+                                  NodeId(node.destination.file_id, node.destination.node_id));
+  std::unique_ptr<Expression> source =
+      interpreter_->GetExpression(context, NodeId(node_file_id, node_node_id), "source",
+                                  NodeId(node.source.file_id, node.source.node_id));
+  auto result = std::make_unique<Assignment>(interpreter(), node_file_id, node_node_id,
+                                             std::move(destination), std::move(source));
   interpreter_->AddInstruction(context, std::move(result), root_node);
 }
 

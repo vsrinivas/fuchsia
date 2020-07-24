@@ -16,6 +16,22 @@
 #include "lib/async-loop/default.h"
 #include "zircon/status.h"
 
+// Adds an object to the builder with the names, values, and types as given in parallel arrays.
+shell::console::AstBuilder::NodePair AddObject(
+    shell::console::AstBuilder& builder, std::vector<std::string>& names,
+    std::vector<shell::console::AstBuilder::NodeId>& values,
+    std::vector<llcpp::fuchsia::shell::ShellType>&& types) {
+  EXPECT_EQ(names.size(), values.size())
+      << "Test incorrect - mismatch in keys and values for constructing object";
+  EXPECT_EQ(names.size(), types.size())
+      << "Test incorrect - mismatch in fields and types for constructing object";
+  builder.OpenObject();
+  for (size_t i = 0; i < names.size(); i++) {
+    builder.AddField(names[i], values[i], std::move(types[i]));
+  }
+  return builder.CloseObject();
+}
+
 llcpp::fuchsia::shell::ExecuteResult InterpreterTestContext::GetResult() const {
   std::string string = error_stream.str();
   if (!string.empty()) {

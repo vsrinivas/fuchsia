@@ -72,6 +72,25 @@ class EmitResult : public Instruction {
   std::unique_ptr<Expression> expression_;
 };
 
+class Assignment : public Instruction {
+ public:
+  Assignment(Interpreter* interpreter, uint64_t file_id, uint64_t node_id,
+             std::unique_ptr<Expression> destination, std::unique_ptr<Expression> source)
+      : Instruction(interpreter, file_id, node_id),
+        destination_(std::move(destination)),
+        source_(std::move(source)) {}
+
+  const Expression* destination() const { return destination_.get(); }
+  const Expression* source() const { return source_.get(); }
+
+  void Dump(std::ostream& os) const override;
+  void Compile(ExecutionContext* context, code::Code* code) override;
+
+ private:
+  std::unique_ptr<Expression> destination_;
+  std::unique_ptr<Expression> source_;
+};
+
 }  // namespace interpreter
 }  // namespace shell
 

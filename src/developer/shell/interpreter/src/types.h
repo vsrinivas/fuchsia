@@ -35,7 +35,7 @@ class TypeBuiltin : public Type {
   TypeBuiltin() = default;
 
   Variable* CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
-                           const std::string& name) const override;
+                           const std::string& name, bool is_mutable) const override;
 };
 
 // Base class for all types which can be loaded/stored without any extra operation.
@@ -47,6 +47,9 @@ class TypeRaw : public TypeBuiltin {
 
   bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
                         const Variable* variable) const override;
+
+  void GenerateAssignVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                              const Variable* variable) const override;
 };
 
 // Base class for all types which are reference counted (which means that the interpreter has to
@@ -107,6 +110,9 @@ class TypeString : public TypeReferenceCounted {
 
   bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
                         const Variable* variable) const override;
+
+  void GenerateAssignVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                              const Variable* variable) const override;
 
   bool GenerateAddition(ExecutionContext* context, code::Code* code,
                         const Addition* addition) const override;
@@ -429,10 +435,13 @@ class TypeObject : public Type {
                               const ObjectDeclaration* literal) const;
 
   Variable* CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
-                           const std::string& name) const override;
+                           const std::string& name, bool is_mutable) const override;
 
   bool GenerateVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
                         const Variable* variable) const override;
+
+  void GenerateAssignVariable(ExecutionContext* context, code::Code* code, const NodeId& id,
+                              const Variable* variable) const override;
 
   void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const override;
 

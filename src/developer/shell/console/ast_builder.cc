@@ -130,6 +130,16 @@ void AstBuilder::AddEmitResult(NodeId expression) {
   AddNode(std::move(node), /*root_node=*/true);
 }
 
+NodeId AstBuilder::AddAssignment(NodeId destination, NodeId source) {
+  auto assignment = ManageNew<llcpp::fuchsia::shell::Assignment>();
+  assignment->destination = std::move(destination);
+  assignment->source = std::move(source);
+
+  auto node = llcpp::fuchsia::shell::Node::WithAssignment(fidl::unowned_ptr(assignment));
+
+  return AddNode(std::move(node), /*root_node=*/true);
+}
+
 NodeId AstBuilder::AddAddition(bool with_exceptions, NodeId left_id, NodeId right_id) {
   auto addition = ManageNew<llcpp::fuchsia::shell::Addition>();
   addition->left = std::move(left_id);

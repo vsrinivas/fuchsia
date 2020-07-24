@@ -90,6 +90,9 @@ class AstBuilder {
   // Adds the emition of an expression.
   void AddEmitResult(NodeId expression);
 
+  // Adds an assignment of two values.
+  NodeId AddAssignment(NodeId destination, NodeId source);
+
   // Adds an addition of two values.
   NodeId AddAddition(bool with_exceptions, NodeId left, NodeId right);
 
