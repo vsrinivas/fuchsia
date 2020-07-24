@@ -60,6 +60,7 @@ if (!is_fuchsia) {
       "src/plugins/health.rs",
       "src/plugins/management.rs",
       "src/plugins/mod.rs",
+      "src/plugins/search.rs",
       "src/rest/mod.rs",
       "src/rest/service.rs",
       "src/rest/visualizer.rs",
