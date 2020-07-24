@@ -7,15 +7,21 @@
 ### generate a report of error conditions
 
 ## usage: fx triage [--config <config-file>]
-##                  [--bugreport <path-to-bugreport>]
-## Processes "fx bugreport" output looking for problems specified in a config
-## file. If no bugreport output is specified (no '--inspect') it runs a new
+##                  [--select <select-string>]
+##                  [--data <path-to-bugreport>]
+## Without 'select':
+## Processes "fx bugreport" output looking for problems specified in config
+## files. If no bugreport output is specified (no '--data') it runs a new
 ## "fx bugreport" and uses its "inspect.json" file.
+## With 'select':
+## Generates selectors from the bugreport, filtered by select-string.
+## --config, --tag, --exclude-tag options are ignored.
 ##
 ##    --config <config-file-or-dir>      Path to config file or dir
 ##    --data <bugreport-or-dir>          Path to bugreport.zip or uncompressed dir
 ##    --tag <tag>                        Adds an action tag to include
 ##    --exclude-tag <tag>                Adds an action tag to exclude
+##    --select <string>                  Generates selectors filtered by <string>
 ##    --test                             (deprecated) Run self-tests (only)
 ##
 ## 0 or more --config paths may be given. Path is relative to CWD, or absolute.
@@ -39,6 +45,11 @@
 ##   Currently, the only supported filetype is inspect.json.
 ##   Future versions will add support for different files.
 ##   If no --data is given,`fx bugreport` will be invoked and analyzed.
+##
+## 0 or more --select strings may be given. --select changes the
+## operation of the program: it generates all selectors for all
+## data in the bugreport and then filters them (via grep) through
+## all the --select strings.
 
 set -e
 trap 'echo Failed: ${BASH_COMMAND}' ERR
@@ -53,67 +64,55 @@ data_paths=( )
 tags=( )
 exclude_tags=( )
 flags=""
+select_filters=( )
 
 # Flag parsing.
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
-    -h|--help)
-      fx-command-help
-      exit 0
-      ;;
-    --config)
-      shift
-      config_paths+=( "$1" )
-      ;;
-    --data)
-      shift
-      data_paths+=( "$1" )
-      ;;
-    --tag)
-      shift
-      tags+=( "$1" )
-      ;;
-    --exclude-tag)
+  -h|--help)
+    fx-command-help
+    exit 0
+    ;;
+  --config)
     shift
-      exclude_tags+=( "$1" )
-      ;;
-    --test)
-      testit="yes"
-      ;;
-    *)
-      echo Bad option "$1"
-      echo
-      fx-command-help
-      exit 1
+    config_paths+=( "$1" )
+    ;;
+  --data)
+    shift
+    data_paths+=( "$1" )
+    ;;
+  --select)
+    shift
+    select_filters+=( "$1" )
+    ;;
+  --tag)
+    shift
+    tags+=( "$1" )
+    ;;
+  --exclude-tag)
+  shift
+    exclude_tags+=( "$1" )
+    ;;
+  --test)
+    testit="yes"
+    ;;
+  *)
+    echo Bad option "$1"
+    echo
+    fx-command-help
+    exit 1
   esac
   shift
 done
 
 triage_exe="${HOST_OUT_DIR}/../host-tools/triage"
+diag_tool_exe="${HOST_OUT_DIR}/../host-tools/diag_tool"
 
 if [[ -n "$testit" ]]; then
   echo "[ERROR] fx triage --test is deprecated!"
   echo "please use 'fx test triage_lib_test' instead"
   exit
 fi
-
-if (( !"${#config_paths[@]}" )); then
-  config_paths=( "${FUCHSIA_DIR}/src/diagnostics/config/triage/" )
-fi
-
-config_files=( )
-for config_path in "${config_paths[@]}"; do
-  if [[ -d "${config_path}" ]] ; then
-    config_files+=( "${config_path}"/*.triage )
-  else
-    config_files+=( "${config_path}" )
-  fi
-done
-
-for config_file in "${config_files[@]}"
-do
-  flags="${flags} --config ${config_file}"
-done
 
 if [ -z "${data_paths}" ]; then
   temp_dir=$(mktemp -d)
@@ -123,37 +122,86 @@ if [ -z "${data_paths}" ]; then
   data_paths+="${temp_dir}"
 fi
 
+unzipped_data_dirs=( )
+
 for data_path in "${data_paths[@]}"
-do
+  do
   if [[ -d "${data_path}" ]] ; then
     # This should be an unzipped bugreport.zip; pass it to the Triage
     # executable.
     # Triage will complain if bugreport.zip files aren't in the directory.
-    flags="${flags} --data ${data_path}"
+    unzipped_data_dirs+=( $data_path )
   else
     # This should be a .zip file. unzip will complain if not. Unzip it and
     # pass its contents to the Triage executable.
     temp_dir=$(mktemp -d)
     trap 'rm -rf "${temp_dir}"' EXIT
     unzip "${data_path}" -d "${temp_dir}" > /dev/null
-    flags="${flags} --data ${temp_dir}"
+    unzipped_data_dirs+=( $temp_dir )
   fi
 done
 
-for tag in "${tags[@]}"
-do
-  flags="${flags} --tag ${tag}"
-done
+if [ -z "${select_filters}" ]; then
 
-for tag in "${exclude_tags[@]}"
-do
-  flags="${flags} --exclude-tag ${tag}"
-done
+  if (( !"${#config_paths[@]}" )); then
+    config_paths=( "${FUCHSIA_DIR}/src/diagnostics/config/triage/" )
+  fi
 
-if [[ ! -f "$triage_exe" ]]; then
-  echo "Building Triage..."
-  fx-command-run build triage
+  config_files=( )
+  for config_path in "${config_paths[@]}"; do
+    if [[ -d "${config_path}" ]] ; then
+      config_files+=( "${config_path}"/*.triage )
+    else
+      config_files+=( "${config_path}" )
+    fi
+  done
+
+  for config_file in "${config_files[@]}"
+  do
+    flags="${flags} --config ${config_file}"
+  done
+
+  for tag in "${tags[@]}"
+  do
+    flags="${flags} --tag ${tag}"
+  done
+
+  for data_path in "${unzipped_data_dirs[@]}"
+  do
+    flags="${flags} --data ${data_path}"
+  done
+
+  for tag in "${exclude_tags[@]}"
+  do
+    flags="${flags} --exclude-tag ${tag}"
+  done
+
+  if [[ ! -f "$triage_exe" ]]; then
+    echo "Building Triage..."
+    fx-command-run build triage
+  fi
+
+  echo "${triage_exe} ${flags}"
+  $triage_exe ${flags}
+
+else
+  temp_dir=$(mktemp -d)
+  trap 'rm -rf "${temp_dir}"' EXIT
+
+  for data_path in "${unzipped_data_dirs[@]}"
+  do
+    $diag_tool_exe -b "$data_path/inspect.json" generate "$temp_dir/diag_out"
+    cat "$temp_dir/diag_out" >> "$temp_dir/diag_all"
+    echo >> "$temp_dir/diag_all" # diag_tool output has no final newline
+  done
+
+  for filter in "${select_filters[@]}"
+  do
+    # Note this repeatedly filters diag_all by writing to a temp file and
+    # moving it back into place.
+    cat "$temp_dir/diag_all" | grep "$filter" > "$temp_dir/diag_filtered"
+    mv "$temp_dir/diag_filtered" "$temp_dir/diag_all"
+  done
+
+  cat "$temp_dir/diag_all" | sort | uniq | sed s/^/INSPECT:/
 fi
-
-echo "${triage_exe} ${flags}"
-$triage_exe ${flags}

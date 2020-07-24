@@ -31,7 +31,7 @@ After building the tool binary, you will be able to execute it from
 
 In order to run this tool, you will first require a json dump of Inspect data.
 
-You can obtain the initial dump through fx bugreport. 
+You can obtain the initial dump through fx bugreport.
 
 While connected to a running Fuchsia device, run the following commands:
 
@@ -40,13 +40,13 @@ fx bugreport -o <path/to/bugreport/dump>
 unzip <path/to/bugreport/dump>/bugreport.zip -d <path/to/bugreport/dump/contents>
 ```
 
-Now, under `<path/to/bugreport/dump/contents>`, you will have a file named 
-`inspect.json` which contains a json serialization of all inspect data 
+Now, under `<path/to/bugreport/dump/contents>`, you will have a file named
+`inspect.json` which contains a json serialization of all inspect data
 on the system.
 
-### Generating Selectors 
+### Generating Selectors
 
-*NOTE: This section assumes a json file at `<path/to/bugreport/dump/contents>/inspect.json` 
+*NOTE: This section assumes a json file at `<path/to/bugreport/dump/contents>/inspect.json`
 exists which includes the json serialized inspect hierarchy for the reader's component.*
 
 The diagnostics tool helps clients define their selector configuration
