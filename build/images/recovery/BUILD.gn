@@ -19,7 +19,6 @@ group("recovery") {
 
 recovery_packages = [
   "//build/info:build-info",
-  "//garnet/bin/network_time_service",
   "//garnet/bin/sysmgr",
   "//garnet/packages/prod:sysmem_connector",
   "//garnet/packages/prod:broadcom",
@@ -36,7 +35,7 @@ recovery_packages = [
   "//src/sys/core",
   "//src/sys/pkg:recovery",
   "//src/sys/stash",
-  "//src/sys/timekeeper",
+  "//src/sys/timekeeper:recovery",
   "//src/connectivity/network/http_client",
 ]
 

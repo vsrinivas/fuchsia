@@ -91,3 +91,12 @@ group("tests") {
   testonly = true
   deps = [ ":timekeeper-tests" ]
 }
+
+# Packages needed for time synchronization in recovery images
+# TODO(56447) - move time sync components and this group to a common directory
+group("recovery") {
+  deps = [
+    ":service",
+    "//garnet/bin/network_time_service",
+  ]
+}
