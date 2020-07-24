@@ -28,12 +28,6 @@ declare_args() {
   # These can be GN `//` source pathnames or absolute system pathnames.
   kernel_cmdline_files = []
 
-  # List of extra manifest entries for files to add to the BOOTFS.
-  # Each entry can be a "TARGET=SOURCE" string, or it can be a scope
-  # with `sources` and `outputs` in the style of a copy() target:
-  # `outputs[0]` is used as `TARGET` (see `gn help source_expansion`).
-  bootfs_extra = []
-
   # (deprecated) List of kernel images to include in the update (OTA) package.
   # If no list is provided, all built kernels are included. The names in the
   # list are strings that must match the filename to be included in the update

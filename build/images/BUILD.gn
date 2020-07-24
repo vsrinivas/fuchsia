@@ -601,7 +601,6 @@ zbi("fuchsia") {
 
   cmdline = kernel_cmdline_args + board_kernel_cmdline_args
   cmdline_inputs = kernel_cmdline_files
-  manifest += bootfs_extra
 
   metadata = {
     images = [
