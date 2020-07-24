@@ -10,6 +10,7 @@
 #include "src/ui/a11y/lib/gesture_manager/recognizers/directional_swipe_recognizers.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/two_finger_n_tap_recognizer.h"
 
 namespace a11y {
 
@@ -265,6 +266,24 @@ bool GestureHandler::BindRightSwipeAction(OnGestureCallback callback, GestureTyp
       },
       number_of_fingers);
   add_recognizer_callback_(gesture_recognizers_[gesture_type].get());
+
+  return true;
+}
+
+bool GestureHandler::BindTwoFingerSingleTapAction(OnGestureCallback callback) {
+  if (gesture_recognizers_.find(kTwoFingerSingleTap) != gesture_recognizers_.end()) {
+    FX_LOGS(INFO) << "Action already exists for GestureType: " << kTwoFingerSingleTap;
+    return false;
+  }
+  gesture_handlers_[kTwoFingerSingleTap].on_complete = std::move(callback);
+
+  gesture_recognizers_[kTwoFingerSingleTap] = std::make_unique<TwoFingerNTapRecognizer>(
+      [this](GestureContext context) {
+        OnGesture(kTwoFingerSingleTap, GestureEvent::kComplete,
+                  {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
+      },
+      1 /* number of taps */);
+  add_recognizer_callback_(gesture_recognizers_[kTwoFingerSingleTap].get());
 
   return true;
 }

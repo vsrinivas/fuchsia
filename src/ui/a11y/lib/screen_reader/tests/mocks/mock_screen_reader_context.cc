@@ -24,6 +24,12 @@ fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessagePromise(
   return fit::make_ok_promise();
 }
 
+fit::promise<> MockScreenReaderContext::MockSpeaker::CancelTts() {
+  received_cancel_ = true;
+  messages_.clear();
+  return fit::make_ok_promise();
+}
+
 MockScreenReaderContext::MockScreenReaderContext() : ScreenReaderContext() {
   auto a11y_focus_manager = std::make_unique<MockA11yFocusManager>();
   mock_a11y_focus_manager_ptr_ = a11y_focus_manager.get();

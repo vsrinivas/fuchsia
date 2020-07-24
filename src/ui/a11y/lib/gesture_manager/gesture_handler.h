@@ -39,6 +39,7 @@ class GestureHandler {
     kThreeFingerDownSwipe,
     kThreeFingerLeftSwipe,
     kThreeFingerRightSwipe,
+    kTwoFingerSingleTap,
   };
 
   // Some gestures need additional information about what was touched and where it was touched on
@@ -74,6 +75,10 @@ class GestureHandler {
   // Binds the action defined in |callback| with the |gesture_type|. Returns true if the |callback|
   // is bound, false otherwise
   bool BindSwipeAction(OnGestureCallback callback, GestureType gesture_type);
+
+  // Binds the action defined in |callback| with the |kTwoFingerSingleTap|. The
+  // action is invoked only after the gesture is detected.
+  bool BindTwoFingerSingleTapAction(OnGestureCallback callback);
 
   // Binds a recognizer that consumes everything.
   void ConsumeAll();

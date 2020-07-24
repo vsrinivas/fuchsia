@@ -51,6 +51,9 @@ class Speaker {
   virtual fit::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
                                              Options options);
 
+  // Returns a promise that cancels pending or in progress tts utterances.
+  virtual fit::promise<> CancelTts();
+
  protected:
   // For mocks.
   Speaker() = default;
@@ -90,9 +93,6 @@ class Speaker {
 
   // The task waits in queue until it reaches the front of the queue.
   fit::promise<> WaitInQueue(std::weak_ptr<SpeechTask> weak_task);
-
-  // Returns a promise that cancels pending or in progress tts utterances.
-  fit::promise<> CancelTts();
 
   // Returns a promise that enqueues an utterance. An error is thrown if the atempt to enqueue the
   // utterance is rejected by the TTS service.

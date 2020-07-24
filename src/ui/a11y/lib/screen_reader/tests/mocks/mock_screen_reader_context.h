@@ -30,8 +30,14 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     fit::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
                                        Options options) override;
 
+    // |Speaker|
+    fit::promise<> CancelTts() override;
+
     // Returns true whether any speak request was done.
     bool ReceivedSpeak() const { return received_speak_; }
+
+    // Returns whether speech was cancelled.
+    bool ReceivedCancel() const { return received_cancel_; }
 
     // Returns the vector that collects all messages sent to SpeakMessagePromise().
     std::vector<std::string>& messages() { return messages_; }
@@ -42,6 +48,7 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     std::vector<std::string> messages_;
     std::vector<uint32_t> node_ids_;
     bool received_speak_ = false;
+    bool received_cancel_ = false;
   };
 
   MockScreenReaderContext();

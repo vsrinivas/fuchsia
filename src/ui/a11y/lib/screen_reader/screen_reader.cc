@@ -4,6 +4,7 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 
+#include <lib/fit/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -145,6 +146,16 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
                   ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
         context_->set_mode(ScreenReaderContext::ScreenReaderMode::kNormal);
       } /*on_complete*/);
+  FX_DCHECK(gesture_bind_status);
+
+  // Add TwoFingerSingleTap recognizer.
+  gesture_bind_status = gesture_handler->BindTwoFingerSingleTapAction(
+      [this](zx_koid_t viewref_koid, fuchsia::math::PointF point) {
+        // Cancel any outstanding speech.
+        auto promise = context_->speaker()->CancelTts();
+        auto* executor = context_->executor();
+        executor->schedule_task(std::move(promise));
+      });
   FX_DCHECK(gesture_bind_status);
 }
 

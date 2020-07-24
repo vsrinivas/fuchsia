@@ -347,5 +347,20 @@ TEST_F(ScreenReaderTest, ThreeFingerLeftSwipeAction) {
   EXPECT_EQ(mock_speaker_ptr_->messages()[0], kListenerUtterance);
 }
 
+TEST_F(ScreenReaderTest, TwoFingerSingleTapAction) {
+  mock_gesture_listener_.SetOnGestureCallbackStatus(true);
+  mock_gesture_listener_.SetUtterance(kListenerUtterance);
+
+  // Perform two finger single tap action.
+  SendPointerEvents(
+      DownEvents(1 /* pointer ID, unused */, {}) + UpEvents(1 /* pointer ID, unused */, {}),
+      2 /* number of fingers */);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_gesture_listener_.is_registered());
+  // Speech should be cancelled.
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedCancel());
+}
+
 }  // namespace
 }  // namespace accessibility_test
