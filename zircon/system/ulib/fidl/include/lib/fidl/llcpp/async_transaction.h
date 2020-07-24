@@ -57,6 +57,8 @@ class AsyncTransaction final : public Transaction {
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 
+  bool IsUnbound() final;
+
  private:
   friend fidl::internal::AsyncBinding;
 

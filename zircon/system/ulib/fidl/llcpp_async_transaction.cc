@@ -98,6 +98,12 @@ std::unique_ptr<Transaction> AsyncTransaction::TakeOwnership() {
   return std::make_unique<AsyncTransaction>(std::move(*this));
 }
 
+bool AsyncTransaction::IsUnbound() {
+  // The channel is unbound if this transaction neither owns the binding nor can get a strong
+  // reference to it.
+  return !owned_binding_ && !unowned_binding_.lock();
+}
+
 }  // namespace internal
 
 }  // namespace fidl

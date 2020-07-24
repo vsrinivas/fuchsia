@@ -43,7 +43,8 @@ CompleterBase::CompleterBase(CompleterBase&& other) noexcept
 
 CompleterBase::~CompleterBase() {
   ScopedLock lock(lock_);
-  ZX_ASSERT_MSG(!needs_to_reply_, "Completer expected a Reply to be sent.");
+  ZX_ASSERT_MSG(!needs_to_reply_ || (transaction_ && transaction_->IsUnbound()),
+                "Completer expected a Reply to be sent.");
   DropTransaction();
 }
 

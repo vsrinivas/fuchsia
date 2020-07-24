@@ -859,4 +859,57 @@ TEST(BindServerTestCase, UnbindInfoDispatcherError) {
             local.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite_past(), nullptr));
 }
 
+TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
+  struct WorkingServer : Simple::Interface {
+    explicit WorkingServer(std::optional<EchoCompleter::Async>* async_completer,
+                           sync_completion_t* ready)
+        : async_completer_(async_completer),
+          ready_(ready) {}
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
+      sync_completion_signal(ready_);
+      *async_completer_ = completer.ToAsync();  // Releases ownership of the binding.
+    }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
+    std::optional<EchoCompleter::Async>* async_completer_;
+    sync_completion_t* ready_;
+  };
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  // Create the channel and bind it with the server and dispatcher.
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+  sync_completion_t ready, unbound;
+  std::optional<Server::EchoCompleter::Async> async_completer;
+  auto server = std::make_unique<WorkingServer>(&async_completer, &ready);
+  fidl::OnUnboundFn<WorkingServer> on_unbound =
+      [&unbound](WorkingServer*, fidl::UnbindInfo info, zx::channel) {
+        EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+        EXPECT_EQ(ZX_OK, info.status);
+        sync_completion_signal(&unbound);
+      };
+  auto binding_ref = fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(),
+                                      std::move(on_unbound));
+  ASSERT_TRUE(binding_ref.is_ok());
+
+  // Start another thread to make the outgoing call.
+  std::thread([local = std::move(local)]() mutable {
+    auto result = Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
+  }).detach();
+
+  // Wait for the server to enter Echo().
+  ASSERT_OK(sync_completion_wait(&ready, ZX_TIME_INFINITE));
+
+  // Unbind the server.
+  binding_ref.value().Unbind();
+
+  // Wait for the OnUnboundFn.
+  ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+
+  // The AsyncCompleter will be destroyed without having Reply()d or Close()d
+  // but should not crash.
+}
+
 }  // namespace

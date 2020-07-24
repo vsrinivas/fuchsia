@@ -101,6 +101,12 @@ class Transaction {
     ZX_ASSERT_MSG(false, "Transaction does not support explicitly resuming dispatch.");
   }
 
+  // Returns true if the transaction references some internal binding, and that binding is no longer
+  // accessible. This is used to determine whether a reply is still required. The default
+  // implementation simply returns false in order to maintain the behavior for the binding
+  // implementations outside of libfidl.
+  virtual bool IsUnbound() { return false; }
+
   // A transaction will only be destroyed after one of three actions happens to it:
   // the Completer containing it is destroyed, the transaction is closed, or ownership is taken from
   // the transaction.
