@@ -27,6 +27,10 @@ import (
 	"syscall/zx/fidl"
 )
 
+// Introduce a dependency on reflect to avoid unused import errors if certain
+// GIDL tests are disabled.
+var _ = reflect.Copy
+
 {{ if .EncodeSuccessCases }}
 func TestAllEncodeSuccessCases(t *testing.T) {
 {{ range .EncodeSuccessCases }}
