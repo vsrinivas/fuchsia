@@ -216,7 +216,7 @@ function run-gsutil {
 
   if [[ "${GSUTIL_BIN}" == "" ]]; then
     fx-error "Cannot find gsutil."
-    exit 2
+    return 1
   fi
 
   # Prevent gsutil prompting for updates by making stdin not a TTY
@@ -233,7 +233,7 @@ function run-cipd {
 
   if [[ "${CIPD_BIN}" == "" ]]; then
     fx-error "Cannot find cipd."
-    exit 2
+    return 1
   fi
   "${CIPD_BIN}" "$@"
 }

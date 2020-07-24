@@ -188,6 +188,23 @@ EOF
   BT_EXPECT_EQ "${RESULT}" "gs://fuchsia/development/LATEST"
 }
 
+TEST_run-gsutil-not-found() {
+  # override the builtin command which is used to
+  # find programs via the PATH environment variable.
+  BT_EXPECT_EQ "$(type -t command)"  "builtin"
+  command() {
+    return 1
+  }
+
+  # Capture the return code and any output.
+  rc=0
+  RESULT="$(run-gsutil ls gs://fuchsia/development 2>&1)"
+  rc=$?
+
+  BT_EXPECT_EQ  $rc 1
+  BT_EXPECT_EQ "${RESULT}" "ERROR: Cannot find gsutil."
+}
+
 TEST_run-cipd() {
   BT_ASSERT_FUNCTION_EXISTS run-cipd
   cat > "${BT_TEMP_DIR}/${MOCKED_CIPD}.mock_side_effects" <<EOF
@@ -195,6 +212,23 @@ TEST_run-cipd() {
 EOF
   RESULT="$(run-cipd ls)"
   BT_EXPECT_EQ "${RESULT}" "fuchsia/"
+}
+
+TEST_run-cipd-not-found() {
+  # override the builtin command which is used to
+  # find programs via the PATH environment variable.
+  BT_EXPECT_EQ "$(type -t command)"  "builtin"
+  command() {
+    return 1
+  }
+
+  # Capture the return code and any output.  
+  rc=0
+  RESULT="$(run-cipd ls  2>&1)"
+  rc=$?
+  
+  BT_EXPECT_EQ  $rc 1
+  BT_EXPECT_EQ "${RESULT}" "ERROR: Cannot find cipd."
 }
 
 TEST_get-available-images() {
