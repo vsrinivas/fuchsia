@@ -611,7 +611,6 @@ struct Thread {
   static Thread* CreateEtc(Thread* t, const char* name, thread_start_routine entry, void* arg,
                            int priority, thread_trampoline_routine alt_trampoline);
 
-  void SetCurrent();
   void SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread);
 
   // Internal initialization routines. Eventually, these should be private.
