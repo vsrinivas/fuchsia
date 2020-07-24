@@ -628,6 +628,7 @@ async fn test_omaha_client_policy_config_inspect() {
                 "periodic_interval": 60 * 60u64,
                 "startup_delay": 60u64,
                 "retry_delay": 5 * 60u64,
+                "allow_reboot_when_idle": true,
             }
         }
     );

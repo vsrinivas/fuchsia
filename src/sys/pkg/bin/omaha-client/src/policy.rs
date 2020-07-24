@@ -8,8 +8,7 @@ use fidl_fuchsia_ui_activity::{
     ListenerMarker, ListenerRequest, ProviderMarker, ProviderProxy, State,
 };
 use fuchsia_component::client::connect_to_service;
-use fuchsia_zircon as zx;
-use futures::{future::BoxFuture, prelude::*};
+use futures::{future::BoxFuture, future::FutureExt, prelude::*};
 use log::{error, info, warn};
 use omaha_client::{
     common::{App, CheckOptions, CheckTiming, ProtocolState, UpdateCheckSchedule},
@@ -32,9 +31,8 @@ const PERIODIC_INTERVAL: Duration = Duration::from_secs(1 * 60 * 60);
 const STARTUP_DELAY: Duration = Duration::from_secs(60);
 /// Wait 5 minutes before retrying after failed update checks.
 const RETRY_DELAY: Duration = Duration::from_secs(5 * 60);
-/// If the UI activity is active but is > 48 hours old, we should still allow reboot.
-const UI_ACTIVITY_VALID_DURATION: zx::Duration = zx::Duration::from_seconds(48 * 60);
-
+/// Allow reboot if it's been more than 48 hours since waiting to reboot.
+const VALID_REBOOT_DURATION: Duration = Duration::from_secs(48 * 60 * 60);
 /// The policy implementation for Fuchsia.
 struct FuchsiaPolicy;
 
@@ -174,9 +172,11 @@ impl Policy for FuchsiaPolicy {
     /// Is reboot allowed right now.
     fn reboot_allowed(policy_data: &Self::RebootPolicyData, check_options: &CheckOptions) -> bool {
         check_options.source == InstallSource::OnDemand
-            || policy_data.ui_activity.state != State::Active
-            || policy_data.ui_activity.transition_time + UI_ACTIVITY_VALID_DURATION
-                < policy_data.current_monotonic_zx_time
+            || (policy_data.allow_reboot_when_idle
+                && policy_data.ui_activity.state != State::Active)
+            || (policy_data
+                .current_time
+                .is_after_or_eq_any(policy_data.last_reboot_time + VALID_REBOOT_DURATION))
     }
 }
 
@@ -188,7 +188,9 @@ pub struct FuchsiaPolicyEngine<T> {
     // Whether the device is in active use.
     ui_activity: Rc<Cell<UiActivityState>>,
     config: PolicyConfig,
+    waiting_for_reboot_time: Option<ComplexTime>,
 }
+
 pub struct FuchsiaPolicyEngineBuilder;
 pub struct FuchsiaPolicyEngineBuilderWithTime<T> {
     time_source: T,
@@ -212,6 +214,7 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
             time_source: self.time_source,
             ui_activity: Rc::new(Cell::new(UiActivityState::new())),
             config: self.config,
+            waiting_for_reboot_time: None,
         }
     }
 }
@@ -270,8 +273,17 @@ where
     }
 
     fn reboot_allowed(&mut self, check_options: &CheckOptions) -> BoxFuture<'_, bool> {
+        if self.waiting_for_reboot_time.is_none() {
+            self.waiting_for_reboot_time = Some(self.time_source.now());
+        }
+
         let decision = FuchsiaPolicy::reboot_allowed(
-            &FuchsiaRebootPolicyData::new(self.ui_activity.get()),
+            &FuchsiaRebootPolicyData::new(
+                self.ui_activity.get(),
+                self.time_source.now(),
+                self.waiting_for_reboot_time.unwrap(),
+                self.config.allow_reboot_when_idle,
+            ),
             check_options,
         );
         future::ready(decision).boxed()
@@ -285,6 +297,11 @@ where
     /// Returns a future that watches the UI activity state and updates the value within
     /// FuchsiaPolicyEngine.
     pub fn start_watching_ui_activity(&self) -> impl Future<Output = ()> {
+        if !self.config.allow_reboot_when_idle {
+            info!("not watching ui.activity since the product will handle reboots");
+            return futures::future::ready(()).left_future();
+        }
+
         let ui_activity = Rc::clone(&self.ui_activity);
         async move {
             let mut backoff = Duration::from_secs(1);
@@ -298,6 +315,7 @@ where
                 }
             }
         }
+        .right_future()
     }
 
     pub fn get_config(&self) -> &PolicyConfig {
@@ -311,7 +329,6 @@ where
             .build()
     }
 }
-
 /// Watches the UI activity state and updates the value in `ui_activity`.
 async fn watch_ui_activity(ui_activity: &Rc<Cell<UiActivityState>>) -> Result<(), Error> {
     let provider = connect_to_service::<ProviderMarker>()?;
@@ -326,9 +343,8 @@ async fn watch_ui_activity_impl(
     let (listener, mut stream) = fidl::endpoints::create_request_stream::<ListenerMarker>()?;
     provider.watch_state(listener).context("watch_state")?;
     while let Some(event) = stream.try_next().await? {
-        let ListenerRequest::OnStateChanged { state, transition_time, responder } = event;
-        ui_activity
-            .set(UiActivityState { state, transition_time: zx::Time::from_nanos(transition_time) });
+        let ListenerRequest::OnStateChanged { state, transition_time: _, responder } = event;
+        ui_activity.set(UiActivityState { state });
         responder.send()?;
     }
     Ok(())
@@ -337,13 +353,11 @@ async fn watch_ui_activity_impl(
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct UiActivityState {
     state: State,
-    // Monotonic time of last state transition.
-    transition_time: zx::Time,
 }
 
 impl UiActivityState {
     fn new() -> Self {
-        Self { state: State::Unknown, transition_time: zx::Time::get(zx::ClockId::Monotonic) }
+        Self { state: State::Unknown }
     }
 }
 
@@ -408,17 +422,19 @@ impl UpdatePolicyDataBuilderWithTime {
 #[derive(Clone, Debug)]
 struct FuchsiaRebootPolicyData {
     ui_activity: UiActivityState,
-    current_monotonic_zx_time: zx::Time,
+    current_time: ComplexTime,
+    last_reboot_time: ComplexTime,
+    allow_reboot_when_idle: bool,
 }
 
 impl FuchsiaRebootPolicyData {
-    fn new(ui_activity: UiActivityState) -> Self {
-        Self {
-            ui_activity,
-            // We use zx::Time::get instead of time_source because there's no easy way to
-            // convert Instant to zx::Time.
-            current_monotonic_zx_time: zx::Time::get(zx::ClockId::Monotonic),
-        }
+    fn new(
+        ui_activity: UiActivityState,
+        current_time: ComplexTime,
+        last_reboot_time: ComplexTime,
+        allow_reboot_when_idle: bool,
+    ) -> Self {
+        Self { ui_activity, current_time, last_reboot_time, allow_reboot_when_idle }
     }
 }
 
@@ -427,6 +443,7 @@ pub struct PolicyConfig {
     pub periodic_interval: Duration,
     pub startup_delay: Duration,
     pub retry_delay: Duration,
+    pub allow_reboot_when_idle: bool,
 }
 
 impl From<Option<PolicyConfigJson>> for PolicyConfig {
@@ -447,6 +464,10 @@ impl From<Option<PolicyConfigJson>> for PolicyConfig {
                 .and_then(|c| c.retry_delay_seconds)
                 .map(Duration::from_secs)
                 .unwrap_or(RETRY_DELAY),
+            allow_reboot_when_idle: config
+                .as_ref()
+                .and_then(|c| c.allow_reboot_when_idle)
+                .unwrap_or(true),
         }
     }
 }
@@ -462,6 +483,7 @@ struct PolicyConfigJson {
     periodic_interval_minutes: Option<u64>,
     startup_delay_seconds: Option<u64>,
     retry_delay_seconds: Option<u64>,
+    allow_reboot_when_idle: Option<bool>,
 }
 
 impl PolicyConfigJson {
@@ -960,23 +982,17 @@ mod tests {
             stream.next().await.unwrap().unwrap();
         let listener = listener.into_proxy().unwrap();
         listener.on_state_changed(State::Active, 123).await.unwrap();
-        assert_eq!(
-            ui_activity.get(),
-            UiActivityState { state: State::Active, transition_time: zx::Time::from_nanos(123) }
-        );
+        assert_eq!(ui_activity.get(), UiActivityState { state: State::Active });
         listener.on_state_changed(State::Idle, 456).await.unwrap();
-        assert_eq!(
-            ui_activity.get(),
-            UiActivityState { state: State::Idle, transition_time: zx::Time::from_nanos(456) }
-        );
+        assert_eq!(ui_activity.get(), UiActivityState { state: State::Idle });
     }
 
     #[test]
     fn test_reboot_allowed_interactive() {
-        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
-            state: State::Active,
-            transition_time: zx::Time::get(zx::ClockId::Monotonic),
-        });
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        let policy_data =
+            FuchsiaRebootPolicyData::new(UiActivityState { state: State::Active }, now, now, true);
         assert_eq!(
             FuchsiaPolicy::reboot_allowed(
                 &policy_data,
@@ -988,34 +1004,53 @@ mod tests {
 
     #[test]
     fn test_reboot_allowed_unknown() {
-        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState::new());
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState::new(), now, now, true);
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
     }
 
     #[test]
     fn test_reboot_allowed_idle() {
-        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
-            state: State::Idle,
-            transition_time: zx::Time::get(zx::ClockId::Monotonic),
-        });
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        let policy_data =
+            FuchsiaRebootPolicyData::new(UiActivityState { state: State::Idle }, now, now, true);
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
     }
 
     #[test]
     fn test_reboot_allowed_state_too_old() {
-        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
-            state: State::Active,
-            transition_time: zx::Time::get(zx::ClockId::Monotonic) - zx::Duration::from_hours(49),
-        });
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        let policy_data = FuchsiaRebootPolicyData::new(
+            UiActivityState { state: State::Active },
+            now,
+            now - VALID_REBOOT_DURATION,
+            true,
+        );
+        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+    }
+
+    #[test]
+    fn test_reboot_allowed_state_too_old_allow_rebot_false() {
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        let policy_data = FuchsiaRebootPolicyData::new(
+            UiActivityState { state: State::Active },
+            now,
+            now - VALID_REBOOT_DURATION,
+            false,
+        );
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
     }
 
     #[test]
     fn test_reboot_not_allowed_when_active() {
-        let policy_data = FuchsiaRebootPolicyData::new(UiActivityState {
-            state: State::Active,
-            transition_time: zx::Time::get(zx::ClockId::Monotonic),
-        });
+        let mock_time = MockTimeSource::new_from_now();
+        let now = mock_time.now();
+        let policy_data =
+            FuchsiaRebootPolicyData::new(UiActivityState { state: State::Active }, now, now, true);
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), false);
     }
 
@@ -1031,6 +1066,7 @@ mod tests {
                 periodic_interval: Duration::from_secs(42 * 60),
                 startup_delay: Duration::from_secs(43),
                 retry_delay: Duration::from_secs(301),
+                allow_reboot_when_idle: true,
             }
         );
     }
@@ -1041,6 +1077,7 @@ mod tests {
             periodic_interval: PERIODIC_INTERVAL,
             startup_delay: STARTUP_DELAY,
             retry_delay: RETRY_DELAY,
+            allow_reboot_when_idle: true,
         };
         assert_eq!(PolicyConfig::default(), default_policy_config);
         assert_eq!(PolicyConfig::from(None), default_policy_config);
@@ -1058,6 +1095,7 @@ mod tests {
                 periodic_interval: PERIODIC_INTERVAL,
                 startup_delay: Duration::from_secs(123),
                 retry_delay: RETRY_DELAY,
+                allow_reboot_when_idle: true,
             }
         );
     }

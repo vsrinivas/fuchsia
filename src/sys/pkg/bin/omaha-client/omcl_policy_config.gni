@@ -19,6 +19,9 @@ import("//build/config.gni")
 #     [int] The number of seconds to wait after a failed update check
 #     before retrying.
 #
+#   allow_reboot_when_idle (optional)
+#     [bool] Whether or not to reboot when idle. Defaults to "true".
+#
 #   for_pkg (optional)
 #     [string] The package to make a config_data blob for. Defaults to
 #     "omaha-client"
@@ -35,10 +38,12 @@ template("omcl_policy_config") {
                              "periodic_interval_minutes",
                              "startup_delay_seconds",
                              "retry_delay_seconds",
+                             "allow_reboot_when_idle",
                            ])
-    assert(defined(periodic_interval_minutes) ||
-               defined(startup_delay_seconds) || defined(retry_delay_seconds),
-           "at least one config parameter should be defined")
+    assert(
+        defined(periodic_interval_minutes) || defined(startup_delay_seconds) ||
+            defined(retry_delay_seconds || allow_reboot_when_idle),
+        "at least one config parameter should be defined")
   }
 
   if (!defined(for_pkg)) {
