@@ -367,7 +367,7 @@ mod tests {
         assert_eq!(attrs.mode, 0);
         assert_eq!(attrs.id, INO_UNKNOWN);
         assert_eq!(attrs.content_size, TEST_FILE_CONTENT.len() as u64);
-        assert_eq!(attrs.storage_size, TEST_FILE_CONTENT.len() as u64);
+        assert!(attrs.storage_size > TEST_FILE_CONTENT.len() as u64);
         assert_eq!(attrs.link_count, 1);
     }
 }

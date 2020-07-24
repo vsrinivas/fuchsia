@@ -14,6 +14,7 @@ group("tests") {
     "conformance:tests",
     "ext4:tests",
     "factory:tests",
+    "fatfs:tests",
     "fs-management-tests:tests",
     "fs_test:tests",
     "lib:tests",
