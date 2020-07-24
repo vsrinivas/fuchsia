@@ -266,7 +266,9 @@ class {{ .Name }} final {
       {{ .Name }}* operator=(const {{ .Name }}&) = delete;
       {{- if and .HasResponse .ResponseIsResource }}
       ~{{ .Name }}() {
-        fidl_close_handles({{ .Name }}Response::Type, {{- template "ResponseReceivedByteAccess" . }}, nullptr);
+        if (ok()) {
+          fidl_close_handles({{ .Name }}Response::Type, {{- template "ResponseReceivedByteAccess" . }}, nullptr);
+        }
       }
       {{- else }}
       ~{{ .Name }}() = default;

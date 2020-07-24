@@ -212,7 +212,9 @@ class Parent final {
       GetChild* operator=(GetChild&&) = delete;
       GetChild* operator=(const GetChild&) = delete;
       ~GetChild() {
-        fidl_close_handles(GetChildResponse::Type, bytes_, nullptr);
+        if (ok()) {
+          fidl_close_handles(GetChildResponse::Type, bytes_, nullptr);
+        }
       }
 
       GetChildResponse* Unwrap() {
@@ -248,7 +250,9 @@ class Parent final {
       GetChildRequest* operator=(GetChildRequest&&) = delete;
       GetChildRequest* operator=(const GetChildRequest&) = delete;
       ~GetChildRequest() {
-        fidl_close_handles(GetChildRequestResponse::Type, bytes_, nullptr);
+        if (ok()) {
+          fidl_close_handles(GetChildRequestResponse::Type, bytes_, nullptr);
+        }
       }
 
       GetChildRequestResponse* Unwrap() {
