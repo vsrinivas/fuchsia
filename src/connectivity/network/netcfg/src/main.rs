@@ -805,71 +805,10 @@ impl<'a> NetCfg<'a> {
         match event {
             fvfs_watcher::WatchEvent::ADD_FILE | fvfs_watcher::WatchEvent::EXISTING => {
                 let filepath = path::Path::new(dev_dir_path).join(filename);
-                let (topological_path, device_instance) =
-                    get_topo_path_and_device::<D::ServiceMarker>(&filepath).await.with_context(
-                        || format!("get_topo_path_and_device({})", filepath.display()),
-                    )?;
-
-                info!(
-                    "found new {} {} with topological path {}",
-                    D::NAME,
-                    filepath.display(),
-                    topological_path
-                );
-
-                let (info, mac) = D::device_info_and_mac(&device_instance)
-                    .await
-                    .context("get device info and MAC")?;
-                if !self.allow_virtual_devices && !info.is_physical() {
-                    warn!(
-                        "{} at {} is not a physical device, skipping",
-                        D::NAME,
-                        filepath.display()
-                    );
-                    return Ok(());
-                }
-
-                let wlan = info.is_wlan();
-                let (metric, features) = crate::get_metric_and_features(wlan);
-                let name = self
-                    .persisted_interface_config
-                    .get_stable_name(
-                        &topological_path, /* TODO(tamird): we can probably do
-                                            * better with std::borrow::Cow. */
-                        mac,
-                        wlan,
-                    )
-                    .context("get stable name")?;
-
-                let eth_info = D::eth_device_info(info, mac, features);
-                let mut config = matchers::config_for_device(
-                    &eth_info,
-                    name.to_string(),
-                    &topological_path,
-                    metric,
-                    &self.default_config_rules,
-                    &filepath,
-                );
-
-                let interface_id = D::add_to_stack(
-                    self,
-                    topological_path.clone(),
-                    &mut config.fidl,
-                    device_instance,
-                )
-                .await
-                .with_context(|| format!("add {} {} to stack", D::NAME, filepath.display()))?;
-
                 let () = self
-                    .configure_eth_interface(interface_id, &topological_path, &eth_info, &config)
+                    .add_new_device::<D>(&filepath)
                     .await
-                    .with_context(|| {
-                        format!(
-                            "configure ethernet interface for {} {}",
-                            D::NAME,
-                            filepath.display()
-                        )
-                    })?;
+                    .with_context(|| format!("add new {} at {}", D::NAME, filepath.display()))?;
             }
             fvfs_watcher::WatchEvent::IDLE | fvfs_watcher::WatchEvent::REMOVE_FILE => {}
             event => {
@@ -883,6 +822,62 @@ impl<'a> NetCfg<'a> {
         }
 
         Ok(())
+    }
+
+    /// Add a device at `filepath` to the netstack.
+    async fn add_new_device<D: devices::Device>(
+        &mut self,
+        filepath: &path::PathBuf,
+    ) -> Result<(), anyhow::Error> {
+        let (topological_path, device_instance) =
+            get_topo_path_and_device::<D::ServiceMarker>(filepath)
+                .await
+                .context("get topological path and device")?;
+
+        info!(
+            "found new {} {} with topological path {}",
+            D::NAME,
+            filepath.display(),
+            topological_path
+        );
+
+        let (info, mac) =
+            D::device_info_and_mac(&device_instance).await.context("get device info and MAC")?;
+        if !self.allow_virtual_devices && !info.is_physical() {
+            warn!("{} at {} is not a physical device, skipping", D::NAME, filepath.display());
+            return Ok(());
+        }
+
+        let wlan = info.is_wlan();
+        let (metric, features) = crate::get_metric_and_features(wlan);
+        let eth_info = D::eth_device_info(info, mac, features);
+        let name = self
+            .persisted_interface_config
+            .get_stable_name(
+                &topological_path, /* TODO(tamird): we can probably do
+                                    * better with std::borrow::Cow. */
+                mac,
+                wlan,
+            )
+            .context("get stable name")?;
+
+        let mut config = matchers::config_for_device(
+            &eth_info,
+            name.to_string(),
+            &topological_path,
+            metric,
+            &self.default_config_rules,
+            filepath,
+        );
+
+        let interface_id =
+            D::add_to_stack(self, topological_path.clone(), &mut config.fidl, device_instance)
+                .await
+                .context("add device to stack")?;
+
+        self.configure_eth_interface(interface_id, &topological_path, &eth_info, &config)
+            .await
+            .context("configure ethernet interface")
     }
 
     /// Start the DHCP server.
