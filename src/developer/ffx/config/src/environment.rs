@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error},
+    anyhow::{Context, Result},
     ffx_config_plugin_args::ConfigLevel,
     serde::{Deserialize, Serialize},
     std::{
@@ -22,68 +22,54 @@ pub struct Environment {
 }
 
 impl Environment {
-    fn load_from_reader<R: Read>(reader: R) -> Result<Self, Error> {
-        match serde_json::from_reader::<R, Environment>(reader) {
-            Ok(value) => Ok(value),
-            Err(e) => Err(anyhow!("Could not initialize configuration environment {}", e)),
-        }
+    fn load_from_reader<R: Read>(reader: R) -> Result<Self> {
+        serde_json::from_reader::<R, Environment>(reader).context("reading environment from disk")
     }
 
-    fn save_to_writer<W: Write>(&self, writer: W) -> Result<(), Error> {
-        match serde_json::to_writer_pretty(writer, &self) {
-            Err(e) => Err(anyhow!("Could not write config environment file: {}", e)),
-            Ok(_) => Ok(()),
-        }
+    fn save_to_writer<W: Write>(&self, writer: W) -> Result<()> {
+        serde_json::to_writer_pretty(writer, &self).context("writing environment to disk")
     }
 
     pub(crate) fn try_load(file: Option<&String>) -> Self {
-        match file {
-            Some(f) => {
+        file.map_or_else(
+            || Self { user: None, build: None, global: None },
+            |f| {
                 let reader = Environment::reader(f);
                 if reader.is_err() {
                     Self { user: None, build: None, global: None }
                 } else {
-                    match Environment::load_from_reader(reader.expect("environment file reader")) {
-                        Ok(env) => env,
-                        Err(e) => {
-                            log::error!("Error loading environment: {}", e);
-                            Self { user: None, build: None, global: None }
-                        }
-                    }
+                    Environment::load_from_reader(reader.expect("environment file reader"))
+                        .context("reading environment")
+                        .unwrap_or_else(|_| Self { user: None, build: None, global: None })
                 }
-            }
-            None => Self { user: None, build: None, global: None },
-        }
+            },
+        )
     }
 
-    pub fn load(file: &str) -> Result<Self, Error> {
+    pub fn load(file: &str) -> Result<Self> {
         Environment::load_from_reader(Environment::reader(file)?)
     }
 
-    fn reader(path: &str) -> Result<BufReader<File>, Error> {
-        match File::open(path) {
-            Ok(f) => Ok(BufReader::new(f)),
-            Err(e) => Err(anyhow!("Could not open file {}", e)),
-        }
+    fn reader(path: &str) -> Result<BufReader<File>> {
+        File::open(path).context("opening file for read").map(BufReader::new)
     }
 
-    fn writer(path: &str) -> Result<BufWriter<File>, Error> {
-        let file = OpenOptions::new().write(true).truncate(true).create(true).open(path);
-        match file {
-            Ok(f) => Ok(BufWriter::new(f)),
-            Err(e) => Err(anyhow!("Could not open file {}", e)),
-        }
+    fn writer(path: &str) -> Result<BufWriter<File>> {
+        OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(path)
+            .context("opening file for write")
+            .map(BufWriter::new)
     }
 
-    pub fn save(&self, file: &str) -> Result<(), Error> {
+    pub fn save(&self, file: &str) -> Result<()> {
         self.save_to_writer(Environment::writer(file)?)
     }
 
     fn display_user(&self) -> String {
-        match self.user.as_ref() {
-            Some(u) => format!(" User: {}\n", u),
-            None => format!(" User: none\n"),
-        }
+        self.user.as_ref().map_or_else(|| format!(" User: none\n"), |u| format!(" User: {}\n", u))
     }
 
     fn display_build(&self) -> String {
@@ -106,28 +92,27 @@ impl Environment {
     }
 
     fn display_global(&self) -> String {
-        match self.global.as_ref() {
-            Some(g) => format!(" Global: {}\n", g),
-            None => format!(" Global: none\n"),
-        }
+        self.global
+            .as_ref()
+            .map_or_else(|| format!(" Global: none\n"), |g| format!(" Global: {}\n", g))
     }
 
     pub fn display(&self, level: &Option<ConfigLevel>) -> String {
-        match level {
-            Some(l) => match l {
-                ConfigLevel::User => self.display_user(),
-                ConfigLevel::Build => self.display_build(),
-                ConfigLevel::Global => self.display_global(),
-                ConfigLevel::Defaults => "".to_string(),
-            },
-            None => {
+        level.map_or_else(
+            || {
                 let mut res = format!("\nEnvironment:\n");
                 res.push_str(&self.display_user());
                 res.push_str(&self.display_build());
                 res.push_str(&self.display_global());
                 res
-            }
-        }
+            },
+            |l| match l {
+                ConfigLevel::User => self.display_user(),
+                ConfigLevel::Build => self.display_build(),
+                ConfigLevel::Global => self.display_global(),
+                _ => format!(" This level is not saved in the environment file."),
+            },
+        )
     }
 }
 
@@ -154,7 +139,7 @@ mod test {
         }"#;
 
     #[test]
-    fn test_loading_and_saving_environment() -> Result<(), Error> {
+    fn test_loading_and_saving_environment() -> Result<()> {
         let mut env_file = String::from(ENVIRONMENT);
         let environment = Environment::load_from_reader(BufReader::new(env_file.as_bytes()))?;
         let mut env_file_out = String::new();

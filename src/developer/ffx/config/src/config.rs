@@ -9,7 +9,7 @@ use {
     crate::file_backed_config::FileBacked,
     crate::heuristic_config::{Heuristic, HeuristicFn},
     crate::runtime_config::Runtime,
-    anyhow::Error,
+    anyhow::{anyhow, Result},
     ffx_config_plugin_args::ConfigLevel,
     ffx_lib_args::Ffx,
     serde_json::Value,
@@ -82,7 +82,7 @@ impl<'a> Config<'a> {
         environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
         heuristics: &'a HashMap<&'static str, HeuristicFn>,
         runtime: Ffx,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         Ok(Self {
             data: Some(Config::load_persistent_config(env, build_dir)?),
             environment_variables: EnvironmentVariable::new(environment_variables),
@@ -96,7 +96,7 @@ impl<'a> Config<'a> {
         environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
         heuristics: &'a HashMap<&'static str, HeuristicFn>,
         runtime: Ffx,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         Ok(Self {
             data: None,
             environment_variables: EnvironmentVariable::new(environment_variables),
@@ -109,16 +109,13 @@ impl<'a> Config<'a> {
         ReadConfigIterator { curr: None, config: self }
     }
 
-    fn load_persistent_config(
-        env: &Environment,
-        build_dir: &Option<String>,
-    ) -> Result<FileBacked, Error> {
-        match build_dir {
-            Some(b) => {
+    fn load_persistent_config(env: &Environment, build_dir: &Option<String>) -> Result<FileBacked> {
+        build_dir.as_ref().map_or_else(
+            || FileBacked::load(&env.global, &None, &env.user),
+            |b| {
                 FileBacked::load(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user)
-            }
-            None => FileBacked::load(&env.global, &None, &env.user),
-        }
+            },
+        )
     }
 }
 
@@ -145,7 +142,7 @@ impl<'a> PersistentConfig for Config<'a> {
         global: &Option<String>,
         build: &Option<&String>,
         user: &Option<String>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         match &self.data {
             Some(c) => c.save(global, build, user),
             None => Ok(()),
@@ -160,20 +157,18 @@ impl<'a> ReadConfig for Config<'a> {
 }
 
 impl<'a> WriteConfig for Config<'a> {
-    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
-        if self.data.is_some() {
-            self.data.as_mut().unwrap().set(level, key, value)
-        } else {
-            Ok(())
-        }
+    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
+        self.data
+            .as_mut()
+            .ok_or(anyhow!("configuration not initialized"))
+            .and_then(|d| d.set(level, key, value))
     }
 
-    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
-        if self.data.is_some() {
-            self.data.as_mut().unwrap().remove(level, key)
-        } else {
-            Ok(())
-        }
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
+        self.data
+            .as_mut()
+            .ok_or(anyhow!("configuration not initialized"))
+            .and_then(|d| d.remove(level, key))
     }
 }
 
@@ -195,7 +190,7 @@ mod test {
     }
 
     #[test]
-    fn test_config_heuristics() -> Result<(), Error> {
+    fn test_config_heuristics() -> Result<()> {
         let (heuristic_key, heuristic_key_2) = ("test", "test_2");
         let mut heuristics = HashMap::<&str, HeuristicFn>::new();
         heuristics.insert(heuristic_key, test_heuristic);
@@ -217,7 +212,7 @@ mod test {
     }
 
     #[test]
-    fn test_config_environment_variables() -> Result<(), Error> {
+    fn test_config_environment_variables() -> Result<()> {
         let (env_key, env_key_2) = ("test", "test_2");
         let (env_var_1, env_var_1_value) = ("FFX_TEST_1", "test 1");
         let (env_var_2, env_var_2_value) = ("FFX_TEST_2", "test 2");
@@ -255,7 +250,7 @@ mod test {
     }
 
     #[test]
-    fn test_config_runtime() -> Result<(), Error> {
+    fn test_config_runtime() -> Result<()> {
         let (key_1, value_1) = ("test 1", "test 2");
         let (key_2, value_2) = ("test 3", "test 4");
 
@@ -276,7 +271,7 @@ mod test {
     }
 
     #[test]
-    fn test_config_all() -> Result<(), Error> {
+    fn test_config_all() -> Result<()> {
         let (heuristic_key, heuristic_key_2) = ("test", "test_2");
         let mut heuristics = HashMap::<&str, HeuristicFn>::new();
         heuristics.insert(heuristic_key, test_heuristic);
@@ -324,7 +319,7 @@ mod test {
     }
 
     #[test]
-    fn test_config_display() -> Result<(), Error> {
+    fn test_config_display() -> Result<()> {
         let (heuristic_key, heuristic_key_2) = ("h_test", "h_test_2");
         let mut heuristics = HashMap::<&str, HeuristicFn>::new();
         heuristics.insert(heuristic_key, test_heuristic);

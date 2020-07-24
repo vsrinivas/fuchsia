@@ -5,7 +5,7 @@
 use {
     crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
     crate::priority_config::Priority,
-    anyhow::{anyhow, Error},
+    anyhow::{bail, Result},
     ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
     std::{
@@ -19,7 +19,7 @@ pub(crate) struct Persistent {
 }
 
 impl Persistent {
-    fn open<R: Read>(file: Option<R>) -> Result<Option<Value>, Error> {
+    fn open<R: Read>(file: Option<R>) -> Result<Option<Value>> {
         if file.is_none() {
             return Ok(None);
         }
@@ -32,7 +32,7 @@ impl Persistent {
         Ok(Some(config.unwrap()))
     }
 
-    fn save_config<W: Write>(file: Option<W>, value: &Option<Value>) -> Result<(), Error> {
+    fn save_config<W: Write>(file: Option<W>, value: &Option<Value>) -> Result<()> {
         if value.is_none() {
             // No reason to throw an error.
             return Ok(());
@@ -43,7 +43,7 @@ impl Persistent {
             return Ok(());
         }
         match serde_json::to_writer_pretty(file.unwrap(), value.as_ref().unwrap()) {
-            Err(e) => Err(anyhow!("Could not write config file: {}", e)),
+            Err(e) => bail!("could not write config file: {}", e),
             Ok(_) => Ok(()),
         }
     }
@@ -52,7 +52,7 @@ impl Persistent {
         global: Option<R>,
         build: Option<R>,
         user: Option<R>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         Ok(Self {
             data: Priority::new(
                 Persistent::open(user)?,
@@ -67,7 +67,7 @@ impl Persistent {
         global: Option<W>,
         build: Option<W>,
         user: Option<W>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         Persistent::save_config(user, &self.data.user)?;
         Persistent::save_config(build, &self.data.build)?;
         Persistent::save_config(global, &self.data.global)?;
@@ -90,16 +90,16 @@ impl fmt::Display for Persistent {
 impl ReadDisplayConfig for Persistent {}
 
 impl WriteConfig for Persistent {
-    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
+    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
         match level {
-            ConfigLevel::Defaults => Err(anyhow!("Cannot override defaults")),
+            ConfigLevel::Defaults => bail!("cannot override defaults"),
             _ => self.data.set(&level, key, value),
         }
     }
 
-    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
         match level {
-            ConfigLevel::Defaults => Err(anyhow!("Cannot override defaults")),
+            ConfigLevel::Defaults => bail!("cannot override defaults"),
             _ => self.data.remove(&level, key),
         }
     }
@@ -129,7 +129,7 @@ mod test {
         }"#;
 
     #[test]
-    fn test_persistent_build() -> Result<(), Error> {
+    fn test_persistent_build() -> Result<()> {
         let mut user_file = String::from(USER);
         let mut build_file = String::from(BUILD);
         let mut global_file = String::from(GLOBAL);

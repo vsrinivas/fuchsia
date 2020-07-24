@@ -5,7 +5,7 @@
 use {
     crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
     crate::persistent_config::Persistent,
-    anyhow::{anyhow, Error},
+    anyhow::{Context, Result},
     ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
     std::{
@@ -20,48 +20,46 @@ pub struct FileBacked {
 }
 
 impl FileBacked {
-    fn reader_from_ref(path: &Option<&String>) -> Result<Option<BufReader<File>>, Error> {
-        match path {
-            Some(p) => match File::open(p) {
-                Ok(f) => Ok(Some(BufReader::new(f))),
-                Err(e) => Err(anyhow!("Could not open file {}", e)),
-            },
-            None => Ok(None),
-        }
-    }
-
-    fn reader(path: &Option<String>) -> Result<Option<BufReader<File>>, Error> {
-        match path {
-            Some(p) => match File::open(p) {
-                Ok(f) => Ok(Some(BufReader::new(f))),
-                Err(e) => Err(anyhow!("Could not open file {}", e)),
-            },
-            None => Ok(None),
-        }
-    }
-
-    fn writer_from_ref(path: &Option<&String>) -> Result<Option<BufWriter<File>>, Error> {
+    fn reader_from_ref(path: &Option<&String>) -> Result<Option<BufReader<File>>> {
         match path {
             Some(p) => {
-                let file = OpenOptions::new().write(true).truncate(true).create(true).open(p);
-                match file {
-                    Ok(f) => Ok(Some(BufWriter::new(f))),
-                    Err(e) => Err(anyhow!("Could not open file {}", e)),
-                }
+                File::open(p).map(|f| Some(BufReader::new(f))).context("opening read buffer")
             }
             None => Ok(None),
         }
     }
 
-    fn writer(path: &Option<String>) -> Result<Option<BufWriter<File>>, Error> {
+    fn reader(path: &Option<String>) -> Result<Option<BufReader<File>>> {
         match path {
             Some(p) => {
-                let file = OpenOptions::new().write(true).truncate(true).create(true).open(p);
-                match file {
-                    Ok(f) => Ok(Some(BufWriter::new(f))),
-                    Err(e) => Err(anyhow!("Could not open file {}", e)),
-                }
+                File::open(p).map(|f| Some(BufReader::new(f))).context("opening read buffer")
             }
+            None => Ok(None),
+        }
+    }
+
+    fn writer_from_ref(path: &Option<&String>) -> Result<Option<BufWriter<File>>> {
+        match path {
+            Some(p) => OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open(p)
+                .map(|f| Some(BufWriter::new(f)))
+                .context("opening write buffer"),
+            None => Ok(None),
+        }
+    }
+
+    fn writer(path: &Option<String>) -> Result<Option<BufWriter<File>>> {
+        match path {
+            Some(p) => OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open(p)
+                .map(|f| Some(BufWriter::new(f)))
+                .context("opening write buffer"),
             None => Ok(None),
         }
     }
@@ -70,13 +68,14 @@ impl FileBacked {
         global: &Option<String>,
         build: &Option<&String>,
         user: &Option<String>,
-    ) -> Result<Self, Error> {
-        let data = Persistent::load(
-            FileBacked::reader(global)?,
-            FileBacked::reader_from_ref(build)?,
-            FileBacked::reader(user)?,
-        )?;
-        Ok(Self { data })
+    ) -> Result<Self> {
+        Ok(Self {
+            data: Persistent::load(
+                FileBacked::reader(global)?,
+                FileBacked::reader_from_ref(build)?,
+                FileBacked::reader(user)?,
+            )?,
+        })
     }
 
     pub(crate) fn save(
@@ -84,7 +83,7 @@ impl FileBacked {
         global: &Option<String>,
         build: &Option<&String>,
         user: &Option<String>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         self.data.save(
             FileBacked::writer(global)?,
             FileBacked::writer_from_ref(build)?,
@@ -108,11 +107,11 @@ impl fmt::Display for FileBacked {
 impl ReadDisplayConfig for FileBacked {}
 
 impl WriteConfig for FileBacked {
-    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
+    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
         self.data.set(level, key, value)
     }
 
-    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
         self.data.remove(level, key)
     }
 }

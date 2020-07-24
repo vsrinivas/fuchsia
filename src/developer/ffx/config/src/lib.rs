@@ -8,7 +8,7 @@ use {
     crate::config::Config,
     crate::constants::ENV_FILE,
     crate::environment::Environment,
-    anyhow::{anyhow, Error},
+    anyhow::{bail, Context, Result},
     ffx_config_plugin_args::ConfigLevel,
     ffx_lib_args::Ffx,
     serde_json::Value,
@@ -36,11 +36,7 @@ mod linux;
 #[cfg(not(target_os = "linux"))]
 mod not_linux;
 
-pub async fn get_config(
-    name: &str,
-    ffx: Ffx,
-    env: Result<String, Error>,
-) -> Result<Option<Value>, Error> {
+pub async fn get_config(name: &str, ffx: Ffx, env: Result<String>) -> Result<Option<Value>> {
     get_config_with_build_dir(name, &None, ffx, env).await
 }
 
@@ -48,31 +44,21 @@ pub async fn get_config_with_build_dir(
     name: &str,
     build_dir: &Option<String>,
     ffx: Ffx,
-    env: Result<String, Error>,
-) -> Result<Option<Value>, Error> {
+    env: Result<String>,
+) -> Result<Option<Value>> {
     let config = load_config(build_dir, ffx, &env).await?;
     let read_guard = config.read().await;
     Ok((*read_guard).get(name))
 }
 
-pub async fn get_config_str(
-    name: &str,
-    default: &str,
-    ffx: Ffx,
-    env: Result<String, Error>,
-) -> String {
+pub async fn get_config_str(name: &str, default: &str, ffx: Ffx, env: Result<String>) -> String {
     get_config(name, ffx, env)
         .await
         .unwrap_or(Some(Value::String(default.to_string())))
         .map_or(default.to_string(), |v| v.as_str().unwrap_or(default).to_string())
 }
 
-pub async fn get_config_bool(
-    name: &str,
-    default: bool,
-    ffx: Ffx,
-    env: Result<String, Error>,
-) -> bool {
+pub async fn get_config_bool(name: &str, default: bool, ffx: Ffx, env: Result<String>) -> bool {
     get_config(name, ffx, env).await.unwrap_or(Some(Value::Bool(default))).map_or(default, |v| {
         v.as_bool().unwrap_or(match v {
             Value::String(s) => s.parse().unwrap_or(default),
@@ -86,8 +72,8 @@ pub async fn set_config(
     name: &str,
     value: Value,
     ffx: Ffx,
-    env: Result<String, Error>,
-) -> Result<(), Error> {
+    env: Result<String>,
+) -> Result<()> {
     set_config_with_build_dir(level, name, value, &None, ffx, env).await
 }
 
@@ -97,8 +83,8 @@ pub async fn set_config_with_build_dir(
     value: Value,
     build_dir: &Option<String>,
     ffx: Ffx,
-    env: Result<String, Error>,
-) -> Result<(), Error> {
+    env: Result<String>,
+) -> Result<()> {
     let config = load_config(&build_dir, ffx, &env).await?;
     let mut write_guard = config.write().await;
     (*write_guard).set(&level, &name, value)?;
@@ -109,8 +95,8 @@ pub async fn remove_config(
     level: &ConfigLevel,
     name: &str,
     ffx: Ffx,
-    env: Result<String, Error>,
-) -> Result<(), Error> {
+    env: Result<String>,
+) -> Result<()> {
     remove_config_with_build_dir(level, name, &None, ffx, env).await
 }
 
@@ -119,8 +105,8 @@ pub async fn remove_config_with_build_dir(
     name: &str,
     build_dir: &Option<String>,
     ffx: Ffx,
-    env: Result<String, Error>,
-) -> Result<(), Error> {
+    env: Result<String>,
+) -> Result<()> {
     let config = load_config(&build_dir, ffx, &env).await?;
     let mut write_guard = config.write().await;
     (*write_guard).remove(&level, &name)?;
@@ -129,14 +115,13 @@ pub async fn remove_config_with_build_dir(
 
 // TODO(fxr/45489): replace with the dirs::config_dir when the crate is included in third_party
 // https://docs.rs/dirs/1.0.5/dirs/fn.config_dir.html
-fn find_env_dir() -> Result<String, Error> {
-    match env::var("HOME").or_else(|_| env::var("HOMEPATH")) {
-        Ok(dir) => Ok(dir),
-        Err(e) => Err(anyhow!("Could not determing environment directory: {}", e)),
-    }
+fn find_env_dir() -> Result<String> {
+    env::var("HOME")
+        .or_else(|_| env::var("HOMEPATH"))
+        .or_else(|e| bail!("Could not determing environment directory: {}", e))
 }
 
-fn init_env_file(path: &PathBuf) -> Result<(), Error> {
+fn init_env_file(path: &PathBuf) -> Result<()> {
     let mut f = File::create(path)?;
     f.write_all(b"{}")?;
     f.sync_all()?;
@@ -144,7 +129,7 @@ fn init_env_file(path: &PathBuf) -> Result<(), Error> {
 }
 
 // This method should not be called from unit tests since it tries to parse CLI params.
-pub fn find_env_file() -> Result<String, Error> {
+pub fn find_env_file() -> Result<String> {
     let ffx: Ffx = argh::from_env();
 
     let env_path = if let Some(f) = ffx.environment_file {
@@ -159,32 +144,28 @@ pub fn find_env_file() -> Result<String, Error> {
         log::debug!("initializing environment {}", env_path.display());
         init_env_file(&env_path)?;
     }
-    match env_path.to_str() {
-        Some(f) => Ok(String::from(f)),
-        None => Err(anyhow!("Could not find environment file")),
-    }
+    env_path.to_str().map(String::from).context("getting environment file")
 }
 
 pub fn save_config(
     config: &mut Config<'_>,
     build_dir: &Option<String>,
-    env_file: Result<String, Error>,
-) -> Result<(), Error> {
+    env_file: Result<String>,
+) -> Result<()> {
     let env = Environment::load(&env_file?)?;
 
-    match build_dir {
-        Some(b) => config.save(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user),
-        None => config.save(&env.global, &None, &env.user),
-    }
+    build_dir.as_ref().map_or(config.save(&env.global, &None, &env.user), |b| {
+        config.save(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user)
+    })
 }
 
 pub async fn print_config<W: Write>(
     mut writer: W,
     build_dir: &Option<String>,
     ffx: Ffx,
-    env: Result<String, Error>,
-) -> Result<(), Error> {
+    env: Result<String>,
+) -> Result<()> {
     let config = load_config(build_dir, ffx, &env).await?;
     let read_guard = config.read().await;
-    writeln!(writer, "{}", *read_guard).map_err(|e| anyhow!("Error printing config: {}", e))
+    writeln!(writer, "{}", *read_guard).context("displaying config")
 }

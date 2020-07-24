@@ -4,7 +4,7 @@
 
 use {
     crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, bail, Result},
     config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
@@ -106,7 +106,7 @@ impl fmt::Display for Priority {
 impl ReadDisplayConfig for Priority {}
 
 impl WriteConfig for Priority {
-    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
+    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
         let set = |config_data: &mut Option<Value>| match config_data {
             Some(config) => match config.as_object_mut() {
                 Some(map) => match map.get_mut(key) {
@@ -119,11 +119,7 @@ impl WriteConfig for Priority {
                         Ok(())
                     }
                 },
-                _ => {
-                    return Err(anyhow!(
-                        "Configuration already exists but it is is a JSON literal - not a map"
-                    ))
-                }
+                _ => bail!("Configuration already exists but it is is a JSON literal - not a map"),
             },
             None => {
                 let mut config = serde_json::Map::new();
@@ -140,8 +136,8 @@ impl WriteConfig for Priority {
         }
     }
 
-    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
-        let remove = |config_data: &mut Option<Value>| -> Result<(), Error> {
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
+        let remove = |config_data: &mut Option<Value>| -> Result<()> {
             match config_data {
                 Some(config) => match config.as_object_mut() {
                     Some(map) => map
@@ -193,7 +189,7 @@ mod test {
         }"#;
 
     #[test]
-    fn test_priority_iterator() -> Result<(), Error> {
+    fn test_priority_iterator() -> Result<()> {
         let test = Priority {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
@@ -211,7 +207,7 @@ mod test {
     }
 
     #[test]
-    fn test_priority_iterator_with_nones() -> Result<(), Error> {
+    fn test_priority_iterator_with_nones() -> Result<()> {
         let test = Priority {
             user: Some(serde_json::from_str(USER)?),
             build: None,
@@ -229,7 +225,7 @@ mod test {
     }
 
     #[test]
-    fn test_get() -> Result<(), Error> {
+    fn test_get() -> Result<()> {
         let test = Priority {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
@@ -282,7 +278,7 @@ mod test {
     }
 
     #[test]
-    fn test_set_non_map_value() -> Result<(), Error> {
+    fn test_set_non_map_value() -> Result<()> {
         let mut test = Priority {
             user: Some(serde_json::from_str(ERROR)?),
             build: None,
@@ -295,7 +291,7 @@ mod test {
     }
 
     #[test]
-    fn test_get_nonexistent_config() -> Result<(), Error> {
+    fn test_get_nonexistent_config() -> Result<()> {
         let test = Priority {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
@@ -308,7 +304,7 @@ mod test {
     }
 
     #[test]
-    fn test_set() -> Result<(), Error> {
+    fn test_set() -> Result<()> {
         let mut test = Priority {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
@@ -323,7 +319,7 @@ mod test {
     }
 
     #[test]
-    fn test_set_build_from_none() -> Result<(), Error> {
+    fn test_set_build_from_none() -> Result<()> {
         let mut test = Priority { user: None, build: None, global: None, defaults: None };
         let value_none = test.get("name");
         assert!(value_none.is_none());
@@ -347,7 +343,7 @@ mod test {
     }
 
     #[test]
-    fn test_remove() -> Result<(), Error> {
+    fn test_remove() -> Result<()> {
         let mut test = Priority {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
@@ -380,7 +376,7 @@ mod test {
     }
 
     #[test]
-    fn test_display() -> Result<(), Error> {
+    fn test_display() -> Result<()> {
         let test = Priority {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),

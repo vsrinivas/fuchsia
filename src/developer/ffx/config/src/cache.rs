@@ -7,7 +7,7 @@ use {
     crate::constants::CONFIG_CACHE_TIMEOUT,
     crate::environment::Environment,
     crate::heuristic_config::HeuristicFn,
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Result},
     async_std::sync::{Arc, RwLock},
     ffx_lib_args::Ffx,
     std::collections::HashMap,
@@ -52,8 +52,8 @@ async fn read_cache(
 pub(crate) async fn load_config(
     build_dir: &Option<String>,
     ffx: Ffx,
-    env: &Result<String, Error>,
-) -> Result<Arc<RwLock<Config<'static>>>, Error> {
+    env: &Result<String>,
+) -> Result<Arc<RwLock<Config<'static>>>> {
     load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx, env).await
 }
 
@@ -62,8 +62,8 @@ async fn load_config_with_instant(
     now: Instant,
     cache: &Cache,
     ffx: Ffx,
-    env: &Result<String, Error>,
-) -> Result<Arc<RwLock<Config<'static>>>, Error> {
+    env: &Result<String>,
+) -> Result<Arc<RwLock<Config<'static>>>> {
     let cache_hit = read_cache(build_dir, now, cache).await;
     match cache_hit {
         Some(h) => Ok(h),
@@ -92,7 +92,7 @@ async fn load_config_with_instant(
             }
             read_cache(build_dir, now, cache)
                 .await
-                .ok_or_else(|| anyhow!("could not get config from cache"))
+                .ok_or(anyhow!("reading config value from cache after initialization"))
         }
     }
 }
@@ -101,14 +101,16 @@ async fn load_config_with_instant(
 // tests
 #[cfg(test)]
 mod test {
-    use super::*;
-    use futures::future::join_all;
-    use std::default::Default;
-    use std::time::Duration;
+    use {
+        super::*,
+        anyhow::bail,
+        futures::future::join_all,
+        std::{default::Default, time::Duration},
+    };
 
-    fn env() -> Result<String, Error> {
+    fn env() -> Result<String> {
         // Prevent any File I/O in unit tests.
-        Err(anyhow!("test no environment"))
+        bail!("No environment when running tests")
     }
 
     async fn load(now: Instant, key: &Option<String>, cache: &Cache) {
@@ -190,7 +192,7 @@ mod test {
     }
 
     #[test]
-    fn test_expiration_check_does_not_panic() -> Result<(), Error> {
+    fn test_expiration_check_does_not_panic() -> Result<()> {
         let tests = 1;
         let (now, build_dirs, _cache) = setup(tests);
         let later = now.checked_add(Duration::from_millis(1)).expect("timeout should not overflow");
