@@ -85,11 +85,8 @@ const char* ClientSettings::System::kSymbolPaths = "symbol-paths";
 static const char* kSymbolPathsDescription =
     R"(  List of mapping databases, ELF files or directories for symbol lookup.
   When a directory path is passed, the directory will be enumerated
-  non-recursively to index all ELF files within, unless it contains a .build-id
-  subfolder, in which case that is presumed to contain an index of all ELF
-  files within. When a .txt file is passed, it will be treated as a mapping
-  database from build ID to file path. Otherwise, the path will be loaded as an
-  ELF file.)";
+  non-recursively to index all ELF files within. When a file is passed, it will
+  be loaded as an ELF file (if possible).)";
 
 const char* ClientSettings::System::kBuildIdDirs = "build-id-dirs";
 static const char* kBuildIdDirsDescription =
@@ -782,23 +779,18 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
     build_id_index.ClearSymbolSources();
 
     for (const std::string& path : symbol_paths) {
-      // TODO(dangyi): Drop support for .txt file here.
-      if (StringEndsWith(path, ".txt")) {
-        build_id_index.AddBuildIDMappingFile(path);
-      } else {
-        build_id_index.AddSymbolSource(path);
-      }
+      build_id_index.AddSymbolSource(path);
     }
     for (const std::string& path : build_id_dirs) {
-      build_id_index.AddRepoSymbolSource(path);
+      build_id_index.AddBuildIdDir(path);
     }
     for (const std::string& path : ids_txts) {
-      build_id_index.AddBuildIDMappingFile(path);
+      build_id_index.AddIdsTxt(path);
     }
     if (!symbol_cache.empty()) {
       std::error_code ec;
       std::filesystem::create_directories(std::filesystem::path(symbol_cache), ec);
-      build_id_index.AddRepoSymbolSource(symbol_cache);
+      build_id_index.AddBuildIdDir(symbol_cache);
     }
   } else if (setting_name == ClientSettings::System::kSymbolServers) {
     // TODO(dangyi): We don't support the removal of an existing symbol server yet.

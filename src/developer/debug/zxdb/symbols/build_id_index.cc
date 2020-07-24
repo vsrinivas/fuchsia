@@ -106,7 +106,7 @@ bool BuildIDIndex::AddOneFile(const std::string& file_name) {
   return IndexOneSourceFile(file_name, true);
 }
 
-void BuildIDIndex::AddBuildIDMappingFile(const std::string& id_file_name) {
+void BuildIDIndex::AddIdsTxt(const std::string& id_file_name) {
   // If the file is already loaded, ignore it.
   if (std::find(build_id_files_.begin(), build_id_files_.end(), id_file_name) !=
       build_id_files_.end())
@@ -125,7 +125,7 @@ void BuildIDIndex::AddSymbolSource(const std::string& path) {
   ClearCache();
 }
 
-void BuildIDIndex::AddRepoSymbolSource(const std::string& path) {
+void BuildIDIndex::AddBuildIdDir(const std::string& path) {
   if (std::find(always_repo_sources_.begin(), always_repo_sources_.end(), path) !=
       always_repo_sources_.end())
     return;
@@ -240,15 +240,6 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
   std::error_code ec;
   if (std::filesystem::is_directory(path, ec)) {
-    // TODO(dangyi): Drop support for .build-id subdirectory.
-    auto build_id_path = std::filesystem::path(path) / ".build-id";
-
-    if (std::filesystem::is_directory(build_id_path, ec)) {
-      repo_sources_.emplace_back(build_id_path);
-      status_.emplace_back(build_id_path, BuildIDIndex::kStatusIsFolder);
-      return;
-    }
-
     // Iterate through all files in this directory, but don't recurse.
     int indexed = 0;
     for (const auto& child : std::filesystem::directory_iterator(path, ec)) {

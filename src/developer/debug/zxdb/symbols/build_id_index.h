@@ -58,7 +58,7 @@ class BuildIDIndex {
 
   // Adds an "ids.txt" file that maps build ID to file paths. Will verify that the path is already
   // there and ignore it if so.
-  void AddBuildIDMappingFile(const std::string& id_file_name);
+  void AddIdsTxt(const std::string& id_file_name);
 
   // Adds a file or directory to the symbol search index. If the path is a file this class will try
   // to parse it as an ELF file and add it to the index if it is.
@@ -70,7 +70,7 @@ class BuildIDIndex {
 
   // Adds a GNU-style symbol repository to the search index. The path given should contain files of
   // the form ab/cdefg.debug, where abc-defg is the build ID.
-  void AddRepoSymbolSource(const std::string& path);
+  void AddBuildIdDir(const std::string& path);
 
   // Returns the status of the symbols. This will force the cache to be fresh
   // so may cause I/O.
@@ -122,7 +122,7 @@ class BuildIDIndex {
   // refresh.
   std::vector<std::string> repo_sources_;
 
-  // GNU-style repository sources. This list is persistent and only modified by AddRepoSymbolSource.
+  // GNU-style repository sources. This list is persistent and only modified by AddBuildIdDir.
   std::vector<std::string> always_repo_sources_;
 
   // Maintains the logs of how many symbols were indexed for each location.

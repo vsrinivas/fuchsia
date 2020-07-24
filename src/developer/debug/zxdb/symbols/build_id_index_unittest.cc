@@ -56,22 +56,10 @@ TEST(BuildIDIndex, IndexDir) {
             index.FileForBuildID(kSmallTestBuildID, DebugSymbolFileType::kBinary));
 }
 
-// Index all files in a directory that has a .build-id
-TEST(BuildIDIndex, IndexDirBuildId) {
-  BuildIDIndex index;
-  index.AddSymbolSource(GetTestDataDir() / "build_id");
-
-  // We should be able to look up the test file.
-  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
-            index.FileForBuildID(kSymbolTestSoBuildID, DebugSymbolFileType::kBinary));
-  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
-            index.FileForBuildID(kSymbolTestSoBuildID, DebugSymbolFileType::kDebugInfo));
-}
-
 // Index all files in a specifically-named build ID folder
 TEST(BuildIDIndex, IndexDirBuildIdRepo) {
   BuildIDIndex index;
-  index.AddRepoSymbolSource(GetTestDataDir() / "build_id/.build-id");
+  index.AddBuildIdDir(GetTestDataDir() / "build_id/.build-id");
 
   // We should be able to look up the test file.
   EXPECT_EQ(GetSymbolTestSoBuildIDPath(),

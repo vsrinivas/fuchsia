@@ -43,9 +43,6 @@ const char* const kRemoteHostHelp = R"(  --connect
       The host and port of the debug agent running on the target Fuchsia
       instance, of the form [<ipv6_addr>]:port.)";
 
-const char* const kSymbolRepoPathHelp = R"(  --symbol-repo-path=<path>
-      Deprecated. Please use --build-id-dir instead.)";
-
 const char* const kBuildIdDirHelp = R"(  --build-id-dir=<path>
       Adds the given directory to the symbol search path. Multiple
       --build-id-dir switches can be passed to add multiple directories.
@@ -63,11 +60,8 @@ const char* const kSymbolPathHelp = R"(  --symbol-path=<path>
       Adds the given directory or file to the symbol search path. Multiple
       -s switches can be passed to add multiple locations. When a directory
       path is passed, the directory will be enumerated non-recursively to
-      index all ELF files, unless the directory contains a .build-id
-      subdirectory, in which case that directory is assumed to contain an index
-      of all ELF files within. When a .txt file is passed, it will be treated
-      as a mapping database from build ID to file path. Otherwise, the path
-      will be loaded as an ELF file (if possible).)";
+      index all ELF files. When a file is passed, it will be loaded as an ELF
+      file (if possible).)";
 
 const char* const kSymbolCacheHelp = R"(  --symbol-cache=<path>
       Directory where we can keep a symbol cache. If a symbol server has been
@@ -279,7 +273,6 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   // Debug agent options:
   parser.AddSwitch("connect", 'r', kRemoteHostHelp, &CommandLineOptions::connect);
-  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);

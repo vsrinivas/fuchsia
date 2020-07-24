@@ -19,15 +19,12 @@ Options
 
 )";
 
-const char kBuildDirsHelp[] = R"(  --build-dirs=<path>
-      Deprecated. Please use --build-dir instead.)";
-
 const char kBuildDirHelp[] = R"(  --build-dir=<path>
   -b <path>
       Adds the given directory to the list of build directories. These
       directories are where source file names from the symbols are relative to.
       There can be multiple ones which will be searched in order.
-      The populates the "build-dirs" setting (see "get build-dirs").)";
+      It populates the "build-dirs" setting (see "get build-dirs").)";
 
 const char kConnectHelp[] = R"(  --connect=<host>:<port>
   -c <host>:<port>
@@ -67,21 +64,13 @@ const char kScriptFileHelp[] = R"(  --script-file=<file>
       commands as they would be input from the command line. They will be
       executed sequentially.)";
 
-// TODO(dangyi): Remove the support for .txt file and .build-id directory when everyone is using
-// --build-id-dir and --ids-txt explicitly.
 const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
   -s <path>
       Adds the given directory or file to the symbol search path. Multiple
       -s switches can be passed to add multiple locations. When a directory
       path is passed, the directory will be enumerated non-recursively to
-      index all ELF files, unless the directory contains a .build-id
-      subdirectory, in which case that directory is assumed to contain an index
-      of all ELF files within. When a .txt file is passed, it will be treated
-      as a mapping database from build ID to file path. Otherwise, the path
-      will be loaded as an ELF file (if possible).)";
-
-const char kSymbolRepoPathHelp[] = R"(  --symbol-repo-path=<path>
-      Deprecated. Please use --build-id-dir instead.)";
+      index all ELF files. When a file is passed, it will be loaded as an ELF
+      file (if possible).)";
 
 const char kBuildIdDirHelp[] = R"(  --build-id-dir=<path>
       Adds the given directory to the symbol search path. Multiple
@@ -115,7 +104,6 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("build-dir", 'b', kBuildDirHelp, &CommandLineOptions::build_dirs);
-  parser.AddSwitch("build-dirs", 0, kBuildDirsHelp, &CommandLineOptions::build_dirs);
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
@@ -125,8 +113,6 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("filter", 'f', kFilterHelp, &CommandLineOptions::filter);
   parser.AddSwitch("script-file", 'S', kScriptFileHelp, &CommandLineOptions::script_file);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
-  // TODO(dangyi): Remove --symbol-repo-path after everyone has migrated to --build-id-dir.
-  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("ids-txt", 0, kIdsTxtHelp, &CommandLineOptions::ids_txts);
   parser.AddSwitch("symbol-cache", 0, kSymbolCacheHelp, &CommandLineOptions::symbol_cache);
