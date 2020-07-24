@@ -53,6 +53,7 @@ action("devmgr_config.txt") {
 
 devmgr_config("devmgr_config") {
   label = ":devmgr_config.txt"
+  testonly = true
 }
 
 migrated_zbi("bringup") {

@@ -509,6 +509,7 @@ action("devmgr_config.txt") {
 
 devmgr_config("devmgr_config") {
   label = ":devmgr_config.txt"
+  testonly = true
 }
 
 # Generate the prime /boot/config/devmgr file. Points to system_image_prime
@@ -558,6 +559,7 @@ action("devmgr_config_prime.txt") {
 
 devmgr_config("devmgr_config_prime") {
   label = ":devmgr_config_prime.txt"
+  testonly = true
 }
 
 generated_file("zxcrypt_config.txt") {
@@ -2067,9 +2069,6 @@ group("updates") {
     ":publish",
     ":root_component_index_metadata",
     ":system_snapshot",
-
-    # Force the comparison with the new zbi's.
-    "//build/unification/future/images",
   ]
 }
 

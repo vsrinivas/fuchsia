@@ -10,6 +10,9 @@ import("//build/unification/zbi/resource.gni")
 #
 #   label (required)
 #     GN label of the target producing the config file.
+#
+#   testonly
+#     See `gn help`.
 template("devmgr_config") {
   devmgr_config_label = invoker.label
   devmgr_config_out_dir = get_label_info(devmgr_config_label, "target_out_dir")
@@ -17,7 +20,7 @@ template("devmgr_config") {
   devmgr_config_file = "$devmgr_config_out_dir/$devmgr_config_name"
 
   resource(target_name) {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     deps = [ devmgr_config_label ]
     sources = [ devmgr_config_file ]
     outputs = [ "config/devmgr" ]

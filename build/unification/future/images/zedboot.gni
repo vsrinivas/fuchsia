@@ -9,11 +9,17 @@
 # the objects that we want in that ZBI. If multiple ZBI's need a common
 # denominator, it needs to be factored out to a proper GN variable.
 
+# TODO(36888): This could be made smaller by removing drivers that are not
+# needed, but we don't currently have a good way to determine the
+# subset that is useful to Zedboot.
+
 import("//build/images/factory.gni")
 import("//build/unification/images/common_image_contents.gni")
 
-zedboot_deps = [
-  "//examples/drivers//fifo:demo-fifo",
+zedboot_deps = []
+
+# Core things needed for booting (local and netboot).
+zedboot_deps += [
   "//src/bringup/bin/bootsvc:bin",
   "//src/bringup/bin/console",
   "//src/bringup/bin/debuglog",
@@ -23,8 +29,46 @@ zedboot_deps = [
   "//src/bringup/bin/ptysvc",
   "//src/bringup/bin/pwrbtn-monitor",
   "//src/bringup/bin/svchost",
+  "//src/storage/fshost",
+]
+
+# Needed for installer runs.
+zedboot_deps += [
+  "//src/storage/bin/blobfs",
+  "//src/storage/bin/disk-pave:install-disk-image",
+  "//src/storage/bin/minfs",
+  "//src/storage/bin/mount:mount",
+]
+
+# For debugging.
+zedboot_deps += [
+  "//src/connectivity/network/bin/ping",
+  "//src/devices/bin/driverctl",
+  "//src/devices/bin/lsdev",
+  "//src/devices/bin/unbind",
+  "//src/devices/block/bin/gpt",
+  "//src/devices/block/bin/lsblk",
+  "//src/devices/nand/bin/nand-util",
+  "//src/devices/usb/bin/lsusb",
+  "//src/security/bin/syscall-check",
+  "//src/storage/bin/dd",
+  "//src/storage/bin/fsck",
+  "//src/storage/bin/mkfs",
+  "//src/storage/bin/umount",
+  "//src/sys/bin/psutils:killall",
+  "//src/sys/bin/psutils:ps",
+  "//src/sys/bin/psutils:threads",
+  "//src/zircon/bin/ktrace",
+  "//zircon/third_party/uapp/dash",
+]
+
+# Used by infra.
+zedboot_deps += [ "//src/bringup/bin/waitfor" ]
+
+# Finally, everything which used to come from the Zircon build as a monolith.
+zedboot_deps += [
+  "//examples/drivers//fifo:demo-fifo",
   "//src/bringup/bin/virtcon:virtual-console",
-  "//src/bringup/bin/waitfor",
   "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
   "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb",
   "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
@@ -40,14 +84,8 @@ zedboot_deps = [
   "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
   "//src/connectivity/ethernet/drivers/usb-cdc-function",
   "//src/connectivity/ethernet/drivers/usb-cdc-function",
-  "//src/connectivity/network/bin/ping",
   "//src/connectivity/network/drivers/network-device",
   "//src/devices/bin/driver_manager",
-  "//src/devices/bin/driverctl",
-  "//src/devices/bin/lsdev",
-  "//src/devices/bin/unbind",
-  "//src/devices/block/bin/gpt",
-  "//src/devices/block/bin/lsblk",
   "//src/devices/block/drivers/ahci",
   "//src/devices/block/drivers/aml-sd-emmc",
   "//src/devices/block/drivers/bootpart",
@@ -94,7 +132,6 @@ zedboot_deps = [
   "//src/devices/misc/drivers/ktrace",
   "//src/devices/ml/drivers/aml-nna",
   "//src/devices/ml/drivers/usb-harriet",
-  "//src/devices/nand/bin/nand-util",
   "//src/devices/nand/drivers/aml-rawnand",
   "//src/devices/nand/drivers/broker:nand-broker",
   "//src/devices/nand/drivers/nand",
@@ -130,7 +167,6 @@ zedboot_deps = [
   "//src/devices/tests/sysdev",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",
   "//src/devices/thermal/drivers/aml-thermal-s912",
-  "//src/devices/usb/bin/lsusb",
   "//src/devices/usb/drivers/aml-usb-phy-v2",
   "//src/devices/usb/drivers/dwc2",
   "//src/devices/usb/drivers/dwc3",
@@ -158,19 +194,6 @@ zedboot_deps = [
   "//src/media/audio/drivers/codecs/tas27xx",
   "//src/media/audio/drivers/usb-audio",
   "//src/power/shutdown-shim",
-  "//src/security/bin/syscall-check",
-  "//src/storage/bin/blobfs",
-  "//src/storage/bin/dd",
-  "//src/storage/bin/disk-pave:install-disk-image",
-  "//src/storage/bin/fsck:fsck",
-  "//src/storage/bin/minfs",
-  "//src/storage/bin/mkfs:mkfs",
-  "//src/storage/bin/mount:mount",
-  "//src/storage/bin/umount:umount",
-  "//src/storage/fshost",
-  "//src/sys/bin/psutils:killall",
-  "//src/sys/bin/psutils:ps",
-  "//src/sys/bin/psutils:threads",
   "//src/sys/component_manager:bin",
   "//src/sys/installer:bin",
   "//src/ui/backlight/drivers/ti-lp8556",
@@ -184,7 +207,6 @@ zedboot_deps = [
   "//src/ui/input/drivers/usb-hid",
   "//src/ui/input/drivers/usb-hid",
   "//src/ui/light/drivers/aml-light",
-  "//src/zircon/bin/ktrace",
   "//zircon/third_party/dev/ethernet/e1000",
 ]
 

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
-import("//build/config/fuchsia/zbi.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/bootfs_manifest_additions.gni")
@@ -14,56 +13,12 @@ import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/images/zxcrypt.gni")
+import("//build/unification/future/images/devmgr_config.gni")
+import("//build/unification/future/images/zedboot.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
 
-# Construct a minimal manifest containing only the few user binaries
-# that constitute zedboot, and the libraries they depend on.
-# TODO(36888): This could be made smaller by constraining the drivers
-# included, but we don't currently have a good way to determine the
-# subset that is useful to Zedboot.
-zedboot_binary_patterns = [
-  # These are the core things needed for booting (local and netboot).
-  "bin/bootsvc",
-  "bin/console",
-  "bin/debuglog",
-  "bin/device-name-provider",
-  "bin/dlog",
-  "bin/fshost",
-  "bin/miscsvc",
-  "bin/netsvc",
-  "bin/ptysvc",
-  "bin/pwrbtn-monitor",
-  "bin/svchost",
-  "driver/*",
-
-  # These are needed for installer runs.
-  "bin/blobfs",
-  "bin/install-disk-image",
-  "bin/minfs",
-  "bin/mount",
-
-  # These are useful for debugging.
-  "bin/dd",
-  "bin/driverctl",
-  "bin/fsck*",
-  "bin/gpt",
-  "bin/killall",
-  "bin/ktrace",
-  "bin/lsblk",
-  "bin/lsdev",
-  "bin/lsusb",
-  "bin/mkfs*",
-  "bin/nand-util",
-  "bin/ping",
-  "bin/ps",
-  "bin/sh",
-  "bin/syscall-check",
-  "bin/threads",
-  "bin/umount",
-  "bin/unbind",
-
-  # These are used by Infra.
-  "bin/waitfor",
-]
+# Note: the contents of the zbi are now located in the zedboot.gni file in the
+# imports above.
 
 # Zedboot must be included to pave devices until recovery has a replacement mechanism. Products can specify override_recovery_label to determine which image to include in zircon-r.
 use_zedboot_as_recovery = false
@@ -73,34 +28,14 @@ if (override_recovery_label == "") {
   zedboot_metadata_slot = "zircon-r"
 }
 
-generate_manifest("zedboot.manifest") {
-  visibility = [ ":*" ]
-  args = []
-  foreach(pattern, zedboot_binary_patterns) {
-    args += [ "--binary=" + pattern ]
-  }
-
-  # The --binary switch only matches binaries, not other files.
-  # Get the non-binary files from the manifest directly.
-  args += [ "--include=lib/firmware/*" ]
-  deps = zircon_boot_manifests_deps
-  foreach(manifest, zircon_boot_manifests) {
-    args += [
-      "--cwd=.",
-      "--manifest=" + rebase_path(manifest, root_build_dir),
-    ]
-  }
-}
-manifest_outputs = get_target_outputs(":zedboot.manifest")
-manifest_file = manifest_outputs[0]
-
 action("devmgr_config.txt") {
   visibility = [
+    ":devmgr_config",
     ":zbi",
     ":zedboot.vbmeta",
     ":zedboot.vbmeta__zbi_props",
     ":zedboot.vbmeta__vb_desc",
-    "//build/unification/future/images:*",
+    "//build/unification/future/images:*",  # XXX
   ]
 
   script = "../manifest.py"
@@ -116,58 +51,63 @@ action("devmgr_config.txt") {
   }
 }
 
+devmgr_config("devmgr_config") {
+  label = ":devmgr_config.txt"
+}
+
 generated_file("zxcrypt_config.txt") {
   outputs = [ "$target_out_dir/$target_name" ]
   contents = zxcrypt_key_source
 }
 
-bootfs_manifest_additions += [ "//src/sys/installer:installer.manifest" ]
+cmdline = [
+            "console.shell=true",
+            "netsvc.disable=false",
+            "kernel.enable-debugging-syscalls=true",
+            "kernel.enable-serial-syscalls=true",
+          ] + zedboot_cmdline_args + board_zedboot_cmdline_args
 
-additional_manifests = []
-foreach(label, bootfs_manifest_additions) {
-  target_dir = get_label_info(label, "target_out_dir")
-  target_name = get_label_info(label, "name")
-  additional_manifests += [ target_dir + "/" + target_name ]
+zbi_input("kernel_cmdline") {
+  type = "cmdline"
+  args = []
+  foreach(arg, cmdline) {
+    args += [ "--entry=$arg" ]
+  }
+  sources = zedboot_cmdline_files
+}
+
+ta_deps = []
+foreach(ta_uuid, zedboot_ta_uuids) {
+  resource("ta_$ta_uuid") {
+    sources = [ "${ta_path}/${ta_uuid}${ta_src_suffix}" ]
+    outputs = [ "lib/firmware/${ta_uuid}${ta_dest_suffix}" ]
+  }
+
+  ta_deps += [ ":ta_$ta_uuid" ]
+}
+
+group("ta") {
+  deps = ta_deps
 }
 
 # Note: This output is also used by a script in //scripts/verify_cmdline_params.
-zbi("zbi") {
+migrated_zbi("zbi") {
   output_name = "zedboot"
+  output_dir = root_out_dir
+
   deps = [
-           ":devmgr_config.txt",
-           ":zedboot.manifest",
-           ":zxcrypt_config.txt",
-         ] + bootfs_manifest_additions
-  inputs = [
-             zircon_kernel_zbi,
-             manifest_file,
-           ] + additional_manifests
-  manifest =
-      [ "config/zxcrypt=" +
-        rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir) ]
-  foreach(ta_uuid, zedboot_ta_uuids) {
-    manifest += [
-      {
-        outputs = [ "lib/firmware/$ta_uuid$ta_dest_suffix" ]
-        sources = [ rebase_path("$ta_path/$ta_uuid$ta_src_suffix") ]
-      },
-    ]
-  }
+    ":kernel_cmdline",
+    ":ta",
+    "//build/unification/future/images:zxcrypt",
+    "//build/unification/zbi:kernel",
+    "//src/sys/installer:installer.manifest",
+  ]
+  deps += zedboot_deps
+  deps += bootfs_manifest_additions
+
   if (!include_devmgr_config_in_vbmeta) {
-    manifest += [
-      {
-        outputs = [ "config/devmgr" ]
-        sources = get_target_outputs(":devmgr_config.txt")
-      },
-    ]
+    deps += [ ":devmgr_config" ]
   }
-  cmdline = [
-              "console.shell=true",
-              "netsvc.disable=false",
-              "kernel.enable-debugging-syscalls=true",
-              "kernel.enable-serial-syscalls=true",
-            ] + zedboot_cmdline_args + board_zedboot_cmdline_args
-  cmdline_inputs = zedboot_cmdline_files
 
   metadata = {
     images = [
