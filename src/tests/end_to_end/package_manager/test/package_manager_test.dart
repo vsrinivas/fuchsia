@@ -37,7 +37,9 @@ Future<ProcessResult> createArchive(
   // Running the process from runtime_deps directory is needed since meta.far needs to be
   // a relative path.
   final workingDirectory = Platform.script.resolve('runtime_deps').toFilePath();
-  return Process.run(pmPath, ['-m=$packageManifestPath', 'archive'],
+  final manifestPath =
+      await createPkgManifestFile(packageManifestPath, workingDirectory);
+  return Process.run(pmPath, ['-m=$manifestPath', 'archive'],
       workingDirectory: workingDirectory);
 }
 
