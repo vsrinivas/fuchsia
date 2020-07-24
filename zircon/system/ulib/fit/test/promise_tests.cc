@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "examples/utils.h"
 #include "unittest_utils.h"
@@ -43,9 +43,7 @@ struct move_only {
 
 // Just a simple test to put the promise through its paces.
 // Other tests go into more detail to cover the API surface.
-bool basics() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, basics) {
   for (int i = 0; i < 5; i++) {
     // Make a promise that calculates half the square of a number.
     // Produces an error if the square is odd.
@@ -70,15 +68,11 @@ bool basics() {
       EXPECT_STR_EQ("square is odd", result.error());
     }
   }
-
-  END_TEST;
 }
 
 // An empty promise has no continuation.
 // We can't do a lot with it but we can check for emptyness.
-bool empty_promise() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, empty_promise) {
   {
     fit::promise<> promise;
     EXPECT_FALSE(promise);
@@ -100,13 +94,9 @@ bool empty_promise() {
     fit::promise<> promise(std::move(f));
     EXPECT_FALSE(promise);
   }
-
-  END_TEST;
 }
 
-bool invocation() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, invocation) {
   uint64_t run_count = 0;
   fake_context fake_context;
   fit::promise<> promise([&](fit::context& context) -> fit::result<> {
@@ -126,13 +116,9 @@ bool invocation() {
   EXPECT_EQ(2, run_count);
   EXPECT_EQ(fit::result_state::ok, result.state());
   EXPECT_FALSE(promise);
-
-  END_TEST;
 }
 
-bool take_continuation() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, take_continuation) {
   uint64_t run_count = 0;
   fake_context fake_context;
   fit::promise<> promise([&](fit::context& context) -> fit::result<> {
@@ -149,13 +135,9 @@ bool take_continuation() {
   fit::result<> result = f(fake_context);
   EXPECT_EQ(1, run_count);
   EXPECT_EQ(fit::result_state::pending, result.state());
-
-  END_TEST;
 }
 
-bool assignment_and_swap() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, assignment_and_swap) {
   fake_context fake_context;
 
   fit::promise<> empty;
@@ -209,13 +191,9 @@ bool assignment_and_swap() {
 
   x = std::move(y);
   EXPECT_FALSE(x);
-
-  END_TEST;
 }
 
-bool comparison_with_nullptr() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, comparison_with_nullptr) {
   {
     fit::promise<> promise;
     EXPECT_TRUE(promise == nullptr);
@@ -231,13 +209,9 @@ bool comparison_with_nullptr() {
     EXPECT_TRUE(promise != nullptr);
     EXPECT_TRUE(nullptr != promise);
   }
-
-  END_TEST;
 }
 
-bool make_promise() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, make_promise) {
   fake_context fake_context;
 
   // Handler signature: void().
@@ -356,15 +330,11 @@ bool make_promise() {
     EXPECT_EQ(fit::result_state::ok, result.state());
     EXPECT_FALSE(p);
   }
-
-  END_TEST;
 }
 
 // This is a bit lower level than fit::make_promise() in that there's
 // no automatic adaptation of the handler type.
-bool make_promise_with_continuation() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, make_promise_with_continuation) {
   uint64_t run_count = 0;
   fake_context fake_context;
   auto p =
@@ -382,13 +352,9 @@ bool make_promise_with_continuation() {
   EXPECT_EQ(fit::result_state::ok, result.state());
   EXPECT_EQ(42, result.value());
   EXPECT_FALSE(p);
-
-  END_TEST;
 }
 
-bool make_result_promise() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, make_result_promise) {
   fake_context fake_context;
 
   // Argument type: fit::result<int, char>
@@ -458,13 +424,9 @@ bool make_result_promise() {
     fit::result<int, char> result = p(fake_context);
     EXPECT_EQ(fit::result_state::pending, result.state());
   }
-
-  END_TEST;
 }
 
-bool make_ok_promise() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, make_ok_promise) {
   fake_context fake_context;
 
   // Argument type: int
@@ -485,13 +447,9 @@ bool make_ok_promise() {
     fit::result<void, void> result = p(fake_context);
     EXPECT_EQ(fit::result_state::ok, result.state());
   }
-
-  END_TEST;
 }
 
-bool make_error_promise() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, make_error_promise) {
   fake_context fake_context;
 
   // Argument type: int
@@ -512,8 +470,6 @@ bool make_error_promise() {
     fit::result<void, void> result = p(fake_context);
     EXPECT_EQ(fit::result_state::error, result.state());
   }
-
-  END_TEST;
 }
 
 auto make_checked_ok_promise(int value) {
@@ -561,9 +517,7 @@ auto make_delayed_error_promise(char error) {
 // To keep these tests manageable, we only focus on argument type adaptation
 // since return type adaptation logic is already covered by |make_promise()|
 // and by the examples.
-bool then_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, then_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
@@ -653,13 +607,9 @@ bool then_combinator() {
     EXPECT_EQ(fit::result_state::ok, result.state());
     EXPECT_EQ(46, result.value());
   }
-
-  END_TEST;
 }
 
-bool and_then_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, and_then_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
@@ -741,13 +691,9 @@ bool and_then_combinator() {
     EXPECT_EQ(46, result.value());
     EXPECT_FALSE(p);
   }
-
-  END_TEST;
 }
 
-bool or_else_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, or_else_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
@@ -828,13 +774,9 @@ bool or_else_combinator() {
     EXPECT_EQ('e', result.error());
     EXPECT_FALSE(p);
   }
-
-  END_TEST;
 }
 
-bool inspect_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, inspect_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
@@ -910,13 +852,9 @@ bool inspect_combinator() {
     EXPECT_EQ(fit::result_state::ok, result.state());
     EXPECT_EQ(44, result.value());
   }
-
-  END_TEST;
 }
 
-bool discard_result_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, discard_result_combinator) {
   fake_context fake_context;
 
   // Chaining on OK.
@@ -948,13 +886,9 @@ bool discard_result_combinator() {
     EXPECT_FALSE(p);
     EXPECT_EQ(fit::result_state::ok, result.state());
   }
-
-  END_TEST;
 }
 
-bool wrap_with_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, wrap_with_combinator) {
   fake_context fake_context;
   capture_result_wrapper<int, char> wrapper;
   uint64_t successor_run_count = 0;
@@ -977,13 +911,9 @@ bool wrap_with_combinator() {
   EXPECT_EQ(fit::result_state::ok, wrapper.last_result.state());
   EXPECT_EQ(42, wrapper.last_result.value());
   EXPECT_EQ(1, successor_run_count);
-
-  END_TEST;
 }
 
-bool box_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, box_combinator) {
   fake_context fake_context;
 
   auto p = fit::make_promise([&]() -> fit::result<int, char> { return fit::ok(42); });
@@ -998,13 +928,9 @@ bool box_combinator() {
   EXPECT_FALSE(q);
   EXPECT_EQ(fit::result_state::ok, result.state());
   EXPECT_EQ(42, result.value());
-
-  END_TEST;
 }
 
-bool join_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, join_combinator) {
   fake_context fake_context;
 
   auto p = fit::join_promises(
@@ -1024,13 +950,9 @@ bool join_combinator() {
   EXPECT_EQ(42, std::get<0>(result.value()).value());
   EXPECT_EQ('y', std::get<1>(result.value()).error());
   EXPECT_EQ(55, std::get<2>(result.value()).value());
-
-  END_TEST;
 }
 
-bool join_combinator_move_only_result() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, join_combinator_move_only_result) {
   fake_context fake_context;
 
   // Add 1 + 2 to get 3, using a join combinator with a "then" continuation
@@ -1053,13 +975,9 @@ bool join_combinator_move_only_result() {
   EXPECT_FALSE(p);
   EXPECT_EQ(fit::result_state::ok, result.state());
   EXPECT_EQ(3, *result.value());
-
-  END_TEST;
 }
 
-bool join_vector_combinator() {
-  BEGIN_TEST;
-
+TEST(PromiseTests, join_vector_combinator) {
   fake_context fake_context;
 
   std::vector<fit::promise<int, char>> promises;
@@ -1080,8 +998,6 @@ bool join_vector_combinator() {
   EXPECT_EQ(42, result.value()[0].value());
   EXPECT_EQ('y', result.value()[1].error());
   EXPECT_EQ(55, result.value()[2].value());
-
-  END_TEST;
 }
 
 // Ensure that fit::promise is considered nullable so that a promise can be
@@ -1292,27 +1208,3 @@ void diagnose_handler_with_invalid_error_arg() {
         .or_else([](const int& error) {});
 }
 #endif
-
-BEGIN_TEST_CASE(promise_tests)
-RUN_TEST(basics)
-RUN_TEST(empty_promise)
-RUN_TEST(invocation)
-RUN_TEST(take_continuation)
-RUN_TEST(assignment_and_swap)
-RUN_TEST(comparison_with_nullptr)
-RUN_TEST(make_promise)
-RUN_TEST(make_promise_with_continuation)
-RUN_TEST(make_result_promise)
-RUN_TEST(make_ok_promise)
-RUN_TEST(make_error_promise)
-RUN_TEST(then_combinator)
-RUN_TEST(and_then_combinator)
-RUN_TEST(or_else_combinator)
-RUN_TEST(inspect_combinator)
-RUN_TEST(discard_result_combinator)
-RUN_TEST(wrap_with_combinator)
-RUN_TEST(box_combinator)
-RUN_TEST(join_combinator)
-RUN_TEST(join_combinator_move_only_result)
-RUN_TEST(join_vector_combinator)
-END_TEST_CASE(promise_tests)

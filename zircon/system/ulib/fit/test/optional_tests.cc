@@ -13,7 +13,7 @@
 #define FORCE_FIT_OPTIONAL
 #include <lib/fit/optional.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -264,9 +264,7 @@ static_assert(std::is_trivially_move_assignable<fit::optional<trivially_copyable
 }  // namespace trivial_copy_move_tests
 
 template <typename T>
-bool construct_without_value() {
-  BEGIN_TEST;
-
+void construct_without_value() {
   fit::optional<T> opt;
   EXPECT_FALSE(opt.has_value());
   EXPECT_FALSE(!!opt);
@@ -275,14 +273,10 @@ bool construct_without_value() {
 
   opt.reset();
   EXPECT_FALSE(opt.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool construct_with_value() {
-  BEGIN_TEST;
-
+void construct_with_value() {
   fit::optional<T> opt(T{42});
   EXPECT_TRUE(opt.has_value());
   EXPECT_TRUE(!!opt);
@@ -296,14 +290,10 @@ bool construct_with_value() {
 
   opt.reset();
   EXPECT_FALSE(opt.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool construct_copy() {
-  BEGIN_TEST;
-
+void construct_copy() {
   fit::optional<T> a(T{42});
   fit::optional<T> b(a);
   fit::optional<T> c;
@@ -314,14 +304,10 @@ bool construct_copy() {
   EXPECT_EQ(42, b.value().value);
   EXPECT_FALSE(c.has_value());
   EXPECT_FALSE(d.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool construct_move() {
-  BEGIN_TEST;
-
+void construct_move() {
   fit::optional<T> a(T{42});
   fit::optional<T> b(std::move(a));
   fit::optional<T> c;
@@ -331,8 +317,6 @@ bool construct_move() {
   EXPECT_EQ(42, b.value().value);
   EXPECT_FALSE(c.has_value());
   EXPECT_FALSE(d.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
@@ -340,20 +324,14 @@ T get_value(fit::optional<T> opt) {
   return opt.value();
 }
 
-bool construct_with_implicit_conversion() {
-  BEGIN_TEST;
-
+TEST(OptionalTests, construct_with_implicit_conversion) {
   // get_value expects a value of type fit::optional<T> but we pass 3
   // so this exercises the converting constructor
   EXPECT_EQ(3, get_value<int>(3));
-
-  END_TEST;
 }
 
 template <typename T>
-bool accessors() {
-  BEGIN_TEST;
-
+void accessors() {
   fit::optional<T> a(T{42});
   T& value = a.value();
   EXPECT_EQ(42, value.value);
@@ -366,14 +344,10 @@ bool accessors() {
 
   T const_rvalue = const_cast<const fit::optional<T>&&>(fit::optional<T>(T{42})).value();
   EXPECT_EQ(42, const_rvalue.value);
-
-  END_TEST;
 }
 
 template <typename T>
-bool assign() {
-  BEGIN_TEST;
-
+void assign() {
   fit::optional<T> a(T{42});
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(42, a.value().value);
@@ -391,14 +365,10 @@ bool assign() {
 
   a = fit::nullopt;
   EXPECT_FALSE(a.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool assign_copy() {
-  BEGIN_TEST;
-
+void assign_copy() {
   fit::optional<T> a(T{42});
   fit::optional<T> b(T{55});
   fit::optional<T> c;
@@ -439,14 +409,10 @@ bool assign_copy() {
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
-
-  END_TEST;
 }
 
 template <typename T>
-bool assign_move() {
-  BEGIN_TEST;
-
+void assign_move() {
   fit::optional<T> a(T{42});
   fit::optional<T> b(T{55});
   fit::optional<T> c;
@@ -484,14 +450,10 @@ bool assign_move() {
 
   c = std::move(c);
   EXPECT_FALSE(c.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool emplace() {
-  BEGIN_TEST;
-
+void emplace() {
   fit::optional<T> a;
   EXPECT_EQ(55, a.emplace(55).value);
   EXPECT_TRUE(a.has_value());
@@ -501,26 +463,18 @@ bool emplace() {
   EXPECT_EQ(66, b.emplace(66).value);
   EXPECT_TRUE(b.has_value());
   EXPECT_EQ(66, b.value().value);
-
-  END_TEST;
 }
 
 template <typename T>
-bool invoke() {
-  BEGIN_TEST;
-
+void invoke() {
   fit::optional<T> a(T{42});
   EXPECT_EQ(42, a->get());
   EXPECT_EQ(43, a->increment());
   EXPECT_EQ(43, (*a).value);
-
-  END_TEST;
 }
 
 template <typename T>
-bool comparisons() {
-  BEGIN_TEST;
-
+void comparisons() {
   fit::optional<T> a(T{42});
   fit::optional<T> b(T{55});
   fit::optional<T> c(T{42});
@@ -560,14 +514,10 @@ bool comparisons() {
   EXPECT_TRUE(T{42} != d);
   EXPECT_FALSE(d != fit::nullopt);
   EXPECT_FALSE(fit::nullopt != d);
-
-  END_TEST;
 }
 
 template <typename T>
-bool swapping() {
-  BEGIN_TEST;
-
+void swapping() {
   fit::optional<T> a(T{42});
   fit::optional<T> b(T{55});
   fit::optional<T> c;
@@ -599,22 +549,14 @@ bool swapping() {
   swap(d, d);
   EXPECT_TRUE(d.has_value());
   EXPECT_EQ(55, d.value().value);
-
-  END_TEST;
 }
 
 template <typename T>
-bool balance() {
-  BEGIN_TEST;
-
+void balance() {
   EXPECT_EQ(0, T::balance);
-
-  END_TEST;
 }
 
-bool make_optional() {
-  BEGIN_TEST;
-
+TEST(OptionalTests, make_optional) {
   {
     // Simple value.
     auto value = fit::make_optional<int>(10);
@@ -635,45 +577,39 @@ bool make_optional() {
     static_assert(std::is_same<fit::optional<std::vector<int>>, decltype(value)>::value, "");
     EXPECT_TRUE((*value == std::vector<int>{{10, 20, 30}}));
   }
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(optional_tests)
-RUN_TEST(construct_with_implicit_conversion)
-RUN_TEST(construct_without_value<slot<false>>)
-RUN_TEST(construct_without_value<slot<true>>)
-RUN_TEST(construct_with_value<slot<false>>)
-RUN_TEST(construct_with_value<slot<true>>)
-RUN_TEST(construct_copy<slot<false>>)
-RUN_TEST(construct_copy<slot<true>>)
-RUN_TEST(construct_move<slot<false>>)
-RUN_TEST(construct_move<slot<true>>)
-RUN_TEST(accessors<slot<false>>)
-RUN_TEST(accessors<slot<true>>)
+TEST(OptionalTests, construct_without_value_slot_false) { construct_without_value<slot<false>>(); }
+TEST(OptionalTests, construct_without_value_slot_true) { construct_without_value<slot<true>>(); }
+TEST(OptionalTests, construct_with_value_slot_false) { construct_with_value<slot<false>>(); }
+TEST(OptionalTests, construct_with_value_slot_true) { construct_with_value<slot<true>>(); }
+TEST(OptionalTests, construct_copy_slot_false) { construct_copy<slot<false>>(); }
+TEST(OptionalTests, construct_copy_slot_true) { construct_copy<slot<true>>(); }
+TEST(OptionalTests, construct_move_slot_false) { construct_move<slot<false>>(); }
+TEST(OptionalTests, construct_move_slot_true) { construct_move<slot<true>>(); }
+TEST(OptionalTests, accessors_slot_false) { accessors<slot<false>>(); }
+TEST(OptionalTests, accessors_slot_true) { accessors<slot<true>>(); }
 #if 0 || TEST_DOES_NOT_COMPILE
-RUN_TEST(assign<slot<false>>)
+TEST(OptionalTests, assign_slot_false) { assign<slot<false>>(); }
 #endif
-RUN_TEST(assign<slot<true>>)
+TEST(OptionalTests, assign_slot_true) { assign<slot<true>>(); }
 #if 0 || TEST_DOES_NOT_COMPILE
-RUN_TEST(assign_copy<slot<false>>)
+TEST(OptionalTests, assign_copy_slot_false) { assign_copy<slot<false>>(); }
 #endif
-RUN_TEST(assign_copy<slot<true>>)
+TEST(OptionalTests, assign_copy_slot_true) { assign_copy<slot<true>>(); }
 #if 0 || TEST_DOES_NOT_COMPILE
-RUN_TEST(assign_move<slot<false>>)
+TEST(OptionalTests, assign_move_slot_false) { assign_move<slot<false>>(); }
 #endif
-RUN_TEST(assign_move<slot<true>>)
-RUN_TEST(emplace<slot<false>>)
-RUN_TEST(emplace<slot<true>>)
-RUN_TEST(invoke<slot<false>>)
-RUN_TEST(invoke<slot<true>>)
-RUN_TEST(comparisons<slot<false>>)
-RUN_TEST(comparisons<slot<true>>)
-RUN_TEST(swapping<slot<false>>)
-RUN_TEST(swapping<slot<true>>)
-RUN_TEST(balance<slot<false>>)
-RUN_TEST(balance<slot<true>>)
-RUN_TEST(make_optional)
-END_TEST_CASE(optional_tests)
+TEST(OptionalTests, assign_move_slot_true) { assign_move<slot<true>>(); }
+TEST(OptionalTests, emplace_slot_false) { emplace<slot<false>>(); }
+TEST(OptionalTests, emplace_slot_true) { emplace<slot<true>>(); }
+TEST(OptionalTests, invoke_slot_false) { invoke<slot<false>>(); }
+TEST(OptionalTests, invoke_slot_true) { invoke<slot<true>>(); }
+TEST(OptionalTests, comparisons_slot_false) { comparisons<slot<false>>(); }
+TEST(OptionalTests, comparisons_slot_true) { comparisons<slot<true>>(); }
+TEST(OptionalTests, swapping_slot_false) { swapping<slot<false>>(); }
+TEST(OptionalTests, swapping_slot_true) { swapping<slot<true>>(); }
+TEST(OptionalTests, balance_slot_false) { balance<slot<false>>(); }
+TEST(OptionalTests, balance_slot_true) { balance<slot<true>>(); }

@@ -9,7 +9,7 @@
 #include <functional>
 #include <memory>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -35,30 +35,20 @@ class balance {
 void incr_arg(int* p) { *p += 1; }
 
 template <typename T>
-bool default_construction() {
-  BEGIN_TEST;
-
+void default_construction() {
   fit::deferred_action<T> d;
   EXPECT_FALSE(d);
-
-  END_TEST;
 }
 
 template <typename T>
-bool null_construction() {
-  BEGIN_TEST;
-
+void null_construction() {
   fit::deferred_action<T> d(nullptr);
   EXPECT_FALSE(d);
-
-  END_TEST;
 }
 
 template <typename T>
-bool basic() {
+void basic() {
   static_assert(fit::is_nullable<fit::deferred_action<T>>::value, "");
-
-  BEGIN_TEST;
 
   int var = 0;
   {
@@ -71,14 +61,10 @@ bool basic() {
     EXPECT_TRUE(nullptr != do_incr);
   }
   EXPECT_EQ(var, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool cancel() {
-  BEGIN_TEST;
-
+void cancel() {
   int var = 0;
   {
     auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
@@ -99,14 +85,10 @@ bool cancel() {
     EXPECT_EQ(var, 0);
   }
   EXPECT_EQ(var, 0);
-
-  END_TEST;
 }
 
 template <typename T>
-bool null_assignment() {
-  BEGIN_TEST;
-
+void null_assignment() {
   int var = 0;
   {
     auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
@@ -123,14 +105,10 @@ bool null_assignment() {
     EXPECT_EQ(var, 0);
   }
   EXPECT_EQ(var, 0);
-
-  END_TEST;
 }
 
 template <typename T>
-bool target_reassignment() {
-  BEGIN_TEST;
-
+void target_reassignment() {
   int var = 0;
   {
     fit::deferred_action<T> do_incr;
@@ -143,14 +121,10 @@ bool target_reassignment() {
     EXPECT_EQ(var, 0);
   }
   EXPECT_EQ(var, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool call() {
-  BEGIN_TEST;
-
+void call() {
   int var = 0;
   {
     auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
@@ -167,14 +141,10 @@ bool call() {
     EXPECT_EQ(var, 1);
   }
   EXPECT_EQ(var, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool recursive_call() {
-  BEGIN_TEST;
-
+void recursive_call() {
   int var = 0;
   {
     auto do_incr = fit::defer<T>([]() { /* no-op */ });
@@ -192,14 +162,10 @@ bool recursive_call() {
     EXPECT_EQ(var, 1);
   }
   EXPECT_EQ(var, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_construct_basic() {
-  BEGIN_TEST;
-
+void move_construct_basic() {
   int var = 0;
   {
     auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
@@ -211,14 +177,10 @@ bool move_construct_basic() {
     EXPECT_EQ(var, 0);
   }
   EXPECT_EQ(var, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_construct_from_canceled() {
-  BEGIN_TEST;
-
+void move_construct_from_canceled() {
   int var = 0;
   {
     auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
@@ -233,14 +195,10 @@ bool move_construct_from_canceled() {
     EXPECT_EQ(var, 0);
   }
   EXPECT_EQ(var, 0);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_construct_from_called() {
-  BEGIN_TEST;
-
+void move_construct_from_called() {
   int var = 0;
   {
     auto do_incr = fit::defer<T>([&var]() { incr_arg(&var); });
@@ -256,14 +214,10 @@ bool move_construct_from_called() {
     EXPECT_FALSE(do_incr);
   }
   EXPECT_EQ(var, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_assign_basic() {
-  BEGIN_TEST;
-
+void move_assign_basic() {
   int var1 = 0, var2 = 0;
   {
     auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
@@ -289,14 +243,10 @@ bool move_assign_basic() {
   }
   EXPECT_EQ(var1, 1);
   EXPECT_EQ(var2, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_assign_wider_scoped() {
-  BEGIN_TEST;
-
+void move_assign_wider_scoped() {
   int var1 = 0, var2 = 0;
   {
     auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
@@ -325,14 +275,10 @@ bool move_assign_wider_scoped() {
   }
   EXPECT_EQ(var1, 1);
   EXPECT_EQ(var2, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_assign_from_canceled() {
-  BEGIN_TEST;
-
+void move_assign_from_canceled() {
   int var1 = 0, var2 = 0;
   {
     auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
@@ -358,14 +304,10 @@ bool move_assign_from_canceled() {
   // do_incr was cancelled, this state is preserved by the move.
   EXPECT_EQ(var1, 0);
   EXPECT_EQ(var2, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_assign_from_called() {
-  BEGIN_TEST;
-
+void move_assign_from_called() {
   int var1 = 0, var2 = 0;
   {
     auto do_incr = fit::defer<T>([&var1]() { incr_arg(&var1); });
@@ -391,14 +333,10 @@ bool move_assign_from_called() {
   // do_incr was called already, this state is preserved by the move.
   EXPECT_EQ(var1, 1);
   EXPECT_EQ(var2, 1);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_assign_to_null() {
-  BEGIN_TEST;
-
+void move_assign_to_null() {
   int call_count = 0;
   {
     fit::deferred_action<T> deferred(nullptr);
@@ -407,14 +345,10 @@ bool move_assign_to_null() {
     EXPECT_EQ(0, call_count);
   }
   EXPECT_EQ(1, call_count);
-
-  END_TEST;
 }
 
 template <typename T>
-bool move_assign_to_invalid() {
-  BEGIN_TEST;
-
+void move_assign_to_invalid() {
   int call_count = 0;
   {
     T fn;
@@ -424,14 +358,10 @@ bool move_assign_to_invalid() {
     EXPECT_EQ(0, call_count);
   }
   EXPECT_EQ(1, call_count);
-
-  END_TEST;
 }
 
 template <typename T>
-bool target_destroyed_when_scope_exited() {
-  BEGIN_TEST;
-
+void target_destroyed_when_scope_exited() {
   int call_count = 0;
   int instance_count = 0;
   {
@@ -442,14 +372,10 @@ bool target_destroyed_when_scope_exited() {
   }
   EXPECT_EQ(1, call_count);
   EXPECT_EQ(0, instance_count);
-
-  END_TEST;
 }
 
 template <typename T>
-bool target_destroyed_when_called() {
-  BEGIN_TEST;
-
+void target_destroyed_when_called() {
   int call_count = 0;
   int instance_count = 0;
   {
@@ -464,14 +390,10 @@ bool target_destroyed_when_called() {
   }
   EXPECT_EQ(1, call_count);
   EXPECT_EQ(0, instance_count);
-
-  END_TEST;
 }
 
 template <typename T>
-bool target_destroyed_when_canceled() {
-  BEGIN_TEST;
-
+void target_destroyed_when_canceled() {
   int call_count = 0;
   int instance_count = 0;
   {
@@ -486,14 +408,10 @@ bool target_destroyed_when_canceled() {
   }
   EXPECT_EQ(0, call_count);
   EXPECT_EQ(0, instance_count);
-
-  END_TEST;
 }
 
 template <typename T>
-bool target_destroyed_when_move_constructed() {
-  BEGIN_TEST;
-
+void target_destroyed_when_move_constructed() {
   int call_count = 0;
   int instance_count = 0;
   {
@@ -508,14 +426,10 @@ bool target_destroyed_when_move_constructed() {
   }
   EXPECT_EQ(1, call_count);
   EXPECT_EQ(0, instance_count);
-
-  END_TEST;
 }
 
 template <typename T>
-bool target_destroyed_when_move_assigned() {
-  BEGIN_TEST;
-
+void target_destroyed_when_move_assigned() {
   int call_count = 0;
   int instance_count = 0;
   {
@@ -531,13 +445,9 @@ bool target_destroyed_when_move_assigned() {
   }
   EXPECT_EQ(1, call_count);
   EXPECT_EQ(0, instance_count);
-
-  END_TEST;
 }
 
-bool deferred_callback() {
-  BEGIN_TEST;
-
+TEST(DeferTests, deferred_callback) {
   auto get_lambda = [](bool* b) { return [b] { *b = true; }; };
 
   bool called1 = false;
@@ -553,53 +463,80 @@ bool deferred_callback() {
     EXPECT_FALSE(called2);
   }
   EXPECT_TRUE(called2);
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(defer_tests)
-RUN_TEST(default_construction<fit::closure>)
-RUN_TEST(default_construction<std::function<void()>>)
-RUN_TEST(null_construction<fit::closure>)
-RUN_TEST(null_construction<std::function<void()>>)
-RUN_TEST(basic<fit::closure>)
-RUN_TEST(basic<std::function<void()>>)
-RUN_TEST(cancel<fit::closure>)
-RUN_TEST(cancel<std::function<void()>>)
-RUN_TEST(null_assignment<fit::closure>)
-RUN_TEST(null_assignment<std::function<void()>>)
-RUN_TEST(target_reassignment<fit::closure>)
-RUN_TEST(target_reassignment<std::function<void()>>)
-RUN_TEST(call<fit::closure>)
-RUN_TEST(call<std::function<void()>>)
-RUN_TEST(recursive_call<fit::closure>)
-RUN_TEST(recursive_call<std::function<void()>>)
-RUN_TEST(move_construct_basic<fit::closure>)
-RUN_TEST(move_construct_basic<std::function<void()>>)
-RUN_TEST(move_construct_from_canceled<fit::closure>)
-RUN_TEST(move_construct_from_canceled<std::function<void()>>)
-RUN_TEST(move_construct_from_called<fit::closure>)
-RUN_TEST(move_construct_from_called<std::function<void()>>)
-RUN_TEST(move_assign_basic<fit::closure>)
-RUN_TEST(move_assign_basic<std::function<void()>>)
-RUN_TEST(move_assign_wider_scoped<fit::closure>)
-RUN_TEST(move_assign_wider_scoped<std::function<void()>>)
-RUN_TEST(move_assign_from_canceled<fit::closure>)
-RUN_TEST(move_assign_from_canceled<std::function<void()>>)
-RUN_TEST(move_assign_from_called<fit::closure>)
-RUN_TEST(move_assign_from_called<std::function<void()>>)
-RUN_TEST(move_assign_to_null<fit::closure>)
-RUN_TEST(move_assign_to_null<std::function<void()>>)
-RUN_TEST(move_assign_to_invalid<fit::closure>)
-RUN_TEST(move_assign_to_invalid<std::function<void()>>)
+TEST(DeferTests, default_construction_fit_closure) { default_construction<fit::closure>(); }
+TEST(DeferTests, default_construction_std_function) {
+  default_construction<std::function<void()>>();
+}
+TEST(DeferTests, null_construction_fit_closure) { null_construction<fit::closure>(); }
+TEST(DeferTests, null_construction_std_function) { null_construction<std::function<void()>>(); }
+TEST(DeferTests, basic_fit_closure) { basic<fit::closure>(); }
+TEST(DeferTests, basic_std_function) { basic<std::function<void()>>(); }
+TEST(DeferTests, cancel_fit_closure) { cancel<fit::closure>(); }
+TEST(DeferTests, cancel_std_function) { cancel<std::function<void()>>(); }
+TEST(DeferTests, null_assignment_fit_closure) { null_assignment<fit::closure>(); }
+TEST(DeferTests, null_assignment_std_function) { null_assignment<std::function<void()>>(); }
+TEST(DeferTests, target_reassignment_fit_closure) { target_reassignment<fit::closure>(); }
+TEST(DeferTests, target_reassignment_std_function) { target_reassignment<std::function<void()>>(); }
+TEST(DeferTests, call_fit_closure) { call<fit::closure>(); }
+TEST(DeferTests, call_std_function) { call<std::function<void()>>(); }
+TEST(DeferTests, recursive_call_fit_closure) { recursive_call<fit::closure>(); }
+TEST(DeferTests, recursive_call_std_function) { recursive_call<std::function<void()>>(); }
+TEST(DeferTests, move_construct_basic_fit_closure) { move_construct_basic<fit::closure>(); }
+TEST(DeferTests, move_construct_basic_std_function) {
+  move_construct_basic<std::function<void()>>();
+}
+TEST(DeferTests, move_construct_from_canceled_fit_closure) {
+  move_construct_from_canceled<fit::closure>();
+}
+TEST(DeferTests, move_construct_from_canceled_std_function) {
+  move_construct_from_canceled<std::function<void()>>();
+}
+TEST(DeferTests, move_construct_from_called_fit_closure) {
+  move_construct_from_called<fit::closure>();
+}
+TEST(DeferTests, move_construct_from_called_std_function) {
+  move_construct_from_called<std::function<void()>>();
+}
+TEST(DeferTests, move_assign_basic_fit_closure) { move_assign_basic<fit::closure>(); }
+TEST(DeferTests, move_assign_basic_std_function) { move_assign_basic<std::function<void()>>(); }
+TEST(DeferTests, move_assign_wider_scoped_fit_closure) { move_assign_wider_scoped<fit::closure>(); }
+TEST(DeferTests, move_assign_wider_scoped_std_function) {
+  move_assign_wider_scoped<std::function<void()>>();
+}
+TEST(DeferTests, move_assign_from_canceled_fit_closure) {
+  move_assign_from_canceled<fit::closure>();
+}
+TEST(DeferTests, move_assign_from_canceled_std_function) {
+  move_assign_from_canceled<std::function<void()>>();
+}
+TEST(DeferTests, move_assign_from_called_fit_closure) { move_assign_from_called<fit::closure>(); }
+TEST(DeferTests, move_assign_from_called_std_function) {
+  move_assign_from_called<std::function<void()>>();
+}
+TEST(DeferTests, move_assign_to_null_fit_closure) { move_assign_to_null<fit::closure>(); }
+TEST(DeferTests, move_assign_to_null_std_function) { move_assign_to_null<std::function<void()>>(); }
+TEST(DeferTests, move_assign_to_invalid_fit_closure) { move_assign_to_invalid<fit::closure>(); }
+TEST(DeferTests, move_assign_to_invalid_std_function) {
+  move_assign_to_invalid<std::function<void()>>();
+}
 // These tests do not support std::function because std::function copies
 // the captured values (which balance does not support).
-RUN_TEST(target_destroyed_when_scope_exited<fit::closure>)
-RUN_TEST(target_destroyed_when_called<fit::closure>)
-RUN_TEST(target_destroyed_when_canceled<fit::closure>)
-RUN_TEST(target_destroyed_when_move_constructed<fit::closure>)
-RUN_TEST(target_destroyed_when_move_assigned<fit::closure>)
-RUN_TEST(deferred_callback)
-END_TEST_CASE(defer_tests)
+TEST(DeferTests, target_destroyed_when_scope_exited_fit_closure) {
+  target_destroyed_when_scope_exited<fit::closure>();
+}
+TEST(DeferTests, target_destroyed_when_called_fit_closure) {
+  target_destroyed_when_called<fit::closure>();
+}
+TEST(DeferTests, target_destroyed_when_canceled_fit_closure) {
+  target_destroyed_when_canceled<fit::closure>();
+}
+TEST(DeferTests, target_destroyed_when_move_constructed_fit_closure) {
+  target_destroyed_when_move_constructed<fit::closure>();
+}
+TEST(DeferTests, target_destroyed_when_move_assigned_fit_closure) {
+  target_destroyed_when_move_assigned<fit::closure>();
+}

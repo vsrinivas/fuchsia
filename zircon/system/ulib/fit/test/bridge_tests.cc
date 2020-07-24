@@ -11,7 +11,7 @@
 #include <thread>
 #include <tuple>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -39,9 +39,7 @@ void async_invoke_callback_two_args(uint64_t* run_count,
   }).detach();
 }
 
-bool bridge_construction_and_assignment() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, bridge_construction_and_assignment) {
   // Create a new bridge.
   fit::bridge<int, const char*> bridge;
   EXPECT_TRUE(bridge.completer);
@@ -68,13 +66,9 @@ bool bridge_construction_and_assignment() {
   EXPECT_FALSE(bridge.consumer);
   EXPECT_EQ(fit::result_state::error, result.state());
   EXPECT_STR_EQ("Test", result.error());
-
-  END_TEST;
 }
 
-bool completer_construction_and_assignment() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, completer_construction_and_assignment) {
   // Default constructed completer is empty.
   fit::completer<int, const char*> completer;
   EXPECT_FALSE(completer);
@@ -106,13 +100,9 @@ bool completer_construction_and_assignment() {
   completer2 = std::move(completer3);
   EXPECT_FALSE(completer2);
   EXPECT_FALSE(completer3);
-
-  END_TEST;
 }
 
-bool completer_abandon() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, completer_abandon) {
   // abandon()
   {
     fit::bridge<int, const char*> bridge;
@@ -146,13 +136,9 @@ bool completer_abandon() {
     EXPECT_EQ(fit::result_state::error, result.state());
     EXPECT_STR_EQ("Abandoned", result.error());
   }
-
-  END_TEST;
 }
 
-bool completer_complete() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, completer_complete) {
   // complete_ok()
   {
     fit::bridge<void, const char*> bridge;
@@ -263,13 +249,9 @@ bool completer_complete() {
     EXPECT_EQ(fit::result_state::error, result.state());
     EXPECT_STR_EQ("Abandoned", result.error());
   }
-
-  END_TEST;
 }
 
-bool completer_bind_no_arg_callback() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, completer_bind_no_arg_callback) {
   // Use bind()
   {
     uint64_t run_count = 0;
@@ -295,13 +277,9 @@ bool completer_bind_no_arg_callback() {
     EXPECT_EQ(fit::result_state::ok, result.state());
     EXPECT_EQ(1, run_count);
   }
-
-  END_TEST;
 }
 
-bool completer_bind_one_arg_callback() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, completer_bind_one_arg_callback) {
   // Use bind()
   {
     uint64_t run_count = 0;
@@ -330,13 +308,9 @@ bool completer_bind_one_arg_callback() {
     EXPECT_TRUE(std::get<0>(result.value()) == "Hippopotamus");
     EXPECT_EQ(1, run_count);
   }
-
-  END_TEST;
 }
 
-bool completer_bind_two_arg_callback() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, completer_bind_two_arg_callback) {
   // Use bind_tuple()
   {
     uint64_t run_count = 0;
@@ -352,13 +326,9 @@ bool completer_bind_two_arg_callback() {
     EXPECT_EQ(42, std::get<1>(result.value()));
     EXPECT_EQ(1, run_count);
   }
-
-  END_TEST;
 }
 
-bool consumer_construction_and_assignment() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, consumer_construction_and_assignment) {
   // Default constructed consumer is empty.
   fit::consumer<int, const char*> consumer;
   EXPECT_FALSE(consumer);
@@ -390,13 +360,9 @@ bool consumer_construction_and_assignment() {
   consumer2 = std::move(consumer3);
   EXPECT_FALSE(consumer2);
   EXPECT_FALSE(consumer3);
-
-  END_TEST;
 }
 
-bool consumer_cancel() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, consumer_cancel) {
   // cancel()
   {
     fit::bridge<int, const char*> bridge;
@@ -424,13 +390,9 @@ bool consumer_cancel() {
     bridge.completer.complete_ok(42);
     EXPECT_FALSE(bridge.completer);
   }
-
-  END_TEST;
 }
 
-bool consumer_promise() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, consumer_promise) {
   // promise() when completed
   {
     fit::bridge<int, const char*> bridge;
@@ -501,13 +463,9 @@ bool consumer_promise() {
     EXPECT_EQ(fit::result_state::error, result.state());
     EXPECT_STR_EQ("Abandoned", result.error());
   }
-
-  END_TEST;
 }
 
-bool schedule_for_consumer() {
-  BEGIN_TEST;
-
+TEST(BridgeTests, schedule_for_consumer) {
   // Promise completes normally.
   {
     uint64_t run_count[2] = {};
@@ -583,22 +541,6 @@ bool schedule_for_consumer() {
     EXPECT_EQ(1, run_count[1]);
     t.join();
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(bridge_tests)
-RUN_TEST(bridge_construction_and_assignment)
-RUN_TEST(completer_construction_and_assignment)
-RUN_TEST(completer_abandon)
-RUN_TEST(completer_complete)
-RUN_TEST(completer_bind_no_arg_callback)
-RUN_TEST(completer_bind_one_arg_callback)
-RUN_TEST(completer_bind_two_arg_callback)
-RUN_TEST(consumer_construction_and_assignment)
-RUN_TEST(consumer_cancel)
-RUN_TEST(consumer_promise)
-RUN_TEST(schedule_for_consumer)
-END_TEST_CASE(bridge_tests)

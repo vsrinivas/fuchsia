@@ -10,14 +10,12 @@
 #include <string>
 #include <thread>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 // Wrapping tasks with a barrier should still allow them to complete, even without a sync.
-bool wrapping_tasks_no_sync() {
-  BEGIN_TEST;
-
+TEST(BarrierTests, wrapping_tasks_no_sync) {
   bool array[3] = {};
   auto a = fit::make_promise([&] { array[0] = true; });
   auto b = fit::make_promise([&] { array[1] = true; });
@@ -38,14 +36,10 @@ bool wrapping_tasks_no_sync() {
   for (size_t i = 0; i < std::size(array); i++) {
     EXPECT_TRUE(array[i]);
   }
-
-  END_TEST;
 }
 
 // Syncing tasks with should still allow them to complete, even without pending work.
-bool sync_no_wrapped_tasks() {
-  BEGIN_TEST;
-
+TEST(BarrierTests, sync_no_wrapped_tasks) {
   bool array[3] = {};
   auto a = fit::make_promise([&] { array[0] = true; });
   auto b = fit::make_promise([&] { array[1] = true; });
@@ -66,15 +60,11 @@ bool sync_no_wrapped_tasks() {
   for (size_t i = 0; i < std::size(array); i++) {
     EXPECT_TRUE(array[i]);
   }
-
-  END_TEST;
 }
 
 // Wrap up a bunch of work in the barrier before syncing a barrier.
 // Observe that the wrapped work completes before the sync.
-bool wrap_then_sync() {
-  BEGIN_TEST;
-
+TEST(BarrierTests, wrap_then_sync) {
   bool array[3] = {};
   auto a = fit::make_promise([&] { array[0] = true; });
   auto b = fit::make_promise([&] { array[1] = true; });
@@ -108,15 +98,11 @@ bool wrap_then_sync() {
   executor.run();
 
   EXPECT_TRUE(sync_complete);
-
-  END_TEST;
 }
 
 // Observe that the order of "barrier.wrap" does not re-order the wrapped promises, but
 // merely provides ordering before the sync point.
-bool wrap_preserves_initial_order() {
-  BEGIN_TEST;
-
+TEST(BarrierTests, wrap_preserves_initial_order) {
   // Create three promises.
   //
   // They will be sequencer-wrapped in the order "a, b, c".
@@ -170,14 +156,10 @@ bool wrap_preserves_initial_order() {
   executor.run();
 
   EXPECT_TRUE(sync_complete);
-
-  END_TEST;
 }
 
 // Observe that promises chained after the "wrap" request do not block the sync.
-bool work_after_wrap_non_blocking() {
-  BEGIN_TEST;
-
+TEST(BarrierTests, work_after_wrap_non_blocking) {
   bool work_complete = false;
   auto work = fit::make_promise([&] { work_complete = true; });
 
@@ -207,14 +189,11 @@ bool work_after_wrap_non_blocking() {
 
   EXPECT_TRUE(work_complete);
   EXPECT_TRUE(sync_complete);
-
-  END_TEST;
 }
 
 // Observe that back-to-back sync operations are still ordered, and cannot
 // skip ahead of previously wrapped work.
-bool multiple_syncs_after_work_are_ordered() {
-  BEGIN_TEST;
+TEST(BarrierTests, multiple_syncs_after_work_are_ordered) {
   bool work_complete = false;
   auto work = fit::make_promise([&] { work_complete = true; });
 
@@ -244,13 +223,10 @@ bool multiple_syncs_after_work_are_ordered() {
   EXPECT_TRUE(work_complete);
   EXPECT_TRUE(syncs_complete[0]);
   EXPECT_TRUE(syncs_complete[1]);
-  END_TEST;
 }
 
 // Abandoning promises should still allow sync to complete.
-bool abandoned_promises_are_ordered_by_sync() {
-  BEGIN_TEST;
-
+TEST(BarrierTests, abandoned_promises_are_ordered_by_sync) {
   auto work = fit::make_promise([&] { assert(false); });
 
   bool sync_complete = false;
@@ -267,18 +243,6 @@ bool abandoned_promises_are_ordered_by_sync() {
   executor.run();
 
   EXPECT_TRUE(sync_complete);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(barrier_tests)
-RUN_TEST(wrapping_tasks_no_sync)
-RUN_TEST(sync_no_wrapped_tasks)
-RUN_TEST(wrap_then_sync)
-RUN_TEST(wrap_preserves_initial_order)
-RUN_TEST(work_after_wrap_non_blocking)
-RUN_TEST(multiple_syncs_after_work_are_ordered)
-RUN_TEST(abandoned_promises_are_ordered_by_sync)
-END_TEST_CASE(barrier_tests)

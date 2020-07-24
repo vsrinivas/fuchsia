@@ -10,7 +10,7 @@
 
 #include <thread>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -51,9 +51,7 @@ class accumulator {
   uint32_t counter_ = 0;
 };
 
-bool scoping_tasks() {
-  BEGIN_TEST;
-
+TEST(ScopeTests, scoping_tasks) {
   auto acc = std::make_unique<accumulator>();
   fit::single_threaded_executor executor;
   uint32_t sums[4] = {};
@@ -86,13 +84,9 @@ bool scoping_tasks() {
   EXPECT_EQ(5, sums[1]);
   EXPECT_EQ(0, sums[2]);
   EXPECT_EQ(10, sums[3]);
-
-  END_TEST;
 }
 
-bool exit_destroys_wrapped_promises() {
-  BEGIN_TEST;
-
+TEST(ScopeTests, exit_destroys_wrapped_promises) {
   fit::scope scope;
   EXPECT_FALSE(scope.exited());
 
@@ -136,13 +130,9 @@ bool exit_destroys_wrapped_promises() {
   // Exiting again has no effect.
   scope.exit();
   EXPECT_TRUE(scope.exited());
-
-  END_TEST;
 }
 
-bool double_wrap() {
-  BEGIN_TEST;
-
+TEST(ScopeTests, double_wrap) {
   fit::scope scope;
   fake_context context;
 
@@ -174,13 +164,9 @@ bool double_wrap() {
   EXPECT_EQ(fit::result_state::pending, promise(context).state());
   EXPECT_EQ(1, run_count);
   EXPECT_TRUE(destroyed);
-
-  END_TEST;
 }
 
-bool thread_safety() {
-  BEGIN_TEST;
-
+TEST(ScopeTests, thread_safety) {
   fit::scope scope;
   fit::single_threaded_executor executor;
   uint64_t run_count = 0;
@@ -223,15 +209,6 @@ bool thread_safety() {
   // called scope.exit() at the same time.
   EXPECT_GE(run_count, exit_threshold);
   EXPECT_LE(run_count, num_threads * exit_threshold);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(scope_tests)
-RUN_TEST(scoping_tasks)
-RUN_TEST(exit_destroys_wrapped_promises)
-RUN_TEST(double_wrap)
-RUN_TEST(thread_safety)
-END_TEST_CASE(scope_tests)

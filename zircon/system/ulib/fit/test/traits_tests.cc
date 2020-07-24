@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -49,16 +49,12 @@ void invoke_with_defaults(Callable c) {
   invoke_with_defaults(std::move(c), typename fit::callable_traits<Callable>::args{});
 }
 
-bool arg_capture() {
-  BEGIN_TEST;
-
+TEST(TraitsTest, arg_capture) {
   int i = 0;
   invoke_with_defaults([&] { i = 42; });
   EXPECT_EQ(42, i);
   invoke_with_defaults([&](int, float) { i = 54; });
   EXPECT_EQ(54, i);
-
-  END_TEST;
 }
 
 // Performs static assertions against a function-like type of signature int(float, bool).
@@ -140,7 +136,3 @@ static_assert(fit::is_callable<std::function<int(float, bool)>>::value, "");
 }  // namespace test_callables
 
 }  // namespace
-
-BEGIN_TEST_CASE(traits_test)
-RUN_TEST(test_callables::arg_capture)
-END_TEST_CASE(traits_test)

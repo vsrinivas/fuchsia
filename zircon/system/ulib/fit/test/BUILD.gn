@@ -92,15 +92,13 @@ test("fit") {
     "traits_tests.cc",
     "utility_internal_tests.cc",
   ]
-  deps = [ "//zircon/public/lib/fit" ]
+  deps = [
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zxtest",
+  ]
   configs += [ ":shadow" ]
   if (is_fuchsia) {
-    deps += [
-      "//sdk/lib/fdio",
-      "//zircon/system/ulib/unittest",
-    ]
-  } else {
-    deps += [ "//zircon/system/ulib/unittest:unittest-static" ]
+    deps += [ "//sdk/lib/fdio" ]
   }
 
   # TODO(48668): Fix the leaks and remove this.

@@ -4,7 +4,7 @@
 
 #include <lib/fit/result.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -21,9 +21,7 @@ struct MoveOnly {
   int data;
 };
 
-bool states() {
-  BEGIN_TEST;
-
+TEST(ResultTests, states) {
   fit::result<> good = fit::ok();
   EXPECT_EQ(fit::result_state::ok, good.state());
   EXPECT_TRUE(good);
@@ -51,13 +49,9 @@ bool states() {
   EXPECT_FALSE(default_init.is_ok());
   EXPECT_FALSE(default_init.is_error());
   EXPECT_TRUE(default_init.is_pending());
-
-  END_TEST;
 }
 
-bool void_value_and_error() {
-  BEGIN_TEST;
-
+TEST(ResultTests, void_value_and_error) {
   fit::result<> good = fit::ok();
   EXPECT_EQ(fit::result_state::ok, good.state());
 
@@ -86,13 +80,9 @@ bool void_value_and_error() {
   fit::error_result<> taken_error_result = tmpsrc.take_error_result();
   EXPECT_EQ(fit::result_state::pending, tmpsrc.state());
   (void)taken_error_result;
-
-  END_TEST;
 }
 
-bool copyable_value() {
-  BEGIN_TEST;
-
+TEST(ResultTests, copyable_value) {
   fit::result<Copyable> good = fit::ok<Copyable>({42});
   EXPECT_EQ(fit::result_state::ok, good.state());
   EXPECT_EQ(42, good.value().data);
@@ -128,13 +118,9 @@ bool copyable_value() {
   fit::error_result<> taken_error_result = tmpsrc.take_error_result();
   EXPECT_EQ(fit::result_state::pending, tmpsrc.state());
   (void)taken_error_result;
-
-  END_TEST;
 }
 
-bool copyable_error() {
-  BEGIN_TEST;
-
+TEST(ResultTests, copyable_error) {
   fit::result<void, Copyable> good = fit::ok();
   EXPECT_EQ(fit::result_state::ok, good.state());
 
@@ -170,13 +156,9 @@ bool copyable_error() {
   fit::error_result<Copyable> taken_error_result = tmpsrc.take_error_result();
   EXPECT_EQ(fit::result_state::pending, tmpsrc.state());
   EXPECT_EQ(42, taken_error_result.error.data);
-
-  END_TEST;
 }
 
-bool moveonly_value() {
-  BEGIN_TEST;
-
+TEST(ResultTests, moveonly_value) {
   fit::result<MoveOnly> good = fit::ok<MoveOnly>({42});
   EXPECT_EQ(fit::result_state::ok, good.state());
   EXPECT_EQ(42, good.value().data);
@@ -204,13 +186,9 @@ bool moveonly_value() {
   fit::error_result<> taken_error_result = tmpsrc.take_error_result();
   EXPECT_EQ(fit::result_state::pending, tmpsrc.state());
   (void)taken_error_result;
-
-  END_TEST;
 }
 
-bool moveonly_error() {
-  BEGIN_TEST;
-
+TEST(ResultTests, moveonly_error) {
   fit::result<void, MoveOnly> good = fit::ok();
   EXPECT_EQ(fit::result_state::ok, good.state());
 
@@ -238,13 +216,9 @@ bool moveonly_error() {
   fit::error_result<MoveOnly> taken_error_result = tmpsrc.take_error_result();
   EXPECT_EQ(fit::result_state::pending, tmpsrc.state());
   EXPECT_EQ(42, taken_error_result.error.data);
-
-  END_TEST;
 }
 
-bool swapping() {
-  BEGIN_TEST;
-
+TEST(ResultTests, swapping) {
   fit::result<int, char> a, b, c;
   a = fit::ok(42);
   b = fit::error('x');
@@ -259,8 +233,6 @@ bool swapping() {
 
   swap(c, c);
   EXPECT_EQ(42, c.value());
-
-  END_TEST;
 }
 
 // Test constexpr behavior.
@@ -301,13 +273,3 @@ static_assert(fit::result<void, int>(fit::error(1)).is_error(), "");
 static_assert(fit::result<void, int>(fit::error(1)).error() == 1, "");
 }  // namespace constexpr_test
 }  // namespace
-
-BEGIN_TEST_CASE(result_tests)
-RUN_TEST(states)
-RUN_TEST(void_value_and_error)
-RUN_TEST(copyable_value)
-RUN_TEST(copyable_error)
-RUN_TEST(moveonly_value)
-RUN_TEST(moveonly_error)
-RUN_TEST(swapping)
-END_TEST_CASE(result_tests)

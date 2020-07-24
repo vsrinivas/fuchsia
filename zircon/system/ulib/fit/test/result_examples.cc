@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 namespace example1 {
@@ -38,18 +38,10 @@ fit::result<> open(std::string secret) {
 
 bool guess_combination() { return open("friend") || open("sesame") || open("I give up"); }
 
-bool test() {
-  BEGIN_TEST;
-
+TEST(ResultExamples, test) {
   EXPECT_EQ(2, try_divide(5, 2));
   EXPECT_EQ(-999, try_divide(5, 0));
   EXPECT_TRUE(guess_combination());
-
-  END_TEST;
 }
 }  // namespace example1
 }  // namespace
-
-BEGIN_TEST_CASE(result_examples)
-RUN_TEST(example1::test)
-END_TEST_CASE(result_examples)

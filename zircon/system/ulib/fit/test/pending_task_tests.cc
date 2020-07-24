@@ -4,7 +4,7 @@
 
 #include <lib/fit/promise.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -16,9 +16,7 @@ class fake_context : public fit::context {
   fit::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
 };
 
-bool empty_task() {
-  BEGIN_TEST;
-
+TEST(PendingTaskTests, empty_task) {
   fake_context context;
 
   {
@@ -38,13 +36,9 @@ bool empty_task() {
     EXPECT_FALSE(empty);
     EXPECT_FALSE(empty.take_promise());
   }
-
-  END_TEST;
 }
 
-bool non_empty_task() {
-  BEGIN_TEST;
-
+TEST(PendingTaskTests, non_empty_task) {
   fake_context context;
 
   {
@@ -97,13 +91,6 @@ bool non_empty_task() {
     EXPECT_EQ(2, run_count);
     EXPECT_FALSE(promise);
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(pending_task_tests)
-RUN_TEST(empty_task)
-RUN_TEST(non_empty_task)
-END_TEST_CASE(pending_task_tests)

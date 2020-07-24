@@ -7,7 +7,7 @@
 
 #include <stdlib.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // Asserts that a condition is true.  If false, prints an error then
 // aborts the test run.  Use only when |current_test_info| is not in scope.
@@ -18,12 +18,12 @@
 // to indicate success or failure.  This isn't always practical for the
 // tests in this library.  Crashing the process when a test fails isn't
 // great but it's better than not checking the condition.
-#define ASSERT_CRITICAL(x)                                                                         \
-  do {                                                                                             \
-    if (!(x)) {                                                                                    \
-      unittest_printf_critical("ASSERT_CRITICAL FAILED at (%s:%d): %s\n", __FILE__, __LINE__, #x); \
-      abort();                                                                                     \
-    }                                                                                              \
+#define ASSERT_CRITICAL(x)                                                       \
+  do {                                                                           \
+    if (!(x)) {                                                                  \
+      printf("ASSERT_CRITICAL FAILED at (%s:%d): %s\n", __FILE__, __LINE__, #x); \
+      abort();                                                                   \
+    }                                                                            \
   } while (0)
 
 #endif  // ZIRCON_SYSTEM_ULIB_FIT_TEST_UNITTEST_UTILS_H_

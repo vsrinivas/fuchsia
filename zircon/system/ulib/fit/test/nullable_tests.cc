@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -237,9 +237,7 @@ static_assert(nullable_struct{1} != fit::nullable<nullable_struct>{2}, "");
 static_assert(fit::nullable<nullable_struct>{1}.value() == nullable_struct{1}, "");
 static_assert(fit::nullable<nullable_struct>{2}.value() != nullable_struct{1}, "");
 
-bool is_null() {
-  BEGIN_TEST;
-
+TEST(NullableTests, is_null) {
   EXPECT_TRUE(fit::is_null(nullptr));
 
   null_comparable_struct ncf;
@@ -271,8 +269,6 @@ bool is_null() {
 
   non_nullable_struct_with_non_bool_comparator nbn;
   EXPECT_FALSE(fit::is_null(nbn));
-
-  END_TEST;
 }
 
 template <typename T>
@@ -293,9 +289,7 @@ struct traits<non_nullable_struct> {
 };
 
 template <typename T>
-bool construct_without_value() {
-  BEGIN_TEST;
-
+void construct_without_value() {
   fit::nullable<T> opt;
   EXPECT_FALSE(opt.has_value());
   EXPECT_FALSE(!!opt);
@@ -304,14 +298,10 @@ bool construct_without_value() {
 
   opt.reset();
   EXPECT_FALSE(opt.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool construct_with_value() {
-  BEGIN_TEST;
-
+void construct_with_value() {
   fit::nullable<T> opt(traits<T>::a);
   EXPECT_TRUE(opt.has_value());
   EXPECT_TRUE(!!opt);
@@ -325,14 +315,10 @@ bool construct_with_value() {
 
   opt.reset();
   EXPECT_FALSE(opt.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool construct_copy() {
-  BEGIN_TEST;
-
+void construct_copy() {
   fit::nullable<T> a(traits<T>::a);
   fit::nullable<T> b(a);
   fit::nullable<T> c;
@@ -345,14 +331,10 @@ bool construct_copy() {
   EXPECT_FALSE(c.has_value());
   EXPECT_FALSE(d.has_value());
   EXPECT_FALSE(e.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool construct_move() {
-  BEGIN_TEST;
-
+void construct_move() {
   fit::nullable<T> a(traits<T>::a);
   fit::nullable<T> b(std::move(a));
   fit::nullable<T> c;
@@ -362,14 +344,10 @@ bool construct_move() {
   EXPECT_EQ(42, b.value().value);
   EXPECT_FALSE(c.has_value());
   EXPECT_FALSE(d.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool accessors() {
-  BEGIN_TEST;
-
+void accessors() {
   fit::nullable<T> a(traits<T>::a);
   T& value = a.value();
   EXPECT_EQ(42, value.value);
@@ -382,14 +360,10 @@ bool accessors() {
 
   T const_rvalue = const_cast<const fit::nullable<T>&&>(fit::nullable<T>(traits<T>::a)).value();
   EXPECT_EQ(42, const_rvalue.value);
-
-  END_TEST;
 }
 
 template <typename T>
-bool assign() {
-  BEGIN_TEST;
-
+void assign() {
   fit::nullable<T> a(traits<T>::a);
   EXPECT_TRUE(a.has_value());
   EXPECT_EQ(42, a.value().value);
@@ -411,14 +385,10 @@ bool assign() {
   a = traits<T>::a;
   a = traits<T>::null;
   EXPECT_FALSE(a.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool assign_copy() {
-  BEGIN_TEST;
-
+void assign_copy() {
   fit::nullable<T> a(traits<T>::a);
   fit::nullable<T> b(traits<T>::b);
   fit::nullable<T> c;
@@ -462,14 +432,10 @@ bool assign_copy() {
 
   b = traits<T>::null;
   EXPECT_FALSE(b.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool assign_move() {
-  BEGIN_TEST;
-
+void assign_move() {
   fit::nullable<T> a(traits<T>::a);
   fit::nullable<T> b(traits<T>::b);
   fit::nullable<T> c;
@@ -507,26 +473,18 @@ bool assign_move() {
 
   c = std::move(c);
   EXPECT_FALSE(c.has_value());
-
-  END_TEST;
 }
 
 template <typename T>
-bool invoke() {
-  BEGIN_TEST;
-
+void invoke() {
   fit::nullable<T> a(traits<T>::a);
   EXPECT_EQ(42, a->get());
   EXPECT_EQ(43, a->increment());
   EXPECT_EQ(43, (*a).value);
-
-  END_TEST;
 }
 
 template <typename T>
-bool comparisons() {
-  BEGIN_TEST;
-
+void comparisons() {
   fit::nullable<T> a(traits<T>::a);
   fit::nullable<T> b(traits<T>::b);
   fit::nullable<T> c(traits<T>::a);
@@ -566,14 +524,10 @@ bool comparisons() {
   EXPECT_TRUE(traits<T>::a != d);
   EXPECT_FALSE(d != nullptr);
   EXPECT_FALSE(nullptr != d);
-
-  END_TEST;
 }
 
 template <typename T>
-bool swapping() {
-  BEGIN_TEST;
-
+void swapping() {
   fit::nullable<T> a(traits<T>::a);
   fit::nullable<T> b(traits<T>::b);
   fit::nullable<T> c;
@@ -605,34 +559,37 @@ bool swapping() {
   swap(d, d);
   EXPECT_TRUE(d.has_value());
   EXPECT_EQ(55, d.value().value);
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(nullable_tests)
-RUN_TEST(is_null)
-RUN_TEST(construct_without_value<nullable_struct>)
-RUN_TEST(construct_without_value<non_nullable_struct>)
-RUN_TEST(construct_with_value<nullable_struct>)
-RUN_TEST(construct_with_value<non_nullable_struct>)
-RUN_TEST(construct_copy<nullable_struct>)
-RUN_TEST(construct_copy<non_nullable_struct>)
-RUN_TEST(construct_move<nullable_struct>)
-RUN_TEST(construct_move<non_nullable_struct>)
-RUN_TEST(accessors<nullable_struct>)
-RUN_TEST(accessors<non_nullable_struct>)
-RUN_TEST(assign<nullable_struct>)
-RUN_TEST(assign<non_nullable_struct>)
-RUN_TEST(assign_copy<nullable_struct>)
-RUN_TEST(assign_copy<non_nullable_struct>)
-RUN_TEST(assign_move<nullable_struct>)
-RUN_TEST(assign_move<non_nullable_struct>)
-RUN_TEST(invoke<nullable_struct>)
-RUN_TEST(invoke<non_nullable_struct>)
-RUN_TEST(comparisons<nullable_struct>)
-RUN_TEST(comparisons<non_nullable_struct>)
-RUN_TEST(swapping<nullable_struct>)
-RUN_TEST(swapping<non_nullable_struct>)
-END_TEST_CASE(nullable_tests)
+TEST(NullableTests, construct_without_value_nullable_struct) {
+  construct_without_value<nullable_struct>();
+}
+TEST(NullableTests, construct_without_value_non_nullable_struct) {
+  construct_without_value<non_nullable_struct>();
+}
+TEST(NullableTests, construct_with_value_nullable_struct) {
+  construct_with_value<nullable_struct>();
+}
+TEST(NullableTests, construct_with_value_non_nullable_struct) {
+  construct_with_value<non_nullable_struct>();
+}
+TEST(NullableTests, construct_copy_nullable_struct) { construct_copy<nullable_struct>(); }
+TEST(NullableTests, construct_copy_non_nullable_struct) { construct_copy<non_nullable_struct>(); }
+TEST(NullableTests, construct_move_nullable_struct) { construct_move<nullable_struct>(); }
+TEST(NullableTests, construct_move_non_nullable_struct) { construct_move<non_nullable_struct>(); }
+TEST(NullableTests, accessors_nullable_struct) { accessors<nullable_struct>(); }
+TEST(NullableTests, accessors_non_nullable_struct) { accessors<non_nullable_struct>(); }
+TEST(NullableTests, assign_nullable_struct) { assign<nullable_struct>(); }
+TEST(NullableTests, assign_non_nullable_struct) { assign<non_nullable_struct>(); }
+TEST(NullableTests, assign_copy_nullable_struct) { assign_copy<nullable_struct>(); }
+TEST(NullableTests, assign_copy_non_nullable_struct) { assign_copy<non_nullable_struct>(); }
+TEST(NullableTests, assign_move_nullable_struct) { assign_move<nullable_struct>(); }
+TEST(NullableTests, assign_move_non_nullable_struct) { assign_move<non_nullable_struct>(); }
+TEST(NullableTests, invoke_nullable_struct) { invoke<nullable_struct>(); }
+TEST(NullableTests, invoke_non_nullable_struct) { invoke<non_nullable_struct>(); }
+TEST(NullableTests, comparisons_nullable_struct) { comparisons<nullable_struct>(); }
+TEST(NullableTests, comparisons_non_nullable_struct) { comparisons<non_nullable_struct>(); }
+TEST(NullableTests, swapping_nullable_struct) { swapping<nullable_struct>(); }
+TEST(NullableTests, swapping_non_nullable_struct) { swapping<non_nullable_struct>(); }

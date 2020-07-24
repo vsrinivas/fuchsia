@@ -10,13 +10,11 @@
 #include <string>
 #include <thread>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool sequencing_tasks() {
-  BEGIN_TEST;
-
+TEST(SequencerTests, sequencing_tasks) {
   fit::sequencer seq;
   std::string str;
 
@@ -73,13 +71,9 @@ bool sequencing_tasks() {
 
   // Evaluate the promises and check the execution order.
   EXPECT_STR_EQ(":z1:a:a2:z2:b:b2:c:b2:d:b2:e:b2:b3", str.c_str());
-
-  END_TEST;
 }
 
-bool thread_safety() {
-  BEGIN_TEST;
-
+TEST(SequencerTests, thread_safety) {
   fit::sequencer seq;
   fit::single_threaded_executor executor;
   uint64_t run_count = 0;
@@ -107,13 +101,6 @@ bool thread_safety() {
 
   // We expect all tasks to have run.
   EXPECT_EQ(num_threads * num_tasks_per_thread, run_count);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(sequencer_tests)
-RUN_TEST(sequencing_tasks)
-RUN_TEST(thread_safety)
-END_TEST_CASE(sequencer_tests)

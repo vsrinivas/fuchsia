@@ -4,7 +4,7 @@
 
 #include <lib/fit/function.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -86,10 +86,8 @@ class DestructionObserver {
 };
 
 template <typename ClosureFunction>
-bool closure() {
+void closure() {
   static_assert(fit::is_nullable<ClosureFunction>::value, "");
-
-  BEGIN_TEST;
 
   // default initialization
   ClosureFunction fdefault;
@@ -265,15 +263,11 @@ bool closure() {
   EXPECT_EQ(fslottarget, fslottargetconst);
   fslot = nullptr;
   EXPECT_NULL(fslot.template target<decltype(nullptr)>());
-
-  END_TEST;
 }
 
 template <typename BinaryOpFunction>
-bool binary_op() {
+void binary_op() {
   static_assert(fit::is_nullable<BinaryOpFunction>::value, "");
-
-  BEGIN_TEST;
 
   // default initialization
   BinaryOpFunction fdefault;
@@ -464,13 +458,9 @@ bool binary_op() {
   EXPECT_EQ(fslottarget, fslottargetconst);
   fslot = nullptr;
   EXPECT_NULL(fslot.template target<decltype(nullptr)>());
-
-  END_TEST;
 }
 
-bool sized_function_size_bounds() {
-  BEGIN_TEST;
-
+TEST(FunctionTests, sized_function_size_bounds) {
   auto empty = [] {};
   fit::function<Closure, sizeof(empty)> fempty(std::move(empty));
   static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
@@ -503,13 +493,9 @@ bool sized_function_size_bounds() {
     (void)x;
     (void)y;
   };
-
-  END_TEST;
 }
 
-bool inline_function_size_bounds() {
-  BEGIN_TEST;
-
+TEST(FunctionTests, inline_function_size_bounds) {
   auto empty = [] {};
   fit::inline_function<Closure, sizeof(empty)> fempty(std::move(empty));
   static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
@@ -543,23 +529,17 @@ bool inline_function_size_bounds() {
         (void)y;
     };
 #endif
-
-  END_TEST;
 }
 
-bool inline_function_alignment_check() {
-  BEGIN_TEST;
+TEST(FunctionTests, inline_function_alignment_check) {
 // These statements do not compile because the alignment is too large.
 #if 0
     auto big = [big = BigAlignment()] { };
     fit::inline_function<Closure, sizeof(big)> fbig(std::move(big));
 #endif
-  END_TEST;
 }
 
-bool move_only_argument_and_result() {
-  BEGIN_TEST;
-
+TEST(FunctionTests, move_only_argument_and_result) {
   std::unique_ptr<int> arg(new int());
   fit::function<MoveOp> f([](std::unique_ptr<int> value) {
     *value += 1;
@@ -569,37 +549,27 @@ bool move_only_argument_and_result() {
   EXPECT_EQ(1, *arg);
   arg = f(std::move(arg));
   EXPECT_EQ(2, *arg);
-
-  END_TEST;
 }
 
 void implicit_construction_helper(fit::closure closure) {}
 
-bool implicit_construction() {
-  BEGIN_TEST;
-
+TEST(FunctionTests, implicit_construction) {
   // ensure we can implicitly construct from nullptr
   implicit_construction_helper(nullptr);
 
   // ensure we can implicitly construct from a lambda
   implicit_construction_helper([] {});
-
-  END_TEST;
 }
 
 int arg_count(fit::closure) { return 0; }
 int arg_count(fit::function<void(int)>) { return 1; }
 
-bool overload_resolution() {
-  BEGIN_TEST;
+TEST(FunctionTests, overload_resolution) {
   EXPECT_EQ(0, arg_count([] {}));
   EXPECT_EQ(1, arg_count([](int) {}));
-  END_TEST;
 }
 
-bool sharing() {
-  BEGIN_TEST;
-
+TEST(FunctionTests, sharing) {
   fit::function<Closure> fnull;
   fit::function<Closure> fnullshare1 = fnull.share();
   fit::function<Closure> fnullshare2 = fnull.share();
@@ -701,8 +671,6 @@ bool sharing() {
     fit::inline_function<Closure> fbad;
     fbad.share();
 #endif
-
-  END_TEST;
 }
 
 struct Obj {
@@ -726,9 +694,7 @@ struct Obj {
   uint32_t calls = 0;
 };
 
-bool bind_member() {
-  BEGIN_TEST;
-
+TEST(FunctionTests, bind_member) {
   Obj obj;
   auto move_only_value = std::make_unique<int>(4);
 
@@ -738,13 +704,9 @@ bool bind_member() {
   move_only_value = fit::bind_member(&obj, &Obj::AddAndReturn)(std::move(move_only_value));
   EXPECT_EQ(5, *move_only_value);
   EXPECT_EQ(3, obj.calls);
-
-  END_TEST;
 }
 
-bool callback_once() {
-  BEGIN_TEST;
-
+TEST(FunctionTests, callback_once) {
   fit::callback<Closure> cbnull;
   fit::callback<Closure> cbnullshare1 = cbnull.share();
   fit::callback<Closure> cbnullshare2 = cbnull.share();
@@ -891,8 +853,6 @@ bool callback_once() {
     }
 
 #endif
-
-  END_TEST;
 }
 
 namespace test_copy_move_constructions {
@@ -972,22 +932,21 @@ static_assert(std::is_same<fit::function<BinaryOp>::result_type, int>::value, ""
 static_assert(std::is_same<fit::callback<BinaryOp>::result_type, int>::value, "");
 }  // namespace test_conversions
 
-BEGIN_TEST_CASE(function_tests)
-RUN_TEST((closure<fit::function<Closure>>))
-RUN_TEST((binary_op<fit::function<BinaryOp>>))
-RUN_TEST((closure<fit::function<Closure, 0u>>))
-RUN_TEST((binary_op<fit::function<BinaryOp, 0u>>))
-RUN_TEST((closure<fit::function<Closure, HugeCallableSize>>))
-RUN_TEST((binary_op<fit::function<BinaryOp, HugeCallableSize>>))
-RUN_TEST((closure<fit::inline_function<Closure, HugeCallableSize>>))
-RUN_TEST((binary_op<fit::inline_function<BinaryOp, HugeCallableSize>>))
-RUN_TEST(sized_function_size_bounds)
-RUN_TEST(inline_function_size_bounds)
-RUN_TEST(inline_function_alignment_check)
-RUN_TEST(move_only_argument_and_result)
-RUN_TEST(implicit_construction)
-RUN_TEST(overload_resolution)
-RUN_TEST(sharing)
-RUN_TEST(bind_member)
-RUN_TEST(callback_once)
-END_TEST_CASE(function_tests)
+TEST(FunctionTests, closure_fit_function_Closure) { closure<fit::function<Closure>>(); }
+TEST(FunctionTests, binary_op_fit_function_BinaryOp) { binary_op<fit::function<BinaryOp>>(); }
+TEST(FunctionTests, closure_fit_function_Closure_0u) { closure<fit::function<Closure, 0u>>(); }
+TEST(FunctionTests, binary_op_fit_function_BinaryOp_0u) {
+  binary_op<fit::function<BinaryOp, 0u>>();
+}
+TEST(FunctionTests, closure_fit_function_Closure_HugeCallableSize) {
+  closure<fit::function<Closure, HugeCallableSize>>();
+}
+TEST(FunctionTests, binary_op_fit_function_BinaryOp_HugeCallableSize) {
+  binary_op<fit::function<BinaryOp, HugeCallableSize>>();
+}
+TEST(FunctionTests, closure_fit_inline_function_Closure_HugeCallableSize) {
+  closure<fit::inline_function<Closure, HugeCallableSize>>();
+}
+TEST(FunctionTests, binary_op_fit_inline_function_BinaryOp_HugeCallableSize) {
+  binary_op<fit::inline_function<BinaryOp, HugeCallableSize>>();
+}

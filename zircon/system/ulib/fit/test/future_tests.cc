@@ -4,7 +4,7 @@
 
 #include <lib/fit/promise.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -16,9 +16,7 @@ class fake_context : public fit::context {
   fit::suspended_task suspend_task() override { ASSERT_CRITICAL(false); }
 };
 
-bool empty_future() {
-  BEGIN_TEST;
-
+TEST(FutureTests, empty_future) {
   fake_context context;
 
   {
@@ -73,13 +71,9 @@ bool empty_future() {
     EXPECT_FALSE(nihil.is_ready());
     EXPECT_FALSE(nihil(context));
   }
-
-  END_TEST;
 }
 
-bool pending_future() {
-  BEGIN_TEST;
-
+TEST(FutureTests, pending_future) {
   fake_context context;
 
   uint64_t run_count = 0;
@@ -129,13 +123,9 @@ bool pending_future() {
   EXPECT_EQ(fit::future_state::error, fut.state());
   EXPECT_EQ(fit::result_state::error, fut.result().state());
   EXPECT_EQ(42, fut.result().error());
-
-  END_TEST;
 }
 
-bool ok_future() {
-  BEGIN_TEST;
-
+TEST(FutureTests, ok_future) {
   fake_context context;
   fit::future<int> fut(fit::ok(42));
   EXPECT_EQ(fit::future_state::ok, fut.state());
@@ -172,13 +162,9 @@ bool ok_future() {
   EXPECT_EQ(fit::future_state::ok, fut.state());
   EXPECT_EQ(45, fut.take_ok_result().value);
   EXPECT_EQ(fit::future_state::empty, fut.state());
-
-  END_TEST;
 }
 
-bool error_future() {
-  BEGIN_TEST;
-
+TEST(FutureTests, error_future) {
   fake_context context;
   fit::future<void, int> fut(fit::error(42));
   EXPECT_EQ(fit::future_state::error, fut.state());
@@ -215,13 +201,9 @@ bool error_future() {
   EXPECT_EQ(fit::future_state::error, fut.state());
   EXPECT_EQ(45, fut.take_error_result().error);
   EXPECT_EQ(fit::future_state::empty, fut.state());
-
-  END_TEST;
 }
 
-bool assignment_and_swap() {
-  BEGIN_TEST;
-
+TEST(FutureTests, assignment_and_swap) {
   fit::future<> x;
   EXPECT_EQ(fit::future_state::empty, x.state());
 
@@ -253,13 +235,9 @@ bool assignment_and_swap() {
 
   x.swap(x);
   EXPECT_EQ(fit::future_state::pending, x.state());
-
-  END_TEST;
 }
 
-bool make_future() {
-  BEGIN_TEST;
-
+TEST(FutureTests, make_future) {
   fake_context context;
   uint64_t run_count = 0;
   auto fut = fit::make_future(fit::make_promise([&] {
@@ -268,8 +246,6 @@ bool make_future() {
   }));
   EXPECT_TRUE(fut(context));
   EXPECT_EQ(42, fut.value());
-
-  END_TEST;
 }
 
 // Ensure that fit::future is considered nullable so that there is
@@ -278,12 +254,3 @@ bool make_future() {
 static_assert(fit::is_nullable<fit::future<>>::value, "");
 
 }  // namespace
-
-BEGIN_TEST_CASE(future_tests)
-RUN_TEST(empty_future)
-RUN_TEST(pending_future)
-RUN_TEST(ok_future)
-RUN_TEST(error_future)
-RUN_TEST(assignment_and_swap)
-RUN_TEST(make_future)
-END_TEST_CASE(future_tests)

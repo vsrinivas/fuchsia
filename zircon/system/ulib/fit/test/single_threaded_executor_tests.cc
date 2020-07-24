@@ -7,15 +7,13 @@
 
 #include <thread>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
 namespace {
 
-bool running_tasks() {
-  BEGIN_TEST;
-
+TEST(SingleThreadedExecutorTests, running_tasks) {
   fit::single_threaded_executor executor;
   uint64_t run_count[3] = {};
 
@@ -39,13 +37,9 @@ bool running_tasks() {
   EXPECT_EQ(1, run_count[0]);
   EXPECT_EQ(1, run_count[1]);
   EXPECT_EQ(1, run_count[2]);
-
-  END_TEST;
 }
 
-bool suspending_and_resuming_tasks() {
-  BEGIN_TEST;
-
+TEST(SingleThreadedExecutorTests, suspending_and_resuming_tasks) {
   fit::single_threaded_executor executor;
   uint64_t run_count[5] = {};
   uint64_t resume_count[5] = {};
@@ -115,13 +109,10 @@ bool suspending_and_resuming_tasks() {
   EXPECT_EQ(1, run_count[3]);
   EXPECT_EQ(0, resume_count[3]);
   EXPECT_EQ(100, run_count[4]);
-
-  END_TEST;
 }
 
-[[maybe_unused]] bool abandoning_tasks() {
-  BEGIN_TEST;
-
+// Test disabled due to flakiness.  See FLK-260.
+TEST(SingleThreadedExecutorTests, DISABLED_abandoning_tasks) {
   fit::single_threaded_executor executor;
   uint64_t run_count[4] = {};
   uint64_t destruction[4] = {};
@@ -173,13 +164,9 @@ bool suspending_and_resuming_tasks() {
   EXPECT_EQ(1, destruction[2]);
   EXPECT_EQ(1, run_count[3]);
   EXPECT_EQ(1, destruction[3]);
-
-  END_TEST;
 }
 
-bool run_single_threaded() {
-  BEGIN_TEST;
-
+TEST(SingleThreadedExecutorTests, run_single_threaded) {
   uint64_t run_count = 0;
   fit::result<int> result = fit::run_single_threaded(fit::make_promise([&]() {
     run_count++;
@@ -187,13 +174,9 @@ bool run_single_threaded() {
   }));
   EXPECT_EQ(42, result.value());
   EXPECT_EQ(1, run_count);
-
-  END_TEST;
 }
 
-bool run_single_threaded_move_only_result() {
-  BEGIN_TEST;
-
+TEST(SingleThreadedExecutorTests, run_single_threaded_move_only_result) {
   const int kGolden = 5;
   size_t run_count = 0;
 
@@ -205,17 +188,6 @@ bool run_single_threaded_move_only_result() {
   fit::result<std::unique_ptr<int>> result = fit::run_single_threaded(std::move(promise));
   EXPECT_EQ(kGolden, *result.value());
   EXPECT_EQ(1, run_count);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(single_threaded_executor_tests)
-RUN_TEST(running_tasks)
-RUN_TEST(suspending_and_resuming_tasks)
-// Test disabled due to flakiness.  See FLK-260.
-// RUN_TEST(abandoning_tasks)
-RUN_TEST(run_single_threaded)
-RUN_TEST(run_single_threaded_move_only_result)
-END_TEST_CASE(single_threaded_executor_tests)

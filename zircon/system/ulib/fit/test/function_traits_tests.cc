@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -21,16 +21,12 @@ void invoke_with_defaults(Callable c) {
   invoke_with_defaults(std::move(c), typename fit::function_traits<Callable>::args{});
 }
 
-bool arg_capture() {
-  BEGIN_TEST;
-
+TEST(FunctionTraitsTests, arg_capture) {
   int i = 0;
   invoke_with_defaults([&] { i = 42; });
   EXPECT_EQ(42, i);
   invoke_with_defaults([&](int, float) { i = 54; });
   EXPECT_EQ(54, i);
-
-  END_TEST;
 }
 
 // Performs static assertions against a function-like type of signature int(float, bool).
@@ -87,7 +83,3 @@ using Traits = FunctorTraitsTest<std::function<int(float, bool)>>;
 }  // namespace std_function_traits
 
 }  // namespace
-
-BEGIN_TEST_CASE(function_traits_tests)
-RUN_TEST(arg_capture)
-END_TEST_CASE(function_traits_tests)

@@ -4,7 +4,7 @@
 
 #include <lib/fit/scheduler.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -20,20 +20,14 @@ fit::pending_task make_pending_task(uint64_t* counter) {
   return fit::make_promise([counter] { (*counter)++; });
 }
 
-bool initial_state() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, initial_state) {
   fit::subtle::scheduler scheduler;
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
-
-  END_TEST;
 }
 
-bool schedule_task() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, schedule_task) {
   fit::subtle::scheduler scheduler;
   fit::subtle::scheduler::task_queue tasks;
   fake_context context;
@@ -82,13 +76,9 @@ bool schedule_task() {
   // Once we're done, no tasks are left.
   scheduler.take_runnable_tasks(&tasks);
   EXPECT_TRUE(tasks.empty());
-
-  END_TEST;
 }
 
-bool ticket_obtain_finalize_without_task() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, ticket_obtain_finalize_without_task) {
   fit::subtle::scheduler scheduler;
 
   fit::suspended_task::ticket t = scheduler.obtain_ticket();
@@ -101,13 +91,9 @@ bool ticket_obtain_finalize_without_task() {
   EXPECT_FALSE(scheduler.has_runnable_tasks());
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
-
-  END_TEST;
 }
 
-bool ticket_obtain_finalize_with_task() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, ticket_obtain_finalize_with_task) {
   fit::subtle::scheduler scheduler;
 
   fit::suspended_task::ticket t = scheduler.obtain_ticket();
@@ -122,13 +108,9 @@ bool ticket_obtain_finalize_with_task() {
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
   EXPECT_TRUE(p);  // didn't take ownership
-
-  END_TEST;
 }
 
-bool ticket_obtain2_duplicate_finalize_release() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, ticket_obtain2_duplicate_finalize_release) {
   fit::subtle::scheduler scheduler;
 
   fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
@@ -156,13 +138,9 @@ bool ticket_obtain2_duplicate_finalize_release() {
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
   EXPECT_TRUE(p);  // ticket fully unref'd so task ownership returned
-
-  END_TEST;
 }
 
-bool ticket_obtain2_duplicate_finalize_resume() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, ticket_obtain2_duplicate_finalize_resume) {
   fit::subtle::scheduler scheduler;
 
   fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
@@ -197,13 +175,9 @@ bool ticket_obtain2_duplicate_finalize_resume() {
   fake_context context;
   tasks.front()(context);
   EXPECT_EQ(1, run_count);
-
-  END_TEST;
 }
 
-bool ticket_obtain2_release_finalize() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, ticket_obtain2_release_finalize) {
   fit::subtle::scheduler scheduler;
 
   fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
@@ -224,13 +198,9 @@ bool ticket_obtain2_release_finalize() {
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_FALSE(scheduler.has_outstanding_tickets());
   EXPECT_TRUE(p);  // ticket ref-count reached zero, so ownership not taken
-
-  END_TEST;
 }
 
-bool ticket_obtain2_resume_finalize() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, ticket_obtain2_resume_finalize) {
   fit::subtle::scheduler scheduler;
 
   fit::suspended_task::ticket t = scheduler.obtain_ticket(2 /*initial_refs*/);
@@ -258,13 +228,9 @@ bool ticket_obtain2_resume_finalize() {
   fake_context context;
   tasks.front()(context);
   EXPECT_EQ(1, run_count);
-
-  END_TEST;
 }
 
-bool take_all_tasks() {
-  BEGIN_TEST;
-
+TEST(SchedulerTests, take_all_tasks) {
   fit::subtle::scheduler scheduler;
   fit::subtle::scheduler::task_queue tasks;
   fake_context context;
@@ -354,20 +320,6 @@ bool take_all_tasks() {
   EXPECT_FALSE(scheduler.has_suspended_tasks());
   EXPECT_TRUE(scheduler.has_outstanding_tickets());
   EXPECT_TRUE(tasks.empty());
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(scheduler_tests)
-RUN_TEST(initial_state)
-RUN_TEST(schedule_task)
-RUN_TEST(ticket_obtain_finalize_without_task)
-RUN_TEST(ticket_obtain_finalize_with_task)
-RUN_TEST(ticket_obtain2_duplicate_finalize_release)
-RUN_TEST(ticket_obtain2_duplicate_finalize_resume)
-RUN_TEST(ticket_obtain2_release_finalize)
-RUN_TEST(ticket_obtain2_resume_finalize)
-RUN_TEST(take_all_tasks)
-END_TEST_CASE(scheduler_tests)

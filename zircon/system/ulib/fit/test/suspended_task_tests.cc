@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "unittest_utils.h"
 
@@ -49,9 +49,7 @@ class fake_resolver : public fit::suspended_task::resolver {
   std::map<fit::suspended_task::ticket, disposition> tickets_;
 };
 
-bool test() {
-  BEGIN_TEST;
-
+TEST(SuspendedTaskTests, test) {
   fake_resolver resolver;
   {
     fit::suspended_task empty1;
@@ -140,13 +138,9 @@ bool test() {
   EXPECT_EQ(disposition::released, resolver.get_disposition(2));
   EXPECT_EQ(disposition::released, resolver.get_disposition(3));
   EXPECT_EQ(disposition::released, resolver.get_disposition(4));
-
-  END_TEST;
 }
 
-bool swapping() {
-  BEGIN_TEST;
-
+TEST(SuspendedTaskTests, swapping) {
   fake_resolver resolver;
   {
     fit::suspended_task a(&resolver, resolver.obtain_ticket());
@@ -188,13 +182,6 @@ bool swapping() {
     EXPECT_EQ(disposition::released, resolver.get_disposition(1));
     EXPECT_EQ(disposition::resumed, resolver.get_disposition(2));
   }
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(suspended_task_tests)
-RUN_TEST(test)
-RUN_TEST(swapping)
-END_TEST_CASE(suspended_task_tests)
