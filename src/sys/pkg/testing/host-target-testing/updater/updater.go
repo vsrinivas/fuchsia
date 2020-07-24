@@ -9,10 +9,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/url"
 	"os"
+	"path"
+	"path/filepath"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/omaha"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/zbi"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 
 	"golang.org/x/crypto/ssh"
@@ -123,4 +131,111 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 	logger.Infof(ctx, "OTA successfully downloaded in %s", time.Now().Sub(startTime))
 
 	return nil
+}
+
+type OmahaUpdater struct {
+	repo             *packages.Repository
+	updatePackageURL *url.URL
+	omahaServer      *omaha.OmahaServer
+	avbTool          *avb.AVBTool
+	zbiTool          *zbi.ZBITool
+}
+
+func NewOmahaUpdater(
+	repo *packages.Repository,
+	updatePackageURL string,
+	omahaServer *omaha.OmahaServer,
+	avbTool *avb.AVBTool,
+	zbiTool *zbi.ZBITool,
+) (*OmahaUpdater, error) {
+	u, err := url.Parse(updatePackageURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid update package URL %q: %w", updatePackageURL, err)
+	}
+
+	if u.Scheme != "fuchsia-pkg" {
+		return nil, fmt.Errorf("scheme must be 'fuchsia-pkg', not %q", u.Scheme)
+	}
+
+	if u.Host == "" {
+		return nil, fmt.Errorf("update package URL's host must not be empty")
+	}
+
+	return &OmahaUpdater{
+		repo:             repo,
+		updatePackageURL: u,
+		omahaServer:      omahaServer,
+		avbTool:          avbTool,
+		zbiTool:          zbiTool,
+	}, nil
+}
+
+func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
+	pkg, err := u.repo.OpenPackage(u.updatePackageURL.Path[1:])
+	if err != nil {
+		return fmt.Errorf("failed to open url %q: %w", u.updatePackageURL, err)
+	}
+
+	tempDir, err := ioutil.TempDir("", "update-pkg-expand")
+	if err != nil {
+		return fmt.Errorf("unable to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	if err := pkg.Expand(tempDir); err != nil {
+		return fmt.Errorf("failed to expand pkg to %s: %w", tempDir, err)
+	}
+
+	// Create a ZBI with the omaha_url argument.
+	destZbiPath := path.Join(tempDir, "omaha_argument.zbi")
+	imageArguments := map[string]string{
+		"omaha_url": u.omahaServer.URL(),
+	}
+
+	if err := u.zbiTool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments); err != nil {
+		return fmt.Errorf("Failed to create ZBI. %w", err)
+	}
+
+	propFiles := map[string]string{
+		"zbi": destZbiPath,
+	}
+
+	// Update vbmeta in this package.
+	srcVbmetaPath := filepath.Join(tempDir, "fuchsia.vbmeta")
+
+	// Swap the the updated vbmeta into place.
+	err = util.AtomicallyWriteFile(srcVbmetaPath, 0600, func(f *os.File) error {
+		if err := u.avbTool.MakeVBMetaImage(ctx, f.Name(), srcVbmetaPath, propFiles); err != nil {
+			return fmt.Errorf("Failed to update vbmeta: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to atomically overwrite %q: %w", srcVbmetaPath, err)
+	}
+
+	logger.Infof(ctx, "Omaha Server URL set in vbmeta to %q", u.omahaServer.URL())
+
+	pkgBuilder, err := packages.NewPackageBuilderFromDir(tempDir, "update_omaha", "0")
+	if err != nil {
+		return fmt.Errorf("Failed to parse package from %q: %w", tempDir, err)
+	}
+	defer pkgBuilder.Close()
+
+	if err := pkgBuilder.Publish(u.repo); err != nil {
+		return fmt.Errorf("Failed to publish update package: %w", err)
+	}
+
+	omahaPackageURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s/0", pkgBuilder.Name)
+
+	// Have the omaha server serve the package.
+	if err := u.omahaServer.SetUpdatePkgURL(ctx, omahaPackageURL); err != nil {
+		return fmt.Errorf("Failed to set Omaha update package: %w", err)
+	}
+
+	// Trigger an update
+	updateChecker := NewSystemUpdateChecker(u.repo)
+
+	return updateChecker.Update(ctx, c)
 }
