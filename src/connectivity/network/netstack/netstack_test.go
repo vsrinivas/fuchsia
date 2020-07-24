@@ -690,8 +690,8 @@ func TestStaticIPConfiguration(t *testing.T) {
 
 			onlineChanged := make(chan bool, 1)
 			ifs.observer.SetOnLinkOnlineChanged(func(linkOnline bool) {
-				onlineChanged <- linkOnline
 				ifs.onLinkOnlineChanged(linkOnline)
+				onlineChanged <- linkOnline
 			})
 
 			name := ifs.ns.name(ifs.nicid)
