@@ -7,6 +7,8 @@
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/file_descriptor.h>
@@ -22,7 +24,8 @@
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 
-class BasemgrImplTest : public sys::testing::TestWithEnvironment {
+class BasemgrImplTest : public sys::testing::TestWithEnvironment,
+                        fuchsia::ui::lifecycle::LifecycleController {
  public:
   BasemgrImplTest() {}
 
@@ -39,6 +42,14 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment {
         fuchsia::sys::LaunchInfo{.url = "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
                                         "device_settings_manager.cmx"},
         fuchsia::devicesettings::DeviceSettingsManager::Name_);
+
+    env_services->AddService(scenic_lifecycle_controller_bindings_.GetHandler(this));
+    env_services->AddService(std::make_unique<vfs::Service>(
+                                 [presenter_channels = std::vector<zx::channel>()](
+                                     zx::channel channel, async_dispatcher_t* dispatcher) mutable {
+                                   presenter_channels.push_back(std::move(channel));
+                                 }),
+                             fuchsia::ui::policy::Presenter::Name_);
 
     settings_ = modular_testing::FakeSettingsIntl::CreateWithDefaultOptions();
     env_services->AddService(settings_->GetHandler(), fuchsia::settings::Intl::Name_);
@@ -91,9 +102,7 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment {
     )config";
   }
 
-  void LaunchBasemgr() {
-    std::string config_str = GetTestConfig();
-
+  std::shared_ptr<sys::ServiceDirectory> LaunchBasemgrWithConfigJson(std::string config_str) {
     // Create the pseudo directory with our config "file"
     auto config_dir = CreateConfigPseudoDir(config_str);
     fidl::InterfaceHandle<fuchsia::io::Directory> config_dir_handle;
@@ -104,10 +113,6 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment {
     auto svc_dir = sys::ServiceDirectory::CreateWithRequest(&svc_request);
     FX_CHECK(svc_request.is_valid());
 
-    zx_status_t status = svc_dir->Connect("fuchsia.process.lifecycle.Lifecycle",
-                                          process_lifecycle_.NewRequest().TakeChannel());
-    FX_CHECK(ZX_OK == status);
-
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = kBasemgrUrl;
     launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
@@ -117,20 +122,32 @@ class BasemgrImplTest : public sys::testing::TestWithEnvironment {
 
     bool on_directory_ready = false;
     controller_.events().OnDirectoryReady = [&] { on_directory_ready = true; };
-
     env_->CreateComponent(std::move(launch_info), controller_.NewRequest());
 
     RunLoopUntil([&] { return on_directory_ready; });
+    return svc_dir;
   }
+
+  int ui_lifecycle_terminate_calls() const { return ui_lifecycle_terminate_calls_; }
+
+ protected:
+  // |fuchsia.ui.lifecycle.Controller|
+  void Terminate() override {
+    ++ui_lifecycle_terminate_calls_;
+    scenic_lifecycle_controller_bindings_.CloseAll(ZX_ERR_PEER_CLOSED);
+  }
+
+  int ui_lifecycle_terminate_calls_ = 0;
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   std::unique_ptr<modular_testing::FakeSettingsIntl> settings_;
   fuchsia::sys::ComponentControllerPtr controller_;
-  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle_;
+  fidl::BindingSet<fuchsia::ui::lifecycle::LifecycleController>
+      scenic_lifecycle_controller_bindings_;
 };
 
 TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdown) {
-  LaunchBasemgr();
+  auto svc_dir = LaunchBasemgrWithConfigJson(GetTestConfig());
 
   bool is_terminated = false;
   controller_.events().OnTerminated = [&](int64_t return_code,
@@ -140,7 +157,21 @@ TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdown) {
     is_terminated = true;
   };
 
-  process_lifecycle_->Stop();
-
+  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
+  zx_status_t status = svc_dir->Connect("fuchsia.process.lifecycle.Lifecycle",
+                                        process_lifecycle.NewRequest().TakeChannel());
+  FX_CHECK(ZX_OK == status);
+  process_lifecycle->Stop();
   RunLoopUntil([&]() { return is_terminated; });
+}
+
+TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdownAlsoShutsDownScenic) {
+  auto svc_dir = LaunchBasemgrWithConfigJson(GetTestConfig());
+
+  fuchsia::process::lifecycle::LifecyclePtr process_lifecycle;
+  zx_status_t status = svc_dir->Connect("fuchsia.process.lifecycle.Lifecycle",
+                                        process_lifecycle.NewRequest().TakeChannel());
+  FX_CHECK(ZX_OK == status);
+  process_lifecycle->Stop();
+  RunLoopUntil([&]() { return ui_lifecycle_terminate_calls() > 0; });
 }

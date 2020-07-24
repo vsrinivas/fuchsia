@@ -121,29 +121,3 @@ TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
   RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
   RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
 }
-
-// TODO(fxbug.dev/56397) Re-enable flaky test
-// When shutdown is issued, ensure that scenic.cmx is also terminated.
-TEST_F(BasemgrLauncherTest, DISABLED_ShutdownBasemgrShutsdownScenic) {
-  EXPECT_EQ(ZX_OK, RunBasemgrLauncher({}));
-
-  // Get the exact service path, which includes a unique id, of the basemgr instance.
-  std::string service_path;
-  RunLoopUntil([&] {
-    files::Glob glob(kBasemgrHubPathForTests);
-    if (glob.size() == 1) {
-      service_path = *glob.begin();
-      return true;
-    }
-    return false;
-  });
-
-  ASSERT_EQ(ZX_OK, RunBasemgrLauncher({"shutdown"}));
-
-  // Check that the instance of basemgr no longer exists in the hub and it did not restart.
-  RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
-  RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
-
-  // Ensure that scenic also shutdown properly.
-  RunLoopUntil([&] { return files::Glob(kScenicGlobPath).size() == 0; });
-}

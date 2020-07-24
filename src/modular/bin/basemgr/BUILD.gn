@@ -158,6 +158,7 @@ executable("basemgr_impl_unittest") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.testing.runner",
+    "//sdk/fidl/fuchsia.ui.lifecycle",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/lib/fxl/test:gtest_main",
