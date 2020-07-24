@@ -252,7 +252,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             _ => (HashSet::new(), HashSet::new()),
         };
 
-        let service_context = ServiceContext::create(self.generate_service);
+        let event_messenger_factory = internal::event::message::create_hub();
+        let service_context =
+            ServiceContext::create(self.generate_service, Some(event_messenger_factory.clone()));
 
         let mut handler_factory = SettingHandlerFactoryImpl::new(
             settings.clone(),
@@ -274,6 +276,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.agent_blueprints,
             self.event_subscriber_blueprints,
             service_context,
+            event_messenger_factory,
             Arc::new(Mutex::new(handler_factory)),
         )
         .await
@@ -420,12 +423,12 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     agent_blueprints: Vec<AgentBlueprintHandle>,
     event_subscriber_blueprints: Vec<internal::event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
+    event_messenger_factory: internal::event::message::Factory,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
     let registry_messenger_factory = internal::core::message::create_hub();
     let switchboard_messenger_factory = internal::switchboard::message::create_hub();
     let setting_handler_messenger_factory = internal::handler::message::create_hub();
-    let event_messenger_factory = internal::event::message::create_hub();
 
     for blueprint in event_subscriber_blueprints {
         blueprint.create(event_messenger_factory.clone()).await;

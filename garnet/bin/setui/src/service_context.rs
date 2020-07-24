@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::internal::event::message::Factory as EventMessengerFactory;
+use crate::internal::event::{Event, Publisher};
+
 use anyhow::{format_err, Error};
 use fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker};
 use futures::future::BoxFuture;
@@ -12,6 +15,7 @@ use glob::glob;
 
 use fuchsia_zircon as zx;
 use futures::lock::Mutex;
+use std::future::Future;
 use std::sync::Arc;
 
 pub type GenerateService =
@@ -23,15 +27,25 @@ pub type ServiceContextHandle = Arc<Mutex<ServiceContext>>;
 /// environment.
 pub struct ServiceContext {
     generate_service: Option<GenerateService>,
+    _event_messenger_factory: Option<EventMessengerFactory>,
 }
 
 impl ServiceContext {
-    pub fn create(generate_service: Option<GenerateService>) -> ServiceContextHandle {
-        return Arc::new(Mutex::new(ServiceContext::new(generate_service)));
+    pub fn create(
+        generate_service: Option<GenerateService>,
+        event_messenger_factory: Option<EventMessengerFactory>,
+    ) -> ServiceContextHandle {
+        return Arc::new(Mutex::new(ServiceContext::new(
+            generate_service,
+            event_messenger_factory,
+        )));
     }
 
-    pub fn new(generate_service: Option<GenerateService>) -> Self {
-        Self { generate_service: generate_service }
+    pub fn new(
+        generate_service: Option<GenerateService>,
+        event_messenger_factory: Option<EventMessengerFactory>,
+    ) -> Self {
+        Self { generate_service, _event_messenger_factory: event_messenger_factory }
     }
 
     /// Connect to a service with the given ServiceMarker.
@@ -109,5 +123,56 @@ impl ServiceContext {
 
             connect_to_service_at_path::<S>(path_str)
         }
+    }
+}
+
+/// A wrapper around a proxy, used to track disconnections.
+///
+/// This wraps any type implementing `Proxy`. Whenever any call returns a
+/// `ClientChannelClosed` error, this wrapper publishes a closed event for
+/// the wrapped proxy.
+#[derive(Clone)]
+pub struct ExternalServiceProxy<P>
+where
+    P: Proxy,
+{
+    proxy: P,
+    publisher: Option<Publisher>,
+}
+
+impl<P> ExternalServiceProxy<P>
+where
+    P: Proxy,
+{
+    #[cfg(test)]
+    pub fn new(proxy: P, publisher: Option<Publisher>) -> Self {
+        Self { proxy, publisher }
+    }
+
+    fn inspect_result<T>(&self, result: &Result<T, fidl::Error>) {
+        if let Err(fidl::Error::ClientChannelClosed { .. }) = result {
+            self.publisher.as_ref().map(|p| p.send_event(Event::Closed(P::Service::DEBUG_NAME)));
+        }
+    }
+
+    /// Make a call to a synchronous API of the wrapped proxy.
+    pub fn call<T, F>(&self, func: F) -> Result<T, fidl::Error>
+    where
+        F: FnOnce(&P) -> Result<T, fidl::Error>,
+    {
+        let result = func(&self.proxy);
+        self.inspect_result(&result);
+        result
+    }
+
+    /// Nake a call to an asynchronous API of the wrapped proxy.
+    pub async fn call_async<T, F, Fut>(&self, func: F) -> Result<T, fidl::Error>
+    where
+        F: FnOnce(&P) -> Fut,
+        Fut: Future<Output = Result<T, fidl::Error>>,
+    {
+        let result = func(&self.proxy).await;
+        self.inspect_result(&result);
+        result
     }
 }

@@ -222,7 +222,7 @@ async fn create_authority() -> AuthorityImpl {
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let mut authority = create_authority().await;
-    let service_context = ServiceContext::create(None);
+    let service_context = ServiceContext::create(None, None);
 
     // Create a number of agents.
     let agent_ids =
@@ -263,7 +263,7 @@ async fn test_sequential() {
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let mut authority = create_authority().await;
-    let service_context = ServiceContext::create(None);
+    let service_context = ServiceContext::create(None, None);
     let agent_ids =
         create_agents(12, LifespanTarget::Initialization, &mut authority, tx.clone()).await;
 
@@ -300,7 +300,7 @@ async fn test_simultaneous() {
 async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation, AckSender)>();
     let mut authority = create_authority().await;
-    let service_context = ServiceContext::create(None);
+    let service_context = ServiceContext::create(None, None);
     let mut rng = rand::thread_rng();
 
     let agent_1_id = TestAgent::create_and_register(

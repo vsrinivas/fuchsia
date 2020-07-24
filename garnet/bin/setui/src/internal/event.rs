@@ -5,7 +5,6 @@
 use crate::agent;
 use crate::message::base::{Audience, MessengerType};
 use crate::message_hub_definition;
-use crate::switchboard::base::SettingType;
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -20,6 +19,7 @@ pub enum Event {
     Custom(&'static str),
     Earcon(earcon::Event),
     Restore(restore::Event),
+    Closed(&'static str),
 }
 
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
@@ -42,7 +42,7 @@ pub mod earcon {
 }
 
 pub mod restore {
-    use super::*;
+    use crate::switchboard::base::SettingType;
 
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
     pub enum Event {
@@ -71,7 +71,7 @@ impl Publisher {
             .await
             .expect("should be able to retrieve messenger for publisher");
 
-        Publisher { messenger: messenger }
+        Publisher { messenger }
     }
 
     /// Broadcasts event to the message hub.

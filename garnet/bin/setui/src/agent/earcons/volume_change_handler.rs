@@ -316,7 +316,7 @@ mod tests {
         let mut handler = VolumeChangeHandler {
             switchboard_messenger: messenger,
             common_earcons_params: CommonEarconsParams {
-                service_context: ServiceContext::create(None),
+                service_context: ServiceContext::create(None, None),
                 sound_player_added_files: Arc::new(Mutex::new(HashSet::new())),
                 sound_player_connection: Arc::new(Mutex::new(None)),
             },

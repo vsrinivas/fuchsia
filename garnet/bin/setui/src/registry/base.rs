@@ -4,7 +4,7 @@
 
 use crate::internal::handler::message;
 use crate::registry::device_storage::DeviceStorageFactory;
-use crate::service_context::{ServiceContext, ServiceContextHandle};
+use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingRequest, SettingType};
 use anyhow::Error;
 use async_trait::async_trait;
@@ -12,6 +12,11 @@ use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::collections::HashSet;
 use std::sync::Arc;
+#[cfg(test)]
+use {
+    crate::internal::event::message::Factory as EventMessengerFactory,
+    crate::service_context::ServiceContext,
+};
 
 pub type SettingHandlerResult = Result<(), Error>;
 
@@ -80,11 +85,7 @@ impl<T: DeviceStorageFactory> Environment<T> {
         service_context_handle: ServiceContextHandle,
         storage_factory_handle: Arc<Mutex<T>>,
     ) -> Environment<T> {
-        return Environment {
-            settings: settings,
-            service_context_handle: service_context_handle,
-            storage_factory_handle: storage_factory_handle,
-        };
+        return Environment { settings, service_context_handle, storage_factory_handle };
     }
 }
 
@@ -112,16 +113,19 @@ impl<T: DeviceStorageFactory> Context<T> {
 
 /// ContextBuilder is a convenience builder to facilitate creating a Context
 /// (and associated environment).
+#[cfg(test)]
 pub struct ContextBuilder<T: DeviceStorageFactory> {
     setting_type: SettingType,
     storage_factory: Arc<Mutex<T>>,
     settings: HashSet<SettingType>,
     service_context: Option<ServiceContextHandle>,
+    event_messenger_factory: Option<EventMessengerFactory>,
     messenger: message::Messenger,
     receptor: message::Receptor,
     id: u64,
 }
 
+#[cfg(test)]
 impl<T: DeviceStorageFactory> ContextBuilder<T> {
     pub fn new(
         setting_type: SettingType,
@@ -131,12 +135,13 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
         id: u64,
     ) -> Self {
         Self {
-            setting_type: setting_type,
-            storage_factory: storage_factory,
+            setting_type,
+            storage_factory,
             settings: HashSet::new(),
             service_context: None,
-            messenger: messenger,
-            receptor: receptor,
+            event_messenger_factory: None,
+            messenger,
+            receptor,
             id,
         }
     }
@@ -144,6 +149,15 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
     // Sets the service context to be used.
     pub fn service_context(mut self, service_context_handle: ServiceContextHandle) -> Self {
         self.service_context = Some(service_context_handle);
+
+        self
+    }
+
+    pub fn event_messenger_factory(
+        mut self,
+        event_messenger_factory: EventMessengerFactory,
+    ) -> Self {
+        self.event_messenger_factory = Some(event_messenger_factory);
 
         self
     }
@@ -160,7 +174,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
     /// Generates the Context.
     pub fn build(self) -> Context<T> {
         let service_context = if self.service_context.is_none() {
-            ServiceContext::create(None)
+            ServiceContext::create(None, self.event_messenger_factory)
         } else {
             self.service_context.unwrap()
         };
