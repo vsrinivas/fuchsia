@@ -31,9 +31,6 @@ group("images") {
 
   if (!bootfs_only) {
     deps = [
-      ":verify_fuchsia",
-      ":verify_fuchsia_prime",
-
       # netboot zbi's are not built by default as they get too big under certain
       # configurations.
       # ":verify_netboot",
@@ -43,32 +40,6 @@ group("images") {
 }
 
 # Verification targets.
-
-verify_zbi("verify_fuchsia") {
-  testonly = true
-
-  original = "$root_out_dir/fuchsia.zbi"
-
-  updated = "$target_out_dir/fuchsia.zbi"
-
-  deps = [
-    ":fuchsia",
-    "//build/images:fuchsia",
-  ]
-}
-
-verify_zbi("verify_fuchsia_prime") {
-  testonly = true
-
-  original = "$root_out_dir/fuchsia_prime.zbi"
-
-  updated = "$target_out_dir/fuchsia_prime.zbi"
-
-  deps = [
-    ":fuchsia_prime",
-    "//build/images:fuchsia_prime",
-  ]
-}
 
 verify_zbi("verify_netboot") {
   testonly = true
@@ -105,10 +76,6 @@ generated_resource("zxcrypt") {
 
 devmgr_config("fuchsia_devmgr_config") {
   label = "//build/images:devmgr_config.txt"
-}
-
-devmgr_config("fuchsia_prime_devmgr_config") {
-  label = "//build/images:devmgr_config_prime.txt"
 }
 
 devmgr_config("zedboot_devmgr_config") {
@@ -188,34 +155,6 @@ zbi_input("fvm.blk_ramdisk") {
 }
 
 # ZBI's.
-
-migrated_zbi("fuchsia") {
-  testonly = true
-
-  deps = [ "//build/unification/zbi:kernel" ]
-  deps += [
-    ":fuchsia_devmgr_config",
-    ":fuchsia_kernel_cmdline",
-    ":ta",
-    ":zxcrypt",
-  ]
-  deps += bootfs_manifest_additions
-  deps += common_image_contents
-}
-
-migrated_zbi("fuchsia_prime") {
-  testonly = true
-
-  deps = [ "//build/unification/zbi:kernel" ]
-  deps += [
-    ":fuchsia_kernel_cmdline",
-    ":fuchsia_prime_devmgr_config",
-    ":ta",
-    ":zxcrypt",
-  ]
-  deps += bootfs_manifest_additions
-  deps += common_image_contents
-}
 
 migrated_zbi("netboot") {
   testonly = true

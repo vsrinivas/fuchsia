@@ -26,6 +26,9 @@ import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
+import("//build/unification/future/images/devmgr_config.gni")
+import("//build/unification/images/common_image_contents.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
@@ -431,6 +434,7 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta",
     ":fuchsia.vbmeta__zbi_props",
     ":fuchsia.vbmeta__vb_desc",
+    ":devmgr_config",
     ":devmgr_config_prime.txt",
     "//build/unification/future/images:*",
   ]
@@ -504,6 +508,10 @@ action("devmgr_config.txt") {
   ]
 }
 
+devmgr_config("devmgr_config") {
+  label = ":devmgr_config.txt"
+}
+
 # Generate the prime /boot/config/devmgr file. Points to system_image_prime
 # instead of system_image
 # The prime images are used to have an alternate known-compatible OTA
@@ -514,7 +522,7 @@ action("devmgr_config_prime.txt") {
     ":fuchsia_prime.vbmeta",
     ":fuchsia_prime.vbmeta__zbi_props",
     ":fuchsia_prime.vbmeta__vb_desc",
-    "//build/unification/future/images:*",
+    ":devmgr_config_prime",
   ]
   testonly = true
 
@@ -549,58 +557,38 @@ action("devmgr_config_prime.txt") {
   ]
 }
 
+devmgr_config("devmgr_config_prime") {
+  label = ":devmgr_config_prime.txt"
+}
+
 generated_file("zxcrypt_config.txt") {
   outputs = [ "$target_out_dir/$target_name" ]
   contents = zxcrypt_key_source
 }
 
-additional_manifests = []
-foreach(label, bootfs_manifest_additions) {
-  target_dir = get_label_info(label, "target_out_dir")
-  target_name = get_label_info(label, "name")
-  additional_manifests += [ target_dir + "/" + target_name ]
+group("fuchsia_contents") {
+  deps = [
+    "//build/unification/future/images:fuchsia_kernel_cmdline",
+    "//build/unification/future/images:ta",
+    "//build/unification/future/images:zxcrypt",
+    "//build/unification/zbi:kernel",
+  ]
+  deps += bootfs_manifest_additions
+  deps += common_image_contents
 }
 
 # The main bootable image, which requires `blob.blk` to appear on some
 # attached storage device at runtime.
-zbi("fuchsia") {
+migrated_zbi("fuchsia") {
   testonly = true
 
-  deps = [
-           ":devmgr_config.txt",
-           ":system_image.manifest",
-         ] + bootfs_manifest_additions
-  inputs = [
-             boot_manifest,
-             zircon_kernel_zbi,
-           ] + additional_manifests
-  manifest = []
-  if (!include_devmgr_config_in_vbmeta) {
-    manifest += [
-      {
-        outputs = [ "config/devmgr" ]
-        sources = get_target_outputs(":devmgr_config.txt")
-      },
-    ]
-  }
-  foreach(ta_uuid, fuchsia_ta_uuids) {
-    manifest += [
-      {
-        outputs = [ "lib/firmware/${ta_uuid}${ta_dest_suffix}" ]
-        sources = [ rebase_path("${ta_path}/${ta_uuid}${ta_src_suffix}") ]
-      },
-    ]
-  }
-  deps += [ ":zxcrypt_config.txt" ]
-  manifest += [
-    {
-      outputs = [ "config/zxcrypt" ]
-      sources = [ "$target_out_dir/zxcrypt_config.txt" ]
-    },
-  ]
+  output_dir = root_out_dir
 
-  cmdline = kernel_cmdline_args + board_kernel_cmdline_args
-  cmdline_inputs = kernel_cmdline_files
+  deps = [ ":fuchsia_contents" ]
+
+  if (!include_devmgr_config_in_vbmeta) {
+    deps += [ ":devmgr_config" ]
+  }
 
   metadata = {
     images = [
@@ -704,24 +692,15 @@ action("elf_sizes.json") {
 # Generate the prime fuchsia.zbi.
 # The prime images are used to have an alternate known-compatible OTA
 # target for integration testing.
-zbi("fuchsia_prime") {
+migrated_zbi("fuchsia_prime") {
   testonly = true
 
-  deps = [
-    ":devmgr_config_prime.txt",
-    ":fuchsia",
-  ]
-  inputs = get_target_outputs(":fuchsia")
+  output_dir = root_out_dir
 
-  manifest = []
+  deps = [ ":fuchsia_contents" ]
+
   if (!include_devmgr_config_in_vbmeta) {
-    replace = true
-    manifest += [
-      {
-        outputs = [ "config/devmgr" ]
-        sources = get_target_outputs(":devmgr_config_prime.txt")
-      },
-    ]
+    deps += [ ":devmgr_config_prime" ]
   }
 }
 
