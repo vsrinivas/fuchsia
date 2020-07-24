@@ -32,15 +32,12 @@ typedef struct pci_sdhci_device {
 static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
   pci_sdhci_device_t* dev = ctx;
   // select irq mode
-  zx_status_t status = pci_set_irq_mode(&dev->pci, ZX_PCIE_IRQ_MODE_MSI, 1);
-  if (status < 0) {
-    status = pci_set_irq_mode(&dev->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
-    if (status < 0) {
-      printf("pci-sdhci: error %d setting irq mode\n", status);
-      return status;
-    }
-    printf("pci-sdhci: selected legacy irq mode\n");
+  zx_status_t status = pci_configure_irq_mode(&dev->pci, 1);
+  if (status != ZX_OK) {
+    printf("pci-sdhci: error %d setting irq mode\n", status);
+    return status;
   }
+
   // get irq handle
   status = pci_map_interrupt(&dev->pci, 0, handle_out);
   if (status != ZX_OK) {
