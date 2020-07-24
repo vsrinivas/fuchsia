@@ -158,9 +158,7 @@ fidl_compatibilty_test_servers = [
   "go",
   "llcpp",
   "rust",
-
-  # Re-enable after http://fxr/409534 lands
-  # "fuchsia-pkg://fuchsia.com/fidl_dart_compatibility_test_server#meta/fidl_dart_compatibility_test_server.cmx",
+  "fuchsia-pkg://fuchsia.com/fidl_dart_compatibility_test_server#meta/fidl_dart_compatibility_test_server.cmx",
 ]
 
 test_component_labels = []
@@ -241,6 +239,5 @@ group("compatibility") {
   testonly = true
   deps = test_labels
 
-  # Re-enable after http://fxr/409534 lands
-  # deps += [ "//topaz/bin/fidl_compatibility_test/dart:fidl_dart_compatibility_test_server" ]
+  deps += [ "//topaz/bin/fidl_compatibility_test/dart:fidl_dart_compatibility_test_server" ]
 }
