@@ -1,0 +1,63 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+driver_module("vim3-mcu") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "vim3-mcu.cc" ]
+  deps = [
+    "//src/devices/i2c/lib/device-protocol-i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/pretty",
+  ]
+}
+test("vim3-mcu-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "vim3-mcu-test"
+  sources = [
+    "vim3-mcu-test.cc",
+    "vim3-mcu.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/i2c/testing/mock-i2c",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("vim3-mcu-test-package") {
+  package_name = "vim3-mcu-test"
+  deps = [ ":vim3-mcu-test" ]
+
+  tests = [
+    {
+      name = "vim3-mcu-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":vim3-mcu-test-package" ]
+}

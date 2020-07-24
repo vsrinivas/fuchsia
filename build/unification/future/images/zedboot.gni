@@ -87,6 +87,7 @@ zedboot_deps = [
   "//src/devices/internal/drivers/fragment:fragment.proxy",
   "//src/devices/light-sensor/drivers/ams-light",
   "//src/devices/light-sensor/drivers/lite-on",
+  "//src/devices/mcu/drivers/vim3-mcu",
   "//src/devices/misc/drivers/builtin",
   "//src/devices/misc/drivers/cpu-trace",
   "//src/devices/misc/drivers/ktrace",

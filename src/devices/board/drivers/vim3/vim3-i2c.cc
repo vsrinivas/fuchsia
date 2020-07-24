@@ -49,14 +49,13 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = PDEV_PID_GENERIC,
         .did = PDEV_DID_PCF8563_RTC,
     },
-    // Ethernet/STM8s microcontroller
+    // STM8s microcontroller
     {
         .bus_id = 0,
         .address = 0x18,
-        // Binds to a composite device.
-        .vid = 0,
-        .pid = 0,
-        .did = 0,
+        .vid = PDEV_VID_KHADAS,
+        .pid = PDEV_PID_VIM3,
+        .did = PDEV_DID_VIM3_MCU,
     },
 #if 0  // placeholder until driver implemented and vid/pid/did assigned
        // bus_ids and addresses are correct

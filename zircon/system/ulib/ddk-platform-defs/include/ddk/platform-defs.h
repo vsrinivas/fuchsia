@@ -93,8 +93,9 @@ __BEGIN_CDECLS
 // Khadas
 #define PDEV_VID_KHADAS             0x04
 #define PDEV_PID_VIM2               0x02
-#define PDEV_PID_VIM2_MACHINA       0x3EA
+#define PDEV_PID_VIM2_MACHINA       0X3EA
 #define PDEV_PID_VIM3               0x03
+#define PDEV_DID_VIM3_MCU           0x05
 
 #define PDEV_DID_VIM_DISPLAY        0x01
 
