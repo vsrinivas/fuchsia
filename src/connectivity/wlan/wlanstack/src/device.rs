@@ -143,7 +143,7 @@ pub fn create_and_serve_sme(
         &device_info,
         stats_reqs,
         cobalt_sender,
-        iface_tree_holder,
+        iface_tree_holder.clone(),
         inspect_tree.hash_key.clone(),
     );
 
@@ -152,7 +152,7 @@ pub fn create_and_serve_sme(
         msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
     });
     if let fidl_mlme::MacRole::Client = device_info.role {
-        inspect_tree.mark_active_client_iface(id);
+        inspect_tree.mark_active_client_iface(id, ifaces.clone(), iface_tree_holder.clone());
     }
     let mlme_query = MlmeQueryProxy::new(mlme_proxy);
     let is_softmac = device_info.driver_features.contains(&DriverFeature::TempSoftmac);

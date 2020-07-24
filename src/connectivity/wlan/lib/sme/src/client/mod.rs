@@ -200,7 +200,7 @@ impl ClientSme {
         let (info_sink, info_stream) = mpsc::unbounded();
         let (mut timer, time_stream) = timer::create_timer();
         let inspect = Arc::new(inspect::SmeTree::new(&iface_tree_holder.node, inspect_hash_key));
-        iface_tree_holder.place_iface_subtree(inspect.clone());
+        iface_tree_holder.add_iface_subtree(inspect.clone());
         timer.schedule(event::InspectPulseCheck);
 
         (

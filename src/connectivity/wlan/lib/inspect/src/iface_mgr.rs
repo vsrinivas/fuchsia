@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_inspect::Node;
+use fuchsia_inspect::{InspectType, Node};
 use parking_lot::Mutex;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
@@ -56,20 +56,21 @@ impl IfacesTrees {
 
 pub struct IfaceTreeHolder {
     pub node: Node,
-    subtree: Mutex<Option<Arc<dyn IfaceTree + Send + Sync>>>,
+    subtrees: Mutex<Vec<Arc<dyn IfaceTree + Send + Sync>>>,
 }
 
 impl IfaceTreeHolder {
     pub fn new(node: Node) -> Self {
-        Self { node, subtree: Mutex::new(None) }
+        Self { node, subtrees: Mutex::new(vec![]) }
     }
 
-    pub fn place_iface_subtree(&self, subtree: Arc<dyn IfaceTree + Send + Sync>) {
-        self.subtree.lock().replace(subtree);
+    pub fn add_iface_subtree(&self, subtree: Arc<dyn IfaceTree + Send + Sync>) {
+        self.subtrees.lock().push(subtree);
     }
 }
 
 pub trait IfaceTree {}
+impl<T: InspectType> IfaceTree for T {}
 
 #[cfg(test)]
 mod tests {
@@ -130,7 +131,7 @@ mod tests {
             _apple: holder.node.create_string("apple", "yum"),
             _banana: holder.node.create_child("banana"),
         });
-        holder.place_iface_subtree(iface_subtree);
+        holder.add_iface_subtree(iface_subtree);
 
         assert_inspect_tree!(inspector, root: {
             "iface-1": {

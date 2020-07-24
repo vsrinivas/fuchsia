@@ -396,7 +396,7 @@ fn get_mesh_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::mesh::Endpo
     }
 }
 
-async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16) -> Result<StatsRef, zx::Status> {
+pub async fn get_iface_stats(ifaces: &IfaceMap, iface_id: u16) -> Result<StatsRef, zx::Status> {
     let iface = ifaces.get(&iface_id).ok_or(zx::Status::NOT_FOUND)?;
     iface.stats_sched.get_stats().await
 }
