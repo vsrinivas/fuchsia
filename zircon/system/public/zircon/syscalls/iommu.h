@@ -66,8 +66,8 @@ typedef struct zx_iommu_desc_intel {
   uint64_t register_base;  // Physical address of registers
   uint16_t pci_segment;    // The PCI segment associated with this IOMMU
 
-  // If true, this IOMMU has all PCI devices in its segment under its scope.
-  // In this case, the list of scopes acts as a blacklist.
+  // If false, scopes[] represents all PCI devices in this segment managed by this IOMMU.
+  // If true, scopes[] represents all PCI devices in this segment *not* managed by this IOMMU.
   bool whole_segment;
 
   // The number of bytes of zx_iommu_desc_intel_scope_t's that follow this descriptor.

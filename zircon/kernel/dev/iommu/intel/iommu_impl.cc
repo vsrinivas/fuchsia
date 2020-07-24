@@ -116,9 +116,11 @@ IommuImpl::~IommuImpl() {
 
 // Validate the IOMMU descriptor from userspace.
 //
-// The IOMMU descriptor identifies either a whitelist (if whole_segment is false)
-// or a blacklist (if whole_segment is true) of devices that are decoded by this
-// IOMMU. An entry in the list is described by a "scope" below. A scope
+// The IOMMU descriptor contains an array of scopes; if whole_segment is false,
+// the scopes represent all devices managed by the IOMMU. If whole_segment is
+// true, the scopes represent devices not managed by the IOMMU.
+//
+// An entry in the list is described by a "scope" below. A scope
 // identifies a single PCIe device. If the device is behind a bridge, it will be
 // described using multiple "hops", one for each bridge in the way and one for
 // the device itself. A hop identifies the address of a bridge on the path to
