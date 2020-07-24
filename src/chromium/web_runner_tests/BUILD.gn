@@ -17,6 +17,7 @@ source_set("web_context") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//third_party/googletest:gtest",
   ]
 
@@ -52,6 +53,7 @@ source_set("mock_server") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
@@ -69,6 +71,7 @@ executable("web_runner_integration_tests") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
@@ -94,6 +97,7 @@ executable("web_runner_pixel_tests") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

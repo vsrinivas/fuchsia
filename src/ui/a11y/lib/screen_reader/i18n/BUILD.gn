@@ -27,6 +27,7 @@ source_set("i18n") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 

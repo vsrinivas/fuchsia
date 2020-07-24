@@ -25,16 +25,23 @@ sdk_source_set("cpp") {
 
   public_deps = [ "//zircon/public/lib/fit" ]
 
-  if (is_fuchsia) {
-    sources += [ "logging_backend_fuchsia.cc" ]
-    libs = [ "zircon" ]
-    public_deps += [
-      "//zircon/public/lib/zx",
-      "//zircon/system/ulib/syslog",
-    ]
-  } else {
-    sources += [ "logging_backend_host.cc" ]
-  }
+  public_configs = [ "//sdk/config" ]
+}
+
+sdk_source_set("backend_host") {
+  # Keep internal for now until the API stabilizes.
+  category = "internal"
+
+  sdk_name = "syslog_cpp_backend_host"
+
+  include_base = "//sdk"
+
+  sources = [ "logging_backend_host.cc" ]
+
+  deps = [
+    ":cpp",
+    "//zircon/public/lib/fit",
+  ]
 
   public_configs = [ "//sdk/config" ]
 }
@@ -46,6 +53,24 @@ sdk_source_set("backend_legacy") {
   sdk_name = "syslog_cpp_backend_legacy"
 
   include_base = "//sdk"
+
+  if (is_fuchsia) {
+    sources = [ "logging_backend_fuchsia.cc" ]
+
+    libs = [ "zircon" ]
+
+    deps = [ ":cpp" ]
+
+    public_deps = [
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/syslog",
+    ]
+
+    public_configs = [ "//sdk/config" ]
+  } else {
+    public_deps = [ ":backend_host" ]
+  }
 }
 
 executable("logging_cpp_unittests") {
@@ -56,10 +81,6 @@ executable("logging_cpp_unittests") {
     "logging_unittest.cc",
   ]
 
-  if (is_fuchsia) {
-    sources += [ "logging_socket_unittest.cc" ]
-  }
-
   deps = [
     ":cpp",
     "//src/lib/fxl",
@@ -67,6 +88,11 @@ executable("logging_cpp_unittests") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  if (is_fuchsia) {
+    sources += [ "logging_socket_unittest.cc" ]
+    deps += [ ":backend_legacy" ]
+  }
 }
 
 test_package("logging-cpp-tests") {

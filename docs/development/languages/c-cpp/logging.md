@@ -68,6 +68,7 @@ int main(int argc, char** argv) {
 
 ```gn
 //sdk/lib/syslog/cpp
+//sdk/lib/syslog/cpp:backend_legacy
 ```
 
 ### Log messages

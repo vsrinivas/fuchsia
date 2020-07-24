@@ -127,7 +127,8 @@ test("use_h264_multi_decoder_concurrent_stream_switching_test") {
 
   output_name = "use_h264_multi_decoder_concurrent_stream_switching_test"
 
-  sources = [ "test/use_h264_multi_decoder_concurrent_stream_switching_test.cc" ]
+  sources =
+      [ "test/use_h264_multi_decoder_concurrent_stream_switching_test.cc" ]
 
   deps = [ ":use_media_decoder_source_set" ]
 }
@@ -259,6 +260,7 @@ source_set("decoder_fuzzer") {
   public_deps = [
     ":use_media_decoder_source_set",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 

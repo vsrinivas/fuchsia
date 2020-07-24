@@ -18,6 +18,7 @@ source_set("app") {
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

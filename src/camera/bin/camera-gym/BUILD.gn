@@ -36,6 +36,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//zircon/public/lib/fit",

@@ -117,6 +117,7 @@ template("sdk_source_set") {
         all_sources += [ source_file ]
       }
     }
+    not_needed([ "source_headers_are_public" ])
   } else {
     not_needed([ "source_headers_are_public" ])
   }

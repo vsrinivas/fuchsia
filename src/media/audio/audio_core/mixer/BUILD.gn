@@ -48,6 +48,7 @@ source_set("mixer") {
   deps = [
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl:fxl",
     "//src/media/audio/lib/format",
   ]

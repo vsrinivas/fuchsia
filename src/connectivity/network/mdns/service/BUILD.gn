@@ -106,6 +106,7 @@ source_set("source_set") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/inet",
     "//src/lib/json_parser",
@@ -212,6 +213,7 @@ fuzzer("packet_reader_fuzzer") {
   ]
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/inet",
   ]
 }
@@ -231,6 +233,7 @@ executable("mdns_netemul_test_agent") {
     "//sdk/fidl/fuchsia.net.mdns",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

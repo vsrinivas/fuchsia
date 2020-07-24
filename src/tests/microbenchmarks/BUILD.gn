@@ -87,6 +87,7 @@ executable("context_switch_overhead_helper") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
   ]
 }

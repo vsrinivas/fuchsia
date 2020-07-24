@@ -91,6 +91,7 @@ source_set("test_lib") {
     "//garnet/public/lib/fostr/fidl/fuchsia.exception",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//zircon/public/lib/zx",
   ]

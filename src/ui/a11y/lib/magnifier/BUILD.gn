@@ -22,6 +22,7 @@ source_set("magnifier") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/ui/a11y/lib/gesture_manager:util",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-default",

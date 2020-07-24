@@ -55,6 +55,7 @@ executable("main") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -78,6 +79,7 @@ source_set("config") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//third_party/rapidjson",
   ]
@@ -122,6 +124,7 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/annotations:utils",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
@@ -154,6 +157,7 @@ source_set("datastore") {
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
     "//src/developer/forensics/feedback_data/annotations:static_annotations",
     "//src/developer/forensics/feedback_data/attachments:attachment_providers",
@@ -175,7 +179,10 @@ source_set("data_register") {
     "//src/lib/fxl",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 source_set("device_id_provider") {
@@ -192,6 +199,7 @@ source_set("device_id_provider") {
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils:errors",
     "//src/lib/files",
     "//src/lib/fxl",
@@ -204,6 +212,7 @@ source_set("errors") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils:errors",
   ]
 }
@@ -231,6 +240,7 @@ source_set("main_service") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zx",
   ]
 }

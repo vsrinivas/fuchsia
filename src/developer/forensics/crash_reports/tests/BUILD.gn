@@ -62,6 +62,7 @@ executable("crash_reporter_unittest_exe") {
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:crash_reporter",
     "//src/developer/forensics/crash_reports/info:info",
@@ -115,6 +116,7 @@ executable("main_service_unittest_exe") {
   deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:main_service",
     "//src/developer/forensics/crash_reports/info",
@@ -146,6 +148,7 @@ executable("database_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:database",
     "//src/developer/forensics/crash_reports/info:info",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -171,6 +174,7 @@ executable("inspect_manager_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:errors",
     "//src/developer/forensics/crash_reports/info:inspect_manager",
@@ -236,6 +240,7 @@ executable("store_unittest_exe") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports:store",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",

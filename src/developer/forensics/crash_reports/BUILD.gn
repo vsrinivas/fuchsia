@@ -62,6 +62,7 @@ executable("main") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports/info",
     "//src/lib/timekeeper:system",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -93,6 +94,7 @@ source_set("main_service") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//zircon/public/lib/zx",
   ]
@@ -109,6 +111,7 @@ source_set("config") {
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//third_party/rapidjson",
   ]
@@ -140,6 +143,7 @@ source_set("crash_register") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils/fidl:channel_provider_ptr",
   ]
 }
@@ -173,6 +177,7 @@ source_set("crash_reporter") {
   deps = [
     ":report_util",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/fit",
   ]
@@ -188,6 +193,7 @@ source_set("crash_server") {
     ":report",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//third_party/crashpad/util",
@@ -220,6 +226,7 @@ source_set("database") {
     ":constants",
     ":report_util",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
   ]
 }
@@ -229,6 +236,7 @@ source_set("errors") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils:errors",
   ]
 }
@@ -253,6 +261,7 @@ source_set("privacy_settings_ptr") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
   ]
@@ -288,6 +297,7 @@ source_set("queue") {
   deps = [
     ":report",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async-cpp",
   ]
 }
@@ -301,6 +311,7 @@ source_set("report") {
   public_deps = [
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils:sized_data",
   ]
 }
@@ -323,6 +334,7 @@ source_set("report_util") {
   deps = [
     ":errors",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
   ]
@@ -342,7 +354,10 @@ source_set("settings") {
     "//zircon/public/lib/fit",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 source_set("store") {
@@ -359,6 +374,7 @@ source_set("store") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/rapidjson",

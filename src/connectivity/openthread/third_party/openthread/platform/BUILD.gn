@@ -35,5 +35,6 @@ source_set("platform") {
   public_deps = [
     "//src/lib/json_parser",
     "//third_party/modp_b64",
+    "//zircon/public/lib/zx",
   ]
 }

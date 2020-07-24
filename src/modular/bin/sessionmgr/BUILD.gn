@@ -22,6 +22,7 @@ executable_package("sessionmgr") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/app_driver/cpp:app_driver",
     "//src/modular/lib/modular_config",
@@ -201,6 +202,7 @@ source_set("startup_agent_launcher") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/connect",
   ]

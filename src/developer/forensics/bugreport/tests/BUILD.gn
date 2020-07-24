@@ -32,6 +32,7 @@ executable("bugreport_unittest_exe") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/bugreport:bug_reporter",
     "//src/developer/forensics/testing/stubs:data_provider",
     "//src/lib/files",

@@ -51,6 +51,7 @@ source_set("story_model_storage") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular.storymodel",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
   ]
@@ -66,6 +67,7 @@ source_set("apply_mutations") {
     "//garnet/public/lib/fostr/fidl/fuchsia.modular.storymodel",
     "//sdk/fidl/fuchsia.modular.storymodel",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -101,6 +103,7 @@ source_set("story_model_owner") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular.storymodel",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async-cpp",
   ]
 

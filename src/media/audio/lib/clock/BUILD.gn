@@ -19,7 +19,10 @@ source_set("clone_mono") {
     "clone_mono.h",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   public_deps = [ "//zircon/public/lib/zx" ]
 }
@@ -30,7 +33,10 @@ source_set("pid") {
     "pid_control.h",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 source_set("utils") {
@@ -39,7 +45,10 @@ source_set("utils") {
     "utils.h",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 
   public_deps = [
     "//sdk/lib/media/cpp:no_converters",
@@ -63,6 +72,7 @@ executable("unittest_bin") {
   deps = [
     ":clock",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/clock/testing",
   ]

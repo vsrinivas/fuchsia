@@ -13,6 +13,7 @@ executable("system_log_recorder") {
     "encoding:production",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -47,6 +48,7 @@ source_set("src") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//zircon/system/ulib/trace",
   ]
@@ -64,6 +66,7 @@ source_set("reader") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",

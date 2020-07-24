@@ -26,7 +26,10 @@ static_library("shell_interpreter") {
     "src/value.cc",
   ]
 
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+  ]
 }
 
 static_library("shell_server_lib") {
@@ -38,6 +41,7 @@ static_library("shell_server_lib") {
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/shell/console:common",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//zircon/system/ulib/async-default",
@@ -57,6 +61,7 @@ executable("bin") {
     ":shell_interpreter",
     ":shell_server_lib",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -84,6 +89,7 @@ executable("shell_interpreter_test_bin") {
   deps = [
     ":shell_interpreter",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

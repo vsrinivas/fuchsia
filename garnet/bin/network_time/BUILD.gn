@@ -32,6 +32,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.hardware.rtc",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
     "//third_party/boringssl",
     "//third_party/rapidjson",

@@ -49,6 +49,7 @@ source_set("view_ref_helper") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/a11y/lib/util",

@@ -18,6 +18,7 @@ executable("test") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/test_utils",
     "//src/devices/testing/fake_ddk",

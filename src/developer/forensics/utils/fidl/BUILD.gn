@@ -63,6 +63,7 @@ source_set("data_provider_ptr") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils:errors",
     "//zircon/public/lib/async-cpp",
   ]
@@ -102,6 +103,7 @@ source_set("oneshot_ptr") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/async-cpp",
   ]
 }

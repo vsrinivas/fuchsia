@@ -50,6 +50,7 @@ executable("cobalt_testapp") {
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/cobalt/bin/utils:base64",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fsl",
@@ -71,6 +72,7 @@ source_set("fake_timekeeper_lib") {
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
   ]
 }
 
@@ -82,6 +84,7 @@ executable("fake_timekeeper") {
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

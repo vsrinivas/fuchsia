@@ -37,6 +37,7 @@ source_set("attachment_providers") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:logs",
@@ -58,6 +59,7 @@ source_set("static_attachments") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
@@ -73,6 +75,7 @@ source_set("types") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils:errors",
   ]
 }
