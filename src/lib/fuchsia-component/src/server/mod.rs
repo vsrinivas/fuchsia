@@ -1120,10 +1120,12 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 return Ok((None, ConnectionState::Closed));
             }
             DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                let object =
-                    handle_potentially_unsupported_flags(object, flags, OPEN_REQ_SUPPORTED_FLAGS)?;
-
                 if path == "." {
+                    let object = handle_potentially_unsupported_flags(
+                        object,
+                        flags,
+                        OPEN_REQ_SUPPORTED_FLAGS,
+                    )?;
                     match self.serve_connection_at(object, connection.position, None, flags) {
                         Ok(Some(_)) => panic!("serving directory '.' should not return output"),
                         Ok(None) => {}
@@ -1148,6 +1150,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
 
                 match descend_result {
                     DescendResult::LocalChildren(children) => {
+                        // Some flags are unsupported when dealing with local children.
+                        // When the descend ends up at a remote dir, do not check the flags.
+                        let object = handle_potentially_unsupported_flags(
+                            object,
+                            flags,
+                            OPEN_REQ_SUPPORTED_FLAGS,
+                        )?;
                         if let Some(&next_node_pos) = children.get(end_segment) {
                             let output = self.serve_connection_at(
                                 object,

@@ -48,6 +48,94 @@ fn fs_with_connection<'a, T: 'a>() -> (ServiceFs<ServiceObj<'a, T>>, DirectoryPr
 }
 
 #[run_until_stalled(test)]
+async fn check_bad_flags_root() -> Result<(), Error> {
+    let (fs, dir_proxy) = fs_with_connection::<'_, ()>();
+    let serve_fut = fs.collect().map(Ok);
+
+    let test_fut = async move {
+        // attempt to open . with CREATE flags
+        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
+            | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
+            | fidl_fuchsia_io::OPEN_FLAG_CREATE;
+        let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        dir_proxy.open(flags, mode, ".", server_end.into()).unwrap();
+        assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, test_fut).await?;
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn check_bad_flags_folder() -> Result<(), Error> {
+    let (mut fs, dir_proxy) = fs_with_connection::<'_, ()>();
+    fs.dir("foo").add_service_at("bar", |_chan| Some(()));
+    let serve_fut = fs.collect().map(Ok);
+
+    let test_fut = async move {
+        // attempt to create a folder that already exists in ServiceFS
+        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
+            | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY
+            | fidl_fuchsia_io::OPEN_FLAG_CREATE;
+        let mode = fidl_fuchsia_io::MODE_TYPE_DIRECTORY;
+        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        dir_proxy.open(flags, mode, "foo", server_end.into()).unwrap();
+        assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, test_fut).await?;
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn check_bad_flags_file() -> Result<(), Error> {
+    let (mut fs, dir_proxy) = fs_with_connection::<'_, ()>();
+    fs.dir("foo").add_service_at("bar", |_chan| Some(()));
+    let serve_fut = fs.collect().map(Ok);
+
+    let test_fut = async move {
+        // attempt to create a file that already exists in ServiceFS
+        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
+            | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY
+            | fidl_fuchsia_io::OPEN_FLAG_CREATE
+            | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE;
+        let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        dir_proxy.open(flags, mode, "foo/bar", server_end.into()).unwrap();
+        assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, test_fut).await?;
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn check_bad_flags_new_file() -> Result<(), Error> {
+    let (fs, dir_proxy) = fs_with_connection::<'_, ()>();
+    let serve_fut = fs.collect().map(Ok);
+
+    let test_fut = async move {
+        // attempt to create a new file in ServiceFS
+        let flags = fidl_fuchsia_io::OPEN_FLAG_DESCRIBE
+            | fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY
+            | fidl_fuchsia_io::OPEN_FLAG_CREATE
+            | fidl_fuchsia_io::OPEN_FLAG_TRUNCATE;
+        let mode = fidl_fuchsia_io::MODE_TYPE_FILE;
+        let (node_proxy, server_end) = create_proxy::<NodeMarker>()?;
+        dir_proxy.open(flags, mode, "qaz", server_end.into()).unwrap();
+        assert_open_status(&node_proxy, zx::Status::NOT_SUPPORTED).await;
+        Ok::<(), Error>(())
+    };
+
+    let ((), ()) = try_join(serve_fut, test_fut).await?;
+    Ok(())
+}
+
+#[run_until_stalled(test)]
 async fn serve_on_root_and_subdir() -> Result<(), Error> {
     const SERVICE_NAME: &str = "foo";
 
