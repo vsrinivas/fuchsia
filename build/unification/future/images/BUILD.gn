@@ -11,12 +11,10 @@ import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/future/images/verify_zbi.gni")
 import("//build/unification/future/images/zedboot.gni")
 import("//build/unification/images/common_image_contents.gni")
-import("//build/unification/images/common_test_contents.gni")
 import("//build/unification/zbi/generated_resource.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
 import("//build/unification/zbi/resource.gni")
 import("//build/unification/zbi/zbi_input.gni")
-import("//src/sys/cmc/build/cml.gni")
 
 import("legacy_zircon_objects.gni")
 
@@ -30,29 +28,11 @@ group("images") {
   testonly = true
 
   if (!bootfs_only) {
-    deps = [
-      # netboot zbi's are not built by default as they get too big under certain
-      # configurations.
-      # ":verify_netboot",
-      ":verify_zedboot",
-    ]
+    deps = [ ":verify_zedboot" ]
   }
 }
 
 # Verification targets.
-
-verify_zbi("verify_netboot") {
-  testonly = true
-
-  original = "$root_out_dir/netboot.zbi"
-
-  updated = "$target_out_dir/netboot.zbi"
-
-  deps = [
-    ":netboot",
-    "//build/images:netboot",
-  ]
-}
 
 verify_zbi("verify_zedboot") {
   testonly = true
@@ -73,10 +53,6 @@ generated_resource("zxcrypt") {
 }
 
 # Configuration files for devmgr.
-
-devmgr_config("fuchsia_devmgr_config") {
-  label = "//build/images:devmgr_config.txt"
-}
 
 devmgr_config("zedboot_devmgr_config") {
   label = "//build/images/zedboot:devmgr_config.txt"
@@ -141,35 +117,7 @@ legacy_zircon_objects("legacy_tests") {
   deps = [ "//build/unification/images:legacy-tests" ]
 }
 
-zbi_input("fvm.blk_ramdisk") {
-  testonly = true
-
-  type = "ramdisk"
-
-  # Use data_deps and not deps so that the contents of the fvm don't get
-  # included in the zbi.
-  data_deps = [ "//build/images:fvm.blk" ]
-
-  _out_dir = get_label_info(data_deps[0], "target_out_dir")
-  sources = [ "$_out_dir/fvm.blk" ]
-}
-
 # ZBI's.
-
-migrated_zbi("netboot") {
-  testonly = true
-
-  deps = [ "//build/unification/zbi:kernel" ]
-  deps += [ ":fvm.blk_ramdisk" ]
-  deps += [
-    ":fuchsia_devmgr_config",
-    ":fuchsia_kernel_cmdline",
-    ":ta",
-    ":zxcrypt",
-  ]
-  deps += bootfs_manifest_additions
-  deps += common_image_contents
-}
 
 migrated_zbi("zedboot") {
   testonly = true

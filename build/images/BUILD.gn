@@ -7,7 +7,6 @@ import("//build/compiled_action.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/config/clang/clang.gni")
-import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/images/args.gni")
@@ -29,6 +28,7 @@ import("//build/package_metadata.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/images/common_image_contents.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
+import("//build/unification/zbi/zbi_input.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
@@ -436,7 +436,6 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta__vb_desc",
     ":devmgr_config",
     ":devmgr_config_prime.txt",
-    "//build/unification/future/images:*",
   ]
   testonly = true
 
@@ -1157,18 +1156,31 @@ generate_fvm("fvm.blob.sparse.blk") {
 }
 default_image_deps += [ ":fvm.blob.sparse.blk" ]
 
+zbi_input("fvm.blk_ramdisk") {
+  testonly = true
+
+  type = "ramdisk"
+
+  # Use data_deps and not deps so that the contents of the fvm don't get
+  # included in the dependent zbi.
+  data_deps = [ ":fvm.blk" ]
+
+  sources = [ "$target_out_dir/fvm.blk" ]
+}
+
 # This rolls the primary ZBI together with a compressed RAMDISK image of
 # fvm.blk into a fat ZBI that boots the full system without using any real
 # storage.  The system decompresses the fvm.blk image into memory and then
 # sees that RAM disk just as if it were a real disk on the device.
-zbi("netboot") {
+migrated_zbi("netboot") {
   testonly = true
+
+  output_dir = root_out_dir
+
   deps = [
     ":fuchsia",
-    ":fvm.blk",
+    ":fvm.blk_ramdisk",
   ]
-  inputs = get_target_outputs(":fuchsia")
-  ramdisk_inputs = get_target_outputs(":fvm.blk")
 
   metadata = {
     images = [
