@@ -9,6 +9,7 @@ import 'package:args/args.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:lib.widgets/utils.dart';
+import 'package:flutter_driver/driver_extension.dart';
 
 void main([List<String> args = const []]) {
   final argParser = ArgParser()
@@ -19,12 +20,18 @@ void main([List<String> args = const []]) {
         defaultsTo: '-38')
     ..addFlag('resample', defaultsTo: true)
     ..addFlag('help',
-        abbr: 'h', help: 'Displays usage information.', negatable: false);
+        abbr: 'h', help: 'Displays usage information.', negatable: false)
+    ..addFlag('flutter-driver',
+        help: 'Enable the Flutter Driver extension.', defaultsTo: false);
 
   final argResults = argParser.parse(args);
   if (argResults['help']) {
     print(argParser.usage);
     return;
+  }
+
+  if (argResults['flutter-driver']) {
+    enableFlutterDriverExtension();
   }
 
   runApp(Scroll.fromArgResults(argResults));

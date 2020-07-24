@@ -2,14 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/testing/flutter_driver.gni")
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 flutter_app("scroll-flutter") {
   main_dart = "lib/main.dart"
 
-  flutter_driver_extendable = flutter_driver_enabled
+  # Force a non-release (profile or debug) build since flutter_driver is
+  # disabled in release builds.
+  product = false
 
   meta = [
     {
@@ -21,6 +21,7 @@ flutter_app("scroll-flutter") {
   deps = [
     "//src/experiences/settings/lib/widgets",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/args",
     "//topaz/public/dart/fuchsia_scenic_flutter",
   ]
