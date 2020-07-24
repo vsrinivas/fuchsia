@@ -5,6 +5,7 @@
 assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
+import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
@@ -50,12 +51,8 @@ executable("display-color") {
   ]
 }
 
-executable("display-png") {
-  crate_name = "display_png"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  sources = [ "display-png.rs" ]
+rustc_binary("display_png") {
+  source_root = "display-png.rs"
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -67,6 +64,24 @@ executable("display-png") {
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("display-png") {
+  deps = [ ":display_png" ]
+
+  binaries = [
+    {
+      name = "display_png"
+      source = "display_png"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/display-png.cmx")
+      dest = "display-png.cmx"
+    },
   ]
 }
 

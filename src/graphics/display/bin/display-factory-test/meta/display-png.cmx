@@ -1,0 +1,20 @@
+{
+    "program": {
+        "binary": "bin/display_png"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller",
+            "class/input-report"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}
