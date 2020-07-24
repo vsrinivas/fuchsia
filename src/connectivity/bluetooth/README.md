@@ -19,8 +19,7 @@ Source code shortcuts:
 - [HCI Transport Drivers](hci/transport)
 
 For more orientation, see
-- [System Architecture](/docs/the-book/bluetooth_architecture.md)
-- [Detailed Source Layout](/docs/the-book/bluetooth_source_layout.md)
+- [System Architecture](/docs/concepts/bluetooth/architecture.md)
 - [Respectful Code](#Respectful-Code)
 
 For a note on used (and avoided) vocabulary, see
