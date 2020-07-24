@@ -32,9 +32,8 @@ bool IsValidInstanceId(const std::string& instance_id) {
   return true;
 }
 
-fit::result<std::pair<ComponentIdIndex::Moniker, ComponentIdIndex::InstanceId>,
-            ComponentIdIndex::Error>
-ParseEntry(const rapidjson::Value& entry) {
+fit::result<std::pair<Moniker, ComponentIdIndex::InstanceId>, ComponentIdIndex::Error> ParseEntry(
+    const rapidjson::Value& entry) {
   // Entry must be an object.
   if (!entry.IsObject()) {
     FX_LOGS(ERROR) << "Entry must be an object.";
@@ -84,20 +83,13 @@ ParseEntry(const rapidjson::Value& entry) {
     realm_path.push_back(realm_name.GetString());
   }
 
-  return fit::ok(std::pair{ComponentIdIndex::Moniker{.url = appmgr_moniker["url"].GetString(),
-                                                     .realm_path = std::move(realm_path)},
-                           ComponentIdIndex::InstanceId(entry["instance_id"].GetString())});
+  return fit::ok(std::pair{
+      Moniker{.url = appmgr_moniker["url"].GetString(), .realm_path = std::move(realm_path)},
+      ComponentIdIndex::InstanceId(entry["instance_id"].GetString())});
 }
 }  // namespace
 
-bool operator<(const ComponentIdIndex::Moniker& l, const ComponentIdIndex::Moniker& r) {
-  if (l.realm_path == r.realm_path) {
-    return l.url < r.url;
-  }
-  return l.realm_path < r.realm_path;
-}
-
-ComponentIdIndex::ComponentIdIndex(MonikerToInstanceId moniker_to_id)
+ComponentIdIndex::ComponentIdIndex(ComponentIdIndex::MonikerToInstanceId moniker_to_id)
     : moniker_to_id_(std::move(moniker_to_id)) {}
 
 fit::result<ComponentIdIndex::MonikerToInstanceId, ComponentIdIndex::Error> Parse(
@@ -174,7 +166,7 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
 }
 
 std::optional<ComponentIdIndex::InstanceId> ComponentIdIndex::LookupMoniker(
-    const ComponentIdIndex::Moniker& moniker) const {
+    const Moniker& moniker) const {
   const auto& it = moniker_to_id_.find(moniker);
   if (it != moniker_to_id_.end()) {
     return it->second;

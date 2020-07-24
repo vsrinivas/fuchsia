@@ -19,6 +19,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/sys/appmgr/job_provider_impl.h"
+#include "src/sys/appmgr/moniker.h"
 #include "src/sys/appmgr/service_provider_dir_impl.h"
 
 namespace component {
@@ -62,7 +63,7 @@ class Namespace : public fuchsia::sys::Environment,
     ServeServiceDirectory(std::move(directory_request));
   }
 
-  void set_component_url(const std::string& url) { services_->set_component_url(url); }
+  void set_component_moniker(const Moniker& moniker) { services_->set_component_moniker(moniker); }
   void set_component_id(const std::string& id) { services_->set_component_id(id); }
 
   //

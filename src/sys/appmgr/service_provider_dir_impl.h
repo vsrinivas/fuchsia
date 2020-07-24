@@ -22,8 +22,11 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/sys/appmgr/log_connector_impl.h"
+#include "src/sys/appmgr/moniker.h"
 
 namespace component {
+
+constexpr char kUnknownComponent[] = "<unknown v2 component>";
 
 // A directory-like object which dynamically creates Service vnodes
 // for any file lookup. It also exposes service provider interface.
@@ -40,7 +43,12 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
 
   const std::string& component_url() const { return component_url_; }
 
-  void set_component_url(const std::string& url) { component_url_ = url; }
+  const std::string& component_moniker() const { return component_moniker_; }
+
+  void set_component_moniker(const Moniker& moniker) {
+    component_moniker_ = moniker.ToString();
+    component_url_ = moniker.url;
+  }
   void set_component_id(const std::string& id) { component_id_ = id; }
 
   void AddService(const std::string& service_name, fbl::RefPtr<fs::Service> service);
@@ -100,7 +108,8 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider, public fs::
   std::vector<ServiceHandle> service_handles_;
   std::unordered_set<std::string> all_service_names_;
 
-  std::string component_url_ = "NO_COMPONENT";
+  std::string component_moniker_ = kUnknownComponent;
+  std::string component_url_ = kUnknownComponent;
   std::string component_id_ = "-1";
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceProviderDirImpl);

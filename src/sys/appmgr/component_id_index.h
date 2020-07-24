@@ -16,6 +16,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/files/unique_fd.h"
+#include "src/sys/appmgr/moniker.h"
 
 namespace component {
 
@@ -26,10 +27,9 @@ namespace component {
 // - LookupMoniker() to look up the instance ID of a given moniker.
 class ComponentIdIndex : public fbl::RefCounted<ComponentIdIndex> {
  public:
-  struct Moniker;
   enum class Error;
   using InstanceId = std::string;
-  using MonikerToInstanceId = std::map<ComponentIdIndex::Moniker, ComponentIdIndex::InstanceId>;
+  using MonikerToInstanceId = std::map<Moniker, ComponentIdIndex::InstanceId>;
 
   // Parses the component id index file from the given |appmgr_config_dir|.
   // If the index file does not exist, an empty index is used.
@@ -64,14 +64,6 @@ class ComponentIdIndex : public fbl::RefCounted<ComponentIdIndex> {
 
   MonikerToInstanceId moniker_to_id_;
 };
-
-struct ComponentIdIndex::Moniker {
-  const std::string url;
-  const std::vector<std::string> realm_path;
-};
-
-// This operator allows |Moniker| to be used as a key in a std::map<>.
-bool operator<(const ComponentIdIndex::Moniker& l, const ComponentIdIndex::Moniker& r);
 
 // Error space used by ComponentIdIndex.
 enum class ComponentIdIndex::Error {

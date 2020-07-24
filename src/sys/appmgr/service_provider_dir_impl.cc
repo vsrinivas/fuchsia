@@ -20,18 +20,28 @@ namespace {
 constexpr char kSandboxDocUrl[] =
     "https://fuchsia.dev/fuchsia-src/concepts/framework/sandboxing#services";
 
-std::string ServiceNotInSandbox(const std::string& component_url, const std::string& service_name) {
+std::string ServiceNotInSandbox(const std::string& component_moniker,
+                                const std::string& service_name) {
   return fxl::Substitute(
-      "Component $0 is not allowed to connect to $1 because this service "
-      "is not present in the component's sandbox.\nRefer to $2 for more "
-      "information.",
-      component_url, service_name, kSandboxDocUrl);
+      "`$0` is not allowed to connect to `$1` because this service is not present in the "
+      "component's sandbox.\nRefer to $2 for more information.",
+      component_moniker, service_name, kSandboxDocUrl);
 }
 
-std::string ErrorServingService(const std::string& component_url, const std::string& service_name,
-                                zx_status_t status) {
-  return fxl::Substitute("Cannot serve service $0 for component $1: $2", service_name,
-                         component_url, std::string(zx_status_get_string(status)));
+std::string ServiceNotAvailable(const std::string& component_moniker,
+                                const std::string& service_name) {
+  return fxl::Substitute(
+      "`$0` could not connect to `$1` because this service is not present in the component's "
+      "environment or additional services.",
+      component_moniker, service_name);
+}
+
+std::string ErrorServingService(const std::string& component_moniker,
+                                const std::string& service_name, zx_status_t status) {
+  return fxl::Substitute(
+      "`$0` could not connect to `$1`, because even though the service was present we encountered "
+      "an error attempting to serve from it: $2",
+      component_moniker, service_name, std::string(zx_status_get_string(status)));
 }
 
 }  // namespace
@@ -89,7 +99,7 @@ void ServiceProviderDirImpl::AddBinding(
 
 void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::channel channel) {
   if (!IsServiceAllowlisted(service_name)) {
-    FX_LOGS(WARNING) << ServiceNotInSandbox(component_url_, service_name);
+    FX_LOGS(WARNING) << ServiceNotInSandbox(component_moniker_, service_name);
     return;
   }
   fbl::RefPtr<fs::Vnode> child;
@@ -97,10 +107,10 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name, zx::chan
   if (status == ZX_OK) {
     status = vfs_.Serve(child, std::move(channel), fs::VnodeConnectionOptions());
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << ErrorServingService(component_url_, service_name, status);
+      FX_LOGS(ERROR) << ErrorServingService(component_moniker_, service_name, status);
     }
   } else {
-    FX_LOGS(ERROR) << ErrorServingService(component_url_, service_name, status);
+    FX_LOGS(WARNING) << ServiceNotAvailable(component_moniker_, service_name);
   }
 }
 
@@ -125,11 +135,16 @@ fs::VnodeProtocolSet ServiceProviderDirImpl::GetProtocols() const {
 }
 
 zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) {
-  const std::string sname(name.data(), name.length());
-  if (!IsServiceAllowlisted(sname)) {
-    FX_LOGS(WARNING) << ServiceNotInSandbox(component_url_, sname);
+  const std::string service_name(name.data(), name.length());
+  if (!IsServiceAllowlisted(service_name)) {
+    FX_LOGS(WARNING) << ServiceNotInSandbox(component_moniker_, service_name);
+    return ZX_ERR_NOT_FOUND;
   }
-  return root_->Lookup(out, name);
+  zx_status_t status = root_->Lookup(out, name);
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << ServiceNotAvailable(component_moniker_, service_name);
+  }
+  return status;
 }
 
 void ServiceProviderDirImpl::InitLogging() {

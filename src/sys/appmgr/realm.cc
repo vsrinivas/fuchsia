@@ -50,6 +50,7 @@
 #include "src/sys/appmgr/dynamic_library_loader.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/introspector.h"
+#include "src/sys/appmgr/moniker.h"
 #include "src/sys/appmgr/namespace.h"
 #include "src/sys/appmgr/namespace_builder.h"
 #include "src/sys/appmgr/policy_checker.h"
@@ -220,13 +221,13 @@ std::string ComponentUrlToPathComponent(const FuchsiaPkgUrl& fp) {
   return fxl::Substitute("$0:$1:$2#$3", fp.host_name(), fp.package_name(), fp.variant(), resource);
 }
 
-ComponentIdIndex::Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) {
+Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) {
   std::vector<std::string> realm_path;
   for (Realm* leaf = realm; leaf != nullptr; leaf = leaf->parent().get()) {
     realm_path.push_back(leaf->label());
   }
   std::reverse(realm_path.begin(), realm_path.end());
-  return ComponentIdIndex::Moniker{.url = fp.ToString(), .realm_path = std::move(realm_path)};
+  return Moniker{.url = fp.ToString(), .realm_path = std::move(realm_path)};
 }
 
 }  // namespace
@@ -991,7 +992,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       ns->MaybeAddComponentEventProvider();
     }
 
-    ns->set_component_url(launch_info.url);
+    ns->set_component_moniker(ComputeMoniker(this, fp));
     zx::channel svc = ns->OpenServicesAsDirectory();
     if (!svc) {
       component_request.SetReturnValues(kComponentCreationFailed,

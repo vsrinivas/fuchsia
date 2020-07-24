@@ -12,6 +12,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/sys/appmgr/moniker.h"
 
 namespace component {
 namespace {
@@ -68,8 +69,8 @@ TEST_F(ComponentIdIndexTest, LookupInstanceId_Exists) {
   EXPECT_FALSE(result.is_error());
 
   auto index = result.take_value();
-  ComponentIdIndex::Moniker moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
-                                       .realm_path = {"sys"}};
+  Moniker moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
+                     .realm_path = {"sys"}};
   auto id = index->LookupMoniker(moniker).value_or("");
   EXPECT_EQ("8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280", id);
 }
@@ -81,8 +82,8 @@ TEST_F(ComponentIdIndexTest, LookupMonikerNotExists) {
   EXPECT_FALSE(result.is_error());
   auto index = result.take_value();
 
-  ComponentIdIndex::Moniker moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
-                                       .realm_path = {"sys"}};
+  Moniker moniker = {.url = "fuchsia-pkg://example.com/pkg#meta/component.cmx",
+                     .realm_path = {"sys"}};
   EXPECT_FALSE(index->LookupMoniker(moniker).has_value());
 }
 
@@ -176,14 +177,6 @@ TEST_F(ComponentIdIndexTest, Parse) {
     ASSERT_TRUE(result.is_error()) << "succeeded unexpectedly: " << test_case.name;
     EXPECT_EQ(test_case.expected, result.error()) << "failed: " << test_case.name;
   }
-}
-
-TEST(MonikerTest, CompareLessThan) {
-  EXPECT_LT((ComponentIdIndex::Moniker{.url = "a", .realm_path = {"sys"}}),
-            (ComponentIdIndex::Moniker{.url = "b", .realm_path = {"sys"}}));
-
-  EXPECT_LT((ComponentIdIndex::Moniker{.url = "a", .realm_path = {"sys"}}),
-            (ComponentIdIndex::Moniker{.url = "a", .realm_path = {"sys", "blah"}}));
 }
 
 }  // namespace
