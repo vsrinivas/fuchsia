@@ -58,27 +58,16 @@ std::unique_ptr<PlatformHandle> ZirconPlatformPciDevice::GetBusTransactionInitia
 }
 
 std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt() {
-  uint32_t max_irqs;
-  zx_status_t status = pci_query_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
-  if (status != ZX_OK)
-    return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
-
-  if (max_irqs == 0)
-    return DRETP(nullptr, "max_irqs is zero");
-
-  // Mode must be Disabled before we can request Legacy
-  status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_DISABLED, 0);
-  if (status != ZX_OK)
-    return DRETP(nullptr, "set_irq_mode(DISABLED) failed (%d)", status);
-
-  status = pci_set_irq_mode(&pci(), ZX_PCIE_IRQ_MODE_LEGACY, 1);
-  if (status != ZX_OK)
-    return DRETP(nullptr, "set_irq_mode(LEGACY) failed (%d)", status);
+  zx_status_t status = pci_configure_irq_mode(&pci(), /*irq count*/ 1);
+  if (status != ZX_OK) {
+    return DRETP(nullptr, "configure_irq_mode failed (%d)", status);
+  }
 
   zx_handle_t interrupt_handle;
   status = pci_map_interrupt(&pci(), 0, &interrupt_handle);
-  if (status < 0)
+  if (status != ZX_OK) {
     return DRETP(nullptr, "map_interrupt failed (%d)", status);
+  }
 
   return std::make_unique<ZirconPlatformInterrupt>(zx::handle(interrupt_handle));
 }
