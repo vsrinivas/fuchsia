@@ -50,7 +50,7 @@ Flatland::~Flatland() {
   // TODO(55374): consider if Link tokens should be returned or not.
 }
 
-void Flatland::Present(PresentCallback callback) {
+void Flatland::Present(std::vector<zx::event> acquire_fences, PresentCallback callback) {
   auto root_handle = GetRoot();
 
   // TODO(40818): Decide on a proper limit on compute time for topological sorting.
@@ -132,21 +132,28 @@ void Flatland::Present(PresentCallback callback) {
 
     uber_struct->images = image_metadatas_;
 
-    uber_struct_system_->SetUberStruct(instance_id_, std::move(uber_struct));
+    // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
+    // Flatland is non-movable and FenceQueue does not fire closures after destruction.
+    fence_queue_->QueueTask(
+        [this, uber_struct = std::move(uber_struct),
+         link_operations = std::move(pending_link_operations_)]() mutable {
+          uber_struct_system_->SetUberStruct(instance_id_, std::move(uber_struct));
 
-    // Finalize Link destruction operations after publishing the new UberStruct. This ensures that
-    // any local Transforms referenced by the to-be-deleted Links are already removed from the
-    // now-published UberStruct.
-    for (auto& operation : pending_link_operations_) {
-      operation();
-    }
-    pending_link_operations_.clear();
+          // Finalize Link destruction operations after publishing the new UberStruct. This
+          // ensures that any local Transforms referenced by the to-be-deleted Links are already
+          // removed from the now-published UberStruct.
+          for (auto& operation : link_operations) {
+            operation();
+          }
+        },
+        std::move(acquire_fences));
 
     // TODO(36161): Once present operations can be pipelined, this variable will change state based
     // on the number of outstanding Present calls. Until then, this call is synchronous, and we can
     // always return 1 as the number of remaining presents.
     callback(fit::ok(num_presents_remaining_));
   } else {
+    // TODO(56869): determine if pending link operations should still be run here.
     callback(fit::error(Error::BAD_OPERATION));
   }
 

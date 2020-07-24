@@ -41,9 +41,4 @@ UberStruct::InstanceMap UberStructSystem::Snapshot() {
   return copy;
 }
 
-size_t UberStructSystem::GetSize() {
-  std::scoped_lock lock(map_mutex_);
-  return uber_struct_map_.size();
-}
-
 }  // namespace flatland

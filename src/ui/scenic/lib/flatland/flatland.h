@@ -28,6 +28,7 @@
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
+#include "src/ui/lib/escher/flib/fence_queue.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 
 namespace flatland {
@@ -57,7 +58,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   Flatland& operator=(Flatland&&) = delete;
 
   // |fuchsia::ui::scenic::internal::Flatland|
-  void Present(PresentCallback callback) override;
+  void Present(std::vector<zx::event> acquire_fences, PresentCallback callback) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void LinkToParent(
       fuchsia::ui::scenic::internal::GraphLinkToken token,
@@ -154,6 +155,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // The number of pipelined Present() operations available to the client.
   uint32_t num_presents_remaining_ = kMaxPresents;
+
+  // Must be managed by a shared_ptr because the implementation uses weak_from_this().
+  std::shared_ptr<escher::FenceQueue> fence_queue_ = std::make_shared<escher::FenceQueue>();
 
   // A map from user-generated ID to global handle. This map constitutes the set of transforms that
   // can be referenced by the user through method calls. Keep in mind that additional transforms may

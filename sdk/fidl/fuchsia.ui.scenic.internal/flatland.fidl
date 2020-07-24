@@ -149,6 +149,11 @@ protocol Flatland {
     /// return an error. Operations that produce errors are ignored. Future operations are still
     /// executed.
     ///
+    /// Flatland will not access any content or shared buffers created since the previous
+    /// Present() until the caller signals all acquire_fences. As a result, the updates associated
+    /// with a Present() will not be visible to the user until the caller signals all
+    /// acquire_fences.
+    ///
     /// TODO(36166): Present should stop execution, and kill the channel, when irrecoverable errors
     /// are detected.
     ///
@@ -160,7 +165,7 @@ protocol Flatland {
     ///
     /// num_presents_remaining will always be >= 1. Present() will not return until the client is
     /// allowed to call Present() again.
-    Present() -> (uint32 num_presents_remaining) error Error;
+    Present(vector<zx.handle:EVENT>:16 acquire_fences) -> (uint32 num_presents_remaining) error Error;
 
     // ***** Graph management *****
 

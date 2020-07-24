@@ -38,9 +38,6 @@ class UberStructSystem {
   // Snapshots the current map of UberStructs and returns the copy.
   UberStruct::InstanceMap Snapshot();
 
-  // For validating cleanup logic in tests.
-  size_t GetSize();
-
  private:
   std::atomic<TransformHandle::InstanceId> next_graph_id_ = 0;
 

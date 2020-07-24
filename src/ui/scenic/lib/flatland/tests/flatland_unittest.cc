@@ -55,25 +55,39 @@ using fuchsia::ui::scenic::internal::LinkProperties;
 using fuchsia::ui::scenic::internal::Orientation;
 using fuchsia::ui::scenic::internal::Vec2;
 
+namespace {
+
+// Convenience struct for the PRESENT_WITH_ARGS macro to avoid having to update it every time
+// a new argument is added to Flatland::Present().
+struct PresentArgs {
+  std::vector<zx::event> acquire_fences;
+};
+
+}  // namespace
+
 // These macros works like functions that check a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a function.
 
-// |flatland| is a Flatland object. |expect_success| should be false if the call to Present() is
-// expected to trigger an error.
-#define PRESENT(flatland, expect_success)                                             \
-  {                                                                                   \
-    bool processed_callback = false;                                                  \
-    flatland.Present([&](Flatland_Present_Result result) {                            \
-      EXPECT_EQ(!expect_success, result.is_err());                                    \
-      if (expect_success) {                                                           \
-        EXPECT_EQ(1u, result.response().num_presents_remaining);                      \
-      } else {                                                                        \
-        EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION, result.err()); \
-      }                                                                               \
-      processed_callback = true;                                                      \
-    });                                                                               \
-    EXPECT_TRUE(processed_callback);                                                  \
+// |flatland| is a Flatland object. |args| are the PresentArgs to Present(). |expect_success|
+// should be false if the call to Present() is expected to trigger an error.
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                  \
+  {                                                                                        \
+    bool processed_callback = false;                                                       \
+    flatland.Present(std::move(args.acquire_fences), [&](Flatland_Present_Result result) { \
+      EXPECT_EQ(!expect_success, result.is_err());                                         \
+      if (expect_success) {                                                                \
+        EXPECT_EQ(1u, result.response().num_presents_remaining);                           \
+      } else {                                                                             \
+        EXPECT_EQ(fuchsia::ui::scenic::internal::Error::BAD_OPERATION, result.err());      \
+      }                                                                                    \
+      processed_callback = true;                                                           \
+    });                                                                                    \
+    EXPECT_TRUE(processed_callback);                                                       \
   }
+
+// Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
+#define PRESENT(flatland, expect_success) \
+  { PRESENT_WITH_ARGS(flatland, PresentArgs(), expect_success); }
 
 // |global_topology_data| is a GlobalTopologyData object. |global_matrix_vector| is a
 // GlobalMatrixVector generated from the same set of UberStructs and topology data. |target_handle|
@@ -99,6 +113,31 @@ using fuchsia::ui::scenic::internal::Vec2;
   }
 
 namespace {
+
+// TODO(56879): consolidate the following 3 helper functions when splitting escher into multiple
+// libraries.
+
+zx::event CreateEvent() {
+  zx::event event;
+  FX_CHECK(zx::event::create(0, &event) == ZX_OK);
+  return event;
+}
+
+std::vector<zx::event> CreateEventArray(size_t n) {
+  std::vector<zx::event> events;
+  for (size_t i = 0; i < n; i++) {
+    events.push_back(CreateEvent());
+  }
+  return events;
+}
+
+zx::event CopyEvent(const zx::event& event) {
+  zx::event event_copy;
+  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK) {
+    FX_LOGS(ERROR) << "Copying zx::event failed.";
+  }
+  return event_copy;
+}
 
 const float kDefaultSize = 1.f;
 const glm::vec2 kDefaultPixelScale = {1.f, 1.f};
@@ -143,7 +182,10 @@ class FlatlandTest : public gtest::TestLoopFixture {
     renderer_ = std::shared_ptr<Renderer>(mock_renderer_);
   }
 
-  void TearDown() override { EXPECT_EQ(uber_struct_system_->GetSize(), 0u); }
+  void TearDown() override {
+    auto snapshot = uber_struct_system_->Snapshot();
+    EXPECT_TRUE(snapshot.empty());
+  }
 
   Flatland CreateFlatland() {
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
@@ -243,10 +285,10 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
  protected:
   MockRenderer* mock_renderer_;
+  const std::shared_ptr<UberStructSystem> uber_struct_system_;
 
  private:
   std::shared_ptr<Renderer> renderer_;
-  const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
   std::atomic<BufferCollectionId> next_global_collection_id_ = 1;
@@ -260,6 +302,115 @@ namespace test {
 TEST_F(FlatlandTest, PresentShouldReturnOne) {
   Flatland flatland = CreateFlatland();
   PRESENT(flatland, true);
+}
+
+TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
+  Flatland flatland = CreateFlatland();
+
+  // Create two events to serve as acquire fences.
+  PresentArgs args;
+  args.acquire_fences = CreateEventArray(2);
+  auto event1_copy = CopyEvent(args.acquire_fences[0]);
+  auto event2_copy = CopyEvent(args.acquire_fences[1]);
+
+  // The UberStructSystem shouldn't update when the Present includes acquire fences that haven't
+  // been reached.
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  RunLoopUntilIdle();
+
+  auto snapshot = uber_struct_system_->Snapshot();
+  EXPECT_TRUE(snapshot.empty());
+
+  // Signal the second fence and ensure the UberStructSystem doesn't update. Signal order doesn't
+  // matter.
+  event2_copy.signal(0, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+
+  snapshot = uber_struct_system_->Snapshot();
+  EXPECT_TRUE(snapshot.empty());
+
+  // Signal the first fence and ensure the UberStructSystem contains an UberStruct for the
+  // instance.
+  event1_copy.signal(0, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+
+  snapshot = uber_struct_system_->Snapshot();
+  EXPECT_EQ(snapshot.size(), 1ul);
+  EXPECT_NE(snapshot.find(flatland.GetRoot().GetInstanceId()), snapshot.end());
+}
+
+TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
+  Flatland flatland = CreateFlatland();
+
+  // Create an event to serve as the acquire fence.
+  PresentArgs args;
+  args.acquire_fences = CreateEventArray(1);
+  auto event_copy = CopyEvent(args.acquire_fences[0]);
+
+  // Signal the event before the Present() call.
+  event_copy.signal(0, ZX_EVENT_SIGNALED);
+
+  // The UberStructSystem should update immediately.
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  RunLoopUntilIdle();
+
+  auto snapshot = uber_struct_system_->Snapshot();
+  EXPECT_EQ(snapshot.size(), 1ul);
+  EXPECT_NE(snapshot.find(flatland.GetRoot().GetInstanceId()), snapshot.end());
+}
+
+TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
+  Flatland flatland = CreateFlatland();
+
+  // Create an event to serve as the acquire fence for the first Present().
+  PresentArgs args;
+  args.acquire_fences = CreateEventArray(1);
+  auto event1_copy = CopyEvent(args.acquire_fences[0]);
+
+  // Present, but do not signal the fence, and ensure the UberStructSystem is empty.
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  RunLoopUntilIdle();
+
+  auto snapshot = uber_struct_system_->Snapshot();
+  EXPECT_TRUE(snapshot.empty());
+
+  // Create a transform and make it the root.
+  const TransformId kId = 1;
+
+  flatland.CreateTransform(kId);
+  flatland.SetRootTransform(kId);
+
+  // Create another event to serve as the acquire fence for the second Present().
+  PresentArgs args2;
+  args.acquire_fences = CreateEventArray(1);
+  auto event2_copy = CopyEvent(args.acquire_fences[0]);
+
+  // Present, but do not signal the fence, and ensure the UberStructSystem is still empty.
+  PRESENT_WITH_ARGS(flatland, std::move(args2), true);
+  RunLoopUntilIdle();
+
+  snapshot = uber_struct_system_->Snapshot();
+  EXPECT_TRUE(snapshot.empty());
+
+  // Signal the fence for the second Present(). Since the first one is not done, there should still
+  // be no UberStruct for the instance.
+  event2_copy.signal(0, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+
+  snapshot = uber_struct_system_->Snapshot();
+  EXPECT_TRUE(snapshot.empty());
+
+  // Signal the fence for the first Present(). This should trigger both Presents(), resulting in an
+  // UberStruct with a 2-element topology: the local root, and kId.
+  event1_copy.signal(0, ZX_EVENT_SIGNALED);
+  RunLoopUntilIdle();
+
+  snapshot = uber_struct_system_->Snapshot();
+  EXPECT_EQ(snapshot.size(), 1ul);
+
+  auto uber_struct_kv = snapshot.find(flatland.GetRoot().GetInstanceId());
+  EXPECT_NE(uber_struct_kv, snapshot.end());
+  EXPECT_EQ(uber_struct_kv->second->local_topology.size(), 2ul);
 }
 
 TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
@@ -865,12 +1016,24 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
   flatland.UnlinkFromParent(
       [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
 
-  // Until Present() is called, the previous GraphLink is not unbound.
+  // Until Present() is called and the acquire fence is signaled, the previous GraphLink is not
+  // unbound.
   EXPECT_TRUE(graph_link.is_bound());
   EXPECT_FALSE(graph_token.value.is_valid());
 
+  PresentArgs args;
+  args.acquire_fences = CreateEventArray(1);
+  auto event_copy = CopyEvent(args.acquire_fences[0]);
+
   RunLoopUntilIdle();
-  PRESENT(flatland, true);
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_FALSE(graph_token.value.is_valid());
+
+  // Signal the acquire fence to unbind the link.
+  event_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(graph_link.is_bound());
@@ -1020,14 +1183,26 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_TRUE(graph_link.is_bound());
 
-  // Clearing the parent graph should not unbind the interfaces until Present().
+  // Clearing the parent graph should not unbind the interfaces until Present() is called and the
+  // acquire fence is signaled.
   parent.ClearGraph();
   RunLoopUntilIdle();
 
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_TRUE(graph_link.is_bound());
 
-  PRESENT(parent, true);
+  PresentArgs args;
+  args.acquire_fences = CreateEventArray(1);
+  auto event_copy = CopyEvent(args.acquire_fences[0]);
+
+  PRESENT_WITH_ARGS(parent, std::move(args), true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(graph_link.is_bound());
+
+  // Signal the acquire fence to unbind the links.
+  event_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(content_link.is_bound());
@@ -1040,14 +1215,26 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_TRUE(graph_link.is_bound());
 
-  // Clearing the child graph should not unbind the interfaces until Present().
+  // Clearing the child graph should not unbind the interfaces until Present() is called and the
+  // acquire fence is signaled.
   child.ClearGraph();
   RunLoopUntilIdle();
 
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_TRUE(graph_link.is_bound());
 
-  PRESENT(child, true);
+  PresentArgs args2;
+  args2.acquire_fences = CreateEventArray(1);
+  event_copy = CopyEvent(args2.acquire_fences[0]);
+
+  PRESENT_WITH_ARGS(child, std::move(args2), true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(graph_link.is_bound());
+
+  // Signal the acquire fence to unbind the links.
+  event_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(content_link.is_bound());
@@ -1691,12 +1878,24 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
   flatland.ReleaseLink(
       kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
 
-  // Until Present() is called, the previous ContentLink is not unbound.
+  // Until Present() is called and the acquire fence is signaled, the previous ContentLink is not
+  // unbound.
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_FALSE(content_token.value.is_valid());
 
+  PresentArgs args;
+  args.acquire_fences = CreateEventArray(1);
+  auto event_copy = CopyEvent(args.acquire_fences[0]);
+
   RunLoopUntilIdle();
-  PRESENT(flatland, true);
+  PRESENT_WITH_ARGS(flatland, std::move(args), true);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_FALSE(content_token.value.is_valid());
+
+  // Signal the acquire fence to unbind the link.
+  event_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(content_link.is_bound());
@@ -1774,6 +1973,7 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
   parent.SetContentOnTransform(kLinkId, kId1);
 
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   // Link the child to the parent.
   fidl::InterfacePtr<GraphLink> child_graph_link;
@@ -1783,6 +1983,7 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(child, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
@@ -1808,6 +2009,7 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
 
   // Present the parent once so that it has a topology or else IsDescendantOf() will crash.
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   const ContentId kLinkId = 1;
 
@@ -1822,6 +2024,7 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
@@ -1841,6 +2044,7 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
 
   // Present the parent once so that it has a topology or else IsDescendantOf() will crash.
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   const ContentId kLinkId = 1;
 
@@ -1860,10 +2064,12 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(child, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
@@ -1895,6 +2101,7 @@ TEST_F(FlatlandTest, ClearChildLink) {
 
   PRESENT(parent, true);
   PRESENT(child, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
@@ -1902,6 +2109,7 @@ TEST_F(FlatlandTest, ClearChildLink) {
   parent.SetContentOnTransform(0, kId1);
 
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
@@ -1923,6 +2131,7 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   parent.SetContentOnTransform(kId1, kLinkId1);
 
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
@@ -1930,6 +2139,7 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   child.UnlinkFromParent([&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
 
   PRESENT(child, true);
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
@@ -1938,6 +2148,7 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   child2.LinkToParent(std::move(graph_token), graph_link.NewRequest());
 
   PRESENT(child2, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child2.GetRoot()));
 
@@ -1962,6 +2173,7 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   parent.SetContentOnTransform(kId1, kLinkId1);
 
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
@@ -1970,6 +2182,7 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
       kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
 
   PRESENT(parent, true);
+  RunLoopUntilIdle();
 
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
@@ -1989,6 +2202,7 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   parent2.SetContentOnTransform(kId2, kLinkId2);
 
   PRESENT(parent2, true);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(IsDescendantOf(parent2.GetRoot(), child.GetRoot()));
 
