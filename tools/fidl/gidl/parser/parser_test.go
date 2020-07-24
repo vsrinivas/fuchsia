@@ -53,14 +53,16 @@ func TestParseValues(t *testing.T) {
 				},
 			},
 		}},
-		{gidl: `SomeRecord { 0x01020304: 5, }`, expectedValue: ir.Record{
+		{gidl: `SomeRecord { 0x01020304: { bytes = [1, 2] }, }`, expectedValue: ir.Record{
 			Name: "SomeRecord",
 			Fields: []ir.Field{
 				{
 					Key: ir.FieldKey{
 						UnknownOrdinal: 0x01020304,
 					},
-					Value: uint64(5),
+					Value: ir.UnknownData{
+						Bytes: []byte{1, 2},
+					},
 				},
 			},
 		}},
@@ -129,6 +131,7 @@ func TestFailsParseValues(t *testing.T) {
 	testCases := []testCase{
 		{gidl: `"`, expectedErrorSubstr: "improperly escaped string"},
 		{gidl: `"\xwrong"`, expectedErrorSubstr: "improperly escaped string"},
+		{gidl: `SomeRecord { 0x01020304: 5, }`, expectedErrorSubstr: "unexpected tokenKind"},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.gidl, func(t *testing.T) {
@@ -374,6 +377,69 @@ func TestParseBytesFailures(t *testing.T) {
 			WireFormats: []ir.WireFormat{"alpha", "beta"},
 		})
 		_, err := p.parseByteSection()
+		t.Run(tc.gidl, func(t *testing.T) {
+			if err == nil {
+				t.Fatalf("error was expected, but no error was returned")
+			}
+			if !strings.Contains(err.Error(), tc.errSubstring) {
+				t.Errorf("expected error containing %q, but got %q", tc.errSubstring, err.Error())
+			}
+		})
+	}
+}
+
+func TestParseUnknownData(t *testing.T) {
+	type testCase struct {
+		gidl          string
+		expectedValue ir.UnknownData
+	}
+	testCases := []testCase{
+		// empty
+		{
+			gidl: `{ bytes = [] }`,
+			expectedValue: ir.UnknownData{
+				Bytes: nil,
+			},
+		},
+		// non empty
+		{
+			gidl: `{ bytes = [0xde, 0xad, 0xbe, 0xef] }`,
+			expectedValue: ir.UnknownData{
+				Bytes: []byte{0xde, 0xad, 0xbe, 0xef},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl), Config{})
+		value, err := p.parseUnknownData()
+		t.Run(tc.gidl, func(t *testing.T) {
+			checkMatch(t, value, tc.expectedValue, err)
+		})
+	}
+}
+
+func TestParseUnknownDataFailures(t *testing.T) {
+	type testCase struct {
+		gidl         string
+		errSubstring string
+	}
+	testCases := []testCase{
+		{
+			gidl:         `{}`,
+			errSubstring: "missing required parameter 'bytes'",
+		},
+		{
+			gidl:         `{ value = Foo { bar: 3 } }`,
+			errSubstring: "parameter 'value' does not apply to unknown data",
+		},
+		{
+			gidl:         `{ bytes = [1, 2, 3], bytes = [4, 5] }`,
+			errSubstring: "duplicate parameter 'bytes' found",
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl), Config{})
+		_, err := p.parseUnknownData()
 		t.Run(tc.gidl, func(t *testing.T) {
 			if err == nil {
 				t.Fatalf("error was expected, but no error was returned")

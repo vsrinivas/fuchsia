@@ -461,6 +461,10 @@ func (decl *TableDecl) conforms(value interface{}) error {
 		panic("tables cannot be nullable")
 	}
 	for _, field := range record.Fields {
+		// The mixer explicitly allows using unknown keys for strict unions to
+		// enable encode failure tests. Bindings that do not allow constructing
+		// a strict union with an unknown variant should be denylisted from these
+		// tests.
 		if field.Key.IsUnknown() {
 			if _, ok := decl.fieldByOrdinal(field.Key.UnknownOrdinal); ok {
 				return fmt.Errorf("field name must be used rather than ordinal %d", field.Key.UnknownOrdinal)

@@ -512,14 +512,20 @@ func (p *Parser) parseRecord(name string) (interface{}, error) {
 		if err != nil {
 			return err
 		}
+		key := decodeFieldKey(tokFieldName.value)
 		if _, err := p.consumeToken(tColon); err != nil {
 			return err
 		}
-		val, err := p.parseValue()
+		var val interface{}
+		if key.IsKnown() {
+			val, err = p.parseValue()
+		} else {
+			val, err = p.parseUnknownData()
+		}
 		if err != nil {
 			return err
 		}
-		obj.Fields = append(obj.Fields, ir.Field{Key: decodeFieldKey(tokFieldName.value), Value: val})
+		obj.Fields = append(obj.Fields, ir.Field{Key: key, Value: val})
 		return nil
 	})
 	if err != nil {
@@ -534,6 +540,62 @@ func decodeFieldKey(field string) ir.FieldKey {
 		return ir.FieldKey{UnknownOrdinal: uint64(ord)}
 	}
 	return ir.FieldKey{Name: field}
+}
+
+// TODO(fxb/8047): Parse handles when supported
+// This is not expressed in terms of parseBody since it handles the bytes
+// kind differently by expecting a bytes list instead of a bytes section
+func (p *Parser) parseUnknownData() (ir.UnknownData, error) {
+	var result ir.UnknownData
+	parsedKinds := make(map[bodyElement]struct{})
+	bodyTok, err := p.peekToken()
+	if err != nil {
+		return result, err
+	}
+	if err := p.parseCommaSeparated(tLacco, tRacco, func() error {
+		tok, err := p.consumeToken(tText)
+		if err != nil {
+			return err
+		}
+		if _, err := p.consumeToken(tEqual); err != nil {
+			return err
+		}
+		var kind bodyElement
+		switch tok.value {
+		// case "handles":
+		// 	handles, err := p.parseHandleList()
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// 	result.Handles = handles
+		//  kind = isHandles
+		case "bytes":
+			bytes, err := p.parseByteList()
+			if err != nil {
+				return err
+			}
+			result.Bytes = bytes
+			kind = isBytes
+		default:
+			return p.newParseError(tok, "parameter '%s' does not apply to unknown data, must be bytes", tok)
+		}
+		if kind == 0 {
+			panic("kind must be set")
+		}
+		if _, ok := parsedKinds[kind]; ok {
+			return p.newParseError(tok, "duplicate parameter '%s' found", kind)
+		}
+		parsedKinds[kind] = struct{}{}
+		return nil
+	}); err != nil {
+		return result, err
+	}
+	for _, requiredKind := range []bodyElement{isBytes} {
+		if _, ok := parsedKinds[requiredKind]; !ok {
+			return result, p.newParseError(bodyTok, "missing required parameter '%s'", requiredKind)
+		}
+	}
+	return result, nil
 }
 
 func (p *Parser) parseErrorCode() (ir.ErrorCode, error) {

@@ -599,27 +599,6 @@ success("XUnionInTableXUnionPresent") {
     },
 }
 
-success("Flexible XUnion Field Unknown") {
-    // TODO(8047) Enable support for this in language bindings after determining how it should
-    // be handled in each binding.
-    bindings_allowlist = [],
-    value = TestFlexibleXUnionInStruct {
-        xu: SampleXUnion{
-            0x01020304: Int64Struct {
-                x: 5,
-            },
-        },
-    },
-    bytes = {
-        v1 = [
-            0x04, 0x03, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // fake out-of-line data
-        ],
-    },
-}
-
 success("StrictXUnion") {
     value = TestStrictXUnionInStruct {
         xu: SampleStrictXUnion {
@@ -643,21 +622,6 @@ encode_failure("StrictXUnion Field Not Set") {
         xu: SampleStrictXUnion {},
     },
     err = STRICT_UNION_FIELD_NOT_SET,
-}
-
-decode_failure("StrictXUnion Field Unknown") {
-    // TODO(8047) Enable this. Currently only go supports this error.
-    bindings_allowlist = [go,],
-    type = TestStrictXUnionInStruct,
-    bytes = {
-        v1 = [
-            0x11, 0xba, 0x5e, 0xba, 0x00, 0x00, 0x00, 0x00,  // invalid ordinal + padding
-            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope: # of bytes + # of handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope: data is present
-            0xde, 0xad, 0xbe, 0xef, 0x5c, 0xa1, 0xab, 0x1e,  // fake out-of-line data
-        ],
-    },
-    err = STRICT_UNION_UNKNOWN_FIELD,
 }
 
 success("RecursiveVectorUnionStruct") {

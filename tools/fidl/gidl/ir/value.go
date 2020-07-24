@@ -14,6 +14,7 @@ package ir
 // - `Record` for structs, tables, and unions
 // - `[]interface{}` for slices of values
 // - `nil` for null values (only allowed for nullable types)
+// - `UnknownData` for unknown variants of unions
 type Value interface{}
 
 // Record represents a value for a struct, table, or union type.
@@ -50,4 +51,12 @@ func (f *FieldKey) IsKnown() bool {
 // IsUnknown returns true if f is an unknown (i.e. ordinal) key.
 func (f *FieldKey) IsUnknown() bool {
 	return f.Name == ""
+}
+
+// UnknownData represents the raw payload of an envelope, e.g. the data
+// corresponding to an unknown variant of a union
+type UnknownData struct {
+	Bytes []byte
+	// TODO(fxb/8047): Add when handles are supported
+	// Handle []handles
 }
