@@ -60,7 +60,7 @@ typedef struct {
   zx_handle_t irq;
   zx_handle_t event;
   mmio_buffer_t regs_iobuff;
-  aml_i2c_regs_t* virt_regs;
+  MMIO_PTR aml_i2c_regs_t* virt_regs;
   zx_duration_t timeout;
 } aml_i2c_dev_t;
 
@@ -73,10 +73,10 @@ typedef struct {
 
 static zx_status_t aml_i2c_set_slave_addr(aml_i2c_dev_t* dev, uint16_t addr) {
   addr &= 0x7f;
-  uint32_t reg = readl(&dev->virt_regs->slave_addr);
+  uint32_t reg = MmioRead32(&dev->virt_regs->slave_addr);
   reg = reg & ~0xff;
   reg = reg | ((addr << 1) & 0xff);
-  writel(reg, &dev->virt_regs->slave_addr);
+  MmioWrite32(reg, &dev->virt_regs->slave_addr);
 
   return ZX_OK;
 }
@@ -91,7 +91,7 @@ static int aml_i2c_irq_thread(void* arg) {
       zxlogf(ERROR, "i2c: interrupt error");
       continue;
     }
-    uint32_t reg = readl(&dev->virt_regs->control);
+    uint32_t reg = MmioRead32(&dev->virt_regs->control);
     if (reg & AML_I2C_CONTROL_REG_ERR) {
       zx_object_signal(dev->event, 0, I2C_ERROR_SIGNAL);
       zxlogf(ERROR, "i2c: error on bus");
@@ -103,22 +103,34 @@ static int aml_i2c_irq_thread(void* arg) {
 }
 
 static zx_status_t aml_i2c_dumpstate(aml_i2c_dev_t* dev) {
-  printf("control reg      : %08x\n", readl(&dev->virt_regs->control));
-  printf("slave addr  reg  : %08x\n", readl(&dev->virt_regs->slave_addr));
-  printf("token list0 reg  : %08x\n", readl(&dev->virt_regs->token_list_0));
-  printf("token list1 reg  : %08x\n", readl(&dev->virt_regs->token_list_1));
-  printf("token wdata0     : %08x\n", readl(&dev->virt_regs->token_wdata_0));
-  printf("token wdata1     : %08x\n", readl(&dev->virt_regs->token_wdata_1));
-  printf("token rdata0     : %08x\n", readl(&dev->virt_regs->token_rdata_0));
-  printf("token rdata1     : %08x\n", readl(&dev->virt_regs->token_rdata_1));
+  printf("control reg      : %08x\n", MmioRead32(&dev->virt_regs->control));
+  printf("slave addr  reg  : %08x\n", MmioRead32(&dev->virt_regs->slave_addr));
+  printf("token list0 reg  : %08x\n", MmioRead32(&dev->virt_regs->token_list_0));
+  printf("token list1 reg  : %08x\n", MmioRead32(&dev->virt_regs->token_list_1));
+  printf("token wdata0     : %08x\n", MmioRead32(&dev->virt_regs->token_wdata_0));
+  printf("token wdata1     : %08x\n", MmioRead32(&dev->virt_regs->token_wdata_1));
+  printf("token rdata0     : %08x\n", MmioRead32(&dev->virt_regs->token_rdata_0));
+  printf("token rdata1     : %08x\n", MmioRead32(&dev->virt_regs->token_rdata_1));
 
   return ZX_OK;
 }
 
+static inline void MmioClearBits32(uint32_t bits, MMIO_PTR volatile uint32_t* buffer) {
+  uint32_t reg = MmioRead32(buffer);
+  reg &= ~bits;
+  MmioWrite32(reg, buffer);
+}
+
+static inline void MmioSetBits32(uint32_t bits, MMIO_PTR volatile uint32_t* buffer) {
+  uint32_t reg = MmioRead32(buffer);
+  reg |= bits;
+  MmioWrite32(reg, buffer);
+}
+
 static zx_status_t aml_i2c_start_xfer(aml_i2c_dev_t* dev) {
   // First have to clear the start bit before setting (RTFM)
-  clr_bitsl(AML_I2C_CONTROL_REG_START, &dev->virt_regs->control);
-  set_bitsl(AML_I2C_CONTROL_REG_START, &dev->virt_regs->control);
+  MmioClearBits32(AML_I2C_CONTROL_REG_START, &dev->virt_regs->control);
+  MmioSetBits32(AML_I2C_CONTROL_REG_START, &dev->virt_regs->control);
   return ZX_OK;
 }
 
@@ -156,17 +168,17 @@ static zx_status_t aml_i2c_write(aml_i2c_dev_t* dev, const uint8_t* buff, uint32
       token_reg |= (uint64_t)TOKEN_STOP << (4 * (token_num++));
     }
 
-    writel(token_reg & 0xffffffff, &dev->virt_regs->token_list_0);
+    MmioWrite32(token_reg & 0xffffffff, &dev->virt_regs->token_list_0);
     token_reg = token_reg >> 32;
-    writel(token_reg, &dev->virt_regs->token_list_1);
+    MmioWrite32(token_reg, &dev->virt_regs->token_list_1);
 
     uint64_t wdata = 0;
     for (uint32_t i = 0; i < tx_size; i++) {
       wdata |= (uint64_t)buff[i] << (8 * i);
     }
 
-    writel(wdata & 0xffffffff, &dev->virt_regs->token_wdata_0);
-    writel((wdata >> 32) & 0xffffffff, &dev->virt_regs->token_wdata_1);
+    MmioWrite32(wdata & 0xffffffff, &dev->virt_regs->token_wdata_0);
+    MmioWrite32((wdata >> 32) & 0xffffffff, &dev->virt_regs->token_wdata_1);
 
     aml_i2c_start_xfer(dev);
     // while (dev->virt_regs->control & 0x4) ;;    // wait for idle
@@ -209,13 +221,13 @@ static zx_status_t aml_i2c_read(aml_i2c_dev_t* dev, uint8_t* buff, uint32_t len,
       token_reg |= (uint64_t)TOKEN_DATA << (4 * (token_num++));
     }
 
-    writel(token_reg & 0xffffffff, &dev->virt_regs->token_list_0);
+    MmioWrite32(token_reg & 0xffffffff, &dev->virt_regs->token_list_0);
     token_reg = token_reg >> 32;
-    writel(token_reg, &dev->virt_regs->token_list_1);
+    MmioWrite32(token_reg, &dev->virt_regs->token_list_1);
 
     // clear registers to prevent data leaking from last xfer
-    writel(0, &dev->virt_regs->token_rdata_0);
-    writel(0, &dev->virt_regs->token_rdata_1);
+    MmioWrite32(0, &dev->virt_regs->token_rdata_0);
+    MmioWrite32(0, &dev->virt_regs->token_rdata_1);
 
     aml_i2c_start_xfer(dev);
 
@@ -227,8 +239,8 @@ static zx_status_t aml_i2c_read(aml_i2c_dev_t* dev, uint8_t* buff, uint32_t len,
     // while (dev->virt_regs->control & 0x4) ;;    // wait for idle
 
     uint64_t rdata;
-    rdata = readl(&dev->virt_regs->token_rdata_0);
-    rdata |= ((uint64_t)readl(&dev->virt_regs->token_rdata_1)) << 32;
+    rdata = MmioRead32(&dev->virt_regs->token_rdata_0);
+    rdata |= ((uint64_t)MmioRead32(&dev->virt_regs->token_rdata_1)) << 32;
 
     for (uint32_t i = 0; i < sizeof(rdata); i++) {
       buff[i] = (uint8_t)((rdata >> (8 * i) & 0xff));
@@ -260,7 +272,7 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
     return status;
   }
 
-  device->virt_regs = (aml_i2c_regs_t*)device->regs_iobuff.vaddr;
+  device->virt_regs = (MMIO_PTR aml_i2c_regs_t*)device->regs_iobuff.vaddr;
 
   status = pdev_get_interrupt(&i2c->pdev, index, 0, &device->irq);
   if (status != ZX_OK) {
