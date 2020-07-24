@@ -10,7 +10,7 @@ use ffx_packaging_args::{BuildCommand, PackageCommand, SubCommand};
 use repository::Repository;
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::BufRead;
+use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
 #[ffx_plugin()]
@@ -67,7 +67,11 @@ fn cmd_package_build(
     }
 
     let meta_hash = build_package(repo, contents, meta_files)?;
-    writeln!(w, "{}", meta_hash)?;
+    if let Some(hash_out) = cmd.hash_out {
+        writeln!(fs::File::create(hash_out)?, "{}", meta_hash)?;
+    } else {
+        writeln!(w, "{}", meta_hash)?;
+    }
     Ok(())
 }
 
@@ -104,12 +108,9 @@ mod test {
     use crate::repository::Repository;
     use anyhow::Result;
     use ffx_packaging_args::BuildCommand;
-    use std::{fs, io};
+    use std::{fs, io, path};
 
-    #[test]
-    fn test_build() -> Result<()> {
-        let (tmpdir, repo) = make_test_repo()?;
-        let tmp = tmpdir.path();
+    fn build_command_for_test_package(tmp: &path::Path) -> Result<BuildCommand> {
         fs::write(
             tmp.join("foo.cmx"),
             r#"{
@@ -120,26 +121,48 @@ mod test {
         )?;
         fs::write(tmp.join("foo"), "")?;
         fs::write(tmp.join("entries.rsp"), "bin/foo=foo")?;
+        Ok(BuildCommand {
+            entries: vec![
+                "meta/foo.cmx=foo.cmx".into(),
+                format!("@{}", tmp.join("entries.rsp").to_string_lossy()),
+            ],
+            source_dir: Some(tmp.to_str().unwrap().into()),
+            hash_out: None,
+        })
+    }
+    // These hashes should not change unless the package input changes
+    static TEST_PACKAGE_HASHES: &'static [&str] = &[
+        "01f9a5aa102a75f1f9e034f9ed3f57c0351bd3962ae283d9f58ec0c66b3ee486", // meta.far
+        "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b", // bin/foo
+    ];
+
+    #[test]
+    fn test_build() -> Result<()> {
+        let (tmpdir, repo) = make_test_repo()?;
         let mut stdout = io::Cursor::new(vec![]);
         crate::cmd_package_build(
-            BuildCommand {
-                entries: vec![
-                    "meta/foo.cmx=foo.cmx".into(),
-                    format!("@{}", tmp.join("entries.rsp").to_string_lossy()),
-                ],
-                source_dir: Some(tmp.to_str().unwrap().into()),
-            },
+            build_command_for_test_package(tmpdir.path())?,
             &mut stdout,
             &repo,
         )?;
 
-        // These hashes should not change unless the package input changes
-        let blob_hashes = [
-            "01f9a5aa102a75f1f9e034f9ed3f57c0351bd3962ae283d9f58ec0c66b3ee486", // meta.far
-            "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b", // bin/foo
-        ];
-        assert_eq!(stdout.get_ref().as_slice(), format!("{}\n", blob_hashes[0]).as_bytes());
-        validate_blobs(&tmp, &blob_hashes)?;
+        assert_eq!(std::str::from_utf8(stdout.get_ref())?, format!("{}\n", TEST_PACKAGE_HASHES[0]));
+        validate_blobs(tmpdir.path(), &TEST_PACKAGE_HASHES)?;
+        Ok(())
+    }
+    #[test]
+    fn test_build_hash_out() -> Result<()> {
+        let (tmpdir, repo) = make_test_repo()?;
+        let tmp = tmpdir.path();
+        let mut cmd = build_command_for_test_package(tmpdir.path())?;
+        cmd.hash_out = Some(tmp.join("hash.txt").to_string_lossy().into());
+        crate::cmd_package_build(cmd, &mut std::io::stdout(), &repo)?;
+
+        assert_eq!(
+            fs::read_to_string(tmp.join("hash.txt"))?,
+            format!("{}\n", TEST_PACKAGE_HASHES[0])
+        );
+        validate_blobs(tmp, &TEST_PACKAGE_HASHES)?;
         Ok(())
     }
 
@@ -147,7 +170,7 @@ mod test {
     fn test_manifest_syntax_error() -> Result<()> {
         let (_tmpdir, repo) = make_test_repo()?;
         let res = crate::cmd_package_build(
-            BuildCommand { entries: vec!["bad entry".into()], source_dir: None },
+            BuildCommand { entries: vec!["bad entry".into()], source_dir: None, hash_out: None },
             &mut std::io::stdout(),
             &repo,
         );
@@ -162,7 +185,7 @@ mod test {
         Ok((tmp_dir, repo))
     }
 
-    fn validate_blobs<'a>(tmp: &std::path::Path, blob_hashes: &[&str]) -> Result<()> {
+    fn validate_blobs(tmp: &path::Path, blob_hashes: &[&str]) -> Result<()> {
         let blobs_dir = tmp.join("blobs");
         for blob_hash in blob_hashes {
             let blob = blobs_dir.join(blob_hash);

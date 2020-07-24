@@ -38,4 +38,7 @@ pub struct BuildCommand {
         description = "base directory for the <src> part of entries; defaults to the current directory"
     )]
     pub source_dir: Option<String>,
+
+    #[argh(option, description = "write the package hash to this file instead of stdout")]
+    pub hash_out: Option<String>,
 }
