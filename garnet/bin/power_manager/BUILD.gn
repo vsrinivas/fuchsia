@@ -132,3 +132,7 @@ group("astro_config") {
 group("base_config") {
   deps = [ "node_config:base" ]
 }
+
+group("luis_config") {
+  deps = [ "node_config:luis" ]
+}
