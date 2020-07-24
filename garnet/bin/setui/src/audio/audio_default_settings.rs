@@ -38,10 +38,10 @@ const DEFAULT_AUDIO_INFO: AudioInfo = AudioInfo {
 };
 
 lazy_static! {
-    pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo>> =
+    pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo, &'static str>> =
         Mutex::new(DefaultSetting::new(
             DEFAULT_AUDIO_INFO,
-            Some("/config/data/audio_config_data.json".to_string()),
+            Some("/config/data/audio_config_data.json"),
         ));
 }
 

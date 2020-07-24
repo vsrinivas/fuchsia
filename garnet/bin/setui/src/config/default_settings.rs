@@ -4,18 +4,27 @@
 
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use serde::de::DeserializeOwned;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::BufReader;
+use std::path::Path;
 
-pub struct DefaultSetting<T: DeserializeOwned + Clone> {
+pub struct DefaultSetting<T, P>
+where
+    T: DeserializeOwned + Clone,
+    P: AsRef<Path> + Display,
+{
     default_value: T,
-    // TODO(fxb/56942) Switch to Option<AsRef<Path>>
-    config_file_path: Option<String>,
+    config_file_path: Option<P>,
     cached_value: Option<T>,
 }
 
-impl<T: DeserializeOwned + Clone> DefaultSetting<T> {
-    pub fn new(default_value: T, config_file_path: Option<String>) -> Self {
+impl<T, P> DefaultSetting<T, P>
+where
+    T: DeserializeOwned + Clone,
+    P: AsRef<Path> + Display,
+{
+    pub fn new(default_value: T, config_file_path: Option<P>) -> Self {
         DefaultSetting { default_value, config_file_path, cached_value: None }
     }
 
@@ -28,26 +37,23 @@ impl<T: DeserializeOwned + Clone> DefaultSetting<T> {
     }
 
     fn load_default_settings(&self) -> T {
-        if self.config_file_path.is_none() {
-            return self.default_value.clone();
-        }
-
-        let file_path = self.config_file_path.as_ref().unwrap();
-        let file = match File::open(file_path) {
-            Ok(f) => f,
-            Err(e) => {
-                fx_log_info!("unable to open {}, using defaults: {:?}", file_path, e);
-                return self.default_value.clone();
-            }
-        };
-
-        match serde_json::from_reader(BufReader::new(file)) {
-            Ok(value) => value,
-            Err(e) => {
-                fx_log_err!("unable to parse config, using defaults: {:?}", e);
-                self.default_value.clone()
-            }
-        }
+        self.config_file_path
+            .as_ref()
+            .and_then(|file_path| {
+                File::open(file_path)
+                    .map_err(|e| {
+                        fx_log_info!("unable to open {}, using defaults: {:?}", file_path, e);
+                    })
+                    .ok()
+            })
+            .and_then(|file| {
+                serde_json::from_reader(BufReader::new(file))
+                    .map_err(|e| {
+                        fx_log_err!("unable to parse config, using defaults: {:?}", e);
+                    })
+                    .ok()
+            })
+            .unwrap_or_else(|| self.default_value.clone())
     }
 }
 
@@ -65,7 +71,7 @@ pub mod testing {
     fn test_load_valid_config_data() {
         let mut setting = DefaultSetting::new(
             TestConfigData { value: 3 },
-            Some("/config/data/fake_config_data.json".to_string()),
+            Some("/config/data/fake_config_data.json"),
         );
 
         assert_eq!(setting.get_default_value().value, 10);
@@ -75,7 +81,7 @@ pub mod testing {
     fn test_load_invalid_config_data() {
         let mut setting = DefaultSetting::new(
             TestConfigData { value: 3 },
-            Some("/config/data/fake_invalid_config_data.json".to_string()),
+            Some("/config/data/fake_invalid_config_data.json"),
         );
 
         assert_eq!(setting.get_default_value().value, 3);
@@ -83,8 +89,7 @@ pub mod testing {
 
     #[test]
     fn test_load_invalid_config_file_path() {
-        let mut setting =
-            DefaultSetting::new(TestConfigData { value: 3 }, Some("nuthatch".to_string()));
+        let mut setting = DefaultSetting::new(TestConfigData { value: 3 }, Some("nuthatch"));
 
         assert_eq!(setting.get_default_value().value, 3);
     }

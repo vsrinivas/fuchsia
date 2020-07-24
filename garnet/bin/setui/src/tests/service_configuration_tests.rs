@@ -29,12 +29,10 @@ async fn test_no_configuration_provided() {
         EnabledServicesConfiguration::with_services(get_test_settings_types());
 
     // Don't load a real configuration, use the default configuration.
-    let configuration =
-        DefaultSetting::new(default_configuration, Some("not_a_real_path.json".to_string()))
-            .get_default_value();
-    let flags =
-        DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json".to_string()))
-            .get_default_value();
+    let configuration = DefaultSetting::new(default_configuration, Some("not_a_real_path.json"))
+        .get_default_value();
+    let flags = DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json"))
+        .get_default_value();
     let configuration = ServiceConfiguration::from(configuration, flags);
 
     let env = EnvironmentBuilder::new(factory)
@@ -57,14 +55,11 @@ async fn test_default_configuration_provided() {
         EnabledServicesConfiguration::with_services(get_test_settings_types());
 
     // Load test configuration, which only has Accessibility, default will not be used.
-    let configuration = DefaultSetting::new(
-        default_configuration,
-        Some("/config/data/service_configuration.json".to_string()),
-    )
-    .get_default_value();
-    let flags =
-        DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json".to_string()))
+    let configuration =
+        DefaultSetting::new(default_configuration, Some("/config/data/service_configuration.json"))
             .get_default_value();
+    let flags = DefaultSetting::new(ServiceFlags::default(), Some("not_a_real_path.json"))
+        .get_default_value();
     let configuration = ServiceConfiguration::from(configuration, flags);
 
     let env = EnvironmentBuilder::new(factory)

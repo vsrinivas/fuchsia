@@ -36,17 +36,13 @@ fn main() -> Result<(), Error> {
     let default_configuration =
         EnabledServicesConfiguration::with_services(get_default_setting_types());
 
-    let configuration = DefaultSetting::new(
-        default_configuration,
-        Some("/config/data/service_configuration.json".to_string()),
-    )
-    .get_default_value();
+    let configuration =
+        DefaultSetting::new(default_configuration, Some("/config/data/service_configuration.json"))
+            .get_default_value();
 
-    let flags = DefaultSetting::new(
-        ServiceFlags::default(),
-        Some("/config/data/service_flags.json".to_string()),
-    )
-    .get_default_value();
+    let flags =
+        DefaultSetting::new(ServiceFlags::default(), Some("/config/data/service_flags.json"))
+            .get_default_value();
 
     let configuration = ServiceConfiguration::from(configuration, flags);
 
