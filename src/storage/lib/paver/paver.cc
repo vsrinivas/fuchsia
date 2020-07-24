@@ -37,6 +37,7 @@
 #include "src/storage/lib/paver/fvm.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/stream-reader.h"
+#include "src/storage/lib/paver/validation.h"
 #include "src/storage/lib/paver/vmo-reader.h"
 
 #define ZXCRYPT_DRIVER_LIB "/boot/driver/zxcrypt.so"
@@ -249,8 +250,20 @@ zx::status<::llcpp::fuchsia::mem::Buffer> PartitionRead(const DevicePartitioner&
     return status.take_error();
   }
 
+  size_t asset_size = static_cast<size_t>(partition_size);
+  // Try to find ZBI size if asset is a ZBI. This won't work on signed ZBI, nor vbmeta assets.
+  fzl::VmoMapper mapper;
+  if (zx::make_status(mapper.Map(vmo, 0, partition_size, ZX_VM_PERM_READ)).is_ok()) {
+    auto data = fbl::Span(static_cast<uint8_t*>(mapper.start()), mapper.size());
+    const zbi_header_t* container_header;
+    fbl::Span<const uint8_t> container_data;
+    if (ExtractZbiPayload(data, &container_header, &container_data)) {
+      asset_size = container_data.size();
+    }
+  }
+
   LOG("Completed successfully\n");
-  return zx::ok(::llcpp::fuchsia::mem::Buffer{std::move(vmo), static_cast<size_t>(partition_size)});
+  return zx::ok(::llcpp::fuchsia::mem::Buffer{std::move(vmo), asset_size});
 }
 
 zx::status<> ValidatePartitionPayload(const DevicePartitioner& partitioner,

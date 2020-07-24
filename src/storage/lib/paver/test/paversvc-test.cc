@@ -21,6 +21,7 @@
 #include <lib/paver/provider.h>
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/vmo.h>
+#include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 
 #include <memory>
@@ -418,6 +419,10 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
   void WriteDataBytes(uint32_t start, size_t num_bytes, uint8_t data) {
     memset(static_cast<uint8_t*>(device_->mapper().start()) + start, data, num_bytes);
+  }
+
+  void WriteDataBytes(uint32_t start, void* data, size_t num_bytes) {
+    memcpy(static_cast<uint8_t*>(device_->mapper().start()) + start, data, num_bytes);
   }
 
   std::optional<::llcpp::fuchsia::paver::BootManager::SyncClient> boot_manager_;
@@ -1265,6 +1270,27 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
+}
+
+TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
+  ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
+
+  zbi_header_t container;
+  container.type = ZBI_TYPE_CONTAINER;
+  container.extra = ZBI_CONTAINER_MAGIC;
+  container.magic = ZBI_ITEM_MAGIC;
+  container.flags = ZBI_FLAG_VERSION;
+  container.crc32 = ZBI_ITEM_NO_CRC32;
+  container.length = sizeof(zbi_header_t);
+
+  WriteDataBytes(8 * kPagesPerBlock * kPageSize, &container, sizeof(container));
+
+  ASSERT_NO_FATAL_FAILURES(FindDataSink());
+  auto result = data_sink_->ReadAsset(::llcpp::fuchsia::paver::Configuration::A,
+                                      ::llcpp::fuchsia::paver::Asset::KERNEL);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+  ASSERT_EQ(result->result.response().asset.size, sizeof(container));
 }
 
 TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {

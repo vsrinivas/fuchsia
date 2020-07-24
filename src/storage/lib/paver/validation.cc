@@ -8,7 +8,6 @@
 #include "validation.h"
 
 #include <lib/cksum.h>
-#include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
@@ -39,13 +38,8 @@ bool ZbiHeaderCrcValid(const zbi_header_t* hdr) {
   return hdr->crc32 == crc32(0, reinterpret_cast<const uint8_t*>(hdr + 1), hdr->length);
 }
 
-// Extract the payload out of the given ZBI image.
-//
-// Return "true" on success, or "false" if the input data is invalid.
-//
-// On success, sets "header" to the header of the ZBI image, and
-// "payload" to the payload of the ZBI. Both are guaranteed to be
-// completed contained in "data".
+}  // namespace
+
 bool ExtractZbiPayload(fbl::Span<const uint8_t> data, const zbi_header_t** header,
                        fbl::Span<const uint8_t>* payload) {
   // Validate data header.
@@ -85,8 +79,6 @@ bool ExtractZbiPayload(fbl::Span<const uint8_t> data, const zbi_header_t** heade
   *payload = data.subspan(sizeof(zbi_header_t), zbi_header->length);
   return true;
 }
-
-}  // namespace
 
 bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data) {
   // Get container header.
