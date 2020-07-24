@@ -119,6 +119,13 @@ if (current_toolchain == default_toolchain) {
       "$zx/public/gn/config:data_sections",
     ]
 
+    # Always enable frame pointers in the kernel so there are panic
+    # backtraces and such.
+    # TODO(mcgrathr): Consider either removing this so there's a
+    # no-frame-pointers option, or removing the kernel's support for
+    # !WITH_FRAME_POINTERS if it will never be used.
+    configs += [ "$zx/public/gn/config:frame_pointers" ]
+
     defines = kernel_defines + kernel_extra_defines
     defines += [
       "_KERNEL",

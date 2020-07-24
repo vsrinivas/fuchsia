@@ -17,7 +17,7 @@ declare_args() {
 config("zircon-migrated") {
   compiler_flags = [ "-O2" ]
 
-  cflags = compiler_flags + [ "-fno-omit-frame-pointer" ]
+  cflags = compiler_flags
 
   cflags_c = [
     "-Wwrite-strings",
@@ -37,7 +37,6 @@ config("zircon-migrated") {
   defines = [
     "_ALL_SOURCE",
     "ZX_ASSERT_LEVEL=2",
-    "WITH_FRAME_POINTERS=1",
   ]
 }
 
