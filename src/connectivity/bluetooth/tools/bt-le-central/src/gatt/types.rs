@@ -37,11 +37,8 @@ impl fmt::Display for Service {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let type_pretty =
             find_service_uuid(&self.info.type_).map(|an| an.name).unwrap_or(&self.info.type_);
-        write!(
-            f,
-            "[service: id: {}, primary: {}, type: {}]",
-            self.info.id, self.info.primary, type_pretty
-        )?;
+        let kind_pretty = if self.info.primary { "primary" } else { "secondary" };
+        write!(f, "[{} service: id: {}, type: {}]", kind_pretty, self.info.id, type_pretty)?;
         if let Some(ref chrcs) = self.characteristics {
             let mut i: i32 = 0;
             for ref chrc in chrcs {
