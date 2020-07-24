@@ -33,6 +33,9 @@ macro_rules! write_inspect_value {
     (Double, $node_writer:expr, $key:expr, $expr:expr) => {
         $node_writer.create_double($key, $expr);
     };
+    (Bool, $node_writer:expr, $key:expr, $expr:expr) => {
+        $node_writer.create_bool($key, $expr);
+    };
 }
 
 // --- Implementations for basic types ---
@@ -41,6 +44,7 @@ impl_write_inspect!(Str, self => &self, &str, String);
 impl_write_inspect!(Uint, self => (*self).into(), u8, u16, u32, u64);
 impl_write_inspect!(Int, self => (*self).into(), i8, i16, i32, i64);
 impl_write_inspect!(Double, self => (*self).into(), f32, f64);
+impl_write_inspect!(Bool, self => *self, bool);
 
 impl<V: WriteInspect + ?Sized> WriteInspect for &V {
     fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {

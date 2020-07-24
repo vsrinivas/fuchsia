@@ -5,7 +5,7 @@
 use crate::nodes::NodeExt;
 
 use fuchsia_inspect::{
-    BytesProperty, DoubleProperty, IntProperty, Node, StringProperty, UintProperty,
+    BoolProperty, BytesProperty, DoubleProperty, IntProperty, Node, StringProperty, UintProperty,
 };
 use std::sync::Arc;
 
@@ -29,6 +29,7 @@ impl ManagedNode {
 enum NodeValue {
     Node(Arc<Node>),
     String(StringProperty),
+    Bool(BoolProperty),
     Bytes(BytesProperty),
     Uint(UintProperty),
     Int(IntProperty),
@@ -54,6 +55,12 @@ impl<'c> NodeWriter<'c> {
     pub fn create_time(&mut self, key: impl AsRef<str>) -> &mut Self {
         let val = self.node.create_time(key.as_ref());
         self.items.push(NodeValue::String(val.inner));
+        self
+    }
+
+    pub fn create_bool(&mut self, key: impl AsRef<str>, value: bool) -> &mut Self {
+        let val = self.node.create_bool(key.as_ref(), value);
+        self.items.push(NodeValue::Bool(val));
         self
     }
 
@@ -100,6 +107,7 @@ mod tests {
         let mut node = ManagedNode::new(inspector.root().create_child("config"));
         node.writer()
             .create_string("str_key", "str_value")
+            .create_bool("bool_key", true)
             .create_bytes("bytes_key", &[1, 3, 3, 7])
             .create_uint("uint_key", 1)
             .create_child("child")
@@ -109,6 +117,7 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             config: {
                 str_key: "str_value",
+                bool_key: true,
                 bytes_key: vec![1u8, 3, 3, 7],
                 uint_key: 1u64,
                 child: {
@@ -125,6 +134,7 @@ mod tests {
         let mut node = ManagedNode::new(inspector.root().create_child("config"));
         node.writer()
             .create_string("str_key".to_string(), "str_value".to_string())
+            .create_bool("bool_key", true)
             .create_bytes("bytes_key".to_string(), vec![1, 3, 3, 7])
             .create_uint("uint_key".to_string(), 1)
             .create_child("child".to_string())
@@ -134,6 +144,7 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             config: {
                 str_key: "str_value",
+                bool_key: true,
                 bytes_key: vec![1u8, 3, 3, 7],
                 uint_key: 1u64,
                 child: {
