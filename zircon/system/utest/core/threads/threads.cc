@@ -363,13 +363,8 @@ TEST(Threads, InfoThreadStatsFails) {
 }
 
 TEST(Threads, GetLastScheduledCpu) {
-  // State to synchronize with the worker thread.
-  struct WorkerState {
-    zx_handle_t started;
-    zx_handle_t should_stop;
-  } state;
-  ASSERT_EQ(zx_event_create(0, &state.started), ZX_OK);
-  ASSERT_EQ(zx_event_create(0, &state.should_stop), ZX_OK);
+  zx_handle_t event;
+  ASSERT_EQ(zx_event_create(0, &event), ZX_OK);
 
   // Create a thread.
   zxr_thread_t thread;
@@ -385,21 +380,11 @@ TEST(Threads, GetLastScheduledCpu) {
   ASSERT_EQ(info.last_scheduled_cpu, ZX_INFO_INVALID_CPU);
 
   // Start the thread.
-  // NOTE! This function can only call vDSO entry points.  Any other function
-  // might be compiled with shadow-call-stack or other instrumentation that
-  // requires full proper ABI setup, which ThreadStarter does not do.
-  auto thread_body = [](void* arg) __NO_SAFESTACK -> void {
-    auto* state = static_cast<WorkerState*>(arg);
-    zx_object_signal(state->started, 0, ZX_USER_SIGNAL_0);
-    zx_object_wait_one(state->should_stop, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE,
-                       /*pending=*/nullptr);
-  };
-  ASSERT_TRUE(starter.StartThread(thread_body, &state));
+  ASSERT_TRUE(starter.StartThread(threads_test_run_fn, &event));
 
   // Wait for worker to start.
-  ASSERT_EQ(
-      zx_object_wait_one(state.started, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, /*pending=*/nullptr),
-      ZX_OK);
+  ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, /*pending=*/nullptr),
+            ZX_OK);
 
   // Ensure the last-reported thread looks reasonable.
   ASSERT_EQ(
@@ -409,23 +394,14 @@ TEST(Threads, GetLastScheduledCpu) {
   ASSERT_LT(info.last_scheduled_cpu, ZX_CPU_SET_MAX_CPUS);
 
   // Shut down and clean up.
-  ASSERT_EQ(zx_object_signal(state.should_stop, 0, ZX_USER_SIGNAL_0), ZX_OK);
+  ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_1), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
 TEST(Threads, GetInfoRuntime) {
-  // State to synchronize with the worker thread.
-  struct WorkerState {
-    zx_handle_t started;
-    zx_handle_t should_stop;
-  } state;
-
-  zx::event started, should_stop;
-  ASSERT_EQ(zx::event::create(0, &started), ZX_OK);
-  ASSERT_EQ(zx::event::create(0, &should_stop), ZX_OK);
-  state.started = started.get();
-  state.should_stop = should_stop.get();
+  zx::event event;
+  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
 
   // Create a thread.
   zxr_thread_t thread;
@@ -440,20 +416,10 @@ TEST(Threads, GetInfoRuntime) {
   ASSERT_EQ(info.queue_time, 0);
 
   // Start the thread.
-  // NOTE! This function can only call vDSO entry points.  Any other function
-  // might be compiled with shadow-call-stack or other instrumentation that
-  // requires full proper ABI setup, which ThreadStarter does not do.
-  //
-  // This means we cannot call zx::event object methods.
-  auto thread_body = [](void* arg) __NO_SAFESTACK -> void {
-    auto* state = static_cast<WorkerState*>(arg);
-    zx_object_signal(state->started, 0, ZX_USER_SIGNAL_0);
-    zx_object_wait_one(state->should_stop, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr);
-  };
-  ASSERT_TRUE(starter.StartThread(thread_body, &state));
+  ASSERT_TRUE(starter.StartThread(threads_test_run_fn, &event));
 
   // Wait for worker to start.
-  ASSERT_EQ(started.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr), ZX_OK);
+  ASSERT_EQ(event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), /*pending=*/nullptr), ZX_OK);
 
   // Ensure the last-reported thread looks reasonable.
   ASSERT_EQ(thread_h.get_info(ZX_INFO_TASK_RUNTIME, &info, sizeof(info), nullptr, nullptr), ZX_OK);
@@ -461,7 +427,7 @@ TEST(Threads, GetInfoRuntime) {
   ASSERT_GT(info.queue_time, 0);
 
   // Shut down and clean up.
-  ASSERT_EQ(should_stop.signal(0, ZX_USER_SIGNAL_0), ZX_OK);
+  ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_1), ZX_OK);
   ASSERT_EQ(thread_h.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
 
   // Ensure the runtime can still be read after the task exits.
@@ -815,7 +781,7 @@ TEST(Threads, KillSuspendedThread) {
   std::atomic<int> value = 0;
   zxr_thread_t thread;
   zx_handle_t thread_h;
-  ASSERT_TRUE(start_thread(&threads_test_atomic_store, &value, &thread, &thread_h));
+  ASSERT_TRUE(start_thread(threads_test_atomic_store, &value, &thread, &thread_h));
 
   // Wait until the thread has started and has modified value.
   while (value != 1) {
@@ -863,7 +829,7 @@ TEST(Threads, StartSuspendedThread) {
   ASSERT_EQ(zx_task_suspend(thread_h, &suspend_token), ZX_OK);
 
   std::atomic<int> value = 0;
-  ASSERT_TRUE(starter.StartThread(&threads_test_atomic_store, &value));
+  ASSERT_TRUE(starter.StartThread(threads_test_atomic_store, &value));
 
   // Make sure the thread goes directly to suspended state without executing at all.
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, NULL), ZX_OK);
@@ -898,7 +864,7 @@ TEST(Threads, StartSuspendedAndResumedThread) {
 
   // Start the thread, it should behave normally.
   std::atomic<int> value = 0;
-  ASSERT_TRUE(starter.StartThread(&threads_test_atomic_store, &value));
+  ASSERT_TRUE(starter.StartThread(threads_test_atomic_store, &value));
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, NULL), ZX_OK);
   while (value != 1) {
     zx_nanosleep(0);
@@ -1533,7 +1499,7 @@ TEST(Threads, WritingArmFlagsRegister) {
   std::atomic<int> value = 0;
   zxr_thread_t thread;
   zx_handle_t thread_handle;
-  ASSERT_TRUE(start_thread(&threads_test_atomic_store, &value, &thread, &thread_handle));
+  ASSERT_TRUE(start_thread(threads_test_atomic_store, &value, &thread, &thread_handle));
   // Wait for the thread to start executing and enter its main loop.
   while (value != 1) {
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_USEC(1))), ZX_OK);
