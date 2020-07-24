@@ -69,7 +69,7 @@ remote procedure calls to the server. In HLCPP, the proxy takes the form
 of a class with methods corresponding to each FIDL protocol method.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="2,3,4" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="main" highlight="2,3,4" %}
 ```
 
 * [`fuchsia::examples::EchoSyncPtr`][proxy] is an alias for
@@ -95,7 +95,7 @@ The code makes two requests to the server: one `SendString` request, and one
 `EchoString` request:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="6,7,8" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="main" highlight="6,7,8" %}
 ```
 
 Notice that for `EchoString` the code passes in a pointer for each response parameter (in
@@ -122,7 +122,7 @@ then launch the client in it.
 
 1. Configure your GN build as follows:
 
-    `fx set core.x64 --with //examples/fidl/hlcpp/server --with //examples/fidl/hlcpp/client --with //examples/fidl/test:echo-launcher`
+    `fx set core.x64 --with //examples/fidl/hlcpp/server --with //examples/fidl/hlcpp/client_sync --with //examples/fidl/test:echo-launcher`
 
 2. Build
 
