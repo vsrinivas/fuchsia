@@ -126,7 +126,6 @@ typedef struct {
   uint32_t info_buffer_length;
   uint32_t info_buffer_offset;
   uint32_t reserved;
-  uint8_t info_buffer[RNDIS_SET_INFO_BUFFER_LENGTH];
 } __PACKED rndis_set;
 
 typedef struct {

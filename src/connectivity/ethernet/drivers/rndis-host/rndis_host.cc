@@ -472,21 +472,30 @@ zx_status_t RndisHost::QueryDevice(uint32_t oid, void* info_buffer_out,
 }
 
 zx_status_t RndisHost::SetDeviceOid(uint32_t oid, const void* data, size_t data_length) {
-  rndis_set set{};
-  set.msg_type = RNDIS_SET_MSG;
-  set.msg_length = sizeof(set) - sizeof(set.info_buffer);
-  set.oid = oid;
+  struct Payload {
+    rndis_set header;
+    uint8_t data[RNDIS_SET_INFO_BUFFER_LENGTH];
+  } __PACKED;
+
+  Payload set = {};
+  set.header.msg_type = RNDIS_SET_MSG;
+  set.header.msg_length = sizeof(rndis_set);
+  set.header.info_buffer_length = 0;
+  set.header.info_buffer_offset = 0;
+  set.header.oid = oid;
+
   if (data_length > 0) {
-    if (data_length > sizeof(set.info_buffer)) {
-      zxlogf(ERROR, "rndishost attempted to set OID %u with size %zu bytes (maximum is %zu)", oid,
-             data_length, sizeof(set.info_buffer));
+    if (data_length > RNDIS_SET_INFO_BUFFER_LENGTH) {
+      zxlogf(ERROR, "rndishost attempted to set OID %u with size %zu bytes (maximum is %d)", oid,
+             data_length, RNDIS_SET_INFO_BUFFER_LENGTH);
       return ZX_ERR_INVALID_ARGS;
     }
 
-    set.msg_length += static_cast<uint32_t>(sizeof(set.info_buffer));
-    set.info_buffer_length = sizeof(set.info_buffer);
-    set.info_buffer_offset = offsetof(rndis_set, info_buffer) - offsetof(rndis_set, request_id);
-    memcpy(set.info_buffer, data, data_length);
+    // The buffer is always the same size regardless of the size of the payload.
+    set.header.msg_length += RNDIS_SET_INFO_BUFFER_LENGTH;
+    set.header.info_buffer_length = RNDIS_SET_INFO_BUFFER_LENGTH;
+    set.header.info_buffer_offset = offsetof(Payload, data) - offsetof(rndis_set, request_id);
+    memcpy(&set.data, data, data_length);
   }
 
   zx_status_t status = Command(&set);
