@@ -24,6 +24,7 @@
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
@@ -37,6 +38,7 @@
 #include "src/developer/forensics/testing/stubs/product_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/developer/forensics/utils/time.h"
 #include "src/lib/files/file.h"
@@ -450,6 +452,10 @@ TEST_F(DatastoreTest, GetAttachments_Inspect) {
   EXPECT_THAT(GetStaticAttachments(), IsEmpty());
 }
 
+MATCHER_P2(MatchesCobaltEvent, expected_type, expected_metric_id, "") {
+  return arg.type == expected_type && arg.metric_id == expected_metric_id;
+}
+
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   std::string previous_log_contents = "";
   for (const auto& filepath : kCurrentLogsFilePaths) {
@@ -474,6 +480,13 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslog) {
   for (const auto& file : kCurrentLogsFilePaths) {
     ASSERT_TRUE(files::DeletePath(file, /*recursive=*/false));
   }
+
+  // Verify the event type and metric_id.
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  MatchesCobaltEvent(cobalt::EventType::kCount,
+                                     cobalt_registry::kPreviousBootLogCompressionRatioMetricId),
+              }));
 }
 
 TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {

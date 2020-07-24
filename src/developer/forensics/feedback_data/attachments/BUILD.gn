@@ -51,13 +51,17 @@ source_set("static_attachments") {
     "static_attachments.h",
   ]
 
-  public_deps = [ ":types" ]
+  public_deps = [
+    ":types",
+    "//src/developer/forensics/utils/cobalt",
+  ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
     "//src/developer/forensics/utils:errors",
     "//src/lib/files",
     "//src/lib/fxl",

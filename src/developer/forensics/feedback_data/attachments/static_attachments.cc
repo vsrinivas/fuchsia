@@ -12,7 +12,9 @@
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
+#include "src/developer/forensics/feedback_data/system_log_recorder/encoding/version.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
+#include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -43,7 +45,7 @@ AttachmentValue ReadAttachmentValueFromFilepath(const AttachmentKey& key,
   return value;
 }
 
-void CreatePreviousLogsFile() {
+void CreatePreviousLogsFile(cobalt::Logger* cobalt) {
   // We read the set of /cache files into a single /tmp file.
   system_log_recorder::ProductionDecoder decoder;
   float compression_ratio;
@@ -52,6 +54,9 @@ void CreatePreviousLogsFile() {
     FX_LOGS(INFO) << fxl::StringPrintf(
         "Found logs from previous boot cycle (compression ratio %.2f), available at %s\n",
         compression_ratio, kPreviousLogsFilePath);
+
+    cobalt->LogCount(system_log_recorder::ToCobalt(decoder.GetEncodingVersion()),
+                     (uint64_t)(compression_ratio * 100));
 
     // Clean up the /cache files now that they have been concatenated into a single /tmp file.
     for (const auto& file : kCurrentLogsFilePaths) {
@@ -62,7 +67,7 @@ void CreatePreviousLogsFile() {
   }
 }
 
-AttachmentValue BuildAttachmentValue(const AttachmentKey& key) {
+AttachmentValue BuildAttachmentValue(const AttachmentKey& key, cobalt::Logger* cobalt) {
   if (key == kAttachmentBuildSnapshot) {
     return ReadAttachmentValueFromFilepath(key, "/config/build-info/snapshot");
   } else if (key == kAttachmentLogSystemPrevious) {
@@ -74,7 +79,7 @@ AttachmentValue BuildAttachmentValue(const AttachmentKey& key) {
     // current boot cycle as this would overwrite these /cache files with the content for the
     // current boot cycle.
     if (!std::filesystem::exists(kPreviousLogsFilePath)) {
-      CreatePreviousLogsFile();
+      CreatePreviousLogsFile(cobalt);
     }
     return ReadAttachmentValueFromFilepath(key, kPreviousLogsFilePath);
   }
@@ -94,10 +99,10 @@ AttachmentKeys RestrictAllowlist(const AttachmentKeys& allowlist) {
 
 }  // namespace
 
-Attachments GetStaticAttachments(const AttachmentKeys& allowlist) {
+Attachments GetStaticAttachments(const AttachmentKeys& allowlist, cobalt::Logger* cobalt) {
   Attachments attachments;
   for (const auto& key : RestrictAllowlist(allowlist)) {
-    attachments.insert({key, BuildAttachmentValue(key)});
+    attachments.insert({key, BuildAttachmentValue(key, cobalt)});
   }
   return attachments;
 }
