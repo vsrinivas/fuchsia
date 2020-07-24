@@ -698,7 +698,10 @@ struct Thread {
   // Returns true if this Thread's user state has been saved.
   //
   // Caller must hold the thread lock.
-  bool IsUserStateSavedLocked() const TA_REQ(thread_lock);
+  bool IsUserStateSavedLocked() const TA_REQ(thread_lock) {
+    DEBUG_ASSERT(thread_lock.IsHeld());
+    return user_state_saved_;
+  }
 
   // Callback for the Timer used for SleepEtc.
   static void SleepHandler(Timer* timer, zx_time_t now, void* arg);

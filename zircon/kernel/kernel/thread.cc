@@ -807,11 +807,6 @@ void Thread::Current::DoSuspend() {
   }
 }
 
-bool Thread::IsUserStateSavedLocked() const {
-  DEBUG_ASSERT(thread_lock.IsHeld());
-  return user_state_saved_;
-}
-
 bool Thread::SaveUserStateLocked() {
   DEBUG_ASSERT(thread_lock.IsHeld());
   DEBUG_ASSERT(this == Thread::Current::Get());
