@@ -4306,31 +4306,6 @@ mod test {
     }
 
     #[test]
-    fn strict_xunion_rejects_unknown_ordinal() {
-        fidl_xunion! {
-            #[derive(Debug, PartialEq)]
-            name: StrictBoolXUnion,
-            members: [
-                B {
-                    ty: bool,
-                    ordinal: 12345,
-                },
-            ],
-        }
-
-        for ctx in CONTEXTS {
-            let mut input = TestSampleXUnion::U(1);
-            let buf = &mut Vec::new();
-            let handle_buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, handle_buf, &mut input).unwrap();
-
-            let mut strict_xunion = StrictBoolXUnion::new_empty();
-            let result = Decoder::decode_with_context(ctx, buf, handle_buf, &mut strict_xunion);
-            assert_matches!(result, Err(Error::UnknownUnionTag));
-        }
-    }
-
-    #[test]
     fn xunion_with_64_bit_ordinal() {
         fidl_xunion! {
             #[derive(Debug, Copy, Clone, Eq, PartialEq)]

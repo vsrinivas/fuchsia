@@ -201,16 +201,19 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 		panic(fmt.Sprintf("union has %d fields, expected 1", len(value.Fields)))
 	}
 	field := value.Fields[0]
+	var valueStr string
 	if field.Key.IsUnknown() {
-		panic("unknown field not supported")
+		unknownData := field.Value.(gidlir.UnknownData)
+		valueStr = fmt.Sprintf("%s::__UnknownVariant { ordinal: %d, bytes: vec!%s, handles: Vec::new() }", declName(decl), field.Key.UnknownOrdinal, bytesBuilder(unknownData.Bytes))
+	} else {
+		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
+		fieldDecl, ok := decl.Field(field.Key.Name)
+		if !ok {
+			panic(fmt.Sprintf("field %s not found", field.Key.Name))
+		}
+		fieldValueStr := visit(field.Value, fieldDecl)
+		valueStr = fmt.Sprintf("%s::%s(%s)", declName(decl), fieldName, fieldValueStr)
 	}
-	fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
-	fieldDecl, ok := decl.Field(field.Key.Name)
-	if !ok {
-		panic(fmt.Sprintf("field %s not found", field.Key.Name))
-	}
-	fieldValueStr := visit(field.Value, fieldDecl)
-	valueStr := fmt.Sprintf("%s::%s(%s)", declName(decl), fieldName, fieldValueStr)
 	return wrapNullable(decl, valueStr)
 }
 
