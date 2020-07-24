@@ -14,12 +14,12 @@
     act: {
         disk_full: {
             type: "Warning",
-            trigger: "disk98",
+            trigger: "And(Not(Missing(disk98)), disk98)",
             print: "Disk is >98% full",
         },
         disk_full_old: {
             type: "Warning",
-            trigger: "disk98_old",
+            trigger: "And(Not(Missing(disk98_old)), disk98_old)",
             print: "Disk is >98% full",
         },
         disk: {

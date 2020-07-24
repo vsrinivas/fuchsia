@@ -326,6 +326,7 @@ pub enum Function {
     KlogHas,
     SyslogHas,
     BootlogHas,
+    Missing,
 }
 
 // Behavior for short circuiting execution when applying operands.
@@ -565,6 +566,7 @@ impl<'a> MetricState<'a> {
             Function::KlogHas | Function::SyslogHas | Function::BootlogHas => {
                 self.log_contains(function, namespace, operands)
             }
+            Function::Missing => self.is_missing(namespace, operands),
         }
     }
 
@@ -1168,6 +1170,27 @@ mod test {
             state.eval_value("root", "And(is42 == 42, missing)"),
             MetricValue::Missing("Metric 'missing' Not Found in 'root'".to_string())
         );
+
         assert_eq!(state.eval_value("root", "And(is42 != 42, missing)"), MetricValue::Bool(false));
+
+        // Missing checks
+        assert_eq!(state.eval_value("root", "Missing(is42)"), MetricValue::Bool(false));
+        assert_eq!(state.eval_value("root", "Missing(missing)"), MetricValue::Bool(true));
+        assert_eq!(
+            state.eval_value("root", "And(Not(Missing(is42)), is42 == 42)"),
+            MetricValue::Bool(true)
+        );
+        assert_eq!(
+            state.eval_value("root", "And(Not(Missing(missing)), missing == 'Hello')"),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(
+            state.eval_value("root", "Or(Missing(is42), is42 < 42)"),
+            MetricValue::Bool(false)
+        );
+        assert_eq!(
+            state.eval_value("root", "Or(Missing(missing), missing == 'Hello')"),
+            MetricValue::Bool(true)
+        );
     }
 }
