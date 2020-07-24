@@ -18,6 +18,7 @@ import (
 
 var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
 #![cfg(test)]
+#![allow(unused_imports)]
 
 use {
 	fidl::{Error, encoding::{Context, Decodable, Decoder, Encoder}},
