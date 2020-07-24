@@ -4,6 +4,7 @@
 
 pub mod app; // Runs the config binary
 pub mod config; // Read the config file(s) for metric and action specs.
+pub mod file_io;
 
 #[cfg(test)]
 mod test;

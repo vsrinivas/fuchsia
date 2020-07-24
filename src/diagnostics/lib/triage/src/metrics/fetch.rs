@@ -6,6 +6,8 @@ use {
     super::MetricValue,
     anyhow::{anyhow, bail, Context, Error, Result},
     fuchsia_inspect_node_hierarchy::NodeHierarchy,
+    lazy_static::lazy_static,
+    regex::Regex,
     selectors,
     serde_derive::Deserialize,
     serde_json::Value as JsonValue,
@@ -77,6 +79,34 @@ pub struct ComponentInspectInfo {
     moniker: Vec<String>,
 }
 
+pub struct TextFetcher {
+    pub lines: Vec<String>,
+}
+
+impl From<&str> for TextFetcher {
+    fn from(log_buffer: &str) -> Self {
+        TextFetcher { lines: log_buffer.split('\n').map(|s| s.to_string()).collect::<Vec<_>>() }
+    }
+}
+
+lazy_static! {
+    static ref EMPTY_TEXT_FETCHER: TextFetcher = TextFetcher { lines: Vec::new() };
+}
+
+impl TextFetcher {
+    pub fn ref_empty() -> &'static Self {
+        &EMPTY_TEXT_FETCHER
+    }
+
+    pub fn contains(&self, pattern: &str) -> bool {
+        let re = match Regex::new(pattern) {
+            Ok(re) => re,
+            _ => return false,
+        };
+        self.lines.iter().any(|s| re.is_match(s))
+    }
+}
+
 pub struct InspectFetcher {
     pub components: Vec<ComponentInspectInfo>,
 }
@@ -138,10 +168,13 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
     }
 }
 
+lazy_static! {
+    static ref EMPTY_INSPECT_FETCHER: InspectFetcher = InspectFetcher { components: Vec::new() };
+}
+
 impl InspectFetcher {
-    #[cfg(test)]
-    pub fn new_empty() -> Self {
-        Self { components: Vec::new() }
+    pub fn ref_empty() -> &'static Self {
+        &EMPTY_INSPECT_FETCHER
     }
 
     fn try_fetch(&self, selector_string: &str) -> Result<Vec<MetricValue>, Error> {
@@ -263,5 +296,42 @@ mod test {
             assert_wrong!("INSPECT:*/bar/*:base:array", "Arrays not supported yet");
         }
         Ok(())
+    }
+
+    #[test]
+    fn inspect_ref_empty() -> Result<(), Error> {
+        // Make sure it doesn't crash, can be called multiple times and they both work right.
+        let fetcher1 = InspectFetcher::ref_empty();
+        let fetcher2 = InspectFetcher::ref_empty();
+        match fetcher1.try_fetch("not a selector") {
+            Err(_) => {}
+            _ => bail!("Should not have accepted a bad selector"),
+        }
+        match fetcher2.try_fetch("not a selector") {
+            Err(_) => {}
+            _ => bail!("Should not have accepted a bad selector"),
+        }
+        match fetcher1.try_fetch("a:b:c").unwrap()[0] {
+            MetricValue::Missing(_) => {}
+            _ => bail!("Should have Missing'd a valid selector"),
+        }
+        match fetcher2.try_fetch("a:b:c").unwrap()[0] {
+            MetricValue::Missing(_) => {}
+            _ => bail!("Should have Missing'd a valid selector"),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn text_fetcher_works() {
+        let fetcher = TextFetcher::from("abcfoo\ndefgfoo");
+        assert!(fetcher.contains("d*g"));
+        assert!(fetcher.contains("foo"));
+        assert!(!fetcher.contains("food"));
+        // Make sure ref_empty() doesn't crash and can be used multiple times.
+        let fetcher1 = TextFetcher::ref_empty();
+        let fetcher2 = TextFetcher::ref_empty();
+        assert!(!fetcher1.contains("a"));
+        assert!(!fetcher2.contains("a"));
     }
 }

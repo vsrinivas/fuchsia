@@ -5,7 +5,8 @@
 use {
     anyhow::{bail, Error},
     structopt::StructOpt,
-    triage::{ActionTagDirective, ParseResult},
+    triage::ActionTagDirective,
+    triage_app_lib::file_io::config_from_files,
 };
 
 #[derive(StructOpt, Debug)]
@@ -24,7 +25,7 @@ fn run_tests(config_files: Vec<String>) -> Result<(), Error> {
         bail!("Need at least 1 file to test");
     }
 
-    let parse_result = ParseResult::from_files(&config_files, &ActionTagDirective::AllowAll)?;
+    let parse_result = config_from_files(&config_files, &ActionTagDirective::AllowAll)?;
     parse_result.validate()?;
 
     Ok(())

@@ -22,13 +22,13 @@ impl<'a> ActionContext<'a> {
     pub fn new(
         metrics: &'a Metrics,
         actions: &'a Actions,
-        diagnostic_data: &'a DiagnosticData,
+        diagnostic_data: &'a Vec<DiagnosticData>,
     ) -> ActionContext<'a> {
-        let fetcher = Fetcher::FileData(FileDataFetcher::new(&diagnostic_data.inspect));
+        let fetcher = Fetcher::FileData(FileDataFetcher::new(diagnostic_data));
         ActionContext {
             actions,
             metric_state: MetricState::new(metrics, fetcher),
-            action_results: ActionResults::new(&diagnostic_data.source),
+            action_results: ActionResults::new(),
         }
     }
 }
@@ -37,20 +37,14 @@ impl<'a> ActionContext<'a> {
 /// the [warnings] and [gauges] that are generated.
 #[derive(Clone)]
 pub struct ActionResults {
-    pub source: String,
     results: HashMap<String, bool>,
     warnings: Vec<String>,
     gauges: Vec<String>,
 }
 
 impl ActionResults {
-    pub fn new(source: &str) -> ActionResults {
-        ActionResults {
-            source: source.to_string(),
-            results: HashMap::new(),
-            warnings: Vec::new(),
-            gauges: Vec::new(),
-        }
+    pub fn new() -> ActionResults {
+        ActionResults { results: HashMap::new(), warnings: Vec::new(), gauges: Vec::new() }
     }
 
     pub fn set_result(&mut self, action: &str, value: bool) {
@@ -180,7 +174,7 @@ impl ActionContext<'_> {
 mod test {
     use {
         super::*,
-        crate::metrics::{fetch::InspectFetcher, Metric, Metrics},
+        crate::metrics::{Metric, Metrics},
     };
 
     /// Tells whether any of the stored values include a substring.
@@ -226,11 +220,9 @@ mod test {
                 tag: None,
             }),
         );
-
         actions.insert("file".to_string(), action_file);
-        let inspect_context =
-            DiagnosticData { source: String::from("source"), inspect: InspectFetcher::new_empty() };
-        let mut context = ActionContext::new(&metrics, &actions, &inspect_context);
+        let no_data = Vec::new();
+        let mut context = ActionContext::new(&metrics, &actions, &no_data);
         let results = context.process();
         assert!(includes(results.get_warnings(), "[WARNING] True was fired"));
         assert!(includes(results.get_warnings(), "[WARNING] Inequality triggered"));
@@ -272,9 +264,8 @@ mod test {
             }),
         );
         actions.insert("file".to_string(), action_file);
-        let inspect_context =
-            DiagnosticData { source: String::from("source"), inspect: InspectFetcher::new_empty() };
-        let mut context = ActionContext::new(&metrics, &actions, &inspect_context);
+        let no_data = Vec::new();
+        let mut context = ActionContext::new(&metrics, &actions, &no_data);
 
         let results = context.process();
 

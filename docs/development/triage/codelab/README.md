@@ -306,6 +306,43 @@ Run Triage again. The error should disappear, replaced by a warning that your
 
 `Warning: 'disk_full' in 'rules' detected 'Disk is 98% full': 'disk98' was true`
 
+### Log file scanning
+
+You can write expressions to test whether a line of a log file
+(syslog.txt, klog.txt, bootlog.txt) is matched by a regular
+expression. It looks like this:
+
+```json5
+    eval: {
+        syslog_has_not_found: "SyslogHas('ERROR.*not found')",
+        ...
+    }
+    act: {
+        something_not_found: {
+            trigger: "SyslogHas('ERROR.*not found')",
+            ...
+        }
+    }
+```
+
+Note: To nest quotation marks you can use either single quote `'` or escaped
+double quote `\"`.
+
+The functions are SyslogHas(), KlogHas(), BootlogHas(). If a
+log file is missing (for example, some bugreports contain no
+bootlog.txt) it is treated the same as an empty file.
+
+To test this, you can include entries in the test like this:
+
+```json5
+test: {
+    test_error: {
+        yes: [error_scan],
+        syslog: "ERROR: file Foo not found\nSecond line OK",
+    }
+}
+```
+
 ### Use multiple configuration files
 
 You can add any number of Triage configuration files, and even use variables
@@ -433,6 +470,9 @@ logical AND of the values.
 * Or(value1, value2, value3...) takes Boolean arguments and returns the
 logical OR of the values.
 * Not(value) takes one Boolean argument and returns the logical NOT of it.
+* SyslogHas(regex), KlogHas(regex), BootlogHas(regex) take one
+string argument and return Boolean, true if the regex matches
+any line in the corresponding log file.
 
 ## Further Reading
 

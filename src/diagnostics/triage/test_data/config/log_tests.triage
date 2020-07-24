@@ -1,0 +1,51 @@
+{
+    act: {
+        syslog_foo: {
+            type: "Warning",
+            trigger: "SyslogHas('foo')",
+            print: "Error rate for app.cmx is too high",
+        },
+        klog_foo: {
+            type: "Warning",
+            trigger: "KlogHas('foo')",
+            print: "Error rate for app.cmx is too high",
+        },
+        bootlog_foo: {
+            type: "Warning",
+            trigger: "BootlogHas('foo')",
+            print: "Error rate for app.cmx is too high",
+        },
+    },
+    test: {
+        syslog: {
+            yes: [
+                "syslog_foo",
+            ],
+            no: [
+                "klog_foo",
+                "bootlog_foo",
+            ],
+            syslog: "foo",
+        },
+        klog: {
+            yes: [
+                "klog_foo",
+            ],
+            no: [
+                "syslog_foo",
+                "bootlog_foo",
+            ],
+            klog: "foo",
+        },
+        bootlog: {
+            yes: [
+                "bootlog_foo",
+            ],
+            no: [
+                "klog_foo",
+                "syslog_foo",
+            ],
+            bootlog: "foo",
+        },
+    },
+}

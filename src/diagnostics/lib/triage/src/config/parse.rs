@@ -197,6 +197,9 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
         function!("Not", Not),
         function!("Max", Max),
         function!("Min", Min),
+        function!("SyslogHas", SyslogHas),
+        function!("KlogHas", KlogHas),
+        function!("BootlogHas", BootlogHas),
     ))(i)
 }
 

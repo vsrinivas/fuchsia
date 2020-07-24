@@ -38,6 +38,7 @@ copy("copy_configs") {
   # Any data that is needed for a test should be included in this list.
   sources = [
     "test_data/config/error_rate.triage",
+    "test_data/config/log_tests.triage",
     "test_data/config/other.triage",
     "test_data/config/sample.triage",
     "test_data/config/sample_tags.triage",
@@ -88,7 +89,7 @@ lib_deps = [
   "//third_party/rust_crates:structopt",
 ]
 
-rustc_library("triage_lib") {
+rustc_library("triage_app_lib") {
   edition = 2018
 
   deps = lib_deps
@@ -98,6 +99,7 @@ rustc_library("triage_lib") {
   sources = [
     "src/app.rs",
     "src/config.rs",
+    "src/file_io.rs",
     "src/lib.rs",
   ]
 }
@@ -106,7 +108,7 @@ rustc_test("triage_lib_test") {
   edition = 2018
 
   deps = lib_deps + [
-           ":triage_lib",
+           ":triage_app_lib",
 
            # we need to take a dependency on our bin because our integration tests invoke it
            ":triage_bin",
@@ -118,6 +120,7 @@ rustc_test("triage_lib_test") {
   sources = [
     "src/app.rs",
     "src/config.rs",
+    "src/file_io.rs",
     "src/lib.rs",
     "src/test.rs",
     "src/test/integration.rs",
@@ -128,7 +131,7 @@ rustc_binary("triage_bin") {
   name = "triage"
   edition = "2018"
 
-  deps = lib_deps + [ ":triage_lib" ]
+  deps = lib_deps + [ ":triage_app_lib" ]
 
   enforce_source_listing = true
 

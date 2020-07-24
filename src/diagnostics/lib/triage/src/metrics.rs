@@ -5,9 +5,10 @@
 pub mod fetch;
 
 use {
-    super::config::{self},
-    fetch::{InspectFetcher, SelectorString, SelectorType},
+    super::config::{self, DataFetcher, DiagnosticData, Source},
+    fetch::{InspectFetcher, SelectorString, SelectorType, TextFetcher},
     fuchsia_inspect_node_hierarchy::Property as DiagnosticProperty,
+    lazy_static::lazy_static,
     serde::{Deserialize, Deserializer},
     serde_json::Value as JsonValue,
     std::{clone::Clone, collections::HashMap, convert::TryFrom},
@@ -70,11 +71,44 @@ pub enum Fetcher<'a> {
 #[derive(Clone)]
 pub struct FileDataFetcher<'a> {
     inspect: &'a InspectFetcher,
+    syslog: &'a TextFetcher,
+    klog: &'a TextFetcher,
+    bootlog: &'a TextFetcher,
 }
 
 impl<'a> FileDataFetcher<'a> {
-    pub fn new(inspect: &'a InspectFetcher) -> FileDataFetcher<'a> {
-        FileDataFetcher { inspect }
+    pub fn new(data: &'a Vec<DiagnosticData>) -> FileDataFetcher<'a> {
+        let mut fetcher = FileDataFetcher {
+            inspect: InspectFetcher::ref_empty(),
+            syslog: TextFetcher::ref_empty(),
+            klog: TextFetcher::ref_empty(),
+            bootlog: TextFetcher::ref_empty(),
+        };
+        for DiagnosticData { source, data, .. } in data.iter() {
+            match source {
+                Source::Inspect => {
+                    if let DataFetcher::Inspect(data) = data {
+                        fetcher.inspect = data;
+                    }
+                }
+                Source::Syslog => {
+                    if let DataFetcher::Text(data) = data {
+                        fetcher.syslog = data;
+                    }
+                }
+                Source::Klog => {
+                    if let DataFetcher::Text(data) = data {
+                        fetcher.klog = data;
+                    }
+                }
+                Source::Bootlog => {
+                    if let DataFetcher::Text(data) = data {
+                        fetcher.bootlog = data;
+                    }
+                }
+            }
+        }
+        fetcher
     }
 
     fn fetch(&self, selector: &SelectorString) -> MetricValue {
@@ -102,11 +136,44 @@ impl<'a> FileDataFetcher<'a> {
 #[derive(Clone)]
 pub struct TrialDataFetcher<'a> {
     values: &'a HashMap<String, JsonValue>,
+    klog: &'a TextFetcher,
+    syslog: &'a TextFetcher,
+    bootlog: &'a TextFetcher,
+}
+
+lazy_static! {
+    static ref EMPTY_JSONVALUES: HashMap<String, JsonValue> = HashMap::new();
 }
 
 impl<'a> TrialDataFetcher<'a> {
     pub fn new(values: &'a HashMap<String, JsonValue>) -> TrialDataFetcher<'a> {
-        TrialDataFetcher { values }
+        TrialDataFetcher {
+            values,
+            klog: TextFetcher::ref_empty(),
+            syslog: TextFetcher::ref_empty(),
+            bootlog: TextFetcher::ref_empty(),
+        }
+    }
+
+    pub fn new_empty() -> TrialDataFetcher<'static> {
+        TrialDataFetcher {
+            values: &EMPTY_JSONVALUES,
+            klog: TextFetcher::ref_empty(),
+            syslog: TextFetcher::ref_empty(),
+            bootlog: TextFetcher::ref_empty(),
+        }
+    }
+
+    pub fn set_syslog(&mut self, fetcher: &'a TextFetcher) {
+        self.syslog = fetcher;
+    }
+
+    pub fn set_klog(&mut self, fetcher: &'a TextFetcher) {
+        self.klog = fetcher;
+    }
+
+    pub fn set_bootlog(&mut self, fetcher: &'a TextFetcher) {
+        self.bootlog = fetcher;
     }
 
     fn fetch(&self, name: &str) -> MetricValue {
@@ -256,6 +323,9 @@ pub enum Function {
     And,
     Or,
     Not,
+    KlogHas,
+    SyslogHas,
+    BootlogHas,
 }
 
 fn demand_numeric(value: &MetricValue) -> MetricValue {
@@ -479,6 +549,9 @@ impl<'a> MetricState<'a> {
             Function::And => self.fold_bool(namespace, &|a, b| a && b, operands),
             Function::Or => self.fold_bool(namespace, &|a, b| a || b, operands),
             Function::Not => self.not_bool(namespace, operands),
+            Function::KlogHas | Function::SyslogHas | Function::BootlogHas => {
+                self.log_contains(function, namespace, operands)
+            }
         }
     }
 
@@ -488,6 +561,45 @@ impl<'a> MetricState<'a> {
             Expression::IsMissing(operands) => self.is_missing(namespace, operands),
             Expression::Metric(name) => self.metric_value_by_name(namespace, name),
             Expression::Value(value) => value.clone(),
+        }
+    }
+
+    fn log_contains(
+        &self,
+        log_type: &Function,
+        namespace: &str,
+        operands: &Vec<Expression>,
+    ) -> MetricValue {
+        let log_data = match &self.fetcher {
+            Fetcher::TrialData(fetcher) => match log_type {
+                Function::KlogHas => fetcher.klog,
+                Function::SyslogHas => fetcher.syslog,
+                Function::BootlogHas => fetcher.bootlog,
+                _ => {
+                    return MetricValue::Missing(
+                        "Internal error, log_contains with non-log function".to_string(),
+                    )
+                }
+            },
+            Fetcher::FileData(fetcher) => match log_type {
+                Function::KlogHas => fetcher.klog,
+                Function::SyslogHas => fetcher.syslog,
+                Function::BootlogHas => fetcher.bootlog,
+                _ => {
+                    return MetricValue::Missing(
+                        "Internal error, log_contains with non-log function".to_string(),
+                    )
+                }
+            },
+        };
+        if operands.len() != 1 {
+            return MetricValue::Missing(
+                "Log matcher must use exactly 1 argument, an RE string.".into(),
+            );
+        }
+        match self.evaluate(namespace, &operands[0]) {
+            MetricValue::String(re) => MetricValue::Bool(log_data.contains(&re)),
+            _ => MetricValue::Missing("Log matcher needs a string (RE).".into()),
         }
     }
 
@@ -668,7 +780,7 @@ impl<'a> MetricState<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use lazy_static::lazy_static;
+    use {anyhow::Error, lazy_static::lazy_static};
 
     #[test]
     fn test_equality() {
@@ -776,13 +888,13 @@ mod test {
         };
         static ref FOO_42_AB_7_TRIAL_FETCHER: TrialDataFetcher<'static> =
             TrialDataFetcher::new(&LOCAL_M);
-        static ref LOCAL_F: InspectFetcher = {
+        static ref LOCAL_F: Vec<DiagnosticData> = {
             let s = r#"[{
                 "data_source": "Inspect",
                 "moniker": "bar.cmx",
                 "payload": { "root": { "bar": 99 }}
             }]"#;
-            InspectFetcher::try_from(&*s.to_owned()).unwrap()
+            vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
         };
         static ref BAR_99_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&LOCAL_F);
         static ref BAR_SELECTOR: SelectorString =
@@ -917,4 +1029,45 @@ mod test {
             "Trial should not have read c from file a",
         );
     }
+
+    #[test]
+    fn logs_work() -> Result<(), Error> {
+        let syslog_text = "line 1\nline 2\nsyslog".to_string();
+        let klog_text = "first line\nsecond line\nklog\n".to_string();
+        let bootlog_text = "Yes there's a bootlog with one long line".to_string();
+        let syslog = DiagnosticData::new("sys".to_string(), Source::Syslog, syslog_text)?;
+        let klog = DiagnosticData::new("k".to_string(), Source::Klog, klog_text)?;
+        let bootlog = DiagnosticData::new("boot".to_string(), Source::Bootlog, bootlog_text)?;
+        let metrics = HashMap::new();
+        let mut data = vec![klog, syslog, bootlog];
+        let fetcher = FileDataFetcher::new(&data);
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
+        assert_eq!(state.eval_value("", r#"KlogHas("lin")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"KlogHas("l.ne")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"KlogHas("fi.*ne")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"KlogHas("fi.*sec")"#), MetricValue::Bool(false));
+        assert_eq!(state.eval_value("", r#"KlogHas("first line")"#), MetricValue::Bool(true));
+        // Full regex; even capture groups are allowed but the values can't be extracted.
+        assert_eq!(state.eval_value("", r#"KlogHas("f(.)rst \bline")"#), MetricValue::Bool(true));
+        // Backreferences don't work; this is regex, not fancy_regex.
+        assert_eq!(state.eval_value("", r#"KlogHas("f(.)rst \bl\1ne")"#), MetricValue::Bool(false));
+        assert_eq!(state.eval_value("", r#"KlogHas("second line")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", "KlogHas(\"second line\n\")"), MetricValue::Bool(false));
+        assert_eq!(state.eval_value("", r#"KlogHas("klog")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"KlogHas("line 2")"#), MetricValue::Bool(false));
+        assert_eq!(state.eval_value("", r#"SyslogHas("line 2")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
+        data.pop();
+        let fetcher = FileDataFetcher::new(&data);
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
+        assert_eq!(state.eval_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
+        assert_eq!(state.eval_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(false));
+        assert_eq!(state.eval_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
+        Ok(())
+    }
+
+    // Correct operation of the klog, syslog, and bootlog fields of TrialDataFetcher are tested
+    // in the integration test via log_tests.triage.
 }

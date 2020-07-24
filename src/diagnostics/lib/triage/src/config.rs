@@ -6,7 +6,7 @@ use {
     crate::{
         act::{Actions, ActionsSchema},
         metrics::{
-            fetch::{InspectFetcher, SelectorString},
+            fetch::{InspectFetcher, SelectorString, TextFetcher},
             Metric, Metrics,
         },
         validate::{validate, Trials, TrialsSchema},
@@ -16,13 +16,17 @@ use {
     std::{collections::HashMap, convert::TryFrom},
 };
 
-#[cfg(not(target_arch = "wasm32"))]
-use std::{fs, path::Path};
-
 pub(crate) mod parse;
 
-#[cfg(not(target_arch = "wasm32"))]
-const INSPECT_FILENAME: &str = "inspect.json";
+// These numbers are used in the wasm-bindgen bridge so they are explicit and
+// permanent. They don't need to be sequential.
+#[derive(Debug, Clone, Copy)]
+pub enum Source {
+    Inspect = 0,
+    Klog = 1,
+    Syslog = 2,
+    Bootlog = 3,
+}
 
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
 /// files using serde_json.
@@ -55,25 +59,34 @@ impl TryFrom<String> for ConfigFileSchema {
     }
 }
 
+pub enum DataFetcher {
+    Inspect(InspectFetcher),
+    Text(TextFetcher),
+    None,
+}
+
 /// The path of the Diagnostic files and the data contained within them.
 pub struct DiagnosticData {
-    pub source: String,
-    pub inspect: InspectFetcher,
+    pub name: String,
+    pub source: Source,
+    pub data: DataFetcher,
 }
 
 impl DiagnosticData {
-    pub fn new(source: String, inspect_text: String) -> Result<DiagnosticData, Error> {
-        let inspect = InspectFetcher::try_from(&*inspect_text).context("Parsing inspect.json")?;
-        Ok(DiagnosticData { source, inspect })
+    pub fn new(name: String, source: Source, contents: String) -> Result<DiagnosticData, Error> {
+        let data = match source {
+            Source::Inspect => DataFetcher::Inspect(
+                InspectFetcher::try_from(&*contents).context("Parsing inspect.json")?,
+            ),
+            Source::Syslog | Source::Klog | Source::Bootlog => {
+                DataFetcher::Text(TextFetcher::try_from(&*contents).context("Parsing plain text")?)
+            }
+        };
+        Ok(DiagnosticData { name, source, data })
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn from_directory(directory: &Path) -> Result<Vec<DiagnosticData>, Error> {
-        let file_path =
-            directory.join(INSPECT_FILENAME).into_os_string().to_string_lossy().to_string();
-        let inspect_text = fs::read_to_string(&file_path)
-            .context(format!("Couldn't read file '{}' to string", file_path))?;
-        Ok(vec![Self::new(file_path, inspect_text)?])
+    pub fn new_empty(name: String, source: Source) -> DiagnosticData {
+        DiagnosticData { name, source, data: DataFetcher::None }
     }
 }
 
@@ -123,40 +136,9 @@ impl ParseResult {
         Ok(ParseResult { actions, metrics, tests })
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn from_files(
-        config_files: &Vec<String>,
-        action_tag_directive_from_tags: &ActionTagDirective,
-    ) -> Result<ParseResult, Error> {
-        let mut config_file_map = HashMap::new();
-        for file_name in config_files {
-            let namespace = base_name(&file_name)?;
-            let file_data = match fs::read_to_string(file_name.clone()) {
-                Ok(data) => data,
-                Err(e) => {
-                    bail!("Couldn't read config file '{}' to string, {}", file_name, e);
-                }
-            };
-            config_file_map.insert(namespace, file_data);
-        }
-
-        Self::new(&config_file_map, &action_tag_directive_from_tags)
-    }
-
     pub fn validate(&self) -> Result<(), Error> {
         validate(self)
     }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn base_name(path: &String) -> Result<String, Error> {
-    let file_path = Path::new(path);
-    if let Some(s) = file_path.file_stem() {
-        if let Some(s) = s.to_str() {
-            return Ok(s.to_owned());
-        }
-    }
-    bail!("Bad path {} - can't find file_stem", path)
 }
 
 /// A value which directs how to include Actions based on their tags.
@@ -229,14 +211,8 @@ mod test {
         anyhow::Error,
     };
 
-    // initialize() will be tested in the integration test: "fx triage --test"
+    // initialize() will be tested in the integration test: "fx test triage_lib_test"
     // TODO(cphoenix) - set up dirs under test/ and test initialize() here.
-
-    #[test]
-    fn base_name_works() -> Result<(), Error> {
-        assert_eq!(base_name(&"foo/bar/baz.ext".to_string())?, "baz".to_string());
-        Ok(())
-    }
 
     #[test]
     fn inspect_data_from_works() -> Result<(), Error> {

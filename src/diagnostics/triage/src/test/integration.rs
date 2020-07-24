@@ -298,3 +298,5 @@ integration_test!(
     1,
     "[WARNING] Error rate for app.cmx is too high"
 );
+
+integration_test!(log_tests, vec!["log_tests.triage"], vec![], vec![], 0, "");

@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     log::*,
     structopt::StructOpt,
-    triage_lib::{app::App, Options},
+    triage_app_lib::{app::App, Options},
 };
 
 /// Reports an [Error] to stdout and logs at "error" level.

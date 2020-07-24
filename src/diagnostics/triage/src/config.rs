@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::file_io::{config_from_files, diagnostics_from_directory},
     crate::Options,
     anyhow::{bail, format_err, Error},
-    std::str::FromStr,
+    std::{path::Path, str::FromStr},
     triage::{ActionTagDirective, DiagnosticData, ParseResult},
 };
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::Path;
 
 // TODO(fxb/50451): Add support for CSV.
 #[derive(Debug, PartialEq)]
@@ -44,10 +42,10 @@ pub fn initialize(options: Options) -> Result<ProgramStateHolder, Error> {
     }
 
     let parse_result =
-        ParseResult::from_files(&config_files, &ActionTagDirective::from_tags(tags, exclude_tags))?;
+        config_from_files(&config_files, &ActionTagDirective::from_tags(tags, exclude_tags))?;
     parse_result.validate()?;
 
-    let diagnostic_data = DiagnosticData::from_directory(&Path::new(&data_directory))?;
+    let diagnostic_data = diagnostics_from_directory(&Path::new(&data_directory))?;
 
     Ok(ProgramStateHolder { parse_result, diagnostic_data, output_format })
 }

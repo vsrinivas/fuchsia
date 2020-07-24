@@ -1,7 +1,9 @@
 use {
     anyhow::{bail, Error},
     std::collections::HashMap,
-    triage::{analyze, ActionResultFormatter, ActionTagDirective, DiagnosticData, ParseResult},
+    triage::{
+        analyze, ActionResultFormatter, ActionTagDirective, DiagnosticData, ParseResult, Source,
+    },
 };
 
 /// Unique identifier to resources too expensive to pass between Rust/JS layer.
@@ -48,7 +50,7 @@ impl TriageManager {
     }
 
     pub fn build_inspect_target(&mut self, name: &str, content: &str) -> Result<Handle, Error> {
-        let target = Target::new(name.to_string(), content.to_string())?;
+        let target = Target::new(name.to_string(), Source::Inspect, content.to_string())?;
         Ok(self.insert(Value::Target(target)))
     }
 
@@ -66,7 +68,7 @@ impl TriageManager {
         }
 
         let results = analyze(&targets, &context)?;
-        let results_formatter = ActionResultFormatter::new(results.iter().collect());
+        let results_formatter = ActionResultFormatter::new(&results);
         Ok(results_formatter.to_text())
     }
 

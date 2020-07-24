@@ -6,19 +6,22 @@ use {
     super::{
         act::{Action, Actions},
         config::ParseResult,
-        metrics::{Fetcher, MetricState, MetricValue, TrialDataFetcher},
+        metrics::{fetch::TextFetcher, Fetcher, MetricState, MetricValue, TrialDataFetcher},
     },
-    anyhow::{format_err, Error},
+    anyhow::{bail, format_err, Error},
     serde::Deserialize,
     serde_json as json,
-    std::collections::HashMap,
+    std::{collections::HashMap, convert::TryFrom},
 };
 
 #[derive(Clone, Deserialize, Debug)]
 pub struct Trial {
-    yes: Vec<String>,
-    no: Vec<String>,
-    values: HashMap<String, json::Value>,
+    yes: Option<Vec<String>>,
+    no: Option<Vec<String>>,
+    values: Option<HashMap<String, json::Value>>,
+    klog: Option<String>,
+    syslog: Option<String>,
+    bootlog: Option<String>,
 }
 
 // Outer String is namespace, inner String is trial name
@@ -30,15 +33,44 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
     let mut failed = false;
     for (namespace, trial_map) in tests {
         for (trial_name, trial) in trial_map {
-            let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&trial.values));
-            let state = MetricState { metrics, fetcher };
-            for action_name in trial.yes.iter() {
-                failed = check_failure(namespace, trial_name, action_name, actions, &state, true)
-                    || failed;
+            if trial.yes == None && trial.no == None {
+                bail!("Trial {} in {} needs a yes: or no: entry", trial_name, namespace);
             }
-            for action_name in trial.no.iter() {
-                failed = check_failure(namespace, trial_name, action_name, actions, &state, false)
-                    || failed;
+            let klog_fetcher;
+            let syslog_fetcher;
+            let bootlog_fetcher;
+            let mut fetcher = match &trial.values {
+                Some(values) => Fetcher::TrialData(TrialDataFetcher::new(values)),
+                None => Fetcher::TrialData(TrialDataFetcher::new_empty()),
+            };
+            if let Fetcher::TrialData(fetcher) = &mut fetcher {
+                if let Some(klog) = &trial.klog {
+                    klog_fetcher = TextFetcher::try_from(&**klog)?;
+                    fetcher.set_klog(&klog_fetcher);
+                }
+                if let Some(syslog) = &trial.syslog {
+                    syslog_fetcher = TextFetcher::try_from(&**syslog)?;
+                    fetcher.set_syslog(&syslog_fetcher);
+                }
+                if let Some(bootlog) = &trial.bootlog {
+                    bootlog_fetcher = TextFetcher::try_from(&**bootlog)?;
+                    fetcher.set_bootlog(&bootlog_fetcher);
+                }
+            }
+            let state = MetricState { metrics, fetcher };
+            if let Some(action_names) = &trial.yes {
+                for action_name in action_names.iter() {
+                    failed =
+                        check_failure(namespace, trial_name, action_name, actions, &state, true)
+                            || failed;
+                }
+            }
+            if let Some(action_names) = &trial.no {
+                for action_name in action_names.iter() {
+                    failed =
+                        check_failure(namespace, trial_name, action_name, actions, &state, false)
+                            || failed;
+                }
             }
         }
     }
@@ -98,6 +130,9 @@ mod test {
         anyhow::Error,
     };
 
+    // Correct operation of the klog, syslog, and bootlog fields of TrialDataFetcher are tested
+    // in the integration test via log_tests.triage.
+
     macro_rules! build_map {($($tuple:expr),*) => ({
         let mut map = HashMap::new();
         $(
@@ -148,9 +183,12 @@ mod test {
             )
         ));
         let good_trial = Trial {
-            yes: vec!["fires".to_string()],
-            no: vec!["no_fire".to_string()],
-            values: HashMap::new(),
+            yes: Some(vec!["fires".to_string()]),
+            no: Some(vec!["no_fire".to_string()]),
+            values: Some(HashMap::new()),
+            klog: None,
+            syslog: None,
+            bootlog: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -161,14 +199,20 @@ mod test {
         // Make sure it objects if a trial that should fire doesn't.
         // Also, make sure it signals failure if there's both a good and a bad trial.
         let bad_trial = Trial {
-            yes: vec!["fires".to_string(), "no_fire".to_string()],
-            no: vec![],
-            values: HashMap::new(),
+            yes: Some(vec!["fires".to_string(), "no_fire".to_string()]),
+            no: None, // Test that None doesn't crash
+            values: None,
+            klog: None,
+            syslog: None,
+            bootlog: None,
         };
         let good_trial = Trial {
-            yes: vec!["fires".to_string()],
-            no: vec!["no_fire".to_string()],
-            values: HashMap::new(),
+            yes: Some(vec!["fires".to_string()]),
+            no: Some(vec!["no_fire".to_string()]),
+            values: Some(HashMap::new()),
+            klog: None,
+            syslog: None,
+            bootlog: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -178,9 +222,12 @@ mod test {
         .is_err());
         // Make sure it objects if a trial fires when it shouldn't.
         let bad_trial = Trial {
-            yes: vec![],
-            no: vec!["fires".to_string(), "no_fire".to_string()],
-            values: HashMap::new(),
+            yes: Some(vec![]), // Test that empty vec works right
+            no: Some(vec!["fires".to_string(), "no_fire".to_string()]),
+            values: None,
+            klog: None,
+            syslog: None,
+            bootlog: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,

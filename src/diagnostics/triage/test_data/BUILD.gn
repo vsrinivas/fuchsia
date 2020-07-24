@@ -18,6 +18,7 @@ if (is_host) {
   triage_config_test("triage_sample_config_test") {
     sources = [
       "error_rate.triage",
+      "log_tests.triage",
       "other.triage",
       "sample.triage",
       "sample_tags.triage",

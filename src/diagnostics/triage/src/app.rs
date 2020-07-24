@@ -41,26 +41,26 @@ impl App {
 /// The result of calling App::run.
 pub struct RunResult {
     output_format: OutputFormat,
-    action_results: Vec<ActionResults>,
+    action_results: ActionResults,
 }
 
 impl RunResult {
     /// Creates a new RunResult struct. This method is intended to be used by the
     /// App:run method.
-    fn new(output_format: OutputFormat, action_results: Vec<ActionResults>) -> RunResult {
+    fn new(output_format: OutputFormat, action_results: ActionResults) -> RunResult {
         RunResult { output_format, action_results }
     }
 
     /// Returns true if at least one ActionResults has a warning.
     pub fn has_warnings(&self) -> bool {
-        !self.action_results.iter().all(|results| results.get_warnings().is_empty())
+        !self.action_results.get_warnings().is_empty()
     }
 
     /// Writes the contents of the run to the provided writer.
     ///
     /// This method can be used to output the results to a file or stdout.
     pub fn write_report(&self, dest: &mut dyn std::io::Write) -> Result<(), Error> {
-        let results_formatter = ActionResultFormatter::new(self.action_results.iter().collect());
+        let results_formatter = ActionResultFormatter::new(&self.action_results);
         let output = match self.output_format {
             OutputFormat::Text => results_formatter.to_text(),
         };
@@ -74,9 +74,9 @@ mod tests {
     use {super::*, triage::ActionResults};
 
     macro_rules! make_action_result {
-        ($source:expr, $($action:expr => $r:literal),+) => {
+        ($($action:expr => $r:literal),+) => {
             {
-                let mut result = ActionResults::new($source);
+                let mut result = ActionResults::new();
                 $(
                     result.set_result($action, $r);
                 )*
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_output_text_no_warnings() -> Result<(), Error> {
-        let action_results = vec![make_action_result!("foo", "a" => true)];
+        let action_results = make_action_result!("a" => true);
         let run_result = RunResult::new(OutputFormat::Text, action_results);
 
         let mut dest = vec![];
@@ -101,26 +101,24 @@ mod tests {
 
     #[test]
     fn test_output_text_with_warnings() -> Result<(), Error> {
-        let mut action_result = make_action_result!("foo", "a" => true);
-        action_result.add_warning("fail".to_string());
+        let mut action_results = make_action_result!("a" => true);
+        action_results.add_warning("fail".to_string());
 
-        let action_results = vec![action_result];
         let run_result = RunResult::new(OutputFormat::Text, action_results);
 
         let mut dest = vec![];
         run_result.write_report(&mut dest)?;
 
         let output = String::from_utf8(dest)?;
-        assert_eq!("Warnings for target foo\n-----------------------\nfail\n\n", output);
+        assert_eq!("Warnings\n--------\nfail\n\n", output);
 
         Ok(())
     }
 
     #[test]
     fn test_output_text_with_gauges() -> Result<(), Error> {
-        let mut action_result = make_action_result!("foo", "a" => true);
-        action_result.add_gauge("gauge".to_string());
-        let action_results = vec![action_result];
+        let mut action_results = make_action_result!("a" => true);
+        action_results.add_gauge("gauge".to_string());
         let run_result = RunResult::new(OutputFormat::Text, action_results);
 
         let mut dest = vec![];

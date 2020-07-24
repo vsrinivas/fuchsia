@@ -7,11 +7,11 @@ use {crate::act::ActionContext, anyhow::Error};
 pub(crate) mod act; // Perform appropriate actions.
 pub(crate) mod config; // Read the config file(s) for metric and action specs.
 pub(crate) mod metrics; // Retrieve and calculate the metrics.
-pub(crate) mod validate; // Check config - including that metrics/triggers work correctly.
-pub(crate) mod result_format; // Formats the triage results.
+pub(crate) mod result_format;
+pub(crate) mod validate; // Check config - including that metrics/triggers work correctly. // Formats the triage results.
 
 pub use act::ActionResults;
-pub use config::{ActionTagDirective, DiagnosticData, ParseResult};
+pub use config::{ActionTagDirective, DiagnosticData, ParseResult, Source};
 pub use result_format::ActionResultFormatter;
 
 /// Analyze all DiagnosticData against loaded configs and generate corresponding ActionResults.
@@ -19,11 +19,8 @@ pub use result_format::ActionResultFormatter;
 pub fn analyze(
     diagnostic_data: &Vec<DiagnosticData>,
     parse_result: &ParseResult,
-) -> Result<Vec<ActionResults>, Error> {
-    let mut action_contexts: Vec<ActionContext<'_>> = diagnostic_data
-        .iter()
-        .map(|d| ActionContext::new(&parse_result.metrics, &parse_result.actions, d))
-        .collect();
-
-    Ok(action_contexts.iter_mut().map(|c| c.process().clone()).collect())
+) -> Result<ActionResults, Error> {
+    let mut action_context =
+        ActionContext::new(&parse_result.metrics, &parse_result.actions, diagnostic_data);
+    Ok(action_context.process().clone())
 }
