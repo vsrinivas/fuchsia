@@ -28,7 +28,6 @@ config("zircon-migrated") {
     "-Wextra-semi",
     "-Wconversion",
     "-Wno-sign-conversion",
-    "-ftemplate-backtrace-limit=0",
   ]
 
   ldflags = compiler_flags
