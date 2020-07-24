@@ -243,10 +243,11 @@ async fn run_power_manager_missing_test(
             setup_shim("shutdown-shim-statecontrol-missing").await?;
 
         let (send_mexec_returned, recv_mexec_returned) = oneshot::channel();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             shim_statecontrol.mexec().await.unwrap().unwrap();
             send_mexec_returned.send(()).expect("failed to send that mexec returned");
-        });
+        })
+        .detach();
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
@@ -316,10 +317,11 @@ async fn run_power_manager_not_present_test(
             setup_shim("shutdown-shim-statecontrol-not-present").await?;
 
         let (send_mexec_returned, recv_mexec_returned) = oneshot::channel();
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             shim_statecontrol.mexec().await.unwrap().unwrap();
             send_mexec_returned.send(()).expect("failed to send that mexec returned");
-        });
+        })
+        .detach();
         assert_eq!(
             recv_signals.by_ref().take(2).collect::<Vec<_>>().await,
             vec![
