@@ -137,14 +137,14 @@ zx_status_t Vim::EnableWifi32K() {
     zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d", status);
     return status;
   }
-  uint32_t* regs = (uint32_t*)buffer.vaddr;
+  MMIO_PTR uint32_t* regs = (MMIO_PTR uint32_t*)buffer.vaddr;
 
   // these magic numbers were gleaned by instrumenting drivers/amlogic/pwm/pwm_meson.c
   // TODO(voydanoff) write a proper PWM driver
-  writel(0x016d016e, regs + S912_PWM_PWM_E);
-  writel(0x016d016d, regs + S912_PWM_E2);
-  writel(0x0a0a0609, regs + S912_PWM_TIME_EF);
-  writel(0x02808003, regs + S912_PWM_MISC_REG_EF);
+  MmioWrite32(0x016d016e, regs + S912_PWM_PWM_E);
+  MmioWrite32(0x016d016d, regs + S912_PWM_E2);
+  MmioWrite32(0x0a0a0609, regs + S912_PWM_TIME_EF);
+  MmioWrite32(0x02808003, regs + S912_PWM_MISC_REG_EF);
 
   mmio_buffer_release(&buffer);
 
