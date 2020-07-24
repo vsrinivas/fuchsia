@@ -1239,6 +1239,9 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
  * @brief Set the pointer to the user-mode thread, this will receive callbacks:
  * ThreadDispatcher::Exiting()
  * ThreadDispatcher::Suspending() / Resuming()
+ *
+ * This also caches the assocatiated koids of the thread and process
+ * dispatchers associated with the given ThreadDispatcher.
  */
 void Thread::SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread) {
   canary_.Assert();
@@ -1246,6 +1249,8 @@ void Thread::SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread) {
   DEBUG_ASSERT(!user_thread_);
 
   user_thread_ = ktl::move(user_thread);
+  user_tid_ = user_thread_->get_koid();
+  user_pid_ = user_thread_->process()->get_koid();
 
   // All user mode threads are detached since they are responsible for cleaning themselves up.
   // We can set this directly because we've checked that we are in the initial state.

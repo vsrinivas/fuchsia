@@ -611,10 +611,19 @@ struct Thread {
   static Thread* CreateEtc(Thread* t, const char* name, thread_start_routine entry, void* arg,
                            int priority, thread_trampoline_routine alt_trampoline);
 
-  void SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread);
-
   // Internal initialization routines. Eventually, these should be private.
   void SecondaryCpuInitEarly();
+
+  // Associate this Thread to the given ThreadDispatcher.
+  void SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread);
+
+  // Get the associated ThreadDispatcher.
+  ThreadDispatcher* user_thread() { return user_thread_.get(); }
+  const ThreadDispatcher* user_thread() const { return user_thread_.get(); }
+
+  // Get the koid of the associated ThreadDisptacher or its containing ProcessDispatcher.
+  zx_koid_t user_pid() const { return user_pid_; }
+  zx_koid_t user_tid() const { return user_tid_; }
 
   // Called to mark a thread as schedulable.
   void Resume();
@@ -904,13 +913,6 @@ struct Thread {
   lockdep::ThreadLockState& lock_state() { return lock_state_; }
   const lockdep::ThreadLockState& lock_state() const { return lock_state_; }
 #endif
-
-  ThreadDispatcher* user_thread() { return user_thread_.get(); }
-  const ThreadDispatcher* user_thread() const { return user_thread_.get(); }
-  zx_koid_t user_pid() const { return user_pid_; }
-  zx_koid_t user_tid() const { return user_tid_; }
-  void set_user_pid(zx_koid_t pid) { user_pid_ = pid; }
-  void set_user_tid(zx_koid_t tid) { user_tid_ = tid; }
 
   arch_thread& arch() { return arch_; }
 
