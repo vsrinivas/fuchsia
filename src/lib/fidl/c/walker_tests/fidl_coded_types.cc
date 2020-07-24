@@ -647,7 +647,6 @@ const FidlCodedStruct multiple_nullable_vectors_of_uint32_message_type = {
     .name = "multiple_nullable_vectors_of_uint32_message",
 };
 
-
 // Struct messages.
 static const FidlStructField struct_level_3_fields[] = {
     FidlStructField(&nonnullable_handle, offsetof(struct_level_3, handle_3), 0),

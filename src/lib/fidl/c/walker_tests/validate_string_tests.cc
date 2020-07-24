@@ -6,19 +6,18 @@
 
 #include <unittest/unittest.h>
 
-#define EXPECT_VALID_STRING(input)                                    \
-  {                                                                   \
-    const char* bytes = input;                                        \
-    uint32_t num_bytes = sizeof(input) - 1;                           \
-    EXPECT_EQ(ZX_OK, fidl_validate_string(bytes, num_bytes));         \
+#define EXPECT_VALID_STRING(input)                            \
+  {                                                           \
+    const char* bytes = input;                                \
+    uint32_t num_bytes = sizeof(input) - 1;                   \
+    EXPECT_EQ(ZX_OK, fidl_validate_string(bytes, num_bytes)); \
   }
 
-#define EXPECT_INVALID_STRING(input, explanation)                     \
-  {                                                                   \
-    const char* bytes = input;                                        \
-    uint32_t num_bytes = sizeof(input) - 1;                           \
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS,                                    \
-              fidl_validate_string(bytes, num_bytes), explanation);   \
+#define EXPECT_INVALID_STRING(input, explanation)                                        \
+  {                                                                                      \
+    const char* bytes = input;                                                           \
+    uint32_t num_bytes = sizeof(input) - 1;                                              \
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, fidl_validate_string(bytes, num_bytes), explanation); \
   }
 
 bool safe_on_nullptr() {
@@ -68,15 +67,22 @@ bool invalid_continuations() {
   EXPECT_VALID_STRING("\xc2\x80");
   EXPECT_INVALID_STRING("\xc2\x7f", "first byte following two byte value not starting with 0b10");
 
-  // 2 tests for the first and second following byte of an initial three byte value not having the high bit set.
-  EXPECT_INVALID_STRING("\xe1\x7f\x80", "first byte following three byte value not starting with 0b10");
-  EXPECT_INVALID_STRING("\xe1\x80\x7f", "second byte following three byte value not starting with 0b10");
+  // 2 tests for the first and second following byte of an initial three byte value not having the
+  // high bit set.
+  EXPECT_INVALID_STRING("\xe1\x7f\x80",
+                        "first byte following three byte value not starting with 0b10");
+  EXPECT_INVALID_STRING("\xe1\x80\x7f",
+                        "second byte following three byte value not starting with 0b10");
 
-  // 3 tests for the first, second, and third following byte of an initial four byte value not having the high bit set.
+  // 3 tests for the first, second, and third following byte of an initial four byte value not
+  // having the high bit set.
   EXPECT_VALID_STRING("\xf0\x90\x80\x80");
-  EXPECT_INVALID_STRING("\xf0\x7f\x80\x80", "first byte following four byte value not starting with 0b10");
-  EXPECT_INVALID_STRING("\xf0\x90\x7f\x80", "second byte following four byte value not starting with 0b10");
-  EXPECT_INVALID_STRING("\xf0\x90\x80\x7f", "third byte following four byte value not starting with 0b10");
+  EXPECT_INVALID_STRING("\xf0\x7f\x80\x80",
+                        "first byte following four byte value not starting with 0b10");
+  EXPECT_INVALID_STRING("\xf0\x90\x7f\x80",
+                        "second byte following four byte value not starting with 0b10");
+  EXPECT_INVALID_STRING("\xf0\x90\x80\x7f",
+                        "third byte following four byte value not starting with 0b10");
 
   END_TEST;
 }
@@ -115,7 +121,7 @@ bool various() {
 
   EXPECT_VALID_STRING("");
   EXPECT_VALID_STRING("a");
-  EXPECT_VALID_STRING("€"); // \xe2\x82\xac
+  EXPECT_VALID_STRING("€");  // \xe2\x82\xac
 
   // Mix and match from min_max_code_units_and_minus_one_and_plus_one
   EXPECT_VALID_STRING("\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80");

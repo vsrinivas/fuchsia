@@ -13,17 +13,19 @@
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zxtest/zxtest.h>
 
 #include <mutex>
 #include <thread>
 #include <unordered_set>
+
+#include <zxtest/zxtest.h>
 
 namespace fidl {
 namespace {
 
 class TestProtocol {
   TestProtocol() = delete;
+
  public:
   // Generated code will define an AsyncEventHandlers type.
   struct AsyncEventHandlers {};
@@ -118,12 +120,12 @@ TEST(ClientBindingTestCase, AsyncTxn) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   EXPECT_EQ(0, client->GetTxidCount());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    EXPECT_EQ(0, client->GetTxidCount());
+    sync_completion_signal(&unbound);
+  };
   ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
@@ -151,12 +153,12 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   EXPECT_EQ(0, client->GetTxidCount());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    EXPECT_EQ(0, client->GetTxidCount());
+    sync_completion_signal(&unbound);
+  };
   ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // In parallel, simulate 10 async transactions and send "response" messages from the remote end of
@@ -164,7 +166,7 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
   TestResponseContext contexts[10];
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    threads[i] = std::thread([context = &contexts[i], &remote, &client]{
+    threads[i] = std::thread([context = &contexts[i], &remote, &client] {
       client->PrepareAsyncTxn(context);
       EXPECT_TRUE(client->IsPending(context->Txid()));
       fidl_message_header_t hdr;
@@ -210,12 +212,12 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
-                                   EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   EXPECT_EQ(0, client->GetTxidCount());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    EXPECT_EQ(0, client->GetTxidCount());
+    sync_completion_signal(&unbound);
+  };
   ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // Send a "response" message for which there was no outgoing request.
@@ -239,18 +241,18 @@ TEST(ClientBindingTestCase, Events) {
   sync_completion_t unbound;
   Client<TestProtocol> client;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    EXPECT_EQ(10, client->GetEventCount());  // Expect 10 events.
+    sync_completion_signal(&unbound);
+  };
   ASSERT_OK(client.Bind(std::move(local), loop.dispatcher(), std::move(on_unbound)));
 
   // In parallel, send 10 event messages from the remote end of the channel.
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    threads[i] = std::thread([&remote]{
+    threads[i] = std::thread([&remote] {
       fidl_message_header_t hdr;
       fidl_init_txn_header(&hdr, 0, 0);
       ASSERT_OK(remote.write(0, &hdr, sizeof(fidl_message_header_t), nullptr, 0));
@@ -274,11 +276,11 @@ TEST(ClientBindingTestCase, Unbind) {
 
   sync_completion_t unbound;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-                                   EXPECT_OK(info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+    EXPECT_OK(info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    sync_completion_signal(&unbound);
+  };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   // Unbind the client and wait for on_unbound to run.
@@ -296,11 +298,11 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
 
   sync_completion_t unbound;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-                                   EXPECT_OK(info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+    EXPECT_OK(info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    sync_completion_signal(&unbound);
+  };
   auto* client =
       new Client<TestProtocol>(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
@@ -319,11 +321,11 @@ TEST(ClientBindingTestCase, BindingRefPreventsUnbind) {
 
   sync_completion_t unbound;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-                                   EXPECT_OK(info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+    EXPECT_OK(info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    sync_completion_signal(&unbound);
+  };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   // Create a strong reference to the binding.
@@ -375,11 +377,11 @@ TEST(ClientBindingTestCase, Epitaph) {
 
   sync_completion_t unbound;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-                                   EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    sync_completion_signal(&unbound);
+  };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   // Send an epitaph and wait for on_unbound to run.
@@ -397,12 +399,12 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
 
   sync_completion_t unbound;
   OnClientUnboundFn on_unbound = [&](UnbindInfo info, zx::channel channel) {
-                                   EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-                                   // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
-                                   EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
-                                   EXPECT_EQ(local_handle, channel.get());
-                                   sync_completion_signal(&unbound);
-                                 };
+    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+    // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(local_handle, channel.get());
+    sync_completion_signal(&unbound);
+  };
   Client<TestProtocol> client(std::move(local), loop.dispatcher(), std::move(on_unbound));
 
   // Close the server end and wait for on_unbound to run.
