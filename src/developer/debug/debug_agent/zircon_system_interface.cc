@@ -12,7 +12,9 @@
 namespace debug_agent {
 
 ZirconSystemInterface::ZirconSystemInterface()
-    : root_job_(zircon::GetRootJob()), services_(sys::ServiceDirectory::CreateFromNamespace()) {}
+    : root_job_(zircon::GetRootJob()),
+      services_(sys::ServiceDirectory::CreateFromNamespace()),
+      limbo_provider_(services_) {}
 
 std::unique_ptr<JobHandle> ZirconSystemInterface::GetRootJob() const {
   return std::make_unique<ZirconJobHandle>(root_job_);

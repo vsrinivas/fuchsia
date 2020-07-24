@@ -36,21 +36,6 @@
 
 namespace debug_agent {
 
-// SystemProviders ---------------------------------------------------------------------------------
-
-SystemProviders SystemProviders::CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services) {
-  SystemProviders system_providers;
-  system_providers.limbo_provider = std::make_shared<LimboProvider>(std::move(services));
-
-  zx_status_t status = system_providers.limbo_provider->Init();
-  if (status != ZX_OK)
-    FX_LOGS(WARNING) << "Could not initialize limbo provider: " << zx_status_get_string(status);
-
-  return system_providers;
-}
-
-// DebugAgent --------------------------------------------------------------------------------------
-
 namespace {
 
 constexpr size_t kMegabyte = 1024 * 1024;
@@ -80,22 +65,21 @@ std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
 }  // namespace
 
 DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface,
-                       std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers)
-    : system_interface_(std::move(system_interface)),
-      services_(services),
-      limbo_provider_(std::move(providers.limbo_provider)),
-      weak_factory_(this) {
-  FX_DCHECK(limbo_provider_);
-
-  // Set a callback to the limbo_provider to let us know when new processes enter the limbo.
-  limbo_provider_->set_on_enter_limbo([agent = GetWeakPtr()](const LimboProvider::Record& record) {
-    if (!agent)
-      return;
-    agent->OnProcessEnteredLimbo(record);
-  });
+                       std::shared_ptr<sys::ServiceDirectory> services)
+    : system_interface_(std::move(system_interface)), services_(services), weak_factory_(this) {
+  // Set a callback to the LimboProvider to let us know when new processes enter the limbo.
+  system_interface_->GetLimboProvider().set_on_enter_limbo(
+      [agent = GetWeakPtr()](const LimboProvider::Record& record) {
+        if (!agent)
+          return;
+        agent->OnProcessEnteredLimbo(record);
+      });
 }
 
-DebugAgent::~DebugAgent() = default;
+DebugAgent::~DebugAgent() {
+  // Clear the callback to prevent dangling pointers.
+  system_interface_->GetLimboProvider().set_on_enter_limbo(LimboProvider::OnEnterLimboCallback());
+}
 
 fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
@@ -165,9 +149,10 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
   }
 
   // Get the limbo processes.
-  if (limbo_provider_->Valid()) {
+  if (system_interface_->GetLimboProvider().Valid()) {
     std::vector<fuchsia::exception::ProcessExceptionMetadata> limbo_processes;
-    for (const auto& [process_koid, record] : limbo_provider_->GetLimboRecords()) {
+    for (const auto& [process_koid, record] :
+         system_interface_->GetLimboProvider().GetLimboRecords()) {
       debug_ipc::ProcessRecord process_record = {};
       process_record.process_koid = process_koid;
       process_record.process_name = record.process->GetName();
@@ -196,10 +181,11 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
-  // See first if the process is on limbo.
-  if (limbo_provider_->IsProcessInLimbo(request.process_koid)) {
+  // See first if the process is in limbo.
+  LimboProvider& limbo = system_interface_->GetLimboProvider();
+  if (limbo.Valid() && limbo.IsProcessInLimbo(request.process_koid)) {
     // Release if from limbo, which will effectivelly kill it.
-    reply->status = limbo_provider_->ReleaseProcess(request.process_koid);
+    reply->status = limbo.ReleaseProcess(request.process_koid);
     return;
   }
 
@@ -236,8 +222,9 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
     }
     case debug_ipc::TaskType::kProcess: {
       // First check if the process is waiting in limbo. If so, release it.
-      if (limbo_provider_->IsProcessInLimbo(request.koid)) {
-        reply->status = limbo_provider_->ReleaseProcess(request.koid);
+      LimboProvider& limbo = system_interface_->GetLimboProvider();
+      if (limbo.Valid() && limbo.IsProcessInLimbo(request.koid)) {
+        reply->status = limbo.ReleaseProcess(request.koid);
         return;
       }
 
@@ -636,7 +623,7 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
   }
 
   // First check if the process is in limbo. Sends the appropiate replies/notifications.
-  if (limbo_provider_->Valid()) {
+  if (system_interface_->GetLimboProvider().Valid()) {
     zx_status_t status = AttachToLimboProcess(process_koid, transaction_id);
     if (status == ZX_OK)
       return;
@@ -656,10 +643,11 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
 }
 
 zx_status_t DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id) {
-  FX_DCHECK(limbo_provider_->Valid());
+  LimboProvider& limbo = system_interface_->GetLimboProvider();
+  FX_DCHECK(limbo.Valid());
 
   // Obtain the process and exception from limbo.
-  auto retrieved = limbo_provider_->RetrieveException(process_koid);
+  auto retrieved = limbo.RetrieveException(process_koid);
   if (retrieved.is_error()) {
     zx_status_t status = retrieved.error_value();
     DEBUG_LOG(Agent) << "Could not retrieve exception from limbo: " << zx_status_get_string(status);
@@ -916,7 +904,7 @@ void DebugAgent::OnProcessEnteredLimbo(const LimboProvider::Record& record) {
 
   // First check if we were to "kill" this process.
   if (auto it = killed_limbo_procs_.find(process_koid); it != killed_limbo_procs_.end()) {
-    limbo_provider_->ReleaseProcess(process_koid);
+    system_interface_->GetLimboProvider().ReleaseProcess(process_koid);
     killed_limbo_procs_.erase(it);
     return;
   }

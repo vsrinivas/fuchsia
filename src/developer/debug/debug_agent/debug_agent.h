@@ -27,15 +27,6 @@ namespace debug_agent {
 
 class SystemInterface;
 
-// Set of dependencies the debug agent needs.
-struct SystemProviders {
-  // Creates the set of providers that represent the actual system. This is what you want to use for
-  // the real debugger.
-  static SystemProviders CreateDefaults(std::shared_ptr<sys::ServiceDirectory> services);
-
-  std::shared_ptr<LimboProvider> limbo_provider;
-};
-
 // Main state and control for the debug agent.
 class DebugAgent : public RemoteAPI,
                    public ProcessStartHandler,
@@ -47,7 +38,7 @@ class DebugAgent : public RemoteAPI,
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
   explicit DebugAgent(std::unique_ptr<SystemInterface> system_interface,
-                      std::shared_ptr<sys::ServiceDirectory> services, SystemProviders providers);
+                      std::shared_ptr<sys::ServiceDirectory> services);
   ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
@@ -219,8 +210,6 @@ class DebugAgent : public RemoteAPI,
   std::map<uint64_t, fuchsia::sys::ComponentControllerPtr> running_components_;
 
   AgentConfiguration configuration_;
-
-  std::shared_ptr<LimboProvider> limbo_provider_;
 
   fxl::WeakPtrFactory<DebugAgent> weak_factory_;
 

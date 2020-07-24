@@ -175,8 +175,7 @@ int main(int argc, const char* argv[]) {
       // DebugAgent::Disconnect is called by ~SocketConnection is called by ~SocketServer, so the
       // debug agent must be destructed after the SocketServer.
       debug_agent::DebugAgent debug_agent(std::make_unique<debug_agent::ZirconSystemInterface>(),
-                                          services,
-                                          debug_agent::SystemProviders::CreateDefaults(services));
+                                          services);
 
       debug_agent::SocketServer server;
       if (!server.Init(options.port)) {

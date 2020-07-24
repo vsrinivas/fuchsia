@@ -108,8 +108,7 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
     WatchpointStreamBackend backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(std::make_unique<ZirconSystemInterface>(), services,
-                     SystemProviders::CreateDefaults(services));
+    DebugAgent agent(std::make_unique<ZirconSystemInterface>(), services);
     RemoteAPI* remote_api = &agent;
 
     agent.Connect(&backend.stream());

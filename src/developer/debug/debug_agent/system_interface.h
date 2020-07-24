@@ -15,6 +15,7 @@
 namespace debug_agent {
 
 class BinaryLauncher;
+class LimboProvider;
 
 // Abstract interface that represents the system. This is eqivalent to ProcessHandle for processes
 // but for the system (for which there's not a clearly owned handle).
@@ -40,6 +41,11 @@ class SystemInterface {
   // If this requires mocking in the future, we should probably make the BinaryLauncher an abstract
   // interface that can itself be mocked.
   virtual std::unique_ptr<BinaryLauncher> GetLauncher() const = 0;
+
+  // Returns a reference to the limbo provider. This gives access to processes that have crashed and
+  // are being held for attaching to the debugger. The limbo provider may have failed, in which
+  // case it will be !Valid(). The reference is owned by this class.
+  virtual LimboProvider& GetLimboProvider() = 0;
 
   // Non-virtual helpers ---------------------------------------------------------------------------
   //

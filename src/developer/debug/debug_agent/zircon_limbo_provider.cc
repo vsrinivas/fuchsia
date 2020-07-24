@@ -1,7 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/limbo_provider.h"
+#include "src/developer/debug/debug_agent/zircon_limbo_provider.h"
 
 #include <zircon/status.h>
 
@@ -18,7 +19,7 @@ namespace debug_agent {
 namespace {
 
 LimboProvider::Record MetadataToRecord(ProcessExceptionMetadata metadata) {
-  LimboProvider::Record record;
+  ZirconLimboProvider::Record record;
   record.process = std::make_unique<ZirconProcessHandle>(std::move(*metadata.mutable_process()));
   record.thread = std::make_unique<ZirconThreadHandle>(std::move(*metadata.mutable_thread()));
   return record;
@@ -26,22 +27,19 @@ LimboProvider::Record MetadataToRecord(ProcessExceptionMetadata metadata) {
 
 }  // namespace
 
-LimboProvider::LimboProvider(std::shared_ptr<sys::ServiceDirectory> services)
-    : services_(std::move(services)) {}
-LimboProvider::~LimboProvider() = default;
-
-zx_status_t LimboProvider::Init() {
+ZirconLimboProvider::ZirconLimboProvider(std::shared_ptr<sys::ServiceDirectory> services)
+    : services_(std::move(services)) {
   // Get the initial state of the hanging gets.
   ProcessLimboSyncPtr process_limbo;
   zx_status_t status = services_->Connect(process_limbo.NewRequest());
   if (status != ZX_OK)
-    return status;
+    return;
 
   // Check if the limbo is active.
   bool is_limbo_active = false;
   status = process_limbo->WatchActive(&is_limbo_active);
   if (status != ZX_OK)
-    return status;
+    return;
 
   is_limbo_active_ = is_limbo_active;
   if (is_limbo_active_) {
@@ -49,10 +47,10 @@ zx_status_t LimboProvider::Init() {
     ProcessLimbo_WatchProcessesWaitingOnException_Result result;
     status = process_limbo->WatchProcessesWaitingOnException(&result);
     if (status != ZX_OK)
-      return status;
+      return;
 
     if (result.is_err())
-      return result.err();
+      return;
 
     // Add all the current exceptions.
     for (auto& exception : result.response().exception_list)
@@ -64,25 +62,19 @@ zx_status_t LimboProvider::Init() {
 
   // |this| owns the connection, so it's guaranteed to outlive it.
   connection_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Got error on limbo: " << zx_status_get_string(status);
-    Reset();
+    FX_LOGS(ERROR) << "Got error from limbo: " << zx_status_get_string(status);
+    limbo_.clear();
+    is_limbo_active_ = false;
+    connection_ = {};
   });
 
   WatchActive();
   WatchLimbo();
 
   valid_ = true;
-  return ZX_OK;
 }
 
-void LimboProvider::Reset() {
-  valid_ = false;
-  limbo_.clear();
-  is_limbo_active_ = false;
-  connection_ = {};
-}
-
-void LimboProvider::WatchActive() {
+void ZirconLimboProvider::WatchActive() {
   // |this| owns the connection, so it's guaranteed to outlive it.
   connection_->WatchActive([this](bool is_active) {
     if (!is_active)
@@ -94,14 +86,12 @@ void LimboProvider::WatchActive() {
   });
 }
 
-bool LimboProvider::Valid() const { return valid_; }
-
-void LimboProvider::WatchLimbo() {
+void ZirconLimboProvider::WatchLimbo() {
   connection_->WatchProcessesWaitingOnException(
       // |this| owns the connection, so it's guaranteed to outlive it.
       [this](ProcessLimbo_WatchProcessesWaitingOnException_Result result) {
         if (result.is_err()) {
-          FX_LOGS(ERROR) << "Got error waiting on limbo: " << zx_status_get_string(result.err());
+          FX_LOGS(ERROR) << "Got error waiting for limbo: " << zx_status_get_string(result.err());
         } else {
           // The callback provides the full current list every time.
           RecordMap new_limbo;
@@ -133,13 +123,13 @@ void LimboProvider::WatchLimbo() {
       });
 }
 
-bool LimboProvider::IsProcessInLimbo(zx_koid_t process_koid) const {
+bool ZirconLimboProvider::IsProcessInLimbo(zx_koid_t process_koid) const {
   const auto& records = GetLimboRecords();
   return records.find(process_koid) != records.end();
 }
 
-fitx::result<zx_status_t, LimboProvider::RetrievedException> LimboProvider::RetrieveException(
-    zx_koid_t process_koid) {
+fitx::result<zx_status_t, ZirconLimboProvider::RetrievedException>
+ZirconLimboProvider::RetrieveException(zx_koid_t process_koid) {
   ProcessLimboSyncPtr process_limbo;
   if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
     return fitx::error(status);
@@ -172,7 +162,7 @@ fitx::result<zx_status_t, LimboProvider::RetrievedException> LimboProvider::Retr
   return fitx::ok(std::move(retrieved));
 }
 
-zx_status_t LimboProvider::ReleaseProcess(zx_koid_t process_koid) {
+zx_status_t ZirconLimboProvider::ReleaseProcess(zx_koid_t process_koid) {
   ProcessLimboSyncPtr process_limbo;
   if (zx_status_t status = services_->Connect(process_limbo.NewRequest()); status != ZX_OK)
     return status;

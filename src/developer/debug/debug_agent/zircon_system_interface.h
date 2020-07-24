@@ -10,6 +10,7 @@
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
+#include "src/developer/debug/debug_agent/zircon_limbo_provider.h"
 
 namespace debug_agent {
 
@@ -23,10 +24,12 @@ class ZirconSystemInterface final : public SystemInterface {
   std::unique_ptr<JobHandle> GetRootJob() const override;
   std::unique_ptr<JobHandle> GetComponentRootJob() const override;
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
+  LimboProvider& GetLimboProvider() override { return limbo_provider_; }
 
  private:
   ZirconJobHandle root_job_;
   std::shared_ptr<sys::ServiceDirectory> services_;
+  ZirconLimboProvider limbo_provider_;
 };
 
 }  // namespace debug_agent

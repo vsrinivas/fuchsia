@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/limbo_provider.h"
+#include "src/developer/debug/debug_agent/zircon_limbo_provider.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -158,7 +158,7 @@ void RunUntil(async::Loop* loop, fit::function<bool()> condition,
 
 // Tests -------------------------------------------------------------------------------------------
 
-TEST(LimboProvider, WatchProcessesOnException) {
+TEST(ZirconLimboProvider, WatchProcessesOnException) {
   StubProcessLimbo process_limbo;
 
   constexpr zx_koid_t kProc1Koid = 100;
@@ -176,8 +176,7 @@ TEST(LimboProvider, WatchProcessesOnException) {
   ASSERT_ZX_EQ(remote_loop.StartThread("process-limbo-thread"), ZX_OK);
 
   async::Loop local_loop(&kAsyncLoopConfigAttachToCurrentThread);
-  LimboProvider limbo_provider(services.service_directory());
-  ASSERT_ZX_EQ(limbo_provider.Init(), ZX_OK);
+  ZirconLimboProvider limbo_provider(services.service_directory());
   ASSERT_TRUE(limbo_provider.Valid());
 
   process_limbo.set_reply_active(false);
@@ -192,7 +191,7 @@ TEST(LimboProvider, WatchProcessesOnException) {
   EXPECT_NE(processes.find(kProc2Koid), processes.end());
 }
 
-TEST(LimboProvider, WatchProcessesCallback) {
+TEST(ZirconLimboProvider, WatchProcessesCallback) {
   constexpr zx_koid_t kProc1Koid = 100;
   constexpr zx_koid_t kThread1Koid = 101;
   constexpr auto kException1Type = ExceptionType::FATAL_PAGE_FAULT;
@@ -211,8 +210,7 @@ TEST(LimboProvider, WatchProcessesCallback) {
   ASSERT_ZX_EQ(remote_loop.StartThread("process-limbo-thread"), ZX_OK);
 
   async::Loop local_loop(&kAsyncLoopConfigAttachToCurrentThread);
-  LimboProvider limbo_provider(services.service_directory());
-  ASSERT_ZX_EQ(limbo_provider.Init(), ZX_OK);
+  ZirconLimboProvider limbo_provider(services.service_directory());
   ASSERT_TRUE(limbo_provider.Valid());
 
   local_loop.RunUntilIdle();
@@ -230,7 +228,7 @@ TEST(LimboProvider, WatchProcessesCallback) {
   // Set the callback.
   int called_count = 0;
   limbo_provider.set_on_enter_limbo(
-      [&called_count](const LimboProvider::Record& record) { called_count++; });
+      [&called_count](const ZirconLimboProvider::Record& record) { called_count++; });
 
   // The event should've not been signaled.
   ASSERT_EQ(called_count, 0);
