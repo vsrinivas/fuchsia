@@ -770,7 +770,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (newdir_minfs->IsUnlinked()) {
-    return ZX_ERR_BAD_STATE;
+    return ZX_ERR_NOT_FOUND;
   }
   auto newdir = fbl::RefPtr<Directory>::Downcast(newdir_minfs);
 

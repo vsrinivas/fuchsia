@@ -185,8 +185,10 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
                              fbl::StringPiece newname, bool src_must_be_dir, bool dst_must_be_dir) {
   auto newdir = fbl::RefPtr<VnodeMemfs>::Downcast(std::move(_newdir));
 
-  if (!IsDirectory() || !newdir->IsDirectory())
-    return ZX_ERR_BAD_STATE;
+  if (!IsDirectory() || !newdir->IsDirectory()) {
+    // Not linked into the directory hierachy.
+    return ZX_ERR_NOT_FOUND;
+  }
 
   Dnode* olddn;
   zx_status_t r;

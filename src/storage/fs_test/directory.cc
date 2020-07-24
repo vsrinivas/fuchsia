@@ -376,7 +376,7 @@ TEST_P(DirectoryTest, RenameIntoUnlinkedDirectoryFails) {
   ASSERT_EQ(renameat(foo_fd.get(), "baz", root_fd.get(), "baz"), 0);
   ASSERT_EQ(unlink(GetPath("foo").c_str()), 0);
   ASSERT_EQ(renameat(root_fd.get(), "baz", foo_fd.get(), "baz"), -1);
-  ASSERT_EQ(errno, EPIPE);  // ZX_ERR_BAD_STATE maps to EPIPE, for now.
+  ASSERT_EQ(errno, ENOENT);
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, DirectoryTest, testing::ValuesIn(AllTestFilesystems()),
