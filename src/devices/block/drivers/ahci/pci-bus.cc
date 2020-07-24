@@ -60,31 +60,11 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
     return status;
   }
 
-  // Query and configure IRQ modes by trying MSI first and falling back to
-  // legacy if necessary.
-  uint32_t irq_cnt = 0;
-  zx_pci_irq_mode_t irq_mode = ZX_PCIE_IRQ_MODE_MSI;
-  status = pci_query_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
-  if (status == ZX_ERR_NOT_SUPPORTED) {
-    status = pci_query_irq_mode(&pci_, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "ahci: neither MSI nor legacy interrupts are supported");
-      return status;
-    }
-    irq_mode = ZX_PCIE_IRQ_MODE_LEGACY;
-  }
-
-  if (irq_cnt == 0) {
-    zxlogf(ERROR, "ahci: no interrupts available");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  zxlogf(INFO, "ahci: pci using %s interrupt",
-         (irq_mode == ZX_PCIE_IRQ_MODE_MSI) ? "MSI" : "legacy");
-  status = pci_set_irq_mode(&pci_, irq_mode, 1);
+  // Request 1 interrupt of any mode.
+  status = pci_configure_irq_mode(&pci_, 1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "ahci: error %d setting irq mode", status);
-    return status;
+    zxlogf(ERROR, "ahci: no interrupts available %d", status);
+    return ZX_ERR_NO_RESOURCES;
   }
 
   // Get bti handle.
