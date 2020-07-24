@@ -17,7 +17,6 @@
 #define UFS_BIT(x) (1L << (x))
 #define LOWER_32_BITS(x) ((uint32_t)((x)&0xFFFFFFFFUL))
 #define UPPER_32_BITS(x) ((uint32_t)((x) >> 32))
-#define clr_bits(v, a) writel(readl(a) & (uint32_t) ~(v), (a))
 
 #define UFS_ERROR(fmt, ...) zxlogf(ERROR, "[%s:%d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define UFS_WARN(fmt, ...) zxlogf(WARNING, "[%s:%d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
