@@ -3,13 +3,11 @@
 ## All builds
 
 ### asan_default_options
-TODO(45047): Temporary until all lsan bugs are filed and marked with
-deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 TODO(52369): Temporary until asan runtime decommits large allocations.
 
-**Current value (from the default):** `"detect_leaks=0:clear_shadow_mmap_threshold=16384"`
+**Current value (from the default):** `"clear_shadow_mmap_threshold=16384"`
 
-From //public/gn/config/instrumentation/BUILD.zircon.gn:20
+From //public/gn/config/instrumentation/BUILD.zircon.gn:18
 
 ### assert_level
 Controls which asserts are enabled.
@@ -227,6 +225,12 @@ If true, excludes syscalls with the [testonly] attribute.
 
 From //vdso/vdso.gni:7
 
+### fidl_write_v1_wireformat
+
+**Current value (from the default):** `false`
+
+From //system/ulib/fidl/BUILD.zircon.gn:8
+
 ### fidlc_deprecate_c_unions
 
 **Current value (from the default):** `false`
@@ -316,6 +320,13 @@ revision of the checkout.
 **Current value (from the default):** `""`
 
 From //kernel/lib/version/BUILD.zircon.gn:11
+
+### mac_sdk_path
+Path to Mac SDK.
+
+**Current value (from the default):** `""`
+
+From //public/gn/config/standard.gni:41
 
 ### malloc
 
@@ -442,7 +453,7 @@ function.
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //public/gn/config/instrumentation/BUILD.zircon.gn:30
+From //public/gn/config/instrumentation/BUILD.zircon.gn:28
 
 ### use_ccache
 Set to true to enable compiling with ccache.
@@ -747,4 +758,17 @@ build for build infrastructure.
 **Current value (from the default):** `"/"`
 
 From //public/gn/BUILDCONFIG.gn:17
+
+### zx_fidl_trace_level
+This mirrors the fidl_trace_level GN variable in //build/fidl/args.gni to
+the ZN build. See that file for more information about what this variable
+does.
+
+**Current value for `target_cpu = `:** `0`
+
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:18
+
+**Overridden from the default:** `0`
+
+From //public/gn/fidl/params.gni:9
 

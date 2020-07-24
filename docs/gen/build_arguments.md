@@ -6,7 +6,7 @@
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:89
+From //build/images/args.gni:82
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -14,7 +14,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:96
+From //build/images/args.gni:89
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -24,7 +24,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:102
+From //build/images/args.gni:95
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -38,7 +38,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:114
+From //build/images/args.gni:107
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -114,7 +114,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:76
+From //BUILD.gn:82
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -123,21 +123,21 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/exception_broker", "//src/developer/feedback/bugreport", "//src/developer/feedback/crash_reports:crash-reports", "//src/developer/feedback/feedback_data:feedback_agent", "//src/developer/feedback/last_reboot:last-reboot", "//src/developer/remote-control:pkg", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics/bugreport", "//src/developer/forensics/crash_reports:crash-reports", "//src/developer/forensics/exceptions", "//src/developer/forensics/feedback_data:feedback_agent", "//src/developer/forensics/last_reboot:last-reboot", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/exception_broker", "//src/developer/feedback/bugreport", "//src/developer/feedback/crash_reports:crash-reports", "//src/developer/feedback/feedback_data:feedback_agent", "//src/developer/feedback/last_reboot:last-reboot", "//src/developer/remote-control:pkg", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics/bugreport", "//src/developer/forensics/crash_reports:crash-reports", "//src/developer/forensics/exceptions", "//src/developer/forensics/feedback_data:feedback_agent", "//src/developer/forensics/last_reboot:last-reboot", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -287,7 +287,7 @@ binaries are included in the final image.
 
 **Current value (from the default):** `[]`
 
-From //build/images/recovery/BUILD.gn:15
+From //build/images/recovery/recovery_args.gni:9
 
 ### bootfs_extra
 List of extra manifest entries for files to add to the BOOTFS.
@@ -319,26 +319,6 @@ From //products/core.gni:11
 
 From //build/images/args.gni:14
 
-### bootloader_hw_revision
-(deprecated)  HW revision of the bootloader to be included into OTA package
-and paving process.
-
-See `firmware_prebuilts_path_suffix` instead.
-
-**Current value (from the default):** `""`
-
-From //build/images/args.gni:53
-
-### bootloader_prebuilt
-(deprecated) Prebuilt bootloader image to be included into update (OTA)
-package and paving process.
-
-See `firmware_prebuilts` instead.
-
-**Current value (from the default):** `""`
-
-From //build/images/args.gni:47
-
 ### build_all_vp9_file_decoder_conformance_tests
 
 **Current value (from the default):** `false`
@@ -353,7 +333,7 @@ default format is used.
 
 **Current value (from the default):** `""`
 
-From //build/config/fuchsia/BUILD.gn:16
+From //build/config/build_id.gni:10
 
 ### build_info_board
 Board configuration of the current build
@@ -427,21 +407,21 @@ flows. These packages are not updated with an OTA, but instead are updated
 ephemerally. This cache of software can be evicted by the system if storage
 pressure arises or other policies indicate.
 
-**Current value for `target_cpu = "arm64"`:** `[]`
+**Current value for `target_cpu = "arm64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:91
-
-**Overridden from the default:** `[]`
-
-From //BUILD.gn:33
-
-**Current value for `target_cpu = "x64"`:** `[]`
-
-From //products/core.gni:91
+From //products/core.gni:93
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:33
+From //BUILD.gn:34
+
+**Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
+
+From //products/core.gni:93
+
+**Overridden from the default:** `[]`
+
+From //BUILD.gn:34
 
 ### camera_debug
 
@@ -457,7 +437,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:108
+From //build/images/args.gni:101
 
 ### clang_lib_dir
 Path to Clang lib directory.
@@ -489,7 +469,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:111
+From //build/images/args.gni:104
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -537,26 +517,26 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#32)
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"//root_build_dir/clang-crashreports"`
 
-From //build/config/BUILD.gn:13
+From //build/config/clang/crash_diagnostics.gni:7
 
 ### crashpad_dependencies
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/38f6034998ccae29634b5369ad7166b67d03d9a9/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/f9549d1ffefe00f5e3dbabc6aff9e1a7ff619089/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/38f6034998ccae29634b5369ad7166b67d03d9a9/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/f9549d1ffefe00f5e3dbabc6aff9e1a7ff619089/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -583,7 +563,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/e256e517e70fd034d6db27bb53a0d48da1846337/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/9fecbe911d213ae9d40d1b55c5063ba0bf63bc9c/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -591,14 +571,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/e256e517e70fd034d6db27bb53a0d48da1846337/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/9fecbe911d213ae9d40d1b55c5063ba0bf63bc9c/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/e256e517e70fd034d6db27bb53a0d48da1846337/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/9fecbe911d213ae9d40d1b55c5063ba0bf63bc9c/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -606,7 +586,7 @@ partition.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:72
+From //build/images/args.gni:65
 
 ### debian_guest_earlycon
 
@@ -665,7 +645,7 @@ remove this option when the issues are addressed.
 
 **Current value (from the default):** `true`
 
-From //build/config/BUILD.gn:23
+From //build/config/BUILD.gn:21
 
 ### enable_gfx_subsystem
 
@@ -685,7 +665,7 @@ Enables the tracing feature of mdns, which can be turned on using
 
 **Current value (from the default):** `false`
 
-From //src/connectivity/network/mdns/service/BUILD.gn:15
+From //src/connectivity/network/mdns/service/BUILD.gn:16
 
 ### enable_netboot
 Whether to build the netboot zbi by default.
@@ -694,7 +674,7 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:77
+From //build/images/args.gni:70
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
@@ -772,7 +752,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:671
+From //build/config/BUILDCONFIG.gn:690
 
 ### factory_mode
 factory_mode: enables/disables factory mode
@@ -785,7 +765,15 @@ From //build/images/factory.gni:9
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:91
+From //build/images/args.gni:84
+
+### fidl_trace_level
+0 = Disable FIDL userspace tracing (default).
+1 = Enable FIDL userspace tracing.
+
+**Current value (from the default):** `0`
+
+From //build/fidl/args.gni:8
 
 ### filter_out_of_astro
 Use this flag to exclude artifacts from Astro builds.
@@ -812,7 +800,7 @@ all `path` variables, so do not include the suffix here.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:62
+From //build/images/args.gni:50
 
 ### firmware_prebuilts_path_suffix
 Suffix to append to all `firmware_prebuilts` paths.
@@ -822,13 +810,13 @@ that users can easily switch revisions using a single arg.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:68
+From //build/images/args.gni:56
 
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/e256e517e70fd034d6db27bb53a0d48da1846337/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/9fecbe911d213ae9d40d1b55c5063ba0bf63bc9c/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -843,14 +831,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/e256e517e70fd034d6db27bb53a0d48da1846337/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/9fecbe911d213ae9d40d1b55c5063ba0bf63bc9c/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/e256e517e70fd034d6db27bb53a0d48da1846337/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/9fecbe911d213ae9d40d1b55c5063ba0bf63bc9c/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -951,7 +939,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:17
 
 **Current value (from the default):** `false`
 
-From //build/go/go_build.gni:21
+From //build/go/go_build.gni:20
 
 ### gocache_dir
   gocache_dir
@@ -961,7 +949,7 @@ From //build/go/go_build.gni:21
 
 **Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/fidling/.gocache"`
 
-From //build/go/go_build.gni:17
+From //build/go/go_build.gni:16
 
 ### goma_dir
 Directory containing the Goma source code.  This can be a GN
@@ -970,6 +958,15 @@ source-absolute path ("//...") or a system absolute path.
 **Current value (from the default):** `"//prebuilt/third_party/goma/linux-x64"`
 
 From //build/toolchain/goma.gni:15
+
+### gpt_image
+GUID Partition Table (GPT) image.
+
+Typically useful for initially flashing a device from zero-state.
+
+**Current value (from the default):** `""`
+
+From //build/images/args.gni:61
 
 ### graphics_compute_generate_debug_shaders
 Set to true in your args.gn file to generate pre-processed and
@@ -1035,6 +1032,27 @@ From //build/config/host_byteorder.gni:7
 
 **Current value (from the default):** `"x64"`
 
+### host_labels
+If you add labels to this variable, these will be included in the 'host'
+artifact set, which represents an additional set of host-only software that
+is produced by the build.
+
+**Current value for `target_cpu = "arm64"`:** `[]`
+
+From //products/bringup.gni:37
+
+**Overridden from the default:** `[]`
+
+From //BUILD.gn:53
+
+**Current value for `target_cpu = "x64"`:** `[]`
+
+From //products/bringup.gni:37
+
+**Overridden from the default:** `[]`
+
+From //BUILD.gn:53
+
 ### host_os
 
 **Current value (from the default):** `"linux"`
@@ -1052,13 +1070,30 @@ by an explicit install_host_tools() rule (see //build/host.gni).
 
 From //build/host.gni:13
 
+### icu_disable_thin_archive
+If true, compile icu into a standalone static library. Currently this is
+only useful on Chrome OS.
+
+**Current value (from the default):** `false`
+
+From [//third_party/icu/config.gni:11](https://fuchsia.googlesource.com/third_party/icu/+/2bb5d7ae7db6479ebc76166a648def5b2651243b/config.gni#11)
+
+### icu_major_version_number
+Contains the major version number of the ICU library, for dependencies that
+need different configuration based on the library version.  Currently this
+is only useful in Fuchsia.
+
+**Current value (from the default):** `"67"`
+
+From [//third_party/icu/version.gni:10](https://fuchsia.googlesource.com/third_party/icu/+/2bb5d7ae7db6479ebc76166a648def5b2651243b/version.gni#10)
+
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
 being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/995c0373ab900da6cbf97cb3074d9f475efaa915/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/2bb5d7ae7db6479ebc76166a648def5b2651243b/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -1073,7 +1108,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:121
+From //build/images/args.gni:114
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1105,38 +1140,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#12)
 
 ### inet_want_endpoint_tun
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#13)
 
 ### is_debug
 Debug build.
@@ -1150,7 +1185,7 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["blobfs.userpager=true", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:17
 
@@ -1158,7 +1193,7 @@ From //products/core.gni:17
 
 From //build/images/args.gni:23
 
-**Current value for `target_cpu = "x64"`:** `["console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["blobfs.userpager=true", "console.shell=true", "kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:17
 
@@ -1288,28 +1323,28 @@ Each element of the list is one variant, which is a scope defining:
   use_scudo = false
 }
 }, {
-  configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:rust-asan", "//build/config/sanitizers:fuzzer", "//build/config/fuchsia:icf"]
+  configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:rust-asan", "//build/config/sanitizers:fuzzer", "//build/config:icf"]
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   instrumented = true
   name = "asan-fuzzer"
-  remove_common_configs = ["//build/config/fuchsia:icf"]
+  remove_common_configs = ["//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
   toolchain_args = {
   asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0:clear_shadow_mmap_threshold=0"
   use_scudo = false
 }
 }, {
-  configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:fuzzer", "//build/config/fuchsia:icf"]
+  configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:fuzzer", "//build/config:icf"]
   instrumented = true
   name = "ubsan-fuzzer"
-  remove_common_configs = ["//build/config/fuchsia:icf"]
+  remove_common_configs = ["//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:596
+From //build/config/BUILDCONFIG.gn:615
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1511,7 +1546,7 @@ From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:80
+From //build/images/args.gni:73
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
@@ -1519,7 +1554,7 @@ From //products/core.gni:19
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:80
+From //build/images/args.gni:73
 
 ### minfs_maximum_bytes
 
@@ -1584,13 +1619,13 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
 **Current value (from the default):** `true`
 
-From //src/connectivity/network/netcfg/BUILD.gn:12
+From //src/connectivity/management/BUILD.gn:6
 
 ### netsvc_extra_defines
 
 **Current value (from the default):** `[]`
 
-From //src/bringup/bin/netsvc/BUILD.gn:18
+From //src/bringup/bin/netsvc/BUILD.gn:8
 
 ### omaha_app_id
 Default app id will always return no update.
@@ -1641,6 +1676,16 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 From //build/config/BUILDCONFIG.gn:28
 
+### override_recovery_label
+Allows a product to override the recovery image used in the zirconr slot.
+Default recovery image is zedboot. Overriding this value will keep zedboot
+in the build but will not include it as the default zirconr image.
+Example value: "//build/images/recovery"
+
+**Current value (from the default):** `""`
+
+From //build/images/args.gni:120
+
 ### persist_logs
 
 **Current value (from the default):** `false`
@@ -1651,7 +1696,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:118
+From //build/images/args.gni:111
 
 ### platform_enable_user_pci
 
@@ -1663,7 +1708,7 @@ From //src/devices/bus/drivers/pci/pci.gni:10
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:92
+From //build/images/args.gni:85
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -1698,7 +1743,7 @@ A list of bootfs_manifest labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/security/policy:component_manager_policy.manifest"]`
 
-From //products/bringup.gni:22
+From //products/bringup.gni:23
 
 **Overridden from the default:** `[]`
 
@@ -1706,7 +1751,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//src/security/policy:component_manager_policy.manifest"]`
 
-From //products/bringup.gni:22
+From //products/bringup.gni:23
 
 **Overridden from the default:** `[]`
 
@@ -1902,7 +1947,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:893
+From //build/config/BUILDCONFIG.gn:912
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1911,7 +1956,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:898
+From //build/config/BUILDCONFIG.gn:917
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1942,7 +1987,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:717
+From //build/config/BUILDCONFIG.gn:736
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -1969,7 +2014,7 @@ From [//third_party/shaderc/shaderc_features.gni:20](https://fuchsia.googlesourc
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:90
+From //build/images/args.gni:83
 
 ### size_checker_input
 The input to the size checker.
@@ -2035,6 +2080,15 @@ appear when using this level.
 **Current value (from the default):** `2`
 
 From //build/config/compiler.gni:20
+
+### sysmgr_golden_warn_override
+Used by config_package().
+If true, then overrides the value of the sysmgr_golden_warn template
+parameter to true regardless of whether it is specified on a target.
+
+**Current value (from the default):** `false`
+
+From //build/config.gni:12
 
 ### syzkaller_dir
 Used by syz-ci to build with own syz-executor source.
@@ -2119,7 +2173,7 @@ and causes infra to schedule tests as if each one has the same duration.
 
 **Current value (from the default):** `"//integration/infra/test_durations/default.json"`
 
-From //BUILD.gn:39
+From //BUILD.gn:40
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2182,7 +2236,7 @@ nonempty may conflict with programs that define their own
 
 **Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
-From //build/config/sanitizers/BUILD.gn:35
+From //build/config/sanitizers/BUILD.gn:33
 
 ### universal_variants
 
@@ -2197,7 +2251,7 @@ From //build/config/sanitizers/BUILD.gn:35
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:691
+From //build/config/BUILDCONFIG.gn:710
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2207,21 +2261,21 @@ the build. The build system ensures that the universe package set includes
 the base and cache package sets, which means you do not need to redundantly
 include those labels in this variable.
 
-**Current value for `target_cpu = "arm64"`:** `["//tools/net/dev_finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
+**Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:93
-
-**Overridden from the default:** `[]`
-
-From //BUILD.gn:47
-
-**Current value for `target_cpu = "x64"`:** `["//tools/net/dev_finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
-
-From //products/core.gni:93
+From //products/core.gni:95
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:47
+From //BUILD.gn:48
+
+**Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
+
+From //products/core.gni:95
+
+**Overridden from the default:** `[]`
+
+From //BUILD.gn:48
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2242,6 +2296,13 @@ package.
 **Current value (from the default):** `[]`
 
 From //build/images/args.gni:41
+
+### use_aemu_as_default
+Whether to use AEMU instead of QEMU as the default emulator environment.
+
+**Current value (from the default):** `true`
+
+From //build/testing/environments.gni:17
 
 ### use_cast_runner_canary
 If true then the most recent canary version of the Cast Runner is used,
@@ -2266,13 +2327,15 @@ otherwise the most recently validated version is used.
 
 From //src/chromium/BUILD.gn:13
 
-### use_dns_resolver
-Transitional flag to enable dns-resolver as the provider for
-fuchsia.net.name.LookupAdmin and fuchsia.net.NameLookup instead of netstack.
+### use_dhcpv6
+If true, enables DHCPv6.
+
+When set as a GN argument, requires that sysmgr_config_warn_override be set
+to true to avoid build failures. See that flag's documentation for details.
 
 **Current value (from the default):** `false`
 
-From //src/connectivity/network/BUILD.gn:10
+From //src/connectivity/network/BUILD.gn:16
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -2289,10 +2352,14 @@ Use link time optimization (LTO).
 From //build/config/lto/config.gni:7
 
 ### use_netstack3
+If true, replaces netstack with netstack3.
+
+When set as a GN argument, requires that sysmgr_config_warn_override be set
+to true to avoid build failures. See that flag's documentation for details.
 
 **Current value (from the default):** `false`
 
-From //src/connectivity/network/BUILD.gn:6
+From //src/connectivity/network/BUILD.gn:10
 
 ### use_prebuilt_dart_sdk
 Whether to use the prebuilt Dart SDK for everything.
@@ -2358,245 +2425,23 @@ Fuchsia SDK
 
 From //build/fuchsia/sdk.gni:8
 
-### variants
-List of "selectors" to request variant builds of certain targets.  Each
-selector specifies matching criteria and a chosen variant.  The first
-selector in the list to match a given target determines which variant is
-used for that target.
-
-The $default_variants list is appended to the list set here.  So if no
-selector set in $variants matches (e.g. if the list is empty, as is the
-default), then the first match in $default_variants chooses the variant.
-
-Each selector is either a string or a scope.  A selector that's a string
-is a shorthand that gets expanded to a full selector (a scope); the full
-selector form is described below.
-
-If a string selector contains a slash, then it's "shorthand/filename".
-This is like the plain "shorthand" selector, but further constrained to
-apply only to a binary whose `output_name` exactly matches "filename".
-
-The "shorthand" string (a whole string selector or the part before slash)
-is first looked up in $variant_shorthands, which see.  If it doesn't match
-a name defined there, then it must be the name of a variant.  In that case,
-it's equivalent to `{ variant = "..." host = false }`, meaning it applies
-to every binary not built to be a host tool.
-
-A full selector is a scope with the following fields.  All the fields
-other than `.variant` are matching criteria.  A selector matches if all of
-its matching criteria match.  Hence, a selector with no criteria defined
-always matches and is referred to as a "catch-all".  The $default_variants
-list ends with a catch-all, so each target always chooses some variant.
-
-Selector scope parameters
-
-  * variant
-    - Required: The variant to use when this selector matches.  If this
-    is a string then it must match a fully-defined variant elsewhere in
-    the list (or in $default_variants + $standard_variants, which is
-    appended implicitly to the $variants list).  If it's a scope then
-    it defines a new variant (see details below).
-    - Type: string or scope, described below
-
-  * cpu
-    - Optional: If nonempty, match only when $current_cpu is one in the
-    - list.
-    - Type: list(string)
-
-  * os
-    - Optional: If nonempty, match only when $current_os is one in the
-    - list.
-    - Type: list(string)
-
-  * host
-    - Optional: If present, match only in host environments if true or
-    non-host environments if false.  This means a context in which
-    $is_host is true, not specifically the build host.  For example, it
-    would be true when cross-compiling host tools for an SDK build but
-    would be false when compiling code for a hypervisor guest system
-    that happens to be the same CPU and OS as the build host.
-    - Type: bool
-
-  * kernel
-    - Optional: If present, match only in kernel environments if true or
-    non-kernel environments if false.  This means a context in which
-    $is_kernel is true, not just the "kernel" environment itself.
-    For different machine architectures there may be multiple different
-    specialized environments that set $is_kernel, e.g. for boot loaders
-    and for special circumstances used within the kernel.  See also the
-    $tags field in $variant, described below.
-    - Type: bool
-
-  * environment
-    - Optional: If nonempty, a list of environment names that match.  This
-    looks at ${toolchain.environment}, which is the simple name (no
-    directories) in an environment label defined by environment().  Each
-    element can match either the whole environment name, or just the
-    "base" environment, which is the part of the name before a `.` if it
-    has one.  For example, "host" would match both "host" and "host.fuzz".
-    - Type: list(string)
-
-  * target_type
-    - Optional: If nonempty, a list of target types to match.  This is
-    one of "executable", "host_tool", "loadable_module", "driver", or
-    "test".
-    Note, test_driver() matches as "driver".
-    - Type: list(string)
-
-  * label
-    - Optional: If nonempty, match only when the canonicalized target label
-    (as returned by `get_label_info(..., "label_no_toolchain")`) is one in
-    the list.
-    - Type: list(label_no_toolchain)
-
-  * dir
-    - Optional: If nonempty, match only when the directory part of the
-    target label (as returned by `get_label_info(..., "dir")`) is one in
-    the list.
-    - Type: list(label_no_toolchain)
-
-  * name
-    - Optional: If nonempty, match only when the name part of the target
-    label (as returned by `get_label_info(..., "name")`) is one in the
-    list.
-    - Type: list(label_no_toolchain)
-
-  * output_name
-    - Optional: If nonempty, match only when the `output_name` of the
-    target is one in the list.  Note `output_name` defaults to
-    `target_name`, and does not include prefixes or suffixes like ".so"
-    or ".exe".
-    - Type: list(string)
-
-An element with a scope for `.variant` defines a new variant.  Each
-variant name used in a selector must be defined exactly once.  Other
-selectors can refer to the same variant by using the name string in the
-`.variant` field.  Definitions in $variants take precedence over the same
-name defined in $standard_variants, but it would probably cause confusion
-to use the name of a standard variant with a non-standard definition.
-
-Variant scope parameters
-
-  * name
-    - Required: Name for the variant.  This must be unique among all
-    variants used with the same environment.  It becomes part of the GN
-    toolchain names defined for the environment, which in turn forms part
-    of directory names used in $root_build_dir; so it must meet Ninja's
-    constraints on file names (sticking to `[a-z0-9_-]` is a good idea).
-
-  * globals
-    - Optional: Variables in this scope are introduced as globals visible
-    to all GN code in the toolchain.  For example, the standard "gcc"
-    variant sets `is_gcc = true` in $globals.  This should be used
-    sparingly and is safest when restricted to variables that
-    $zx/public/gn/BUILDCONFIG.gn sets defaults for.
-    - Type: scope
-
-  * toolchain_args
-    - Optional: See toolchain().  Variables in this scope must match GN
-    build arguments defined somewhere in the build with declare_args().
-    Use this when the variant should change something that otherwise is a
-    manual tuning variable to set via `gn args`.  *Do not* define
-    variables in declare_args() just for the purpose of setting them here,
-    i.e. if they should not *also* be available to set via `gn args` to
-    affect other variants that don't override them here.  Instead, use
-    either $globals (above) or $toolchain_vars (below).
-    - Type: scope
-
-  * toolchain_vars
-    - Optional: Variables in this scope are visible in the scope-typed
-    $toolchain global variable seen in toolchains for this variant.
-    Use this to pass along interesting information without cluttering
-    the global scope via $globals.
-    - Type: scope
-
-  * configs
-    - Optional: List of changes to the pre-set $configs variable in targets
-    being defined in toolchains for this variant.  This is the same as in
-    the $configs parameter to environment().  Each element is either a
-    string or a scope.  A string element is simply appended to the default
-    $configs list: it's equivalent to a scope element of `{add=["..."]}`.
-    The string is the GN label (without toolchain) for a config() target.
-    A scope element can be more selective, as described below.
-    - Type: list(label_no_toolchain or scope)
-      * shlib
-        - Optional: If present, this element applies only when
-        `current_toolchain == toolchain.shlib` (if true) or
-        `current_toolchain != toolchain.shlib` (if false).  That is, it
-        applies only in (not ni) the companion toolchain used to compile
-        shared_library() and loadable_module() (including driver()) code.
-        - Type: bool
-
-      * types
-        - Optional: If present, this element applies only to a target whose
-        type is one in this list (same as `target_type` in a selector,
-        described above).
-        - Type: list(string)
-
-      * add
-        - Optional: List of labels to append to $configs.
-        - Type: list(label_no_toolchain)
-
-      * remove
-        - Optional: List of labels to remove from $configs.  This does
-        exactly `configs -= remove` so it has the normal GN semantics that
-        it's an error if any element in the $remove list is not present in
-        the $configs list beforehand.
-        - Type: list(label_no_toolchain)
-
-  * implicit_deps
-    - Optional: List of changes to the list added to $deps of all linking
-    targets in toolchains for this variant.  This is the same as in the
-    $implicit_deps parameter to environment().
-    - Type: See $configs
-
-  * tags
-    - Optional: List of tags that describe this variant.  This list will be
-    visible within the variant's toolchains as ${toolchain.tags}.  Its main
-    purpose is to match the $exclude_variant_tags list in an environment()
-    definition.  For example, several of the standard variants listed in
-    $standard_variants use the "useronly" tag.  The environment() defining
-    the kernel toolchains uses `exclude_variant_tags = [ "useronly" ]`.
-    Then $variants selectors that choose variants that are incompatible
-    with the kernel are automatically ignored in the kernel toolchains,
-    so there's no need to add `kernel = false` to every such selector.
-    - Type: list(string)
-
-  * bases
-    - Optional: A list of other variant names that this one inherits from.
-    This is a very primitive mechanism for deriving a new variant from an
-    existing variant.  All of fields from all the bases except for `name`
-    and `bases` are combined with the fields defined explicitly for the
-    new variant.  The fields of list type are just concatenated in order
-    (each $bases variant in the order listed, then this variant).  The
-    fields of scope type are merged in the same order, with a variant
-    later in the list overriding values set earlier (so this variant's
-    values override all the bases).  There is *only one* level of
-    inheritance: a base variant listed in $bases cannot have $bases itself.
-    - Type: list(string)
-
-
-**Current value (from the default):** `[]`
-
-From //zircon/public/gn/toolchain/variants.gni:222
-
 ### vbmeta_a_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:86
+From //build/images/args.gni:79
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:87
+From //build/images/args.gni:80
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:88
+From //build/images/args.gni:81
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -2616,7 +2461,7 @@ From //src/graphics/lib/magma/include/virtio/virtmagma_debug.gni:7
 
 **Current value (from the default):** `""`
 
-From //src/graphics/examples/vkprimer/BUILD.gn:46
+From //src/graphics/examples/vkprimer/BUILD.gn:49
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
@@ -2631,35 +2476,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/8bde75a87ade87a1fb4afdf5103759b216d56a9e/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
@@ -2718,7 +2563,7 @@ arguments to fx flash script
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:83
+From //build/images/args.gni:76
 
 ### zircon_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2741,22 +2586,23 @@ silently clobber the default value shown here.
   use_goma = false
   variants = []
   zbi_compression = "zstd"
+  zx_fidl_trace_level = 0
 }
 ```
 
-From //BUILD.gn:97
+From //BUILD.gn:107
 
 ### zircon_asserts
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:205
+From //build/config/fuchsia/BUILD.gn:192
 
 ### zircon_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:84
+From //build/images/args.gni:77
 
 ### zircon_build_root
 
@@ -2769,7 +2615,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:71
+From //BUILD.gn:77
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2786,20 +2632,20 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:60
+From //BUILD.gn:66
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:64
+From //BUILD.gn:70
 
 ### zircon_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:85
+From //build/images/args.gni:78
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
@@ -2807,7 +2653,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:68
+From //BUILD.gn:74
 
 ### zvb_partition_name
 Partition name from where image will be verified
