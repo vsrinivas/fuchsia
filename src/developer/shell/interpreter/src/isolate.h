@@ -33,10 +33,6 @@ class Isolate {
     return global_scope_.SearchVariable(node_id);
   }
 
-  void LoadGlobal(const Variable* variable, Value* value) const {
-    return global_execution_scope_.Load(variable, value);
-  }
-
   // Allocate more space for the global variables (if needed). This is called after we potentially
   // added some global variables.
   void AllocateGlobals() { global_execution_scope_.Resize(global_scope_.size()); }

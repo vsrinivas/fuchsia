@@ -462,18 +462,6 @@ void Service::ExecuteExecutionContext(uint64_t context_id,
   }
 }
 
-void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) {
-  SerializeHelper helper;
-  const Variable* variable = interpreter_->SearchGlobal(std::string(name.data(), name.size()));
-  if (variable != nullptr) {
-    Value value;
-    interpreter_->LoadGlobal(variable, &value);
-    // TODO: Consider having the type stored along with the value, for visibility by the client.
-    helper.Set(value);
-  }
-  completer.Reply(helper.nodes());
-}
-
 void Service::Shutdown(ShutdownCompleter::Sync completer) {
   // Shutdown the interpreter. If we have some memory leaks, this will generate errors.
   std::vector<std::string> errors;

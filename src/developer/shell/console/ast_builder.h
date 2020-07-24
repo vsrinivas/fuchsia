@@ -39,9 +39,9 @@ class AstBuilder {
     return fidl::unowned_vec(nodes_);
   }
 
-  // Returns the set of nodes managed by this AstBuilder as a vector view, suitable for returning
-  // from Shell::LoadGlobal.  The node id is assumed to be the individual index.  Caution:
-  // DefsAsVectorView will not return anything after this method is called.
+  // Returns the set of nodes managed by this AstBuilder as a vector view.
+  // The node id is assumed to be the individual index.
+  // Caution: DefsAsVectorView will not return anything after this method is called.
   fidl::VectorView<llcpp::fuchsia::shell::Node> NodesAsVectorView();
 
   bool empty() const { return nodes_.empty(); }

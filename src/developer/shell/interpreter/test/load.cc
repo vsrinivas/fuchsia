@@ -20,17 +20,15 @@ TEST_F(InterpreterTest, LoadStringVariableOk) {
   builder.AddVariableDeclaration("groucho", builder.TypeString(),
                                  builder.AddVariable("a_marx_brother"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("groucho"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("groucho");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* groucho = GetGlobal("groucho");
-  ASSERT_TRUE(groucho->is_string_literal());
-  ASSERT_EQ("A Marx brother",
-            std::string(groucho->string_literal().data(), groucho->string_literal().size()));
+  CHECK_RESULT(0, "\"A Marx brother\"");
 }
 
 TEST_F(InterpreterTest, LoadStringVariableFromAnotherContext) {
@@ -59,19 +57,15 @@ TEST_F(InterpreterTest, LoadStringVariableFromAnotherContext) {
   builder_2.AddVariableDeclaration("groucho", builder_2.TypeString(),
                                    builder_2.AddVariable("a_marx_brother"), false, true);
 
+  builder_2.AddEmitResult(builder_2.AddVariable("groucho"));
+
   ASSERT_CALL_OK(shell().AddNodes(context_2->id, builder_2.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context_2->id));
-
-  // Check execution.
-  LoadGlobal("groucho");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context_2->GetResult());
 
-  const llcpp::fuchsia::shell::Node* groucho = GetGlobal("groucho");
-  ASSERT_TRUE(groucho->is_string_literal());
-  ASSERT_EQ("A Marx brother",
-            std::string(groucho->string_literal().data(), groucho->string_literal().size()));
+  CHECK_RESULT(0, "\"A Marx brother\"");
 }
 
 TEST_F(InterpreterTest, LoadInt8VariableOk) {
@@ -84,18 +78,15 @@ TEST_F(InterpreterTest, LoadInt8VariableOk) {
                                  true);
   builder.AddVariableDeclaration("y", builder.TypeInt8(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_TRUE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "-1");
 }
 
 TEST_F(InterpreterTest, LoadUint8VariableOk) {
@@ -108,18 +99,15 @@ TEST_F(InterpreterTest, LoadUint8VariableOk) {
                                  false, true);
   builder.AddVariableDeclaration("y", builder.TypeUint8(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_FALSE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "1");
 }
 
 TEST_F(InterpreterTest, LoadInt16VariableOk) {
@@ -132,18 +120,15 @@ TEST_F(InterpreterTest, LoadInt16VariableOk) {
                                  false, true);
   builder.AddVariableDeclaration("y", builder.TypeInt16(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_TRUE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "-1");
 }
 
 TEST_F(InterpreterTest, LoadUint16VariableOk) {
@@ -156,18 +141,15 @@ TEST_F(InterpreterTest, LoadUint16VariableOk) {
                                  false, true);
   builder.AddVariableDeclaration("y", builder.TypeUint16(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_FALSE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "1");
 }
 
 TEST_F(InterpreterTest, LoadInt32VariableOk) {
@@ -180,18 +162,15 @@ TEST_F(InterpreterTest, LoadInt32VariableOk) {
                                  false, true);
   builder.AddVariableDeclaration("y", builder.TypeInt32(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_TRUE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "-1");
 }
 
 TEST_F(InterpreterTest, LoadUint32VariableOk) {
@@ -204,18 +183,15 @@ TEST_F(InterpreterTest, LoadUint32VariableOk) {
                                  false, true);
   builder.AddVariableDeclaration("y", builder.TypeUint32(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_FALSE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "1");
 }
 
 TEST_F(InterpreterTest, LoadInt64VariableOk) {
@@ -228,18 +204,15 @@ TEST_F(InterpreterTest, LoadInt64VariableOk) {
                                  false, true);
   builder.AddVariableDeclaration("y", builder.TypeInt64(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_TRUE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "-1");
 }
 
 TEST_F(InterpreterTest, LoadUint64VariableOk) {
@@ -252,16 +225,13 @@ TEST_F(InterpreterTest, LoadUint64VariableOk) {
                                  false, true);
   builder.AddVariableDeclaration("y", builder.TypeUint64(), builder.AddVariable("x"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("y"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("y");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* y = GetGlobal("y");
-  ASSERT_TRUE(y->is_integer_literal());
-  ASSERT_FALSE(y->integer_literal().negative);
-  ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));
-  ASSERT_EQ(y->integer_literal().absolute_value[0], 1U);
+  CHECK_RESULT(0, "1");
 }

@@ -203,22 +203,23 @@ TEST_F(InterpreterTest, Objects) {
                                    /*is_root=*/true);
   }
 
+  builder.AddEmitResult(builder.AddVariable("obj1"));
+  builder.AddEmitResult(builder.AddVariable("obj2"));
+  builder.AddEmitResult(builder.AddVariable("obj3"));
+  builder.AddEmitResult(builder.AddVariable("obj4"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("obj1");
-  LoadGlobal("obj2");
-  LoadGlobal("obj3");
-  LoadGlobal("obj4");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  ASSERT_EQ(GlobalString("obj1"), "{}");
-  ASSERT_EQ(GlobalString("obj2"), "{alpha: uint64(4), beta: uint64(5)}");
-  ASSERT_EQ(GlobalString("obj3"), "{alpha: string(\"Hello\"), beta: string(\"world!\")}");
-  ASSERT_EQ(GlobalString("obj4"),
-            "{inner: {alpha: string(\"Hello\"), beta: string(\"world!\")},"
-            " extra: string(\"Extra value\")}");
+  CHECK_RESULT(0, "{}");
+  CHECK_RESULT(1, "{alpha: uint64(4), beta: uint64(5)}");
+  CHECK_RESULT(2, "{alpha: string(\"Hello\"), beta: string(\"world!\")}");
+  CHECK_RESULT(3,
+               "{inner: {alpha: string(\"Hello\"), beta: string(\"world!\")},"
+               " extra: string(\"Extra value\")}");
 }
 
 TEST_F(InterpreterTest, VariableOk) {
@@ -234,20 +235,19 @@ TEST_F(InterpreterTest, VariableOk) {
   builder.AddVariableDeclaration("groucho", builder.TypeString(),
                                  builder.AddStringLiteral("A Marx brother"), false, true);
 
+  builder.AddEmitResult(builder.AddVariable("foo"));
+  builder.AddEmitResult(builder.AddVariable("bar"));
+  builder.AddEmitResult(builder.AddVariable("groucho"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("foo");
-  LoadGlobal("bar");
-  LoadGlobal("groucho");
-  LoadGlobal("x");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  ASSERT_EQ(GlobalString("foo"), "1");
-  ASSERT_EQ(GlobalString("bar"), "10");
-  ASSERT_EQ(GlobalString("groucho"), "\"A Marx brother\"");
-  ASSERT_EQ(GetGlobal("x"), nullptr);
+  CHECK_RESULT(0, "1");
+  CHECK_RESULT(1, "10");
+  CHECK_RESULT(2, "\"A Marx brother\"");
 }
 
 TEST_F(InterpreterTest, VariableNoType) {

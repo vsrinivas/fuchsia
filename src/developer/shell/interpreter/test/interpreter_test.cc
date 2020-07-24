@@ -163,22 +163,6 @@ void InterpreterTest::Run(FinishAction action) {
         return kNoContext;
       }
       context->result = result;
-      if (!globals_to_load_.empty() && (result == llcpp::fuchsia::shell::ExecuteResult::OK)) {
-        // Now that the execution is finished, loads all the global variables we asked using
-        // LoadGlobal.
-        for (const auto& global : globals_to_load_) {
-          ++pending_globals_;
-          fidl::Buffer<llcpp::fuchsia::shell::Node> request_buffer;
-          auto& response_buffer =
-              to_be_deleted_.emplace_back(new fidl::Buffer<llcpp::fuchsia::shell::Node>());
-          auto response = shell().LoadGlobal(request_buffer.view(), fidl::unowned_str(global),
-                                             response_buffer->view());
-          auto& nodes = response->nodes;
-          if (!nodes.empty()) {
-            globals_.emplace(global, std::move(response));
-          }
-        }
-      }
       return ZX_OK;
     };
 
@@ -241,16 +225,6 @@ InterpreterTestContext* InterpreterTest::GetContext(uint64_t context_id) {
     return nullptr;
   }
   return result->second.get();
-}
-
-std::string InterpreterTest::GlobalString(const std::string& name) const {
-  auto node = DeserializeGlobal(name);
-  if (node == nullptr) {
-    return "";
-  }
-  std::stringstream ss;
-  node->Dump(ss);
-  return ss.str();
 }
 
 void InterpreterTest::SetUp() {

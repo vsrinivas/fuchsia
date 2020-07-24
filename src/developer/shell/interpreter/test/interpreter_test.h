@@ -49,29 +49,6 @@ class InterpreterTest : public ::testing::Test {
     return results_;
   }
 
-  // Loads a global variable. The loads are defered after the end of the execution.
-  void LoadGlobal(const std::string& name) { globals_to_load_.emplace_back(name); }
-
-  // Gets the value for a global variable we loaded using LoadGlobal.
-  const llcpp::fuchsia::shell::Node* GetGlobal(const std::string& name) const {
-    auto result = globals_.find(name);
-    if (result == globals_.end()) {
-      return nullptr;
-    }
-    return &(result->second->nodes[0]);
-  }
-
-  std::unique_ptr<shell::common::ResultNode> DeserializeGlobal(const std::string& name) const {
-    auto result = globals_.find(name);
-    if (result == globals_.end()) {
-      return nullptr;
-    }
-    shell::common::DeserializeResult deserialize;
-    return deserialize.Deserialize(result->second->nodes);
-  }
-
-  std::string GlobalString(const std::string& name) const;
-
   void SetUp() override;
 
   enum FinishAction { kError, kDump, kExecute, kTextResult };
@@ -98,15 +75,6 @@ class InterpreterTest : public ::testing::Test {
   std::vector<std::string> text_results_;
   bool last_text_result_partial_ = false;
   std::vector<std::unique_ptr<shell::common::ResultNode>> results_;
-  // Holds the response buffers for llcpp calls, so that they are cleaned up on shutdown.  Needs to
-  // be destructed after globals_.
-  std::vector<std::unique_ptr<fidl::Buffer<llcpp::fuchsia::shell::Node>>> to_be_deleted_;
-  // Names for the global we will load when the execution will be done.
-  std::vector<std::string> globals_to_load_;
-  // Holds the values for the globals which have been loaded.
-  std::map<std::string, llcpp::fuchsia::shell::Shell::UnownedResultOf::LoadGlobal> globals_;
-  // Count of global we are waiting for a result.
-  int pending_globals_ = 0;
 };
 
 extern shell::console::AstBuilder::NodeId NullNode;

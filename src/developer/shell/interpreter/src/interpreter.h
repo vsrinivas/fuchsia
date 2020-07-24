@@ -174,10 +174,6 @@ class Interpreter {
     return isolate_->SearchGlobal(node_id);
   }
 
-  void LoadGlobal(const Variable* variable, Value* value) const {
-    return isolate_->LoadGlobal(variable, value);
-  }
-
  private:
   // All the contexts for the interpreter.
   std::map<uint64_t, std::unique_ptr<ExecutionContext>> contexts_;

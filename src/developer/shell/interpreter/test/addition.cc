@@ -38,23 +38,17 @@ TEST_F(InterpreterTest, StringAdditionOk) {
           builder.AddStringLiteral(" brother")),
       false, true);
 
+  builder.AddEmitResult(builder.AddVariable("groucho1"));
+  builder.AddEmitResult(builder.AddVariable("groucho2"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("groucho1");
-  LoadGlobal("groucho2");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("groucho1");
-  ASSERT_TRUE(groucho1->is_string_literal());
-  ASSERT_EQ("A Marx brother",
-            std::string(groucho1->string_literal().data(), groucho1->string_literal().size()));
-
-  const llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("groucho2");
-  ASSERT_TRUE(groucho2->is_string_literal());
-  ASSERT_EQ("A Marx brother",
-            std::string(groucho2->string_literal().data(), groucho2->string_literal().size()));
+  CHECK_RESULT(0, "\"A Marx brother\"");
+  CHECK_RESULT(1, "\"A Marx brother\"");
 }
 
 TEST_F(InterpreterTest, StringAdditionEmpty) {
@@ -76,23 +70,17 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
                           builder.AddVariable("foo")),
       false, true);
 
+  builder.AddEmitResult(builder.AddVariable("foo1"));
+  builder.AddEmitResult(builder.AddVariable("foo2"));
+
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));
-  LoadGlobal("foo1");
-  LoadGlobal("foo2");
   Finish(kExecute);
 
   ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());
 
-  const llcpp::fuchsia::shell::Node* groucho1 = GetGlobal("foo1");
-  ASSERT_TRUE(groucho1->is_string_literal());
-  ASSERT_EQ("foo",
-            std::string(groucho1->string_literal().data(), groucho1->string_literal().size()));
-
-  const llcpp::fuchsia::shell::Node* groucho2 = GetGlobal("foo2");
-  ASSERT_TRUE(groucho2->is_string_literal());
-  ASSERT_EQ("foo",
-            std::string(groucho2->string_literal().data(), groucho2->string_literal().size()));
+  CHECK_RESULT(0, "\"foo\"");
+  CHECK_RESULT(1, "\"foo\"");
 }
 
 // - Helpers ---------------------------------------------------------------------------------------
@@ -114,24 +102,20 @@ TEST_F(InterpreterTest, StringAdditionEmpty) {
                                       : builder.AddIntegerLiteral(right, false)),     \
       false, true);                                                                   \
                                                                                       \
+  builder.AddEmitResult(builder.AddVariable("y"));                                    \
+                                                                                      \
   ASSERT_CALL_OK(shell().AddNodes(context->id, builder.DefsAsVectorView()));          \
   ASSERT_CALL_OK(shell().ExecuteExecutionContext(context->id));                       \
-  LoadGlobal("y");                                                                    \
   Finish(kExecute);
 
-#define DoAdditionTest(name, type, with_exceptions, left, right, result)               \
-  TEST_F(InterpreterTest, name) {                                                      \
-    ExecuteAddition(builder.type, with_exceptions, left, right);                       \
-                                                                                       \
-    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult());         \
-                                                                                       \
-    const llcpp::fuchsia::shell::Node* y = GetGlobal("y");                             \
-    ASSERT_TRUE(y->is_integer_literal());                                              \
-    ASSERT_EQ(y->integer_literal().negative, result < 0);                              \
-    ASSERT_EQ(y->integer_literal().absolute_value.count(), static_cast<size_t>(1));    \
-    uint64_t absolute_value =                                                          \
-        (result < 0) ? -static_cast<uint64_t>(result) : static_cast<uint64_t>(result); \
-    ASSERT_EQ(y->integer_literal().absolute_value[0], absolute_value);                 \
+#define DoAdditionTest(name, type, with_exceptions, left, right, result)       \
+  TEST_F(InterpreterTest, name) {                                              \
+    ExecuteAddition(builder.type, with_exceptions, left, right);               \
+                                                                               \
+    ASSERT_EQ(llcpp::fuchsia::shell::ExecuteResult::OK, context->GetResult()); \
+                                                                               \
+    std::string string_result = std::to_string(result);                        \
+    CHECK_RESULT(0, string_result);                                            \
   }
 
 #define DoAdditionTestException(name, type, left, right, errors)                       \
