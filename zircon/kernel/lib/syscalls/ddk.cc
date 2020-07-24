@@ -323,10 +323,6 @@ zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi
   auto* up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<MsiAllocationDispatcher> msi_alloc_disp;
 
-  if (options) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   zx_status_t status;
   if ((status = up->GetDispatcher(msi_alloc, &msi_alloc_disp)) != ZX_OK) {
     return status;
@@ -341,7 +337,7 @@ zx_status_t sys_msi_create(zx_handle_t msi_alloc, uint32_t options, uint32_t msi
   KernelHandle<InterruptDispatcher> msi_handle;
   if ((status = MsiDispatcher::Create(
            msi_alloc_disp->msi_allocation(), /* msi_id= */ msi_id, vmo_disp->vmo(),
-           /* cap_offset= */ vmo_offset, /* options= */ 0, &rights, &msi_handle)) != ZX_OK) {
+           /* cap_offset= */ vmo_offset, /* options= */ options, &rights, &msi_handle)) != ZX_OK) {
     return status;
   }
 

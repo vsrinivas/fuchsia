@@ -7,6 +7,7 @@
 #include <lib/arch/intrin.h>
 #include <lib/counters.h>
 #include <platform.h>
+#include <reg.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/limits.h>
@@ -15,6 +16,7 @@
 
 #include <array>
 #include <cstring>
+#include <limits>
 
 #include <dev/interrupt.h>
 #include <fbl/alloc_checker.h>
@@ -35,21 +37,25 @@ KCOUNTER(dispatcher_msi_destroy_count, "msi_dispatcher.destroy")
 
 // Creates an a derived MsiDispatcher determined by the flags passed in
 zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi_id,
-                                  const fbl::RefPtr<VmObject>& vmo, zx_paddr_t cap_offset,
+                                  const fbl::RefPtr<VmObject>& vmo, zx_paddr_t vmo_offset,
                                   uint32_t options, zx_rights_t* out_rights,
                                   KernelHandle<InterruptDispatcher>* out_interrupt,
                                   RegisterIntFn register_int_fn) {
+  LTRACEF(
+      "out_rights = %p, out_interrupt = %p\nvmo: %s, %s, %s\nsize = %lu, "
+      "vmo_offset = %lu, options = %#x, cache policy = %u\n",
+      out_rights, out_interrupt, vmo->is_paged() ? "paged" : "physical",
+      vmo->is_contiguous() ? "contiguous" : "not contiguous",
+      vmo->is_resizable() ? "resizable" : "not resizable", vmo->size(), vmo_offset, options,
+      vmo->GetMappingCachePolicy());
+
+  bool is_msix = (options & ZX_MSI_MODE_MSI_X) == ZX_MSI_MODE_MSI_X;
+  options &= ~ZX_MSI_MODE_MSI_X;
+
   if (!out_rights || !out_interrupt ||
       (vmo->is_paged() && (vmo->is_resizable() || !vmo->is_contiguous())) ||
-      cap_offset >= vmo->size() || options != 0 ||
+      vmo_offset >= vmo->size() || options ||
       vmo->GetMappingCachePolicy() != ZX_CACHE_POLICY_UNCACHED_DEVICE) {
-    LTRACEF(
-        "out_rights = %p, out_interrupt = %p\nvmo: %s, %s, %s\nsize = %lu, "
-        "cap_offset = %lu, options = %#x, cache policy = %u\n",
-        out_rights, out_interrupt, vmo->is_paged() ? "paged" : "physical",
-        vmo->is_contiguous() ? "contiguous" : "not contiguous",
-        vmo->is_resizable() ? "resizable" : "not resizable", vmo->size(), cap_offset, options,
-        vmo->GetMappingCachePolicy());
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -95,36 +101,49 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
     return st;
   }
 
-  LTRACEF("Mapping mapped at %#lx, size %zx, vmo size %lx, cap_offset = %#lx\n", mapping->base(),
-          mapping->size(), vmo->size(), cap_offset);
+  LTRACEF("Mapping mapped at %#lx, size %zx, vmo size %lx, vmo_offset = %#lx\n", mapping->base(),
+          mapping->size(), vmo->size(), vmo_offset);
   fbl::AllocChecker ac;
   fbl::RefPtr<MsiDispatcher> disp;
-  auto* cap = reinterpret_cast<MsiCapability*>(mapping->base() + cap_offset);
-  // For the moment we only support MSI, but when MSI-X is added this object creation will
-  // be extended to return a derived type suitable for MSI-X operation.
-  switch (cap->id) {
-    case kMsiCapabilityId: {
-      // MSI capabilities fit within a given device's configuration space which is either 256
-      // or 4096 bytes. But in most cases the VMO containing config space is going to be at
-      // least the size of a full PCI bus's worth of devices, and physical VMOs cannot be sliced
-      // into children. We can validate that the capability fits within the offset given, but
-      // otherwise cannot rely on the VMO's size for validation.
-      size_t add_result = 0;
-      if (add_overflow(cap_offset, sizeof(MsiCapability), &add_result) ||
-          add_result > vmo->size()) {
-        return ZX_ERR_INVALID_ARGS;
-      }
 
-      uint16_t ctrl_val = cap->control;
-      bool has_pvm = !!(ctrl_val & kMsiPvmSupported);
-      bool has_64bit = !!(ctrl_val & kMsi64bitSupported);
-      disp = fbl::AdoptRef<MsiDispatcher>(new (&ac) MsiDispatcherImpl(
-          ktl::move(alloc), base_irq_id, msi_id, ktl::move(mapping), cap_offset,
-          /* has_cap_pvm= */ has_pvm, /* has_64bit= */ has_64bit, register_int_fn));
-    } break;
-    default:
-      LTRACEF("exiting due to unsupported MSI type.\n");
-      return ZX_ERR_NOT_SUPPORTED;
+  // MSI lives inside a device's config space within an MSI Capability. MSI-X has a similar
+  // capability, but has another table mapped elsewhere which contains individually maskable bits
+  // per vector. The capability itself is managed by the PCI bus driver, and the mask bits are
+  // handled by this dispatcher. So in the event of MSI-X there is no capability id to check, since
+  // we don't touch the capability at all at this level.
+  size_t add_result = 0;
+  if (is_msix) {
+    // Most validation for MSI-X is done in the PCI driver since it can confirm that the Table
+    // Structure is appropriately large for the number of interrupts, and the allocation by now has
+    // already been made.
+    if (add_overflow(vmo_offset, (msi_id + 1) * sizeof(MsixTableEntry), &add_result) ||
+        add_result > vmo->size()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    disp = fbl::AdoptRef<MsiDispatcher>(new (&ac) MsixDispatcherImpl(
+        ktl::move(alloc), base_irq_id, msi_id, ktl::move(mapping), vmo_offset, register_int_fn));
+  } else {
+    auto* cap = reinterpret_cast<MsiCapability*>(mapping->base() + vmo_offset);
+    if (cap->id != kMsiCapabilityId) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    // MSI capabilities fit within a given device's configuration space which is either 256
+    // or 4096 bytes. But in most cases the VMO containing config space is going to be at
+    // least the size of a full PCI bus's worth of devices, and physical VMOs cannot be sliced
+    // into children. We can validate that the capability fits within the offset given, but
+    // otherwise cannot rely on the VMO's size for validation.
+    if (add_overflow(vmo_offset, sizeof(MsiCapability), &add_result) || add_result > vmo->size()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    uint16_t ctrl_val = cap->control;
+    bool has_pvm = !!(ctrl_val & kMsiPvmSupported);
+    bool has_64bit = !!(ctrl_val & kMsi64bitSupported);
+    disp = fbl::AdoptRef<MsiDispatcher>(
+        new (&ac) MsiDispatcherImpl(ktl::move(alloc), base_irq_id, msi_id, ktl::move(mapping),
+                                    vmo_offset, has_pvm, has_64bit, register_int_fn));
   }
 
   if (!ac.check()) {
@@ -137,10 +156,9 @@ zx_status_t MsiDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uint32_t msi
 
   // MSI / MSI-X interrupts share a masking approach and should be masked while
   // being serviced and unmasked while waiting for an interrupt message to arrive.
-  disp->set_flags(INTERRUPT_UNMASK_PREWAIT | INTERRUPT_MASK_POSTWAIT | options);
+  disp->set_flags(INTERRUPT_UNMASK_PREWAIT | INTERRUPT_MASK_POSTWAIT);
 
-  // Mask the interrupt until it is needed.
-  disp->MaskInterrupt();
+  disp->UnmaskInterrupt();
   st = disp->RegisterInterruptHandler();
   if (st != ZX_OK) {
     LTRACEF("Failed to register interrupt handler for msi id %u (vector %u): %d\n", msi_id, vector,
@@ -223,4 +241,38 @@ void MsiDispatcherImpl::UnmaskInterrupt() {
   }
 }
 
-void MsiDispatcherImpl::DeactivateInterrupt() { }
+MsixDispatcherImpl::MsixDispatcherImpl(fbl::RefPtr<MsiAllocation>&& alloc, uint32_t base_irq_id,
+                                       uint32_t msi_id, fbl::RefPtr<VmMapping>&& mapping,
+                                       zx_off_t table_offset, RegisterIntFn register_int_fn)
+    : MsiDispatcher(ktl::move(alloc), ktl::move(mapping), base_irq_id, msi_id, register_int_fn),
+      table_entries_(reinterpret_cast<MsixTableEntry*>(this->mapping()->base() + table_offset)) {
+  // Disable the vector, set up the address and data registers, then re-enable it for our given
+  // msi_id. Per PCI Local Bus Spec v3 section 6.8.2 implementation notes, all accesses to these
+  // registers must be DWORD or QWORD only. We write upper and lower halves of the address
+  // unconditionally because if the address is 32 bits then we want to write zeroes to the upper
+  // half regardless.
+  MaskInterrupt();
+  writel(allocation()->block().tgt_addr & UINT32_MAX, &table_entries_[msi_id].msg_addr);
+  writel(static_cast<uint32_t>(allocation()->block().tgt_addr >> 32),
+         &table_entries_[msi_id].msg_upper_addr);
+  writel(allocation()->block().tgt_data, &table_entries_[msi_id].msg_data);
+}
+
+void MsixDispatcherImpl::MaskInterrupt() {
+  kcounter_add(dispatcher_msi_mask_count, 1);
+  RMWREG32(&table_entries_[msi_id()].vector_control, kMsixVectorControlMaskBit, 1, 1);
+  arch::DeviceMemoryBarrier();
+}
+
+void MsixDispatcherImpl::UnmaskInterrupt() {
+  kcounter_add(dispatcher_msi_unmask_count, 1);
+  RMWREG32(&table_entries_[msi_id()].vector_control, kMsixVectorControlMaskBit, 1, 0);
+  arch::DeviceMemoryBarrier();
+}
+
+MsixDispatcherImpl::~MsixDispatcherImpl() {
+  MaskInterrupt();
+  writel(0, &table_entries_[msi_id()].msg_addr);
+  writel(0, &table_entries_[msi_id()].msg_upper_addr);
+  writel(0, &table_entries_[msi_id()].msg_data);
+}

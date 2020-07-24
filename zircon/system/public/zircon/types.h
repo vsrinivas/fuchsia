@@ -299,6 +299,9 @@ typedef struct zx_iovec {
 // interrupt wait slots must be in the range 0 - 62 inclusive
 #define ZX_INTERRUPT_MAX_SLOTS              ((uint32_t)62u)
 
+// msi_create flags
+#define ZX_MSI_MODE_MSI_X                   ((uint32_t)0x1u)
+
 // PCI interrupt handles use interrupt slot 0 for the PCI hardware interrupt
 #define ZX_PCI_INTERRUPT_SLOT               ((uint32_t)0u)
 

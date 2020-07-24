@@ -252,7 +252,7 @@ static bool interrupt_vmo_test() {
                                     &interrupt, register_fn));
     ASSERT_EQ(ZX_OK, vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
     // Create will still fail because the VMO doesn't look like an MSI capability.
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS,
               MsiDispatcher::Create(alloc, 0, vmo, /*cap_offset=*/0, /*options=*/0, &rights,
                                     &interrupt, register_fn));
   }
@@ -293,8 +293,8 @@ static bool interrupt_creation_mask_test() {
                                              &rights, &interrupt, register_fn));
       auto val_32 = cap->mask_bits_32;
       auto val_64 = cap->mask_bits_64;
-      ASSERT_EQ(val_32, 0u);
-      ASSERT_EQ(val_64, 0u);
+      EXPECT_EQ(val_32, 0u);
+      EXPECT_EQ(val_64, 0u);
     }
   }
 
@@ -309,8 +309,8 @@ static bool interrupt_creation_mask_test() {
                                              &rights, &interrupt, register_fn));
       auto val_32 = cap->mask_bits_32;
       auto val_64 = cap->mask_bits_64;
-      ASSERT_EQ(val_32, (1u << msi_id));
-      ASSERT_EQ(val_64, 0u);
+      EXPECT_EQ(0u, val_32 & (1u << msi_id));
+      EXPECT_EQ(val_64, 0u);
     }
   }
 
@@ -325,8 +325,8 @@ static bool interrupt_creation_mask_test() {
                                              &rights, &interrupt, register_fn));
       auto val_32 = cap->mask_bits_32;
       auto val_64 = cap->mask_bits_64;
-      ASSERT_EQ(val_32, 0u);
-      ASSERT_EQ(val_64, 0u);
+      EXPECT_EQ(val_32, 0u);
+      EXPECT_EQ(val_64, 0u);
     }
   }
 
@@ -341,8 +341,8 @@ static bool interrupt_creation_mask_test() {
                                              &rights, &interrupt, register_fn));
       auto val_32 = cap->mask_bits_32;
       auto val_64 = cap->mask_bits_64;
-      ASSERT_EQ(val_32, 0u);
-      ASSERT_EQ(val_64, (1u << msi_id));
+      EXPECT_EQ(val_32, 0u);
+      EXPECT_EQ(0u, val_64 & (1u << msi_id));
     }
   }
 
@@ -383,7 +383,7 @@ UNITTEST("Test reservations for MSI ids", allocation_reservation_test)
 UNITTEST("Test for MSI platform support hooks", allocation_support_test)
 UNITTEST("Test that MsiDispatchers cannot overlap on an MSI id", interrupt_duplication_test)
 UNITTEST("Test that MsiDispatcher validates the VMO", interrupt_vmo_test)
-UNITTEST("Test that MsiDispatcher masks on creation", interrupt_creation_mask_test)
+UNITTEST("Test that MsiDispatcher unmasks on creation", interrupt_creation_mask_test)
 UNITTEST("Test that MsiAllocation & MsiDispatcher ownership is correct",
          out_of_order_ownership_test)
 UNITTEST_END_TESTCASE(msi_object, "msi", "Tests for MSI objects")
