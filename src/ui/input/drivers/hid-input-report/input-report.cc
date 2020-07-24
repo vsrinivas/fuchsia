@@ -4,6 +4,7 @@
 
 #include "input-report.h"
 
+#include <lib/fidl/epitaph.h>
 #include <threads.h>
 #include <zircon/status.h>
 
@@ -29,65 +30,33 @@ namespace hid_input_report_dev {
 
 void InputReport::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
-zx_status_t InputReport::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-  auto inst = std::make_unique<InputReportInstance>(zxdev(), next_instance_id_++);
-  zx_status_t status = inst->Bind(this);
-  if (status != ZX_OK) {
-    return status;
-  }
+zx_status_t InputReport::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  fuchsia_input_report::InputDevice::Dispatch(this, msg, &transaction);
+  return transaction.Status();
+}
 
-  {
-    fbl::AutoLock lock(&instance_lock_);
-    instance_list_.push_front(inst.get());
-  }
-
-  // If we have a consumer control device, get a report and send it to the client,
-  // since the client needs the device's state.
-  for (auto& device : devices_) {
-    if (device->GetDeviceType() == hid_input_report::DeviceType::kConsumerControl) {
-      std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
-      size_t report_size = 0;
-      zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
-                                             report_data.data(), report_data.size(), &report_size);
-      if (status != ZX_OK) {
-        continue;
-      }
-      inst->ReceiveReport(report_data.data(), report_size, zx_clock_get_monotonic(), device.get());
+void InputReport::RemoveReaderFromList(InputReportsReader* reader) {
+  fbl::AutoLock lock(&readers_lock_);
+  for (auto iter = readers_list_.begin(); iter != readers_list_.end(); ++iter) {
+    if (iter->get() == reader) {
+      readers_list_.erase(iter);
+      break;
     }
   }
-
-  *dev_out = inst->zxdev();
-
-  // devmgr is now in charge of the memory for inst.
-  __UNUSED auto ptr = inst.release();
-  return ZX_OK;
 }
 
 void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t report_size,
                                                  zx_time_t report_time) {
+  fbl::AutoLock lock(&readers_lock_);
   for (auto& device : devices_) {
     // Find the matching device.
     if (device->InputReportId() != 0 && device->InputReportId() != report[0]) {
       continue;
     }
 
-    // Send to each instance.
-    {
-      fbl::AutoLock lock(&instance_lock_);
-      for (auto& instance : instance_list_) {
-        instance.ReceiveReport(report, report_size, report_time, device.get());
-      }
-    }
-  }
-}
-
-void InputReport::RemoveInstanceFromList(InputReportInstance* instance) {
-  fbl::AutoLock lock(&instance_lock_);
-
-  for (auto& iter : instance_list_) {
-    if (iter.zxdev() == instance->zxdev()) {
-      instance_list_.erase(iter);
-      break;
+    for (auto& reader : readers_list_) {
+      reader->ReceiveReport(report, report_size, report_time, device.get());
     }
   }
 }
@@ -102,8 +71,44 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
   return true;
 }
 
-void InputReport::CreateDescriptor(fidl::Allocator* allocator,
-                                   fuchsia_input_report::DeviceDescriptor::Builder* descriptor) {
+void InputReport::SendInitialConsumerControlReport(InputReportsReader* reader) {
+  for (auto& device : devices_) {
+    if (device->GetDeviceType() == hid_input_report::DeviceType::kConsumerControl) {
+      std::array<uint8_t, HID_MAX_REPORT_LEN> report_data;
+      size_t report_size = 0;
+      zx_status_t status = hiddev_.GetReport(HID_REPORT_TYPE_INPUT, device->InputReportId(),
+                                             report_data.data(), report_data.size(), &report_size);
+      if (status != ZX_OK) {
+        continue;
+      }
+      reader->ReceiveReport(report_data.data(), report_size, zx_clock_get_monotonic(),
+                            device.get());
+    }
+  }
+}
+
+void InputReport::GetInputReportsReader(zx::channel req,
+                                        GetInputReportsReaderCompleter::Sync completer) {
+  fbl::AutoLock lock(&readers_lock_);
+
+  auto reader =
+      InputReportsReader::Create(this, next_reader_id_++, loop_->dispatcher(), std::move(req));
+  if (!reader) {
+    return;
+  }
+
+  SendInitialConsumerControlReport(reader.get());
+  readers_list_.push_back(std::move(reader));
+
+  // Signal to a test framework (if it exists) that we are connected to a reader.
+  sync_completion_signal(&next_reader_wait_);
+}
+
+void InputReport::GetDescriptor(GetDescriptorCompleter::Sync completer) {
+  fidl::BufferThenHeapAllocator<kFidlDescriptorBufferSize> descriptor_allocator;
+  auto descriptor_builder = fuchsia_input_report::DeviceDescriptor::Builder(
+      descriptor_allocator.make<fuchsia_input_report::DeviceDescriptor::Frame>());
+
   hid_device_info_t info;
   hiddev_.GetHidDeviceInfo(&info);
 
@@ -111,15 +116,18 @@ void InputReport::CreateDescriptor(fidl::Allocator* allocator,
   fidl_info.vendor_id = info.vendor_id;
   fidl_info.product_id = info.product_id;
   fidl_info.version = info.version;
-  descriptor->set_device_info(
-      allocator->make<fuchsia_input_report::DeviceInfo>(std::move(fidl_info)));
+  descriptor_builder.set_device_info(
+      descriptor_allocator.make<fuchsia_input_report::DeviceInfo>(std::move(fidl_info)));
 
   for (auto& device : devices_) {
-    device->CreateDescriptor(allocator, descriptor);
+    device->CreateDescriptor(&descriptor_allocator, &descriptor_builder);
   }
+
+  completer.Reply(descriptor_builder.build());
 }
 
-zx_status_t InputReport::SendOutputReport(fuchsia_input_report::OutputReport report) {
+void InputReport::SendOutputReport(fuchsia_input_report::OutputReport report,
+                                   SendOutputReportCompleter::Sync completer) {
   uint8_t hid_report[HID_MAX_DESC_LEN];
   size_t size;
   hid_input_report::ParseResult result = hid_input_report::ParseResult::kNotImplemented;
@@ -135,9 +143,16 @@ zx_status_t InputReport::SendOutputReport(fuchsia_input_report::OutputReport rep
     }
   }
   if (result != hid_input_report::ParseResult::kOk) {
-    return ZX_ERR_INTERNAL;
+    completer.ReplyError(ZX_ERR_INTERNAL);
+    return;
   }
-  return hiddev_.SetReport(HID_REPORT_TYPE_OUTPUT, hid_report[0], hid_report, size);
+
+  zx_status_t status = hiddev_.SetReport(HID_REPORT_TYPE_OUTPUT, hid_report[0], hid_report, size);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
 }
 
 zx_status_t InputReport::Bind() {
@@ -152,13 +167,13 @@ zx_status_t InputReport::Bind() {
   auto parse_res = hid::ParseReportDescriptor(report_desc, report_desc_size, &dev_desc);
   if (parse_res != hid::ParseResult::kParseOk) {
     zxlogf(ERROR, "hid-parser: parsing report descriptor failed with error %d", int(parse_res));
-    return false;
+    return ZX_ERR_INTERNAL;
   }
 
   auto count = dev_desc->rep_count;
   if (count == 0) {
     zxlogf(ERROR, "No report descriptors found ");
-    return false;
+    return ZX_ERR_INTERNAL;
   }
 
   // Parse each input report.
@@ -180,7 +195,25 @@ zx_status_t InputReport::Bind() {
   // Register to listen to HID reports.
   hiddev_.RegisterListener(this, &hid_report_listener_protocol_ops_);
 
+  // Start the async loop for the Readers.
+  {
+    fbl::AutoLock lock(&readers_lock_);
+    loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
+    status = loop_->StartThread("hid-input-report-reader-loop");
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
   return DdkAdd("InputReport");
+}
+
+zx_status_t InputReport::WaitForNextReader(zx::duration timeout) {
+  zx_status_t status = sync_completion_wait(&next_reader_wait_, timeout.get());
+  if (status == ZX_OK) {
+    sync_completion_reset(&next_reader_wait_);
+  }
+  return status;
 }
 
 zx_status_t input_report_bind(void* ctx, zx_device_t* parent) {

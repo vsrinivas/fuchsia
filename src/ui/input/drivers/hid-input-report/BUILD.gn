@@ -11,7 +11,6 @@ driver_module("hid-input-report") {
   sources = [
     "input-report.cc",
     "input-reports-reader.cc",
-    "instance.cc",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.hiddevice",
@@ -38,7 +37,6 @@ test("hid-input-report-test-bin") {
   sources = [
     "input-report.cc",
     "input-reports-reader.cc",
-    "instance.cc",
     "test.cc",
   ]
   deps = [
