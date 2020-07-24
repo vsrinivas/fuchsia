@@ -7,8 +7,8 @@
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
@@ -23,6 +23,7 @@
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
 
@@ -40,10 +41,7 @@ using fuchsia::exception::ExceptionType;
 using fuchsia::exception::ProcessException;
 using testing::UnorderedElementsAreArray;
 
-// Handler unit test ------------------------------------------------------------------------------
-//
-// The main objective of this test is to verify that the connected crash reporter actually receive
-// the exception.
+constexpr zx::duration kDefaultTimeout{zx::duration::infinite()};
 
 class StubCrashReporter : public fuchsia::feedback::CrashReporter {
  public:
@@ -112,39 +110,32 @@ class StubIntrospect : public fuchsia::sys::internal::Introspect {
   fidl::BindingSet<fuchsia::sys::internal::Introspect> bindings_;
 };
 
-// Test Setup -------------------------------------------------------------------------------------
-//
-// Necessary elements for a fidl test to run. The ServiceDirectoryProvider is meant to mock the
-// environment from which a process gets its services. This is the way we "inject" in our stub
-// crash reporter instead of the real one.
+class HandlerTest : public UnitTestFixture {
+ public:
+  HandlerTest() : executor_(dispatcher()) {}
 
-struct TestContext {
-  async::Loop loop;
-  sys::testing::ServiceDirectoryProvider services;
-  std::unique_ptr<StubCrashReporter> crash_reporter;
-  std::unique_ptr<StubIntrospect> introspect;
-};
-
-std::unique_ptr<TestContext> CreateTestContext() {
-  std::unique_ptr<TestContext> context(new TestContext{
-      .loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread),
-      .services = sys::testing::ServiceDirectoryProvider{},
-      .crash_reporter = std::make_unique<StubCrashReporter>(),
-      .introspect = std::make_unique<StubIntrospect>(),
-  });
-
-  return context;
-}
-
-// Runs a loop until |condition| is true. Does this by stopping every |step| to check the condition.
-// If |condition| is never true, the thread will never leave this cycle. The test harness has to be
-// able to handle this "hanging" case.
-void RunUntil(TestContext* context, fit::function<bool()> condition,
-              zx::duration step = zx::msec(10)) {
-  while (!condition()) {
-    context->loop.Run(zx::deadline_after(step));
+  void HandleException(
+      zx::exception exception, zx::duration component_lookup_timeout,
+      zx::duration crash_reporter_timeout, ::fit::closure callback = [] {}) {
+    executor_.schedule_task(
+        Handle(std::move(exception), dispatcher(), services(), component_lookup_timeout,
+               crash_reporter_timeout)
+            .then([callback = std::move(callback)](const ::fit::result<>& result) { callback(); }));
+    RunLoopUntilIdle();
   }
-}
+
+  void SetUpCrashReporter() { InjectServiceProvider(&crash_reporter_); }
+  void SetUpIntrospect() { InjectServiceProvider(&introspect_); }
+
+  const StubCrashReporter& crash_reporter() const { return crash_reporter_; }
+  const StubIntrospect& introspect() const { return introspect_; }
+
+ private:
+  async::Executor executor_;
+
+  StubCrashReporter crash_reporter_;
+  StubIntrospect introspect_;
+};
 
 bool RetrieveExceptionContext(ExceptionContext* pe) {
   // Create a process that crashes and obtain the relevant handles and exception.
@@ -230,27 +221,19 @@ inline void ValidateReport(const fuchsia::feedback::CrashReport& report,
   ValidateReport(report, program_name, std::nullopt, validate_minidump);
 }
 
-// Tests -------------------------------------------------------------------------------------------
-
-TEST(HandlerTest, NoIntrospectConnection) {
-  auto test_context = CreateTestContext();
-
-  // We add the services we're injecting.
-  test_context->services.AddService(test_context->crash_reporter->GetHandler());
-
-  Handler handler(test_context->services.service_directory());
+TEST_F(HandlerTest, NoIntrospectConnection) {
+  SetUpCrashReporter();
 
   // Create the exception.
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
   bool called = false;
-  handler.Handle(std::move(exception.exception), [&called]() { called = true; });
+  HandleException(std::move(exception.exception), kDefaultTimeout, kDefaultTimeout,
+                  [&called] { called = true; });
 
-  // We wait until the crash reporter has received all exceptions.
-  RunUntil(test_context.get(),
-           [&test_context]() { return test_context->crash_reporter->reports().size() == 1u; });
   ASSERT_TRUE(called);
+  EXPECT_EQ(crash_reporter().reports().size(), 1u);
 
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
@@ -258,23 +241,21 @@ TEST(HandlerTest, NoIntrospectConnection) {
   exception.job.kill();
 }
 
-TEST(HandlerTest, NoCrashReporterConnection) {
-  // We don't inject a stub service. This will make connecting to the service fail.
-  auto test_context = CreateTestContext();
-
-  Handler handler(test_context->services.service_directory());
+TEST_F(HandlerTest, NoCrashReporterConnection) {
+  SetUpIntrospect();
 
   // Create the exception.
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
   bool called = false;
-  handler.Handle(std::move(exception.exception), [&called]() { called = true; });
+  HandleException(std::move(exception.exception), kDefaultTimeout, kDefaultTimeout,
+                  [&called] { called = true; });
 
-  RunUntil(test_context.get(), [&called]() { return called; });
+  ASSERT_TRUE(called);
 
   // The stub shouldn't be called.
-  ASSERT_EQ(test_context->crash_reporter->reports().size(), 0u);
+  EXPECT_EQ(crash_reporter().reports().size(), 0u);
 
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process
   // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
@@ -282,22 +263,40 @@ TEST(HandlerTest, NoCrashReporterConnection) {
   exception.job.kill();
 }
 
-TEST(HandlerTest, GettingInvalidVMO) {
-  auto test_context = CreateTestContext();
-  test_context->services.AddService(test_context->crash_reporter->GetHandler());
-  test_context->services.AddService(test_context->introspect->GetHandler());
+TEST_F(HandlerTest, CrashReportingTimesOut) {
+  SetUpIntrospect();
 
-  Handler handler(test_context->services.service_directory());
+  // Create the exception.
+  ExceptionContext exception;
+  ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
-  // We create a bogus exception, which will fail to create a valid VMO.
   bool called = false;
-  handler.Handle(zx::exception{}, [&called]() { called = true; });
+  HandleException(std::move(exception.exception), kDefaultTimeout,
+                  /*crash_reporter_timeout=*/zx::sec(0), [&called] { called = true; });
 
-  RunUntil(test_context.get(),
-           [&test_context]() { return test_context->crash_reporter->reports().size() == 1u; });
   ASSERT_TRUE(called);
 
-  auto& report = test_context->crash_reporter->reports().front();
+  // The stub shouldn't be called.
+  EXPECT_EQ(crash_reporter().reports().size(), 0u);
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exception.job.kill();
+}
+
+TEST_F(HandlerTest, GettingInvalidVMO) {
+  SetUpCrashReporter();
+  SetUpIntrospect();
+
+  bool called = false;
+  HandleException(zx::exception{}, zx::duration::infinite(), zx::duration::infinite(),
+                  [&called] { called = true; });
+
+  ASSERT_TRUE(called);
+
+  ASSERT_EQ(crash_reporter().reports().size(), 1u);
+  auto& report = crash_reporter().reports().front();
 
   ValidateReport(report, "crasher", false);
 }

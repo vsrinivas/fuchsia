@@ -24,6 +24,10 @@ executable("exe") {
 ###############################################################################
 source_set("lib") {
   sources = [
+    "component_lookup.cc",
+    "component_lookup.h",
+    "crash_reporter.cc",
+    "crash_reporter.h",
     "handler.cc",
     "handler.h",
     "minidump.cc",
@@ -37,6 +41,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//src/lib/fxl",
     "//third_party/crashpad/minidump",
     "//third_party/crashpad/snapshot",
@@ -48,6 +53,8 @@ source_set("lib") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
   ]
 }

@@ -66,57 +66,59 @@ zx::thread GetThread(const zx::exception& exception) {
 
 }  // namespace
 
-zx::vmo GenerateMinidumpVMO(const zx::exception& exception, std::string* process_name) {
-  zx::process process = GetProcess(exception);
-  if (!process.is_valid())
-    return {};
+::fit::promise<zx::vmo> GenerateMinidumpVMO(const zx::exception& exception) {
+  return ::fit::make_promise([&exception]() -> ::fit::result<zx::vmo> {
+    zx::process process = GetProcess(exception);
+    if (!process.is_valid())
+      return ::fit::error();
 
-  zx::thread thread = GetThread(exception);
-  if (!thread.is_valid())
-    return {};
+    zx::thread thread = GetThread(exception);
+    if (!thread.is_valid())
+      return ::fit::error();
 
-  zx_koid_t thread_koid = fsl::GetKoid(thread.get());
-  if (thread_koid == 0)
-    return {};
+    zx_koid_t thread_koid = fsl::GetKoid(thread.get());
+    if (thread_koid == 0)
+      return ::fit::error();
 
-  // Will unsuspend the process upon exiting the block.
-  crashpad::ScopedTaskSuspend suspend(process);
+    // Will unsuspend the process upon exiting the block.
+    crashpad::ScopedTaskSuspend suspend(process);
 
-  *process_name = fsl::GetObjectName(process.get());
-  zx_exception_report_t report;
-  zx_status_t status =
-      thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr, nullptr);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Process " << process_name
-                            << ": Could not obtain ZX_INFO_THREAD_EXCEPTION_REPORT.";
-    return {};
-  }
+    const std::string process_name = fsl::GetObjectName(process.get());
+    zx_exception_report_t report;
+    zx_status_t status =
+        thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr, nullptr);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Process " << process_name
+                              << ": Could not obtain ZX_INFO_THREAD_EXCEPTION_REPORT.";
+      return ::fit::error();
+    }
 
-  // Create a process snapshot form the process and the exception thread.
-  crashpad::ProcessSnapshotFuchsia process_snapshot;
-  if (!process_snapshot.Initialize(process) ||
-      !process_snapshot.InitializeException(thread_koid, report)) {
-    FX_LOGS(ERROR) << "Process " << *process_name << ": Could not create process snapshot.";
-    return {};
-  }
+    // Create a process snapshot form the process and the exception thread.
+    crashpad::ProcessSnapshotFuchsia process_snapshot;
+    if (!process_snapshot.Initialize(process) ||
+        !process_snapshot.InitializeException(thread_koid, report)) {
+      FX_LOGS(ERROR) << "Process " << process_name << ": Could not create process snapshot.";
+      return ::fit::error();
+    }
 
-  crashpad::MinidumpFileWriter minidump;
-  minidump.InitializeFromSnapshot(&process_snapshot);
+    crashpad::MinidumpFileWriter minidump;
+    minidump.InitializeFromSnapshot(&process_snapshot);
 
-  // Represents an in-memory backed file writer interface.
-  crashpad::StringFile string_file;
-  if (!minidump.WriteEverything(&string_file)) {
-    FX_LOGS(ERROR) << "Process " << *process_name << ": Failed to generate minidump.";
-    return {};
-  }
+    // Represents an in-memory backed file writer interface.
+    crashpad::StringFile string_file;
+    if (!minidump.WriteEverything(&string_file)) {
+      FX_LOGS(ERROR) << "Process " << process_name << ": Failed to generate minidump.";
+      return ::fit::error();
+    }
 
-  zx::vmo minidump_vmo = GenerateVMOFromStringFile(string_file);
-  if (!minidump_vmo.is_valid()) {
-    FX_LOGS(ERROR) << "Process " << *process_name << ": Could not generate vmo from minidump.";
-    return {};
-  }
+    zx::vmo minidump_vmo = GenerateVMOFromStringFile(string_file);
+    if (!minidump_vmo.is_valid()) {
+      FX_LOGS(ERROR) << "Process " << process_name << ": Could not generate vmo from minidump.";
+      return ::fit::error();
+    }
 
-  return minidump_vmo;
+    return ::fit::ok(std::move(minidump_vmo));
+  });
 }
 
 }  // namespace exceptions

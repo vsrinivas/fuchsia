@@ -1,11 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include "src/developer/forensics/exceptions/exception_handler/minidump.h"
+
+#include <lib/async/cpp/executor.h>
+
 #include <gtest/gtest.h>
 #include <third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h>
 
-#include "src/developer/forensics/exceptions/exception_handler/minidump.h"
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
+#include "src/developer/forensics/testing/unit_test_fixture.h"
 
 namespace forensics {
 namespace exceptions {
@@ -13,7 +17,27 @@ namespace {
 
 constexpr char kData[] = "1234567489";
 
-TEST(CrashReportGeneration, EmptyStringFileShouldFail) {
+class MinidumpTest : public UnitTestFixture {
+ public:
+  MinidumpTest() : executor_(dispatcher()) {}
+
+  zx::vmo GenerateMinidump(const zx::exception& exception) {
+    zx::vmo minidump;
+    executor_.schedule_task(
+        GenerateMinidumpVMO(exception).then([&minidump](::fit::result<zx::vmo>& result) {
+          if (result.is_ok()) {
+            minidump = result.take_value();
+          }
+        }));
+    RunLoopUntilIdle();
+    return minidump;
+  }
+
+ private:
+  async::Executor executor_;
+};
+
+TEST_F(MinidumpTest, EmptyStringFileShouldFail) {
   crashpad::StringFile string_file;
   zx::vmo vmo;
 
@@ -22,7 +46,7 @@ TEST(CrashReportGeneration, EmptyStringFileShouldFail) {
   ASSERT_FALSE(vmo.is_valid());
 }
 
-TEST(CrashReportGeneration, GenerateVMOFromStringFile) {
+TEST_F(MinidumpTest, GenerateVMOFromStringFile) {
   crashpad::StringFile string_file;
   zx::vmo vmo;
 
@@ -36,17 +60,15 @@ TEST(CrashReportGeneration, GenerateVMOFromStringFile) {
   EXPECT_LT(sizeof(kData), size);
 }
 
-TEST(CrashReportGeneration, GenerateMinidump) {
+TEST_F(MinidumpTest, GenerateMinidump) {
   ExceptionContext ec;
   if (!SpawnCrasher(&ec)) {
     FAIL() << "Could not initialize exception.";
     return;
   }
 
-  std::string process_name;
-  zx::vmo minidump_vmo = GenerateMinidumpVMO(ec.exception, &process_name);
+  zx::vmo minidump_vmo = GenerateMinidump(ec.exception);
   ASSERT_TRUE(minidump_vmo.is_valid());
-  ASSERT_FALSE(process_name.empty());
 
   uint64_t vmo_size;
   ASSERT_EQ(minidump_vmo.get_size(&vmo_size), ZX_OK);

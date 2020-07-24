@@ -114,6 +114,8 @@ executable("exception_broker_unittest") {
     "//src/developer/forensics/exceptions/exception_handler:lib",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
