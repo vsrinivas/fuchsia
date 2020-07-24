@@ -138,25 +138,4 @@ zbi_result_t ZbiVMO::SplitComplete(ZbiVMO* kernel, ZbiVMO* data) const {
   return ZBI_RESULT_OK;
 }
 
-// C API wrapper.
-zbi_result_t SplitCompleteWrapper(zx_handle_t zbi_vmo, zx_handle_t* kernel_vmo,
-                                  zx_handle_t* data_vmo) {
-  ZbiVMO zbi, kernel, data;
-  auto status = zbi.Init(zx::vmo(zbi_vmo));
-  if (status != ZX_OK) {
-    return ZBI_RESULT_TOO_BIG;
-  }
-  auto result = zbi.SplitComplete(&kernel, &data);
-  if (result == ZBI_RESULT_OK) {
-    *kernel_vmo = kernel.vmo_.release();
-    *data_vmo = data.vmo_.release();
-  }
-  return result;
-}
-
-zbi_result_t zbi_split_complete(zx_handle_t zbi_vmo, zx_handle_t* kernel_vmo,
-                                zx_handle_t* data_vmo) {
-  return SplitCompleteWrapper(zbi_vmo, kernel_vmo, data_vmo);
-}
-
 }  // namespace zbi

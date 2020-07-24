@@ -6,7 +6,6 @@ zx_library("zbi") {
   sdk = "static"
   sdk_headers = [
     "lib/zbi/zbi-cpp.h",
-    "lib/zbi/zbi-split.h",
     "lib/zbi/zbi-zx.h",
     "lib/zbi/zbi.h",
   ]
