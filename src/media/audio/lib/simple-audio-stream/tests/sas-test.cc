@@ -155,68 +155,14 @@ class MockSimpleAudio : public SimpleAudioStream {
   uint32_t us_per_notification_ = 0;
 };
 
-class Bind;
-class Bind : public fake_ddk::Bind {
- public:
-  int total_children() const { return total_children_; }
-
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    if (parent == fake_ddk::kFakeParent) {
-      *out = fake_ddk::kFakeDevice;
-      add_called_ = true;
-    } else if (parent == fake_ddk::kFakeDevice) {
-      *out = kFakeChild;
-      children_++;
-      total_children_++;
-    } else {
-      *out = kUnknownDevice;
-      bad_parent_ = false;
-    }
-    return ZX_OK;
-  }
-
-  zx_status_t DeviceRemove(zx_device_t* device) override {
-    if (device == fake_ddk::kFakeDevice) {
-      remove_called_ = true;
-    } else if (device == kFakeChild) {
-      // Check that all children are removed before the parent is removed.
-      if (!remove_called_) {
-        children_--;
-      }
-    } else {
-      bad_device_ = true;
-    }
-    return ZX_OK;
-  }
-
-  bool IsRemoved() { return remove_called_; }
-
-  bool Ok() {
-    return ((children_ == 0) && add_called_ && remove_called_ && !bad_parent_ && !bad_device_);
-  }
-
- private:
-  zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);
-  zx_device_t* kUnknownDevice = reinterpret_cast<zx_device_t*>(0x5678);
-
-  int total_children_ = 0;
-  int children_ = 0;
-
-  bool bad_parent_ = false;
-  bool bad_device_ = false;
-  bool add_called_ = false;
-  bool remove_called_ = false;
-};
-
 TEST(SimpleAudioTest, DdkLifeCycleTest) {
-  Bind tester;
+  fake_ddk::Bind tester;
   auto server = audio::SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
   ddk::SuspendTxn txn(server->zxdev(), 0, false, DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND);
   server->DdkSuspend(std::move(txn));
-  EXPECT_FALSE(tester.IsRemoved());
-  server->DdkUnbindDeprecated();
+  EXPECT_FALSE(tester.remove_called());
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -240,7 +186,7 @@ TEST(SimpleAudioTest, SetAndGetGain) {
       audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
   ASSERT_OK(gain_state.status());
   ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -283,7 +229,7 @@ TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   int result = -1;
   thrd_join(th, &result);
   ASSERT_EQ(result, 0);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -318,7 +264,7 @@ TEST(SimpleAudioTest, SetAndGetAgc) {
       audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.agc_enabled());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -353,7 +299,7 @@ TEST(SimpleAudioTest, SetAndGetMute) {
       audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.muted());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -386,7 +332,7 @@ TEST(SimpleAudioTest, SetMuteWhenDisabled) {
       audio_fidl::StreamConfig::Call::WatchGainState(zx::unowned_channel(ch->channel));
   ASSERT_OK(gain_state1.status());
   ASSERT_FALSE(gain_state1->gain_state.has_muted());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -415,7 +361,7 @@ TEST(SimpleAudioTest, Enumerate1) {
   ASSERT_EQ(2, formats.bytes_per_sample[0]);
   ASSERT_EQ(1, formats.valid_bits_per_sample.count());
   ASSERT_EQ(16, formats.valid_bits_per_sample[0]);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -496,7 +442,7 @@ TEST(SimpleAudioTest, Enumerate2) {
   ASSERT_EQ(4, formats2.bytes_per_sample[0]);
   ASSERT_EQ(1, formats2.valid_bits_per_sample.count());
   ASSERT_EQ(32, formats2.valid_bits_per_sample[0]);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -523,7 +469,7 @@ TEST(SimpleAudioTest, CreateRingBuffer1) {
   auto result = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -570,7 +516,7 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   auto result = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
   ASSERT_OK(result.status());
   ASSERT_EQ(result->properties.fifo_depth(), MockSimpleAudio::kTestFifoDepth);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -604,7 +550,7 @@ TEST(SimpleAudioTest, SetBadFormat1) {
 
   auto result2 = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -638,7 +584,7 @@ TEST(SimpleAudioTest, SetBadFormat2) {
 
   auto result2 = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, result2.status());  // With a bad format we get a channel close.
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -661,7 +607,7 @@ TEST(SimpleAudioTest, GetIds) {
   ASSERT_BYTES_EQ(result->properties.manufacturer().data(), "Bike Sheds, Inc.",
                   strlen("Bike Sheds, Inc."));
   ASSERT_EQ(result->properties.clock_domain(), MockSimpleAudio::kTestClockDomain);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -695,7 +641,7 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_OK(state2.status());
   ASSERT_FALSE(state1->plug_state.plugged());
   ASSERT_FALSE(state2->plug_state.plugged());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -753,7 +699,7 @@ TEST(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   result = -1;
   thrd_join(th2, &result);
   ASSERT_EQ(result, 0);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -793,7 +739,7 @@ TEST(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   ASSERT_TRUE(state1b->plug_state.plugged());
   ASSERT_TRUE(state2b->plug_state.plugged());
   ASSERT_TRUE(state3b->plug_state.plugged());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -816,7 +762,7 @@ TEST(SimpleAudioTest, MultipleChannelsGainState) {
   ASSERT_OK(state2.status());
   ASSERT_EQ(0.f, state1->gain_state.gain_db());
   ASSERT_EQ(0.f, state2->gain_state.gain_db());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -876,7 +822,7 @@ TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   int result = -1;
   thrd_join(th, &result);
   ASSERT_EQ(result, 0);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -916,7 +862,7 @@ TEST(SimpleAudioTest, RingBufferTests) {
 
   auto stop = audio_fidl::RingBuffer::Call::Stop(zx::unowned_channel(local));
   ASSERT_OK(stop.status());
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -967,7 +913,7 @@ TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   int result = -1;
   thrd_join(th, &result);
   ASSERT_EQ(result, 0);
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -982,7 +928,7 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocol) {
   ASSERT_EQ(ch.status(), ZX_OK);
 
   ch->channel.reset();
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -1009,7 +955,7 @@ TEST(SimpleAudioTest, ClientCloseRingBufferProtocol) {
 
   local.reset();
 
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -1036,7 +982,7 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
 
   client.mutable_channel()->reset();
 
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
@@ -1088,7 +1034,7 @@ TEST(SimpleAudioTest, NonPriviledged) {
   auto stop3 = ringbuffer3.Stop();
   ASSERT_NOT_OK(stop3.status());  // Non-priviledged channel.
 
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   server->DdkRelease();
 }
