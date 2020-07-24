@@ -74,12 +74,14 @@ mod test {
     use {
         super::*,
         ffx_config::{ffx_cmd, ffx_env},
+        std::default::Default,
     };
 
     #[test]
     fn test_config_macros() {
         // Testing these macros outside of the config library.
-        assert_eq!(ffx_cmd!(), ffx_lib_args::DEFAULT_FFX);
+        let ffx: Ffx = Default::default();
+        assert_eq!(ffx, ffx_cmd!());
         let env: Result<(), Error> = ffx_env!();
         assert!(env.is_err());
     }

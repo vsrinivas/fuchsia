@@ -102,8 +102,8 @@ async fn load_config_with_instant(
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_lib_args::DEFAULT_FFX;
     use futures::future::join_all;
+    use std::default::Default;
     use std::time::Duration;
 
     fn env() -> Result<String, Error> {
@@ -111,16 +111,12 @@ mod test {
         Err(anyhow!("test no environment"))
     }
 
-    fn cli() -> Ffx {
-        DEFAULT_FFX
-    }
-
     async fn load(now: Instant, key: &Option<String>, cache: &Cache) {
         let tests = 25;
         let env = env();
         let mut futures = Vec::new();
         for _x in 0..tests {
-            futures.push(load_config_with_instant(key, now, cache, cli(), &env));
+            futures.push(load_config_with_instant(key, now, cache, Default::default(), &env));
         }
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
@@ -205,7 +201,7 @@ mod test {
                 &build_dirs[0],
                 &ENV_VARS,
                 &HEURISTICS,
-                cli(),
+                Default::default(),
             )?)),
         };
         assert!(!is_cache_item_expired(&item, now));

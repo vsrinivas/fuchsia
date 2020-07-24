@@ -12,7 +12,7 @@ macro_rules! ffx_cmd {
     () => {{
         #[cfg(test)]
         {
-            ffx_lib_args::DEFAULT_FFX
+            std::default::Default::default()
         }
         #[cfg(not(test))]
         {

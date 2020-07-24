@@ -28,7 +28,7 @@ template("ffx") {
     forward_variables_from(invoker, "*", [])
     args_deps = [ "core:lib" ]
 
-    # These are needed only for the DEFAULT_FFX
+    # These are needed only for the default FFX
     extra_deps = [
       "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_args",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_sub_command",

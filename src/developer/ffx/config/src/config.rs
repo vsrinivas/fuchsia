@@ -166,23 +166,14 @@ impl<'a> WriteConfig for Config<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_lib_sub_command::Subcommand;
+    use std::default::Default;
 
     fn test_heuristic(key: &str) -> Option<Value> {
         Some(Value::String(key.to_string()))
     }
 
     fn test_cli_params(test: &str) -> Ffx {
-        Ffx {
-            target: None,
-            config: Some(test.to_string()),
-            environment_file: None,
-            subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
-                subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
-                    ffx_daemon_start_args::StartCommand {},
-                ),
-            }),
-        }
+        Ffx { config: Some(test.to_string()), ..Default::default() }
     }
 
     #[test]

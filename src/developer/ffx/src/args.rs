@@ -24,13 +24,17 @@ pub struct Ffx {
     pub subcommand: Subcommand,
 }
 
-pub const DEFAULT_FFX: Ffx = Ffx {
-    target: None,
-    config: None,
-    environment_file: None,
-    subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
-        subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
-            ffx_daemon_start_args::StartCommand {},
-        ),
-    }),
-};
+impl Default for Ffx {
+    fn default() -> Self {
+        Self {
+            target: None,
+            config: None,
+            environment_file: None,
+            subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
+                subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
+                    ffx_daemon_start_args::StartCommand {},
+                ),
+            }),
+        }
+    }
+}
