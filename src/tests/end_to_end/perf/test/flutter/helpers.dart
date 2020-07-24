@@ -100,21 +100,40 @@ class FlutterTestHelper {
           'URL "fuchsia-pkg://fuchsia.com/$appName#meta/$appName.cmx".');
     }
 
+    final pid = startComponentEvent.pid;
+
     // This is expensive if there are events from other flutter apps before
     // the one being measured, but this doesn't happen in the current use case.
     final vsyncCallbackEvent = filterEventsTyped<DurationEvent>(
       getAllEvents(model),
       category: 'flutter',
       name: 'vsync callback',
-    ).firstWhere(
-        (event) =>
-            model.processes
-                .firstWhere((Process process) => process.pid == event.pid)
-                .threads
-                .firstWhere((Thread thread) => thread.tid == event.tid)
-                .name ==
-            '$appName.cmx.ui',
-        orElse: () => null);
+    ).firstWhere((event) {
+      if (event.pid != pid) {
+        return false;
+      }
+      final threadName = model.processes
+          .firstWhere((Process process) => process.pid == event.pid)
+          .threads
+          .firstWhere((Thread thread) => thread.tid == event.tid)
+          .name;
+
+      // TODO: Sometimes this thread doesn't get a name, so we also have to
+      // accept threads without names for now. It is unclear whether this is a
+      // tracing issue (related to fxb/32554?) or a flutter engine issue.
+      // The trace for button_flutter seems to consistently have names for the
+      // .platform and .raster threads but not .io or .ui (.ui being the problem
+      // here). However, the .io and .ui threads are always(?) present in the
+      // clockface-flutter and scroll-flutter benchmarks. In clockface-flutter,
+      // meanwhile, the .raster thread is occasionally unnamed (fxb/56644).
+      if (threadName.startsWith('pthread_t:')) {
+        Logger('FlutterStartupTimeMetricsProcessor').warning(
+            'Assuming thread $threadName is supposed to be $appName.cmx.ui');
+        return true;
+      }
+
+      return threadName == '$appName.cmx.ui';
+    }, orElse: () => null);
 
     if (vsyncCallbackEvent == null) {
       throw ArgumentError(

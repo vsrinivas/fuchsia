@@ -32,11 +32,19 @@ class Input {
   /// Coordinates must be in the range of [0, 1000] and are scaled to the screen
   /// size on the device, and they are rotated to compensate for the clockwise
   /// [screenRotation].
-  Future<bool> tap(Point<int> coord, {Rotation screenRotation}) async {
+  ///
+  /// [tap_event_count]: Number of tap events to send ([duration] is divided
+  /// over the tap events). Defaults to 1.
+  /// [duration]: Duration of the event(s) in milliseconds. Defaults to 0.
+  /// These defaults are set in the input facade.
+  Future<bool> tap(Point<int> coord,
+      {Rotation screenRotation, int tapEventCount, int duration}) async {
     final tcoord = _rotate(coord, screenRotation ?? _screenRotation);
     final result = await _sl4f.request('input_facade.Tap', {
       'x': tcoord.x,
       'y': tcoord.y,
+      if (tapEventCount != null) 'tap_event_count': tapEventCount,
+      if (duration != null) 'duration': duration,
     });
     return result == 'Success';
   }

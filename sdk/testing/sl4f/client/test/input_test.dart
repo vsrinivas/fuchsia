@@ -61,6 +61,16 @@ void main(List<String> args) {
         'y': 1000,
       })).called(1);
     });
+
+    test('input multiple taps', () async {
+      await input.tap(Point<int>(500, 500), tapEventCount: 10, duration: 100);
+      verify(sl4f.request('input_facade.Tap', {
+        'x': 500,
+        'y': 500,
+        'tap_event_count': 10,
+        'duration': 100,
+      })).called(1);
+    });
   });
 
   test('input rotates with constructor default', () async {

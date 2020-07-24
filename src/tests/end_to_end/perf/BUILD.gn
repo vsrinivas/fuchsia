@@ -44,7 +44,7 @@ foreach(target_name, test_list) {
 }
 
 flutter_test_list = [
-  # TODO(55832): Add more benchmarks.
+  "button_flutter_benchmarks_test",
   "clockface_flutter_benchmarks_test",
 ]
 foreach(target_name, flutter_test_list) {
@@ -152,6 +152,7 @@ group("package_deps") {
     "//third_party/sbase:touch",
 
     # These are used by the flutter benchmarks.
+    "//src/experiences/benchmarks/bin/button_flutter:button_flutter",
     "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
   ]
 }
