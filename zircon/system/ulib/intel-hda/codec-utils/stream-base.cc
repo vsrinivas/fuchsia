@@ -143,7 +143,7 @@ void IntelHDAStreamBase::Deactivate() {
 
     // If we had published a device node, remove it now.
     if (parent_device_ != nullptr) {
-      device_remove_deprecated(stream_device_);
+      device_async_remove(stream_device_);
       parent_device_ = nullptr;
     }
   }
