@@ -32,17 +32,17 @@ pub enum ConfigLevel {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "set", description = "set config settings")]
 pub struct SetCommand {
-    #[argh(option, from_str_fn(parse_level))]
-    /// config level.  Possible values are "user", "build", "global", "default".
-    pub level: ConfigLevel,
-
-    #[argh(option)]
+    #[argh(positional)]
     /// name of the property to set
     pub name: String,
 
-    #[argh(option)]
+    #[argh(positional)]
     /// value to associate with name
     pub value: String,
+
+    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User")]
+    /// config level. Possible values are "user", "build", "global". Defaults to "user".
+    pub level: ConfigLevel,
 
     // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
@@ -55,9 +55,9 @@ pub struct SetCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get", description = "list config for a given level")]
 pub struct GetCommand {
-    #[argh(option)]
+    #[argh(positional)]
     /// name of the config property
-    pub name: String,
+    pub name: Option<String>,
 
     // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
@@ -70,13 +70,13 @@ pub struct GetCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "remove", description = "remove config for a given level")]
 pub struct RemoveCommand {
-    #[argh(option, from_str_fn(parse_level))]
-    /// config level.  Possible values are "user", "build", "global", "default".
-    pub level: ConfigLevel,
-
-    #[argh(option)]
+    #[argh(positional)]
     /// name of the config property
     pub name: String,
+
+    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User")]
+    /// config level. Possible values are "user", "build", "global". Defaults to "user".
+    pub level: ConfigLevel,
 
     // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
@@ -103,13 +103,13 @@ pub enum EnvAccessCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "set", description = "set environment settings")]
 pub struct EnvSetCommand {
-    #[argh(option, from_str_fn(parse_level))]
-    /// config level.  Possible values are "user", "build", "global", "default".
-    pub level: ConfigLevel,
-
     #[argh(option)]
     /// path to the config file for the configruation level provided
     pub file: String,
+
+    #[argh(option, from_str_fn(parse_level), default = "ConfigLevel::User")]
+    /// config level. Possible values are "user", "build", "global". Defaults to "user".
+    pub level: ConfigLevel,
 
     #[argh(option)]
     /// an optional build directory to associate the build config provided - use used for "build"
@@ -121,7 +121,7 @@ pub struct EnvSetCommand {
 #[argh(subcommand, name = "get", description = "list environment for a given level")]
 pub struct EnvGetCommand {
     #[argh(option, from_str_fn(parse_level))]
-    /// config level.  Possible values are "user", "build", "global", "default".
+    /// config level. Possible values are "user", "build", "global".
     pub level: Option<ConfigLevel>,
 }
 
@@ -130,9 +130,8 @@ fn parse_level(value: &str) -> Result<ConfigLevel, String> {
         "user" => Ok(ConfigLevel::User),
         "build" => Ok(ConfigLevel::Build),
         "global" => Ok(ConfigLevel::Global),
-        "default" => Ok(ConfigLevel::Defaults),
         _ => Err(String::from(
-            "Unrecognized value. Possible values are \"user\",\"build\",\"global\",\"default\".",
+            "Unrecognized value. Possible values are \"user\",\"build\",\"global\".",
         )),
     }
 }
@@ -161,7 +160,6 @@ mod tests {
             ("build", Some(ConfigLevel::Build)),
             ("user", Some(ConfigLevel::User)),
             ("global", Some(ConfigLevel::Global)),
-            ("default", Some(ConfigLevel::Defaults)),
         ];
 
         for level_opt in levels.iter() {
@@ -190,7 +188,6 @@ mod tests {
             ("build", ConfigLevel::Build),
             ("user", ConfigLevel::User),
             ("global", ConfigLevel::Global),
-            ("default", ConfigLevel::Defaults),
         ];
 
         for level_opt in levels.iter() {
@@ -217,7 +214,7 @@ mod tests {
                 ConfigCommand::from_args(CMD_NAME, args),
                 Ok(ConfigCommand {
                     sub: SubCommand::Get(GetCommand {
-                        name: expected_key.to_string(),
+                        name: Some(expected_key.to_string()),
                         build_dir: expected_build_dir,
                     })
                 })
@@ -226,8 +223,8 @@ mod tests {
 
         let key = "test-key";
         let build_dir = "/test/";
-        check(&["get", "--name", key], key, None);
-        check(&["get", "--name", key, "--build-dir", build_dir], key, Some(build_dir.to_string()));
+        check(&["get", key], key, None);
+        check(&["get", key, "--build-dir", build_dir], key, Some(build_dir.to_string()));
     }
 
     #[test]
@@ -259,29 +256,12 @@ mod tests {
             ("build", ConfigLevel::Build),
             ("user", ConfigLevel::User),
             ("global", ConfigLevel::Global),
-            ("default", ConfigLevel::Defaults),
         ];
 
         for level_opt in levels.iter() {
+            check(&["set", key, value, "--level", level_opt.0], level_opt.1, key, value, None);
             check(
-                &["set", "--name", key, "--value", value, "--level", level_opt.0],
-                level_opt.1,
-                key,
-                value,
-                None,
-            );
-            check(
-                &[
-                    "set",
-                    "--name",
-                    key,
-                    "--value",
-                    value,
-                    "--level",
-                    level_opt.0,
-                    "--build-dir",
-                    build_dir,
-                ],
+                &["set", key, value, "--level", level_opt.0, "--build-dir", build_dir],
                 level_opt.1,
                 key,
                 value,
@@ -316,13 +296,12 @@ mod tests {
             ("build", ConfigLevel::Build),
             ("user", ConfigLevel::User),
             ("global", ConfigLevel::Global),
-            ("default", ConfigLevel::Defaults),
         ];
 
         for level_opt in levels.iter() {
-            check(&["remove", "--name", key, "--level", level_opt.0], level_opt.1, key, None);
+            check(&["remove", key, "--level", level_opt.0], level_opt.1, key, None);
             check(
-                &["remove", "--name", key, "--level", level_opt.0, "--build-dir", build_dir],
+                &["remove", key, "--level", level_opt.0, "--build-dir", build_dir],
                 level_opt.1,
                 key,
                 Some(build_dir.to_string()),

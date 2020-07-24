@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, WriteConfig},
+    crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
     crate::persistent_config::Persistent,
     anyhow::{anyhow, Error},
     ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
-    std::fs::{File, OpenOptions},
-    std::io::{BufReader, BufWriter},
+    std::{
+        fmt,
+        fs::{File, OpenOptions},
+        io::{BufReader, BufWriter},
+    },
 };
 
 pub struct FileBacked {
@@ -95,6 +98,14 @@ impl ReadConfig for FileBacked {
         self.data.get(key)
     }
 }
+
+impl fmt::Display for FileBacked {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.data)
+    }
+}
+
+impl ReadDisplayConfig for FileBacked {}
 
 impl WriteConfig for FileBacked {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {

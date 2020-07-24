@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
-    ffx_config::{environment::Environment, find_env_file, get, remove, set},
+    ffx_config::{environment::Environment, find_env_file, get, print, remove, set},
     ffx_config_plugin_args::{
         ConfigCommand, ConfigLevel, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand,
         RemoveCommand, SetCommand, SubCommand,
@@ -27,10 +27,15 @@ pub async fn exec_config(config: ConfigCommand) -> Result<(), Error> {
 }
 
 async fn exec_get<W: Write + Sync>(get: &GetCommand, mut writer: W) -> Result<(), Error> {
-    match get!(&get.name).await? {
-        Some(v) => writeln!(writer, "{}: {}", get.name, v)?,
-        None => writeln!(writer, "{}: none", get.name)?,
-    };
+    match get.name.as_ref() {
+        Some(name) => match get!(name).await? {
+            Some(v) => writeln!(writer, "{}: {}", name, v)?,
+            None => writeln!(writer, "{}: none", name)?,
+        },
+        None => {
+            print!(writer, &get.build_dir).await?;
+        }
+    }
     Ok(())
 }
 
@@ -85,6 +90,9 @@ fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<
                 Ok(())
             }
         },
-        None => Err(anyhow!("Missing flags.  Try `ffx config env help`")),
+        None => {
+            writeln!(writer, "{}", env.display(&None))?;
+            Ok(())
+        }
     }
 }

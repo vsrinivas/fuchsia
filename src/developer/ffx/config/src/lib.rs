@@ -28,7 +28,7 @@ mod persistent_config;
 mod priority_config;
 mod runtime_config;
 
-pub use config_macros::{ffx_cmd, ffx_env, get, remove, set};
+pub use config_macros::{ffx_cmd, ffx_env, get, print, remove, set};
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -81,7 +81,6 @@ pub async fn get_config_bool(
     })
 }
 
-// TODO: remove dead code allowance when used (if ever)
 pub async fn set_config(
     level: &ConfigLevel,
     name: &str,
@@ -106,8 +105,6 @@ pub async fn set_config_with_build_dir(
     save_config(&mut *write_guard, build_dir, env)
 }
 
-// TODO: remove dead code allowance when used (if ever)
-#[allow(dead_code)]
 pub async fn remove_config(
     level: &ConfigLevel,
     name: &str,
@@ -179,4 +176,15 @@ pub fn save_config(
         Some(b) => config.save(&env.global, &env.build.as_ref().and_then(|c| c.get(b)), &env.user),
         None => config.save(&env.global, &None, &env.user),
     }
+}
+
+pub async fn print_config<W: Write>(
+    mut writer: W,
+    build_dir: &Option<String>,
+    ffx: Ffx,
+    env: Result<String, Error>,
+) -> Result<(), Error> {
+    let config = load_config(build_dir, ffx, &env).await?;
+    let read_guard = config.read().await;
+    writeln!(writer, "{}", *read_guard).map_err(|e| anyhow!("Error printing config: {}", e))
 }

@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, WriteConfig},
+    crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
     crate::priority_config::Priority,
     anyhow::{anyhow, Error},
     ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
-    std::io::{Read, Write},
+    std::{
+        fmt,
+        io::{Read, Write},
+    },
 };
 
 pub(crate) struct Persistent {
@@ -77,6 +80,14 @@ impl ReadConfig for Persistent {
         self.data.get(key)
     }
 }
+
+impl fmt::Display for Persistent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.data)
+    }
+}
+
+impl ReadDisplayConfig for Persistent {}
 
 impl WriteConfig for Persistent {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {

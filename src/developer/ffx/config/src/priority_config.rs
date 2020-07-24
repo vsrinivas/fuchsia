@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, WriteConfig},
+    crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
     anyhow::{anyhow, Error},
     config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
     serde_json::Value,
+    std::fmt,
 };
 
 pub(crate) struct Priority {
@@ -68,6 +69,41 @@ impl ReadConfig for Priority {
             .find_map(|c| c.get(key).cloned())
     }
 }
+
+impl fmt::Display for Priority {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Persistent configuration saved in files in the current environment.\n")?;
+        let mut iterator = self.iter();
+        while let Some(next) = iterator.next() {
+            if let Some(level) = iterator.curr {
+                match level {
+                    ConfigLevel::User => {
+                        write!(f, "User Configuration")?;
+                    }
+                    ConfigLevel::Build => {
+                        write!(f, "Build Configuration")?;
+                    }
+                    ConfigLevel::Global => {
+                        write!(f, "Global Configuration")?;
+                    }
+                    ConfigLevel::Defaults => {
+                        write!(f, "Default Configuration")?;
+                    }
+                };
+            }
+            if let Some(value) = next {
+                writeln!(f, "")?;
+                writeln!(f, "{}", serde_json::to_string_pretty(&value).unwrap())?;
+            } else {
+                writeln!(f, ": {}", "none")?;
+            }
+            writeln!(f, "")?;
+        }
+        Ok(())
+    }
+}
+
+impl ReadDisplayConfig for Priority {}
 
 impl WriteConfig for Priority {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
@@ -132,6 +168,7 @@ impl WriteConfig for Priority {
 #[cfg(test)]
 mod test {
     use super::*;
+    use regex::Regex;
 
     const ERROR: &'static str = "0";
 
@@ -340,5 +377,26 @@ mod test {
         let test = Priority::new(None, None, None);
         let default_value = test.get("log-enabled");
         assert_eq!(default_value.unwrap(), Value::Bool(false));
+    }
+
+    #[test]
+    fn test_display() -> Result<(), Error> {
+        let test = Priority {
+            user: Some(serde_json::from_str(USER)?),
+            build: Some(serde_json::from_str(BUILD)?),
+            global: Some(serde_json::from_str(GLOBAL)?),
+            defaults: Some(serde_json::from_str(DEFAULTS)?),
+        };
+        let output = format!("{}", test);
+        assert!(output.len() > 0);
+        let user_reg = Regex::new("\"name\": \"User\"").expect("test regex");
+        assert_eq!(1, user_reg.find_iter(&output).count());
+        let build_reg = Regex::new("\"name\": \"Build\"").expect("test regex");
+        assert_eq!(1, build_reg.find_iter(&output).count());
+        let global_reg = Regex::new("\"name\": \"Global\"").expect("test regex");
+        assert_eq!(1, global_reg.find_iter(&output).count());
+        let defaults_reg = Regex::new("\"name\": \"Defaults\"").expect("test regex");
+        assert_eq!(1, defaults_reg.find_iter(&output).count());
+        Ok(())
     }
 }

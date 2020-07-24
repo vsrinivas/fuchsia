@@ -32,6 +32,7 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
     ]

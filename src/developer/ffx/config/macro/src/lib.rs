@@ -75,3 +75,15 @@ macro_rules! set {
         )
     }};
 }
+
+#[macro_export]
+macro_rules! print {
+    ($writer:expr, $build_dir:expr) => {{
+        ffx_config::print_config(
+            $writer,
+            $build_dir,
+            ffx_config::ffx_cmd!(),
+            ffx_config::ffx_env!(),
+        )
+    }};
+}

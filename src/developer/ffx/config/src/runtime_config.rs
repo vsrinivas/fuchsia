@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::api::ReadConfig, ffx_lib_args::Ffx, serde_json::Value, std::collections::HashMap};
+use {
+    crate::api::{ReadConfig, ReadDisplayConfig},
+    ffx_lib_args::Ffx,
+    serde_json::Value,
+    std::{collections::HashMap, fmt},
+};
 
 pub(crate) struct Runtime {
     pub runtime_config: HashMap<String, String>,
@@ -29,6 +34,22 @@ impl ReadConfig for Runtime {
         self.runtime_config.get(key).map(|s| Value::String(s.to_string()))
     }
 }
+
+impl fmt::Display for Runtime {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Configuration set via the 'ffx --config' parameter.\n")?;
+        if self.runtime_config.len() == 0 {
+            writeln!(f, "none")?;
+        } else {
+            self.runtime_config
+                .iter()
+                .try_for_each(|(key, value)| writeln!(f, "\"{}\" = \"{}\"", key, value))?;
+        }
+        writeln!(f, "")
+    }
+}
+
+impl ReadDisplayConfig for Runtime {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // tests
