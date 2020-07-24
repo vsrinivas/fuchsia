@@ -46,6 +46,7 @@ foreach(target_name, test_list) {
 flutter_test_list = [
   "button_flutter_benchmarks_test",
   "clockface_flutter_benchmarks_test",
+  "scroll_flutter_benchmarks_test",
 ]
 foreach(target_name, flutter_test_list) {
   dart_test(target_name) {
@@ -53,6 +54,7 @@ foreach(target_name, flutter_test_list) {
 
     deps = [
       "//sdk/testing/sl4f/client",
+      "//sdk/testing/sl4f/flutter_driver_sl4f",
       "//third_party/dart-pkg/pub/test",
     ]
 
@@ -154,6 +156,7 @@ group("package_deps") {
     # These are used by the flutter benchmarks.
     "//src/experiences/benchmarks/bin/button_flutter:button_flutter",
     "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
+    "//src/experiences/benchmarks/bin/scroll_flutter:scroll-flutter",
   ]
 }
 
@@ -221,6 +224,7 @@ dart_test("flutter_startup_time_metric_test") {
 
   deps = [
     "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//third_party/dart-pkg/pub/test",
   ]
 }
