@@ -11,6 +11,7 @@ base_package_labels -= [
 ]
 
 base_package_labels += [
+  "//garnet/bin/http",
   "//garnet/packages/config:shortcut",
   "//src/chromium:web_engine",
   "//src/dart:dart_jit",
