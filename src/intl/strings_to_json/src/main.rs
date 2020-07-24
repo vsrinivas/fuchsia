@@ -49,6 +49,11 @@ struct Args {
     output: PathBuf,
     #[structopt(long = "verbose", help = "Verbose output, for debugging")]
     verbose: bool,
+    #[structopt(
+        long = "replace-missing-with-warning",
+        help = "Replaces a missing message 'foo' with 'UNTRANSLATED(foo)' instead of failing"
+    )]
+    replace_missing_with_warning: bool,
 }
 
 // All the input and output files needed for the JSON conversion.
@@ -106,6 +111,7 @@ fn run(args: Args) -> Result<(), Error> {
         &source_dictionary,
         &args.target_locale,
         &target_dictionary,
+        args.replace_missing_with_warning,
     )?;
 
     // And at the very end, victoriously write the file out.
@@ -169,6 +175,7 @@ mod tests {
             target_strings_file: fr.path().to_path_buf(),
             output: fr_json.path().to_path_buf(),
             verbose: false,
+            replace_missing_with_warning: false,
         };
         run(args)?;
 
@@ -252,6 +259,7 @@ mod tests {
                 target_strings_file: fr.path().to_path_buf(),
                 output: fr_json.path().to_path_buf(),
                 verbose: false,
+                replace_missing_with_warning: false,
             };
             if let Ok(_) = run(args) {
                 return Err(anyhow::anyhow!("unexpected OK in test: {}", &test.name));

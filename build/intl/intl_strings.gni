@@ -135,6 +135,7 @@ template("intl_strings") {
       outputs = [ output_file_name ]
 
       args = [
+        "--replace-missing-with-warning",
         "--source-locale",
         source_locale,
         "--source-strings-file",

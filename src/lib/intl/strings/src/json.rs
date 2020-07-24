@@ -42,19 +42,24 @@ pub fn model_from_dictionaries(
     source_dictionary: &parser::Dictionary,
     target_locale_id: &str,
     target_dictionary: &parser::Dictionary,
+    replace_with_warning: bool,
 ) -> Result<Model> {
     let mut messages: Messages = BTreeMap::new();
     for (name, message) in source_dictionary.iter() {
+        let message_id = message_ids::gen_id(name, message);
         match target_dictionary.get(name) {
             None => {
-                return Err(anyhow::anyhow!(
-                    "not found: translation for\n\tname: '{}'\n\tmessage: '{}'",
-                    name,
-                    message
-                ));
+                if replace_with_warning {
+                    messages.insert(message_id, format!("UNTRANSLATED({})", &message));
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "not found: translation for\n\tname: '{}'\n\tmessage: '{}'",
+                        name,
+                        message
+                    ));
+                }
             }
             Some(translated) => {
-                let message_id = message_ids::gen_id(name, message);
                 messages.insert(message_id, translated.to_string());
             }
         }
@@ -74,6 +79,8 @@ mod tests {
     fn build_from_dictionary() -> Result<()> {
         struct TestCase {
             name: &'static str,
+            // If set, a missing message is substituted.
+            substitute: bool,
             source: parser::Dictionary,
             target: parser::Dictionary,
             expected_num_messages: usize,
@@ -82,6 +89,7 @@ mod tests {
         let tests = vec![
             TestCase {
                 name: "basic pseudo-French",
+                substitute: false,
                 source: parser::Dictionary::from_init(&vec![("string_name", "text_string")]),
                 target: parser::Dictionary::from_init(&vec![
                     // Behold my French-language-foo!
@@ -94,6 +102,7 @@ mod tests {
             },
             TestCase {
                 name: "known message ID",
+                substitute: false,
                 source: parser::Dictionary::from_init(&vec![("string_name", "text")]),
                 target: parser::Dictionary::from_init(&vec![("string_name", "le text")]),
                 expected_num_messages: 1,
@@ -105,6 +114,7 @@ mod tests {
             },
             TestCase {
                 name: "several messages",
+                substitute: false,
                 source: parser::Dictionary::from_init(&vec![
                     ("string_1", "text"),
                     ("string_2", "more text"),
@@ -123,11 +133,35 @@ mod tests {
                     (11619890714301104023, "le even more text".to_string()),
                 ],
             },
+            TestCase {
+                name: "several messages",
+                substitute: true,
+                source: parser::Dictionary::from_init(&vec![
+                    ("string_1", "text"),
+                    ("string_2", "more text"),
+                    ("string_3", "even more text"),
+                ]),
+                target: parser::Dictionary::from_init(&vec![
+                    ("string_1", "le text"),
+                    ("string_2", "le more text"),
+                ]),
+                expected_num_messages: 3,
+                expected: vec![
+                    (2935634291568311942, "le text".to_string()),
+                    (14010255246293253599, "le more text".to_string()),
+                    (11619890714301104023, "UNTRANSLATED(even more text)".to_string()),
+                ],
+            },
         ];
         for test in tests {
-            let model =
-                model_from_dictionaries("und-x-src", &test.source, "und-x-dest", &test.target)
-                    .with_context(|| format!("in test '{}', while building model", test.name))?;
+            let model = model_from_dictionaries(
+                "und-x-src",
+                &test.source,
+                "und-x-dest",
+                &test.target,
+                test.substitute,
+            )
+            .with_context(|| format!("in test '{}', while building model", test.name))?;
             let expected = Model::from_parts(
                 "und-x-dest",
                 "und-x-src",
@@ -161,8 +195,13 @@ mod tests {
             ]),
         }];
         for test in tests {
-            let model =
-                model_from_dictionaries("und-x-src", &test.source, "und-x-dest", &test.target);
+            let model = model_from_dictionaries(
+                "und-x-src",
+                &test.source,
+                "und-x-dest",
+                &test.target,
+                false,
+            );
             match model {
                 Ok(_) => return Err(anyhow::anyhow!("unexpectedly passing test: '{}'", test.name)),
                 Err(_) => { /* expected */ }
