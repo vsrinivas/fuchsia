@@ -9,8 +9,6 @@ use {
     },
     diagnostics_schema::InspectSchema,
     fuchsia_inspect_contrib::reader::ArchiveReader,
-    fuchsia_inspect_node_hierarchy::NodeHierarchy,
-    serde_json,
 };
 
 /// Returns the selectors for a component whose url contains the `manifest` string.
@@ -40,7 +38,7 @@ pub async fn get_selectors_for_manifest(
 
 /// Returns the component "moniker" and the hierarchy data for results of
 /// reading from the archive using the given selectors.
-pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarchy)>, Error> {
+pub async fn fetch_data(selectors: &[String]) -> Result<Vec<InspectSchema>, Error> {
     let mut fetcher = ArchiveReader::new().retry_if_empty(false);
     // We support receiving the moniker or a tree selector
     for selector in selectors {
@@ -50,16 +48,11 @@ pub async fn fetch_data(selectors: &[String]) -> Result<Vec<(String, NodeHierarc
             fetcher = fetcher.add_selector(format!("{}:*", selector));
         }
     }
-    let result_value = fetcher.get_raw_json().await.map_err(|e| Error::Fetch(e))?;
-    let results: Vec<InspectSchema> =
-        serde_json::from_value(result_value).map_err(|e| Error::ArchiveInvalidJson(e))?;
-
-    let mut data = vec![];
-    for result in results {
-        if let Some(mut hierarchy) = result.payload {
+    let mut results = fetcher.get().await.map_err(|e| Error::Fetch(e))?;
+    for result in results.iter_mut() {
+        if let Some(hierarchy) = &mut result.payload {
             hierarchy.sort();
-            data.push((result.moniker, hierarchy))
         }
     }
-    Ok(data)
+    Ok(results)
 }

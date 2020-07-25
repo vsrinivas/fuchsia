@@ -7,6 +7,8 @@ use {
     lazy_static::lazy_static,
     serde::{self, de::Deserializer, Deserialize, Serialize, Serializer},
     std::{
+        borrow::Borrow,
+        fmt,
         hash::Hash,
         ops::{Deref, DerefMut},
         str::FromStr,
@@ -43,7 +45,7 @@ pub enum LifecycleType {
     DiagnosticsReady,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Metadata {
     Empty,
@@ -58,8 +60,14 @@ impl Default for Metadata {
 }
 
 /// Wraps a time for serialization and deserialization purposes.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Timestamp(u64);
+
+impl fmt::Display for Timestamp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl From<u64> for Timestamp {
     fn from(nanos: u64) -> Timestamp {
@@ -87,7 +95,7 @@ impl DerefMut for Timestamp {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct LifecycleEventMetadata {
     /// Optional vector of errors encountered by platform.
     pub errors: Option<Vec<Error>>,
@@ -102,7 +110,7 @@ pub struct LifecycleEventMetadata {
     pub timestamp: Timestamp,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct InspectMetadata {
     /// Optional vector of errors encountered by platform.
     pub errors: Option<Vec<Error>>,
@@ -114,7 +122,7 @@ pub struct InspectMetadata {
     pub timestamp: Timestamp,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct Schema<Key: AsRef<str> + Hash + Eq + FromStr + Clone> {
     /// Enum specifying that this schema is encoding data.
     #[serde(default)]
@@ -190,6 +198,18 @@ impl Schema<String> {
             payload: inspect_hierarchy,
             metadata: Metadata::Inspect(inspect_metadata),
         }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl Borrow<str> for Error {
+    fn borrow(&self) -> &str {
+        &self.message
     }
 }
 

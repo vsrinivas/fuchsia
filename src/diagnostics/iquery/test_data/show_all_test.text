@@ -1,12 +1,22 @@
 show-all-test/basic_component.cmx:
-  root:
-    iquery = rocks
-    fuchsia.inspect.Health:
-      start_timestamp_nanos = TIMESTAMP
-      status = OK
+  metadata:
+    filename = fuchsia.inspect.Tree
+    component_url = fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx
+    timestamp = TIMESTAMP
+  payload:
+    root:
+      iquery = rocks
+      fuchsia.inspect.Health:
+        start_timestamp_nanos = TIMESTAMP
+        status = OK
 show-all-test2/basic_component.cmx:
-  root:
-    iquery = rocks
-    fuchsia.inspect.Health:
-      start_timestamp_nanos = TIMESTAMP
-      status = OK
+  metadata:
+    filename = fuchsia.inspect.Tree
+    component_url = fuchsia-pkg://fuchsia.com/iquery_tests#meta/basic_component.cmx
+    timestamp = TIMESTAMP
+  payload:
+    root:
+      iquery = rocks
+      fuchsia.inspect.Health:
+        start_timestamp_nanos = TIMESTAMP
+        status = OK

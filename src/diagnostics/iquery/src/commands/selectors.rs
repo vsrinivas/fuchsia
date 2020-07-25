@@ -43,9 +43,11 @@ impl Command for SelectorsCommand {
         let mut result = utils::fetch_data(&selectors)
             .await?
             .into_iter()
-            .flat_map(|(component_selector, hierarchy)| {
-                get_selectors(component_selector, hierarchy)
+            .filter_map(|schema| {
+                let moniker = schema.moniker;
+                schema.payload.map(|hierarchy| get_selectors(moniker, hierarchy))
             })
+            .flat_map(|results| results)
             .collect::<Vec<_>>();
         result.sort();
         Ok(result)

@@ -15,9 +15,6 @@ pub enum Error {
     #[error("Invalid arguments: {}", _0)]
     InvalidArguments(String),
 
-    #[error("The archivist returned invalid JSON: {}", _0)]
-    ArchiveInvalidJson(serde_json::Error),
-
     #[error("Failed formatting the command response: {}", _0)]
     InvalidCommandResponse(serde_json::Error),
 

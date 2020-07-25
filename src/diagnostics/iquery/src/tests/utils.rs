@@ -50,7 +50,7 @@ pub async fn execute_command(command: &[&str]) -> Result<String, Error> {
 
 /// Validates that a command result matches the expected json string
 pub fn assert_result(result: &str, expected: &str) {
-    let clean_result = cleanup_variable_strings(&result);
+    let clean_result = cleanup_variable_strings(result);
     let Changeset { diffs, distance, .. } = Changeset::new(&clean_result, expected.trim(), "\n");
     if distance == 0 {
         return;
@@ -73,7 +73,7 @@ pub fn assert_result(result: &str, expected: &str) {
 
 /// Checks that the result string (cleaned) and the expected string are equal
 pub fn result_equals_expected(result: &str, expected: &str) -> bool {
-    let clean_result = cleanup_variable_strings(&result);
+    let clean_result = cleanup_variable_strings(result);
     clean_result.trim() == expected.trim()
 }
 
@@ -114,12 +114,19 @@ async fn wait_for_out_ready(app: &App) -> Result<(), anyhow::Error> {
 /// Cleans-up instances of:
 /// - `"start_timestamp_nanos": 7762005786231` by `"start_timestamp_nanos": TIMESTAMP`
 /// - instance ids by INSTANCE_ID
-fn cleanup_variable_strings(string: &str) -> String {
-    // Replace start_timestamp_nanos in fuchsia.inspect.Health entries.
-    let re = Regex::new("\"start_timestamp_nanos\": \\d+").unwrap();
-    let string = re.replace_all(&string, "\"start_timestamp_nanos\": \"TIMESTAMP\"").to_string();
-    let re = Regex::new("start_timestamp_nanos = \\d+").unwrap();
-    let string = re.replace_all(&string, "start_timestamp_nanos = TIMESTAMP").to_string();
+fn cleanup_variable_strings(string: impl Into<String>) -> String {
+    // Replace start_timestamp_nanos in fuchsia.inspect.Health entries and
+    // timestamp in metadatas.
+    let mut string: String = string.into();
+    for value in &["timestamp", "start_timestamp_nanos"] {
+        let re = Regex::new(&format!("\"{}\": \\d+", value)).unwrap();
+        let replacement = format!("\"{}\": \"TIMESTAMP\"", value);
+        string = re.replace_all(&string, replacement.as_str()).to_string();
+
+        let re = Regex::new(&format!("{} = \\d+", value)).unwrap();
+        let replacement = format!("{} = TIMESTAMP", value);
+        string = re.replace_all(&string, replacement.as_str()).to_string();
+    }
 
     // Replace instance IDs in paths.
     let re = Regex::new("/\\d+/").unwrap();

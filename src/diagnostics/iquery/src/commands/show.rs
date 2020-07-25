@@ -11,9 +11,9 @@ use {
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
-    fuchsia_inspect_node_hierarchy::NodeHierarchy,
+    diagnostics_schema::InspectSchema,
     serde::Serialize,
-    std::cmp::Ordering,
+    std::{cmp::Ordering, ops::Deref},
 };
 
 /// Prints the inspect hierarchies that match the given selectors.
@@ -33,23 +33,33 @@ pub struct ShowCommand {
 }
 
 #[derive(Derivative, Serialize, PartialEq)]
-#[derivative(Ord, Eq)]
-pub struct ShowCommandResultItem {
-    pub moniker: String,
-    #[derivative(Ord = "ignore")]
-    pub payload: NodeHierarchy,
+#[derivative(Eq)]
+pub struct ShowCommandResultItem(InspectSchema);
+
+impl Deref for ShowCommandResultItem {
+    type Target = InspectSchema;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl PartialOrd for ShowCommandResultItem {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.moniker.cmp(&other.moniker))
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ShowCommandResultItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.moniker.cmp(&other.moniker)
     }
 }
 
 impl ToText for Vec<ShowCommandResultItem> {
     fn to_text(self) -> String {
         self.into_iter()
-            .map(|item| text_formatter::format(&item.moniker, item.payload))
+            .map(|item| text_formatter::format_schema(item.0))
             .collect::<Vec<_>>()
             .join("\n")
     }
@@ -64,7 +74,7 @@ impl Command for ShowCommand {
         let mut results = utils::fetch_data(&selectors)
             .await?
             .into_iter()
-            .map(|(moniker, payload)| ShowCommandResultItem { moniker, payload })
+            .map(|schema| ShowCommandResultItem(schema))
             .collect::<Vec<_>>();
         results.sort();
 

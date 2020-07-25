@@ -250,7 +250,7 @@ async fn empty_result_on_null_payload() {
     let result =
         utils::execute_command(&["show", "show-test-empty/basic_component.cmx:root/nothing:here"])
             .await;
-    assert_matches!(result, Ok(res) if res == "");
+    assert_matches!(result, Ok(res) if res == "" || res.contains("payload: null"));
     utils::wait_for_terminated(app).await;
 }
 
