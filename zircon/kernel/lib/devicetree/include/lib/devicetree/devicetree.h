@@ -17,8 +17,6 @@
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_double_list.h>
 
-#include "internal.h"
-
 // This library provides abstractions and utilities for dealing with
 // 'devicetree's in their flattened, binary form (.dtb). Although not used in
 // Fuchsia-compliant bootloaders (which use the ZBI protocol), dealing with
@@ -29,7 +27,7 @@
 
 namespace devicetree {
 
-using internal::ByteView;
+using ByteView = std::basic_string_view<uint8_t>;
 
 // Represents the node name of a devicetree. This has the same API as
 // std::string_view and is meant to be used the same way. It requires its own
@@ -80,10 +78,7 @@ class PropertyValue {
     return {reinterpret_cast<const char*>(bytes_.data()), bytes_.size() - 1};
   }
 
-  uint32_t AsUint32() const {
-    ZX_ASSERT(bytes_.size() == sizeof(uint32_t));
-    return internal::ReadBigEndianUint32(bytes_).value;
-  }
+  uint32_t AsUint32() const;
 
   uint64_t AsUint64() const;
 
@@ -203,31 +198,24 @@ class Devicetree {
   // logic into a non-template function and use a function pointer callback,
   // with this templated wrapper calling that with a captureless lambda to call
   // the templated walker.
-  template <typename WalkCallback>
-  void Walk(WalkCallback& walker) {
-    static_assert(std::is_invocable_r_v<bool, WalkCallback, const NodePath&, Properties>, "wrong ");
-
-    // |path| will point to stack-owned Nodes as we recurse.
-    NodePath path;
-    ByteView unprocessed = struct_block_;
-    while (!unprocessed.empty()) {
-      auto [token, tail] = internal::ReadBigEndianUint32(unprocessed);
-      unprocessed = tail;
-      switch (token) {
-        case internal::FDT_NOP:
-          break;
-        case internal::FDT_BEGIN_NODE:
-          unprocessed = WalkSubtree(unprocessed, &path, walker, true);
-          break;
-        case internal::FDT_END:
-          return;
-        default:
-          ZX_PANIC("unknown devicetree token: %#x\n", token);
-      }
+  template <typename F>
+  void Walk(F&& walker) {
+    static_assert(std::is_invocable_r_v<bool, F, const NodePath&, Properties>,
+                  "wrong callback signature");
+    if constexpr (std::is_rvalue_reference_v<F>) {
+      // An rvalue reference argument has to be moved into a local copy to be
+      // passed by reference.
+      F moved_walker = std::move(walker);
+      WalkTree(moved_walker);
+    } else {
+      // An lvalue reference or an argument passed by value is just forwarded.
+      WalkTree(walker);
     }
   }
 
  private:
+  using WalkerCallback = bool(void*, const NodePath&, Properties);
+
   Devicetree(ByteView fdt, ByteView struct_block, std::string_view string_block)
       : fdt_(fdt), struct_block_(struct_block), string_block_(string_block) {}
 
@@ -235,75 +223,19 @@ class Devicetree {
   // iterator in that span pointing to the 4-byte aligned end of that block.
   ByteView EndOfPropertyBlock(ByteView bytes);
 
-  // Recursively walks a subtree and returns its unprocessed tail.
-  // It should be invariant that the subtree begins just after the
-  // internal::FDT_BEGIN_NODE token.
-  template <typename WalkCallback>
-  ByteView WalkSubtree(ByteView subtree, NodePath* path, WalkCallback& walker, bool visit) {
-    ByteView unprocessed = subtree;
-
-    // The node name follows the begin token.
-    size_t name_end = unprocessed.find_first_of('\0');
-    ZX_ASSERT_MSG(name_end != ByteView::npos, "unterminated node name");
-    std::string_view name{reinterpret_cast<const char*>(unprocessed.data()), name_end};
-    Node node{name};
-    path->push_back(&node);
-    unprocessed.remove_prefix(internal::StructBlockAlign(name_end + 1));
-
-    // Seek past all no-op tokens and properties.
-    ByteView props_block = unprocessed;
-    while (!unprocessed.empty()) {
-      auto [token, tail] = internal::ReadBigEndianUint32(unprocessed);
-      switch (token) {
-        case internal::FDT_NOP:
-          unprocessed = tail;
-          continue;
-        case internal::FDT_PROP:
-          unprocessed = EndOfPropertyBlock(tail);
-          continue;
-      }
-      break;
-    }
-
-    // Recall that it is a simplifying assumption of Properties that it must
-    // be instantiated with a block that is either empty or that which begins
-    // just after a property token.
-    props_block.remove_suffix(unprocessed.size());
-
-    if (visit) {
-      while (!props_block.empty()) {
-        auto [token, tail] = internal::ReadBigEndianUint32(props_block);
-        props_block = tail;
-        switch (token) {
-          case internal::FDT_PROP:
-            break;
-          default:
-            continue;
-        }
-        // Reached only at the end of the property block.
-        break;
-      }
-      Properties props{props_block, string_block_};
-      visit = walker(*path, props);
-    }
-
-    // Walk all subtrees of |node|.
-    while (!unprocessed.empty()) {
-      auto [token, tail] = internal::ReadBigEndianUint32(unprocessed);
-      unprocessed = tail;
-      switch (token) {
-        case internal::FDT_NOP:
-          continue;
-        case internal::FDT_BEGIN_NODE:
-          unprocessed = WalkSubtree(unprocessed, path, walker, visit);
-          continue;
-      }
-      break;
-    }
-
-    path->pop_back();
-    return unprocessed;
+  template <typename Walker>
+  void WalkTree(Walker& walker) {
+    WalkerCallback* callback = [](void* callback_arg, const NodePath& path,
+                                  Properties props) -> bool {
+      return (*static_cast<Walker*>(callback_arg))(path, props);
+    };
+    WalkTree(callback, &walker);
   }
+
+  void WalkTree(WalkerCallback* callback, void* callback_arg);
+
+  ByteView WalkSubtree(ByteView subtree, NodePath* path, WalkerCallback* callback,
+                       void* callback_arg, bool visit);
 
   ByteView fdt_;
   // https://devicetree-specification.readthedocs.io/en/v0.3/flattened-format.html#structure-block

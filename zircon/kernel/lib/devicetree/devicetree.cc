@@ -5,9 +5,23 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/devicetree/devicetree.h>
+#include <lib/zircon-internal/align.h>
+#include <zircon/assert.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <string_view>
 
 namespace devicetree {
 namespace {
+
+constexpr uint32_t kMagic = 0xd00dfeed;
+// The structure block tokens, named as in the spec for clarity.
+constexpr uint32_t FDT_BEGIN_NODE = 0x00000001;
+constexpr uint32_t FDT_END_NODE = 0x00000002;
+constexpr uint32_t FDT_PROP = 0x00000003;
+constexpr uint32_t FDT_NOP = 0x00000004;
+constexpr uint32_t FDT_END = 0x00000009;
 
 // https://devicetree-specification.readthedocs.io/en/v0.3/flattened-format.html#header
 struct struct_fdt_header {
@@ -29,6 +43,23 @@ struct FdtProperty {
   uint32_t nameoff;
 };
 
+// Structure block tokens are 4-byte aligned.
+inline size_t StructBlockAlign(size_t x) { return ZX_ALIGN(x, sizeof(uint32_t)); }
+
+struct ReadBigEndianUint32Result {
+  uint32_t value;
+  ByteView tail;
+};
+
+inline ReadBigEndianUint32Result ReadBigEndianUint32(ByteView bytes) {
+  ZX_ASSERT(bytes.size() >= sizeof(uint32_t));
+  return {
+      (static_cast<uint32_t>(bytes[0]) << 24) | (static_cast<uint32_t>(bytes[1]) << 16) |
+          (static_cast<uint32_t>(bytes[2]) << 8) | static_cast<uint32_t>(bytes[3]),
+      bytes.substr(sizeof(uint32_t)),
+  };
+}
+
 struct PropertyBlockContents {
   // The underlying property value.
   ByteView value;
@@ -39,20 +70,23 @@ struct PropertyBlockContents {
 
 PropertyBlockContents ReadPropertyBlock(ByteView bytes) {
   ZX_ASSERT(bytes.size() >= sizeof(FdtProperty));
-  uint32_t prop_size =
-      internal::ReadBigEndianUint32(bytes.substr(offsetof(FdtProperty, len))).value;
-  auto [name_offset, block_end] =
-      internal::ReadBigEndianUint32(bytes.substr(offsetof(FdtProperty, nameoff)));
+  uint32_t prop_size = ReadBigEndianUint32(bytes.substr(offsetof(FdtProperty, len))).value;
+  auto [name_offset, block_end] = ReadBigEndianUint32(bytes.substr(offsetof(FdtProperty, nameoff)));
   ByteView value = block_end.substr(0, prop_size);
-  return {value, name_offset, block_end.substr(internal::StructBlockAlign(prop_size))};
+  return {value, name_offset, block_end.substr(StructBlockAlign(prop_size))};
 }
 
 }  // namespace
 
+uint32_t PropertyValue::AsUint32() const {
+  ZX_ASSERT(bytes_.size() == sizeof(uint32_t));
+  return ReadBigEndianUint32(bytes_).value;
+}
+
 uint64_t PropertyValue::AsUint64() const {
   ZX_ASSERT(bytes_.size() == sizeof(uint64_t));
-  auto [high, tail] = internal::ReadBigEndianUint32(bytes_);
-  const uint32_t low = internal::ReadBigEndianUint32(tail).value;
+  auto [high, tail] = ReadBigEndianUint32(bytes_);
+  const uint32_t low = ReadBigEndianUint32(tail).value;
   return (static_cast<uint64_t>(high) << 32) | static_cast<uint64_t>(low);
 }
 
@@ -74,12 +108,12 @@ Properties::iterator& Properties::iterator::operator++() {
   // A property block might be followed by no-op tokens; seek past them if so
   // and, space provided, stop just after the next property token.
   while (!position_.empty()) {
-    auto [token, tail] = internal::ReadBigEndianUint32(position_);
+    auto [token, tail] = ReadBigEndianUint32(position_);
     position_ = tail;
     switch (token) {
-      case internal::FDT_NOP:
+      case FDT_NOP:
         continue;
-      case internal::FDT_PROP:
+      case FDT_PROP:
         break;
       default:
         ZX_PANIC("unexpected token in property block: %#x", token);
@@ -90,30 +124,30 @@ Properties::iterator& Properties::iterator::operator++() {
 }
 
 Devicetree::Devicetree(ByteView blob) {
-  ZX_ASSERT(internal::ReadBigEndianUint32(blob).value == internal::kMagic);
+  ZX_ASSERT(ReadBigEndianUint32(blob).value == kMagic);
 
   const uint32_t size =
-      internal::ReadBigEndianUint32(blob.substr(offsetof(struct_fdt_header, totalsize))).value;
+      ReadBigEndianUint32(blob.substr(offsetof(struct_fdt_header, totalsize))).value;
   ZX_ASSERT(size <= blob.size());
   ByteView fdt(blob.data(), size);
 
   const uint32_t struct_block_offset =
-      internal::ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, off_dt_struct))).value;
+      ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, off_dt_struct))).value;
   const uint32_t struct_block_size =
-      internal::ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, size_dt_struct))).value;
+      ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, size_dt_struct))).value;
   ZX_ASSERT(struct_block_offset < fdt.size());
   ZX_ASSERT(fdt.size() - struct_block_offset >= struct_block_size);
 
   const uint8_t* struct_block_base = fdt.data() + struct_block_offset;
   ByteView struct_block(struct_block_base, struct_block_size);
   ZX_ASSERT(struct_block_size > 0);
-  ZX_ASSERT(internal::ReadBigEndianUint32(struct_block.substr(struct_block_size - sizeof(uint32_t)))
-                .value == internal::FDT_END);
+  ZX_ASSERT(ReadBigEndianUint32(struct_block.substr(struct_block_size - sizeof(uint32_t))).value ==
+            FDT_END);
 
   const uint32_t string_block_offset =
-      internal::ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, off_dt_strings))).value;
+      ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, off_dt_strings))).value;
   const uint32_t string_block_size =
-      internal::ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, size_dt_strings))).value;
+      ReadBigEndianUint32(fdt.substr(offsetof(struct_fdt_header, size_dt_strings))).value;
   ZX_ASSERT(string_block_offset <= fdt.size());
   ZX_ASSERT(fdt.size() - struct_block_offset >= struct_block_size);
 
@@ -127,5 +161,101 @@ Devicetree::Devicetree(ByteView blob) {
 }
 
 ByteView Devicetree::EndOfPropertyBlock(ByteView prop) { return ReadPropertyBlock(prop).tail; }
+
+void Devicetree::WalkTree(WalkerCallback* callback, void* arg) {
+  // |path| will point to stack-owned Nodes as we recurse.
+  NodePath path;
+  ByteView unprocessed = struct_block_;
+  while (!unprocessed.empty()) {
+    auto [token, tail] = ReadBigEndianUint32(unprocessed);
+    unprocessed = tail;
+    switch (token) {
+      case FDT_NOP:
+        break;
+      case FDT_BEGIN_NODE:
+        unprocessed = WalkSubtree(unprocessed, &path, callback, arg, true);
+        break;
+      case FDT_END:
+        return;
+      default:
+        ZX_PANIC("unknown devicetree token: %#x\n", token);
+    }
+  }
+}
+
+// Recursively walks a subtree and returns its unprocessed tail.
+// It should be invariant that the subtree begins just after the
+// FDT_BEGIN_NODE token.
+ByteView Devicetree::WalkSubtree(ByteView subtree, NodePath* path, WalkerCallback* callback,
+                                 void* callback_arg, bool visit) {
+  ByteView unprocessed = subtree;
+
+  // The node name follows the begin token.
+  size_t name_end = unprocessed.find_first_of('\0');
+  ZX_ASSERT_MSG(name_end != ByteView::npos, "unterminated node name");
+  std::string_view name{reinterpret_cast<const char*>(unprocessed.data()), name_end};
+  Node node{name};
+  path->push_back(&node);
+  unprocessed.remove_prefix(StructBlockAlign(name_end + 1));
+
+  // Seek past all no-op tokens and properties.
+  ByteView props_block = unprocessed;
+  while (!unprocessed.empty()) {
+    auto [token, tail] = ReadBigEndianUint32(unprocessed);
+    switch (token) {
+      case FDT_NOP:
+        unprocessed = tail;
+        continue;
+      case FDT_PROP:
+        unprocessed = EndOfPropertyBlock(tail);
+        continue;
+      case FDT_END_NODE:
+        break;
+    }
+    break;
+  }
+
+  // Recall that it is a simplifying assumption of Properties that it must
+  // be instantiated with a block that is either empty or that which begins
+  // just after a property token.
+  props_block.remove_suffix(unprocessed.size());
+
+  if (visit) {
+    while (!props_block.empty()) {
+      auto [token, tail] = ReadBigEndianUint32(props_block);
+      props_block = tail;
+      switch (token) {
+        case FDT_PROP:
+          break;
+        case FDT_END_NODE:
+        default:
+          continue;
+      }
+      // Reached only at the end of the property block.
+      break;
+    }
+    Properties props{props_block, string_block_};
+    visit = callback(callback_arg, *path, props);
+  }
+
+  // Walk all subtrees of |node|.
+  while (!unprocessed.empty()) {
+    auto [token, tail] = ReadBigEndianUint32(unprocessed);
+    unprocessed = tail;
+    switch (token) {
+      case FDT_NOP:
+        continue;
+      case FDT_BEGIN_NODE:
+        unprocessed = WalkSubtree(unprocessed, path, callback, callback_arg, visit);
+        continue;
+      case FDT_END_NODE:
+        break;
+    }
+    break;
+  }
+
+  path->pop_back();
+  return unprocessed;
+}
 
 }  // namespace devicetree
