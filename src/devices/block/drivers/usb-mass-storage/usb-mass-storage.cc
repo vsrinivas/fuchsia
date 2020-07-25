@@ -140,17 +140,19 @@ void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
     return;
   }
   auto interface = interfaces->begin();
+  if (interface == interfaces->end()) {
+    txn.Reply(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
   const usb_interface_descriptor_t* interface_descriptor = interface->descriptor();
+  // Since interface != interface->end(), interface_descriptor is guaranteed not null.
+  ZX_DEBUG_ASSERT(interface_descriptor);
   uint8_t interface_number = interface_descriptor->bInterfaceNumber;
   uint8_t bulk_in_addr = 0;
   uint8_t bulk_out_addr = 0;
   size_t bulk_in_max_packet = 0;
   size_t bulk_out_max_packet = 0;
-
-  if (interface == interfaces->end()) {
-    txn.Reply(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
 
   if (interface_descriptor->bNumEndpoints < 2) {
     DEBUG_PRINT(
