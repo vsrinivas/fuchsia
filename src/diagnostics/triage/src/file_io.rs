@@ -11,9 +11,9 @@ use {
 // Third field is whether the file is required.
 const BUGREPORT_FILES: [(&str, Source, bool); 4] = [
     ("inspect.json", Source::Inspect, true),
-    ("klog.txt", Source::Klog, false),
-    ("syslog.txt", Source::Syslog, false),
-    ("bootlog.txt", Source::Bootlog, false),
+    ("log.kernel.txt", Source::Klog, false),
+    ("log.system.txt", Source::Syslog, false),
+    ("log.system.previous_boot.txt", Source::Bootlog, false),
 ];
 
 pub fn diagnostics_from_directory(directory: &Path) -> Result<Vec<DiagnosticData>, Error> {
