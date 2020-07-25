@@ -103,8 +103,8 @@ struct TestContext {
 TestContext CreateTestContext() {
   TestContext context;
 
-  context.debug_agent = std::make_unique<DebugAgent>(
-      std::make_unique<MockSystemInterface>(MockJobHandle(1)), nullptr);
+  context.debug_agent =
+      std::make_unique<DebugAgent>(std::make_unique<MockSystemInterface>(MockJobHandle(1)));
 
   // Create the connection to the debug agent.
   context.backend = std::make_unique<TestStreamBackend>();

@@ -18,4 +18,10 @@ std::unique_ptr<BinaryLauncher> MockSystemInterface::GetLauncher() const {
   return nullptr;
 }
 
+std::unique_ptr<ComponentLauncher> MockSystemInterface::GetComponentLauncher() const {
+  // Unimplemented in this mock.
+  FX_NOTREACHED();
+  return nullptr;
+}
+
 }  // namespace debug_agent

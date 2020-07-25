@@ -37,8 +37,7 @@ class DebugAgent : public RemoteAPI,
   // The stream must outlive this class. It will be used to send data to the
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
-  explicit DebugAgent(std::unique_ptr<SystemInterface> system_interface,
-                      std::shared_ptr<sys::ServiceDirectory> services);
+  explicit DebugAgent(std::unique_ptr<SystemInterface> system_interface);
   ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
@@ -154,8 +153,6 @@ class DebugAgent : public RemoteAPI,
   std::unique_ptr<SystemInterface> system_interface_;
 
   debug_ipc::StreamBuffer* stream_ = nullptr;
-
-  std::shared_ptr<sys::ServiceDirectory> services_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;

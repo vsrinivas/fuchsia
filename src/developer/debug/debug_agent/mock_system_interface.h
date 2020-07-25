@@ -20,9 +20,12 @@ class MockSystemInterface final : public SystemInterface {
   MockLimboProvider& mock_limbo_provider() { return limbo_provider_; }
 
   // SystemInterface implementation:
+  uint32_t GetNumCpus() const override { return 2; }
+  uint64_t GetPhysicalMemory() const override { return 1073741824; }  // 1GB
   std::unique_ptr<JobHandle> GetRootJob() const override;
   std::unique_ptr<JobHandle> GetComponentRootJob() const override;
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
+  std::unique_ptr<ComponentLauncher> GetComponentLauncher() const override;
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
 
  private:

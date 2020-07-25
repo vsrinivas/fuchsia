@@ -96,7 +96,7 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   MockSystemInterface* system_interface = owning_system_interface.get();
   DebugAgentStreamBackend stream_backend;
 
-  DebugAgent debug_agent(std::move(owning_system_interface), nullptr);
+  DebugAgent debug_agent(std::move(owning_system_interface));
   debug_agent.Connect(&stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -184,7 +184,7 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
 
 TEST_F(DebugAgentTests, OnProcessStatus) {
   DebugAgentStreamBackend stream_backend;
-  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr);
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()));
   debug_agent.Connect(&stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -249,7 +249,7 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
   MockSystemInterface* system_interface = owning_system_interface.get();
   DebugAgentStreamBackend stream_backend;
 
-  DebugAgent debug_agent(std::move(owning_system_interface), nullptr);
+  DebugAgent debug_agent(std::move(owning_system_interface));
   debug_agent.Connect(&stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -288,7 +288,7 @@ TEST_F(DebugAgentTests, OnAttach) {
   uint32_t transaction_id = 1u;
 
   DebugAgentStreamBackend stream_backend;
-  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()), nullptr);
+  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()));
   debug_agent.Connect(&stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -345,7 +345,7 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
   auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
   MockSystemInterface* system_interface = owning_system_interface.get();
 
-  DebugAgent debug_agent(std::move(owning_system_interface), nullptr);
+  DebugAgent debug_agent(std::move(owning_system_interface));
   debug_agent.Connect(&stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -400,7 +400,7 @@ TEST_F(DebugAgentTests, OnEnterLimbo) {
   auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
   MockSystemInterface* system_interface = owning_system_interface.get();
 
-  DebugAgent debug_agent(std::move(owning_system_interface), nullptr);
+  DebugAgent debug_agent(std::move(owning_system_interface));
   debug_agent.Connect(&stream_backend.stream());
 
   constexpr zx_koid_t kProcKoid1 = 100;
@@ -429,7 +429,7 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
   auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
   MockSystemInterface* system_interface = owning_system_interface.get();
 
-  DebugAgent debug_agent(std::move(owning_system_interface), nullptr);
+  DebugAgent debug_agent(std::move(owning_system_interface));
   debug_agent.Connect(&stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
@@ -489,7 +489,7 @@ TEST_F(DebugAgentTests, Kill) {
   auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
   MockSystemInterface* system_interface = owning_system_interface.get();
 
-  DebugAgent debug_agent(std::move(owning_system_interface), nullptr);
+  DebugAgent debug_agent(std::move(owning_system_interface));
   debug_agent.Connect(&stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 

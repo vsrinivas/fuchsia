@@ -174,8 +174,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     // Second arguments is the amount of threads to create.
     BreakpointStreamBackend backend(loop, 5);
 
-    auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(std::make_unique<ZirconSystemInterface>(), services);
+    DebugAgent agent(std::make_unique<ZirconSystemInterface>());
     RemoteAPI* remote_api = &agent;
 
     agent.Connect(&backend.stream());

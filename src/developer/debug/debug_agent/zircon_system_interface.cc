@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
 
 #include "src/developer/debug/debug_agent/binary_launcher.h"
+#include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
@@ -15,6 +16,10 @@ ZirconSystemInterface::ZirconSystemInterface()
     : root_job_(zircon::GetRootJob()),
       services_(sys::ServiceDirectory::CreateFromNamespace()),
       limbo_provider_(services_) {}
+
+uint32_t ZirconSystemInterface::GetNumCpus() const { return zx_system_get_num_cpus(); }
+
+uint64_t ZirconSystemInterface::GetPhysicalMemory() const { return zx_system_get_physmem(); }
 
 std::unique_ptr<JobHandle> ZirconSystemInterface::GetRootJob() const {
   return std::make_unique<ZirconJobHandle>(root_job_);
@@ -33,6 +38,10 @@ std::unique_ptr<JobHandle> ZirconSystemInterface::GetComponentRootJob() const {
 
 std::unique_ptr<BinaryLauncher> ZirconSystemInterface::GetLauncher() const {
   return std::make_unique<BinaryLauncher>(services_);
+}
+
+std::unique_ptr<ComponentLauncher> ZirconSystemInterface::GetComponentLauncher() const {
+  return std::make_unique<ComponentLauncher>(services_);
 }
 
 }  // namespace debug_agent

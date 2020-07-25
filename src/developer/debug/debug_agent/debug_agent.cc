@@ -64,9 +64,8 @@ std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
 
 }  // namespace
 
-DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface,
-                       std::shared_ptr<sys::ServiceDirectory> services)
-    : system_interface_(std::move(system_interface)), services_(services), weak_factory_(this) {
+DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface)
+    : system_interface_(std::move(system_interface)), weak_factory_(this) {
   // Set a callback to the LimboProvider to let us know when new processes enter the limbo.
   system_interface_->GetLimboProvider().set_on_enter_limbo(
       [agent = GetWeakPtr()](const LimboProvider::Record& record) {
@@ -352,8 +351,8 @@ void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
                            debug_ipc::SysInfoReply* reply) {
   reply->version = std::string(zx_system_get_version_string());
 
-  reply->num_cpus = zx_system_get_num_cpus();
-  reply->memory_mb = zx_system_get_physmem() / kMegabyte;
+  reply->num_cpus = system_interface_->GetNumCpus();
+  reply->memory_mb = system_interface_->GetPhysicalMemory() / kMegabyte;
 
   reply->hw_breakpoint_count = arch::GetHardwareBreakpointCount();
   reply->hw_watchpoint_count = arch::GetHardwareWatchpointCount();
@@ -749,11 +748,11 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   *reply = {};
   reply->inferior_type = debug_ipc::InferiorType::kComponent;
 
-  ComponentLauncher component_launcher(services_);
+  std::unique_ptr<ComponentLauncher> launcher = system_interface_->GetComponentLauncher();
 
   ComponentDescription description;
   ComponentHandles handles;
-  zx_status_t status = component_launcher.Prepare(request.argv, &description, &handles);
+  zx_status_t status = launcher->Prepare(request.argv, &description, &handles);
   if (status != ZX_OK) {
     reply->status = status;
     return;
@@ -796,7 +795,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   reply->component_id = description.component_id;
 
   // Launch the component.
-  auto controller = component_launcher.Launch();
+  auto controller = launcher->Launch();
   if (!controller) {
     FX_LOGS(WARNING) << "Could not launch component " << description.url;
     reply->status = ZX_ERR_BAD_STATE;

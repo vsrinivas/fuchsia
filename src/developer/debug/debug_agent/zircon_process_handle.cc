@@ -94,6 +94,40 @@ std::vector<debug_ipc::Module> ZirconProcessHandle::GetModules(uint64_t dl_debug
   return GetElfModulesForProcess(*this, dl_debug_addr);
 }
 
+fitx::result<zx_status_t, std::vector<debug_ipc::InfoHandleExtended>>
+ZirconProcessHandle::GetHandles() const {
+  // Query the table size.
+  size_t actual = 0;
+  size_t avail = 0;
+  if (zx_status_t status = process_.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, &actual, &avail);
+      status != ZX_OK)
+    return fitx::error(status);
+
+  // We're technically racing with the program, so add some extra buffer in case the process has
+  // opened more handles since the above query.
+  avail += 64;
+
+  std::vector<zx_info_handle_extended_t> handles(avail);
+  if (zx_status_t status =
+          process_.get_info(ZX_INFO_HANDLE_TABLE, handles.data(),
+                            avail * sizeof(zx_info_handle_extended_t), &actual, &avail);
+      status != ZX_OK)
+    return fitx::error(status);
+
+  std::vector<debug_ipc::InfoHandleExtended> result(actual);
+  for (size_t i = 0; i < actual; ++i) {
+    result[i].type = handles[i].type;
+    result[i].handle_value = handles[i].handle_value;
+    result[i].rights = handles[i].rights;
+    result[i].props = handles[i].props;
+    result[i].koid = handles[i].koid;
+    result[i].related_koid = handles[i].related_koid;
+    result[i].peer_owner_koid = handles[i].peer_owner_koid;
+  }
+
+  return fitx::success(std::move(result));
+}
+
 zx_status_t ZirconProcessHandle::ReadMemory(uintptr_t address, void* buffer, size_t len,
                                             size_t* actual) const {
   return process_.read_memory(address, buffer, len, actual);

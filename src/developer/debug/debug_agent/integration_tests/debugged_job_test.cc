@@ -214,8 +214,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
 
   JobStreamBackend backend(message_loop);
 
-  auto services = sys::ServiceDirectory::CreateFromNamespace();
-  DebugAgent agent(std::make_unique<ZirconSystemInterface>(), services);
+  DebugAgent agent(std::make_unique<ZirconSystemInterface>());
   RemoteAPI* remote_api = &agent;
 
   agent.Connect(&backend.stream());
@@ -410,8 +409,7 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
 
   JobStreamBackend backend(loop_wrapper.loop());
 
-  auto services = sys::ServiceDirectory::CreateFromNamespace();
-  DebugAgent agent(std::make_unique<ZirconSystemInterface>(), std::move(services));
+  DebugAgent agent(std::make_unique<ZirconSystemInterface>());
   RemoteAPI* remote_api = &agent;
 
   agent.Connect(&backend.stream());
