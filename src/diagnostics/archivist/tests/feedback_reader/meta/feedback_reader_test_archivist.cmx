@@ -12,6 +12,7 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.logging.LogSink",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.internal.ComponentEventProvider",
             "fuchsia.sys.internal.LogConnector"

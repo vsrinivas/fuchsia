@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 use {
     anyhow::{bail, Error},
-    difference::assert_diff,
     fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
@@ -12,8 +11,9 @@ use {
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     lazy_static::lazy_static,
+    pretty_assertions::assert_eq,
     std::{
-        fs::{self, create_dir, create_dir_all, write, File},
+        fs::{self, create_dir, create_dir_all, remove_dir_all, write, File},
         path::{Path, PathBuf},
     },
 };
@@ -33,7 +33,7 @@ const NONOVERLAPPING_CLIENT_AND_STATIC_SELECTORS_JSON: &[u8] =
 const STATIC_FEEDBACK_SELECTORS: &[u8] = include_bytes!("../configs/static_selectors.cfg");
 // Number of seconds to wait before timing out polling the reader for pumped results.
 
-static READ_TIMEOUT_SECONDS: i64 = 10;
+static READ_TIMEOUT_SECONDS: i64 = 60;
 
 static MONIKER_KEY: &str = "moniker";
 static METADATA_KEY: &str = "metadata";
@@ -44,6 +44,7 @@ lazy_static! {
     static ref CONFIG_PATH: PathBuf = Path::new("/tmp/config/data").to_path_buf();
     static ref ARCHIVIST_CONFIGURATION_PATH: PathBuf = CONFIG_PATH.join("archivist_config.json");
     static ref STATIC_SELECTORS_PATH: PathBuf = CONFIG_PATH.join("feedback/static_selectors.cfg");
+    static ref DISABLE_FILTER_PATH: PathBuf = CONFIG_PATH.join("feedback/DISABLE_FILTERING.txt");
     static ref ALL_GOLDEN_JSON_PATH: PathBuf = CONFIG_PATH.join("all_golden.json");
     static ref EMPTY_RESULTS_GOLDEN_JSON_PATH: PathBuf =
         CONFIG_PATH.join("client_selectors_dont_overlap_with_static_selectors.json");
@@ -53,13 +54,28 @@ lazy_static! {
     static ref TEST_DATA_PATH: &'static str = "/tmp/test_data";
 }
 
-async fn setup_environment() -> Result<(App, App), Error> {
+struct TestOptions {
+    // If true, inject the special file to disable filtering.
+    disable_filtering: bool,
+    // If true, omit selectors from the test so the pipeline is unconfigured.
+    omit_selectors: bool,
+}
+
+async fn setup_environment(test_options: TestOptions) -> Result<(App, App), Error> {
+    remove_dir_all(&*CONFIG_PATH).unwrap_or_default();
+    remove_dir_all(&*ARCHIVE_PATH).unwrap_or_default();
+    remove_dir_all(&*TEST_DATA_PATH).unwrap_or_default();
     create_dir_all(&*STATIC_SELECTORS_PATH.parent().unwrap())?;
     create_dir(*ARCHIVE_PATH)?;
     create_dir(*TEST_DATA_PATH)?;
 
     write(&*ARCHIVIST_CONFIGURATION_PATH, ARCHIVIST_CONFIG)?;
-    write(&*STATIC_SELECTORS_PATH, STATIC_FEEDBACK_SELECTORS)?;
+    if !test_options.omit_selectors {
+        write(&*STATIC_SELECTORS_PATH, STATIC_FEEDBACK_SELECTORS)?;
+    }
+    if test_options.disable_filtering {
+        write(&*DISABLE_FILTER_PATH, "This file disables filtering")?;
+    }
     write(&*ALL_GOLDEN_JSON_PATH, ALL_GOLDEN_JSON)?;
     write(&*SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH, SINGLE_VALUE_CLIENT_SELECTOR_JSON)?;
     write(&*EMPTY_RESULTS_GOLDEN_JSON_PATH, NONOVERLAPPING_CLIENT_AND_STATIC_SELECTORS_JSON)?;
@@ -98,29 +114,7 @@ async fn setup_environment() -> Result<(App, App), Error> {
     Ok((archivist, example_app))
 }
 
-// Loop indefinitely snapshotting the archive until we get the expected number of
-// hierarchies, and then validate that the ordered json represetionation of these hierarchies
-// matches the golden file.
-async fn retrieve_and_validate_results(
-    archivist: &App,
-    custom_selectors: Vec<&str>,
-    golden_file: &PathBuf,
-    expected_results_count: usize,
-) {
-    let archive_accessor = archivist
-        .connect_to_named_service::<ArchiveAccessorMarker>(
-            "fuchsia.diagnostics.FeedbackArchiveAccessor",
-        )
-        .unwrap();
-
-    let results = ArchiveReader::new()
-        .with_archive(archive_accessor)
-        .add_selectors(custom_selectors.clone().into_iter())
-        .with_minimum_schema_count(expected_results_count)
-        .get_raw_json()
-        .await
-        .expect("got result");
-
+fn process_results_for_comparison(results: serde_json::Value) -> serde_json::Value {
     let mut string_result_array = results
         .as_array()
         .expect("result json is an array of objs.")
@@ -153,13 +147,66 @@ async fn retrieve_and_validate_results(
 
     string_result_array.sort();
     let sorted_results_json_string = format!("[{}]", string_result_array.join(","));
-    let sorted_results_json_struct: serde_json::Value =
-        serde_json::from_str(&sorted_results_json_string).unwrap();
+    eprintln!("processed to {} bytes", sorted_results_json_string.len());
+    serde_json::from_str(&sorted_results_json_string).unwrap()
+}
+
+async fn feedback_pipeline_is_filtered(archivist: &App, expected_results_count: usize) -> bool {
+    let feedback_archive_accessor = archivist
+        .connect_to_named_service::<ArchiveAccessorMarker>(
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
+        )
+        .unwrap();
+
+    let feedback_results = ArchiveReader::new()
+        .with_archive(feedback_archive_accessor)
+        .with_minimum_schema_count(expected_results_count)
+        .get_raw_json()
+        .await
+        .expect("got result");
+
+    let all_archive_accessor = archivist
+        .connect_to_named_service::<ArchiveAccessorMarker>("fuchsia.diagnostics.ArchiveAccessor")
+        .unwrap();
+
+    let all_results = ArchiveReader::new()
+        .with_archive(all_archive_accessor)
+        .with_minimum_schema_count(expected_results_count)
+        .get_raw_json()
+        .await
+        .expect("got result");
+
+    process_results_for_comparison(feedback_results) != process_results_for_comparison(all_results)
+}
+
+// Loop indefinitely snapshotting the archive until we get the expected number of
+// hierarchies, and then validate that the ordered json represetionation of these hierarchies
+// matches the golden file.
+async fn retrieve_and_validate_results(
+    archivist: &App,
+    custom_selectors: Vec<&str>,
+    golden_file: &PathBuf,
+    expected_results_count: usize,
+) {
+    let archive_accessor = archivist
+        .connect_to_named_service::<ArchiveAccessorMarker>(
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
+        )
+        .unwrap();
+
+    let results = ArchiveReader::new()
+        .with_archive(archive_accessor)
+        .add_selectors(custom_selectors.clone().into_iter())
+        .with_minimum_schema_count(expected_results_count)
+        .get_raw_json()
+        .await
+        .expect("got result");
+
     // Convert the json struct into a "pretty" string rather than converting the
     // golden file into a json struct because deserializing the golden file into a
     // struct causes serde_json to convert the u64s into exponential form which
     // causes loss of precision.
-    let mut pretty_results = serde_json::to_string_pretty(&sorted_results_json_struct)
+    let mut pretty_results = serde_json::to_string_pretty(&process_results_for_comparison(results))
         .expect("should be able to format the the results as valid json.");
     let mut expected_string: String =
         fs::read_to_string(golden_file).expect("Reading golden json failed.");
@@ -169,14 +216,15 @@ async fn retrieve_and_validate_results(
     // format within the reader.
     pretty_results.retain(|c| !c.is_whitespace());
     expected_string.retain(|c| !c.is_whitespace());
-    assert_diff!(&expected_string, &pretty_results, "", 0);
+    assert_eq!(&expected_string, &pretty_results, "goldens mismatch");
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn canonical_reader_test() -> Result<(), Error> {
     // We need to keep example_app in scope so it stays running until the end
     // of the test.
-    let (archivist_app, _example_app) = setup_environment().await?;
+    let (archivist_app, _example_app) =
+        setup_environment(TestOptions { disable_filtering: false, omit_selectors: false }).await?;
     // First, retrieve all of the information in our realm to make sure that everything
     // we expect is present.
     retrieve_and_validate_results(&archivist_app, Vec::new(), &*ALL_GOLDEN_JSON_PATH, 3)
@@ -218,5 +266,26 @@ async fn canonical_reader_test() -> Result<(), Error> {
         panic!("failed to get meaningful results from reader service.")
     })
     .await;
+
+    assert!(feedback_pipeline_is_filtered(&archivist_app, 3).await);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_disabled_pipeline() -> Result<(), Error> {
+    let (archivist_app, _example_app) =
+        setup_environment(TestOptions { disable_filtering: true, omit_selectors: false }).await?;
+    assert!(!feedback_pipeline_is_filtered(&archivist_app, 3).await);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_pipeline_missing_selectors() -> Result<(), Error> {
+    let (archivist_app, _example_app) =
+        setup_environment(TestOptions { disable_filtering: false, omit_selectors: true }).await?;
+    assert!(!feedback_pipeline_is_filtered(&archivist_app, 3).await);
+
     Ok(())
 }

@@ -186,9 +186,15 @@ impl Archivist {
         let pipelines_node = diagnostics::root().create_child("pipelines");
         let feedback_pipeline = pipelines_node.create_child("feedback");
         let legacy_pipeline = pipelines_node.create_child("legacy_metrics");
-        let mut feedback_config = configs::PipelineConfig::from_directory("/config/data/feedback");
+        let mut feedback_config = configs::PipelineConfig::from_directory(
+            "/config/data/feedback",
+            configs::EmptyBehavior::DoNotFilter,
+        );
         feedback_config.record_to_inspect(&feedback_pipeline);
-        let legacy_config = configs::PipelineConfig::from_directory("/config/data/legacy_metrics");
+        let legacy_config = configs::PipelineConfig::from_directory(
+            "/config/data/legacy_metrics",
+            configs::EmptyBehavior::Disable,
+        );
         legacy_config.record_to_inspect(&legacy_pipeline);
         // Do not set the state to error if the pipelines simply do not exist.
         let pipeline_exists = !((Path::new("/config/data/feedback").is_dir()
@@ -208,12 +214,15 @@ impl Archivist {
         // The Inspect Repository offered to the Feedback pipeline. This repository applies
         // static selectors configured under config/data/feedback to inspect exfiltration.
         let feedback_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
-            feedback_config.take_inspect_selectors().map(|selectors| {
-                selectors
-                    .into_iter()
-                    .map(|selector| Arc::new(selector))
-                    .collect::<Vec<Arc<Selector>>>()
-            }),
+            match feedback_config.disable_filtering {
+                false => feedback_config.take_inspect_selectors().map(|selectors| {
+                    selectors
+                        .into_iter()
+                        .map(|selector| Arc::new(selector))
+                        .collect::<Vec<Arc<Selector>>>()
+                }),
+                true => None,
+            },
         )));
 
         let archivist_state = archive::ArchivistState::new(
