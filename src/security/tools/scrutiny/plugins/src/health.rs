@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
+    scrutiny::{
+        plugin, collectors, controllers,
         engine::hook::PluginHooks,
         engine::plugin::{Plugin, PluginDescriptor},
+        model::collector::DataCollector,
         model::controller::DataController,
         model::model::DataModel,
     },

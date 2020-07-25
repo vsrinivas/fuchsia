@@ -2,121 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/host.gni")
-
-import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_library.gni")
-
-if (!is_fuchsia) {
-  rustc_library("lib") {
-    testonly = true
-    name = "scrutiny"
-    with_unit_tests = true
-    edition = "2018"
-    visibility = [ "//src/security/tools/scrutiny/*" ]
-    deps = [
-      "//src/sys/pkg/lib/fuchsia-archive",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:async-trait",
-      "//third_party/rust_crates:bincode",
-      "//third_party/rust_crates:futures-executor",
-      "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:log",
-      "//third_party/rust_crates:regex",
-      "//third_party/rust_crates:rouille",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:thiserror",
-      "//third_party/rust_crates:uuid",
-    ]
-    test_deps = [ "//third_party/rust_crates:tempfile" ]
-
-    enforce_source_listing = true
-
-    sources = [
-      "src/engine/dispatcher.rs",
-      "src/engine/hook.rs",
-      "src/engine/manager.rs",
-      "src/engine/mod.rs",
-      "src/engine/plugin.rs",
-      "src/engine/scheduler.rs",
-      "src/lib.rs",
-      "src/model/collector.rs",
-      "src/model/controller.rs",
-      "src/model/error.rs",
-      "src/model/mod.rs",
-      "src/model/model.rs",
-      "src/plugins/components/controllers/component_controllers.rs",
-      "src/plugins/components/controllers/mod.rs",
-      "src/plugins/components/controllers/package_controllers.rs",
-      "src/plugins/components/controllers/route_controllers.rs",
-      "src/plugins/components/graph.rs",
-      "src/plugins/components/http.rs",
-      "src/plugins/components/jsons.rs",
-      "src/plugins/components/mod.rs",
-      "src/plugins/components/package_reader.rs",
-      "src/plugins/components/types.rs",
-      "src/plugins/components/util.rs",
-      "src/plugins/health.rs",
-      "src/plugins/management.rs",
-      "src/plugins/mod.rs",
-      "src/plugins/search.rs",
-      "src/rest/mod.rs",
-      "src/rest/service.rs",
-      "src/rest/visualizer.rs",
-      "src/store/embedded.rs",
-      "src/store/error.rs",
-      "src/store/mod.rs",
-      "src/store/store.rs",
-    ]
-  }
-
-  rustc_binary("bin") {
-    testonly = true
-    name = "scrutiny"
-    with_unit_tests = true
-    edition = "2018"
-    deps = [
-      ":lib",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:clap",
-      "//third_party/rust_crates:log",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:simplelog",
-      "//third_party/rust_crates:termion",
-      "//third_party/rust_crates:thiserror",
-    ]
-
-    enforce_source_listing = true
-
-    sources = [
-      "src/app/app.rs",
-      "src/app/builtin.rs",
-      "src/app/error.rs",
-      "src/app/logo.rs",
-      "src/app/mod.rs",
-      "src/app/shell.rs",
-      "src/main.rs",
-    ]
-  }
-}
-
-install_host_tools("host") {
-  testonly = true
-  deps = [ ":bin" ]
-  outputs = [ "scrutiny" ]
-}
-
 group("scrutiny") {
   testonly = true
-  public_deps = [ ":host" ]
+  public_deps = [ "//src/security/tools/scrutiny/app:scrutiny" ]
 }
 
 group("tests") {
   testonly = true
   public_deps = [
-    ":bin_test($host_toolchain)",
-    ":lib_test($host_toolchain)",
+    "//src/security/tools/scrutiny/app:tests",
+    "//src/security/tools/scrutiny/framework:tests",
+    "//src/security/tools/scrutiny/plugins:tests",
   ]
 }

@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{logo, shell::Shell},
+    crate::{
+        logo,
+        shell::Shell,
+    },
     anyhow::{Error, Result},
     clap::{App, Arg, ArgMatches},
     log::error,

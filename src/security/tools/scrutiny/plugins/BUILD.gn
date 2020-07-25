@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+if (!is_fuchsia) {
+  rustc_library("plugins") {
+    testonly = true
+    name = "scrutiny_plugins"
+    with_unit_tests = true
+    edition = "2018"
+    visibility = [ "//src/security/tools/scrutiny/*" ]
+    deps = [
+      "//src/security/tools/scrutiny/framework",
+      "//src/sys/pkg/lib/fuchsia-archive",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:async-trait",
+      "//third_party/rust_crates:bincode",
+      "//third_party/rust_crates:futures-executor",
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:rouille",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:uuid",
+    ]
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/components/controllers/component_controllers.rs",
+      "src/components/controllers/mod.rs",
+      "src/components/controllers/package_controllers.rs",
+      "src/components/controllers/route_controllers.rs",
+      "src/components/graph.rs",
+      "src/components/http.rs",
+      "src/components/jsons.rs",
+      "src/components/mod.rs",
+      "src/components/package_reader.rs",
+      "src/components/types.rs",
+      "src/components/util.rs",
+      "src/health.rs",
+      "src/management.rs",
+      "src/lib.rs",
+      "src/search.rs",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":plugins_test($host_toolchain)",
+  ]
+}

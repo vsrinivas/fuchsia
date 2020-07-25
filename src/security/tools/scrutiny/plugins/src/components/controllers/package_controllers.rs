@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{model::controller::DataController, model::model::DataModel},
+    scrutiny::{model::controller::DataController, model::model::DataModel},
     anyhow::Result,
     serde_json::{self, value::Value},
     std::sync::Arc,
@@ -22,7 +22,7 @@ impl DataController for PackagesGraphController {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::model::model::*, serde_json::json, std::collections::HashMap,
+        super::*, scrutiny::model::model::*, serde_json::json, std::collections::HashMap,
         tempfile::tempdir,
     };
 

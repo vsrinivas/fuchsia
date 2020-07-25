@@ -42,6 +42,7 @@ pub trait Plugin: Send + Sync {
 /// Utility macro to automatically create the plugin boilerplate. This creates
 /// a general template that is usable for most plugins. Plugins that need to
 /// do custom logic when hooking should simply implement the trait directly.
+#[macro_export]
 macro_rules! plugin {
     ($name:ident, $hooks:expr, $deps:expr) => {
         pub struct $name {

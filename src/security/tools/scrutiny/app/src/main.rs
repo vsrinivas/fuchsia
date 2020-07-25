@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod app;
+mod logo;
+mod error;
+mod builtin;
+mod shell;
+mod scrutiny;
 
 use {
     anyhow::Result,
-    app::app::ScrutinyApp,
-    scrutiny::plugins::{
+    crate::scrutiny::ScrutinyApp,
+    scrutiny_plugins::{
         components::graph::ComponentGraphPlugin, health::HealthPlugin,
         management::ManagementPlugin, search::ModelSearchPlugin,
     },

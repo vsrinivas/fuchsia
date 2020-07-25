@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
+    scrutiny::{
+        collectors, controllers,
         engine::{
             dispatcher::ControllerDispatcher,
             hook::PluginHooks,
@@ -11,6 +12,7 @@ use {
             plugin::{Plugin, PluginDescriptor},
             scheduler::{CollectorScheduler, CollectorState},
         },
+        model::collector::DataCollector,
         model::controller::DataController,
         model::model::DataModel,
     },
@@ -190,7 +192,9 @@ impl DataController for ControllerListController {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::model::collector::DataCollector, crate::model::model::Component,
+        super::*,
+        scrutiny::plugin,
+        scrutiny::model::collector::DataCollector, scrutiny::model::model::Component,
         std::boxed::Box, tempfile::tempdir, uuid::Uuid,
     };
 

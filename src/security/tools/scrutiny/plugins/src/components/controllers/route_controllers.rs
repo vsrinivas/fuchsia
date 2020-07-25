@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{model::controller::DataController, model::model::DataModel},
+    scrutiny::{model::controller::DataController, model::model::DataModel},
     anyhow::{Error, Result},
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
@@ -119,7 +119,7 @@ impl DataController for ComponentUsedGraphController {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::model::*, serde_json::json, tempfile::tempdir};
+    use {super::*, scrutiny::model::model::*, serde_json::json, tempfile::tempdir};
 
     fn empty_value() -> Value {
         serde_json::from_str("{}").unwrap()

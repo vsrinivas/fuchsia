@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod app;
-pub mod builtin;
-pub mod logo;
-pub mod shell;
-pub mod error;
+pub mod engine;
+pub mod model;
+pub mod rest;
+pub mod store;

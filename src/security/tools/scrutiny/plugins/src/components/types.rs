@@ -4,7 +4,7 @@
 
 // Structs used in parsing packages
 
-use {crate::plugins::components::jsons::*, serde::Serialize, std::collections::HashMap};
+use {crate::components::jsons::*, serde::Serialize, std::collections::HashMap};
 
 pub type ServiceMapping = HashMap<String, String>;
 

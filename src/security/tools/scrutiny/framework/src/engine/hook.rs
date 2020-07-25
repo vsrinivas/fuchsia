@@ -29,12 +29,12 @@ impl PluginHooks {
 // Utility macro to give unique names to each collector for a given plugin.
 // This additional naming information is used to make individual controllers
 // human readable.
-#[macro_use]
+#[macro_export]
 macro_rules! collectors {
     ($($ns:expr => $ctrl:expr,)+) => {collectors!($($ns => $ctrl),+)};
     ($($ns:expr => $ctrl:expr),*) => {{
             let mut _collectors: ::std::collections::HashMap<String,
-            std::sync::Arc<dyn crate::model::collector::DataCollector>> = ::std::collections::HashMap::new();
+            std::sync::Arc<dyn DataCollector>> = ::std::collections::HashMap::new();
             $(
                 _collectors.insert(String::from($ns), Arc::new($ctrl));
             )*
@@ -45,12 +45,12 @@ macro_rules! collectors {
 // Utility macro to generate controller hook mappings from a namespace => constructor
 // mapping. It automatically fixes the string type and sets the correct arc, rwlock
 // on the controllers provided.
-#[macro_use]
+#[macro_export]
 macro_rules! controllers {
     ($($ns:expr => $ctrl:expr,)+) => {controllers!($($ns => $ctrl),+)};
     ($($ns:expr => $ctrl:expr),*) => {{
             let mut _hooks: ::std::collections::HashMap<String,
-            std::sync::Arc<dyn crate::model::controller::DataController>> = ::std::collections::HashMap::new();
+            std::sync::Arc<dyn DataController>> = ::std::collections::HashMap::new();
             $(
                 if $ns.starts_with("/") {
                     _hooks.insert(format!("/api{}", $ns), Arc::new($ctrl));

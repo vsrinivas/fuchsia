@@ -1,0 +1,58 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+if (!is_fuchsia) {
+  rustc_binary("bin") {
+    testonly = true
+    name = "scrutiny"
+    with_unit_tests = true
+    edition = "2018"
+    deps = [
+      "//src/security/tools/scrutiny/framework",
+      "//src/security/tools/scrutiny/plugins",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:simplelog",
+      "//third_party/rust_crates:termion",
+      "//third_party/rust_crates:thiserror",
+    ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/scrutiny.rs",
+      "src/builtin.rs",
+      "src/error.rs",
+      "src/logo.rs",
+      "src/shell.rs",
+      "src/main.rs",
+    ]
+  }
+}
+
+install_host_tools("host") {
+  testonly = true
+  deps = [ ":bin" ]
+  outputs = [ "scrutiny" ]
+}
+
+group("scrutiny") {
+  testonly = true
+  public_deps = [ ":host" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":bin_test($host_toolchain)",
+  ]
+}

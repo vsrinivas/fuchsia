@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
+    scrutiny::{
+        plugin, collectors, controllers,
         engine::hook::PluginHooks,
         engine::plugin::{Plugin, PluginDescriptor},
+        model::controller::DataController,
         model::collector::DataCollector,
         model::model::{Component, DataModel, Manifest, Package, Route},
-        plugins::components::{
+    },
+    crate::{
+        components::{
             controllers::component_controllers::*, controllers::package_controllers::*,
             controllers::route_controllers::*, http::HttpGetter, package_reader::*, types::*, util,
         },
@@ -358,7 +362,7 @@ impl DataCollector for PackageDataCollector {
 // building logic.
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::plugins::components::jsons::*, std::sync::RwLock, tempfile::tempdir};
+    use {super::*, crate::components::jsons::*, std::sync::RwLock, tempfile::tempdir};
 
     struct MockPackageReader {
         targets: RwLock<Vec<TargetsJson>>,
@@ -852,12 +856,12 @@ mod tests {
             });
 
             let mut manis = model.manifests().write().unwrap();
-            manis.push(crate::model::model::Manifest {
+            manis.push(scrutiny::model::model::Manifest {
                 component_id: 1,
                 manifest: String::from("test.component.manifest"),
                 uses: vec![String::from("test.service")],
             });
-            manis.push(crate::model::model::Manifest {
+            manis.push(scrutiny::model::model::Manifest {
                 component_id: 2,
                 manifest: String::from("foo.bar.manifest"),
                 uses: Vec::new(),
