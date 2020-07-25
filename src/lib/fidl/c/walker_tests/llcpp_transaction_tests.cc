@@ -14,7 +14,7 @@
 #include <thread>
 
 #include <fidl/test/coding/llcpp/fidl.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "fidl_coded_types.h"
 
@@ -48,95 +48,55 @@ class Transaction : public fidl::Transaction {
 using Completer = ::llcpp::fidl::test::coding::Llcpp::Interface::ActionCompleter::Sync;
 
 // A completer being destroyed without replying (but needing one) should crash
-bool no_reply_asserts() {
-  BEGIN_TEST;
-
+TEST(LlcppTransaction, no_reply_asserts) {
   Transaction txn{};
-  ASSERT_DEATH([](void* arg) { Completer completer(static_cast<Transaction*>(arg)); }, &txn,
-               "no reply should crash");
-
-  END_TEST;
+  ASSERT_DEATH([&] { Completer completer(&txn); }, "no reply should crash");
 }
 
 // A completer being destroyed without replying (but needing one) should crash
-bool no_expected_reply_doesnt_assert() {
-  BEGIN_TEST;
-
+TEST(LlcppTransaction, no_expected_reply_doesnt_assert) {
   Transaction txn{};
   fidl::Completer<fidl::CompleterBase>::Sync completer(&txn);
-
-  END_TEST;
 }
 
 // A completer replying twice should crash
-bool double_reply_asserts() {
-  BEGIN_TEST;
-
+TEST(LlcppTransaction, double_reply_asserts) {
   Transaction txn{};
   Completer completer(&txn);
   completer.Reply(0);
-  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Reply(1); }, &completer,
-               "second reply should crash");
-
-  END_TEST;
+  ASSERT_DEATH([&] { completer.Reply(1); }, "second reply should crash");
 }
 
 // It is allowed to reply and then close
-bool reply_then_close_doesnt_assert() {
-  BEGIN_TEST;
-
+TEST(LlcppTransaction, reply_then_close_doesnt_assert) {
   Transaction txn{};
   Completer completer(&txn);
   completer.Reply(0);
   completer.Close(ZX_ERR_INVALID_ARGS);
-
-  END_TEST;
 }
 
 // It is not allowed to close then reply
-bool close_then_reply_asserts() {
-  BEGIN_TEST;
-
+TEST(LlcppTransaction, close_then_reply_asserts) {
   Transaction txn{};
   Completer completer(&txn);
   completer.Close(ZX_ERR_INVALID_ARGS);
-  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Reply(1); }, &completer,
-               "reply after close should crash");
-
-  END_TEST;
+  ASSERT_DEATH([&] { completer.Reply(1); }, "reply after close should crash");
 }
 
 // It is not allowed to be accessed from multiple threads simultaneously
-bool concurrent_access_asserts() {
-  BEGIN_TEST;
-
+TEST(LlcppTransaction, concurrent_access_asserts) {
   sync_completion_t signal, wait;
   Transaction txn{&signal, &wait};
   Completer completer(&txn);
   std::thread t([&] { completer.Reply(1); });
   sync_completion_wait(&wait, ZX_TIME_INFINITE);
   // TODO(fxb/54499) Hide assertion failed messages from output - they are confusing.
-  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Reply(1); }, &completer,
-               "concurrent access should crash");
-  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->Close(ZX_OK); },
-               &completer, "concurrent access should crash");
-  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->EnableNextDispatch(); },
-               &completer, "concurrent access should crash");
-  ASSERT_DEATH([](void* completer) { static_cast<Completer*>(completer)->ToAsync(); }, &completer,
-               "concurrent access should crash");
+  ASSERT_DEATH([&] { completer.Reply(1); }, "concurrent access should crash");
+  ASSERT_DEATH([&] { completer.Close(ZX_OK); }, "concurrent access should crash");
+  ASSERT_DEATH([&] { completer.EnableNextDispatch(); }, "concurrent access should crash");
+  ASSERT_DEATH([&] { completer.ToAsync(); }, "concurrent access should crash");
   sync_completion_signal(&signal);
   t.join();  // Don't accidentally invoke ~Completer() while `t` is still in Reply().
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(llcpp_transaction)
-RUN_TEST(no_reply_asserts)
-RUN_TEST(no_expected_reply_doesnt_assert)
-RUN_TEST(double_reply_asserts)
-RUN_TEST(reply_then_close_doesnt_assert)
-RUN_TEST(close_then_reply_asserts)
-RUN_TEST(concurrent_access_asserts)
-END_TEST_CASE(llcpp_transaction)

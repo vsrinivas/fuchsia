@@ -15,7 +15,7 @@
 #include <new>
 
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "extra_messages.h"
 #include "fidl_coded_types.h"
@@ -40,9 +40,7 @@ bool IsPeerValid(const zx::unowned_eventpair& handle) {
   }
 }
 
-bool EncodeErrorTest() {
-  BEGIN_TEST;
-
+TEST(OnErrorCloseHandle, EncodeErrorTest) {
   // If there is only one handle in the message, fidl_encode should not close beyond one handles.
   // Specifically, |event_handle| should remain intact.
 
@@ -65,18 +63,14 @@ bool EncodeErrorTest() {
                             std::size(handles), &actual_handles, &error);
 
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-  ASSERT_NONNULL(error);
+  ASSERT_NOT_NULL(error);
   ASSERT_EQ(handles[0], ZX_HANDLE_INVALID);
   ASSERT_EQ(handles[1], event_handle);
 
   ASSERT_EQ(zx_handle_close(event_handle), ZX_OK);
-
-  END_TEST;
 }
 
-bool EncodeWithNullHandlesTest() {
-  BEGIN_TEST;
-
+TEST(OnErrorCloseHandle, EncodeWithNullHandlesTest) {
   // When the |handles| parameter to fidl_encode is nullptr, it should still close all handles
   // inside the message.
   for (uint32_t num_handles : {0u, 1u}) {
@@ -96,16 +90,12 @@ bool EncodeWithNullHandlesTest() {
                               num_handles, &actual_handles, &error);
 
     ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-    ASSERT_NONNULL(error);
+    ASSERT_NOT_NULL(error);
     ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_b)));
   }
-
-  END_TEST;
 }
 
-bool EncodeWithNullOutActualHandlesTest() {
-  BEGIN_TEST;
-
+TEST(OnErrorCloseHandle, EncodeWithNullOutActualHandlesTest) {
   // When the |out_actual_handles| parameter to fidl_encode is nullptr, it should still close
   // all handles inside the message.
 
@@ -125,15 +115,11 @@ bool EncodeWithNullOutActualHandlesTest() {
                             std::size(handles), nullptr, &error);
 
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-  ASSERT_NONNULL(error);
+  ASSERT_NOT_NULL(error);
   ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_b)));
-
-  END_TEST;
 }
 
-bool DecodeErrorTest() {
-  BEGIN_TEST;
-
+TEST(OnErrorCloseHandle, DecodeErrorTest) {
   // If an unknown envelope causes the handles contained within to be closed, and later on
   // an error was encountered, the handles in the unknown envelope should not be closed again.
   zx::eventpair eventpair_a;
@@ -171,21 +157,12 @@ bool DecodeErrorTest() {
   auto status = fidl_decode(&fidl_test_coding_SmallerTableOfStructWithHandleTable, buffer, buf_size,
                             handles, std::size(handles), &out_error);
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-  ASSERT_NONNULL(out_error);
+  ASSERT_NOT_NULL(out_error);
 
   // The peer was closed by the decoder
   ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_a)));
   ASSERT_FALSE(IsPeerValid(zx::unowned_eventpair(eventpair_x)));
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(on_error_close_handle)
-RUN_TEST(EncodeErrorTest)
-RUN_TEST(EncodeWithNullHandlesTest)
-RUN_TEST(EncodeWithNullOutActualHandlesTest)
-RUN_TEST(DecodeErrorTest)
-END_TEST_CASE(on_error_close_handle)
 
 }  // namespace
 }  // namespace fidl

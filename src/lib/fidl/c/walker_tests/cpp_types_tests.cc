@@ -7,13 +7,11 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool string_view_test() {
-  BEGIN_TEST;
-
+TEST(CppTypesTests, string_view_test) {
   char buffer[ZX_CHANNEL_MAX_MSG_BYTES];
   fidl::Builder builder(buffer, ZX_CHANNEL_MAX_MSG_BYTES);
 
@@ -30,13 +28,9 @@ bool string_view_test() {
   EXPECT_EQ(view->data(), data);
 
   EXPECT_EQ(view->at(1), 0);
-
-  END_TEST;
 }
 
-bool vector_view_test() {
-  BEGIN_TEST;
-
+TEST(CppTypesTests, vector_view_test) {
   char buffer[ZX_CHANNEL_MAX_MSG_BYTES];
   fidl::Builder builder(buffer, ZX_CHANNEL_MAX_MSG_BYTES);
 
@@ -52,13 +46,6 @@ bool vector_view_test() {
   EXPECT_EQ(view->data(), data);
 
   EXPECT_EQ(view->at(1), 0);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(cpp_types_tests)
-RUN_NAMED_TEST("StringView test", string_view_test)
-RUN_NAMED_TEST("VectorView test", vector_view_test)
-END_TEST_CASE(cpp_types_tests)

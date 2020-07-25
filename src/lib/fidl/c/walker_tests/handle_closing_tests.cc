@@ -11,7 +11,7 @@
 
 #include <new>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
@@ -36,27 +36,17 @@ uint32_t ArraySize(T const (&array)[N]) {
   return sizeof(array);
 }
 
-bool helper_expect_peer_valid(zx_handle_t channel) {
-  BEGIN_HELPER;
-
+void helper_expect_peer_valid(zx_handle_t channel) {
   const char* foo = "hello";
   EXPECT_EQ(zx_channel_write(channel, 0, foo, 5, nullptr, 0), ZX_OK);
-
-  END_HELPER;
 }
 
-bool helper_expect_peer_invalid(zx_handle_t channel) {
-  BEGIN_HELPER;
-
+void helper_expect_peer_invalid(zx_handle_t channel) {
   const char* foo = "hello";
   EXPECT_EQ(zx_channel_write(channel, 0, foo, 5, nullptr, 0), ZX_ERR_PEER_CLOSED);
-
-  END_HELPER;
 }
 
-bool close_single_present_handle() {
-  BEGIN_TEST;
-
+TEST(Handles, close_single_present_handle) {
   zx_handle_t* channel_0 = new zx_handle_t;
   // Capture the extra handle here; it will not be cleaned by fidl_close_handles
   zx::channel channel_1 = {};
@@ -72,24 +62,20 @@ bool close_single_present_handle() {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = *channel_0;
 
-  EXPECT_TRUE(helper_expect_peer_valid(channel_1.get()));
+  helper_expect_peer_valid(channel_1.get());
 
   const char* error = nullptr;
   auto status = fidl_close_handles(&nonnullable_handle_message_type, &message, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-  EXPECT_TRUE(helper_expect_peer_invalid(channel_1.get()));
+  EXPECT_NULL(error, "%s", error);
+  helper_expect_peer_invalid(channel_1.get());
   EXPECT_EQ(message.inline_struct.handle, ZX_HANDLE_INVALID);
 
   delete channel_0;
-
-  END_TEST;
 }
 
-bool close_multiple_present_handles_with_some_invalid() {
-  BEGIN_TEST;
-
+TEST(Handles, close_multiple_present_handles_with_some_invalid) {
   zx_handle_t* channels_0 = new zx_handle_t[3];
   // Capture the extra handles here; these will not be cleaned by fidl_close_handles
   zx::channel channels_1[3] = {};
@@ -102,9 +88,9 @@ bool close_multiple_present_handles_with_some_invalid() {
     channels_1[i] = zx::channel(out1);
   }
 
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[0].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[1].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[2].get()));
+  helper_expect_peer_valid(channels_1[0].get());
+  helper_expect_peer_valid(channels_1[1].get());
+  helper_expect_peer_valid(channels_1[2].get());
 
   // Make the second handle invalid
   multiple_nonnullable_handles_message_layout message = {};
@@ -122,9 +108,9 @@ bool close_multiple_present_handles_with_some_invalid() {
   EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
 
   // Second channel should remain valid, since it was inaccessible to fidl_close_handles
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[0].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[1].get()));
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[2].get()));
+  helper_expect_peer_invalid(channels_1[0].get());
+  helper_expect_peer_valid(channels_1[1].get());
+  helper_expect_peer_invalid(channels_1[2].get());
 
   // Handles 0, 2 have been closed; it is now an error to re-close them.
   EXPECT_EQ(zx_handle_close(channels_0[1]), ZX_OK);
@@ -138,13 +124,9 @@ bool close_multiple_present_handles_with_some_invalid() {
   EXPECT_EQ(message.inline_struct.handle_2, ZX_HANDLE_INVALID);
 
   delete[] channels_0;
-
-  END_TEST;
 }
 
-bool close_array_of_present_handles() {
-  BEGIN_TEST;
-
+TEST(Arrays, close_array_of_present_handles) {
   zx_handle_t* channels_0 = new zx_handle_t[4];
   // Capture the extra handles here; these will not be cleaned by fidl_close_handles
   zx::channel channels_1[4] = {};
@@ -162,21 +144,21 @@ bool close_array_of_present_handles() {
     message.inline_struct.handles[i] = channels_0[i];
   }
 
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[0].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[1].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[2].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[3].get()));
+  helper_expect_peer_valid(channels_1[0].get());
+  helper_expect_peer_valid(channels_1[1].get());
+  helper_expect_peer_valid(channels_1[2].get());
+  helper_expect_peer_valid(channels_1[3].get());
 
   const char* error = nullptr;
   auto status = fidl_close_handles(&array_of_nonnullable_handles_message_type, &message, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[0].get()));
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[1].get()));
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[2].get()));
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[3].get()));
+  helper_expect_peer_invalid(channels_1[0].get());
+  helper_expect_peer_invalid(channels_1[1].get());
+  helper_expect_peer_invalid(channels_1[2].get());
+  helper_expect_peer_invalid(channels_1[3].get());
 
   // Handles in the message struct are released.
   EXPECT_EQ(message.inline_struct.handles[0], ZX_HANDLE_INVALID);
@@ -185,13 +167,9 @@ bool close_array_of_present_handles() {
   EXPECT_EQ(message.inline_struct.handles[3], ZX_HANDLE_INVALID);
 
   delete[] channels_0;
-
-  END_TEST;
 }
 
-bool close_out_of_line_array_of_nonnullable_handles() {
-  BEGIN_TEST;
-
+TEST(Arrays, close_out_of_line_array_of_nonnullable_handles) {
   zx_handle_t* channels_0 = new zx_handle_t[4];
   // Capture the extra handles here; these will not be cleaned by fidl_close_handles
   zx::channel channels_1[4] = {};
@@ -210,22 +188,22 @@ bool close_out_of_line_array_of_nonnullable_handles() {
     message.data.handles[i] = channels_0[i];
   }
 
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[0].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[1].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[2].get()));
-  EXPECT_TRUE(helper_expect_peer_valid(channels_1[3].get()));
+  helper_expect_peer_valid(channels_1[0].get());
+  helper_expect_peer_valid(channels_1[1].get());
+  helper_expect_peer_valid(channels_1[2].get());
+  helper_expect_peer_valid(channels_1[3].get());
 
   const char* error = nullptr;
   auto status =
       fidl_close_handles(&out_of_line_array_of_nonnullable_handles_message_type, &message, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[0].get()));
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[1].get()));
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[2].get()));
-  EXPECT_TRUE(helper_expect_peer_invalid(channels_1[3].get()));
+  helper_expect_peer_invalid(channels_1[0].get());
+  helper_expect_peer_invalid(channels_1[1].get());
+  helper_expect_peer_invalid(channels_1[2].get());
+  helper_expect_peer_invalid(channels_1[3].get());
 
   // Handles in the message struct are released.
   EXPECT_EQ(message.data.handles[0], ZX_HANDLE_INVALID);
@@ -234,8 +212,6 @@ bool close_out_of_line_array_of_nonnullable_handles() {
   EXPECT_EQ(message.data.handles[3], ZX_HANDLE_INVALID);
 
   delete[] channels_0;
-
-  END_TEST;
 }
 
 // This number of handles is guaranteed to not fit in a channel call.
@@ -271,8 +247,7 @@ const FidlCodedStruct unbounded_too_large_nullable_vector_of_handles_message_typ
     .name = "unbounded_too_large_nullable_vector_of_handles_message",
 };
 
-bool close_present_too_large_nullable_vector_of_handles() {
-  BEGIN_TEST;
+TEST(Vectors, close_present_too_large_nullable_vector_of_handles) {
   zx_handle_t* channels_0 = new zx_handle_t[kTooBigNumHandles];
   // Capture the extra handles here; these will not be cleaned by fidl_close_handles
   zx::channel channels_1[kTooBigNumHandles] = {};
@@ -289,7 +264,7 @@ bool close_present_too_large_nullable_vector_of_handles() {
   message.inline_struct.vector = fidl_vector_t{kTooBigNumHandles, &message.handles[0]};
   for (int i = 0; i < kTooBigNumHandles; i++) {
     message.handles[i] = channels_0[i];
-    EXPECT_TRUE(helper_expect_peer_valid(channels_1[i].get()));
+    helper_expect_peer_valid(channels_1[i].get());
   }
 
   const char* error = nullptr;
@@ -297,10 +272,10 @@ bool close_present_too_large_nullable_vector_of_handles() {
                                    &message, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
   for (int i = 0; i < kTooBigNumHandles; i++) {
-    EXPECT_TRUE(helper_expect_peer_invalid(channels_1[i].get()));
+    helper_expect_peer_invalid(channels_1[i].get());
   }
 
   auto message_handles = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
@@ -309,23 +284,7 @@ bool close_present_too_large_nullable_vector_of_handles() {
   }
 
   delete[] channels_0;
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(handles)
-RUN_TEST(close_single_present_handle)
-RUN_TEST(close_multiple_present_handles_with_some_invalid)
-END_TEST_CASE(handles)
-
-BEGIN_TEST_CASE(arrays)
-RUN_TEST(close_array_of_present_handles)
-RUN_TEST(close_out_of_line_array_of_nonnullable_handles)
-END_TEST_CASE(arrays)
-
-BEGIN_TEST_CASE(vectors)
-RUN_TEST(close_present_too_large_nullable_vector_of_handles)
-END_TEST_CASE(vectors)
 
 }  // namespace
 }  // namespace fidl

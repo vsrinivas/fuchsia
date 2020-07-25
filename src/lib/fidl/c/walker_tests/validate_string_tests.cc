@@ -4,7 +4,7 @@
 
 #include <lib/fidl/coding.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define EXPECT_VALID_STRING(input)                            \
   {                                                           \
@@ -20,26 +20,16 @@
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, fidl_validate_string(bytes, num_bytes), explanation); \
   }
 
-bool safe_on_nullptr() {
-  BEGIN_TEST;
-
+TEST(ValidateString, safe_on_nullptr) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, fidl_validate_string(nullptr, 10));
-
-  END_TEST;
 }
 
-bool string_with_size_too_big() {
-  BEGIN_TEST;
-
+TEST(ValidateString, string_with_size_too_big) {
   uint64_t size_too_big = static_cast<uint64_t>(FIDL_MAX_SIZE) + 1;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, fidl_validate_string("", size_too_big));
-
-  END_TEST;
 }
 
-bool min_max_code_units_and_minus_one_and_plus_one() {
-  BEGIN_TEST;
-
+TEST(ValidateString, min_max_code_units_and_minus_one_and_plus_one) {
   EXPECT_VALID_STRING("\x00");              // single byte, min: 0
   EXPECT_VALID_STRING("\x7f");              // single byte, max: 127
   EXPECT_VALID_STRING("\xc2\x80");          // two bytes,   min: 128
@@ -56,13 +46,9 @@ bool min_max_code_units_and_minus_one_and_plus_one() {
   EXPECT_INVALID_STRING("\xef\xbf\xc0", "1 above max three bytes");
   EXPECT_INVALID_STRING("\xf0\x80\x80\x80", "1 below min four bytes");
   EXPECT_INVALID_STRING("\xf7\xbf\xbf\xc0", "1 above max four bytes");
-
-  END_TEST;
 }
 
-bool invalid_continuations() {
-  BEGIN_TEST;
-
+TEST(ValidateString, invalid_continuations) {
   // 1 test for the first following byte of an initial two byte value not having the high bit.
   EXPECT_VALID_STRING("\xc2\x80");
   EXPECT_INVALID_STRING("\xc2\x7f", "first byte following two byte value not starting with 0b10");
@@ -83,13 +69,9 @@ bool invalid_continuations() {
                         "second byte following four byte value not starting with 0b10");
   EXPECT_INVALID_STRING("\xf0\x90\x80\x7f",
                         "third byte following four byte value not starting with 0b10");
-
-  END_TEST;
 }
 
-bool only_shortest_encoding_is_valid() {
-  BEGIN_TEST;
-
+TEST(ValidateString, only_shortest_encoding_is_valid) {
   // All encodings of slash, only the shortest is valid.
   //
   // For further details, see "code unit" defined to be 'The minimal bit
@@ -99,26 +81,18 @@ bool only_shortest_encoding_is_valid() {
   EXPECT_INVALID_STRING("\xc0\xaf", "slash (2)");
   EXPECT_INVALID_STRING("\xe0\x80\xaf", "slash (3)");
   EXPECT_INVALID_STRING("\xf0\x80\x80\xaf", "slash (4)");
-
-  END_TEST;
 }
 
-bool valid_noncharacter_codepoints() {
-  BEGIN_TEST;
-
+TEST(ValidateString, valid_noncharacter_codepoints) {
   EXPECT_VALID_STRING("\xd8\x9d");          // U+061D
   EXPECT_VALID_STRING("\xd7\xb6");          // U+05F6
   EXPECT_VALID_STRING("\xe0\xab\xb4");      // U+0AF4
   EXPECT_VALID_STRING("\xe0\xb1\x92");      // U+0C52
   EXPECT_VALID_STRING("\xf0\x9e\x91\x94");  // U+1E454
   EXPECT_VALID_STRING("\xf0\x9f\xa5\xb8");  // U+1F978
-
-  END_TEST;
 }
 
-bool various() {
-  BEGIN_TEST;
-
+TEST(ValidateString, various) {
   EXPECT_VALID_STRING("");
   EXPECT_VALID_STRING("a");
   EXPECT_VALID_STRING("€");  // \xe2\x82\xac
@@ -192,16 +166,4 @@ bool various() {
   // BOMs in UTF-16(BE|LE)
   EXPECT_INVALID_STRING("\xfe\xff", "BOMs in UTF-16 BE");
   EXPECT_INVALID_STRING("\xff\xfe", "BOMs in UTF-16 LE");
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(validate_string)
-RUN_TEST(safe_on_nullptr)
-RUN_TEST(string_with_size_too_big)
-RUN_TEST(min_max_code_units_and_minus_one_and_plus_one)
-RUN_TEST(invalid_continuations)
-RUN_TEST(only_shortest_encoding_is_valid)
-RUN_TEST(valid_noncharacter_codepoints)
-RUN_TEST(various)
-END_TEST_CASE(validate_string)

@@ -22,7 +22,6 @@ source_set("test_sources") {
     "llcpp_server_test.cc",
     "llcpp_transaction_tests.cc",
     "llcpp_types_tests.cc",
-    "main.cc",
     "message_tests.cc",
     "on_error_handle_tests.cc",
     "validating_tests.cc",
@@ -43,7 +42,6 @@ source_set("test_sources") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
-    "//zircon/system/ulib/unittest",
   ]
 }
 
@@ -74,14 +72,12 @@ if (is_fuchsia) {
     sources = [
       "fidl_coded_types.cc",
       "handle_closing_tests.cc",
-      "main.cc",
     ]
     public_deps = [
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/fit",
       "//zircon/public/lib/zx",
       "//zircon/public/lib/zxtest",
-      "//zircon/system/ulib/unittest",
     ]
   }
 
@@ -119,7 +115,7 @@ source_set("host_test_sources") {
   ]
   public_deps = [
     "//zircon/public/lib/fidl_base",
-    "//zircon/system/ulib/unittest:unittest-static",
+    "//zircon/public/lib/zxtest",
   ]
 }
 

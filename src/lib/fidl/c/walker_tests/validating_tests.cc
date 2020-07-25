@@ -9,7 +9,7 @@
 #include <limits>
 #include <memory>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "extra_messages.h"
 #include "fidl_coded_types.h"
@@ -73,9 +73,7 @@ uint32_t ArraySize(T const (&array)[N]) {
   return sizeof(array);
 }
 
-bool validate_null_validate_parameters() {
-  BEGIN_TEST;
-
+TEST(NullParameters, validate_null_validate_parameters) {
   zx_handle_t handles[] = {static_cast<zx_handle_t>(23)};
 
   // Null message type.
@@ -86,7 +84,7 @@ bool validate_null_validate_parameters() {
     auto status = fidl_validate(nullptr, &message, sizeof(nonnullable_handle_message_layout),
                                 ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error);
+    EXPECT_NOT_NULL(error);
   }
 
   // Null message.
@@ -96,7 +94,7 @@ bool validate_null_validate_parameters() {
         fidl_validate(&nonnullable_handle_message_type, nullptr,
                       sizeof(nonnullable_handle_message_layout), ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error);
+    EXPECT_NOT_NULL(error);
   }
 
   // Zero handles, for a message that has a handle.
@@ -107,7 +105,7 @@ bool validate_null_validate_parameters() {
     auto status = fidl_validate(&nonnullable_handle_message_type, &message,
                                 sizeof(nonnullable_handle_message_layout), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NONNULL(error);
+    EXPECT_NOT_NULL(error);
   }
 
   // A null error string pointer is ok, though.
@@ -125,15 +123,14 @@ bool validate_null_validate_parameters() {
                       sizeof(nonnullable_handle_message_layout), ArrayCount(handles), nullptr);
     EXPECT_EQ(status, ZX_OK);
   }
-
-  END_TEST;
 }
+
+// The Walker tests are disabled for host because they depend on fidl
+// generated LLCPP code that can't run on host.
 
 // TODO(fxb/52382) Move this test to GIDL.
 #ifdef __Fuchsia__
-bool validate_walker_recursive_struct_max_out_of_line_depth() {
-  BEGIN_TEST;
-
+TEST(Walker, validate_walker_recursive_struct_max_out_of_line_depth) {
   // Up to 32 out of line objects are allowed - here there are 33 pointers.
   uintptr_t message[34];
   for (int i = 0; i < 33; i++) {
@@ -151,16 +148,12 @@ bool validate_walker_recursive_struct_max_out_of_line_depth() {
   status = fidl_validate(&fidl_test_coding_RecursiveOptionalTable, &message[1],
                          sizeof(message) - sizeof(uintptr_t), 0, &error);
   EXPECT_EQ(status, ZX_OK);
-
-  END_TEST;
 }
 #endif
 
 // TODO(fxb/52382) Move this test to GIDL.
 #ifdef __Fuchsia__
-bool validate_walker_table_max_out_of_line_depth_exceeded() {
-  BEGIN_TEST;
-
+TEST(Walker, validate_walker_table_max_out_of_line_depth_exceeded) {
   // 1 table + 31 non-null pointers + 1 null pointer = 33 out of line elements.
   uint8_t message[sizeof(fidl_vector_t) + sizeof(fidl_envelope_t) + sizeof(uintptr_t) * 32];
   fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(message);
@@ -182,14 +175,10 @@ bool validate_walker_table_max_out_of_line_depth_exceeded() {
       fidl_validate(&fidl_test_coding_RecursiveTableTable, &message[0], sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "recursion depth exceeded");
-
-  END_TEST;
 }
 
 // TODO(fxb/52382) Move this test to GIDL.
-bool validate_walker_table_max_out_of_line_depth_matched() {
-  BEGIN_TEST;
-
+TEST(Walker, validate_walker_table_max_out_of_line_depth_matched) {
   // 1 table + 30 non-null pointers + 1 null pointer = 32 out of line elements.
   uint8_t message[sizeof(fidl_vector_t) + sizeof(fidl_envelope_t) + sizeof(uintptr_t) * 31];
   fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(message);
@@ -210,14 +199,10 @@ bool validate_walker_table_max_out_of_line_depth_matched() {
   auto status =
       fidl_validate(&fidl_test_coding_RecursiveTableTable, &message[0], sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
-
-  END_TEST;
 }
 #endif
 
-bool validate_single_present_handle() {
-  BEGIN_TEST;
-
+TEST(Handles, validate_single_present_handle) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;
 
@@ -230,15 +215,11 @@ bool validate_single_present_handle() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
-
-  END_TEST;
 }
 
-bool validate_single_present_handle_check_trailing_padding() {
-  BEGIN_TEST;
-
+TEST(Handles, validate_single_present_handle_check_trailing_padding) {
   // There are four padding bytes; any of them not being zero should lead to an error.
   for (size_t i = 0; i < 4; i++) {
     constexpr size_t kBufferSize = sizeof(nonnullable_handle_message_layout);
@@ -257,13 +238,9 @@ bool validate_single_present_handle_check_trailing_padding() {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_STR_EQ(error, "non-zero padding bytes detected");
   }
-
-  END_TEST;
 }
 
-bool validate_too_many_handles_specified_error() {
-  BEGIN_TEST;
-
+TEST(Handles, validate_too_many_handles_specified_error) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;
 
@@ -277,15 +254,11 @@ bool validate_too_many_handles_specified_error() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
   EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
-
-  END_TEST;
 }
 
-bool validate_single_present_handle_unaligned_error() {
-  BEGIN_TEST;
-
+TEST(Handles, validate_single_present_handle_unaligned_error) {
   // Test a short, unaligned version of nonnullable message
   // handle. All fidl message objects should be 8 byte aligned.
   //
@@ -312,14 +285,10 @@ bool validate_single_present_handle_unaligned_error() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_multiple_present_handles() {
-  BEGIN_TEST;
-
+TEST(Handles, validate_multiple_present_handles) {
   multiple_nonnullable_handles_message_layout message = {};
   message.inline_struct.handle_0 = FIDL_HANDLE_PRESENT;
   message.inline_struct.handle_1 = FIDL_HANDLE_PRESENT;
@@ -336,20 +305,16 @@ bool validate_multiple_present_handles() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(message.inline_struct.data_0, 0u);
   EXPECT_EQ(message.inline_struct.handle_0, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.data_1, 0u);
   EXPECT_EQ(message.inline_struct.handle_1, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handle_2, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.data_2, 0u);
-
-  END_TEST;
 }
 
-bool validate_single_absent_handle() {
-  BEGIN_TEST;
-
+TEST(Handles, validate_single_absent_handle) {
   nullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_ABSENT;
 
@@ -357,15 +322,11 @@ bool validate_single_absent_handle() {
   auto status = fidl_validate(&nullable_handle_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_ABSENT);
-
-  END_TEST;
 }
 
-bool validate_multiple_absent_handles() {
-  BEGIN_TEST;
-
+TEST(Handles, validate_multiple_absent_handles) {
   multiple_nullable_handles_message_layout message = {};
   message.inline_struct.handle_0 = FIDL_HANDLE_ABSENT;
   message.inline_struct.handle_1 = FIDL_HANDLE_ABSENT;
@@ -376,20 +337,16 @@ bool validate_multiple_absent_handles() {
       fidl_validate(&multiple_nullable_handles_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(message.inline_struct.data_0, 0u);
   EXPECT_EQ(message.inline_struct.handle_0, FIDL_HANDLE_ABSENT);
   EXPECT_EQ(message.inline_struct.data_1, 0u);
   EXPECT_EQ(message.inline_struct.handle_1, FIDL_HANDLE_ABSENT);
   EXPECT_EQ(message.inline_struct.handle_2, FIDL_HANDLE_ABSENT);
   EXPECT_EQ(message.inline_struct.data_2, 0u);
-
-  END_TEST;
 }
 
-bool validate_array_of_present_handles() {
-  BEGIN_TEST;
-
+TEST(Arrays, validate_array_of_present_handles) {
   array_of_nonnullable_handles_message_layout message = {};
   message.inline_struct.handles[0] = FIDL_HANDLE_PRESENT;
   message.inline_struct.handles[1] = FIDL_HANDLE_PRESENT;
@@ -408,18 +365,14 @@ bool validate_array_of_present_handles() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(message.inline_struct.handles[0], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[1], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[2], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[3], FIDL_HANDLE_PRESENT);
-
-  END_TEST;
 }
 
-bool validate_array_of_nonnullable_handles_some_absent_error() {
-  BEGIN_TEST;
-
+TEST(Arrays, validate_array_of_nonnullable_handles_some_absent_error) {
   array_of_nonnullable_handles_message_layout message = {};
   message.inline_struct.handles[0] = FIDL_HANDLE_PRESENT;
   message.inline_struct.handles[1] = FIDL_HANDLE_PRESENT;
@@ -438,14 +391,10 @@ bool validate_array_of_nonnullable_handles_some_absent_error() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_array_of_nullable_handles() {
-  BEGIN_TEST;
-
+TEST(Arrays, validate_array_of_nullable_handles) {
   array_of_nullable_handles_message_layout message = {};
   message.inline_struct.handles[0] = FIDL_HANDLE_PRESENT;
   message.inline_struct.handles[1] = FIDL_HANDLE_ABSENT;
@@ -464,19 +413,15 @@ bool validate_array_of_nullable_handles() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(message.inline_struct.handles[0], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[1], FIDL_HANDLE_ABSENT);
   EXPECT_EQ(message.inline_struct.handles[2], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[3], FIDL_HANDLE_ABSENT);
   EXPECT_EQ(message.inline_struct.handles[4], FIDL_HANDLE_PRESENT);
-
-  END_TEST;
 }
 
-bool validate_array_of_nullable_handles_with_insufficient_handles_error() {
-  BEGIN_TEST;
-
+TEST(Arrays, validate_array_of_nullable_handles_with_insufficient_handles_error) {
   array_of_nullable_handles_message_layout message = {};
   message.inline_struct.handles[0] = FIDL_HANDLE_PRESENT;
   message.inline_struct.handles[1] = FIDL_HANDLE_ABSENT;
@@ -494,14 +439,10 @@ bool validate_array_of_nullable_handles_with_insufficient_handles_error() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_array_of_array_of_present_handles() {
-  BEGIN_TEST;
-
+TEST(Arrays, validate_array_of_array_of_present_handles) {
   array_of_array_of_nonnullable_handles_message_layout message = {};
   message.inline_struct.handles[0][0] = FIDL_HANDLE_PRESENT;
   message.inline_struct.handles[0][1] = FIDL_HANDLE_PRESENT;
@@ -527,7 +468,7 @@ bool validate_array_of_array_of_present_handles() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(message.inline_struct.handles[0][0], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[0][1], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[0][2], FIDL_HANDLE_PRESENT);
@@ -540,13 +481,9 @@ bool validate_array_of_array_of_present_handles() {
   EXPECT_EQ(message.inline_struct.handles[2][1], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[2][2], FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.handles[2][3], FIDL_HANDLE_PRESENT);
-
-  END_TEST;
 }
 
-bool validate_out_of_line_array() {
-  BEGIN_TEST;
-
+TEST(Arrays, validate_out_of_line_array) {
   out_of_line_array_of_nonnullable_handles_message_layout message = {};
   message.inline_struct.maybe_array =
       reinterpret_cast<array_of_nonnullable_handles*>(FIDL_ALLOC_PRESENT);
@@ -567,14 +504,10 @@ bool validate_out_of_line_array() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nonnullable_string() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_present_nonnullable_string) {
   unbounded_nonnullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   memcpy(message.data, "hello!", 6);
@@ -584,14 +517,10 @@ bool validate_present_nonnullable_string() {
                               0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nullable_string() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_present_nullable_string) {
   unbounded_nullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   memcpy(message.data, "hello!", 6);
@@ -601,14 +530,10 @@ bool validate_present_nullable_string() {
       fidl_validate(&unbounded_nullable_string_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_multiple_present_nullable_string() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_multiple_present_nullable_string) {
   // Among other things, this test ensures we handle out-of-line
   // alignment to FIDL_ALIGNMENT (i.e., 8) bytes correctly.
   multiple_nullable_strings_message_layout message;
@@ -624,14 +549,10 @@ bool validate_multiple_present_nullable_string() {
       fidl_validate(&multiple_nullable_strings_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_absent_nonnullable_string_error() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_absent_nonnullable_string_error) {
   unbounded_nonnullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
@@ -640,14 +561,10 @@ bool validate_absent_nonnullable_string_error() {
                               0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_absent_nullable_string() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_absent_nullable_string) {
   unbounded_nullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{0, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
@@ -656,14 +573,10 @@ bool validate_absent_nullable_string() {
                               sizeof(message.inline_struct), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nonnullable_bounded_string() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_present_nonnullable_bounded_string) {
   bounded_32_nonnullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   memcpy(message.data, "hello!", 6);
@@ -673,14 +586,10 @@ bool validate_present_nonnullable_bounded_string() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nullable_bounded_string() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_present_nullable_bounded_string) {
   bounded_32_nullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   memcpy(message.data, "hello!", 6);
@@ -690,14 +599,10 @@ bool validate_present_nullable_bounded_string() {
       fidl_validate(&bounded_32_nullable_string_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_absent_nonnullable_bounded_string_error() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_absent_nonnullable_bounded_string_error) {
   bounded_32_nonnullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
@@ -706,14 +611,10 @@ bool validate_absent_nonnullable_bounded_string_error() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_absent_nullable_bounded_string() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_absent_nullable_bounded_string) {
   bounded_32_nullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{0, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
@@ -722,14 +623,10 @@ bool validate_absent_nullable_bounded_string() {
                               sizeof(message.inline_struct), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nonnullable_bounded_string_short_error() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_present_nonnullable_bounded_string_short_error) {
   multiple_short_nonnullable_strings_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   message.inline_struct.string2 = fidl_string_t{8, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
@@ -741,14 +638,10 @@ bool validate_present_nonnullable_bounded_string_short_error() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_present_nullable_bounded_string_short_error() {
-  BEGIN_TEST;
-
+TEST(Strings, validate_present_nullable_bounded_string_short_error) {
   multiple_short_nullable_strings_message_layout message = {};
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
   message.inline_struct.string2 = fidl_string_t{8, reinterpret_cast<char*>(FIDL_ALLOC_PRESENT)};
@@ -760,14 +653,10 @@ bool validate_present_nullable_bounded_string_short_error() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_vector_with_huge_count() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_vector_with_huge_count) {
   unbounded_nonnullable_vector_of_uint32_message_layout message = {};
   // (2^30 + 4) * 4 (4 == sizeof(uint32_t)) overflows to 16 when stored as uint32_t.
   // We want 16 because it happens to be the actual size of the vector data in the message,
@@ -781,16 +670,12 @@ bool validate_vector_with_huge_count() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
   const char expected_error_msg[] = "integer overflow calculating vector size";
   EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
-
-  END_TEST;
 }
 
-bool validate_present_nonnullable_vector_of_handles() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nonnullable_vector_of_handles) {
   unbounded_nonnullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.handles[0] = FIDL_HANDLE_PRESENT;
@@ -810,14 +695,10 @@ bool validate_present_nonnullable_vector_of_handles() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nullable_vector_of_handles() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nullable_vector_of_handles) {
   unbounded_nullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.handles[0] = FIDL_HANDLE_PRESENT;
@@ -837,14 +718,10 @@ bool validate_present_nullable_vector_of_handles() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_absent_nonnullable_vector_of_handles_error() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nonnullable_vector_of_handles_error) {
   unbounded_nonnullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -860,14 +737,10 @@ bool validate_absent_nonnullable_vector_of_handles_error() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_absent_nullable_vector_of_handles() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nullable_vector_of_handles) {
   unbounded_nullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -876,14 +749,10 @@ bool validate_absent_nullable_vector_of_handles() {
                               sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nonnullable_bounded_vector_of_handles() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nonnullable_bounded_vector_of_handles) {
   bounded_32_nonnullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.handles[0] = FIDL_HANDLE_PRESENT;
@@ -903,14 +772,10 @@ bool validate_present_nonnullable_bounded_vector_of_handles() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nullable_bounded_vector_of_handles() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nullable_bounded_vector_of_handles) {
   bounded_32_nullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.handles[0] = FIDL_HANDLE_PRESENT;
@@ -930,14 +795,10 @@ bool validate_present_nullable_bounded_vector_of_handles() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_absent_nonnullable_bounded_vector_of_handles() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nonnullable_bounded_vector_of_handles) {
   bounded_32_nonnullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -946,14 +807,10 @@ bool validate_absent_nonnullable_bounded_vector_of_handles() {
                               sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_absent_nullable_bounded_vector_of_handles() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nullable_bounded_vector_of_handles) {
   bounded_32_nullable_vector_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -962,14 +819,10 @@ bool validate_absent_nullable_bounded_vector_of_handles() {
                               sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_present_nonnullable_bounded_vector_of_handles_short_error() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nonnullable_bounded_vector_of_handles_short_error) {
   multiple_nonnullable_vectors_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.inline_struct.vector2 = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
@@ -992,14 +845,10 @@ bool validate_present_nonnullable_bounded_vector_of_handles_short_error() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_present_nullable_bounded_vector_of_handles_short_error() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nullable_bounded_vector_of_handles_short_error) {
   multiple_nullable_vectors_of_handles_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.inline_struct.vector2 = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
@@ -1022,14 +871,10 @@ bool validate_present_nullable_bounded_vector_of_handles_short_error() {
                               sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_present_nonnullable_vector_of_uint32() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nonnullable_vector_of_uint32) {
   unbounded_nonnullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
@@ -1038,17 +883,13 @@ bool validate_present_nonnullable_vector_of_uint32() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
   auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
-  EXPECT_NONNULL(message_uint32);
-
-  END_TEST;
+  EXPECT_NOT_NULL(message_uint32);
 }
 
-bool validate_present_nullable_vector_of_uint32() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nullable_vector_of_uint32) {
   unbounded_nullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
@@ -1057,17 +898,13 @@ bool validate_present_nullable_vector_of_uint32() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
   auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
-  EXPECT_NONNULL(message_uint32);
-
-  END_TEST;
+  EXPECT_NOT_NULL(message_uint32);
 }
 
-bool validate_absent_nonnullable_vector_of_uint32_error() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nonnullable_vector_of_uint32_error) {
   unbounded_nonnullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -1076,14 +913,10 @@ bool validate_absent_nonnullable_vector_of_uint32_error() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_absent_nullable_vector_of_uint32() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nullable_vector_of_uint32) {
   unbounded_nullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -1092,17 +925,13 @@ bool validate_absent_nullable_vector_of_uint32() {
                               sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
   auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
   EXPECT_NULL(message_uint32);
-
-  END_TEST;
 }
 
-bool validate_present_nonnullable_bounded_vector_of_uint32() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nonnullable_bounded_vector_of_uint32) {
   bounded_32_nonnullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
@@ -1111,17 +940,13 @@ bool validate_present_nonnullable_bounded_vector_of_uint32() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
   auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
-  EXPECT_NONNULL(message_uint32);
-
-  END_TEST;
+  EXPECT_NOT_NULL(message_uint32);
 }
 
-bool validate_present_nullable_bounded_vector_of_uint32() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nullable_bounded_vector_of_uint32) {
   bounded_32_nullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
@@ -1130,17 +955,13 @@ bool validate_present_nullable_bounded_vector_of_uint32() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
   auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
-  EXPECT_NONNULL(message_uint32);
-
-  END_TEST;
+  EXPECT_NOT_NULL(message_uint32);
 }
 
-bool validate_absent_nonnullable_bounded_vector_of_uint32() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nonnullable_bounded_vector_of_uint32) {
   bounded_32_nonnullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -1149,17 +970,13 @@ bool validate_absent_nonnullable_bounded_vector_of_uint32() {
                               sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
 
   auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
   EXPECT_NULL(message_uint32);
-
-  END_TEST;
 }
 
-bool validate_absent_nullable_bounded_vector_of_uint32() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_absent_nullable_bounded_vector_of_uint32) {
   bounded_32_nullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
@@ -1168,17 +985,13 @@ bool validate_absent_nullable_bounded_vector_of_uint32() {
                               sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
 
   auto message_uint32 = reinterpret_cast<zx_handle_t*>(message.inline_struct.vector.data);
   EXPECT_NULL(message_uint32);
-
-  END_TEST;
 }
 
-bool validate_present_nonnullable_bounded_vector_of_uint32_short_error() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nonnullable_bounded_vector_of_uint32_short_error) {
   multiple_nonnullable_vectors_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.inline_struct.vector2 = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
@@ -1188,14 +1001,10 @@ bool validate_present_nonnullable_bounded_vector_of_uint32_short_error() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_present_nullable_bounded_vector_of_uint32_short_error() {
-  BEGIN_TEST;
-
+TEST(Vectors, validate_present_nullable_bounded_vector_of_uint32_short_error) {
   multiple_nullable_vectors_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
   message.inline_struct.vector2 = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
@@ -1205,14 +1014,10 @@ bool validate_present_nullable_bounded_vector_of_uint32_short_error() {
                               sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
-
-  END_TEST;
+  EXPECT_NOT_NULL(error);
 }
 
-bool validate_nested_nonnullable_structs() {
-  BEGIN_TEST;
-
+TEST(Structs, validate_nested_nonnullable_structs) {
   nested_structs_message_layout message = {};
   message.inline_struct.l0.handle_0 = FIDL_HANDLE_PRESENT;
   message.inline_struct.l0.l1.handle_1 = FIDL_HANDLE_PRESENT;
@@ -1231,19 +1036,15 @@ bool validate_nested_nonnullable_structs() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
+  EXPECT_NULL(error, "%s", error);
   // Note the traversal order! l1 -> l3 -> l2 -> l0
   EXPECT_EQ(message.inline_struct.l0.l1.handle_1, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.l0.l1.l2.l3.handle_3, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.l0.l1.l2.handle_2, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(message.inline_struct.l0.handle_0, FIDL_HANDLE_PRESENT);
-
-  END_TEST;
 }
 
-bool validate_nested_nonnullable_structs_check_padding() {
-  BEGIN_TEST;
-
+TEST(Structs, validate_nested_nonnullable_structs_check_padding) {
   // Wire-format:
   // message
   // - 16 bytes header
@@ -1289,13 +1090,9 @@ bool validate_nested_nonnullable_structs_check_padding() {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_STR_EQ(error, "non-zero padding bytes detected");
   }
-
-  END_TEST;
 }
 
-bool validate_nested_nullable_structs() {
-  BEGIN_TEST;
-
+TEST(Structs, validate_nested_nullable_structs) {
   // See below for the handle traversal order.
   nested_struct_ptrs_message_layout message = {};
 
@@ -1385,44 +1182,35 @@ bool validate_nested_nullable_structs() {
                               ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-#ifdef __Fuchsia__
-bool validate_valid_empty_nullable_xunion() {
-  BEGIN_TEST;
+// The following tests are disabled for host because they depend on fidl
+// generated LLCPP code that can't run on host.
 
+#ifdef __Fuchsia__
+TEST(Xunions, validate_valid_empty_nullable_xunion) {
   SampleNullableXUnionStruct message = {};
 
   const char* error = nullptr;
   auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_empty_nonnullable_xunion() {
-  BEGIN_TEST;
-
+TEST(Xunions, validate_empty_nonnullable_xunion) {
   SampleXUnionStruct message = {};
 
   const char* error = nullptr;
   auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "non-nullable xunion is absent");
-
-  END_TEST;
 }
 
-bool validate_empty_nullable_xunion_nonzero_ordinal() {
-  BEGIN_TEST;
-
+TEST(Xunions, validate_empty_nullable_xunion_nonzero_ordinal) {
   SampleNullableXUnionStruct message = {};
   message.opt_xu.header.tag = kSampleXUnionIntStructOrdinal;
 
@@ -1430,15 +1218,11 @@ bool validate_empty_nullable_xunion_nonzero_ordinal() {
   auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "empty xunion must have zero as ordinal");
-
-  END_TEST;
 }
 
-bool validate_nonempty_xunion_zero_ordinal() {
-  BEGIN_TEST;
-
+TEST(Xunions, validate_nonempty_xunion_zero_ordinal) {
   SampleXUnionStruct message = {};
   message.xu.header.envelope =
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
@@ -1447,15 +1231,11 @@ bool validate_nonempty_xunion_zero_ordinal() {
   auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                               sizeof(SampleXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
-
-  END_TEST;
 }
 
-bool validate_nonempty_nullable_xunion_zero_ordinal() {
-  BEGIN_TEST;
-
+TEST(Xunions, validate_nonempty_nullable_xunion_zero_ordinal) {
   SampleNullableXUnionStruct message = {};
   message.opt_xu.header.envelope =
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
@@ -1464,15 +1244,11 @@ bool validate_nonempty_nullable_xunion_zero_ordinal() {
   auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(SampleNullableXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
-
-  END_TEST;
 }
 
-bool validate_strict_xunion_unknown_ordinal() {
-  BEGIN_TEST;
-
+TEST(Xunions, validate_strict_xunion_unknown_ordinal) {
   uint8_t bytes[] = {
       0xf0, 0x05, 0xc1, 0x0a,                          // invalid ordinal
       0x00, 0x00, 0x00, 0x00,                          // padding
@@ -1487,15 +1263,11 @@ bool validate_strict_xunion_unknown_ordinal() {
   auto status = fidl_validate(&fidl_test_coding_SampleStrictXUnionStructTable, bytes, sizeof(bytes),
                               0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NONNULL(error);
+  EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "strict xunion has unknown ordinal");
-
-  END_TEST;
 }
 
-bool validate_flexible_xunion_unknown_ordinal() {
-  BEGIN_TEST;
-
+TEST(Xunions, validate_flexible_xunion_unknown_ordinal) {
   uint8_t bytes[] = {
       0xf0, 0x05, 0xc1, 0x0a,                          // invalid ordinal
       0x00, 0x00, 0x00, 0x00,                          // padding
@@ -1511,13 +1283,9 @@ bool validate_flexible_xunion_unknown_ordinal() {
       fidl_validate(&fidl_test_coding_SampleXUnionStructTable, bytes, sizeof(bytes), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error);
-
-  END_TEST;
 }
 
-bool validate_invalid_bool() {
-  BEGIN_TEST;
-
+TEST(Primitives, validate_invalid_bool) {
   uint8_t data[] = {
       0x88,  // bool, not 0 or 1*/
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1528,41 +1296,29 @@ bool validate_invalid_bool() {
   auto status = fidl_validate(&fidl_test_coding_BoolStructTable, data, sizeof(data), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "not a valid bool value");
-
-  END_TEST;
 }
 
-bool validate_zero_16bit_bits() {
-  BEGIN_TEST;
-
+TEST(Bits, validate_zero_16bit_bits) {
   Int16Bits message{.bits = 0};
 
   const char* error = nullptr;
   auto status =
       fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_valid_16bit_bits() {
-  BEGIN_TEST;
-
+TEST(Bits, validate_valid_16bit_bits) {
   Int16Bits message{.bits = 1u | 16u};
 
   const char* error = nullptr;
   auto status =
       fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_invalid_16bit_bits() {
-  BEGIN_TEST;
-
+TEST(Bits, validate_invalid_16bit_bits) {
   Int16Bits message{.bits = 1u << 7u};
 
   const char* error = nullptr;
@@ -1570,27 +1326,19 @@ bool validate_invalid_16bit_bits() {
       fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "not a valid bits member");
-
-  END_TEST;
 }
 
-bool validate_zero_32bit_bits() {
-  BEGIN_TEST;
-
+TEST(Bits, validate_zero_32bit_bits) {
   Int32Bits message{.bits = 0};
 
   const char* error = nullptr;
   auto status =
       fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_valid_32bit_bits() {
-  BEGIN_TEST;
-
+TEST(Bits, validate_valid_32bit_bits) {
   // The valid bits are position 7, 12, and 27.
   Int32Bits message{.bits = (1u << 6u) | (1u << 11u) | (1u << 26u)};
 
@@ -1598,14 +1346,10 @@ bool validate_valid_32bit_bits() {
   auto status =
       fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, error);
-
-  END_TEST;
+  EXPECT_NULL(error, "%s", error);
 }
 
-bool validate_invalid_32bit_bits() {
-  BEGIN_TEST;
-
+TEST(Bits, validate_invalid_32bit_bits) {
   // The valid bits are position 7, 12, and 27.
   Int32Bits message{.bits = 1u};
 
@@ -1614,15 +1358,11 @@ bool validate_invalid_32bit_bits() {
       fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "not a valid bits member");
-
-  END_TEST;
 }
 #endif
 
 template <typename T>
-bool TestValidEnum(const fidl_type_t* coding_table) {
-  BEGIN_HELPER;
-
+void TestValidEnum(const fidl_type_t* coding_table) {
   // See extra_messages.test.fidl for the list of valid members.
   using Underlying = decltype(T::e);
   for (const Underlying valid_value : {
@@ -1636,14 +1376,10 @@ bool TestValidEnum(const fidl_type_t* coding_table) {
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error);
   }
-
-  END_HELPER;
 }
 
 template <typename T>
-bool TestInvalidEnum(const fidl_type_t* coding_table) {
-  BEGIN_HELPER;
-
+void TestInvalidEnum(const fidl_type_t* coding_table) {
   // See extra_messages.test.fidl for the list of valid members.
   using Underlying = decltype(T::e);
   for (const Underlying invalid_value : {
@@ -1658,71 +1394,51 @@ bool TestInvalidEnum(const fidl_type_t* coding_table) {
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_STR_EQ(error, "not a valid enum member");
   }
-
-  END_HELPER;
 }
 
 #ifdef __Fuchsia__
-bool validate_int8_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_int8_enum) {
+  TestValidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable);
+  TestInvalidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable);
 }
 
-bool validate_int16_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_int16_enum) {
+  TestValidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable);
+  TestInvalidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable);
 }
 
-bool validate_int32_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_int32_enum) {
+  TestValidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable);
+  TestInvalidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable);
 }
 
-bool validate_int64_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_int64_enum) {
+  TestValidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable);
+  TestInvalidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable);
 }
 
-bool validate_uint8_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_uint8_enum) {
+  TestValidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable);
+  TestInvalidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable);
 }
 
-bool validate_uint16_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_uint16_enum) {
+  TestValidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable);
+  TestInvalidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable);
 }
 
-bool validate_uint32_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_uint32_enum) {
+  TestValidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable);
+  TestInvalidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable);
 }
 
-bool validate_uint64_enum() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestValidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable));
-  EXPECT_TRUE(TestInvalidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable));
-  END_TEST;
+TEST(Enums, validate_uint64_enum) {
+  TestValidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable);
+  TestInvalidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable);
 }
 #endif
 
-bool validate_primitives_struct() {
-  BEGIN_TEST;
-
+TEST(Primitives, validate_primitives_struct) {
   // TODO(fxb/52585) Use generated types - primitive struct fields actually have null type.
   // The following coding table is equivalent to this FIDL struct definition:
   //
@@ -1834,126 +1550,7 @@ bool validate_primitives_struct() {
                               static_cast<uint32_t>(sizeof(data)), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error);
-
-  END_TEST;
 }
-
-#ifdef __Fuchsia__
-// Disabled for host because they depend on fidl generated LLCPP code that can't run on host.
-BEGIN_TEST_CASE(walker)
-RUN_TEST(validate_walker_recursive_struct_max_out_of_line_depth)
-RUN_TEST(validate_walker_table_max_out_of_line_depth_exceeded)
-RUN_TEST(validate_walker_table_max_out_of_line_depth_matched)
-END_TEST_CASE(walker)
-#endif
-
-BEGIN_TEST_CASE(null_parameters)
-RUN_TEST(validate_null_validate_parameters)
-END_TEST_CASE(null_parameters)
-
-BEGIN_TEST_CASE(handles)
-RUN_TEST(validate_single_present_handle)
-RUN_TEST(validate_single_present_handle_check_trailing_padding)
-RUN_TEST(validate_too_many_handles_specified_error)
-RUN_TEST(validate_single_present_handle_unaligned_error)
-RUN_TEST(validate_multiple_present_handles)
-RUN_TEST(validate_single_absent_handle)
-RUN_TEST(validate_multiple_absent_handles)
-END_TEST_CASE(handles)
-
-BEGIN_TEST_CASE(arrays)
-RUN_TEST(validate_array_of_present_handles)
-RUN_TEST(validate_array_of_nonnullable_handles_some_absent_error)
-RUN_TEST(validate_array_of_nullable_handles)
-RUN_TEST(validate_array_of_nullable_handles_with_insufficient_handles_error)
-RUN_TEST(validate_array_of_array_of_present_handles)
-RUN_TEST(validate_out_of_line_array)
-END_TEST_CASE(arrays)
-
-BEGIN_TEST_CASE(strings)
-RUN_TEST(validate_present_nonnullable_string)
-RUN_TEST(validate_multiple_present_nullable_string)
-RUN_TEST(validate_present_nullable_string)
-RUN_TEST(validate_absent_nonnullable_string_error)
-RUN_TEST(validate_absent_nullable_string)
-RUN_TEST(validate_present_nonnullable_bounded_string)
-RUN_TEST(validate_present_nullable_bounded_string)
-RUN_TEST(validate_absent_nonnullable_bounded_string_error)
-RUN_TEST(validate_absent_nullable_bounded_string)
-RUN_TEST(validate_present_nonnullable_bounded_string_short_error)
-RUN_TEST(validate_present_nullable_bounded_string_short_error)
-END_TEST_CASE(strings)
-
-BEGIN_TEST_CASE(vectors)
-RUN_TEST(validate_vector_with_huge_count)
-RUN_TEST(validate_present_nonnullable_vector_of_handles)
-RUN_TEST(validate_present_nullable_vector_of_handles)
-RUN_TEST(validate_absent_nonnullable_vector_of_handles_error)
-RUN_TEST(validate_absent_nullable_vector_of_handles)
-RUN_TEST(validate_present_nonnullable_bounded_vector_of_handles)
-RUN_TEST(validate_present_nullable_bounded_vector_of_handles)
-RUN_TEST(validate_absent_nonnullable_bounded_vector_of_handles)
-RUN_TEST(validate_absent_nullable_bounded_vector_of_handles)
-RUN_TEST(validate_present_nonnullable_bounded_vector_of_handles_short_error)
-RUN_TEST(validate_present_nullable_bounded_vector_of_handles_short_error)
-RUN_TEST(validate_present_nonnullable_vector_of_uint32)
-RUN_TEST(validate_present_nullable_vector_of_uint32)
-RUN_TEST(validate_absent_nonnullable_vector_of_uint32_error)
-RUN_TEST(validate_absent_nullable_vector_of_uint32)
-RUN_TEST(validate_present_nonnullable_bounded_vector_of_uint32)
-RUN_TEST(validate_present_nullable_bounded_vector_of_uint32)
-RUN_TEST(validate_absent_nonnullable_bounded_vector_of_uint32)
-RUN_TEST(validate_absent_nullable_bounded_vector_of_uint32)
-RUN_TEST(validate_present_nonnullable_bounded_vector_of_uint32_short_error)
-RUN_TEST(validate_present_nullable_bounded_vector_of_uint32_short_error)
-END_TEST_CASE(vectors)
-
-BEGIN_TEST_CASE(structs)
-RUN_TEST(validate_nested_nonnullable_structs)
-RUN_TEST(validate_nested_nonnullable_structs_check_padding)
-RUN_TEST(validate_nested_nullable_structs)
-END_TEST_CASE(structs)
-
-#ifdef __Fuchsia__
-// Disabled for host because they depend on fidl generated LLCPP code that can't run on host.
-BEGIN_TEST_CASE(xunions)
-RUN_TEST(validate_valid_empty_nullable_xunion)
-RUN_TEST(validate_empty_nonnullable_xunion)
-RUN_TEST(validate_empty_nullable_xunion_nonzero_ordinal)
-RUN_TEST(validate_nonempty_xunion_zero_ordinal)
-RUN_TEST(validate_strict_xunion_unknown_ordinal)
-RUN_TEST(validate_flexible_xunion_unknown_ordinal)
-RUN_TEST(validate_nonempty_nullable_xunion_zero_ordinal)
-END_TEST_CASE(xunions)
-
-BEGIN_TEST_CASE(bits)
-RUN_TEST(validate_zero_16bit_bits)
-RUN_TEST(validate_valid_16bit_bits)
-RUN_TEST(validate_invalid_16bit_bits)
-RUN_TEST(validate_zero_32bit_bits)
-RUN_TEST(validate_valid_32bit_bits)
-RUN_TEST(validate_invalid_32bit_bits)
-END_TEST_CASE(bits)
-
-BEGIN_TEST_CASE(enums)
-RUN_TEST(validate_int8_enum)
-RUN_TEST(validate_int16_enum)
-RUN_TEST(validate_int32_enum)
-RUN_TEST(validate_int64_enum)
-RUN_TEST(validate_uint8_enum)
-RUN_TEST(validate_uint16_enum)
-RUN_TEST(validate_uint32_enum)
-RUN_TEST(validate_uint64_enum)
-END_TEST_CASE(enums)
-#endif
-
-BEGIN_TEST_CASE(primitives)
-RUN_TEST(validate_primitives_struct)
-#ifdef __Fuchsia__
-// Disabled for host because they depend on fidl generated LLCPP code that can't run on host.
-RUN_TEST(validate_invalid_bool)
-#endif
-END_TEST_CASE(primitives)
 
 }  // namespace
 }  // namespace fidl

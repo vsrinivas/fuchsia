@@ -13,7 +13,7 @@
 #include <optional>
 #include <utility>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -40,7 +40,7 @@ struct NonnullableChannelMessage {
 
   static constexpr const fidl_type_t* Type = &NonnullableChannelMessageType;
 
-  static bool MakeDecodedMessageHelper(
+  static void MakeDecodedMessageHelper(
       fidl::BytePart buffer, fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
       zx::channel* out_channel);
 };
@@ -80,7 +80,7 @@ struct InlinePODStruct {
 
   static constexpr const fidl_type_t* Type = &InlinePODStructType;
 
-  static bool MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t payload,
+  static void MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t payload,
                                        fidl::DecodedMessage<InlinePODStruct>* out_decoded_message);
 };
 
@@ -114,7 +114,7 @@ struct OutOfLineMessage {
 
   static constexpr const fidl_type_t* Type = &OutOfLineMessageType;
 
-  static bool MakeDecodedMessageHelper(fidl::BytePart buffer,
+  static void MakeDecodedMessageHelper(fidl::BytePart buffer,
                                        std::optional<uint64_t> optional_field,
                                        fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message);
 };
@@ -153,7 +153,7 @@ struct LargeStruct {
 
   static constexpr const fidl_type_t* Type = &LargeStructType;
 
-  static bool MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
+  static void MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
                                        fidl::DecodedMessage<LargeStruct>* out_decoded_message);
 };
 
@@ -229,27 +229,17 @@ namespace {
 // Zircon system call instead of calling a destructor, we indirectly test for handle closure
 // via the ZX_ERR_PEER_CLOSED error message.
 
-bool HelperExpectPeerValid(zx::channel& channel) {
-  BEGIN_HELPER;
-
+void HelperExpectPeerValid(zx::channel& channel) {
   const char* foo = "A";
   EXPECT_EQ(channel.write(0, foo, 1, nullptr, 0), ZX_OK);
-
-  END_HELPER;
 }
 
-bool HelperExpectPeerInvalid(zx::channel& channel) {
-  BEGIN_HELPER;
-
+void HelperExpectPeerInvalid(zx::channel& channel) {
   const char* foo = "A";
   EXPECT_EQ(channel.write(0, foo, 1, nullptr, 0), ZX_ERR_PEER_CLOSED);
-
-  END_HELPER;
 }
 
-bool EncodedMessageTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, EncodedMessageTest) {
   // Manually construct an encoded message
   alignas(NonnullableChannelMessage) uint8_t buf[sizeof(NonnullableChannelMessage)] = {};
   auto msg = reinterpret_cast<NonnullableChannelMessage*>(&buf[0]);
@@ -273,17 +263,13 @@ bool EncodedMessageTest() {
 
     encoded_message.handles().set_actual(1);
 
-    EXPECT_TRUE(HelperExpectPeerValid(channel_1));
+    HelperExpectPeerValid(channel_1);
   }
 
-  EXPECT_TRUE(HelperExpectPeerInvalid(channel_1));
-
-  END_TEST;
+  HelperExpectPeerInvalid(channel_1);
 }
 
-bool DecodedMessageTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, DecodedMessageTest) {
   // Manually construct a decoded message
   alignas(NonnullableChannelMessage) uint8_t buf[sizeof(NonnullableChannelMessage)] = {};
   auto msg = reinterpret_cast<NonnullableChannelMessage*>(&buf[0]);
@@ -303,18 +289,14 @@ bool DecodedMessageTest() {
     fidl::DecodedMessage<NonnullableChannelMessage> decoded_message(
         fidl::BytePart(buf, sizeof(buf), sizeof(buf)));
 
-    EXPECT_TRUE(HelperExpectPeerValid(channel_1));
+    HelperExpectPeerValid(channel_1);
   }
 
-  EXPECT_TRUE(HelperExpectPeerInvalid(channel_1));
-
-  END_TEST;
+  HelperExpectPeerInvalid(channel_1);
 }
 
 // Start with an encoded message, then decode and back.
-bool RoundTripTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, RoundTripTest) {
   alignas(NonnullableChannelMessage) uint8_t buf[sizeof(NonnullableChannelMessage)] = {};
   auto msg = reinterpret_cast<NonnullableChannelMessage*>(&buf[0]);
   msg->header.txid = 10;
@@ -352,13 +334,13 @@ bool RoundTripTest() {
   // Byte-accurate comparison
   EXPECT_EQ(memcmp(golden_encoded, buf, sizeof(buf)), 0);
 
-  EXPECT_TRUE(HelperExpectPeerValid(channel_1));
+  HelperExpectPeerValid(channel_1);
 
   // Decode
   auto decode_result = fidl::Decode(std::move(*encoded_message));
   auto& decoded_message = decode_result.message;
   EXPECT_EQ(decode_result.status, ZX_OK);
-  EXPECT_NULL(decode_result.error, decode_result.error);
+  EXPECT_NULL(decode_result.error, "%s", decode_result.error);
   EXPECT_EQ(decoded_message.message()->header.txid, 10);
   EXPECT_EQ(decoded_message.message()->header.ordinal, (42lu << 32));
   EXPECT_EQ(decoded_message.message()->channel.get(), unsafe_handle_backup);
@@ -367,14 +349,14 @@ bool RoundTripTest() {
   EXPECT_EQ(encoded_message->bytes().actual(), 0);
   // If we destroy encoded_message, it should not accidentally close the channel
   delete encoded_message;
-  EXPECT_TRUE(HelperExpectPeerValid(channel_1));
+  HelperExpectPeerValid(channel_1);
 
   // Encode
   {
     auto encode_result = fidl::Encode(std::move(decoded_message));
     auto& encoded_message = encode_result.message;
     EXPECT_EQ(encode_result.status, ZX_OK);
-    EXPECT_NULL(encode_result.error, encode_result.error);
+    EXPECT_NULL(encode_result.error, "%s", encode_result.error);
     // decoded_message should be consumed
     EXPECT_EQ(decoded_message.message(), nullptr);
 
@@ -384,30 +366,22 @@ bool RoundTripTest() {
     EXPECT_EQ(encoded_message.handles().data()[0], unsafe_handle_backup);
     EXPECT_EQ(memcmp(golden_encoded, encoded_message.bytes().data(), sizeof(buf)), 0);
 
-    EXPECT_TRUE(HelperExpectPeerValid(channel_1));
+    HelperExpectPeerValid(channel_1);
   }
   // Encoded message was destroyed, bringing down the handle with it
-  EXPECT_TRUE(HelperExpectPeerInvalid(channel_1));
-
-  END_TEST;
+  HelperExpectPeerInvalid(channel_1);
 }
 
-bool ArrayLayoutTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, ArrayLayoutTest) {
   static_assert(sizeof(fidl::Array<uint8_t, 3>) == sizeof(uint8_t[3]));
   static_assert(sizeof(fidl::Array<fidl::Array<uint8_t, 7>, 3>) == sizeof(uint8_t[3][7]));
 
   constexpr fidl::Array<uint8_t, 3> a = {1, 2, 3};
   constexpr uint8_t b[3] = {1, 2, 3};
   EXPECT_EQ((&a[2] - &a[0]), (&b[2] - &b[0]));
-
-  END_TEST;
 }
 
-bool UninitializedBufferStackAllocationAlignmentTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, UninitializedBufferStackAllocationAlignmentTest) {
   fidl::internal::AlignedBuffer<1> array_of_1;
   ASSERT_EQ(sizeof(array_of_1), 8);
   ASSERT_TRUE(reinterpret_cast<uintptr_t>(&array_of_1) % 8 == 0);
@@ -423,13 +397,9 @@ bool UninitializedBufferStackAllocationAlignmentTest() {
   fidl::internal::AlignedBuffer<100> array_of_100;
   ASSERT_EQ(sizeof(array_of_100), 104);
   ASSERT_TRUE(reinterpret_cast<uintptr_t>(&array_of_100) % 8 == 0);
-
-  END_TEST;
 }
 
-bool UninitializedBufferHeapAllocationAlignmentTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, UninitializedBufferHeapAllocationAlignmentTest) {
   std::unique_ptr array_of_1 = std::make_unique<fidl::internal::AlignedBuffer<1>>();
   ASSERT_TRUE(reinterpret_cast<uintptr_t>(array_of_1.get()) % 8 == 0);
 
@@ -441,8 +411,6 @@ bool UninitializedBufferHeapAllocationAlignmentTest() {
 
   std::unique_ptr array_of_100 = std::make_unique<fidl::internal::AlignedBuffer<100>>();
   ASSERT_TRUE(reinterpret_cast<uintptr_t>(array_of_100.get()) % 8 == 0);
-
-  END_TEST;
 }
 
 template <typename TestMessage>
@@ -450,11 +418,9 @@ class MySyncCall;
 
 // Helper to populate a OwnedSyncCallBase<NonnullableChannelMessage> with a decoded message,
 // as if receiving a FIDL reply.
-bool NonnullableChannelMessage::MakeDecodedMessageHelper(
+void NonnullableChannelMessage::MakeDecodedMessageHelper(
     fidl::BytePart buffer, fidl::DecodedMessage<NonnullableChannelMessage>* out_decoded_message,
     zx::channel* out_channel) {
-  BEGIN_HELPER;
-
   auto msg = reinterpret_cast<NonnullableChannelMessage*>(buffer.data());
   memset(buffer.data(), 0, buffer.capacity());
 
@@ -471,18 +437,14 @@ bool NonnullableChannelMessage::MakeDecodedMessageHelper(
     *out_decoded_message = std::move(decoded_message);
   }
 
-  EXPECT_TRUE(HelperExpectPeerValid(*out_channel));
-
-  END_HELPER;
+  HelperExpectPeerValid(*out_channel);
 }
 
 // Helper to populate a OwnedSyncCallBase<InlinePODStruct> with a decoded message,
 // as if receiving a FIDL reply.
-bool InlinePODStruct::MakeDecodedMessageHelper(
+void InlinePODStruct::MakeDecodedMessageHelper(
     fidl::BytePart buffer, uint64_t payload,
     fidl::DecodedMessage<InlinePODStruct>* out_decoded_message) {
-  BEGIN_HELPER;
-
   auto msg = reinterpret_cast<InlinePODStruct*>(buffer.data());
   memset(buffer.data(), 0, buffer.capacity());
   msg->payload = payload;
@@ -495,17 +457,13 @@ bool InlinePODStruct::MakeDecodedMessageHelper(
   }
 
   EXPECT_EQ(out_decoded_message->message()->payload, payload);
-
-  END_HELPER;
 }
 
 // Helper to populate a OwnedSyncCallBase<OutOfLineMessage> with a decoded message,
 // as if receiving a FIDL reply.
-bool OutOfLineMessage::MakeDecodedMessageHelper(
+void OutOfLineMessage::MakeDecodedMessageHelper(
     fidl::BytePart buffer, std::optional<uint64_t> optional_field,
     fidl::DecodedMessage<OutOfLineMessage>* out_decoded_message) {
-  BEGIN_HELPER;
-
   auto msg = reinterpret_cast<OutOfLineMessage*>(buffer.data());
   memset(buffer.data(), 0, buffer.capacity());
 
@@ -527,16 +485,12 @@ bool OutOfLineMessage::MakeDecodedMessageHelper(
     fidl::DecodedMessage<OutOfLineMessage> decoded_message(std::move(full_buffer));
     *out_decoded_message = std::move(decoded_message);
   }
-
-  END_HELPER;
 }
 
 // Helper to populate a OwnedSyncCallBase<LargeStruct> with a decoded message,
 // as if receiving a FIDL reply.
-bool LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
+void LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
                                            fidl::DecodedMessage<LargeStruct>* out_decoded_message) {
-  BEGIN_HELPER;
-
   auto msg = reinterpret_cast<LargeStruct*>(buffer.data());
   memset(buffer.data(), 0, buffer.capacity());
   for (auto& x : msg->payload) {
@@ -553,13 +507,9 @@ bool LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
   for (const auto& x : out_decoded_message->message()->payload) {
     EXPECT_EQ(x, fill);
   }
-
-  END_HELPER;
 }
 
-bool UnownedSyncCallTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, UnownedSyncCallTest) {
   // Manually define the unowned OwnedSyncCallBase type for InlinePODStruct.
   // This is similar to the llcpp codegen output.
   class MyUnownedSyncCall : private fidl::internal::UnownedSyncCallBase<InlinePODStruct> {
@@ -568,8 +518,7 @@ bool UnownedSyncCallTest() {
    public:
     explicit MyUnownedSyncCall(fidl::BytePart buffer, uint64_t payload) {
       fidl::DecodedMessage<InlinePODStruct> decoded_message;
-      EXPECT_TRUE(
-          InlinePODStruct::MakeDecodedMessageHelper(std::move(buffer), payload, &decoded_message));
+      InlinePODStruct::MakeDecodedMessageHelper(std::move(buffer), payload, &decoded_message);
       Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
     }
 
@@ -594,34 +543,15 @@ bool UnownedSyncCallTest() {
   ASSERT_EQ(call_2.error(), nullptr);
   ASSERT_EQ(call_2.Unwrap()->payload, 0xABCDABCD);
   ASSERT_EQ(reinterpret_cast<uint8_t*>(call_2.Unwrap()), &response_buffer[0]);
-
-  END_TEST;
 }
 
-bool ResponseStorageAllocationStrategyTest() {
-  BEGIN_TEST;
-
+TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {
   // The stack allocation limit of 512 bytes is defined in
   // zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h
   ASSERT_EQ(sizeof(fidl::internal::ResponseStorage<StructOf512Bytes>), 512);
 
   // Since the buffer is on heap, |ResponseStorage| becomes a pointer.
   ASSERT_EQ(sizeof(fidl::internal::ResponseStorage<StructOf513Bytes>), sizeof(std::uintptr_t));
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(llcpp_types_tests)
-RUN_NAMED_TEST("EncodedMessage test", EncodedMessageTest)
-RUN_NAMED_TEST("DecodedMessage test", DecodedMessageTest)
-RUN_NAMED_TEST("Round trip test", RoundTripTest)
-RUN_NAMED_TEST("Array layout test", ArrayLayoutTest)
-RUN_NAMED_TEST("fidl::internal::AlignedBuffer alignment on stack",
-               UninitializedBufferStackAllocationAlignmentTest)
-RUN_NAMED_TEST("fidl::internal::AlignedBuffer alignment on heap",
-               UninitializedBufferHeapAllocationAlignmentTest)
-RUN_NAMED_TEST("Unowned OwnedSyncCallBase std::move", UnownedSyncCallTest)
-RUN_NAMED_TEST("ResponseStorage allocation strategy", ResponseStorageAllocationStrategyTest)
-END_TEST_CASE(llcpp_types_tests)
