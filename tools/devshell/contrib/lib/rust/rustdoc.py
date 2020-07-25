@@ -86,8 +86,9 @@ def main():
     rustdoc = os.path.join(ROOT_PATH, "scripts", "rust", "rustdoc_no_ld_library_path.sh")
 
     shared_libs_root = os.path.join(ROOT_PATH, build_dir)
-    sysroot = os.path.join(ROOT_PATH, build_dir, "sdk", "exported", "zircon_sysroot", \
-            "arch", target_cpu, "sysroot")
+    sysroot = os.path.join(
+        ROOT_PATH, build_dir, "zircon_toolchain", "obj", "zircon", "public",
+        "sysroot", "sysroot")
 
     clang_c_compiler = os.path.join(clang_prefix, "clang")
 
