@@ -380,7 +380,7 @@ int main(int argc, char** argv) {
   char cmdline[4096];
   char* cmdnext = cmdline;
   char* nodename = NULL;
-  int s = 1;
+  int sock = 1;
   size_t num_fvms = 0;
   size_t num_firmware = 0;
   char board_info_template[] = "/tmp/board_info.XXXXXX";
@@ -696,14 +696,14 @@ int main(int argc, char** argv) {
     log("Board name set to [%s]", board_name);
   }
 
-  s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-  if (s < 0) {
-    log("cannot create socket %d", s);
+  sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+  if (sock < 0) {
+    log("cannot create socket %d", sock);
     return -1;
   }
 
   if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) || nodename) {
-    setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof 1);
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof 1);
   }
 
   memset(&addr, 0, sizeof(addr));
@@ -711,11 +711,13 @@ int main(int argc, char** argv) {
   if (no_bind) {
     if (IN6_IS_ADDR_UNSPECIFIED(&allowed_addr)) {
       log("need to specify ipv6 address using -a for --no-bind");
+      close(sock);
       return -1;
     }
     if (allowed_scope_id == -1) {
       log("need to specify interface number in -a for --no-bind.");
       log("Ex: -a fe80::5054:4d:fe12:3456/4 \nHint: use netls to get the address");
+      close(sock);
       return -1;
     }
     memcpy(&addr.sin6_addr, &allowed_addr, sizeof(struct in6_addr));
@@ -724,10 +726,10 @@ int main(int argc, char** argv) {
     log("Sending request to %s", sockaddr_str(&addr));
   } else {
     addr.sin6_port = htons(NB_ADVERT_PORT);
-    if (bind(s, (void*)&addr, sizeof(addr)) < 0) {
+    if (bind(sock, (void*)&addr, sizeof(addr)) < 0) {
       log("cannot bind to %s %d: %s\nthere may be another bootserver running\n",
           sockaddr_str(&addr), errno, strerror(errno));
-      close(s);
+      close(sock);
       return -1;
     }
     log("listening on %s", sockaddr_str(&addr));
@@ -746,10 +748,10 @@ int main(int argc, char** argv) {
       msg->magic = NB_MAGIC;
       msg->cmd = NB_GET_ADVERT;
 
-      ssize_t send_result = sendto(s, buf, sizeof(nbmsg), 0, (struct sockaddr*)&addr, sizeof(addr));
+      ssize_t send_result = sendto(sock, buf, sizeof(nbmsg), 0, (struct sockaddr*)&addr, sizeof(addr));
       if (send_result != sizeof(nbmsg)) {
         if (fail_fast) {
-          close(s);
+          close(sock);
           return -1;
         }
         sleep(RETRY_DELAY_SEC);
@@ -758,13 +760,13 @@ int main(int argc, char** argv) {
 
       // Ensure that response is received.
       struct pollfd read_fd[1];
-      read_fd[0].fd = s;
+      read_fd[0].fd = sock;
       read_fd[0].events = POLLIN;
       int ret = poll(read_fd, 1, 1000);
       if (ret < 0 || !(read_fd[0].revents & POLLIN)) {
         // No response received. Resend request after delay.
         if (fail_fast) {
-          close(s);
+          close(sock);
           return -1;
         }
         sleep(RETRY_DELAY_SEC);
@@ -772,10 +774,10 @@ int main(int argc, char** argv) {
       }
     }
 
-    ssize_t r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
+    ssize_t r = recvfrom(sock, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
     if (r < 0) {
       log("socket read error %s", strerror(errno));
-      close(s);
+      close(sock);
       return -1;
     }
     if ((size_t)r < sizeof(nbmsg)) {
@@ -800,7 +802,7 @@ int main(int argc, char** argv) {
           "detected from %s, please upgrade your bootloader%s",
           ANSI(RED), msg->arg, sockaddr_str(&ra), ANSI(RESET));
       if (fail_fast) {
-        close(s);
+        close(sock);
         return -1;
       }
       continue;
@@ -842,7 +844,7 @@ int main(int argc, char** argv) {
             " Device will not be serviced. Please upgrade Zedboot.%s",
             ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
         if (fail_fast || fail_fast_if_version_mismatch) {
-          close(s);
+          close(sock);
           return -1;
         }
         continue;
@@ -973,20 +975,20 @@ int main(int argc, char** argv) {
         }
       }
       if (once) {
-        close(s);
+        close(sock);
         return 0;
       }
     } else if (fail_fast) {
-      close(s);
+      close(sock);
       return -1;
     } else {
       log("Transfer ends incompletely.");
       log("Wait for %u secs before retrying...\n\n", RETRY_DELAY_SEC);
       sleep(RETRY_DELAY_SEC);
     }
-    drain(s);
+    drain(sock);
   }
 
-  close(s);
+  close(sock);
   return 0;
 }
