@@ -30,6 +30,7 @@ rustc_library("fuchsia-async") {
     "src/net/tcp.rs",
     "src/net/udp.rs",
     "src/runtime/mod.rs",
+    "src/runtime/stub.rs",
     "src/temp.rs",
     "src/test_support.rs",
   ]

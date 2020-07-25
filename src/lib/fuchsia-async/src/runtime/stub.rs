@@ -6,6 +6,7 @@
 // TODO(56078): Remove this once smol supports WASM.
 
 pub mod task {
+    use futures::prelude::Future;
     /// Stub Task.
     pub struct Task<T> {
         _unused: T,
@@ -21,6 +22,18 @@ pub mod task {
     impl<T: Send> Task<T> {
         /// Stub blocking, panics if used.
         pub fn blocking(_: impl core::future::Future<Output = T> + Send + 'static) -> Task<T> {
+            unimplemented!();
+        }
+
+        /// Stub spawn, panics if used.
+        pub fn spawn(_: impl Future<Output = T> + Send + 'static) -> Task<T> {
+            unimplemented!();
+        }
+    }
+
+    impl<T> Task<T> {
+        /// Stub local, panics if used.
+        pub fn local(_: impl Future<Output = T> + 'static) -> Task<T> {
             unimplemented!();
         }
     }
