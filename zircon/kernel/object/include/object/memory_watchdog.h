@@ -19,7 +19,6 @@
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <platform/crashlog.h>
-#include <platform/halt_helper.h>
 
 class Executor;
 

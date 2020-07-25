@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/debuglog.h>
+
 #include <object/executor.h>
 #include <object/memory_watchdog.h>
 #include <vm/scanner.h>
@@ -108,17 +110,25 @@ void MemoryWatchdog::OnOom() {
       // specific order in the log, the test will fail.
       printf("memory-pressure: stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
 
-      // It is important that we don't hang while trying to reboot.  Set a deadline by which we must
-      // successfully reboot, else panic.
+      // TODO(maniscalco): What prevents another thread from concurrently initiating a halt/reboot
+      // of some kind (via RootJobObserver, syscall, etc.)?
+
+      // The debuglog could contain diagnostic messages that would assist in debugging the cause of
+      // the OOM.  Shutdown debuglog before rebooting in order to flush any queued messages.
       //
-      // TODO(55673): How long should we wait?  Part of the reboot process includes shutting down
-      // the debuglog subsystem (|dlog_shutdown|), which involves writing out any buffered debuglog
-      // messages the serial port (if present).  Writing to a serial port can be slow.  Assuming we
-      // have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1, it will take roughly 11.4
-      // seconds to drain the buffer.  The timeout should be long enough to allow a full DLOG buffer
-      // to be drained.
+      // It is important that we don't hang during this process so set a deadline for the debuglog
+      // to shutdown.
+      //
+      // TODO(55673): How long should we wait?  Shutting down the debuglog includes flushing any
+      // buffered messages to the serial port (if present).  Writing to a serial port can be slow.
+      // Assuming we have a full debuglog buffer of 128KB, at 115200 bps, with 8-N-1, it will take
+      // roughly 11.4 seconds to drain the buffer.  The timeout should be long enough to allow a
+      // full DLOG buffer to be drained.
       zx_time_t deadline = current_time() + ZX_SEC(20);
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::Oom, deadline);
+      status = dlog_shutdown(deadline);
+      ASSERT_MSG(status == ZX_OK, "dlog_shutdown failed: %d\n", status);
+
+      platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
   }
 }
 

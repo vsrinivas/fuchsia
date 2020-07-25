@@ -192,6 +192,9 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
           "                                        optionally specify the rate at which to leak "
           "(in MB per second)\n",
           argv[0].str);
+      printf(
+          "%s oom hard                          : leak memory aggressively and keep on leaking\n",
+          argv[0].str);
       printf("%s mem_avail_state info              : dump memory availability state info\n",
              argv[0].str);
       printf(
@@ -238,9 +241,18 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       show_mem = false;
     }
   } else if (!strcmp(argv[1].str, "oom")) {
+    if (argc > 3) {
+      goto usage;
+    }
+
     uint64_t rate = 0;
+    bool hard = false;
     if (argc > 2) {
-      rate = strtoul(argv[2].str, nullptr, 0) * 1024 * 1024 / PAGE_SIZE;
+      if (!strcmp(argv[2].str, "hard")) {
+        hard = true;
+      } else {
+        rate = strtoul(argv[2].str, nullptr, 0) * 1024 * 1024 / PAGE_SIZE;
+      }
     }
 
     // When we reach the oom state the kernel may 'try harder' to reclaim memory and prevent us from
@@ -277,6 +289,15 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       }
       // Ignore any errors under the assumption we had a racy allocation and try again next time
       // around the loop.
+    }
+
+    if (hard) {
+      printf("Continuing to leak pages forever\n");
+      // Keep leaking as fast possible.
+      while (true) {
+        vm_page_t* p;
+        pmm_alloc_page(0, &p);
+      }
     }
   } else if (!strcmp(argv[1].str, "mem_avail_state")) {
     if (argc < 3) {
