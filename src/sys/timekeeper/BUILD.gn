@@ -96,7 +96,7 @@ group("tests") {
 # TODO(56447) - move time sync components and this group to a common directory
 group("recovery") {
   deps = [
-    ":service",
+    ":timekeeper",
     "//garnet/bin/network_time_service",
   ]
 }
