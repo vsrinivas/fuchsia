@@ -107,8 +107,6 @@ std::vector<InternalPointerEvent> PointerInjectorEventToInternalPointerEvent(
                                          pointer_sample.position_in_viewport()[1]};
   internal_event.context = context;
   internal_event.target = target;
-  if (event.has_trace_flow_id())
-    internal_event.trace_id = event.trace_flow_id();
 
   std::vector<InternalPointerEvent> events;
   switch (pointer_sample.phase()) {
@@ -165,7 +163,6 @@ InternalPointerEvent GfxPointerEventToInternalEvent(
   // to deliver events to any client in the scene graph.
   internal_event.context = scene_koid;
   internal_event.target = scene_koid;
-  internal_event.trace_id = PointerTraceHACK(event.radius_major, event.radius_minor);
   internal_event.phase = GfxPhaseToInternalPhase(event.phase);
   internal_event.buttons = event.buttons;
 
@@ -174,7 +171,8 @@ InternalPointerEvent GfxPointerEventToInternalEvent(
 
 GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalPointerEvent& internal_event,
                                                       const glm::mat4& view_from_context_transform,
-                                                      fuchsia::ui::input::PointerEventType type) {
+                                                      fuchsia::ui::input::PointerEventType type,
+                                                      uint64_t trace_id) {
   GfxPointerEvent event;
   event.event_time = internal_event.timestamp;
   event.device_id = internal_event.device_id;
@@ -190,7 +188,7 @@ GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalPointerEvent
   event.x = local_position.x;
   event.y = local_position.y;
 
-  const auto [high, low] = ReversePointerTraceHACK(internal_event.trace_id);
+  const auto [high, low] = ReversePointerTraceHACK(trace_id);
   event.radius_minor = low;   // Lower 32 bits.
   event.radius_major = high;  // Upper 32 bits.
 

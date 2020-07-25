@@ -20,7 +20,7 @@ using DeviceType = fuchsia::ui::pointerinjector::DeviceType;
 
 // Convert event to internal representation, then to gfx.
 std::vector<fuchsia::ui::input::PointerEvent> ConvertPointerEvent(
-    const fuchsia::ui::pointerinjector::Event& event) {
+    const fuchsia::ui::pointerinjector::Event& event, uint64_t trace_id = 0) {
   // Default viewport.
   scenic_impl::input::Viewport viewport;
   viewport.extents = scenic_impl::input::Extents({{{0.f, 0.f}, {10.f, 10.f}}});
@@ -35,7 +35,7 @@ std::vector<fuchsia::ui::input::PointerEvent> ConvertPointerEvent(
   std::vector<fuchsia::ui::input::PointerEvent> output;
   for (auto& internal_event : intermediate) {
     output.push_back(scenic_impl::input::InternalPointerEventToGfxPointerEvent(
-        internal_event, kIdentity, fuchsia::ui::input::PointerEventType::TOUCH));
+        internal_event, kIdentity, fuchsia::ui::input::PointerEventType::TOUCH, trace_id));
   }
   return output;
 }
@@ -179,9 +179,9 @@ TEST(PointerEventConversionTest, TraceFlowId) {
   // Create a trace id with some high bits and low bits.
   constexpr float high = 7;
   constexpr float low = 5;
-  event.set_trace_flow_id(scenic_impl::input::PointerTraceHACK(high, low));
+  const uint64_t trace_id = scenic_impl::input::PointerTraceHACK(high, low);
 
-  std::vector<fuchsia::ui::input::PointerEvent> results = ConvertPointerEvent(event);
+  std::vector<fuchsia::ui::input::PointerEvent> results = ConvertPointerEvent(event, trace_id);
 
   ASSERT_EQ(results.size(), 2u);
   EXPECT_EQ(results[0].radius_minor, low);

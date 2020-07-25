@@ -149,6 +149,7 @@ void Injector::SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
 
 void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
                       InjectCallback callback) {
+  TRACE_DURATION("input", "Injector::Inject");
   // TODO(50348): Find a way to make to listen for scene graph events instead of checking
   // connectivity per injected event.
   if (!is_descendant_and_connected_(settings_.target_koid, settings_.context_koid)) {
@@ -196,6 +197,10 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
           CloseChannel(result);
           return;
         }
+      }
+
+      if (event.has_trace_flow_id()) {
+        TRACE_FLOW_END("input", "dispatch_event_to_scenic", event.trace_flow_id());
       }
 
       // Translate events to internal representation and inject.

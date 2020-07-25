@@ -62,7 +62,7 @@ InternalPointerEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::Po
 // Does not support HOVER events.
 fuchsia::ui::input::PointerEvent InternalPointerEventToGfxPointerEvent(
     const InternalPointerEvent& event, const glm::mat4& view_from_context_transform,
-    fuchsia::ui::input::PointerEventType type);
+    fuchsia::ui::input::PointerEventType type, uint64_t trace_id);
 
 glm::mat4 ColumnMajorMat3VectorToMat4(const std::array<float, 9>& matrix_array);
 

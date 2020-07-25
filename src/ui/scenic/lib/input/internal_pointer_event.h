@@ -51,9 +51,6 @@ struct InternalPointerEvent {
   zx_koid_t context = ZX_KOID_INVALID;
   // Reference to the target the event was injected into (a View).
   zx_koid_t target = ZX_KOID_INVALID;
-  // Id for trace flow events.
-  // TODO(53354): This doesn't need to be passed around. Generate a new one when necessary instead.
-  uint64_t trace_id = 0;
   // The Viewport this event was injected with.
   Viewport viewport;
   // Coordinates in Viewport space. Pointer events do not necessarily need to stay within the

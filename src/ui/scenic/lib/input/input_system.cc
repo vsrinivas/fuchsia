@@ -28,6 +28,11 @@ using fuchsia::ui::input::PointerEventType;
 
 namespace {
 
+uint64_t NextTraceId() {
+  static uint64_t next_trace_id = 1;
+  return next_trace_id++;
+}
+
 // Creates a hit ray at z = -1000, pointing in the z-direction.
 escher::ray4 CreateZRay(glm::vec2 coords) {
   return {
@@ -380,7 +385,9 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
   switch (command.pointer_event.type) {
     case PointerEventType::TOUCH: {
       TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
-      TRACE_FLOW_END("input", "dispatch_event_to_scenic", internal_event.trace_id);
+      TRACE_FLOW_END(
+          "input", "dispatch_event_to_scenic",
+          PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor));
       InjectTouchEventHitTested(internal_event, parallel_dispatch);
       break;
     }
@@ -734,7 +741,8 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(const InternalPoint
     return;
 
   fuchsia::ui::input::PointerEvent gfx_event = InternalPointerEventToGfxPointerEvent(
-      event, view_from_context_transform.value(), fuchsia::ui::input::PointerEventType::TOUCH);
+      event, view_from_context_transform.value(), fuchsia::ui::input::PointerEventType::TOUCH,
+      /*trace_id*/ 0);
 
   // TODO(42145): Implement flow control.
   listener.listener_ptr->OnPointerEvent(gfx_event, [] {});
@@ -745,7 +753,6 @@ void InputSystem::ReportPointerEventToView(const InternalPointerEvent& event,
                                            fuchsia::ui::input::PointerEventType type,
                                            const gfx::ViewTree& view_tree) const {
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
-
   EventReporterWeakPtr event_reporter = view_tree.EventReporterOf(view_ref_koid);
   if (!event_reporter)
     return;
@@ -755,10 +762,11 @@ void InputSystem::ReportPointerEventToView(const InternalPointerEvent& event,
   if (!view_from_context_transform)
     return;
 
-  TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", event.trace_id);
+  const uint64_t trace_id = NextTraceId();
+  TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
   InputEvent input_event;
-  input_event.set_pointer(
-      InternalPointerEventToGfxPointerEvent(event, view_from_context_transform.value(), type));
+  input_event.set_pointer(InternalPointerEventToGfxPointerEvent(
+      event, view_from_context_transform.value(), type, trace_id));
   FX_VLOGS(1) << "Event dispatch to view=" << view_ref_koid << ": " << input_event;
   event_reporter->EnqueueEvent(std::move(input_event));
 }
