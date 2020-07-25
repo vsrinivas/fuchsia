@@ -13,6 +13,7 @@ use {
         block_ack::{BlockAckState, Closed},
         client::{lost_bss::LostBssCounter, BoundClient, Client, Context, TimedEvent},
         ddk_converter as ddk,
+        disconnect::LocallyInitiated,
         error::Error,
         key::KeyConfig,
         timer::*,
@@ -209,7 +210,7 @@ impl Authenticated {
     fn on_deauth_frame(&self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
         let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
-        sta.send_deauthenticate_ind(reason_code);
+        sta.send_deauthenticate_ind(reason_code, LocallyInitiated(false));
     }
 
     fn on_sme_deauthenticate(
@@ -454,7 +455,7 @@ impl Associated {
         self.pre_leaving_associated_state(sta);
         let reason_code = fidl_mlme::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
-        sta.send_disassoc_ind(reason_code);
+        sta.send_disassoc_ind(reason_code, LocallyInitiated(false));
     }
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
@@ -462,7 +463,7 @@ impl Associated {
         self.pre_leaving_associated_state(sta);
         let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
-        sta.send_deauthenticate_ind(reason_code);
+        sta.send_deauthenticate_ind(reason_code, LocallyInitiated(false));
     }
 
     /// Process every inbound management frame before its being handed off to a more specific
@@ -730,7 +731,10 @@ impl Associated {
 
         let auto_deauth = self.0.lost_bss_counter.should_deauthenticate();
         if auto_deauth {
-            sta.send_deauthenticate_ind(fidl_mlme::ReasonCode::LeavingNetworkDeauth);
+            sta.send_deauthenticate_ind(
+                fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                LocallyInitiated(true),
+            );
             if let Err(e) = sta.send_deauth_frame(mac::ReasonCode::LEAVING_NETWORK_DEAUTH) {
                 warn!("Failed sending deauth frame {:?}", e);
             }
@@ -1561,6 +1565,7 @@ mod tests {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
                 reason_code: fidl_mlme::ReasonCode::NoMoreStas,
+                locally_initiated: false,
             }
         );
     }
@@ -1862,6 +1867,7 @@ mod tests {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
                 reason_code: fidl_mlme::ReasonCode::ApInitiated,
+                locally_initiated: false,
             }
         );
         // Verify association context is cleared and ethernet port is shut down.
@@ -1901,6 +1907,7 @@ mod tests {
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: BSSID.0,
                 reason_code: mac::ReasonCode::AP_INITIATED.0,
+                locally_initiated: false,
             }
         );
 

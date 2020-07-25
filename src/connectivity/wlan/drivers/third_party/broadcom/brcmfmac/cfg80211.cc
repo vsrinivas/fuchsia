@@ -1017,12 +1017,13 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
 }
 
 static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reason,
-                                  uint16_t event_reason) {
+                                  uint16_t event_reason, bool locally_initiated) {
   struct net_device* ndev = vif->wdev.netdev;
   wlanif_deauth_indication_t ind;
 
   memcpy(ind.peer_sta_address, vif->profile.bssid, ETH_ALEN);
   ind.reason_code = reason;
+  ind.locally_initiated = locally_initiated;
 
   BRCMF_DBG(WLANIF,
             "Link Down: Sending deauth indication to SME. address: " MAC_FMT_STR
@@ -1035,8 +1036,8 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reaso
   wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
 }
 
-static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason,
-                            uint16_t event_reason) {
+static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason, uint16_t event_reason,
+                            bool locally_initiated) {
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
 
@@ -1051,7 +1052,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason,
                 brcmf_fil_get_errstr(fwerr));
     }
     if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
-      cfg80211_disconnected(vif, reason, event_reason);
+      cfg80211_disconnected(vif, reason, event_reason, locally_initiated);
     }
   }
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
@@ -4503,7 +4504,9 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
              e->status, ndev->last_known_rssi_dbm, ndev->last_known_snr_db);
   brcmf_bss_connect_done(cfg, ndev, false);
   brcmf_disconnect_done(cfg);
-  brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason);
+  bool locally_initiated = e->event_code == BRCMF_E_DEAUTH || e->event_code == BRCMF_E_DISASSOC ||
+                           e->event_code == BRCMF_E_LINK;
+  brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason, locally_initiated);
   brcmf_init_prof(ndev_to_prof(ndev));
   if (ndev != cfg_to_ndev(cfg)) {
     sync_completion_signal(&cfg->vif_disabled);
@@ -4984,7 +4987,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
    * from AP to save power
    */
   if (check_vif_up(ifp->vif)) {
-    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, 0);
+    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, 0, true);
 
     /* Make sure WPA_Supplicant receives all the event
        generated due to DISASSOC call to the fw to keep

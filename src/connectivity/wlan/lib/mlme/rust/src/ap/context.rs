@@ -7,6 +7,7 @@ use {
         ap::TimedEvent,
         buffer::{BufferProvider, InBuf},
         device::Device,
+        disconnect::LocallyInitiated,
         error::Error,
         timer::{EventId, Timer},
     },
@@ -87,11 +88,13 @@ impl Context {
         &self,
         peer_sta_address: MacAddr,
         reason_code: fidl_mlme::ReasonCode,
+        locally_initiated: LocallyInitiated,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
             sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
                 peer_sta_address,
                 reason_code,
+                locally_initiated: locally_initiated.0,
             })
         })
     }
@@ -124,11 +127,13 @@ impl Context {
         &self,
         peer_sta_address: MacAddr,
         reason_code: u16,
+        locally_initiated: LocallyInitiated,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
             sender.send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
                 peer_sta_address,
                 reason_code,
+                locally_initiated: locally_initiated.0,
             })
         })
     }
@@ -525,8 +530,12 @@ mod test {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_mlme_deauth_ind(CLIENT_ADDR, fidl_mlme::ReasonCode::LeavingNetworkDeauth)
-            .expect("expected OK");
+        ctx.send_mlme_deauth_ind(
+            CLIENT_ADDR,
+            fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+            LocallyInitiated(true),
+        )
+        .expect("expected OK");
         let msg = fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
             .expect("expected MLME message");
@@ -535,6 +544,7 @@ mod test {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                locally_initiated: true,
             },
         );
     }
@@ -577,6 +587,7 @@ mod test {
         ctx.send_mlme_disassoc_ind(
             CLIENT_ADDR,
             fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+            LocallyInitiated(true),
         )
         .expect("expected OK");
         let msg = fake_device
@@ -587,6 +598,7 @@ mod test {
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                locally_initiated: true,
             },
         );
     }

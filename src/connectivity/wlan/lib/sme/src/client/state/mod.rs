@@ -1285,6 +1285,7 @@ mod tests {
             ind: fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: [7, 7, 7, 7, 7, 7],
                 reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+                locally_initiated: false,
             },
         };
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
@@ -1306,6 +1307,7 @@ mod tests {
             ind: fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: [7, 7, 7, 7, 7, 7],
                 reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+                locally_initiated: false,
             },
         };
         let state = state.on_mlme_event(deauth_ind, &mut h.context);
@@ -1327,6 +1329,7 @@ mod tests {
             ind: fidl_mlme::DisassociateIndication {
                 peer_sta_address: [7, 7, 7, 7, 7, 7],
                 reason_code: 42,
+                locally_initiated: false,
             },
         };
         let state = state.on_mlme_event(disassoc_ind, &mut h.context);
@@ -1620,6 +1623,7 @@ mod tests {
             ind: fidl_mlme::DisassociateIndication {
                 peer_sta_address: [0, 0, 0, 0, 0, 0],
                 reason_code: 0,
+                locally_initiated: false,
             },
         };
 
@@ -1685,6 +1689,7 @@ mod tests {
             ind: fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: [0, 0, 0, 0, 0, 0],
                 reason_code: fidl_mlme::ReasonCode::UnspecifiedReason,
+                locally_initiated: true,
             },
         };
 
@@ -1703,6 +1708,7 @@ mod tests {
             ind: fidl_mlme::DisassociateIndication {
                 peer_sta_address: [0, 0, 0, 0, 0, 0],
                 reason_code: 1,
+                locally_initiated: true,
             },
         };
 

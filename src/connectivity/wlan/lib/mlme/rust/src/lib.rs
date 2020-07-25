@@ -10,6 +10,7 @@ pub mod buffer;
 pub mod client;
 mod ddk_converter;
 pub mod device;
+pub mod disconnect;
 pub mod error;
 pub mod key;
 mod logger;

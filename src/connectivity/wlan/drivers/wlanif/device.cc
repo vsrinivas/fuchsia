@@ -776,6 +776,9 @@ void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
   // reason_code
   fidl_ind.reason_code = ConvertDeauthReasonCode(ind->reason_code);
 
+  // locally_initiated
+  fidl_ind.locally_initiated = ind->locally_initiated;
+
   binding_.events().DeauthenticateInd(std::move(fidl_ind));
 }
 
@@ -860,6 +863,9 @@ void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
 
   // reason_code
   fidl_ind.reason_code = ind->reason_code;
+
+  // locally_initiated
+  fidl_ind.locally_initiated = ind->locally_initiated;
 
   binding_.events().DisassociateInd(std::move(fidl_ind));
 }

@@ -341,6 +341,9 @@ struct WlanifDeauthConfirm {
 struct WlanifDeauthIndication {
     array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
     WlanDeauthReason reason_code;
+    /// locally_initiated is true if deauth is initiated from the device,
+    /// and is false if it's initiated remotely (e.g. due to deauth frame)
+    bool locally_initiated;
 };
 
 enum WlanAssocResult : uint8 {
@@ -375,6 +378,9 @@ struct WlanifDisassocConfirm {
 struct WlanifDisassocIndication {
     array<uint8>:MAC_ARRAY_LENGTH PeerStaAddress;
     WlanDeauthReason reason_code;
+    /// locally_initiated is true if diassoc is initiated from the device,
+    /// and is false if it's initiated remotely (e.g. due to disassoc frame)
+    bool locally_initiated;
 };
 
 enum WlanStartResult : uint8 {

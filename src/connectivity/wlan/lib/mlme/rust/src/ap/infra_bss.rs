@@ -1530,6 +1530,7 @@ mod tests {
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::ReasonInactivity as u16,
+                locally_initiated: true,
             },
         );
     }

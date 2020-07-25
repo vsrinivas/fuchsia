@@ -652,7 +652,7 @@ TEST_F(ApInfraBssTest, UnprotectedApReceiveFramesAfterAssociation) {
   // Simulate unauthenticated client sending data frames, which should emit a deauth to MLME, deauth
   // to the client, and no eth frame
   ctx.SendDataFrame(kTestPayload);
-  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateRequest>();
+  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::DeauthenticateIndication>();
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   device.wlan_queue.clear();
   ASSERT_TRUE(device.eth_queue.empty());
@@ -662,7 +662,7 @@ TEST_F(ApInfraBssTest, UnprotectedApReceiveFramesAfterAssociation) {
   // Simulate unassociated client sending data frames, which should emit a disassoc to MLME,
   // disassoc to the client, and no eth frame
   ctx.SendDataFrame(kTestPayload);
-  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::DisassociateRequest>();
+  ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::DisassociateIndication>();
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   device.wlan_queue.clear();
   ASSERT_TRUE(device.wlan_queue.empty());

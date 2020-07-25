@@ -55,6 +55,7 @@ rustc_library("wlan-mlme") {
     "src/client/stats.rs",
     "src/ddk_converter.rs",
     "src/device.rs",
+    "src/disconnect.rs",
     "src/error.rs",
     "src/key.rs",
     "src/lib.rs",

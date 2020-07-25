@@ -16,6 +16,7 @@ use {
         block_ack::{BlockAckTx, ADDBA_REQ_FRAME_LEN, ADDBA_RESP_FRAME_LEN},
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
+        disconnect::LocallyInitiated,
         error::Error,
         logger,
         timer::*,
@@ -892,11 +893,16 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to the joined BSS.
-    fn send_deauthenticate_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
+    fn send_deauthenticate_ind(
+        &mut self,
+        reason_code: fidl_mlme::ReasonCode,
+        locally_initiated: LocallyInitiated,
+    ) {
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_deauthenticate_ind(&mut fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: self.sta.bssid.0,
                 reason_code,
+                locally_initiated: locally_initiated.0,
             })
         });
         if let Err(e) = result {
@@ -905,11 +911,16 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an MLME-DISASSOCIATE.indication message to the joined BSS.
-    fn send_disassoc_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
+    fn send_disassoc_ind(
+        &mut self,
+        reason_code: fidl_mlme::ReasonCode,
+        locally_initiated: LocallyInitiated,
+    ) {
         let result = self.ctx.device.access_sme_sender(|sender| {
             sender.send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
                 peer_sta_address: self.sta.bssid.0,
                 reason_code: reason_code.into_primitive(),
+                locally_initiated: locally_initiated.0,
             })
         });
         if let Err(e) = result {
@@ -1391,6 +1402,7 @@ mod tests {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                locally_initiated: true,
             }
         );
     }
@@ -1444,6 +1456,7 @@ mod tests {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                locally_initiated: true,
             }
         );
     }

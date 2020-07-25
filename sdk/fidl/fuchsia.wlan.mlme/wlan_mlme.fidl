@@ -333,7 +333,7 @@ enum ReasonCode : uint16 {
 };
 
 struct DeauthenticateRequest {
-    array <uint8>:6 peer_sta_address;
+    array<uint8>:6 peer_sta_address;
     // TODO(tkilbourn): define a ReasonCode enum for FIDL
     ReasonCode reason_code;
     // VendorSpecificInfo
@@ -342,7 +342,7 @@ struct DeauthenticateRequest {
 // MLME-DEAUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.6.3)
 
 struct DeauthenticateConfirm {
-    array <uint8>:6 peer_sta_address;
+    array<uint8>:6 peer_sta_address;
 };
 
 // MLME-DEAUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.6.4)
@@ -351,6 +351,9 @@ struct DeauthenticateIndication {
     array<uint8>:6 peer_sta_address;
     // TODO(tkilbourn): define a ReasonCode enum for FIDL
     ReasonCode reason_code;
+    /// locally_initiated is true if deauth is initiated from the device,
+    /// and is false if it's initiated remotely (e.g. due to deauth frame)
+    bool locally_initiated;
     // VendorSpecificInfo
 };
 
@@ -455,6 +458,9 @@ struct DisassociateIndication {
     array<uint8>:6 peer_sta_address;
     // TODO(tkilbourn): define a ReasonCode enum for FIDL
     uint16 reason_code;
+    /// locally_initiated is true if diassoc is initiated from the device,
+    /// and is false if it's initiated remotely (e.g. due to disassoc frame)
+    bool locally_initiated;
     // VendorSpecificInfo
 };
 

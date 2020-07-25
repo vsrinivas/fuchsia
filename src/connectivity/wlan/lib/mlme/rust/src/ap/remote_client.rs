@@ -8,6 +8,7 @@ use {
         buffer::{InBuf, OutBuf},
         ddk_converter,
         device::TxFlags,
+        disconnect::LocallyInitiated,
         error::Error,
         timer::EventId,
     },
@@ -259,8 +260,12 @@ impl RemoteClient {
                 s,
             ))
         })?;
-        ctx.send_mlme_disassoc_ind(self.addr.clone(), ReasonCode::REASON_INACTIVITY.0)
-            .map_err(ClientRejection::SmeSendError)?;
+        ctx.send_mlme_disassoc_ind(
+            self.addr.clone(),
+            ReasonCode::REASON_INACTIVITY.0,
+            LocallyInitiated(true),
+        )
+        .map_err(ClientRejection::SmeSendError)?;
         Ok(())
     }
 
@@ -577,7 +582,7 @@ impl RemoteClient {
         reason_code: ReasonCode,
     ) -> Result<(), ClientRejection> {
         self.change_state(ctx, State::Authenticated).map_err(ClientRejection::DeviceError)?;
-        ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code.0)
+        ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code.0, LocallyInitiated(false))
             .map_err(ClientRejection::SmeSendError)
     }
 
@@ -654,6 +659,7 @@ impl RemoteClient {
             self.addr.clone(),
             fidl_mlme::ReasonCode::from_primitive(reason_code.0)
                 .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason),
+            LocallyInitiated(false),
         )
         .map_err(ClientRejection::SmeSendError)
     }
@@ -859,6 +865,7 @@ impl RemoteClient {
                     self.addr,
                     // Safe: fidl_mlme::ReasonCode has a 1:1 mapping with ReasonCode.
                     fidl_mlme::ReasonCode::from_primitive(reason_code.0).unwrap(),
+                    LocallyInitiated(true),
                 )
                 .map_err(ClientRejection::SmeSendError)?;
             }
@@ -873,7 +880,7 @@ impl RemoteClient {
                     ))
                 })?;
 
-                ctx.send_mlme_disassoc_ind(self.addr, reason_code.0)
+                ctx.send_mlme_disassoc_ind(self.addr, reason_code.0, LocallyInitiated(true))
                     .map_err(ClientRejection::SmeSendError)?;
             }
             State::Associated { .. } => {
@@ -1508,6 +1515,7 @@ mod tests {
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+                locally_initiated: false,
             },
         );
         assert_variant!(r_sta.state.as_ref(), State::Authenticated);
@@ -1613,6 +1621,7 @@ mod tests {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
+                locally_initiated: false,
             }
         );
         assert_variant!(r_sta.state.as_ref(), State::Deauthenticated);
@@ -1958,6 +1967,7 @@ mod tests {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::InvalidClass3Frame,
+                locally_initiated: true,
             },
         );
 
@@ -2020,6 +2030,7 @@ mod tests {
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::InvalidClass3Frame as u16,
+                locally_initiated: true,
             },
         );
 
@@ -2262,6 +2273,7 @@ mod tests {
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::InvalidClass2Frame,
+                locally_initiated: true,
             },
         );
 
@@ -2399,6 +2411,7 @@ mod tests {
             fidl_mlme::DisassociateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::ReasonInactivity as u16,
+                locally_initiated: true,
             },
         );
     }
