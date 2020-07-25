@@ -23,6 +23,7 @@ group("tests") {
     "bugreport/tests",
     "crash_reports/tests",
     "exceptions/tests",
+    "feedback_data/system_log_recorder/tests",
     "feedback_data/tests",
     "last_reboot/tests",
     "utils/tests",

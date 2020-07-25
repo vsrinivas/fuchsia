@@ -353,30 +353,6 @@ executable("last_reboot_info_provider_unittest_exe") {
   ]
 }
 
-executable("lz4_encoding_unittest_exe") {
-  testonly = true
-
-  sources = [ "lz4_encoding_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_decoder",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:lz4_decoder",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:lz4_encoder",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/utils:errors",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 executable("product_info_provider_unittest_exe") {
   testonly = true
 
@@ -432,36 +408,6 @@ executable("system_log_ptr_unittest_exe") {
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:logger",
     "//src/developer/forensics/utils:errors",
-    "//src/lib/fxl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-executable("system_log_recorder_unittest_exe") {
-  testonly = true
-
-  sources = [ "system_log_recorder_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data/attachments:types",
-    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
-    "//src/developer/forensics/feedback_data/system_log_recorder:src",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_decoder",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:logger",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -677,14 +623,6 @@ fuchsia_component("last_reboot_info_provider_unittest") {
   deps = [ ":last_reboot_info_provider_unittest_exe" ]
 }
 
-fuchsia_component("lz4_encoding_unittest") {
-  testonly = true
-
-  manifest = "meta/lz4_encoding_unittest.cmx"
-
-  deps = [ ":lz4_encoding_unittest_exe" ]
-}
-
 fuchsia_component("main_service_unittest") {
   testonly = true
 
@@ -720,14 +658,6 @@ fuchsia_component("system_log_ptr_unittest") {
   deps = [ ":system_log_ptr_unittest_exe" ]
 }
 
-fuchsia_component("system_log_recorder_unittest") {
-  testonly = true
-
-  manifest = "meta/system_log_recorder_unittest.cmx"
-
-  deps = [ ":system_log_recorder_unittest_exe" ]
-}
-
 ###############################################################################
 # PACKAGES
 ###############################################################################
@@ -746,12 +676,10 @@ fuchsia_test_package("feedback-data-tests") {
     ":integrity_reporter_unittest",
     ":kernel_log_ptr_integration_test",
     ":last_reboot_info_provider_unittest",
-    ":lz4_encoding_unittest",
     ":main_service_unittest",
     ":product_info_provider_unittest",
     ":screenshot_ptr_unittest",
     ":system_log_ptr_unittest",
-    ":system_log_recorder_unittest",
   ]
 
   deps = [
