@@ -27,11 +27,11 @@ int main(int argc, char** argv) {
   }
 
   // The handler waits on responses from the component lookup service and crash reporting services
-  // for 30 second and 5 seconds respectively. Note, 35 seconds is not the upper bound on how long
-  // crash reporting takes in total because minidump generation happens in parallel with component
-  // lookup, but may take longer than 1 second.
+  // for 30 seconds each. Note, 60 seconds is not the upper bound on how long crash reporting takes
+  // in total because minidump generation happens in parallel with component lookup, but may take 
+  // longer than 30 seconds.
   constexpr zx::duration kComponentLookupTimeout{zx::sec(30)};
-  constexpr zx::duration kCrashReporterTimeout{zx::sec(5)};
+  constexpr zx::duration kCrashReporterTimeout{zx::sec(30)};
 
   executor.schedule_task(forensics::exceptions::Handle(std::move(exception), loop.dispatcher(),
                                                        sys::ServiceDirectory::CreateFromNamespace(),
