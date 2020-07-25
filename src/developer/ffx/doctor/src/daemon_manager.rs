@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::Result,
     async_trait::async_trait,
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     fidl_fuchsia_developer_bridge::DaemonProxy,
@@ -13,13 +13,13 @@ use {
 #[async_trait]
 pub(crate) trait DaemonManager {
     // Kills any running daemons. Returns a bool indicating whether any daemons were killed.
-    fn kill_all(&self) -> Result<bool, Error>;
+    fn kill_all(&self) -> Result<bool>;
 
     fn is_running(&self) -> bool;
 
-    async fn spawn(&self) -> Result<(), Error>;
+    async fn spawn(&self) -> Result<()>;
 
-    async fn find_and_connect(&self) -> Result<Option<DaemonProxy>, Error>;
+    async fn find_and_connect(&self) -> Result<DaemonProxy>;
 }
 
 pub(crate) struct DefaultDaemonManager {}
@@ -27,7 +27,7 @@ pub(crate) struct DefaultDaemonManager {}
 #[async_trait]
 impl DaemonManager for DefaultDaemonManager {
     // Kills any running daemons. Returns a bool indicating whether any daemons were killed.
-    fn kill_all(&self) -> Result<bool, Error> {
+    fn kill_all(&self) -> Result<bool> {
         let status = Command::new("pkill").arg("-f").arg("ffx daemon").status()?;
         return Ok(status.success());
     }
@@ -36,11 +36,11 @@ impl DaemonManager for DefaultDaemonManager {
         return is_daemon_running();
     }
 
-    async fn spawn(&self) -> Result<(), Error> {
+    async fn spawn(&self) -> Result<()> {
         spawn_daemon().await
     }
 
-    async fn find_and_connect(&self) -> Result<Option<DaemonProxy>, Error> {
+    async fn find_and_connect(&self) -> Result<DaemonProxy> {
         find_and_connect().await
     }
 }

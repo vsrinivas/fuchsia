@@ -5,7 +5,7 @@
 use {
     crate::constants::*,
     crate::daemon_manager::{DaemonManager, DefaultDaemonManager},
-    anyhow::Error,
+    anyhow::{Error, Result},
     async_std::future::timeout,
     ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
@@ -29,7 +29,7 @@ fn print_status_line(writer: &mut impl Write, s: &str) {
 }
 
 #[ffx_plugin()]
-pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<(), Error> {
+pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
     let mut writer = Box::new(stdout());
     let daemon_manager = DefaultDaemonManager {};
     let delay = Duration::from_millis(cmd.retry_delay);
@@ -41,7 +41,7 @@ async fn doctor<W: Write>(
     daemon_manager: &impl DaemonManager,
     retry_count: usize,
     retry_delay: Duration,
-) -> Result<(), Error> {
+) -> Result<()> {
     let mut proxy_opt: Option<DaemonProxy> = None;
     for i in 0..retry_count {
         proxy_opt = None;
@@ -70,19 +70,16 @@ async fn doctor<W: Write>(
 
         print_status_line(writer, CONNECTING_TO_DAEMON);
         match timeout(retry_delay, daemon_manager.find_and_connect()).await {
-            Ok(Ok(Some(p))) => {
+            Ok(Ok(p)) => {
                 proxy_opt = Some(p);
             }
-            Err(_) => {
-                writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
-                continue;
-            }
+
             Ok(Err(e)) => {
                 writeln!(writer, "{}", format_err(e.into())).unwrap();
                 continue;
             }
-            Ok(Ok(None)) => {
-                writeln!(writer, "{}", CONNECT_FAILED_NONE_FOUND).unwrap();
+            Err(_) => {
+                writeln!(writer, "{}", FAILED_TIMEOUT).unwrap();
                 continue;
             }
         }
@@ -223,10 +220,10 @@ mod test {
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
 
     struct FakeStateManager {
-        kill_results: Vec<Result<bool, Error>>,
+        kill_results: Vec<Result<bool>>,
         daemons_running_results: Vec<bool>,
-        spawn_results: Vec<Result<(), Error>>,
-        find_and_connect_results: Vec<Result<Option<DaemonProxy>, Error>>,
+        spawn_results: Vec<Result<()>>,
+        find_and_connect_results: Vec<Result<DaemonProxy>>,
     }
 
     struct FakeDaemonManager {
@@ -236,9 +233,9 @@ mod test {
     impl FakeDaemonManager {
         fn new(
             daemons_running_results: Vec<bool>,
-            kill_results: Vec<Result<bool, Error>>,
-            spawn_results: Vec<Result<(), Error>>,
-            find_and_connect_results: Vec<Result<Option<DaemonProxy>, Error>>,
+            kill_results: Vec<Result<bool>>,
+            spawn_results: Vec<Result<()>>,
+            find_and_connect_results: Vec<Result<DaemonProxy>>,
         ) -> Self {
             return FakeDaemonManager {
                 state_manager: Arc::new(Mutex::new(FakeStateManager {
@@ -279,7 +276,7 @@ mod test {
 
     #[async_trait]
     impl DaemonManager for FakeDaemonManager {
-        fn kill_all(&self) -> Result<bool, Error> {
+        fn kill_all(&self) -> Result<bool> {
             let mut state = self.state_manager.lock().unwrap();
             assert!(!state.kill_results.is_empty(), "too many calls to kill_all");
             state.kill_results.remove(0)
@@ -291,13 +288,13 @@ mod test {
             state.daemons_running_results.remove(0)
         }
 
-        async fn spawn(&self) -> Result<(), Error> {
+        async fn spawn(&self) -> Result<()> {
             let mut state = self.state_manager.lock().unwrap();
             assert!(!state.spawn_results.is_empty(), "too many calls to spawn");
             state.spawn_results.remove(0)
         }
 
-        async fn find_and_connect(&self) -> Result<Option<DaemonProxy>, Error> {
+        async fn find_and_connect(&self) -> Result<DaemonProxy> {
             let mut state = self.state_manager.lock().unwrap();
             assert!(
                 !state.find_and_connect_results.is_empty(),
@@ -478,7 +475,7 @@ mod test {
             vec![false],
             vec![Ok(false)],
             vec![Ok(())],
-            vec![Ok(Some(setup_responsive_daemon_server()))],
+            vec![Ok(setup_responsive_daemon_server())],
         );
 
         let mut output = String::new();
@@ -513,7 +510,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(Some(setup_responsive_daemon_server()))],
+            vec![Ok(setup_responsive_daemon_server())],
         );
 
         let mut output = String::new();
@@ -546,7 +543,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(Some(setup_daemon_server_list_fails()))],
+            vec![Ok(setup_daemon_server_list_fails())],
         );
 
         let mut output = String::new();
@@ -596,10 +593,7 @@ mod test {
             vec![false, true],
             vec![Ok(false), Ok(true)],
             vec![Ok(())],
-            vec![
-                Ok(Some(setup_daemon_server_echo_times_out())),
-                Ok(Some(setup_responsive_daemon_server())),
-            ],
+            vec![Ok(setup_daemon_server_echo_times_out()), Ok(setup_responsive_daemon_server())],
         );
 
         let mut output = String::new();
@@ -645,7 +639,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(Some(setup_responsive_daemon_server_with_responsive_target()))],
+            vec![Ok(setup_responsive_daemon_server_with_responsive_target())],
         );
 
         let mut output = String::new();
@@ -680,7 +674,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(Some(setup_responsive_daemon_server_with_unresponsive_target()))],
+            vec![Ok(setup_responsive_daemon_server_with_unresponsive_target())],
         );
 
         let mut output = String::new();

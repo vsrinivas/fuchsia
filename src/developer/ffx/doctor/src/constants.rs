@@ -17,7 +17,6 @@ pub const ZOMBIE_KILLED: &str = "killed at least one daemon.";
 pub const SPAWNING_DAEMON: &str = "Starting a new daemon instance...";
 pub const CONNECTING_TO_DAEMON: &str =
     "Attempting to connect to the daemon. This may take a couple seconds...";
-pub const CONNECT_FAILED_NONE_FOUND: &str = "FAILED. Could not find a running daemon";
 pub const COMMUNICATING_WITH_DAEMON: &str = "Attempting to communicate with the daemon...";
 pub const DAEMON_CHECKS_FAILED: &str = "Failed to spawn and connect to a daemon. Please file a bug to the ffx team using the link below and include all above output.";
 pub const LISTING_TARGETS: &str = "Attempting to list targets...";

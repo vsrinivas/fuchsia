@@ -5,7 +5,7 @@
 use {
     crate::constants::{DAEMON, MAX_RETRY_COUNT, SOCKET},
     crate::daemon::Daemon,
-    anyhow::{Context, Error},
+    anyhow::{bail, Context, Result},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
     fidl_fuchsia_overnet::{
@@ -30,7 +30,7 @@ mod util;
 
 pub mod target;
 
-pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy, Error> {
+pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
     let svc = hoist::connect_as_service_consumer()?;
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     svc.connect_to_service(id, DaemonMarker::NAME, s)?;
@@ -39,7 +39,7 @@ pub async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy, Error> 
 }
 
 // Note that this function assumes the daemon has been started separately.
-pub async fn find_and_connect() -> Result<Option<DaemonProxy>, Error> {
+pub async fn find_and_connect() -> Result<DaemonProxy> {
     let svc = hoist::connect_as_service_consumer()?;
     // Sometimes list_peers doesn't properly report the published services - retry a few times
     // but don't loop indefinitely.
@@ -59,27 +59,31 @@ pub async fn find_and_connect() -> Result<Option<DaemonProxy>, Error> {
             {
                 continue;
             }
-            return create_daemon_proxy(&mut peer.id).map(|r| r.map(|proxy| Some(proxy))).await;
+            return create_daemon_proxy(&mut peer.id).await;
         }
     }
 
-    Ok(None)
+    bail!("Timed out waiting for ffx daemon connection")
 }
 
-pub async fn spawn_daemon() -> Result<(), Error> {
-    Command::new(env::current_exe().unwrap()).arg(DAEMON).arg("start").spawn()?;
-    Ok(())
+pub async fn spawn_daemon() -> Result<()> {
+    Command::new(env::current_exe().unwrap()).arg(DAEMON).arg("start").spawn().map(
+        // XXX(raggi): this is leaking a process wait handle, which
+        // leads to zombies. A CL in the stack below this commit will
+        // soon address this problem.
+        |_| ()
+    ).context("spawning background daemon")
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Overnet Server implementation
 
 async fn next_request(
     stream: &mut ServiceProviderRequestStream,
-) -> Result<Option<ServiceProviderRequest>, Error> {
+) -> Result<Option<ServiceProviderRequest>> {
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
-async fn exec_server(daemon: Daemon) -> Result<(), Error> {
+async fn exec_server(daemon: Daemon) -> Result<()> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
@@ -117,7 +121,7 @@ pub fn is_daemon_running() -> bool {
     }
 }
 
-pub async fn start() -> Result<(), Error> {
+pub async fn start() -> Result<()> {
     if is_daemon_running() {
         return Ok(());
     }

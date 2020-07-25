@@ -4,7 +4,7 @@
 
 use {
     crate::logger::setup_logger,
-    anyhow::{format_err, Context, Error},
+    anyhow::{Context, Result},
     ffx_daemon::{find_and_connect, is_daemon_running, spawn_daemon},
     ffx_lib_args::Ffx,
     ffx_lib_sub_command::Subcommand,
@@ -15,28 +15,25 @@ use {
 
 mod logger;
 
-async fn get_daemon_proxy() -> Result<DaemonProxy, Error> {
+async fn get_daemon_proxy() -> Result<DaemonProxy> {
     if !is_daemon_running() {
         spawn_daemon().await?;
     }
-    Ok(find_and_connect().await?.expect("No daemon found."))
+    find_and_connect().await
 }
 
-async fn get_remote_proxy() -> Result<RemoteControlProxy, Error> {
+async fn get_remote_proxy() -> Result<RemoteControlProxy> {
     let daemon_proxy = get_daemon_proxy().await?;
     let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
     let app: Ffx = argh::from_env();
 
-    let _result = daemon_proxy
+    daemon_proxy
         .get_remote_control(&app.target.unwrap_or("".to_string()), remote_server_end)
         .await
-        .context("get_remote_control call failed")
-        .map_err(|e| format_err!("error getting remote: {:?}", e))?;
-    Ok(remote_proxy)
+        .context("connecting to RCS")
+        .map(|_| remote_proxy)
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// main
 fn get_log_name(subcommand: &Subcommand) -> &'static str {
     if let Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
         subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(_),
@@ -48,7 +45,7 @@ fn get_log_name(subcommand: &Subcommand) -> &'static str {
     }
 }
 
-async fn run() -> Result<(), Error> {
+async fn run() -> Result<()> {
     let app: Ffx = argh::from_env();
     setup_logger(get_log_name(&app.subcommand)).await;
     ffx_lib::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await
@@ -59,15 +56,11 @@ async fn main() {
     match run().await {
         Ok(_) => std::process::exit(0),
         Err(err) => {
-            eprintln!("BUG: An internal command error occurred.\nError:\n\t{}\nCause:", err);
-            err.chain().skip(1).for_each(|cause| eprintln!("\t{}", cause));
+            eprintln!("BUG: An internal command error occurred.\n{:?}", err);
             std::process::exit(1);
         }
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// tests
 
 #[cfg(test)]
 mod test {
@@ -82,7 +75,7 @@ mod test {
         // Testing these macros outside of the config library.
         let ffx: Ffx = Default::default();
         assert_eq!(ffx, ffx_cmd!());
-        let env: Result<(), Error> = ffx_env!();
+        let env: Result<()> = ffx_env!();
         assert!(env.is_err());
     }
 }
