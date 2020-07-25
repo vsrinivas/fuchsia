@@ -682,6 +682,12 @@ template("package") {
         public_deps += [ ":" + system_rsp_label ]
       }
 
+      if (!bootfs_only) {
+        # Prevent the contents of this package from getting picked up in a zbi.
+        # See fxb/45680 for more information.
+        metadata.distribution_entries_barrier = []
+      }
+
       # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
       # specific targets by the package target's name using visibility.
       if (defined(require_bare_tests_allowlist) &&
