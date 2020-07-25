@@ -39,7 +39,6 @@ void CrashIntrospector::AddBinding(
 
 void CrashIntrospector::FindComponentByProcessKoid(zx_koid_t process,
                                                    FindComponentByProcessKoidCallback callback) {
-  FX_LOGS(INFO) << "Find process: " << process;
   CrashIntrospect_FindComponentByProcessKoid_Result result;
   auto status = RemoveProcessFromCache(process);
   if (status.is_ok()) {
@@ -89,7 +88,6 @@ CrashIntrospector::RemoveProcessFromCache(zx_koid_t process_koid) {
 void CrashIntrospector::AddProcessToCache(
     const zx::process& process, const fuchsia::sys::internal::SourceIdentity& component_info) {
   const auto process_koid = fsl::GetKoid(process.get());
-  FX_LOGS(INFO) << "Add process: " << process_koid;
   if (process_cache_.count(process_koid) > 0) {
     FX_LOGS(ERROR) << "process " << process_koid << " already in map.";
     return;

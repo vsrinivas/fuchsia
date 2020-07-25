@@ -8,7 +8,7 @@
                 "fuchsia.feedback.testing.FakeCrashReporterQuerier": "fuchsia-pkg://fuchsia.com/fake-crash-reporter#meta/fake_crash_reporter.cmx"
             },
             "system-services": [
-                "fuchsia.sys.internal.Introspect"
+                "fuchsia.sys.internal.CrashIntrospect"
             ]
         }
     },
@@ -22,7 +22,7 @@
             "fuchsia.feedback.testing.FakeCrashReporterQuerier",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.internal.Introspect"
+            "fuchsia.sys.internal.CrashIntrospect"
         ]
     }
 }

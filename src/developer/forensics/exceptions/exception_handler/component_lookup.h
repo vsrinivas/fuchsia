@@ -21,25 +21,25 @@ namespace exceptions {
 
 // Get component information about the process with koid |process_koid|.
 //
-// fuchsia.sys.internal.Introspect is expected to be in |services|.
+// fuchsia.sys.internal.CrashIntrospect is expected to be in |services|.
 ::fit::promise<fuchsia::sys::internal::SourceIdentity> GetComponentSourceIdentity(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     fit::Timeout timeout, zx_koid_t process_koid);
 
-// Wraps around fuchsia::sys::internal::IntrospectPtr to handle establishing the connection, losing
-// the connection, waiting for the callback, enforcing a timeout, etc.
+// Wraps around fuchsia::sys::internal::CrashIntrospectPtr to handle establishing the connection,
+// losing the connection, waiting for the callback, enforcing a timeout, etc.
 //
 // GetSourceIdentity() is expected to be called only once.
 class ComponentLookup {
  public:
-  // fuchsia.sys.internal.Introspect is expected to be in |services|.
+  // fuchsia.sys.internal.CrashIntrospect is expected to be in |services|.
   ComponentLookup(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
   ::fit::promise<fuchsia::sys::internal::SourceIdentity> GetSourceIdentity(zx_koid_t process_koid,
                                                                            fit::Timeout timeout);
 
  private:
-  fidl::OneShotPtr<fuchsia::sys::internal::Introspect, fuchsia::sys::internal::SourceIdentity>
+  fidl::OneShotPtr<fuchsia::sys::internal::CrashIntrospect, fuchsia::sys::internal::SourceIdentity>
       introspect_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentLookup);

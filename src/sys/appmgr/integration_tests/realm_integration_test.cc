@@ -629,7 +629,9 @@ TEST_F(RealmCrashIntrospectTest, InvalidProcessId) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, result.err());
 }
 
-TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewCrashingProcess) {
+// TODO(57032): re-enable once we can intercept the exception after appmgr, but before the
+// platform's exception handling.
+TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewCrashingProcess) {
   const char* command_argv[] = {"/pkg/bin/crashing_process", nullptr};
 
   auto job = zx::job::default_job();
@@ -661,7 +663,9 @@ TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewCrashingProcess) {
   EXPECT_EQ(ZX_ERR_NOT_FOUND, result.err());
 }
 
-TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewComponentInCurrentEnv) {
+// TODO(57032): re-enable once we can intercept the exception after appmgr, but before the
+// platform's exception handling.
+TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInCurrentEnv) {
   zx::channel request;
   auto component_svc = sys::ServiceDirectory::CreateWithRequest(&request);
   auto launch_info = CreateLaunchInfo(
@@ -703,7 +707,9 @@ TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewComponentInCurrentEnv) {
   EXPECT_EQ(response.instance_id(), process_koid);
 }
 
-TEST_F(RealmCrashIntrospectTest, ComponentUrlForNewComponentInEnclosingEnv) {
+// TODO(57032): re-enable once we can intercept the exception after appmgr, but before the
+// platform's exception handling.
+TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInEnclosingEnv) {
   auto env_services = CreateServices();
   std::string realm_label = "RealmCrashIntrospectTest";
   auto enclosing_environment = CreateNewEnclosingEnvironment(realm_label, std::move(env_services));

@@ -67,13 +67,13 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
   fidl::BindingSet<fuchsia::feedback::CrashReporter> bindings_;
 };
 
-class StubIntrospect : public fuchsia::sys::internal::Introspect {
+class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
  public:
   void FindComponentByProcessKoid(uint64_t process_koid,
                                   FindComponentByProcessKoidCallback callback) {
     using namespace fuchsia::sys::internal;
     if (pids_to_component_infos_.find(process_koid) == pids_to_component_infos_.end()) {
-      callback(Introspect_FindComponentByProcessKoid_Result::WithErr(ZX_ERR_NOT_FOUND));
+      callback(CrashIntrospect_FindComponentByProcessKoid_Result::WithErr(ZX_ERR_NOT_FOUND));
     } else {
       const auto& info = pids_to_component_infos_[process_koid];
 
@@ -84,13 +84,13 @@ class StubIntrospect : public fuchsia::sys::internal::Introspect {
         source_identity.set_realm_path(info.realm_path.value());
       }
 
-      callback(Introspect_FindComponentByProcessKoid_Result::WithResponse(
-          Introspect_FindComponentByProcessKoid_Response(std::move(source_identity))));
+      callback(CrashIntrospect_FindComponentByProcessKoid_Result::WithResponse(
+          CrashIntrospect_FindComponentByProcessKoid_Response(std::move(source_identity))));
     }
   }
 
-  fidl::InterfaceRequestHandler<fuchsia::sys::internal::Introspect> GetHandler() {
-    return [this](fidl::InterfaceRequest<fuchsia::sys::internal::Introspect> request) {
+  fidl::InterfaceRequestHandler<fuchsia::sys::internal::CrashIntrospect> GetHandler() {
+    return [this](fidl::InterfaceRequest<fuchsia::sys::internal::CrashIntrospect> request) {
       bindings_.AddBinding(this, std::move(request));
     };
   }
@@ -107,7 +107,7 @@ class StubIntrospect : public fuchsia::sys::internal::Introspect {
  private:
   std::map<uint64_t, ComponentInfo> pids_to_component_infos_;
 
-  fidl::BindingSet<fuchsia::sys::internal::Introspect> bindings_;
+  fidl::BindingSet<fuchsia::sys::internal::CrashIntrospect> bindings_;
 };
 
 class HandlerTest : public UnitTestFixture {
@@ -125,16 +125,16 @@ class HandlerTest : public UnitTestFixture {
   }
 
   void SetUpCrashReporter() { InjectServiceProvider(&crash_reporter_); }
-  void SetUpIntrospect() { InjectServiceProvider(&introspect_); }
+  void SetUpCrashIntrospect() { InjectServiceProvider(&introspect_); }
 
   const StubCrashReporter& crash_reporter() const { return crash_reporter_; }
-  const StubIntrospect& introspect() const { return introspect_; }
+  const StubCrashIntrospect& introspect() const { return introspect_; }
 
  private:
   async::Executor executor_;
 
   StubCrashReporter crash_reporter_;
-  StubIntrospect introspect_;
+  StubCrashIntrospect introspect_;
 };
 
 bool RetrieveExceptionContext(ExceptionContext* pe) {
@@ -242,7 +242,7 @@ TEST_F(HandlerTest, NoIntrospectConnection) {
 }
 
 TEST_F(HandlerTest, NoCrashReporterConnection) {
-  SetUpIntrospect();
+  SetUpCrashIntrospect();
 
   // Create the exception.
   ExceptionContext exception;
@@ -264,7 +264,7 @@ TEST_F(HandlerTest, NoCrashReporterConnection) {
 }
 
 TEST_F(HandlerTest, CrashReportingTimesOut) {
-  SetUpIntrospect();
+  SetUpCrashIntrospect();
 
   // Create the exception.
   ExceptionContext exception;
@@ -287,7 +287,7 @@ TEST_F(HandlerTest, CrashReportingTimesOut) {
 
 TEST_F(HandlerTest, GettingInvalidVMO) {
   SetUpCrashReporter();
-  SetUpIntrospect();
+  SetUpCrashIntrospect();
 
   bool called = false;
   HandleException(zx::exception{}, zx::duration::infinite(), zx::duration::infinite(),

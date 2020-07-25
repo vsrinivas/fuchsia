@@ -13,7 +13,7 @@
 namespace forensics {
 namespace exceptions {
 
-using fuchsia::sys::internal::Introspect_FindComponentByProcessKoid_Result;
+using fuchsia::sys::internal::CrashIntrospect_FindComponentByProcessKoid_Result;
 using fuchsia::sys::internal::SourceIdentity;
 
 ::fit::promise<SourceIdentity> GetComponentSourceIdentity(
@@ -35,7 +35,7 @@ ComponentLookup::ComponentLookup(async_dispatcher_t* dispatcher,
 ::fit::promise<SourceIdentity> ComponentLookup::GetSourceIdentity(zx_koid_t process_koid,
                                                                   fit::Timeout timeout) {
   introspect_->FindComponentByProcessKoid(
-      process_koid, [this](Introspect_FindComponentByProcessKoid_Result result) {
+      process_koid, [this](CrashIntrospect_FindComponentByProcessKoid_Result result) {
         if (introspect_.IsAlreadyDone()) {
           return;
         }
