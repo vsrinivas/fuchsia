@@ -9,13 +9,6 @@ import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//tools/fidl/measure-tape/measure_tape.gni")
-
-measure_tape("logmessage_measure_tape") {
-  target_binding = "rust"
-  target_type = "fuchsia.logger/LogMessage"
-  fidls = [ "//sdk/fidl/fuchsia.logger" ]
-}
 
 rustc_library("lib") {
   name = "archivist_lib"
@@ -23,7 +16,6 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
-    ":logmessage_measure_tape",
     "fidl:controller-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",

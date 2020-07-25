@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use super::message::Message;
+use super::{buffer::Accounted, message::Message};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
 };
-use fuchsia_zircon as zx;
 use log::error;
-use logmessage_measure_tape::measure;
 use thiserror::Error;
 
 mod asbestos;
@@ -61,10 +59,9 @@ impl Listener {
         let mut batch_size = 0;
         let mut filtered_batch = vec![];
         for msg in messages {
+            let size = msg.bytes_used();
             if self.filter.should_send(msg) {
-                let for_listener = msg.for_listener();
-                let size = measure(&for_listener).num_bytes;
-                if batch_size + size > zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize {
+                if batch_size + size > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
                     self.send_filtered_logs(&mut filtered_batch).await;
                     if !self.is_healthy() {
                         return;
@@ -73,7 +70,7 @@ impl Listener {
                     batch_size = 0;
                 }
                 batch_size += size;
-                filtered_batch.push(for_listener);
+                filtered_batch.push(msg.for_listener());
             }
         }
 
