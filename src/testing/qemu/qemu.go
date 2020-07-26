@@ -84,11 +84,12 @@ const (
 
 // Params describes how to run a QEMU instance.
 type Params struct {
-	Arch          Arch
-	ZBI           string
-	AppendCmdline string
-	Networking    bool
-	DisableKVM    bool
+	Arch             Arch
+	ZBI              string
+	AppendCmdline    string
+	Networking       bool
+	DisableKVM       bool
+	DisableDebugExit bool
 }
 
 type Instance struct {
@@ -194,10 +195,12 @@ func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []stri
 		args = append(args, "-machine", "virtualization=true",
 			"-cpu", "max", "-machine", "virt-2.12,gic-version=3")
 	} else if params.Arch == X64 {
-		args = append(args, "-machine", "q35", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
-			"-cpu", "Haswell,+smap,-check,-fsgsbase")
+		args = append(args, "-machine", "q35", "-cpu", "Haswell,+smap,-check,-fsgsbase")
 		if !params.DisableKVM && hostSupportsKVM(params.Arch) {
 			args = append(args, "-enable-kvm")
+		}
+		if !params.DisableDebugExit {
+			args = append(args, "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
 		}
 	} else {
 		panic("unsupported architecture")
@@ -471,6 +474,18 @@ func (i *Instance) Kill() error {
 		}
 	}
 	return i.cmd.Process.Kill()
+}
+
+// Wait for the QEMU instance to terminate
+func (i *Instance) Wait() (*os.ProcessState, error) {
+	if i.piped != nil {
+		ps, err := i.piped.Process.Wait()
+		if err != nil {
+			return ps, err
+		}
+	}
+	ps, err := i.cmd.Process.Wait()
+	return ps, err
 }
 
 // RunCommand runs the given command in the serial console for the QEMU instance.

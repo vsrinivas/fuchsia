@@ -27,5 +27,6 @@ group("tests") {
     "microbenchmarks:tests",
     "oom:tests",
     "reboot:tests",
+    "shutdown:tests",
   ]
 }
