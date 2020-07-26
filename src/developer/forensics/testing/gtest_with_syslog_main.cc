@@ -15,6 +15,7 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  syslog::SetTags({"feedback", "test"});
+  syslog::SetTags({"forensics", "test"});
+
   return RUN_ALL_TESTS();
 }

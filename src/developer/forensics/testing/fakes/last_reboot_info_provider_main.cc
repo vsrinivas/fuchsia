@@ -13,7 +13,7 @@
 #include "src/developer/forensics/testing/fakes/last_reboot_info_provider.h"
 
 int main(int argc, const char** argv) {
-  syslog::SetTags({"feedback", "test"});
+  syslog::SetTags({"forensics", "test"});
 
   FX_LOGS(INFO) << "Starting FakeLastRebootInfoProvider";
 

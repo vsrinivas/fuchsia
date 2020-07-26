@@ -21,7 +21,7 @@
 int main(int argc, const char** argv) {
   using namespace ::forensics::crash_reports;
 
-  syslog::SetTags({"feedback"});
+  syslog::SetTags({"forensics", "crash"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();

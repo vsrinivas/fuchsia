@@ -16,7 +16,8 @@
 int main(int argc, char** argv) {
   using namespace forensics::exceptions;
 
-  syslog::SetTags({"exception-broker"});
+  syslog::SetTags({"forensics", "exception"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
 

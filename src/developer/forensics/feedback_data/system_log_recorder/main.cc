@@ -19,7 +19,7 @@ constexpr zx::duration kWritePeriod = zx::sec(1);
 int main(int argc, const char** argv) {
   using namespace ::forensics::feedback_data::system_log_recorder;
 
-  syslog::SetTags({"feedback"});
+  syslog::SetTags({"forensics", "feedback"});
 
   async::Loop main_loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Loop write_loop(&kAsyncLoopConfigNoAttachToCurrentThread);

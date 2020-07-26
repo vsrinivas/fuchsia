@@ -18,7 +18,7 @@
 int main(int argc, const char** argv) {
   using namespace ::forensics::feedback_data;
 
-  syslog::SetTags({"feedback"});
+  syslog::SetTags({"forensics", "feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();

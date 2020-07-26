@@ -56,7 +56,7 @@ void MoveGracefulRebootReason() {
 int main(int argc, char** argv) {
   using namespace ::forensics::last_reboot;
 
-  syslog::SetTags({"feedback"});
+  syslog::SetTags({"forensics", "reboot"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

@@ -4,7 +4,6 @@
 #include <fuchsia/exception/cpp/fidl.h>
 #include <fuchsia/feedback/testing/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -13,7 +12,6 @@
 
 #include "src/developer/forensics/exceptions/exception_broker.h"
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
-#include "src/lib/fxl/test/test_settings.h"
 
 namespace forensics {
 namespace exceptions {
@@ -112,13 +110,3 @@ TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
 }  // namespace
 }  // namespace exceptions
 }  // namespace forensics
-
-int main(int argc, char* argv[]) {
-  if (!fxl::SetTestSettings(argc, argv))
-    return EXIT_FAILURE;
-
-  testing::InitGoogleTest(&argc, argv);
-  syslog::SetTags({"exception-broker", "integration-test"});
-
-  return RUN_ALL_TESTS();
-}

@@ -28,7 +28,7 @@ void LogProcessLimboStatus(const ::forensics::exceptions::ProcessLimboManager& l
 int main() {
   using namespace ::forensics::exceptions;
 
-  syslog::SetTags({"exception-broker"});
+  syslog::SetTags({"forensics", "exception"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
