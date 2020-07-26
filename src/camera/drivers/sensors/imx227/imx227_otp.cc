@@ -69,9 +69,9 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
   return fit::ok(std::move(vmo));
 }
 
-bool Imx227Device::OtpValidate(const zx::vmo* vmo) {
+bool Imx227Device::OtpValidate(const zx::vmo& vmo) {
   std::array<uint8_t, OTP_TOTAL_SIZE> data;
-  vmo->read(&data, 0, OTP_TOTAL_SIZE);
+  vmo.read(&data, 0, OTP_TOTAL_SIZE);
   const auto kId = data[0];
   const auto kDay = data[1];
   const auto kMonth = data[2] & 0x0F;

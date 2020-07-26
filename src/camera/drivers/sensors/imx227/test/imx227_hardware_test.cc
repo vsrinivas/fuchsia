@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/sensors/imx227/imx227.h"
-
 #include <lib/driver-unit-test/logger.h>
 #include <lib/driver-unit-test/utils.h>
 
@@ -11,6 +9,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/camera/drivers/sensors/imx227/imx227.h"
 #include "src/camera/drivers/sensors/imx227/imx227_otp_config.h"
 
 namespace camera {
@@ -65,7 +64,7 @@ TEST_F(Imx227DeviceTest, OtpReadAndValidate) {
   zx::vmo vmo = std::move(result.value());
 
   // Validate vmo contents
-  EXPECT_TRUE(imx227_device_->OtpValidate(&vmo));
+  EXPECT_TRUE(imx227_device_->OtpValidate(vmo));
 }
 
 }  // namespace

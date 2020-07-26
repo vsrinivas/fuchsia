@@ -8,11 +8,8 @@
 #include <lib/device-protocol/i2c.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fit/result.h>
-#include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
-
-#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>

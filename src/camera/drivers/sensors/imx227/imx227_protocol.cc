@@ -12,6 +12,8 @@
 #include "src/camera/drivers/sensors/imx227/imx227_guid.h"
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 
+#include "src/camera/drivers/sensors/imx227/imx227_otp_config.h"
+
 namespace camera {
 
 namespace {
@@ -113,14 +115,33 @@ zx_status_t Imx227Device::CameraSensor2Update() {
 }
 
 zx_status_t Imx227Device::CameraSensor2GetOtpSize(uint32_t* out_size) {
-  FX_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+  *out_size = OTP_TOTAL_SIZE;
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetOtpData(uint32_t byte_count, uint32_t offset,
                                                   const uint8_t* buf_list, size_t buf_count) {
-  FX_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+  if ((byte_count + offset) > OTP_TOTAL_SIZE) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (buf_count < byte_count) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  auto result = OtpRead();
+  if (result.is_error()) {
+    return result.error();
+  }
+  auto vmo = result.take_value();
+  if (!OtpValidate(vmo)) {
+    zxlogf(ERROR, "%s; OTP validation failed.", __func__);
+    return ZX_ERR_INTERNAL;
+  }
+  zx_status_t status =
+      vmo.read(static_cast<void*>(const_cast<uint8_t*>(buf_list)), offset, byte_count);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s; Reading from VMO failed.", __func__);
+  }
+  return status;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetTestPatternMode(uint16_t* out_value) {

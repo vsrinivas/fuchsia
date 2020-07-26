@@ -125,11 +125,11 @@ class Imx227Device : public DeviceType,
   //  written data and checked against a hard-coded value.
   //
   //  Args:
-  //    |vmo|   VMO pointer of data to be validated
+  //    |vmo|   VMO of data to be validated
   //
   //  Returns:
-  //    Whether the OTP data was validated successfully.
-  static bool OtpValidate(const zx::vmo* vmo);
+  //    Whether the OTP data validated successfully.
+  static bool OtpValidate(const zx::vmo& vmo);
 
   // |ZX_PROTOCOL_CAMERA_SENSOR2|
   zx_status_t CameraSensor2Init();
