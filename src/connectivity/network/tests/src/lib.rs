@@ -12,6 +12,7 @@ mod management;
 mod environments;
 mod fidl;
 mod ipv6;
+mod routes;
 mod socket;
 
 use std::convert::TryFrom;
@@ -82,4 +83,36 @@ impl<'a> EthertapName for &'a str {
 /// Asynchronously sleeps for specified `secs` seconds.
 async fn sleep(secs: i64) {
     fasync::Timer::new(zx::Duration::from_seconds(secs).after_now()).await;
+}
+
+/// Waits for all addresses in `addrs` to be assigned to the interface
+/// referenced by `interface_id` in `netstack`.
+async fn wait_for_addresses(
+    netstack: &fidl_fuchsia_netstack::NetstackProxy,
+    interface_id: u64,
+    addrs: impl Iterator<Item = fidl_fuchsia_net::IpAddress> + Clone,
+) -> Result {
+    let _ifaces = netstack
+        .take_event_stream()
+        .try_filter(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            futures::future::ready(
+                interfaces
+                    .iter()
+                    .find(|iface| iface.id as u64 == interface_id)
+                    .map(|iface| {
+                        let iface_addrs = iface
+                            .ipv6addrs
+                            .iter()
+                            .map(|a| &a.addr)
+                            .chain(std::iter::once(&iface.addr));
+                        addrs.clone().all(|want| iface_addrs.clone().any(|a| *a == want))
+                    })
+                    .unwrap_or(false),
+            )
+        })
+        .try_next()
+        .await
+        .context("failed to observe IP Address")?
+        .ok_or_else(|| anyhow::anyhow!("netstack event stream ended unexpectedly"))?;
+    Ok(())
 }

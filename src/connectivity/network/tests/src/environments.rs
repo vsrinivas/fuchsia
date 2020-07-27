@@ -51,6 +51,7 @@ pub enum KnownServices {
     Netstack(NetstackVersion),
     SocketProvider(NetstackVersion),
     Filter(NetstackVersion),
+    RoutesState(NetstackVersion),
     Stash,
     MockCobalt,
     SecureStash,
@@ -76,6 +77,8 @@ impl KnownServices {
                                                  v.get_url()),
             KnownServices::Filter(v) => (<fidl_fuchsia_net_filter::FilterMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                                  v.get_url()),
+            KnownServices::RoutesState(v) => (<fidl_fuchsia_net_routes::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+                                         v.get_url()),
             KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                            "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"),
             KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
@@ -263,6 +266,7 @@ impl TestSandboxExt for netemul::TestSandbox {
         self.create_environment(
             name,
             [
+                KnownServices::RoutesState(N::VERSION),
                 KnownServices::Filter(N::VERSION),
                 KnownServices::Stack(N::VERSION),
                 KnownServices::Netstack(N::VERSION),

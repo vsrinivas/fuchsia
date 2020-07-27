@@ -6,58 +6,69 @@ package fidlconv
 
 import (
 	"fmt"
-	"net"
 
-	netfidl "fidl/fuchsia/net"
+	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 )
 
-func toNet(addr netfidl.IpAddress) net.IP {
+func ToTCPIPAddressAndProtocolNumber(addr net.IpAddress) (tcpip.Address, tcpip.NetworkProtocolNumber) {
 	switch tag := addr.Which(); tag {
-	case netfidl.IpAddressIpv4:
-		return addr.Ipv4.Addr[:]
-	case netfidl.IpAddressIpv6:
-		return addr.Ipv6.Addr[:]
+	case net.IpAddressIpv4:
+		return tcpip.Address(addr.Ipv4.Addr[:]), ipv4.ProtocolNumber
+	case net.IpAddressIpv6:
+		return tcpip.Address(addr.Ipv6.Addr[:]), ipv6.ProtocolNumber
 	default:
-		panic(fmt.Sprintf("invalid IP address tag = %d", tag))
+		panic(fmt.Sprintf("invalid fuchsia.net/IpAddress tag %d", tag))
 	}
 }
 
-func ToTCPIPAddress(addr netfidl.IpAddress) tcpip.Address {
-	return tcpip.Address(toNet(addr))
+func ToTCPIPAddress(addr net.IpAddress) tcpip.Address {
+	a, _ := ToTCPIPAddressAndProtocolNumber(addr)
+	return a
 }
 
-func ToNetIpAddress(addr tcpip.Address) netfidl.IpAddress {
+func ToNetIpAddress(addr tcpip.Address) net.IpAddress {
 	switch l := len(addr); l {
-	case net.IPv4len:
-		var ipv4 netfidl.Ipv4Address
-		copy(ipv4.Addr[:], addr)
-		return netfidl.IpAddressWithIpv4(ipv4)
-	case net.IPv6len:
-		var ipv6 netfidl.Ipv6Address
-		copy(ipv6.Addr[:], addr)
-		return netfidl.IpAddressWithIpv6(ipv6)
+	case header.IPv4AddressSize:
+		var v4 net.Ipv4Address
+		copy(v4.Addr[:], addr)
+		return net.IpAddressWithIpv4(v4)
+	case header.IPv6AddressSize:
+		var v6 net.Ipv6Address
+		copy(v6.Addr[:], addr)
+		return net.IpAddressWithIpv6(v6)
 	default:
 		panic(fmt.Sprintf("invalid IP address length = %d: %x", l, addr))
 	}
 }
 
-func ToNetSocketAddress(addr tcpip.FullAddress) netfidl.SocketAddress {
-	var out netfidl.SocketAddress
+func ToNetMacAddress(addr tcpip.LinkAddress) net.MacAddress {
+	if len(addr) != header.EthernetAddressSize {
+		panic(fmt.Sprintf("invalid link address length = %d: %x", len(addr), addr))
+	}
+	var mac net.MacAddress
+	copy(mac.Octets[:], addr)
+	return mac
+}
+
+func ToNetSocketAddress(addr tcpip.FullAddress) net.SocketAddress {
+	var out net.SocketAddress
 	switch l := len(addr.Addr); l {
-	case net.IPv4len:
-		var ipv4 netfidl.Ipv4Address
-		copy(ipv4.Addr[:], addr.Addr)
-		out.SetIpv4(netfidl.Ipv4SocketAddress{
-			Address: ipv4,
+	case header.IPv4AddressSize:
+		var v4 net.Ipv4Address
+		copy(v4.Addr[:], addr.Addr)
+		out.SetIpv4(net.Ipv4SocketAddress{
+			Address: v4,
 			Port:    addr.Port,
 		})
-	case net.IPv6len:
-		var ipv6 netfidl.Ipv6Address
-		copy(ipv6.Addr[:], addr.Addr)
+	case header.IPv6AddressSize:
+		var v6 net.Ipv6Address
+		copy(v6.Addr[:], addr.Addr)
 
 		// Zone information should only be included for non-global addresses as the same
 		// address may be used across different zones. Note, there is only a single globally
@@ -67,8 +78,8 @@ func ToNetSocketAddress(addr tcpip.FullAddress) netfidl.SocketAddress {
 		if header.IsV6LinkLocalAddress(addr.Addr) || header.IsV6LinkLocalMulticastAddress(addr.Addr) {
 			zoneIdx = uint64(addr.NIC)
 		}
-		out.SetIpv6(netfidl.Ipv6SocketAddress{
-			Address:   ipv6,
+		out.SetIpv6(net.Ipv6SocketAddress{
+			Address:   v6,
 			Port:      addr.Port,
 			ZoneIndex: zoneIdx,
 		})
@@ -78,19 +89,17 @@ func ToNetSocketAddress(addr tcpip.FullAddress) netfidl.SocketAddress {
 	return out
 }
 
-func ToTCPIPSubnet(sn netfidl.Subnet) tcpip.Subnet {
-	a := toNet(sn.Addr)
-	m := net.CIDRMask(int(sn.PrefixLen), len(a)*8)
-	subnet, err := tcpip.NewSubnet(tcpip.Address(a.Mask(m)), tcpip.AddressMask(m))
-	if err != nil {
-		panic(err)
-	}
-	return subnet
+func ToTCPIPSubnet(sn net.Subnet) tcpip.Subnet {
+	a := ToTCPIPAddress(sn.Addr)
+	return tcpip.AddressWithPrefix{
+		Address:   a,
+		PrefixLen: int(sn.PrefixLen),
+	}.Subnet()
 }
 
 func TcpipRouteToForwardingEntry(route tcpip.Route) stack.ForwardingEntry {
 	forwardingEntry := stack.ForwardingEntry{
-		Subnet: netfidl.Subnet{
+		Subnet: net.Subnet{
 			Addr:      ToNetIpAddress(route.Destination.ID()),
 			PrefixLen: uint8(route.Destination.Prefix()),
 		},

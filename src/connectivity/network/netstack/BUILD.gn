@@ -158,6 +158,7 @@ go_library("netstack_lib") {
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
     "//sdk/fidl/fuchsia.net.name($go_toolchain)",
     "//sdk/fidl/fuchsia.net.neighbor($go_toolchain)",
+    "//sdk/fidl/fuchsia.net.routes($go_toolchain)",
     "//sdk/fidl/fuchsia.net.stack($go_toolchain)",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.posix($go_toolchain)",

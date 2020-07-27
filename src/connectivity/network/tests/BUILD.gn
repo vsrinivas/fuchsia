@@ -41,6 +41,7 @@ rustc_test("netstack_integration_test_bin") {
     "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
+    "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
@@ -66,6 +67,7 @@ rustc_test("netstack_integration_test_bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:socket2",
@@ -86,6 +88,7 @@ rustc_test("netstack_integration_test_bin") {
     "src/ipv6.rs",
     "src/lib.rs",
     "src/management.rs",
+    "src/routes.rs",
     "src/socket.rs",
   ]
 }

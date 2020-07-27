@@ -127,33 +127,9 @@ async fn install_ip_device(
     }
     // Wait for addresses to be assigned. Necessary for IPv6 addresses
     // since DAD must be performed.
-    let _ifaces = netstack
-        .take_event_stream()
-        .try_filter(|fidl_fuchsia_netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
-            futures::future::ready(
-                interfaces
-                    .iter()
-                    .find(|iface| iface.id as u64 == id)
-                    .map(|iface| {
-                        println!(
-                            "interfaces changed {:?}, waiting for addresses {:?}",
-                            iface, addrs
-                        );
-                        let iface_addrs = iface
-                            .ipv6addrs
-                            .iter()
-                            .map(|a| &a.addr)
-                            .chain(std::iter::once(&iface.addr));
-                        addrs.iter().all(|want| iface_addrs.clone().any(|a| *a == want.addr))
-                    })
-                    .unwrap_or(false),
-            )
-        })
-        .try_next()
+    let () = crate::wait_for_addresses(&netstack, id, addrs.iter().map(|a| a.addr))
         .await
-        .context("failed to observe IP Address")?
-        .ok_or_else(|| anyhow::anyhow!("netstack event stream ended unexpectedly"))?;
-
+        .context("failed to observe addresses")?;
     Ok(id)
 }
 

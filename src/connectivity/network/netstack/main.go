@@ -33,6 +33,7 @@ import (
 
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
+	"fidl/fuchsia/net/routes"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/posix/socket"
@@ -441,6 +442,19 @@ func Main() {
 			func(ctx fidl.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(socket.ProviderName, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := routes.StateWithCtxStub{Impl: &routesImpl{ns.stack}}
+		appCtx.OutgoingService.AddService(
+			routes.StateName,
+			func(ctx fidl.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(routes.StateName, "%s", err)
 				})
 				return nil
 			},
