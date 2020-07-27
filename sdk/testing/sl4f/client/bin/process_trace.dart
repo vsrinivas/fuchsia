@@ -16,6 +16,7 @@ const _metricsReporters = {
   'flutter_frame_stats': flutterFrameStatsReport,
   'scenic_frame_stats': scenicFrameStatsReport,
   'memory': memoryMetricsReport,
+  'input_latency': inputLatencyReport,
 };
 
 const _helpText = '''

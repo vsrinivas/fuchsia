@@ -6,8 +6,11 @@ import '../metrics_results.dart';
 import '../trace_model.dart';
 import 'common.dart';
 
-List<TestCaseResults> inputLatencyMetricsProcessor(
-    Model model, Map<String, dynamic> extraArgs) {
+class _Results {
+  List<double> inputLatencyValuesMillis;
+}
+
+_Results _inputLatency(Model model) {
   final inputEvents = filterEventsTyped<DurationEvent>(getAllEvents(model),
       category: 'input', name: 'presentation_on_event');
   final vsyncEvents = inputEvents.map(findFollowingVsync);
@@ -28,7 +31,31 @@ List<TestCaseResults> inputLatencyMetricsProcessor(
     throw ArgumentError('Computed 0 total input latency values');
   }
 
+  return _Results()..inputLatencyValuesMillis = latencyValues;
+}
+
+List<TestCaseResults> inputLatencyMetricsProcessor(
+    Model model, Map<String, dynamic> extraArgs) {
+  final results = _inputLatency(model);
+
   return [
-    TestCaseResults('total_input_latency', Unit.milliseconds, latencyValues),
+    TestCaseResults('total_input_latency', Unit.milliseconds,
+        results.inputLatencyValuesMillis),
   ];
+}
+
+String inputLatencyReport(Model model) {
+  final buffer = StringBuffer()..write('''
+===
+Input Latency
+===
+
+''');
+  final results = _inputLatency(model);
+  buffer
+    ..write('total_input_latency (ms):\n')
+    ..write(describeValues(results.inputLatencyValuesMillis, indent: 2))
+    ..write('\n');
+
+  return buffer.toString();
 }
