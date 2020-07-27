@@ -10,6 +10,7 @@
 
 #include <utility>
 
+#include <third_party/modp_b64/modp_b64.h>
 #include <trace-reader/reader.h>
 
 #include "garnet/lib/perfmon/writer.h"
@@ -472,6 +473,11 @@ void ChromiumExporter::ExportBlob(const trace::LargeRecordData::Blob& data) {
   if (fit::holds_alternative<trace::LargeRecordData::BlobEvent>(data)) {
     const auto& blob = get<trace::LargeRecordData::BlobEvent>(data);
 
+    if (blob.category == "fidl:blob") {
+      ExportFidlBlob(blob);
+      return;
+    }
+
     // Drop blob event record.
     FX_LOGS(INFO) << "Dropping large blob event record: "
                   << "name " << blob.name.c_str() << " of size " << blob.blob_size;
@@ -482,6 +488,29 @@ void ChromiumExporter::ExportBlob(const trace::LargeRecordData::Blob& data) {
     FX_LOGS(INFO) << "Dropping large blob attachment record: "
                   << "name " << blob.name.c_str() << " of size " << blob.blob_size;
   }
+}
+
+void ChromiumExporter::ExportFidlBlob(const trace::LargeRecordData::BlobEvent& blob) {
+  writer_.StartObject();
+  writer_.Key("ph");
+  writer_.String("O");
+  writer_.Key("id");
+  writer_.String("");
+  writer_.Key("cat");
+  writer_.String(CleanString(blob.category));
+  writer_.Key("name");
+  writer_.String(CleanString(blob.name));
+  writer_.Key("ts");
+  writer_.Double(blob.timestamp * tick_scale_);
+  writer_.Key("pid");
+  writer_.Uint64(blob.process_thread.process_koid());
+  writer_.Key("tid");
+  writer_.Uint64(blob.process_thread.thread_koid());
+  writer_.Key("blob");
+  auto blob_str = std::string(static_cast<const char*>(blob.blob), blob.blob_size);
+  auto blob_str_base64 = modp_b64_encode(blob_str);
+  writer_.String(blob_str_base64);
+  writer_.EndObject();
 }
 
 void ChromiumExporter::WriteArgs(const fbl::Vector<trace::Argument>& arguments) {

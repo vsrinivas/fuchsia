@@ -92,6 +92,36 @@ TEST(ChromiumExporterTest, UnknownLargeBlobAttachmentDropped) {
             "],\"systemTraceEvents\":{\"type\":\"fuchsia\",\"events\":[]}}");
 }
 
+TEST(ChromiumExporterTest, FidlBlobExported) {
+  static const char blob[] = "some test blob data";
+  trace::Record record(trace::LargeRecordData{trace::LargeRecordData::BlobEvent{
+      "fidl:blob",
+      "BlobName",
+      1000,
+      trace::ProcessThread(45, 46),
+      fbl::Vector<trace::Argument>(),
+      blob,
+      sizeof(blob),
+  }});
+
+  std::ostringstream out_stream;
+
+  // Enclosing the exporter in its own scope ensures that its
+  // cleanup routines are called by the destructor before the
+  // output stream is read. This way, we can obtain the full
+  // output rather than a truncated version.
+  {
+    tracing::ChromiumExporter exporter(out_stream);
+    exporter.ExportRecord(record);
+  }
+
+  EXPECT_EQ(out_stream.str(),
+            "{\"displayTimeUnit\":\"ns\",\"traceEvents\":[{\"ph\":\"O\",\"id\":\"\",\"cat\":\"fidl:"
+            "blob\",\"name\":\"BlobName\",\"ts\":1.0,\"pid\":45,\"tid\":46,\"blob\":"
+            "\"c29tZSB0ZXN0IGJsb2IgZGF0YQA=\"}],\"systemTraceEvents\":{\"type\":\"fuchsia\","
+            "\"events\":[]}}");
+}
+
 TEST(ChromiumExporterTest, EmptyTrace) {
   std::ostringstream out_stream;
 

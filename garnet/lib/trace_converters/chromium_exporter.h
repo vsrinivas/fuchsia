@@ -5,13 +5,13 @@
 #ifndef GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 #define GARNET_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 
-#include <trace-reader/reader.h>
-
 #include <memory>
 #include <ostream>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+
+#include <trace-reader/reader.h>
 
 #include "garnet/lib/perfmon/writer.h"
 #include "rapidjson/ostreamwrapper.h"
@@ -37,6 +37,7 @@ class ChromiumExporter {
   void ExportMetadata(const trace::Record::Metadata& metadata);
   void ExportContextSwitch(const trace::Record::ContextSwitch& context_switch);
   void ExportBlob(const trace::LargeRecordData::Blob& blob);
+  void ExportFidlBlob(const trace::LargeRecordData::BlobEvent& blob);
 
   // Writes argument data. Assumes it is already within an
   // "args" key object.
