@@ -140,6 +140,21 @@ fn main() {
                 name: Some("fuchsia.logger.Log".to_string()),
                 source_path: Some("/svc/fuchsia.logger.Log".to_string()),
             }),
+            CapabilityDecl::Protocol(ProtocolDecl {
+                name: Some("fuchsia.logger.Log2".to_string()),
+                source_path: Some("/svc/fuchsia.logger.Log2".to_string()),
+            }),
+            CapabilityDecl::Directory(DirectoryDecl {
+                name: Some("data".to_string()),
+                source_path: Some("/data".to_string()),
+                rights: Some(
+                    fio2::Operations::Connect
+                        | fio2::Operations::ReadBytes
+                        | fio2::Operations::GetAttributes
+                        | fio2::Operations::Enumerate
+                        | fio2::Operations::Traverse,
+                ),
+            }),
             CapabilityDecl::Storage(StorageDecl {
                 name: Some("minfs".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),

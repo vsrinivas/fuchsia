@@ -609,6 +609,8 @@ fsys::OfferEventDecl,
 fidl_into_enum!(CapabilityDecl, CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDecl,
 {
     Service(ServiceDecl),
+    Protocol(ProtocolDecl),
+    Directory(DirectoryDecl),
     Storage(StorageDecl),
     Runner(RunnerDecl),
     Resolver(ResolverDecl),
@@ -617,6 +619,17 @@ fidl_into_struct!(ServiceDecl, ServiceDecl, fsys::ServiceDecl, fsys::ServiceDecl
 {
     name: CapabilityName,
     source_path: CapabilityPath,
+});
+fidl_into_struct!(ProtocolDecl, ProtocolDecl, fsys::ProtocolDecl, fsys::ProtocolDecl,
+{
+    name: CapabilityName,
+    source_path: CapabilityPath,
+});
+fidl_into_struct!(DirectoryDecl, DirectoryDecl, fsys::DirectoryDecl, fsys::DirectoryDecl,
+{
+    name: CapabilityName,
+    source_path: CapabilityPath,
+    rights: fio2::Operations,
 });
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
 fsys::StorageDecl,
@@ -1972,6 +1985,15 @@ mod tests {
                        name: Some("netstack".to_string()),
                        source_path: Some("/netstack".to_string()),
                    }),
+                   fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                       name: Some("netstack2".to_string()),
+                       source_path: Some("/netstack2".to_string()),
+                   }),
+                   fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                       name: Some("data".to_string()),
+                       source_path: Some("/data".to_string()),
+                       rights: Some(fio2::Operations::Connect),
+                   }),
                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                        name: Some("memfs".to_string()),
                        source_path: Some("/memfs".to_string()),
@@ -2197,6 +2219,15 @@ mod tests {
                         CapabilityDecl::Service(ServiceDecl {
                             name: "netstack".into(),
                             source_path: "/netstack".try_into().unwrap(),
+                        }),
+                        CapabilityDecl::Protocol(ProtocolDecl {
+                            name: "netstack2".into(),
+                            source_path: "/netstack2".try_into().unwrap(),
+                        }),
+                        CapabilityDecl::Directory(DirectoryDecl {
+                            name: "data".into(),
+                            source_path: "/data".try_into().unwrap(),
+                            rights: fio2::Operations::Connect,
                         }),
                         CapabilityDecl::Storage(StorageDecl {
                             name: "memfs".to_string(),

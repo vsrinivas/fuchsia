@@ -185,6 +185,25 @@
             }
         },
         {
+            "protocol": {
+                "name": "fuchsia.logger.Log2",
+                "source_path": "/svc/fuchsia.logger.Log2"
+            }
+        },
+        {
+            "directory": {
+                "name": "data",
+                "source_path": "/data",
+                "rights": [
+                    "connect",
+                    "enumerate",
+                    "traverse",
+                    "read_bytes",
+                    "get_attributes"
+                ]
+            }
+        },
+        {
             "storage": {
                 "name": "minfs",
                 "source": {

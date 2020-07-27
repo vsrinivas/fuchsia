@@ -362,6 +362,12 @@ impl CmInto<fsys::CapabilityDecl> for cm::Capability {
     fn cm_into(self) -> Result<fsys::CapabilityDecl, Error> {
         Ok(match self {
             cm::Capability::Service(service) => fsys::CapabilityDecl::Service(service.cm_into()?),
+            cm::Capability::Protocol(protocol) => {
+                fsys::CapabilityDecl::Protocol(protocol.cm_into()?)
+            }
+            cm::Capability::Directory(directory) => {
+                fsys::CapabilityDecl::Directory(directory.cm_into()?)
+            }
             cm::Capability::Storage(storage) => fsys::CapabilityDecl::Storage(storage.cm_into()?),
             cm::Capability::Runner(runner) => fsys::CapabilityDecl::Runner(runner.cm_into()?),
             cm::Capability::Resolver(resolver) => {
@@ -376,6 +382,25 @@ impl CmInto<fsys::ServiceDecl> for cm::Service {
         Ok(fsys::ServiceDecl {
             name: Some(self.name.into()),
             source_path: Some(self.source_path.into()),
+        })
+    }
+}
+
+impl CmInto<fsys::ProtocolDecl> for cm::Protocol {
+    fn cm_into(self) -> Result<fsys::ProtocolDecl, Error> {
+        Ok(fsys::ProtocolDecl {
+            name: Some(self.name.into()),
+            source_path: Some(self.source_path.into()),
+        })
+    }
+}
+
+impl CmInto<fsys::DirectoryDecl> for cm::Directory {
+    fn cm_into(self) -> Result<fsys::DirectoryDecl, Error> {
+        Ok(fsys::DirectoryDecl {
+            name: Some(self.name.into()),
+            source_path: Some(self.source_path.into()),
+            rights: self.rights.into(),
         })
     }
 }
@@ -1795,6 +1820,19 @@ mod tests {
                         }
                     },
                     {
+                        "protocol": {
+                            "name": "fuchsia.netstack.Netstack2",
+                            "source_path": "/svc/fuchsia.netstack.Netstack2"
+                        }
+                    },
+                    {
+                        "directory": {
+                            "name": "assets",
+                            "source_path": "/assets",
+                            "rights": ["connect"]
+                        }
+                    },
+                    {
                         "storage": {
                             "name": "memfs",
                             "source": {
@@ -1825,6 +1863,15 @@ mod tests {
                     fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                         name: Some("fuchsia.netstack.Netstack".to_string()),
                         source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
+                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                        name: Some("fuchsia.netstack.Netstack2".to_string()),
+                        source_path: Some("/svc/fuchsia.netstack.Netstack2".to_string()),
+                    }),
+                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                        name: Some("assets".to_string()),
+                        source_path: Some("/assets".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),

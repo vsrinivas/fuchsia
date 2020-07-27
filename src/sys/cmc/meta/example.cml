@@ -23,6 +23,15 @@
             path: "/svc/fuchsia.logger.Log",
         },
         {
+            protocol: "fuchsia.logger.Log2",
+            path: "/svc/fuchsia.logger.Log2",
+        },
+        {
+            directory: "data",
+            rights: [ "r*" ],
+            path: "/data",
+        },
+        {
             storage: "minfs",
             from: "parent",
             path: "/data",

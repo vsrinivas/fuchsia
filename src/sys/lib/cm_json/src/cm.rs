@@ -75,6 +75,8 @@ pub struct Rights(pub Vec<Right>);
 #[serde(rename_all = "snake_case")]
 pub enum Capability {
     Service(Service),
+    Protocol(Protocol),
+    Directory(Directory),
     Storage(Storage),
     Runner(Runner),
     Resolver(Resolver),
@@ -110,6 +112,25 @@ pub struct Collection {
 pub struct Service {
     pub name: Name,
     pub source_path: Path,
+}
+
+/// A protocol capability. See [`ProtocolDecl`].
+///
+/// [`ProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.ProtocolDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Protocol {
+    pub name: Name,
+    pub source_path: Path,
+}
+
+/// A directory capability. See [`DirectoryDecl`].
+///
+/// [`DirectoryDecl`]: ../../fidl_fuchsia_sys2/struct.DirectoryDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Directory {
+    pub name: Name,
+    pub source_path: Path,
+    pub rights: Rights,
 }
 
 /// A storage capability. See [`StorageDecl`].

@@ -56,6 +56,8 @@ pub fn parse_cml(buffer: &str) -> Result<cml::Document, Error> {
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_services: HashSet::new(),
+        all_protocols: HashSet::new(),
+        all_directories: HashSet::new(),
         all_runners: HashSet::new(),
         all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
@@ -145,6 +147,8 @@ struct ValidationContext<'a> {
     all_collections: HashSet<&'a cml::Name>,
     all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::CapabilityFromRef>,
     all_services: HashSet<&'a cml::Name>,
+    all_protocols: HashSet<&'a cml::Name>,
+    all_directories: HashSet<&'a cml::Name>,
     all_runners: HashSet<&'a cml::Name>,
     all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
@@ -364,6 +368,8 @@ impl<'a> ValidationContext<'a> {
         self.all_collections = self.document.all_collection_names().into_iter().collect();
         self.all_storage_and_sources = self.document.all_storage_and_sources();
         self.all_services = self.document.all_service_names().into_iter().collect();
+        self.all_protocols = self.document.all_protocol_names().into_iter().collect();
+        self.all_directories = self.document.all_directory_names().into_iter().collect();
         self.all_runners = self.document.all_runner_names().into_iter().collect();
         self.all_resolvers = self.document.all_resolver_names().into_iter().collect();
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
@@ -488,32 +494,30 @@ impl<'a> ValidationContext<'a> {
         capability: &'a cml::Capability,
         used_ids: &mut HashMap<String, CapabilityId>,
     ) -> Result<(), Error> {
-        match (&capability.storage, &capability.from) {
-            (Some(_), None) => Err(Error::validate("\"from\" should be present with \"storage\"")),
-            _ => Ok(()),
-        }?;
-        match (&capability.storage, &capability.path) {
-            (Some(_), None) => Err(Error::validate("\"path\" should be present with \"storage\"")),
-            _ => Ok(()),
-        }?;
-        match (&capability.runner, &capability.from) {
-            (Some(_), None) => Err(Error::validate("\"from\" should be present with \"runner\"")),
-            _ => Ok(()),
-        }?;
-        match (&capability.runner, &capability.path) {
-            (Some(_), None) => Err(Error::validate("\"path\" should be present with \"runner\"")),
-            _ => Ok(()),
-        }?;
-        match (&capability.resolver, &capability.from) {
-            (Some(_), Some(_)) => {
-                Err(Error::validate("\"from\" should not be present with \"resolver\""))
-            }
-            _ => Ok(()),
-        }?;
-        match (&capability.resolver, &capability.path) {
-            (Some(_), None) => Err(Error::validate("\"path\" should be present with \"resolver\"")),
-            _ => Ok(()),
-        }?;
+        if capability.directory.is_some() && capability.path.is_none() {
+            return Err(Error::validate("\"path\" should be present with \"directory\""));
+        }
+        if capability.directory.is_some() && capability.rights.is_none() {
+            return Err(Error::validate("\"rights\" should be present with \"directory\""));
+        }
+        if capability.storage.is_some() && capability.from.is_none() {
+            return Err(Error::validate("\"from\" should be present with \"storage\""));
+        }
+        if capability.storage.is_some() && capability.path.is_none() {
+            return Err(Error::validate("\"path\" should be present with \"storage\""));
+        }
+        if capability.runner.is_some() && capability.from.is_none() {
+            return Err(Error::validate("\"from\" should be present with \"runner\""));
+        }
+        if capability.runner.is_some() && capability.path.is_none() {
+            return Err(Error::validate("\"path\" should be present with \"runner\""));
+        }
+        if capability.resolver.is_some() && capability.from.is_some() {
+            return Err(Error::validate("\"from\" should not be present with \"resolver\""));
+        }
+        if capability.resolver.is_some() && capability.path.is_none() {
+            return Err(Error::validate("\"path\" should be present with \"resolver\""));
+        }
         if let Some(from) = capability.from.as_ref() {
             self.validate_component_ref("\"capabilities\" source", cml::AnyRef::from(from))?;
         }
@@ -670,6 +674,18 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that services exposed from self are defined in `services`.
+        if let Some(service_name) = &expose.service {
+            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                if !self.all_services.contains(service_name) {
+                    return Err(Error::validate(format!(
+                       "Service \"{}\" is exposed from self, so it must be declared as a \"service\" in \"capabilities\"",
+                       service_name
+                   )));
+                }
+            }
+        }
+
         // Ensure directory rights are specified if exposing from self.
         if expose.directory.is_some() {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_)
@@ -694,28 +710,24 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure that services exposed from self are defined in `services`.
-        if let Some(service_name) = &expose.service {
-            // Services can only have a single `from` clause.
+        // Ensure that runners exposed from self are defined in `runners`.
+        if let Some(runner_name) = &expose.runner {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
-                if !self.all_services.contains(service_name) {
+                if !self.all_runners.contains(runner_name) {
                     return Err(Error::validate(format!(
-                       "Service \"{}\" is exposed from self, so it must be declared in \"services\"",
-                       service_name
-                   )));
+                        "Runner \"{}\" is exposed from self, so it must be declared as a \"runner\" in \"capabilities\"",
+                        runner_name
+                    )));
                 }
             }
         }
 
-        // TODO: We should be checking runners here
-
         // Ensure that resolvers exposed from self are defined in `resolvers`.
         if let Some(resolver_name) = &expose.resolver {
-            // Resolvers can only have a single `from` clause.
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                 if !self.all_resolvers.contains(resolver_name) {
                     return Err(Error::validate(format!(
-                       "Resolver \"{}\" is exposed from self, so it must be declared in \"resolvers\"", resolver_name
+                       "Resolver \"{}\" is exposed from self, so it must be declared as a \"resolver\" in \"capabilities\"", resolver_name
                    )));
                 }
             }
@@ -747,9 +759,21 @@ impl<'a> ValidationContext<'a> {
         used_ids: &mut HashMap<&'a cml::Name, HashMap<String, CapabilityId>>,
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
+        // Ensure that services offered from self are defined in `services`.
+        if let Some(service_name) = &offer.service {
+            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                if !self.all_services.contains(service_name) {
+                    return Err(Error::validate(format!(
+                        "Service \"{}\" is offered from self, so it must be declared as a \
+                       \"service\" in \"capabilities\"",
+                        service_name
+                    )));
+                }
+            }
+        }
+
         // Ensure directory rights are specified if offering from self.
         if offer.directory.is_some() {
-            // Directories can only have a single `from` clause.
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) || offer.rights.is_some() {
                 match &offer.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
@@ -762,30 +786,26 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure that services offered from self are defined in `services`.
-        if let Some(service_name) = &offer.service {
-            // Services can only have a single `from` clause.
+        // Ensure that runners offered from self are defined in `runners`.
+        if let Some(runner_name) = &offer.runner {
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                if !self.all_services.contains(service_name) {
+                if !self.all_runners.contains(runner_name) {
                     return Err(Error::validate(format!(
-                        "Service \"{}\" is offered from self, so it must be declared in \
-                       \"services\"",
-                        service_name
+                        "Runner \"{}\" is offered from self, so it must be declared as a \
+                       \"runner\" in \"capabilities\"",
+                        runner_name
                     )));
                 }
             }
         }
 
-        // TODO: We should be checking runners here
-
         // Ensure that resolvers offered from self are defined in `resolvers`.
         if let Some(resolver_name) = &offer.resolver {
-            // Resolvers can only have a single `from` clause.
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
                 if !self.all_resolvers.contains(resolver_name) {
                     return Err(Error::validate(format!(
-                        "Resolver \"{}\" is offered from self, so it must be declared in \
-                       \"resolvers\"",
+                        "Resolver \"{}\" is offered from self, so it must be declared as a \
+                       \"resolver\" in \"capabilities\"",
                         resolver_name
                     )));
                 }
@@ -1778,7 +1798,18 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is exposed from self, so it must be declared in \"services\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is exposed from self, so it must be declared as a \"service\" in \"capabilities\""
+        ),
+        test_cml_expose_runner_from_self_missing(
+            json!({
+                "expose": [
+                    {
+                        "runner": "dart",
+                        "from": "self",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Runner \"dart\" is exposed from self, so it must be declared as a \"runner\" in \"capabilities\""
         ),
         test_cml_expose_resolver_from_self_missing(
             json!({
@@ -1789,7 +1820,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is exposed from self, so it must be declared in \"resolvers\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is exposed from self, so it must be declared as a \"resolver\" in \"capabilities\""
         ),
         test_cml_expose_to_framework_ok(
             json!({
@@ -2372,7 +2403,25 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"fuchsia.fonts.Resolver\" is offered from self, so it must be declared in \"services\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"fuchsia.fonts.Resolver\" is offered from self, so it must be declared as a \"service\" in \"capabilities\""
+        ),
+        test_cml_offer_runner_from_self_missing(
+            json!({
+                "offer": [
+                    {
+                        "runner": "dart",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Runner \"dart\" is offered from self, so it must be declared as a \"runner\" in \"capabilities\""
         ),
         test_cml_offer_resolver_from_self_missing(
             json!({
@@ -2390,7 +2439,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is offered from self, so it must be declared in \"resolvers\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is offered from self, so it must be declared as a \"resolver\" in \"capabilities\""
         ),
         test_cml_offer_dependency_on_wrong_type(
             json!({
@@ -2739,7 +2788,6 @@ mod tests {
                     },
                     {
                         "service": "c",
-                        "path": "/service",
                     },
                 ],
             }),
@@ -2750,11 +2798,89 @@ mod tests {
                 "capabilities": [
                     {
                         "service": "abcdefghijklmnopqrstuvwxyz0123456789_-service",
-                        "path": "/example",
                     },
                 ],
             }),
             Ok(())
+        ),
+        test_cml_protocol(
+            json!({
+                "capabilities": [
+                    {
+                        "protocol": "a",
+                        "path": "/minfs",
+                    },
+                    {
+                        "protocol": "b",
+                        "path": "/data",
+                    },
+                    {
+                        "protocol": "c",
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_protocol_all_valid_chars(
+            json!({
+                "capabilities": [
+                    {
+                        "protocol": "abcdefghijklmnopqrstuvwxyz0123456789_-service",
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_directory(
+            json!({
+                "capabilities": [
+                    {
+                        "directory": "a",
+                        "path": "/minfs",
+                        "rights": ["connect"],
+                    },
+                    {
+                        "directory": "b",
+                        "path": "/data",
+                        "rights": ["connect"],
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_directory_all_valid_chars(
+            json!({
+                "capabilities": [
+                    {
+                        "directory": "abcdefghijklmnopqrstuvwxyz0123456789_-service",
+                        "path": "/data",
+                        "rights": ["connect"],
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_directory_missing_path(
+            json!({
+                "capabilities": [
+                    {
+                        "directory": "dir",
+                        "rights": ["connect"],
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"path\" should be present with \"directory\""
+        ),
+        test_cml_directory_missing_rights(
+            json!({
+                "capabilities": [
+                    {
+                        "directory": "dir",
+                        "path": "/dir",
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"rights\" should be present with \"directory\""
         ),
         test_cml_storage(
             json!({
@@ -2868,7 +2994,54 @@ mod tests {
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
         ),
-
+        test_cml_capability_missing_name(
+            json!({
+                "capabilities": [
+                    {
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "`capability` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"resolver\""
+        ),
+        test_cml_resolver_missing_path(
+            json!({
+                "capabilities": [
+                    {
+                        "resolver": "pkg_resolver",
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"path\" should be present with \"resolver\""
+        ),
+        test_cml_capabilities_extraneous_from(
+            json!({
+                "capabilities": [
+                    {
+                        "resolver": "pkg_resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        "from": "self",
+                    },
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"from\" should not be present with \"resolver\""
+        ),
+        test_cml_capabilities_duplicates(
+            json!({
+                "capabilities": [
+                    {
+                        "runner": "pkg_resolver",
+                        "from": "self",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                    {
+                        "resolver": "pkg_resolver",
+                        "path": "/svc/my-resolver",
+                    },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"pkg_resolver\" is defined twice, once in \"resolvers\" and once in \"runners\""
+        ),
 
         // environments
         test_cml_environments(
@@ -3657,56 +3830,6 @@ mod tests {
         test_cml_program_no_runner(
             json!({"program": { "binary": "bin/app" }}),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Component has a \'program\' block defined, but doesn\'t \'use\' a runner capability. Components need to \'use\' a runner to actually execute code."
-        ),
-
-        // Capabilities
-        test_cml_capability_missing_name(
-            json!({
-                "capabilities": [
-                    {
-                        "path": "/svc/fuchsia.sys2.ComponentResolver",
-                    },
-                ]
-            }),
-            Err(Error::Validate { err, .. }) if &err == "`capability` declaration is missing a capability keyword, one of: \"service\", \"storage\", \"runner\", \"resolver\""
-        ),
-        test_cml_capabilities_missing_path(
-            json!({
-                "capabilities": [
-                    {
-                        "resolver": "pkg_resolver",
-                    },
-                ]
-            }),
-            Err(Error::Validate { err, .. }) if &err == "\"path\" should be present with \"resolver\""
-        ),
-        test_cml_capabilities_extraneous_from(
-            json!({
-                "capabilities": [
-                    {
-                        "resolver": "pkg_resolver",
-                        "path": "/svc/fuchsia.sys2.ComponentResolver",
-                        "from": "self",
-                    },
-                ]
-            }),
-            Err(Error::Validate { err, .. }) if &err == "\"from\" should not be present with \"resolver\""
-        ),
-        test_cml_capabilities_duplicates(
-            json!({
-                "capabilities": [
-                    {
-                        "runner": "pkg_resolver",
-                        "from": "self",
-                        "path": "/svc/fuchsia.sys2.ComponentResolver",
-                    },
-                    {
-                        "resolver": "pkg_resolver",
-                        "path": "/svc/my-resolver",
-                    },
-                ]
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "identifier \"pkg_resolver\" is defined twice, once in \"resolvers\" and once in \"runners\""
         ),
 
         // deny unknown fields

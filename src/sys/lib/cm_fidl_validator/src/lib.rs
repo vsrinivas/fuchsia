@@ -246,6 +246,8 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_services: HashSet::new(),
+        all_protocols: HashSet::new(),
+        all_directories: HashSet::new(),
         all_runners: HashSet::new(),
         all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
@@ -283,6 +285,8 @@ struct ValidationContext<'a> {
     all_collections: HashSet<&'a str>,
     all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_services: HashSet<&'a str>,
+    all_protocols: HashSet<&'a str>,
+    all_directories: HashSet<&'a str>,
     all_runners: HashSet<&'a str>,
     all_resolvers: HashSet<&'a str>,
     all_environment_names: HashSet<&'a str>,
@@ -351,6 +355,12 @@ impl<'a> ValidationContext<'a> {
             for capability in capabilities {
                 match capability {
                     fsys::CapabilityDecl::Service(service) => self.validate_service_decl(&service),
+                    fsys::CapabilityDecl::Protocol(protocol) => {
+                        self.validate_protocol_decl(&protocol)
+                    }
+                    fsys::CapabilityDecl::Directory(directory) => {
+                        self.validate_directory_decl(&directory)
+                    }
                     fsys::CapabilityDecl::Storage(storage) => self.validate_storage_decl(&storage),
                     fsys::CapabilityDecl::Runner(runner) => self.validate_runner_decl(&runner),
                     fsys::CapabilityDecl::Resolver(resolver) => {
@@ -871,6 +881,34 @@ impl<'a> ValidationContext<'a> {
             }
         }
         check_path(service.source_path.as_ref(), "ServiceDecl", "source_path", &mut self.errors);
+    }
+
+    fn validate_protocol_decl(&mut self, protocol: &'a fsys::ProtocolDecl) {
+        if check_name(protocol.name.as_ref(), "ProtocolDecl", "name", &mut self.errors) {
+            let name = protocol.name.as_ref().unwrap();
+            if !self.all_protocols.insert(name) {
+                self.errors.push(Error::duplicate_field("ProtocolDecl", "name", name.as_str()));
+            }
+        }
+        check_path(protocol.source_path.as_ref(), "ProtocolDecl", "source_path", &mut self.errors);
+    }
+
+    fn validate_directory_decl(&mut self, directory: &'a fsys::DirectoryDecl) {
+        if check_name(directory.name.as_ref(), "DirectoryDecl", "name", &mut self.errors) {
+            let name = directory.name.as_ref().unwrap();
+            if !self.all_directories.insert(name) {
+                self.errors.push(Error::duplicate_field("DirectoryDecl", "name", name.as_str()));
+            }
+        }
+        check_path(
+            directory.source_path.as_ref(),
+            "DirectoryDecl",
+            "source_path",
+            &mut self.errors,
+        );
+        if directory.rights.is_none() {
+            self.errors.push(Error::missing_field("DirectoryDecl", "rights"));
+        }
     }
 
     fn validate_storage_decl(&mut self, storage: &'a fsys::StorageDecl) {
@@ -4762,6 +4800,15 @@ mod tests {
                         name: None,
                         source_path: None,
                     }),
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: None,
+                        source_path: None,
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: None,
+                        source_path: None,
+                        rights: None,
+                    }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: None,
                         source: None,
@@ -4782,6 +4829,11 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::missing_field("ServiceDecl", "name"),
                 Error::missing_field("ServiceDecl", "source_path"),
+                Error::missing_field("ProtocolDecl", "name"),
+                Error::missing_field("ProtocolDecl", "source_path"),
+                Error::missing_field("DirectoryDecl", "name"),
+                Error::missing_field("DirectoryDecl", "source_path"),
+                Error::missing_field("DirectoryDecl", "rights"),
                 Error::missing_field("StorageDecl", "source"),
                 Error::missing_field("StorageDecl", "name"),
                 Error::missing_field("StorageDecl", "source_path"),
@@ -4799,6 +4851,15 @@ mod tests {
                     CapabilityDecl::Service(ServiceDecl {
                         name: Some("^bad".to_string()),
                         source_path: Some("&bad".to_string()),
+                    }),
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: Some("^bad".to_string()),
+                        source_path: Some("&bad".to_string()),
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("^bad".to_string()),
+                        source_path: Some("&bad".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: Some("^bad".to_string()),
@@ -4824,6 +4885,10 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("ServiceDecl", "name"),
                 Error::invalid_field("ServiceDecl", "source_path"),
+                Error::invalid_field("ProtocolDecl", "name"),
+                Error::invalid_field("ProtocolDecl", "source_path"),
+                Error::invalid_field("DirectoryDecl", "name"),
+                Error::invalid_field("DirectoryDecl", "source_path"),
                 Error::invalid_field("StorageDecl", "source"),
                 Error::invalid_field("StorageDecl", "name"),
                 Error::invalid_field("StorageDecl", "source_path"),
@@ -4872,6 +4937,15 @@ mod tests {
                         name: Some("a".repeat(101)),
                         source_path: Some(format!("/{}", "c".repeat(1024))),
                     }),
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: Some("a".repeat(101)),
+                        source_path: Some(format!("/{}", "c".repeat(1024))),
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("a".repeat(101)),
+                        source_path: Some(format!("/{}", "c".repeat(1024))),
+                        rights: Some(fio2::Operations::Connect),
+                    }),
                     CapabilityDecl::Storage(StorageDecl {
                         name: Some("a".repeat(101)),
                         source: Some(Ref::Child(ChildRef {
@@ -4898,6 +4972,10 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("ServiceDecl", "name"),
                 Error::field_too_long("ServiceDecl", "source_path"),
+                Error::field_too_long("ProtocolDecl", "name"),
+                Error::field_too_long("ProtocolDecl", "source_path"),
+                Error::field_too_long("DirectoryDecl", "name"),
+                Error::field_too_long("DirectoryDecl", "source_path"),
                 Error::field_too_long("StorageDecl", "source.child.name"),
                 Error::field_too_long("StorageDecl", "name"),
                 Error::field_too_long("StorageDecl", "source_path"),
@@ -4913,56 +4991,76 @@ mod tests {
                 let mut decl = new_component_decl();
                 decl.capabilities = Some(vec![
                     CapabilityDecl::Service(ServiceDecl {
-                        name: Some("buz".to_string()),
-                        source_path: Some("/buz".to_string()),
+                        name: Some("service".to_string()),
+                        source_path: Some("/service".to_string()),
                     }),
                     CapabilityDecl::Service(ServiceDecl {
-                        name: Some("buz".to_string()),
-                        source_path: Some("/buz2".to_string()),
+                        name: Some("service".to_string()),
+                        source_path: Some("/service".to_string()),
+                    }),
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: Some("protocol".to_string()),
+                        source_path: Some("/protocol".to_string()),
+                    }),
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: Some("protocol".to_string()),
+                        source_path: Some("/protocol".to_string()),
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("directory".to_string()),
+                        source_path: Some("/directory".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("directory".to_string()),
+                        source_path: Some("/directory".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     CapabilityDecl::Storage(StorageDecl {
-                        name: Some("foo".to_string()),
+                        name: Some("storage".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/foo".to_string()),
+                        source_path: Some("/storage".to_string()),
                     }),
                     CapabilityDecl::Storage(StorageDecl {
-                        name: Some("foo".to_string()),
+                        name: Some("storage".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/foo2".to_string()),
+                        source_path: Some("/storage".to_string()),
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
-                        name: Some("bar".to_string()),
+                        name: Some("runner".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/bar".to_string()),
+                        source_path: Some("/runner".to_string()),
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
-                        name: Some("bar".to_string()),
+                        name: Some("runner".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/bar2".to_string()),
+                        source_path: Some("/runner".to_string()),
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
-                        name: Some("baz".to_string()),
-                        source_path: Some("/baz".to_string()),
+                        name: Some("resolver".to_string()),
+                        source_path: Some("/resolver".to_string()),
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
-                        name: Some("baz".to_string()),
-                        source_path: Some("/baz2".to_string()),
+                        name: Some("resolver".to_string()),
+                        source_path: Some("/resolver".to_string()),
                     }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::duplicate_field("ServiceDecl", "name", "buz"),
-                Error::duplicate_field("StorageDecl", "name", "foo"),
-                Error::duplicate_field("RunnerDecl", "name", "bar"),
-                Error::duplicate_field("ResolverDecl", "name", "baz"),
+                Error::duplicate_field("ServiceDecl", "name", "service"),
+                Error::duplicate_field("ProtocolDecl", "name", "protocol"),
+                Error::duplicate_field("DirectoryDecl", "name", "directory"),
+                Error::duplicate_field("StorageDecl", "name", "storage"),
+                Error::duplicate_field("RunnerDecl", "name", "runner"),
+                Error::duplicate_field("ResolverDecl", "name", "resolver"),
             ])),
         },
 
         test_validate_resolvers_missing_from_offer => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl::Resolver(OfferResolverDecl{
+                decl.offers = Some(vec![OfferDecl::Resolver(OfferResolverDecl {
                     source: Some(Ref::Self_(SelfRef {})),
                     source_name: Some("a".to_string()),
                     target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
@@ -4983,7 +5081,7 @@ mod tests {
         test_validate_resolvers_missing_from_expose => {
             input = {
                 let mut decl = new_component_decl();
-                decl.exposes = Some(vec![ExposeDecl::Resolver(ExposeResolverDecl{
+                decl.exposes = Some(vec![ExposeDecl::Resolver(ExposeResolverDecl {
                     source: Some(Ref::Self_(SelfRef {})),
                     source_name: Some("a".to_string()),
                     target: Some(Ref::Parent(ParentRef {})),

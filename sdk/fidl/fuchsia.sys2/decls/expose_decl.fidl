@@ -83,7 +83,8 @@ table ExposeDirectoryDecl {
     /// Must be an absolute path starting with /.
     4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
 
-    /// The rights to expose this directory with, required iff `source == self`.
+    /// The maximum rights that can be set by a component using this directory,
+    /// required iff `source == self`.
     5: fuchsia.io2.Rights rights;
 
     /// The subdirectory of this directory to expose instead of the root. Optional.

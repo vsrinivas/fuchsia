@@ -523,53 +523,45 @@ impl Document {
     }
 
     pub fn all_service_names(&self) -> Vec<&Name> {
-        if let Some(capabilities) = self.capabilities.as_ref() {
-            capabilities
-                .iter()
-                .filter_map(|c| match c.service.as_ref() {
-                    Some(r) => Some(r),
-                    None => None,
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+        self.capabilities
+            .as_ref()
+            .map(|c| c.iter().filter_map(|c| c.service.as_ref()).collect())
+            .unwrap_or_else(|| vec![])
+    }
+
+    pub fn all_protocol_names(&self) -> Vec<&Name> {
+        self.capabilities
+            .as_ref()
+            .map(|c| c.iter().filter_map(|c| c.protocol.as_ref()).collect())
+            .unwrap_or_else(|| vec![])
+    }
+
+    pub fn all_directory_names(&self) -> Vec<&Name> {
+        self.capabilities
+            .as_ref()
+            .map(|c| c.iter().filter_map(|c| c.directory.as_ref()).collect())
+            .unwrap_or_else(|| vec![])
     }
 
     pub fn all_runner_names(&self) -> Vec<&Name> {
-        if let Some(capabilities) = self.capabilities.as_ref() {
-            capabilities
-                .iter()
-                .filter_map(|c| match c.runner.as_ref() {
-                    Some(r) => Some(r),
-                    None => None,
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+        self.capabilities
+            .as_ref()
+            .map(|c| c.iter().filter_map(|c| c.runner.as_ref()).collect())
+            .unwrap_or_else(|| vec![])
     }
 
     pub fn all_resolver_names(&self) -> Vec<&Name> {
-        if let Some(capabilities) = self.capabilities.as_ref() {
-            capabilities
-                .iter()
-                .filter_map(|c| match c.resolver.as_ref() {
-                    Some(r) => Some(r),
-                    None => None,
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+        self.capabilities
+            .as_ref()
+            .map(|c| c.iter().filter_map(|c| c.resolver.as_ref()).collect())
+            .unwrap_or_else(|| vec![])
     }
 
     pub fn all_environment_names(&self) -> Vec<&Name> {
-        if let Some(environments) = self.environments.as_ref() {
-            environments.iter().map(|s| &s.name).collect()
-        } else {
-            vec![]
-        }
+        self.environments
+            .as_ref()
+            .map(|c| c.iter().map(|s| &s.name).collect())
+            .unwrap_or_else(|| vec![])
     }
 }
 
@@ -616,11 +608,14 @@ pub struct ResolverRegistration {
 #[serde(deny_unknown_fields)]
 pub struct Capability {
     pub service: Option<Name>,
+    pub protocol: Option<Name>,
+    pub directory: Option<Name>,
     pub storage: Option<Name>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub from: Option<CapabilityFromRef>,
     pub path: Option<Path>,
+    pub rights: Option<Rights>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -710,8 +705,8 @@ pub enum RoutingClauseType {
 
 pub trait CapabilityClause {
     fn service(&self) -> &Option<Name>;
-    fn protocol(&self) -> &Option<OneOrMany<Path>>;
-    fn directory(&self) -> &Option<Path>;
+    fn protocol(&self) -> Option<OneOrMany<Path>>;
+    fn directory(&self) -> Option<Path>;
     fn storage(&self) -> &Option<Name>;
     fn storage_type(&self) -> &Option<StorageType>;
     fn runner(&self) -> &Option<Name>;
@@ -741,15 +736,25 @@ pub trait FilterClause {
     fn filter(&self) -> Option<&Map<String, Value>>;
 }
 
+pub trait RightsClause {
+    fn rights(&self) -> Option<&Rights>;
+}
+
+fn name_to_path(name: &Name) -> Path {
+    format!("/svc/{}", name).parse().unwrap()
+}
+
 impl CapabilityClause for Capability {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> &Option<OneOrMany<Path>> {
-        &None
+    fn protocol(&self) -> Option<OneOrMany<Path>> {
+        // TODO: Once protocol capabilites are integrated with use/offer/expose, return the name
+        self.protocol.as_ref().map(|n| OneOrMany::One(name_to_path(n)))
     }
-    fn directory(&self) -> &Option<Path> {
-        &None
+    fn directory(&self) -> Option<Path> {
+        // TODO: Once directory capabilites are integrated with use/offer/expose, return the name
+        self.directory.as_ref().map(name_to_path)
     }
     fn storage(&self) -> &Option<Name> {
         &self.storage
@@ -772,6 +777,10 @@ impl CapabilityClause for Capability {
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {
             "service"
+        } else if self.protocol.is_some() {
+            "protocol"
+        } else if self.directory.is_some() {
+            "directory"
         } else if self.storage.is_some() {
             "storage"
         } else if self.runner.is_some() {
@@ -786,7 +795,7 @@ impl CapabilityClause for Capability {
         "capability"
     }
     fn supported(&self) -> &[&'static str] {
-        &["service", "storage", "runner", "resolver"]
+        &["service", "protocol", "directory", "storage", "runner", "resolver"]
     }
 }
 
@@ -808,15 +817,21 @@ impl FilterClause for Capability {
     }
 }
 
+impl RightsClause for Capability {
+    fn rights(&self) -> Option<&Rights> {
+        self.rights.as_ref()
+    }
+}
+
 impl CapabilityClause for Use {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> &Option<OneOrMany<Path>> {
-        &self.protocol
+    fn protocol(&self) -> Option<OneOrMany<Path>> {
+        self.protocol.clone()
     }
-    fn directory(&self) -> &Option<Path> {
-        &self.directory
+    fn directory(&self) -> Option<Path> {
+        self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
         &None
@@ -887,17 +902,23 @@ impl FromClause for Expose {
     }
 }
 
+impl RightsClause for Use {
+    fn rights(&self) -> Option<&Rights> {
+        self.rights.as_ref()
+    }
+}
+
 impl CapabilityClause for Expose {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
     // TODO(340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
     // `Many` protocols.
-    fn protocol(&self) -> &Option<OneOrMany<Path>> {
-        &self.protocol
+    fn protocol(&self) -> Option<OneOrMany<Path>> {
+        self.protocol.clone()
     }
-    fn directory(&self) -> &Option<Path> {
-        &self.directory
+    fn directory(&self) -> Option<Path> {
+        self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
         &None
@@ -958,6 +979,12 @@ impl FilterClause for Expose {
     }
 }
 
+impl RightsClause for Expose {
+    fn rights(&self) -> Option<&Rights> {
+        self.rights.as_ref()
+    }
+}
+
 impl FromClause for Offer {
     fn from_(&self) -> OneOrMany<AnyRef<'_>> {
         one_or_many_from_impl(&self.from)
@@ -968,11 +995,11 @@ impl CapabilityClause for Offer {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> &Option<OneOrMany<Path>> {
-        &self.protocol
+    fn protocol(&self) -> Option<OneOrMany<Path>> {
+        self.protocol.clone()
     }
-    fn directory(&self) -> &Option<Path> {
-        &self.directory
+    fn directory(&self) -> Option<Path> {
+        self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
         &None
@@ -1034,6 +1061,12 @@ impl PathClause for Offer {
 impl FilterClause for Offer {
     fn filter(&self) -> Option<&Map<String, Value>> {
         self.filter.as_ref()
+    }
+}
+
+impl RightsClause for Offer {
+    fn rights(&self) -> Option<&Rights> {
+        self.rights.as_ref()
     }
 }
 

@@ -148,7 +148,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             let source = extract_use_source(use_)?;
             let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
                 .extract_path()?;
-            let rights = extract_use_rights(use_)?;
+            let rights = extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
             out_uses.push(cm::Use::Directory(cm::UseDirectory {
                 source,
@@ -455,6 +455,19 @@ fn translate_capabilities(
                 capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
             out_capabilities
                 .push(cm::Capability::Service(cm::Service { name: n.clone(), source_path }));
+        } else if let Some(n) = &capability.protocol {
+            let source_path =
+                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+            out_capabilities
+                .push(cm::Capability::Protocol(cm::Protocol { name: n.clone(), source_path }));
+        } else if let Some(n) = &capability.directory {
+            let source_path =
+                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+            out_capabilities.push(cm::Capability::Directory(cm::Directory {
+                name: n.clone(),
+                source_path,
+                rights: extract_required_rights(capability, "capability")?,
+            }));
         } else if let Some(n) = &capability.storage {
             out_capabilities.push(cm::Capability::Storage(cm::Storage {
                 name: n.clone(),
@@ -556,13 +569,19 @@ fn extract_use_event_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
     }
 }
 
-fn extract_use_rights(in_obj: &cml::Use) -> Result<cm::Rights, Error> {
-    match in_obj.rights.as_ref() {
+fn extract_required_rights<T>(in_obj: &T, keyword: &str) -> Result<cm::Rights, Error>
+where
+    T: cml::RightsClause,
+{
+    match in_obj.rights() {
         Some(right_tokens) => match cml::parse_rights(right_tokens) {
             Ok(rights) => Ok(rights),
             _ => Err(Error::internal("Rights provided to use are not well formed.")),
         },
-        None => Err(Error::internal("No use rights provided but required for used directories")),
+        None => Err(Error::internal(format!(
+            "No `{}` rights provided but required for directories",
+            keyword
+        ))),
     }
 }
 
@@ -1108,6 +1127,11 @@ mod tests {
                 ],
                 "capabilities": [
                     { "service": "my.service.Service" },
+                    {
+                        "runner": "web",
+                        "path": "/svc/fuchsia.component.ComponentRunner",
+                        "from": "self",
+                    },
                 ],
                 "children": [
                     {
@@ -1251,6 +1275,15 @@ mod tests {
             "service": {
                 "name": "my.service.Service",
                 "source_path": "/svc/my.service.Service"
+            }
+        },
+        {
+            "runner": {
+                "name": "web",
+                "source": {
+                    "self": {}
+                },
+                "source_path": "/svc/fuchsia.component.ComponentRunner"
             }
         }
     ],
@@ -1856,6 +1889,18 @@ mod tests {
                         "service": "myservice2",
                     },
                     {
+                        "protocol": "myprotocol",
+                        "path": "/protocol",
+                    },
+                    {
+                        "protocol": "myprotocol2",
+                    },
+                    {
+                        "directory": "mydirectory",
+                        "path": "/directory",
+                        "rights": [ "connect" ],
+                    },
+                    {
                         "storage": "mystorage",
                         "path": "/storage",
                         "from": "#minfs",
@@ -1889,6 +1934,27 @@ mod tests {
             "service": {
                 "name": "myservice2",
                 "source_path": "/svc/myservice2"
+            }
+        },
+        {
+            "protocol": {
+                "name": "myprotocol",
+                "source_path": "/protocol"
+            }
+        },
+        {
+            "protocol": {
+                "name": "myprotocol2",
+                "source_path": "/svc/myprotocol2"
+            }
+        },
+        {
+            "directory": {
+                "name": "mydirectory",
+                "source_path": "/directory",
+                "rights": [
+                    "connect"
+                ]
             }
         },
         {
