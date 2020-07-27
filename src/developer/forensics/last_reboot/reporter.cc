@@ -52,10 +52,7 @@ void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reportin
   // TODO(53131): Remove this once the new metric has been adopted.
   cobalt_->LogOccurrence(ToCobaltLegacyRebootReason(reboot_log.RebootReason()));
 
-  // We don't want to file a crash report on graceful  or cold reboots.
-  if (const auto graceful = OptionallyGraceful(reboot_log.RebootReason());
-      (graceful.has_value() && graceful.value()) ||
-      reboot_log.RebootReason() == RebootReason::kCold) {
+  if (!IsCrash(reboot_log.RebootReason())) {
     return;
   }
 

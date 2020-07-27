@@ -136,6 +136,8 @@ TEST(RebootReasonTest, SessionFailure) {
             cobalt::LegacyRebootReason::kClean);
   EXPECT_EQ(ToCobaltLastRebootReason(RebootReason::kSessionFailure),
             cobalt::LastRebootReason::kSessionFailure);
+  EXPECT_EQ(ToCrashSignature(RebootReason::kSessionFailure), "fuchsia-session-failure");
+  EXPECT_EQ(ToCrashProgramName(RebootReason::kSessionFailure), "system");
   EXPECT_EQ(ToFidlRebootReason(RebootReason::kSessionFailure),
             fuchsia::feedback::RebootReason::SESSION_FAILURE);
 }

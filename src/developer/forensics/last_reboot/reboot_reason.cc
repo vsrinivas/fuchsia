@@ -43,6 +43,26 @@ std::string ToString(const RebootReason reboot_reason) {
 
 }  // namespace
 
+bool IsCrash(const RebootReason reboot_reason) {
+  switch (reboot_reason) {
+    case RebootReason::kNotParseable:
+    case RebootReason::kSpontaneous:
+    case RebootReason::kKernelPanic:
+    case RebootReason::kOOM:
+    case RebootReason::kHardwareWatchdogTimeout:
+    case RebootReason::kSoftwareWatchdogTimeout:
+    case RebootReason::kBrownout:
+    case RebootReason::kSessionFailure:
+      return true;
+    case RebootReason::kGenericGraceful:
+    case RebootReason::kUserRequest:
+    case RebootReason::kSystemUpdate:
+    case RebootReason::kHighTemperature:
+    case RebootReason::kCold:
+      return false;
+  }
+}
+
 std::optional<bool> OptionallyGraceful(const RebootReason reboot_reason) {
   switch (reboot_reason) {
     case RebootReason::kGenericGraceful:
@@ -138,11 +158,12 @@ std::string ToCrashSignature(const RebootReason reboot_reason) {
       return "fuchsia-sw-watchdog-timeout";
     case RebootReason::kBrownout:
       return "fuchsia-brownout";
+    case RebootReason::kSessionFailure:
+      return "fuchsia-session-failure";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
-    case RebootReason::kSessionFailure:
     case RebootReason::kCold:
       FX_LOGS(FATAL) << "Not expecting a crash for reboot reason " << ToString(reboot_reason);
       return "FATAL ERROR";
@@ -161,12 +182,12 @@ std::string ToCrashProgramName(const RebootReason reboot_reason) {
       return "device";
     case RebootReason::kOOM:
     case RebootReason::kSoftwareWatchdogTimeout:
+    case RebootReason::kSessionFailure:
       return "system";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
-    case RebootReason::kSessionFailure:
     case RebootReason::kCold:
       FX_LOGS(FATAL) << "Not expecting a program name request for reboot reason "
                      << ToString(reboot_reason);
