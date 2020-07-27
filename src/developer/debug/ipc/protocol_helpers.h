@@ -39,6 +39,12 @@ bool Deserialize(MessageReader* reader, RegisterCategory* reg_cat);
 void Serialize(const AddressRange& range, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, AddressRange* range);
 
+void Serialize(ExceptionType type, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, ExceptionType* type);
+
+void Serialize(ExceptionStrategy strategy, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, ExceptionStrategy* strategy);
+
 // Will call Serialize for each element in the vector.
 template <typename T>
 inline void Serialize(const std::vector<T>& v, MessageWriter* writer) {

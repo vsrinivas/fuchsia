@@ -153,7 +153,7 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
                      << zx_status_get_string(strategy.error_value());
     return;
   }
-  exception.exception.second_chance = (strategy.value() == ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+  exception.exception.strategy = strategy.value();
 
   std::optional<GeneralRegisters> regs = thread_handle_->GetGeneralRegisters();
   if (!regs) {
@@ -164,7 +164,8 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
   }
 
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception @ 0x" << std::hex << regs->ip()
-                    << std::dec << ": " << debug_ipc::ExceptionTypeToString(exception.type);
+                    << std::dec << ": " << debug_ipc::ExceptionTypeToString(exception.type) << " ("
+                    << debug_ipc::ExceptionStrategyToString(exception.exception.strategy) << ")";
 
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:
@@ -360,7 +361,8 @@ void DebuggedThread::ResumeException() {
   }
 
   if (run_mode_ == debug_ipc::ResumeRequest::How::kForwardAndContinue) {
-    zx_status_t status = exception_handle_->SetStrategy(ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+    zx_status_t status =
+        exception_handle_->SetStrategy(debug_ipc::ExceptionStrategy::kSecondChance);
     if (status != ZX_OK) {
       DEBUG_LOG(Thread) << ThreadPreamble(this) << "Failed to set exception as second-chance: "
                         << zx_status_get_string(status);

@@ -31,18 +31,27 @@ zx_status_t ZirconExceptionHandle::SetState(uint32_t state) {
   return exception_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
 }
 
-fitx::result<zx_status_t, uint32_t> ZirconExceptionHandle::GetStrategy() const {
-  uint32_t strategy = 0;
+fitx::result<zx_status_t, debug_ipc::ExceptionStrategy> ZirconExceptionHandle::GetStrategy() const {
+  uint32_t raw_strategy = 0;
   zx_status_t status =
-      exception_.get_property(ZX_PROP_EXCEPTION_STRATEGY, &strategy, sizeof(strategy));
+      exception_.get_property(ZX_PROP_EXCEPTION_STRATEGY, &raw_strategy, sizeof(raw_strategy));
   if (status != ZX_OK) {
     return fitx::error(status);
   }
-  return fitx::ok(strategy);
+  auto strategy = debug_ipc::ToExceptionStrategy(raw_strategy);
+  if (!strategy.has_value()) {
+    return fitx::error(ZX_ERR_BAD_STATE);
+  }
+  return fitx::ok(strategy.value());
 }
 
-zx_status_t ZirconExceptionHandle::SetStrategy(uint32_t strategy) {
-  return exception_.set_property(ZX_PROP_EXCEPTION_STRATEGY, &strategy, sizeof(strategy));
+zx_status_t ZirconExceptionHandle::SetStrategy(debug_ipc::ExceptionStrategy strategy) {
+  auto raw_strategy = debug_ipc::ToRawValue(strategy);
+  if (!raw_strategy.has_value()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return exception_.set_property(ZX_PROP_EXCEPTION_STRATEGY, &raw_strategy.value(),
+                                 sizeof(raw_strategy.value()));
 }
 
 }  // namespace debug_agent

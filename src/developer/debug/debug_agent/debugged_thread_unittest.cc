@@ -238,30 +238,34 @@ TEST(DebuggedThread, Resume) {
   EXPECT_FALSE(debugged_thread->IsInException());
 
   uint32_t exception_state = 0u;
-  uint32_t exception_strategy = 0u;
+  debug_ipc::ExceptionStrategy exception_strategy = debug_ipc::ExceptionStrategy::kNone;
   auto exception = std::make_unique<MockExceptionHandle>(
       [&exception_state](uint32_t new_state) { exception_state = new_state; },
-      [&exception_strategy](uint32_t new_strategy) { exception_strategy = new_strategy; });
+      [&exception_strategy](debug_ipc::ExceptionStrategy new_strategy) {
+        exception_strategy = new_strategy;
+      });
   debugged_thread->set_exception_handle(std::move(exception));
   EXPECT_TRUE(debugged_thread->IsInException());
   debugged_thread->Resume(
       debug_ipc::ResumeRequest{.how = debug_ipc::ResumeRequest::How::kResolveAndContinue});
   EXPECT_FALSE(debugged_thread->IsInException());
   EXPECT_EQ(exception_state, ZX_EXCEPTION_STATE_HANDLED);
-  EXPECT_EQ(exception_strategy, 0u);
+  EXPECT_EQ(exception_strategy, debug_ipc::ExceptionStrategy::kNone);
 
   exception_state = 0u;
-  exception_strategy = 0u;
+  exception_strategy = debug_ipc::ExceptionStrategy::kNone;
   exception = std::make_unique<MockExceptionHandle>(
       [&exception_state](uint32_t new_state) { exception_state = new_state; },
-      [&exception_strategy](uint32_t new_strategy) { exception_strategy = new_strategy; });
+      [&exception_strategy](debug_ipc::ExceptionStrategy new_strategy) {
+        exception_strategy = new_strategy;
+      });
   debugged_thread->set_exception_handle(std::move(exception));
   EXPECT_TRUE(debugged_thread->IsInException());
   debugged_thread->Resume(
       debug_ipc::ResumeRequest{.how = debug_ipc::ResumeRequest::How::kForwardAndContinue});
   EXPECT_FALSE(debugged_thread->IsInException());
   EXPECT_EQ(exception_state, 0u);
-  EXPECT_EQ(exception_strategy, ZX_EXCEPTION_STRATEGY_SECOND_CHANCE);
+  EXPECT_EQ(exception_strategy, debug_ipc::ExceptionStrategy::kSecondChance);
 
   // Tell the other thread we're done.
   ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_1), ZX_OK);

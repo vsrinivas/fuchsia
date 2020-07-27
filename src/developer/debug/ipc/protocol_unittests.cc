@@ -899,7 +899,7 @@ TEST(Protocol, NotifyException) {
   initial.exception.arch.x64.vector = 22;
   initial.exception.arch.x64.err_code = 5;
   initial.exception.arch.x64.cr2 = 12345;
-  initial.exception.second_chance = true;
+  initial.exception.strategy = ExceptionStrategy::kSecondChance;
 
   initial.hit_breakpoints.emplace_back();
   initial.hit_breakpoints[0].id = 45;
@@ -929,7 +929,7 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.exception.arch.x64.vector, second.exception.arch.x64.vector);
   EXPECT_EQ(initial.exception.arch.x64.err_code, second.exception.arch.x64.err_code);
   EXPECT_EQ(initial.exception.arch.x64.cr2, second.exception.arch.x64.cr2);
-  EXPECT_EQ(initial.exception.second_chance, second.exception.second_chance);
+  EXPECT_EQ(initial.exception.strategy, second.exception.strategy);
 
   ASSERT_EQ(initial.hit_breakpoints.size(), second.hit_breakpoints.size());
 

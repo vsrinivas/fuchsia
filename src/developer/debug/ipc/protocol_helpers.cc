@@ -56,4 +56,31 @@ bool Deserialize(MessageReader* reader, AddressRange* range) {
   return true;
 }
 
+void Serialize(ExceptionType type, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(type));
+}
+
+bool Deserialize(MessageReader* reader, ExceptionType* type) {
+  uint32_t type32;
+  if (!reader->ReadUint32(&type32) || type32 >= static_cast<uint32_t>(ExceptionType::kLast)) {
+    return false;
+  }
+  *type = static_cast<ExceptionType>(type32);
+  return true;
+}
+
+void Serialize(ExceptionStrategy strategy, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(strategy));
+}
+
+bool Deserialize(MessageReader* reader, ExceptionStrategy* strategy) {
+  uint32_t strategy32;
+  if (!reader->ReadUint32(&strategy32) ||
+      strategy32 >= static_cast<uint32_t>(ExceptionStrategy::kLast)) {
+    return false;
+  }
+  *strategy = static_cast<ExceptionStrategy>(strategy32);
+  return true;
+}
+
 }  // namespace debug_ipc

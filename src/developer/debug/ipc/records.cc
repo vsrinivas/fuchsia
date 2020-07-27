@@ -5,6 +5,7 @@
 #include "src/developer/debug/ipc/records.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/syscalls/object.h>
 
 #include <algorithm>
 
@@ -72,6 +73,44 @@ const char* ExceptionTypeToString(ExceptionType type) {
   }
   FX_NOTREACHED();
   return nullptr;
+}
+
+const char* ExceptionStrategyToString(ExceptionStrategy strategy) {
+  switch (strategy) {
+    case ExceptionStrategy::kNone:
+      return "None";
+    case ExceptionStrategy::kFirstChance:
+      return "First-Chance";
+    case ExceptionStrategy::kSecondChance:
+      return "Second-Chance";
+    case ExceptionStrategy::kLast:
+      return "kLast";
+  }
+  FX_NOTREACHED();
+  return nullptr;
+}
+
+std::optional<ExceptionStrategy> ToExceptionStrategy(uint32_t raw_value) {
+  switch (raw_value) {
+    case ZX_EXCEPTION_STRATEGY_FIRST_CHANCE:
+      return ExceptionStrategy::kFirstChance;
+    case ZX_EXCEPTION_STRATEGY_SECOND_CHANCE:
+      return ExceptionStrategy::kSecondChance;
+    default:
+      return {};
+  }
+}
+
+std::optional<uint32_t> ToRawValue(ExceptionStrategy strategy) {
+  switch (strategy) {
+    case ExceptionStrategy::kNone:
+    case ExceptionStrategy::kLast:
+      return {};
+    case ExceptionStrategy::kFirstChance:
+      return ZX_EXCEPTION_STRATEGY_FIRST_CHANCE;
+    case ExceptionStrategy::kSecondChance:
+      return ZX_EXCEPTION_STRATEGY_SECOND_CHANCE;
+  };
 }
 
 const char* ThreadRecord::StateToString(ThreadRecord::State state) {

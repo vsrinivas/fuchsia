@@ -28,8 +28,8 @@ class ZirconExceptionHandle : public ExceptionHandle {
   debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const override;
   fitx::result<zx_status_t, uint32_t> GetState() const override;
   zx_status_t SetState(uint32_t state) override;
-  fitx::result<zx_status_t, uint32_t> GetStrategy() const override;
-  zx_status_t SetStrategy(uint32_t strategy) override;
+  fitx::result<zx_status_t, debug_ipc::ExceptionStrategy> GetStrategy() const override;
+  zx_status_t SetStrategy(debug_ipc::ExceptionStrategy strategy) override;
 
  private:
   zx::exception exception_;

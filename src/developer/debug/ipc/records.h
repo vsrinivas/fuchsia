@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -64,6 +65,28 @@ enum class ExceptionType : uint32_t {
 const char* ExceptionTypeToString(ExceptionType);
 bool IsDebug(ExceptionType);
 
+// Exception handling strategy.
+enum class ExceptionStrategy : uint32_t {
+  // No current exception, used as placeholder or to indicate not set.
+  kNone = 0,
+
+  // Indicates that the debugger only gets the first chance to handle the
+  // exception, before the thread and process-level handlers.
+  kFirstChance,
+
+  // Indicates that the debugger also gets a second first chance to handle
+  //  the exception after process-level handler.
+  kSecondChance,
+
+  kLast,  // Not an actual exception strategy, for range checking.
+};
+
+const char* ExceptionStrategyToString(ExceptionStrategy);
+
+std::optional<ExceptionStrategy> ToExceptionStrategy(uint32_t raw_value);
+
+std::optional<uint32_t> ToRawValue(ExceptionStrategy strategy);
+
 struct ExceptionRecord {
   ExceptionRecord() { memset(&arch, 0, sizeof(Arch)); }
 
@@ -87,10 +110,7 @@ struct ExceptionRecord {
     } arm64;
   } arch;
 
-  // Whether the corresponding exception is second-chance (i.e., that the
-  // debugger will get a second chance to handle the exception after the
-  // process exception channel fails to do so).
-  bool second_chance = false;
+  ExceptionStrategy strategy = ExceptionStrategy::kNone;
 };
 
 // Note: see "ps" source:

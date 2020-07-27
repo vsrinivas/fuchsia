@@ -23,7 +23,8 @@ class MockExceptionHandle : public ExceptionHandle {
  public:
   // std::function and not fit::, as it is more convenient for test logic to
   // have MockExceptionHandle as copyable.
-  using SetCallback = std::function<void(uint32_t)>;
+  using SetStateCallback = std::function<void(uint32_t)>;
+  using SetStrategyCallback = std::function<void(debug_ipc::ExceptionStrategy)>;
 
   MockExceptionHandle() = default;
 
@@ -31,7 +32,7 @@ class MockExceptionHandle : public ExceptionHandle {
                                debug_ipc::ExceptionType type = debug_ipc::ExceptionType::kGeneral)
       : thread_koid_(thread_koid), type_(type) {}
 
-  MockExceptionHandle(SetCallback on_state_change, SetCallback on_strategy_change)
+  MockExceptionHandle(SetStateCallback on_state_change, SetStrategyCallback on_strategy_change)
       : on_state_change_(std::move(on_state_change)),
         on_strategy_change_(std::move(on_strategy_change)) {}
 
@@ -51,9 +52,11 @@ class MockExceptionHandle : public ExceptionHandle {
     return ZX_OK;
   }
 
-  fitx::result<zx_status_t, uint32_t> GetStrategy() const override { return fitx::ok(strategy_); }
+  fitx::result<zx_status_t, debug_ipc::ExceptionStrategy> GetStrategy() const override {
+    return fitx::ok(strategy_);
+  }
 
-  zx_status_t SetStrategy(uint32_t strategy) override {
+  zx_status_t SetStrategy(debug_ipc::ExceptionStrategy strategy) override {
     strategy_ = strategy;
     on_strategy_change_(strategy);
     return ZX_OK;
@@ -63,9 +66,9 @@ class MockExceptionHandle : public ExceptionHandle {
   uint64_t thread_koid_ = ZX_KOID_INVALID;
   debug_ipc::ExceptionType type_ = debug_ipc::ExceptionType::kGeneral;
   uint32_t state_ = ZX_EXCEPTION_STATE_TRY_NEXT;
-  uint32_t strategy_ = ZX_EXCEPTION_STRATEGY_FIRST_CHANCE;
-  SetCallback on_state_change_ = [](uint32_t) {};
-  SetCallback on_strategy_change_ = [](uint32_t) {};
+  debug_ipc::ExceptionStrategy strategy_ = debug_ipc::ExceptionStrategy::kFirstChance;
+  SetStateCallback on_state_change_ = [](uint32_t) {};
+  SetStrategyCallback on_strategy_change_ = [](debug_ipc::ExceptionStrategy) {};
 };
 
 }  // namespace debug_agent
