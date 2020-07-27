@@ -17,10 +17,24 @@ fi
 
 echo "Adding the following udev rules:"
 cat << EOF | sudo tee /etc/udev/rules.d/70-zircon-ethernet.rules
-# Rule for CDC Ethernet-only configuration
-SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="a020", NAME="zircon%b"
-# Rule for CDC Ethernet & USB Test Function composite configuration
-SUBSYSTEM=="net", ACTION=="add", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="a023", NAME="zircon%b"
+# Check for Google network devices being added
+ACTION=="add", SUBSYSTEM=="net", ATTRS{idVendor}=="18d1", GOTO="zircon_add_net_google"
+GOTO="zircon_end"
+
+# Check for Zircon CDC Ethernet devices being added
+LABEL="zircon_add_net_google"
+# CDC Ethernet-only configuration
+ATTRS{idProduct}=="a020", GOTO="zircon_net_name"
+# CDC Ethernet & USB Test Function composite configuration
+ATTRS{idProduct}=="a023", GOTO="zircon_net_name"
+GOTO="zircon_end"
+
+# Set the interface name based on the MAC
+LABEL="zircon_net_name"
+IMPORT{builtin}="net_id"
+PROGRAM="/bin/sh -c 'echo \$\${ID_NET_NAME_MAC#enx}'", NAME="zx-%c"
+
+LABEL="zircon_end"
 EOF
 
 sudo udevadm control --reload
