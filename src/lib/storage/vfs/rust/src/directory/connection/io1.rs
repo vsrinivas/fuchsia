@@ -133,9 +133,6 @@ pub(in crate::directory) enum BaseDirectoryRequest {
     Describe {
         responder: DirectoryDescribeResponder,
     },
-    Sync {
-        responder: DirectorySyncResponder,
-    },
     GetAttr {
         responder: DirectoryGetAttrResponder,
     },
@@ -195,6 +192,9 @@ pub(in crate::directory) enum DerivedDirectoryRequest {
         attributes: NodeAttributes,
         responder: DirectorySetAttrResponder,
     },
+    Sync {
+        responder: DirectorySyncResponder,
+    },
 }
 
 pub(in crate::directory) enum DirectoryRequestType {
@@ -212,7 +212,7 @@ impl From<DirectoryRequest> for DirectoryRequestType {
             }
             DirectoryRequest::Close { responder } => Base(Close { responder }),
             DirectoryRequest::Describe { responder } => Base(Describe { responder }),
-            DirectoryRequest::Sync { responder } => Base(Sync { responder }),
+            DirectoryRequest::Sync { responder } => Derived(Sync { responder }),
             DirectoryRequest::GetAttr { responder } => Base(GetAttr { responder }),
             DirectoryRequest::SetAttr { flags, attributes, responder } => {
                 Derived(SetAttr { flags, attributes, responder })
@@ -305,9 +305,6 @@ where
             BaseDirectoryRequest::Describe { responder } => {
                 let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
-            }
-            BaseDirectoryRequest::Sync { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             BaseDirectoryRequest::GetAttr { responder } => {
                 let (mut attrs, status) = match self.directory.get_attrs() {

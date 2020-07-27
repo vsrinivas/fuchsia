@@ -368,6 +368,10 @@ mod tests {
             fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
                 panic!("Not implemented!");
             }
+
+            fn sync(&self) -> Result<(), Status> {
+                panic!("Not implemented!");
+            }
         }
     }
 }

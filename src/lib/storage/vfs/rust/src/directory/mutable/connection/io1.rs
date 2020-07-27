@@ -177,6 +177,10 @@ impl MutableConnection {
                 };
                 responder.send(status.into_raw())?;
             }
+            DerivedDirectoryRequest::Sync { responder } => {
+                responder
+                    .send(self.base.directory.sync().err().unwrap_or(Status::OK).into_raw())?;
+            }
         }
         Ok(ConnectionState::Alive)
     }
@@ -334,6 +338,7 @@ mod tests {
         Unlink { id: u32, path: String },
         Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
         SetAttr { id: u32, flags: u32, attrs: NodeAttributes },
+        Sync,
     }
 
     #[derive(Debug)]
@@ -427,6 +432,10 @@ mod tests {
 
         fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
             self as Arc<dyn Any + Send + Sync>
+        }
+
+        fn sync(&self) -> Result<(), Status> {
+            self.env.handle_event(MutableDirectoryAction::Sync)
         }
     }
 
@@ -585,5 +594,15 @@ mod tests {
             *events,
             vec![MutableDirectoryAction::Unlink { id: 0, path: "test".to_owned() },]
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sync() {
+        let env = TestEnv::new();
+        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
+        let status = proxy.sync().await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
+        let events = env.events.lock().unwrap();
+        assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
     }
 }

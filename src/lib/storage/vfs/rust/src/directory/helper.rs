@@ -138,4 +138,8 @@ impl<T: DirectlyMutable> MutableDirectory for T {
     fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
         (self as Arc<dyn DirectlyMutable>).into_any()
     }
+
+    fn sync(&self) -> Result<(), Status> {
+        Err(Status::NOT_SUPPORTED)
+    }
 }

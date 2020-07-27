@@ -109,4 +109,7 @@ pub trait MutableDirectory: Directory {
 
     /// Gets this directory as an Any.
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
+
+    /// Syncs the directory.
+    fn sync(&self) -> Result<(), Status>;
 }

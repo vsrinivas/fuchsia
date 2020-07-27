@@ -417,6 +417,11 @@ impl MutableDirectory for FatDirectory {
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send> {
         self as Arc<dyn Any + Sync + Send>
     }
+
+    fn sync(&self) -> Result<(), Status> {
+        // TODO(fxb/55291): Support sync on root of fatfs volume.
+        Ok(())
+    }
 }
 
 impl DirectoryEntry for FatDirectory {

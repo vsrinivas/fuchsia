@@ -139,6 +139,9 @@ impl ImmutableConnection {
             DerivedDirectoryRequest::SetAttr { responder, .. } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
+            DerivedDirectoryRequest::Sync { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
         }
         Ok(ConnectionState::Alive)
     }
