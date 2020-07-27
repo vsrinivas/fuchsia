@@ -231,6 +231,29 @@ class Performance {
     return outputFile;
   }
 
+  /// Convert [traceData] from fxt format to json.
+  ///
+  /// In typical uses, [traceData] will be the return value of a call to
+  /// [TraceSession.terminateAndDownloadAsBytes].
+  Future<String> convertTraceDataToJson(
+      String trace2jsonPath, List<int> traceData) async {
+    _log.info('Performance: Converting in-memory trace to json');
+    final trace2json = Platform.script.resolve(trace2jsonPath).toFilePath();
+    final trace2jsonProcess = await Process.start(trace2json, []);
+    final output = trace2jsonProcess.stdout.transform(utf8.decoder).join('');
+    trace2jsonProcess.stdin.add(traceData);
+    await trace2jsonProcess.stdin.close();
+    // Start the stderr consumer to ensure that the trace2json process does not
+    // block on writing to stderr.
+    final stderr = trace2jsonProcess.stderr.transform(utf8.decoder).join('');
+    final exitCode = await trace2jsonProcess.exitCode;
+    if (exitCode != 0) {
+      throw Exception('trace2json exit code $exitCode stderr: ${await stderr}');
+    }
+    await stderr;
+    return (await output);
+  }
+
   /// Runs the provided [MetricsSpecSet] on the given [trace].
   /// It sets the ouptut file location to be the same as the source.
   /// It will also run the catapult converter if the [converterPath] was provided.
@@ -384,6 +407,16 @@ class TraceSession {
   /// After a call to [terminateAndDownload], further calls on the
   /// [TraceSession] object will throw a [StateError].
   Future<File> terminateAndDownload(String traceName) async {
+    final traceData = await terminateAndDownloadAsBytes();
+    return _dump.writeAsBytes('$traceName-trace', 'fxt', traceData);
+  }
+
+  /// Terminate the trace session and download the trace data, returning a list
+  /// of bytes in Fuchsia trace format.
+  ///
+  /// After a call to [terminateAndDownloadAsBytes], further calls on the
+  /// [TraceSession] object will throw a [StateError].
+  Future<List<int>> terminateAndDownloadAsBytes() async {
     if (_closed) {
       throw StateError('Cannot terminate: Session already terminated');
     }
@@ -391,6 +424,6 @@ class TraceSession {
     final response = await _sl4f.request('tracing_facade.Terminate');
     _closed = true;
     final traceData = base64.decode(response['data']);
-    return _dump.writeAsBytes('$traceName-trace', 'fxt', traceData);
+    return traceData;
   }
 }
