@@ -225,10 +225,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// TODO(fxb/52371) The key in 'files' is the type name and should be used for naming files.
+	// TODO(fxb/52371) Until these files are named based on their `type`, they need to be
+	// generated in a deterministic order.
 	fileNum := 1
-	for _, file := range otherFiles {
-		if err := ioutil.WriteFile(outputFilepath(*flags.MultipleFilePattern, fileNum), file, 0666); err != nil {
+	keys := make([]string, 0, len(otherFiles))
+	for k := range otherFiles {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if err := ioutil.WriteFile(outputFilepath(*flags.MultipleFilePattern, fileNum), otherFiles[k], 0666); err != nil {
 			log.Fatal(err)
 		}
 		fileNum++
