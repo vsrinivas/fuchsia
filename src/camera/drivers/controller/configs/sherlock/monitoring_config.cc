@@ -342,7 +342,7 @@ static InternalConfigNode Ge2dMonitoring() {
       // there is no need to create internal buffers.
       .output_constraints = Ge2dMonitoringConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
-      .in_place = false,
+      .in_place = true,
   };
 }
 

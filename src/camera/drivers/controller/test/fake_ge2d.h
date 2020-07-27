@@ -16,6 +16,7 @@ class FakeGe2d {
   FakeGe2d() {
     ge2d_protocol_ops_.init_task_resize = Ge2dInitTaskResize;
     ge2d_protocol_ops_.init_task_water_mark = Ge2dInitTaskWaterMark;
+    ge2d_protocol_ops_.init_task_in_place_water_mark = Ge2dInitTaskInPlaceWaterMark;
     ge2d_protocol_ops_.process_frame = Ge2dProcessFrame;
     ge2d_protocol_ops_.remove_task = Ge2dRemoveTask;
     ge2d_protocol_ops_.release_frame = Ge2dReleaseFrame;
@@ -50,6 +51,20 @@ class FakeGe2d {
     image_format_index_ = output_image_format_index;
     return ZX_OK;
   }
+  zx_status_t Ge2dInitTaskInPlaceWaterMark(
+      const buffer_collection_info_2_t* /*output_buffer_collection*/,
+      const water_mark_info_t* /*info_list*/, size_t /*info_count*/,
+      const image_format_2_t* /*image_format_table_list*/, size_t /*image_format_table_count*/,
+      uint32_t image_format_index, const hw_accel_frame_callback_t* frame_callback,
+      const hw_accel_res_change_callback_t* res_callback,
+      const hw_accel_remove_task_callback_t* remove_task_callback, uint32_t* /*out_task_index*/) {
+    remove_task_callback_ = remove_task_callback;
+    frame_callback_ = frame_callback;
+    res_change_callback_ = res_callback;
+    image_format_index_ = image_format_index;
+    return ZX_OK;
+  }
+
   zx_status_t Ge2dInitTaskWaterMark(const buffer_collection_info_2_t* /*input_buffer_collection*/,
                                     const buffer_collection_info_2_t* /*output_buffer_collection*/,
                                     const water_mark_info_t* /*info_list*/, size_t /*info_count*/,
@@ -135,6 +150,18 @@ class FakeGe2d {
         input_buffer_collection, output_buffer_collection, info_list, info_count,
         image_format_table_list, image_format_table_count, image_format_index, frame_callback,
         res_callback, task_remove_callback, out_task_index);
+  }
+
+  static zx_status_t Ge2dInitTaskInPlaceWaterMark(
+      void* ctx, const buffer_collection_info_2_t* buffer_collection,
+      const water_mark_info_t* info_list, size_t info_count,
+      const image_format_2_t* image_format_table_list, size_t image_format_table_count,
+      uint32_t image_format_index, const hw_accel_frame_callback_t* frame_callback,
+      const hw_accel_res_change_callback_t* res_callback,
+      const hw_accel_remove_task_callback_t* task_remove_callback, uint32_t* out_task_index) {
+    return static_cast<FakeGe2d*>(ctx)->Ge2dInitTaskInPlaceWaterMark(
+        buffer_collection, info_list, info_count, image_format_table_list, image_format_table_count,
+        image_format_index, frame_callback, res_callback, task_remove_callback, out_task_index);
   }
 
   static zx_status_t Ge2dProcessFrame(void* ctx, uint32_t task_index, uint32_t input_buffer_index) {

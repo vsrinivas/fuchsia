@@ -161,6 +161,8 @@ void GdcNode::OnFrameAvailable(const frame_available_info_t* info) {
     gdc_.ReleaseFrame(task_index_, info->buffer_id);
     return;
   }
+  // Free up parent's frame.
+  parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
   ProcessNode::OnFrameAvailable(info);
 }
 

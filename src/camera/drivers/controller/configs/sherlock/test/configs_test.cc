@@ -82,6 +82,7 @@ TEST(ConfigTest, InternalMonitorConfiguration) {
   EXPECT_EQ(gdc_ds_node.gdc_info.config_type[2], GdcConfig::MONITORING_360p);
 
   EXPECT_EQ(ge2d_ds_node.ge2d_info.config_type, Ge2DConfig::GE2D_WATERMARK);
+  EXPECT_EQ(ge2d_ds_node.in_place, true);
 
   EXPECT_EQ(output_ds_node.image_formats.size(), 3u);
 

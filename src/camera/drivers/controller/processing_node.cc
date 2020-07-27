@@ -31,10 +31,7 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
   ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_ASSERT_MSG(type_ != NodeType::kOutputStream, "Invalid for OuputNode");
   TRACE_DURATION("camera", "ProcessNode::OnFrameAvailable");
-  // Free up parent's frame.
-  if (type_ != kInputStream) {
-    parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
-  }
+
   for (auto& node : child_nodes_) {
     // Check if this frame needs to be passed on to the next node.
     if (node->enabled() && node->current_frame_count() >= output_fps()) {

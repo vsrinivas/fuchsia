@@ -37,7 +37,7 @@ class Ge2dNode : public ProcessNode {
            ProcessNode* parent_node, const camera::InternalConfigNode& internal_ge2d_node,
            fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
            fuchsia::camera2::CameraStreamType current_stream_type,
-           uint32_t current_image_format_index)
+           uint32_t current_image_format_index, bool in_place_processing)
       : ProcessNode(NodeType::kGe2d, parent_node, current_stream_type,
                     std::move(internal_ge2d_node.image_formats),
                     std::move(output_buffer_collection), internal_ge2d_node.supported_streams,
@@ -47,7 +47,8 @@ class Ge2dNode : public ProcessNode {
         info_(internal_ge2d_node.ge2d_info.resize),
         frame_callback_{OnGe2dFrameAvailable, this},
         res_callback_{OnGe2dResChange, this},
-        remove_task_callback_{OnGe2dTaskRemoved, this} {}
+        remove_task_callback_{OnGe2dTaskRemoved, this},
+        in_place_processing_(in_place_processing) {}
 
   // Creates a |Ge2dNode| object.
   // Args:
@@ -105,6 +106,7 @@ class Ge2dNode : public ProcessNode {
   hw_accel_frame_callback_t frame_callback_;
   hw_accel_res_change_callback_t res_callback_;
   hw_accel_remove_task_callback_t remove_task_callback_;
+  bool in_place_processing_;
 };
 
 }  // namespace camera

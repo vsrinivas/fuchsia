@@ -40,6 +40,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node) {
+  zx_status_t status = ZX_OK;
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
   auto result = GetBuffers(memory_allocator, internal_ge2d_node, info, kTag);
   if (result.is_error()) {
@@ -66,7 +67,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
 
   auto ge2d_node = std::make_unique<camera::Ge2dNode>(
       dispatcher, ge2d, parent_node, internal_ge2d_node, std::move(output_buffers_hlcpp),
-      info->stream_type(), info->image_format_index);
+      info->stream_type(), info->image_format_index, internal_ge2d_node.in_place);
   if (!ge2d_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GE2D node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -76,7 +77,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
   uint32_t ge2d_task_index = 0;
   switch (internal_ge2d_node.ge2d_info.config_type) {
     case Ge2DConfig::GE2D_RESIZE: {
-      auto status = ge2d.InitTaskResize(
+      status = ge2d.InitTaskResize(
           input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
           ge2d_node->resize_info(), input_image_formats_c.data(), output_image_formats_c.data(),
           output_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
@@ -120,11 +121,19 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
         }
       });
 
-      auto status = ge2d.InitTaskWaterMark(
-          input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
-          watermarks_info.data(), watermarks_info.size(), input_image_formats_c.data(),
-          input_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
-          ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
+      if (internal_ge2d_node.in_place) {
+        status = ge2d.InitTaskInPlaceWaterMark(
+            input_buffer_collection_helper.GetC(), watermarks_info.data(), watermarks_info.size(),
+            input_image_formats_c.data(), input_image_formats_c.size(), info->image_format_index,
+            ge2d_node->frame_callback(), ge2d_node->res_callback(),
+            ge2d_node->remove_task_callback(), &ge2d_task_index);
+      } else {
+        status = ge2d.InitTaskWaterMark(
+            input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
+            watermarks_info.data(), watermarks_info.size(), input_image_formats_c.data(),
+            input_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
+            ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
+      }
       if (status != ZX_OK) {
         FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D watermark task";
         return fit::error(status);
@@ -154,9 +163,15 @@ void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
   UpdateFrameCounterForAllChildren();
 
   if (NeedToDropFrame()) {
+    if (!in_place_processing_) {
+      ge2d_.ReleaseFrame(task_index_, info->buffer_id);
+    }
     parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
-    ge2d_.ReleaseFrame(task_index_, info->buffer_id);
     return;
+  }
+  // Free up parent's frame.
+  if (!in_place_processing_) {
+    parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
   }
   ProcessNode::OnFrameAvailable(info);
 }
@@ -166,12 +181,14 @@ void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {
   fbl::AutoLock guard(&in_use_buffer_lock_);
   ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
   in_use_buffer_count_[buffer_index]--;
-  if (in_use_buffer_count_[buffer_index] != 0) {
+  if (in_use_buffer_count_[buffer_index] != 0 || shutdown_requested_) {
     return;
   }
-  if (!shutdown_requested_) {
-    ge2d_.ReleaseFrame(task_index_, buffer_index);
+  if (in_place_processing_) {
+    parent_node_->OnReleaseFrame(buffer_index);
+    return;
   }
+  ge2d_.ReleaseFrame(task_index_, buffer_index);
 }
 
 void Ge2dNode::OnReadyToProcess(const frame_available_info_t* info) {
