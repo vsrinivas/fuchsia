@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/sdk.gni")
 import("//build/dart/dart.gni")
+import("//build/dart/dart_package_config.gni")
 import("//build/dart/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
@@ -165,7 +166,11 @@ if (current_toolchain == dart_toolchain) {
     # Dependencies of the umbrella group for the targets in this file.
     group_deps = []
 
-    dot_packages_file = "$target_gen_dir/$target_name.packages"
+    # TODO(55756) remove usages of .packages.
+    # This is here because there are still some tools which rely on the
+    # existence of this file. When all the usages of this file have been
+    # removed from the tree we can remove the generation of this file.
+    _dot_packages_file_deprecated = "$target_gen_dir/$target_name.packages"
     dot_packages_target_name = "${target_name}_dot_packages"
     group_deps += [ ":$dot_packages_target_name" ]
 
@@ -189,17 +194,16 @@ if (current_toolchain == dart_toolchain) {
 
       # Require a manifest file, allowing the analysis service to
       # identify the package.
-
       if (defined(invoker.pubspec)) {
         sources += [ invoker.pubspec ]
       } else {
         sources += [ "$package_root/pubspec.yaml" ]
       }
-      outputs = [ dot_packages_file ]
+      outputs = [ _dot_packages_file_deprecated ]
 
       args = [
                "--out",
-               rebase_path(dot_packages_file),
+               rebase_path(_dot_packages_file_deprecated),
                "--source-dir",
                rebase_path(source_dir),
                "--package-name",
@@ -207,6 +211,41 @@ if (current_toolchain == dart_toolchain) {
                "--deps",
              ] + rebase_path(package_files)
     }
+
+    _metadata = {
+      package_config_entries = [
+        {
+          name = package_name
+
+          # TODO(57004) For now just hardcode to version 2.8 until we plumb this in from the pubspec
+          language_version = "2.8"
+          root_uri = rebase_path(package_root, root_build_dir)
+          if (defined(invoker.source_dir)) {
+            package_uri = invoker.source_dir
+          } else {
+            package_uri = "lib"
+          }
+        },
+      ]
+    }
+
+    # When we generate a package_config for the analyzer we need to make sure
+    # that we are including this library in that file. The dart_package_config
+    # collects metadata from its dependencies so we create this group to expose
+    # that data. We also expose this in the group target below so that users of
+    # the dart_package_config target can just add the targets to the deps list.
+    _publish_metadata_target_name = "${target_name}_package_metadata"
+    group(_publish_metadata_target_name) {
+      metadata = _metadata
+    }
+
+    _dart_package_config_target_name = "${target_name}_dart_package"
+    _packages_path = "$target_gen_dir/${target_name}_package_config.json"
+    dart_package_config(_dart_package_config_target_name) {
+      deps = dart_deps + [ ":$_publish_metadata_target_name" ]
+      outputs = [ _packages_path ]
+    }
+    group_deps += [ ":$_dart_package_config_target_name" ]
 
     ################################
     # Dart source "verification"
@@ -264,11 +303,14 @@ if (current_toolchain == dart_toolchain) {
       action(invocation_target_name) {
         script = "//build/dart/gen_analyzer_invocation.py"
 
-        deps = dart_sdk_deps + [ ":$dot_packages_target_name" ]
+        deps = dart_sdk_deps + [
+                 ":$dot_packages_target_name",
+                 ":$_dart_package_config_target_name",
+               ]
 
         inputs = [
           dart_analyzer_binary,
-          dot_packages_file,
+          _packages_path,
           options_file,
           source_file,
         ]
@@ -281,7 +323,7 @@ if (current_toolchain == dart_toolchain) {
           "--source-file",
           rebase_path(source_file),
           "--dot-packages",
-          rebase_path(dot_packages_file),
+          rebase_path(_packages_path, root_build_dir),
           "--dartanalyzer",
           rebase_path(dart_analyzer_binary),
           "--dart-sdk",
@@ -308,7 +350,7 @@ if (current_toolchain == dart_toolchain) {
 
         inputs = [
                    dart_analyzer_binary,
-                   dot_packages_file,
+                   _packages_path,
                    options_file,
                    source_file,
                  ] + rebased_sources
@@ -319,7 +361,7 @@ if (current_toolchain == dart_toolchain) {
           "--source-file",
           rebase_path(source_file),
           "--dot-packages",
-          rebase_path(dot_packages_file),
+          rebase_path(_packages_path),
           "--dartanalyzer",
           rebase_path(dart_analyzer_binary),
           "--dart-sdk",
@@ -334,7 +376,10 @@ if (current_toolchain == dart_toolchain) {
           rebase_path(depfile),
         ]
 
-        deps = dart_sdk_deps + [ ":$dot_packages_target_name" ]
+        deps = dart_sdk_deps + [
+                 ":$dot_packages_target_name",
+                 ":$_dart_package_config_target_name",
+               ]
       }
     }
 
@@ -346,22 +391,7 @@ if (current_toolchain == dart_toolchain) {
 
       public_deps = group_deps
 
-      metadata = {
-        package_config_entries = [
-          {
-            name = package_name
-
-            # For now just hardcode to version 2.8 until we plumb this in from the pubspec
-            language_version = "2.8"
-            root_uri = rebase_path(package_root, root_build_dir)
-            if (defined(invoker.source_dir)) {
-              package_uri = invoker.source_dir
-            } else {
-              package_uri = "lib"
-            }
-          },
-        ]
-      }
+      metadata = _metadata
     }
 
     ################################################
@@ -384,7 +414,7 @@ if (current_toolchain == dart_toolchain) {
         output_file = detect_target_file
 
         inputs = [
-                   dot_packages_file,
+                   _packages_path,
                    source_file,
                  ] + rebased_sources
 
@@ -396,7 +426,7 @@ if (current_toolchain == dart_toolchain) {
           "--source-file",
           rebase_path(source_file),
           "--dot-packages",
-          rebase_path(dot_packages_file),
+          rebase_path(_packages_path),
           "--output-file",
           rebase_path("$detect_target_file"),
           "--golden-api",
