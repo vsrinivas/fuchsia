@@ -170,7 +170,8 @@ void Store::RebuildMetadata() {
   }
 }
 
-std::optional<Store::Uid> Store::Add(const Report report) {
+std::optional<Store::Uid> Store::Add(const Report report,
+                                     std::vector<Uid>* garbage_collected_reports) {
   for (const auto& key : kReservedAttachmentNames) {
     if (report.Attachments().find(key) != report.Attachments().end()) {
       FX_LOGS(ERROR) << "Attachment is using reserved key: " << key;
@@ -200,7 +201,7 @@ std::optional<Store::Uid> Store::Add(const Report report) {
   }
 
   // Ensure there's enough space in the store for the report.
-  if (!MakeFreeSpace(report_size)) {
+  if (!MakeFreeSpace(report_size, garbage_collected_reports)) {
     FX_LOGS(ERROR) << "Failed to make space for report";
     return std::nullopt;
   }
@@ -326,15 +327,21 @@ void Store::RemoveAll() {
   uids_.clear();
 }
 
-bool Store::MakeFreeSpace(const StorageSize required_space) {
+bool Store::MakeFreeSpace(const StorageSize required_space,
+                          std::vector<Uid>* garbage_collected_reports) {
   if (required_space > max_size_) {
     return false;
   }
 
+  FX_CHECK(garbage_collected_reports);
+  garbage_collected_reports->clear();
+
   size_t num_garbage_collected{0};
   while ((current_size_ + required_space) > max_size_ && !uids_.empty()) {
-    if (Remove(uids_.front())) {
+    const Uid uid = uids_.front();
+    if (Remove(uid)) {
       ++num_garbage_collected;
+      garbage_collected_reports->push_back(uid);
     }
   }
   info_.LogGarbageCollection(num_garbage_collected);

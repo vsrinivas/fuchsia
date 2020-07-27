@@ -32,9 +32,10 @@ class Store {
   Store(std::shared_ptr<InfoContext> info_context, const std::string& root_dir,
         StorageSize max_size);
 
-  // Adds a report to the store. If the operation fails, std::nullopt is returned, else a unique
-  // identifier referring to the report is returned.
-  std::optional<Uid> Add(Report report);
+  // Adds a report to the store and returns the Uids of any report garbage collected in the process.
+  // If the operation fails, std::nullopt is returned, else a unique identifier referring to the
+  // report is returned.
+  std::optional<Uid> Add(Report report, std::vector<Uid>* garbage_collected_reports);
 
   // Gets a report from the store. If no report exists for |id| or there is an error reading the
   // report from the filesystem, return std::nullopt.
@@ -55,10 +56,11 @@ class Store {
   // store present under |root_dir_|.
   void RebuildMetadata();
 
-  // Remove reports until |required_space| is free in the store.
+  // Removes reports until |required_space| is free in the store and returns the Uids of the reports
+  // removed.
   //
   // Return false if |required_space| cannot be freed.
-  bool MakeFreeSpace(StorageSize required_space);
+  bool MakeFreeSpace(StorageSize required_space, std::vector<Uid>* garbage_collected_reports);
 
   struct ReportMetadata {
     // The directory containing the report's files, e.g., /tmp/crashes/foo/<report Uid>
