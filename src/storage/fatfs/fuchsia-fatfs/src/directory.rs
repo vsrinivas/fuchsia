@@ -502,8 +502,8 @@ impl Directory for FatDirectory {
             Ok(dir) => dir,
             Err(e) => return AsyncReadDirents::Immediate(Err(e)),
         };
-        // Figure out where the last call to read_dirents() got up to...
-        let last_name = match pos {
+        // Figure out where to start from.
+        let next_name = match pos {
             AlphabeticalTraversal::Dot => ".".to_owned(),
             AlphabeticalTraversal::Name(name) => name,
             AlphabeticalTraversal::End => {
@@ -520,7 +520,7 @@ impl Directory for FatDirectory {
                 let name = entry.file_name();
                 if &name == ".." {
                     None
-                } else if &last_name == "." || &last_name < &name {
+                } else if &next_name == "." || &next_name <= &name {
                     let entry_type =
                         if entry.is_dir() { DIRENT_TYPE_DIRECTORY } else { DIRENT_TYPE_FILE };
                     Some((name, EntryInfo::new(INO_UNKNOWN, entry_type)))
@@ -681,7 +681,7 @@ mod tests {
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
 
-        let sink = Box::new(DummySink::new(2));
+        let sink = Box::new(DummySink::new(3));
         let mut pos = AlphabeticalTraversal::Dot;
         match dir.clone().read_dirents(pos, sink.clone()) {
             AsyncReadDirents::Immediate(Ok(_)) => {
@@ -694,10 +694,11 @@ mod tests {
                             "directory".to_owned(),
                             EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
                         ),
+                        ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
                     ]
                 );
                 pos = inner.sealed_pos.clone();
-                assert_eq!(pos, AlphabeticalTraversal::Name("directory".to_owned()));
+                assert_eq!(pos, AlphabeticalTraversal::Name("qwerty".to_owned()));
             }
             _ => panic!("Unexpected result"),
         }
@@ -714,18 +715,6 @@ mod tests {
                         ("test_file".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
                     ]
                 );
-                pos = inner.sealed_pos.clone();
-                assert_eq!(pos, AlphabeticalTraversal::Name("test_file".to_owned()));
-            }
-            _ => panic!("Unexpected result"),
-        }
-
-        // Read the "end" entry.
-        sink.reset();
-        match dir.clone().read_dirents(pos, sink.clone()) {
-            AsyncReadDirents::Immediate(Ok(_)) => {
-                let inner = sink.inner.lock().unwrap();
-                assert_eq!(inner.entries, vec![]);
                 pos = inner.sealed_pos.clone();
                 assert_eq!(pos, AlphabeticalTraversal::End);
             }
