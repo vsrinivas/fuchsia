@@ -45,6 +45,8 @@ class Store {
 
   void RemoveAll();
 
+  std::vector<Uid> GetAllUids() const;
+
   // Exposed for testing purposes.
   bool Contains(const Uid& id) const;
 

@@ -279,6 +279,10 @@ std::optional<Report> Store::Get(const Store::Uid& id) {
                 std::move(attachments), std::move(minidump));
 }
 
+std::vector<Store::Uid> Store::GetAllUids() const {
+  return std::vector<Uid>(uids_.begin(), uids_.end());
+}
+
 bool Store::Contains(const Uid& id) const {
   return id_to_metadata_.find(id) != id_to_metadata_.end();
 }
