@@ -12,6 +12,10 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#ifdef __cplusplus
+#include <type_traits>
+#endif  // __cplusplus
+
 __BEGIN_CDECLS
 
 // All sizes here are given as uint32_t. Fidl message sizes are bounded to well below UINT32_MAX.
@@ -388,5 +392,49 @@ extern const struct FidlCodedPrimitive fidl_internal_kFloat32Table;
 extern const struct FidlCodedPrimitive fidl_internal_kFloat64Table;
 
 __END_CDECLS
+
+#ifdef __cplusplus
+// All the data in coding tables should be pure data.
+static_assert(std::is_standard_layout<FidlTypeTag>::value, "");
+static_assert(std::is_standard_layout<FidlStructField>::value, "");
+static_assert(std::is_standard_layout<FidlTableField>::value, "");
+static_assert(std::is_standard_layout<FidlCodedStruct>::value, "");
+static_assert(std::is_standard_layout<FidlCodedStructPointer>::value, "");
+static_assert(std::is_standard_layout<FidlCodedXUnion>::value, "");
+static_assert(std::is_standard_layout<FidlCodedArray>::value, "");
+static_assert(std::is_standard_layout<FidlCodedArrayNew>::value, "");
+static_assert(std::is_standard_layout<FidlCodedVector>::value, "");
+static_assert(std::is_standard_layout<FidlCodedString>::value, "");
+static_assert(std::is_standard_layout<FidlCodedHandle>::value, "");
+#endif  // __cplusplus
+
+static_assert(offsetof(struct FidlCodedStruct, tag) == 0, "");
+static_assert(offsetof(struct FidlCodedStructPointer, tag) == 0, "");
+static_assert(offsetof(struct FidlCodedXUnion, tag) == 0, "");
+static_assert(offsetof(struct FidlCodedArray, tag) == 0, "");
+static_assert(offsetof(struct FidlCodedArrayNew, tag) == 0, "");
+static_assert(offsetof(struct FidlCodedVector, tag) == 0, "");
+static_assert(offsetof(struct FidlCodedString, tag) == 0, "");
+static_assert(offsetof(struct FidlCodedHandle, tag) == 0, "");
+
+// Take caution when increasing the size numbers below. While they
+// can be changed as needed when the structure evolves, these growing
+// has a large impact on binary size and memory footprint.
+
+static_assert(sizeof(struct FidlCodedPrimitive) == 2, "");
+static_assert(sizeof(struct FidlCodedEnum) == 24, "");
+static_assert(sizeof(struct FidlCodedBits) == 24, "");
+static_assert(sizeof(struct FidlCodedStruct) == 24, "");
+static_assert(sizeof(struct FidlCodedStructPointer) == 16, "");
+static_assert(sizeof(struct FidlCodedXUnion) == 24, "");
+static_assert(sizeof(struct FidlCodedArray) == 16, "");
+static_assert(sizeof(struct FidlCodedArrayNew) == 24, "");
+static_assert(sizeof(struct FidlCodedVector) == 24, "");
+static_assert(sizeof(struct FidlCodedString) == 8, "");
+static_assert(sizeof(struct FidlCodedHandle) == 12, "");
+
+static_assert(sizeof(struct FidlStructField) == 16, "");
+static_assert(sizeof(struct FidlTableField) == 16, "");
+static_assert(sizeof(struct FidlXUnionField) == 8, "");
 
 #endif  // LIB_FIDL_INTERNAL_H_
