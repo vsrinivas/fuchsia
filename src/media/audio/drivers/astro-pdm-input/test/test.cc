@@ -116,7 +116,7 @@ struct AstroAudioStreamInTest : public zxtest::Test {
     EXPECT_EQ(channels_mask, server->channels_mask());
     EXPECT_EQ(mute_mask, server->mute_mask());
 
-    server->DdkUnbindDeprecated();
+    server->DdkAsyncRemove();
     EXPECT_TRUE(tester.Ok());
     server->DdkRelease();
   }

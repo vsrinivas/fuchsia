@@ -175,7 +175,7 @@ TEST(AstroAudioStreamOut, ChangeRate96K) {
   // Check that we set the codec to the new rate.
   ASSERT_EQ(codec->last_frame_rate_, kTestFrameRate2);
 
-  controller->DdkUnbindDeprecated();
+  controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   controller->DdkRelease();
 }

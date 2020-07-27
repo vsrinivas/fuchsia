@@ -637,7 +637,7 @@ TEST(SherlockAudioStreamOutTest, SetRate) {
   ASSERT_EQ(codecs_raw[1]->GetGain(), 24.f);
   ASSERT_EQ(codecs_raw[2]->GetGain(), 24.f);
 
-  server->DdkUnbindDeprecated();
+  server->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   mock_ena.VerifyAndClear();
   mock_i2c0.VerifyAndClear();
