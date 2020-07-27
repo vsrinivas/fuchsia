@@ -33,7 +33,7 @@ const NETWORK_TIME_SERVICE: &str =
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().context("initializing logging").unwrap();
+    fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging").unwrap();
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
 
     info!("retrieving UTC clock handle");

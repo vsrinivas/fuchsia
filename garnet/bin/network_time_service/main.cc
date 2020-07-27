@@ -17,7 +17,7 @@ constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+  if (!fxl::SetLogSettingsFromCommandLine(command_line, {"time", "network_time_service"})) {
     return 1;
   }
 
