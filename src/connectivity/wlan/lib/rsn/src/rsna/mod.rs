@@ -56,7 +56,8 @@ impl NegotiatedProtection {
     }
 
     pub fn integrity_algorithm(&self) -> Result<Box<dyn integrity::Algorithm>, Error> {
-        integrity_algorithm(self.key_descriptor_version()).ok_or(Error::UnknownIntegrityAlgorithm)
+        integrity_algorithm(self.key_descriptor_version(), &self.akm)
+            .ok_or(Error::UnknownIntegrityAlgorithm)
     }
 
     pub fn keywrap_algorithm(&self) -> Result<Box<dyn keywrap::Algorithm>, Error> {

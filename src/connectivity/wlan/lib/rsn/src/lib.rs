@@ -277,6 +277,8 @@ pub enum Error {
     UnsupportedAkmSuite,
     #[error("cannot compute MIC for key frames which haven't set their MIC bit")]
     ComputingMicForUnprotectedFrame,
+    #[error("cannot compute MIC; error while encrypting")]
+    ComputingMicEncryptionError,
     #[error("the key frame's MIC size ({}) differes from the expected size: {}", _0, _1)]
     MicSizesDiffer(usize, usize),
     #[error("invalid MIC size")]

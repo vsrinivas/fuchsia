@@ -43,6 +43,7 @@ rustc_library("wlan-rsn") {
     "src/auth/psk.rs",
     "src/crypto_utils/mod.rs",
     "src/crypto_utils/nonce.rs",
+    "src/integrity/cmac_aes128.rs",
     "src/integrity/hmac_md5.rs",
     "src/integrity/hmac_sha1.rs",
     "src/integrity/mod.rs",
