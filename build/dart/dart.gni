@@ -5,50 +5,21 @@
 declare_args() {
   # Directory containing prebuilt Dart SDK.
   # This must have in its `bin/` subdirectory `gen_snapshot.OS-CPU` binaries.
-  # Set to empty for a local build.
   prebuilt_dart_sdk = "//prebuilt/third_party/dart/${host_platform}"
-
-  # Whether to use the prebuilt Dart SDK for everything.
-  # When setting this to false, the preubilt Dart SDK will not be used in
-  # situations where the version of the SDK matters, but may still be used as an
-  # optimization where the version does not matter.
-  use_prebuilt_dart_sdk = true
 }
 
-# For using the prebuilts even when use_prebuilt_dart_sdk is false.
 prebuilt_dart = "${prebuilt_dart_sdk}/bin/dart"
 prebuilt_gen_snapshot =
     "${prebuilt_dart_sdk}/bin/gen_snapshot.${current_os}-${current_cpu}"
 prebuilt_gen_snapshot_product =
     "${prebuilt_dart_sdk}/bin/gen_snapshot_product.${current_os}-${current_cpu}"
 
-if (use_prebuilt_dart_sdk) {
-  dart_sdk = "${prebuilt_dart_sdk}"
-  dart_sdk_deps = []
+dart_sdk = "${prebuilt_dart_sdk}"
+dart_sdk_deps = []
 
-  gen_snapshot = prebuilt_gen_snapshot
-  gen_snapshot_product = prebuilt_gen_snapshot_product
-  gen_snapshot_deps = []
-} else {
-  _dart_sdk_label = "//third_party/dart:create_sdk($host_toolchain)"
-  dart_sdk = get_label_info(_dart_sdk_label, "root_out_dir") + "/dart-sdk"
-  dart_sdk_deps = [ _dart_sdk_label ]
+gen_snapshot = prebuilt_gen_snapshot
+gen_snapshot_product = prebuilt_gen_snapshot_product
 
-  if (current_os == "fuchsia") {
-    suffix = "_fuchsia"
-  } else {
-    suffix = ""
-  }
-  _gen_snapshot_label =
-      "//third_party/dart/runtime/bin:gen_snapshot${suffix}($host_toolchain)"
-  _gen_snapshot_product_label = "//third_party/dart/runtime/bin:gen_snapshot_product${suffix}($host_toolchain)"
-  gen_snapshot =
-      get_label_info(_gen_snapshot_label, "root_out_dir") + "/gen_snapshot"
-  gen_snapshot_product =
-      get_label_info(_gen_snapshot_product_label, "root_out_dir") +
-      "/gen_snapshot_product"
-  gen_snapshot_deps = [
-    _gen_snapshot_label,
-    _gen_snapshot_product_label,
-  ]
-}
+# This variable is currently used in //topaz. It can be removed when the reference
+# is removed from that repository
+gen_snapshot_deps = []

@@ -90,20 +90,16 @@ template("dart_test") {
 
   # When using the prebuilt, we copy the dart binary into the build directory
   # so that it can be used without the prebuilt directory in the source tree.
-  if (use_prebuilt_dart_sdk) {
-    _dart_binary = "$target_gen_dir/$_main_target_name/dart"
 
-    _copy_target_name = "${target_name}_copy"
-    copy(_copy_target_name) {
-      sources = [ "$dart_sdk/bin/dart" ]
-      outputs = [ _dart_binary ]
-      deps = dart_sdk_deps
-    }
-    _sdk_deps = [ ":$_copy_target_name" ]
-  } else {
-    _dart_binary = "$dart_sdk/bin/dart"
-    _sdk_deps = dart_sdk_deps
+  _dart_binary = "$target_gen_dir/$_main_target_name/dart"
+
+  _copy_target_name = "${target_name}_copy"
+  copy(_copy_target_name) {
+    sources = [ "$dart_sdk/bin/dart" ]
+    outputs = [ _dart_binary ]
+    deps = dart_sdk_deps
   }
+  _sdk_deps = [ ":$_copy_target_name" ]
 
   # Creates a snapshot file, which allows the test to be invoked hermetically.
   _snapshot = "$target_gen_dir/${target_name}.snapshot"
