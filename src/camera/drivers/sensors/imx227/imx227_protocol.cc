@@ -4,15 +4,12 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <ddk/protocol/camerasensor.h>
 #include <ddk/debug.h>
 
-#include "ddk/protocol/camera.h"
 #include "imx227.h"
-#include "src/camera/drivers/sensors/imx227/imx227_guid.h"
-#include "src/camera/drivers/sensors/imx227/imx227_seq.h"
-
+#include "src/camera/drivers/sensors/imx227/imx227_id.h"
 #include "src/camera/drivers/sensors/imx227/imx227_otp_config.h"
+#include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 
 namespace camera {
 
@@ -175,57 +172,58 @@ zx_status_t Imx227Device::CameraSensor2SetTestCursorData(const rect_t* data) {
 }
 
 zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
-                                                         extension_value_data_type_t** out_value) {
+                                                         extension_value_data_type_t* out_value) {
   std::lock_guard guard(lock_);
 
   switch (id) {
     case TOTAL_RESOLUTION:
-      (*out_value)->resolution_value = dimensions_t { .x = static_cast<float>(ctx_.HMAX), .y = static_cast<float>(ctx_.VMAX) };
+      out_value->dimension_value =
+          dimensions_t{.x = static_cast<float>(ctx_.HMAX), .y = static_cast<float>(ctx_.VMAX)};
       break;
     case ACTIVE_RESOLUTION: {
       // TODO(55178): Remove this conversion.
       auto res = supported_modes[mode_].resolution;
-      (*out_value)->resolution_value =
-          dimensions_t { .x = static_cast<float>(res.width), .y = static_cast<float>(res.height) };
+      out_value->dimension_value =
+          dimensions_t{.x = static_cast<float>(res.width), .y = static_cast<float>(res.height)};
       break;
     }
     case PIXELS_PER_LINE:
-      (*out_value)->uint_value = ctx_.HMAX;
+      out_value->uint_value = ctx_.HMAX;
       break;
     case AGAIN_LOG2_MAX:
     case DGAIN_LOG2_MAX:
-      (*out_value)->int_value = 3 << kLog2GainShift;
+      out_value->int_value = 3 << kLog2GainShift;
       break;
     case AGAIN_ACCURACY:
-      (*out_value)->int_value = 1 << kLog2GainShift;
+      out_value->int_value = 1 << kLog2GainShift;
       break;
     case INT_TIME_MIN:
-      (*out_value)->uint_value = ctx_.int_time_min;
+      out_value->uint_value = ctx_.int_time_min;
       break;
     case INT_TIME_MAX:
     case INT_TIME_LONG_MAX:
     case INT_TIME_LIMIT:
-      (*out_value)->uint_value = ctx_.int_time_limit;
+      out_value->uint_value = ctx_.int_time_limit;
       break;
     case DAY_LIGHT_INT_TIME_MAX:
       break;
     case INT_TIME_APPLY_DELAY:
-      (*out_value)->int_value = 2;
+      out_value->int_value = 2;
       break;
     case ISP_EXPOSURE_CHANNEL_DELAY:
-      (*out_value)->int_value = 0;
+      out_value->int_value = 0;
       break;
     case X_OFFSET:
     case Y_OFFSET:
       break;
     case LINES_PER_SECOND:
-      (*out_value)->uint_value = kMasterClock / ctx_.HMAX;
+      out_value->uint_value = kMasterClock / ctx_.HMAX;
       break;
     case SENSOR_EXP_NUMBER:
-      (*out_value)->int_value = kSensorExpNumber;
+      out_value->int_value = kSensorExpNumber;
       break;
     case MODE:
-      (*out_value)->uint_value = mode_;
+      out_value->uint_value = mode_;
       break;
     default:
       return ZX_ERR_NOT_SUPPORTED;
@@ -236,7 +234,7 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
 
 zx_status_t Imx227Device::CameraSensor2SetExtensionValue(uint64_t id,
                                                          const extension_value_data_type_t* value,
-                                                         extension_value_data_type_t** out_value) {
+                                                         extension_value_data_type_t* out_value) {
   FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }

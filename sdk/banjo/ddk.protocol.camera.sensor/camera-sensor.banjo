@@ -14,7 +14,7 @@ union ExtensionValueDataType {
     int32 int_value;
     uint32 uint_value;
     array<uint8>:EXTENSION_VALUE_ARRAY_LEN byte_array_value;
-    ddk.protocol.camera.Dimensions resolution_value;
+    ddk.protocol.camera.Dimensions dimension_value;
     ddk.protocol.camera.MinMaxConstraints constraints_value;
     array<FrameRateInfo>:EXTENSION_VALUE_ARRAY_LEN frame_rate_info_value;
 };
@@ -22,6 +22,7 @@ union ExtensionValueDataType {
 enum PixelType : uint8 {
     RAW8 = 1;
     RAW10 = 2;
+    RAW12 = 3;
 };
 
 enum DynamicRangeMode : uint8 {
@@ -181,10 +182,10 @@ protocol CameraSensor2 {
     /// This subset of the API provides implementers with the flexibility to provide custom
     /// endpoints for elements not otherwise included.
     /// Retrieves the specified element. The caller must reference the implementer's ID list.
-    GetExtensionValue(uint64 id) -> (zx.status s, ExtensionValueDataType? value);
+    GetExtensionValue(uint64 id) -> (zx.status s, ExtensionValueDataType value);
     /// This subset of the API provides implementers with the flexibility to provide custom
     /// endpoints for elements not otherwise included.
     /// Changes the specified element. The caller must reference the implementer's ID list.
     SetExtensionValue(uint64 id, ExtensionValueDataType value)
-        -> (zx.status s, ExtensionValueDataType? value);
+        -> (zx.status s, ExtensionValueDataType value);
 };

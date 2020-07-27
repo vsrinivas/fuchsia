@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_GUID_H_
-#define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_GUID_H_
+#ifndef SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_ID_H_
+#define SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_ID_H_
 
 // clang-format off
 #define TOTAL_RESOLUTION              0x0001
@@ -26,4 +26,4 @@
 #define MODE                          0x0012
 // clang-format on
 
-#endif  // SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_GUID_H_
+#endif  // SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_ID_H_
