@@ -496,6 +496,26 @@ void WriteReply(const LoadInfoHandleTableReply& reply, uint32_t transaction_id,
   Serialize(reply.handles, writer);
 }
 
+// UpdateGlobalSettings ---------------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, UpdateGlobalSettingsRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  Deserialize(reader, &request->exception_strategy.type);
+  Deserialize(reader, &request->exception_strategy.value);
+  return true;
+}
+
+void WriteReply(const UpdateGlobalSettingsReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kUpdateGlobalSettings, transaction_id);
+  writer->WriteUint32(reply.status);
+}
+
 // ReadRegisters -----------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request, uint32_t* transaction_id) {

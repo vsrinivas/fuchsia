@@ -118,6 +118,11 @@ void WriteRequest(const LoadInfoHandleTableRequest& request, uint32_t transactio
                   MessageWriter* writer);
 bool ReadReply(MessageReader* reader, LoadInfoHandleTableReply* reply, uint32_t* transaction_id);
 
+// UpdateGlobalSettings.
+void WriteRequest(const UpdateGlobalSettingsRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader, UpdateGlobalSettingsReply* reply, uint32_t* transaction_id);
+
 // ConfigAgent.
 void WriteRequest(const ConfigAgentRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);

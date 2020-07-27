@@ -778,6 +778,31 @@ TEST(Protocol, LoadInfoHandleTableReply) {
   }
 }
 
+// UpdateGlobalSettings ---------------------------------------------------------------------------
+
+TEST(Protocol, UpdateGlobalSettingsRequest) {
+  UpdateGlobalSettingsRequest initial;
+  initial.exception_strategy = {
+      .type = ExceptionType::kPageFault,
+      .value = ExceptionStrategy::kSecondChance,
+  };
+
+  UpdateGlobalSettingsRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.exception_strategy.type, second.exception_strategy.type);
+  EXPECT_EQ(initial.exception_strategy.value, second.exception_strategy.value);
+}
+
+TEST(Protocol, UpdateGlobalSettingsReply) {
+  UpdateGlobalSettingsReply initial;
+  initial.status = 7645;
+
+  UpdateGlobalSettingsReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  ASSERT_EQ(initial.status, second.status);
+}
+
 // Registers ---------------------------------------------------------------------------------------
 
 using debug_ipc::RegisterID;

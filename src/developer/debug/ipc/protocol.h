@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 28;
+constexpr uint32_t kProtocolVersion = 29;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -51,6 +51,7 @@ struct MsgHeader {
     kThreads,
     kWriteMemory,
     kLoadInfoHandleTable,
+    kUpdateGlobalSettings,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyException,
@@ -346,6 +347,20 @@ struct LoadInfoHandleTableRequest {
 struct LoadInfoHandleTableReply {
   zx_status_t status = 0;
   std::vector<InfoHandleExtended> handles;
+};
+
+struct UpdateGlobalSettingsRequest {
+  // Updates how the default strategy for handling a particular exception type.
+  struct UpdateExceptionStrategy {
+    ExceptionType type = ExceptionType::kNone;
+    ExceptionStrategy value = ExceptionStrategy::kNone;
+  };
+
+  UpdateExceptionStrategy exception_strategy;
+};
+
+struct UpdateGlobalSettingsReply {
+  zx_status_t status = 0;
 };
 
 // ReadRegisters ---------------------------------------------------------------

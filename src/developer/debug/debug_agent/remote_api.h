@@ -88,6 +88,9 @@ class RemoteAPI {
 
   virtual void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
                                      debug_ipc::LoadInfoHandleTableReply* reply) = 0;
+
+  virtual void OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
+                                      debug_ipc::UpdateGlobalSettingsReply* reply) = 0;
 };
 
 }  // namespace debug_agent

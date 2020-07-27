@@ -594,6 +594,24 @@ bool ReadReply(MessageReader* reader, LoadInfoHandleTableReply* reply, uint32_t*
   return Deserialize(reader, &reply->handles);
 }
 
+// UpdateGlobalSettings ---------------------------------------------------------------------------
+
+void WriteRequest(const UpdateGlobalSettingsRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kUpdateGlobalSettings, transaction_id);
+  Serialize(request.exception_strategy.type, writer);
+  Serialize(request.exception_strategy.value, writer);
+}
+
+bool ReadReply(MessageReader* reader, UpdateGlobalSettingsReply* reply, uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  return reader->ReadInt32(&reply->status);
+}
+
 // ConfigAgent -------------------------------------------------------------------------------------
 
 void WriteRequest(const ConfigAgentRequest& request, uint32_t transaction_id,

@@ -488,6 +488,10 @@ void DebugAgent::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableReque
     reply->status = ZX_ERR_NOT_FOUND;
 }
 
+// TODO(fxbug.dev/48767): Implement me.
+void DebugAgent::OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
+                                        debug_ipc::UpdateGlobalSettingsReply* reply) {}
+
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
   if (found == procs_.end())
