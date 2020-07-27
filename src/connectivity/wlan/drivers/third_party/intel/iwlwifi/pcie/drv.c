@@ -1094,7 +1094,7 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
       .ops = &device_ops,
       .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
       .proto_ops = &wlanphy_ops,
-      .flags = DEVICE_ADD_INVISIBLE,
+      .flags = DEVICE_ADD_NON_BINDABLE,
   };
 
   status = device_add(dev, &args, &iwl_trans->zxdev);
