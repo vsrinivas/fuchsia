@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{now, report_connect_finished, send_deauthenticate_request, Protection},
+    super::{
+        now, report_connect_finished, send_deauthenticate_request, Protection, StateChangeContext,
+        StateChangeContextExt,
+    },
     crate::{
         client::{
             event::{self, Event},
@@ -245,7 +248,7 @@ impl LinkState {
         self,
         ind: fidl_mlme::EapolIndication,
         bss: &BssDescription,
-        state_change_msg: &mut Option<String>,
+        state_change_msg: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Option<Self> {
         match self {
@@ -254,7 +257,7 @@ impl LinkState {
                 match process_eapol_ind(context, &mut state.rsna, &ind) {
                     RsnaStatus::Established => {
                         let link_up = state.on_rsna_established(bss, context);
-                        state_change_msg.replace("RSNA established".to_string());
+                        state_change_msg.set_msg("RSNA established".to_string());
                         Some(transition.to(link_up).into())
                     }
                     RsnaStatus::Failed(failure) => {
@@ -294,7 +297,7 @@ impl LinkState {
         self,
         event_id: EventId,
         event: Event,
-        state_change_msg: &mut Option<String>,
+        state_change_msg: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Option<Self> {
         match self {
@@ -306,7 +309,7 @@ impl LinkState {
                             Some(transition.to(still_establishing_rsna).into())
                         }
                         None => {
-                            state_change_msg.replace("RSNA timeout".to_string());
+                            state_change_msg.set_msg("RSNA timeout".to_string());
                             None
                         }
                     }
@@ -318,7 +321,7 @@ impl LinkState {
                             Some(transition.to(still_establishing_rsna).into())
                         }
                         None => {
-                            state_change_msg.replace("key frame rx timeout".to_string());
+                            state_change_msg.set_msg("key frame rx timeout".to_string());
                             None
                         }
                     }

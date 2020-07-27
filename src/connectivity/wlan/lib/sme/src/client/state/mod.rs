@@ -117,11 +117,41 @@ statemachine!(
     Associated => [Idle, Associating],
 );
 
+/// Context surrounding the state change, for Inspect logging
+pub enum StateChangeContext {
+    Disconnect {
+        msg: String,
+        reason_code: u16,
+        /// True if disconnect is initiated within the device.
+        /// False if disconnect happens due to frame sent by AP.
+        locally_initiated: bool,
+    },
+    Msg(String),
+}
+
+trait StateChangeContextExt {
+    fn set_msg(&mut self, msg: String);
+}
+
+impl StateChangeContextExt for Option<StateChangeContext> {
+    fn set_msg(&mut self, msg: String) {
+        match self {
+            Some(ctx) => match ctx {
+                StateChangeContext::Disconnect { msg: ref mut inner, .. } => *inner = msg,
+                StateChangeContext::Msg(inner) => *inner = msg,
+            },
+            None => {
+                self.replace(StateChangeContext::Msg(msg));
+            }
+        }
+    }
+}
+
 impl Joining {
     fn on_join_conf(
         self,
         conf: fidl_mlme::JoinConfirm,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Authenticating, Idle> {
         match conf.result_code {
@@ -145,7 +175,7 @@ impl Joining {
                         },
                     ));
                 }
-                state_change_msg.replace("successful join".to_string());
+                state_change_ctx.set_msg("successful join".to_string());
                 Ok(Authenticating {
                     cfg: self.cfg,
                     cmd: self.cmd,
@@ -161,7 +191,7 @@ impl Joining {
                     context,
                     ConnectResult::Failed(ConnectFailure::JoinFailure(other)),
                 );
-                state_change_msg.replace(format!("join failed; result code: {:?}", other));
+                state_change_ctx.set_msg(format!("join failed; result code: {:?}", other));
                 Err(Idle { cfg: self.cfg })
             }
         }
@@ -172,7 +202,7 @@ impl Authenticating {
     fn on_authenticate_conf(
         self,
         conf: fidl_mlme::AuthenticateConfirm,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Associating, Idle> {
         match conf.result_code {
@@ -184,7 +214,7 @@ impl Authenticating {
                     &self.protection_ie,
                     &context.mlme_sink,
                 );
-                state_change_msg.replace("successful authentication".to_string());
+                state_change_ctx.set_msg("successful authentication".to_string());
                 Ok(Associating {
                     cfg: self.cfg,
                     cmd: self.cmd,
@@ -201,7 +231,7 @@ impl Authenticating {
                     context,
                     ConnectResult::Failed(ConnectFailure::AuthenticationFailure(other)),
                 );
-                state_change_msg.replace(format!("auth failed; result code: {:?}", other));
+                state_change_ctx.set_msg(format!("auth failed; result code: {:?}", other));
                 Err(Idle { cfg: self.cfg })
             }
         }
@@ -210,7 +240,7 @@ impl Authenticating {
     fn on_deauthenticate_ind(
         self,
         ind: fidl_mlme::DeauthenticateIndication,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
         error!(
@@ -224,10 +254,14 @@ impl Authenticating {
                 fidl_mlme::AuthenticateResultCodes::Refused,
             )),
         );
-        state_change_msg.replace(format!(
-            "received DeauthenticateInd msg while authenticating; reason code {:?}",
-            ind.reason_code
-        ));
+        state_change_ctx.replace(StateChangeContext::Disconnect {
+            msg: format!(
+                "received DeauthenticateInd msg while authenticating; reason code {:?}",
+                ind.reason_code
+            ),
+            reason_code: ind.reason_code.into_primitive(),
+            locally_initiated: ind.locally_initiated,
+        });
         Idle { cfg: self.cfg }
     }
 }
@@ -236,7 +270,7 @@ impl Associating {
     fn on_associate_conf(
         self,
         conf: fidl_mlme::AssociateConfirm,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Associated, Idle> {
         let wmm_param =
@@ -272,7 +306,7 @@ impl Associating {
                                 fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
                             )),
                         );
-                        state_change_msg.replace(format!(
+                        state_change_ctx.set_msg(format!(
                             "failed associating; AP's capabilites changed between beacon and\
                                  association response"
                         ));
@@ -290,7 +324,7 @@ impl Associating {
                 ) {
                     Some(link_state) => link_state,
                     None => {
-                        state_change_msg.replace(format!("supplicant failed to start"));
+                        state_change_ctx.set_msg(format!("supplicant failed to start"));
                         return Err(Idle { cfg: self.cfg });
                     }
                 }
@@ -302,11 +336,11 @@ impl Associating {
                     context,
                     ConnectResult::Failed(ConnectFailure::AssociationFailure(other)),
                 );
-                state_change_msg.replace(format!("failed associating; result code: {:?}", other));
+                state_change_ctx.set_msg(format!("failed associating; result code: {:?}", other));
                 return Err(Idle { cfg: self.cfg });
             }
         };
-        state_change_msg.replace("successful assoc".to_string());
+        state_change_ctx.set_msg("successful assoc".to_string());
         Ok(Associated {
             cfg: self.cfg,
             last_rssi: self.cmd.bss.rssi_dbm,
@@ -324,7 +358,7 @@ impl Associating {
     fn on_deauthenticate_ind(
         self,
         ind: fidl_mlme::DeauthenticateIndication,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
         error!(
@@ -338,17 +372,21 @@ impl Associating {
                 fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
             )),
         );
-        state_change_msg.replace(format!(
-            "received DeauthenticateInd msg while associating; reason code {:?}",
-            ind.reason_code,
-        ));
+        state_change_ctx.replace(StateChangeContext::Disconnect {
+            msg: format!(
+                "received DeauthenticateInd msg while associating; reason code {:?}",
+                ind.reason_code
+            ),
+            reason_code: ind.reason_code.into_primitive(),
+            locally_initiated: ind.locally_initiated,
+        });
         Idle { cfg: self.cfg }
     }
 
     fn on_disassociate_ind(
         self,
         ind: fidl_mlme::DisassociateIndication,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
         error!("association request failed due to spurious disassociation: {:?}", ind.reason_code);
@@ -359,10 +397,15 @@ impl Associating {
                 fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
             )),
         );
-        state_change_msg.replace(format!(
-            "received DisassociateInd msg while associating; reason code {:?}",
-            ind.reason_code
-        ));
+        state_change_ctx.replace(StateChangeContext::Disconnect {
+            msg: format!(
+                "received DisassociateInd msg while associating; reason code {:?}",
+                ind.reason_code
+            ),
+            reason_code: ind.reason_code,
+            locally_initiated: ind.locally_initiated,
+        });
+
         Idle { cfg: self.cfg }
     }
 }
@@ -370,7 +413,7 @@ impl Associating {
 impl Associated {
     fn on_disassociate_ind(
         self,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Associating {
         let (responder, mut protection, connected_duration) = self.link_state.disconnect();
@@ -398,7 +441,7 @@ impl Associated {
             &self.protection_ie,
             &context.mlme_sink,
         );
-        state_change_msg.replace("received DisassociateInd msg".to_string());
+        state_change_ctx.set_msg("received DisassociateInd msg".to_string());
         Associating {
             cfg: self.cfg,
             cmd,
@@ -411,7 +454,7 @@ impl Associated {
     fn on_deauthenticate_ind(
         self,
         ind: fidl_mlme::DeauthenticateIndication,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Idle {
         let (responder, _, connected_duration) = self.link_state.disconnect();
@@ -430,15 +473,18 @@ impl Associated {
             }
         }
 
-        state_change_msg
-            .replace(format!("received DeauthenticateInd msg; reason code {:?}", ind.reason_code));
+        state_change_ctx.replace(StateChangeContext::Disconnect {
+            msg: format!("received DeauthenticateInd msg; reason code {:?}", ind.reason_code),
+            reason_code: ind.reason_code.into_primitive(),
+            locally_initiated: ind.locally_initiated,
+        });
         Idle { cfg: self.cfg }
     }
 
     fn on_eapol_ind(
         self,
         ind: fidl_mlme::EapolIndication,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Self, Idle> {
         // Ignore unexpected EAPoL frames.
@@ -461,7 +507,7 @@ impl Associated {
         }
 
         let link_state =
-            match self.link_state.on_eapol_ind(ind, &self.bss, state_change_msg, context) {
+            match self.link_state.on_eapol_ind(ind, &self.bss, state_change_ctx, context) {
                 Some(link_state) => link_state,
                 None => return Err(Idle { cfg: self.cfg }),
             };
@@ -478,10 +524,10 @@ impl Associated {
         self,
         event_id: EventId,
         event: Event,
-        state_change_msg: &mut Option<String>,
+        state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Self, Idle> {
-        match self.link_state.handle_timeout(event_id, event, state_change_msg, context) {
+        match self.link_state.handle_timeout(event_id, event, state_change_ctx, context) {
             Some(link_state) => Ok(Associated { link_state, ..self }),
             None => {
                 send_deauthenticate_request(&self.bss, &context.mlme_sink);
@@ -512,7 +558,7 @@ impl ClientState {
 
     pub fn on_mlme_event(self, event: MlmeEvent, context: &mut Context) -> Self {
         let start_state = self.state_name();
-        let mut state_change_msg: Option<String> = None;
+        let mut state_change_ctx: Option<StateChangeContext> = None;
 
         let new_state = match self {
             Self::Idle(_) => {
@@ -522,7 +568,7 @@ impl ClientState {
             Self::Joining(state) => match event {
                 MlmeEvent::JoinConf { resp } => {
                     let (transition, joining) = state.release_data();
-                    match joining.on_join_conf(resp, &mut state_change_msg, context) {
+                    match joining.on_join_conf(resp, &mut state_change_ctx, context) {
                         Ok(authenticating) => transition.to(authenticating).into(),
                         Err(idle) => transition.to(idle).into(),
                     }
@@ -532,7 +578,7 @@ impl ClientState {
             Self::Authenticating(state) => match event {
                 MlmeEvent::AuthenticateConf { resp } => {
                     let (transition, authenticating) = state.release_data();
-                    match authenticating.on_authenticate_conf(resp, &mut state_change_msg, context)
+                    match authenticating.on_authenticate_conf(resp, &mut state_change_ctx, context)
                     {
                         Ok(associating) => transition.to(associating).into(),
                         Err(idle) => transition.to(idle).into(),
@@ -541,7 +587,7 @@ impl ClientState {
                 MlmeEvent::DeauthenticateInd { ind } => {
                     let (transition, authenticating) = state.release_data();
                     let idle =
-                        authenticating.on_deauthenticate_ind(ind, &mut state_change_msg, context);
+                        authenticating.on_deauthenticate_ind(ind, &mut state_change_ctx, context);
                     transition.to(idle).into()
                 }
                 _ => state.into(),
@@ -549,7 +595,7 @@ impl ClientState {
             Self::Associating(state) => match event {
                 MlmeEvent::AssociateConf { resp } => {
                     let (transition, associating) = state.release_data();
-                    match associating.on_associate_conf(resp, &mut state_change_msg, context) {
+                    match associating.on_associate_conf(resp, &mut state_change_ctx, context) {
                         Ok(associated) => transition.to(associated).into(),
                         Err(idle) => transition.to(idle).into(),
                     }
@@ -557,12 +603,12 @@ impl ClientState {
                 MlmeEvent::DeauthenticateInd { ind } => {
                     let (transition, associating) = state.release_data();
                     let idle =
-                        associating.on_deauthenticate_ind(ind, &mut state_change_msg, context);
+                        associating.on_deauthenticate_ind(ind, &mut state_change_ctx, context);
                     transition.to(idle).into()
                 }
                 MlmeEvent::DisassociateInd { ind } => {
                     let (transition, associating) = state.release_data();
-                    let idle = associating.on_disassociate_ind(ind, &mut state_change_msg, context);
+                    let idle = associating.on_disassociate_ind(ind, &mut state_change_ctx, context);
                     transition.to(idle).into()
                 }
                 _ => state.into(),
@@ -571,13 +617,13 @@ impl ClientState {
                 MlmeEvent::DisassociateInd { .. } => {
                     let (transition, associated) = state.release_data();
                     let associating =
-                        associated.on_disassociate_ind(&mut state_change_msg, context);
+                        associated.on_disassociate_ind(&mut state_change_ctx, context);
                     transition.to(associating).into()
                 }
                 MlmeEvent::DeauthenticateInd { ind } => {
                     let (transition, associated) = state.release_data();
                     let idle =
-                        associated.on_deauthenticate_ind(ind, &mut state_change_msg, context);
+                        associated.on_deauthenticate_ind(ind, &mut state_change_ctx, context);
                     transition.to(idle).into()
                 }
                 MlmeEvent::SignalReport { ind } => {
@@ -587,7 +633,7 @@ impl ClientState {
                 }
                 MlmeEvent::EapolInd { ind } => {
                     let (transition, associated) = state.release_data();
-                    match associated.on_eapol_ind(ind, &mut state_change_msg, context) {
+                    match associated.on_eapol_ind(ind, &mut state_change_ctx, context) {
                         Ok(associated) => transition.to(associated).into(),
                         Err(idle) => transition.to(idle).into(),
                     }
@@ -600,18 +646,18 @@ impl ClientState {
             },
         };
 
-        log_state_change(start_state, &new_state, state_change_msg, context);
+        log_state_change(start_state, &new_state, state_change_ctx, context);
         new_state
     }
 
     pub fn handle_timeout(self, event_id: EventId, event: Event, context: &mut Context) -> Self {
         let start_state = self.state_name();
-        let mut state_change_msg: Option<String> = None;
+        let mut state_change_ctx: Option<StateChangeContext> = None;
 
         let new_state = match self {
             Self::Associated(state) => {
                 let (transition, associated) = state.release_data();
-                match associated.handle_timeout(event_id, event, &mut state_change_msg, context) {
+                match associated.handle_timeout(event_id, event, &mut state_change_ctx, context) {
                     Ok(associated) => transition.to(associated).into(),
                     Err(idle) => transition.to(idle).into(),
                 }
@@ -619,7 +665,7 @@ impl ClientState {
             _ => self,
         };
 
-        log_state_change(start_state, &new_state, state_change_msg, context);
+        log_state_change(start_state, &new_state, state_change_ctx, context);
         new_state
     }
 
@@ -687,15 +733,19 @@ impl ClientState {
     }
 
     pub fn disconnect(self, context: &mut Context) -> Self {
-        inspect_log!(context.inspect.state_events.lock(), {
-            from: self.state_name(),
-            to: IDLE_STATE,
-            ctx: "disconnect command",
-        });
         if let Self::Associated(state) = &self {
             context.info.report_manual_disconnect(state.bss.ssid.clone());
         }
-        Self::new(self.disconnect_internal(context))
+        let start_state = self.state_name();
+        let new_state = Self::new(self.disconnect_internal(context));
+
+        let state_change_ctx = Some(StateChangeContext::Disconnect {
+            msg: "disconnect command".to_string(),
+            reason_code: fidl_mlme::ReasonCode::UnspecifiedReason.into_primitive(),
+            locally_initiated: true,
+        });
+        log_state_change(start_state, &new_state, state_change_ctx, context);
+        new_state
     }
 
     fn disconnect_internal(self, context: &mut Context) -> ClientConfig {
@@ -786,15 +836,40 @@ impl ClientState {
 fn log_state_change(
     start_state: &str,
     new_state: &ClientState,
-    msg: Option<String>,
+    state_change_ctx: Option<StateChangeContext>,
     context: &mut Context,
 ) {
-    if start_state != new_state.state_name() || msg.is_some() {
-        inspect_log!(context.inspect.state_events.lock(), {
-            from: start_state,
-            to: new_state.state_name(),
-            ctx?: msg,
-        });
+    if start_state == new_state.state_name() && state_change_ctx.is_none() {
+        return;
+    }
+
+    match state_change_ctx {
+        Some(inner) => match inner {
+            StateChangeContext::Disconnect { msg, reason_code, locally_initiated } => {
+                inspect_log!(context.inspect.state_events.lock(), {
+                    from: start_state,
+                    to: new_state.state_name(),
+                    ctx: msg,
+                    disconnect_ctx: {
+                        reason_code: reason_code,
+                        locally_initiated: locally_initiated,
+                    }
+                });
+            }
+            StateChangeContext::Msg(msg) => {
+                inspect_log!(context.inspect.state_events.lock(), {
+                    from: start_state,
+                    to: new_state.state_name(),
+                    ctx: msg,
+                });
+            }
+        },
+        None => {
+            inspect_log!(context.inspect.state_events.lock(), {
+                from: start_state,
+                to: new_state.state_name(),
+            });
+        }
     }
 }
 
