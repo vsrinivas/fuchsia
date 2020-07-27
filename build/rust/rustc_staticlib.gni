@@ -8,7 +8,8 @@ import("//build/rust/rustc_test.gni")
 #
 # Parameters
 #
-#   name
+#   output_name (optional)
+#   name (optional, deprecated)
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name.
 #
@@ -63,9 +64,6 @@ import("//build/rust/rustc_test.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
-#   output_name (optional)
-#     Name of the output file.
-#
 # Example of usage:
 #
 #   rustc_staticlib("foo") {
@@ -80,6 +78,8 @@ import("//build/rust/rustc_test.gni")
 #   }
 template("rustc_staticlib") {
   not_needed(invoker, [ "version" ])
+  assert(!(defined(invoker.output_name) && defined(invoker.name)),
+         "Only one of output_name and name may be specified.")
 
   # if "with_unit_tests" is set to true, generate an additional rust test target
   # TODO(bwb) deprecate this. All tests should be declared independently
@@ -94,12 +94,15 @@ template("rustc_staticlib") {
                                # for rustc_test get clobbered.
                                "configs",
                                "name",
+                               "output_name",
                                "test_configs",
                                "test_deps",
                              ])
-      name = invoker.target_name + "_staticlib_test"
-      if (defined(invoker.name)) {
-        name = invoker.name + "_staticlib_test"
+      output_name = invoker.target_name + "_staticlib_test"
+      if (defined(invoker.output_name)) {
+        output_name = invoker.output_name + "_staticlib_test"
+      } else if (defined(invoker.name)) {
+        output_name = invoker.name + "_staticlib_test"
       }
       if (defined(invoker.test_configs)) {
         configs += invoker.test_configs
@@ -113,7 +116,9 @@ template("rustc_staticlib") {
   group_target = target_name
 
   rustc_target = "_${target_name}_rustc_static"
-  if (defined(invoker.name)) {
+  if (defined(invoker.output_name)) {
+    rustc_target = "_${invoker.output_name}_rustc_static"
+  } else if (defined(invoker.name)) {
     rustc_target = "_${invoker.name}_rustc_static"
   }
   rustc_target = string_replace(rustc_target, "-", "_")

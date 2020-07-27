@@ -8,7 +8,8 @@ import("//build/rust/rustc_test.gni")
 #
 # Parameters
 #
-#   name
+#   output_name (optional)
+#   name (optional, deprecated)
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name.
 #
@@ -70,11 +71,15 @@ template("rustc_cdylib") {
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test("${target_name}_test") {
       not_needed(invoker, [ "public" ])
-      name = invoker.target_name + "_cdylib_test"
-      if (defined(invoker.name)) {
-        name = invoker.name + "_cdylib_test"
+      assert(!(defined(invoker.output_name) && defined(invoker.name)),
+             "Only one of output_name and name may be specified.")
+      output_name = invoker.target_name + "_cdylib_test"
+      if (defined(invoker.output_name)) {
+        output_name = invoker.output_name + "_cdylib_test"
+      } else if (defined(invoker.name)) {
+        output_name = invoker.name + "_cdylib_test"
       }
-      forward_variables_from(invoker, "*", [ "name" ])
+      forward_variables_from(invoker, "*", [ "output_name" ])
     }
   }
 

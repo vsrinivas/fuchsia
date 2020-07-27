@@ -8,7 +8,8 @@ import("//build/rust/rustc_test.gni")
 #
 # Parameters
 #
-#   name
+#   output_name (optional)
+#   name (optional, deprecated)
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name. All dashes will be replaced
 #     with underscores in the library name: <name_underscored>
@@ -85,24 +86,21 @@ import("//build/rust/rustc_test.gni")
 #    ]
 #
 template("rustc_wasm_library") {
-  if (defined(invoker.name)) {
-    output_name = invoker.name
-  } else {
-    output_name = target_name
+  assert(!(defined(invoker.output_name) && defined(invoker.name)),
+         "Only one of output_name and name may be specified.")
+  package_name = target_name
+  if (defined(invoker.output_name)) {
+    package_name = invoker.output_name
+  } else if (defined(invoker.name)) {
+    package_name = invoker.name
   }
+  crate_name = string_replace(package_name, "-", "_")
 
   if (defined(invoker.source_root)) {
     source_root = invoker.source_root
   } else {
     source_root = "src/lib.rs"
   }
-
-  if (defined(invoker.name)) {
-    package_name = invoker.name
-  } else {
-    package_name = target_name
-  }
-  crate_name = string_replace(package_name, "-", "_")
 
   features = []
   if (defined(invoker.features)) {

@@ -6,7 +6,8 @@
 #
 # Parameters
 #
-#   name
+#   output_name (optional)
+#   name (optional, deprecated)
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name.
 #
@@ -75,11 +76,14 @@ template("rustc_macro") {
   proc_macro_target = "${target_name}_proc_macro"
 
   # The actual host-target build of the proc macro crate.
+  assert(!(defined(invoker.output_name) && defined(invoker.name)),
+         "Only one of output_name and name may be specified.")
   if (is_host) {
-    if (defined(invoker.name)) {
+    package_name = target_name
+    if (defined(invoker.output_name)) {
+      package_name = invoker.output_name
+    } else if (defined(invoker.name)) {
       package_name = invoker.name
-    } else {
-      package_name = target_name
     }
     crate_name = string_replace(package_name, "-", "_")
 
