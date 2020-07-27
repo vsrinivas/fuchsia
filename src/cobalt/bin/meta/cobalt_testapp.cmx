@@ -5,10 +5,7 @@
                 "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http_client#meta/http_client.cmx"
             },
             "system-services": [
-                "fuchsia.net.Connectivity",
                 "fuchsia.net.NameLookup",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.time.Utc"
             ]

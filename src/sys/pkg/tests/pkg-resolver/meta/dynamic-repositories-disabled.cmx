@@ -2,11 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
-            },
-            "system-services": [
-                "fuchsia.posix.socket.Provider"
-            ]
+            }
         }
     },
     "program": {

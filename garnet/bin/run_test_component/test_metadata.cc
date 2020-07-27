@@ -11,8 +11,6 @@
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
-#include <fuchsia/net/stack/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
@@ -23,6 +21,7 @@
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 
+#include <filesystem>
 #include <unordered_set>
 
 #include "src/lib/cmx/cmx.h"
@@ -36,17 +35,20 @@ using fxl::Substitute;
 constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
-// Services below were reported by their owners to be impractical to fake in a
-// test environment because they depend on devices. Appmgr's test support does
-// not offer the ability to fake the device namespace.
-// Component Manager is able to route and fake devices and early boot
-// capabilities.
-// At this time the body of tests largely depends on appmgr, so we maintain
-// this list as a necessary compromise.
-// Please add items to this list only if you believe that no other pragmatic
-// alternative is currently present.
-// Please document the rationale for each entry added.
-// See also: docs/concepts/testing/test_component.md
+// Services below were reported by their owners to be impractical to fake in a test environment
+// because they depend on devices. Appmgr's test support does not offer the ability to fake the
+// device namespace.
+//
+// Component Manager is able to route and fake devices and early boot capabilities.
+//
+// At this time the body of tests largely depends on appmgr, so we maintain this list as a necessary
+// compromise.
+//
+// Please add items to this list only if you believe that no other pragmatic alternative is
+// currently present.
+//
+// Please document the rationale for each entry added.  See also:
+// docs/concepts/testing/test_component.md
 const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::boot::FactoryItems::Name_,
     fuchsia::boot::Items::Name_,
@@ -61,11 +63,6 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::kernel::Counter::Name_,
     fuchsia::kernel::Stats::Name_,
     fuchsia::media::AudioCore::Name_,
-    fuchsia::net::Connectivity::Name_,
-    fuchsia::net::NameLookup::Name_,
-    fuchsia::net::stack::Stack::Name_,
-    fuchsia::netstack::Netstack::Name_,
-    fuchsia::posix::socket::Provider::Name_,
     fuchsia::scheduler::ProfileProvider::Name_,
     fuchsia::sys::internal::CrashIntrospect::Name_,
     fuchsia::sys::internal::Introspect::Name_,
@@ -77,6 +74,23 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::ui::policy::Presenter::Name_,
     fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::vulkan::loader::Loader::Name_,
+};
+
+// These tests do not run in continuous integration because they make real network requests. Do not
+// add to this list under any circumstances. If your tests require real network access, consider
+// writing them as end-to-end tests. See docs/development/testing/create_a_new_end_to_end_test.md.
+//
+// TODO(fxbug.dev/57076): migrate these tests and remove this list.
+const std::unordered_set<std::string> kNetworkUsingTestsThatShouldBeE2E = {
+    "aml_widevine_test.cmx",
+    "cdm_app_test",
+    "cobalt_testapp_for_prober_do_not_run_manually.cmx",
+    "playready_cdm_test.cmx",
+};
+
+const std::unordered_set<std::string> kRealNetworkServices = {
+    fuchsia::net::NameLookup::Name_,
+    fuchsia::posix::socket::Provider::Name_,
 };
 
 }  // namespace
@@ -125,14 +139,13 @@ bool TestMetadata::ParseFromString(const std::string& cmx_data, const std::strin
       json_parser_.ReportError(Substitute("'$0' in 'facets' should be an object.", kFuchsiaTest));
       return false;
     }
-    auto allow_network_services = fuchsia_test.FindMember(kSystemServices);
-    if (allow_network_services != fuchsia_test.MemberEnd()) {
-      if (!allow_network_services->value.IsArray()) {
+    auto system_services = fuchsia_test.FindMember(kSystemServices);
+    if (system_services != fuchsia_test.MemberEnd()) {
+      if (!system_services->value.IsArray()) {
         json_parser_.ReportError(
             Substitute("'$0' in '$1' should be a string array.", kSystemServices, kFuchsiaTest));
       } else {
-        const auto& array = allow_network_services->value.GetArray();
-        std::all_of(array.begin(), array.end(), [&](const rapidjson::Value& val) {
+        for (const rapidjson::Value& val : system_services->value.GetArray()) {
           if (!val.IsString()) {
             json_parser_.ReportError(Substitute("'$0' in '$1' should be a string array.",
                                                 kSystemServices, kFuchsiaTest));
@@ -140,13 +153,16 @@ bool TestMetadata::ParseFromString(const std::string& cmx_data, const std::strin
           }
           std::string service = val.GetString();
           if (kAllowedSystemServices.count(service) == 0) {
-            json_parser_.ReportError(
-                fxl::Substitute("'$0' cannot contain '$1'.", kSystemServices, service));
-            return false;
+            if ((kRealNetworkServices.count(service) == 0 ||
+                 kNetworkUsingTestsThatShouldBeE2E.count(
+                     std::filesystem::path(filename).filename()) == 0)) {
+              json_parser_.ReportError(
+                  fxl::Substitute("'$0' cannot contain '$1'.", kSystemServices, service));
+              return false;
+            }
           }
           system_services_.push_back(service);
-          return true;
-        });
+        };
       }
     }
     auto services = fuchsia_test.FindMember(kInjectedServices);
