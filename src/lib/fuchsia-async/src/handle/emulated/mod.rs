@@ -9,8 +9,8 @@ pub mod socket;
 
 use fuchsia_zircon_status as zx_status;
 use futures::task::noop_waker_ref;
-use parking_lot::Mutex;
 use slab::Slab;
+use std::sync::Mutex;
 use std::{
     collections::VecDeque,
     sync::atomic::{AtomicU64, AtomicUsize, Ordering},
@@ -86,16 +86,17 @@ pub trait AsHandleRef {
         if self.is_invalid() {
             (0, 0)
         } else {
-            let (shard, slot, ty, side) = unpack_handle(self.as_handle_ref().0);
-            let koid_left = match ty {
-                HdlType::Channel => CHANNELS.shards[shard].lock()[slot].koid_left,
-                HdlType::StreamSocket => STREAM_SOCKETS.shards[shard].lock()[slot].koid_left,
-                HdlType::DatagramSocket => DATAGRAM_SOCKETS.shards[shard].lock()[slot].koid_left,
-            };
-            match side {
-                Side::Left => (koid_left, koid_left + 1),
-                Side::Right => (koid_left + 1, koid_left),
-            }
+            with_handle(self.as_handle_ref().0, |h, side| {
+                let koid_left = match h {
+                    HdlRef::Channel(h) => h.koid_left,
+                    HdlRef::StreamSocket(h) => h.koid_left,
+                    HdlRef::DatagramSocket(h) => h.koid_left,
+                };
+                match side {
+                    Side::Left => (koid_left, koid_left + 1),
+                    Side::Right => (koid_left + 1, koid_left),
+                }
+            })
         }
     }
 }
@@ -233,35 +234,42 @@ impl Channel {
         bytes: &mut Vec<u8>,
         handles: &mut Vec<Handle>,
     ) -> Poll<Result<(), zx_status::Status>> {
-        let (shard, slot, ty, side) = unpack_handle(self.0);
-        assert_eq!(ty, HdlType::Channel);
-        let obj = &mut CHANNELS.shards[shard].lock()[slot];
-        if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
-            std::mem::swap(bytes, &mut msg.bytes);
-            std::mem::swap(handles, &mut msg.handles);
-            Poll::Ready(Ok(()))
-        } else if obj.liveness.is_open() {
-            *obj.wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
-            Poll::Pending
-        } else {
-            Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
-        }
+        with_handle(self.0, |h, side| {
+            if let HdlRef::Channel(obj) = h {
+                if let Some(mut msg) = obj.q.side_mut(side.opposite()).pop_front() {
+                    std::mem::swap(bytes, &mut msg.bytes);
+                    std::mem::swap(handles, &mut msg.handles);
+                    Poll::Ready(Ok(()))
+                } else if obj.liveness.is_open() {
+                    *obj.wakers.side_mut(side.opposite()) = Some(cx.waker().clone());
+                    Poll::Pending
+                } else {
+                    Poll::Ready(Err(zx_status::Status::PEER_CLOSED))
+                }
+            } else {
+                unreachable!();
+            }
+        })
     }
 
     /// Write a message to a channel.
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>) -> Result<(), zx_status::Status> {
         let bytes = bytes.to_vec();
-        let (shard, slot, ty, side) = unpack_handle(self.0);
-        assert_eq!(ty, HdlType::Channel);
-        let obj = &mut CHANNELS.shards[shard].lock()[slot];
-        if !obj.liveness.is_open() {
-            return Err(zx_status::Status::PEER_CLOSED);
-        }
-        obj.q
-            .side_mut(side)
-            .push_back(ChannelMessage { bytes, handles: std::mem::replace(handles, Vec::new()) });
-        obj.wakers.side_mut(side).take().map(|w| w.wake());
-        Ok(())
+        with_handle(self.0, |h, side| {
+            if let HdlRef::Channel(obj) = h {
+                if !obj.liveness.is_open() {
+                    return Err(zx_status::Status::PEER_CLOSED);
+                }
+                obj.q.side_mut(side).push_back(ChannelMessage {
+                    bytes,
+                    handles: std::mem::replace(handles, Vec::new()),
+                });
+                obj.wakers.side_mut(side).take().map(|w| w.wake());
+                Ok(())
+            } else {
+                unreachable!();
+            }
+        })
     }
 }
 
@@ -327,46 +335,40 @@ impl Socket {
     /// Write the given bytes into the socket.
     /// Return value (on success) is number of bytes actually written.
     pub fn write(&self, bytes: &[u8]) -> Result<usize, zx_status::Status> {
-        let (shard, slot, ty, side) = unpack_handle(self.0);
-        match ty {
-            HdlType::StreamSocket => {
-                let obj = &mut STREAM_SOCKETS.shards[shard].lock()[slot];
-                if !obj.liveness.is_open() {
-                    return Err(zx_status::Status::PEER_CLOSED);
+        with_handle(self.0, |h, side| {
+            match h {
+                HdlRef::StreamSocket(obj) => {
+                    if !obj.liveness.is_open() {
+                        return Err(zx_status::Status::PEER_CLOSED);
+                    }
+                    obj.q.side_mut(side).extend(bytes);
+                    obj.wakers.side_mut(side).take().map(|w| w.wake());
                 }
-                obj.q.side_mut(side).extend(bytes);
-                obj.wakers.side_mut(side).take().map(|w| w.wake());
-            }
-            HdlType::DatagramSocket => {
-                let obj = &mut DATAGRAM_SOCKETS.shards[shard].lock()[slot];
-                if !obj.liveness.is_open() {
-                    return Err(zx_status::Status::PEER_CLOSED);
+                HdlRef::DatagramSocket(obj) => {
+                    if !obj.liveness.is_open() {
+                        return Err(zx_status::Status::PEER_CLOSED);
+                    }
+                    obj.q.side_mut(side).push_back(bytes.to_vec());
+                    obj.wakers.side_mut(side).take().map(|w| w.wake());
                 }
-                obj.q.side_mut(side).push_back(bytes.to_vec());
-                obj.wakers.side_mut(side).take().map(|w| w.wake());
+                _ => panic!("Non socket passed to Socket::write"),
             }
-            _ => panic!("Non socket passed to Socket::write"),
-        }
-        Ok(bytes.len())
+            Ok(bytes.len())
+        })
     }
 
     /// Return how many bytes are buffered in the socket
     pub fn outstanding_read_bytes(&self) -> Result<usize, zx_status::Status> {
-        let (shard, slot, ty, side) = unpack_handle(self.0);
-        let (len, open) = match ty {
-            HdlType::StreamSocket => {
-                let obj = &STREAM_SOCKETS.shards[shard].lock()[slot];
+        let (len, open) = with_handle(self.0, |h, side| match h {
+            HdlRef::StreamSocket(obj) => {
                 (obj.q.side(side.opposite()).len(), obj.liveness.is_open())
             }
-            HdlType::DatagramSocket => {
-                let obj = &DATAGRAM_SOCKETS.shards[shard].lock()[slot];
-                (
-                    obj.q.side(side.opposite()).front().map(|frame| frame.len()).unwrap_or(0),
-                    obj.liveness.is_open(),
-                )
-            }
+            HdlRef::DatagramSocket(obj) => (
+                obj.q.side(side.opposite()).front().map(|frame| frame.len()).unwrap_or(0),
+                obj.liveness.is_open(),
+            ),
             _ => panic!("Non socket passed to Socket::outstanding_read_bytes"),
-        };
+        });
         if len > 0 {
             return Ok(len);
         }
@@ -381,10 +383,8 @@ impl Socket {
         bytes: &mut [u8],
         ctx: &mut Context<'_>,
     ) -> Poll<Result<usize, zx_status::Status>> {
-        let (shard, slot, ty, side) = unpack_handle(self.0);
-        match ty {
-            HdlType::StreamSocket => {
-                let obj = &mut STREAM_SOCKETS.shards[shard].lock()[slot];
+        with_handle(self.0, |h, side| match h {
+            HdlRef::StreamSocket(obj) => {
                 if bytes.is_empty() {
                     if obj.liveness.is_open() {
                         return Poll::Ready(Ok(0));
@@ -407,8 +407,7 @@ impl Socket {
                 }
                 Poll::Ready(Ok(copy_bytes))
             }
-            HdlType::DatagramSocket => {
-                let obj = &mut DATAGRAM_SOCKETS.shards[shard].lock()[slot];
+            HdlRef::DatagramSocket(obj) => {
                 if let Some(frame) = obj.q.side_mut(side.opposite()).pop_front() {
                     let n = std::cmp::min(bytes.len(), frame.len());
                     bytes[..n].clone_from_slice(&frame[..n]);
@@ -421,7 +420,7 @@ impl Socket {
                 }
             }
             _ => panic!("Non socket passed to Socket::read"),
-        }
+        })
     }
 
     /// Read bytes from the socket.
@@ -611,6 +610,28 @@ struct Hdl<T> {
     koid_left: u64,
 }
 
+enum HdlRef<'a> {
+    Channel(&'a mut Hdl<ChannelMessage>),
+    StreamSocket(&'a mut Hdl<u8>),
+    DatagramSocket(&'a mut Hdl<Vec<u8>>),
+}
+
+fn with_handle<R>(handle: u32, f: impl FnOnce(HdlRef<'_>, Side) -> R) -> R {
+    let (shard, slot, ty, side) = unpack_handle(handle);
+    match ty {
+        HdlType::Channel => {
+            f(HdlRef::Channel(&mut CHANNELS.shards[shard].lock().unwrap()[slot]), side)
+        }
+        HdlType::StreamSocket => {
+            f(HdlRef::StreamSocket(&mut STREAM_SOCKETS.shards[shard].lock().unwrap()[slot]), side)
+        }
+        HdlType::DatagramSocket => f(
+            HdlRef::DatagramSocket(&mut DATAGRAM_SOCKETS.shards[shard].lock().unwrap()[slot]),
+            side,
+        ),
+    }
+}
+
 const SHARD_COUNT: usize = 16;
 
 struct HandleTable<T> {
@@ -640,7 +661,7 @@ impl<T> Default for HandleTable<T> {
 impl<T> HandleTable<T> {
     fn new_handle_slot(&self) -> (usize, usize) {
         let shard = self.next_shard.fetch_add(1, Ordering::Relaxed) & 15;
-        let mut h = self.shards[shard].lock();
+        let mut h = self.shards[shard].lock().unwrap();
         (
             shard,
             h.insert(Hdl {
@@ -683,17 +704,18 @@ fn unpack_handle(handle: u32) -> (usize, usize, HdlType, Side) {
 }
 
 fn close_in_table<T>(tbl: &HandleTable<T>, shard: usize, slot: usize, side: Side) {
-    let mut tbl = tbl.shards[shard].lock();
+    let mut tbl = tbl.shards[shard].lock().unwrap();
     let h = &mut tbl[slot];
-    match h.liveness.close(side) {
-        None => {
-            tbl.remove(slot);
-        }
+    let removed = match h.liveness.close(side) {
+        None => Some(tbl.remove(slot)),
         Some(liveness) => {
             h.liveness = liveness;
             h.wakers.side_mut(side).take().map(|w| w.wake());
+            None
         }
-    }
+    };
+    drop(tbl);
+    drop(removed);
 }
 
 /// Close the handle: no action if hdl==INVALID_HANDLE

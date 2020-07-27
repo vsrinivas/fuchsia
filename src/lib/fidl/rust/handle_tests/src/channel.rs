@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::LoggingFixture;
+use async_trait::async_trait;
 use fidl::HandleBased;
-use fuchsia_zircon_status as zx_status;
 
 fn reverse<T>(value: (T, T)) -> (T, T) {
     (value.1, value.0)
@@ -23,8 +23,9 @@ pub enum CreateHandlePurpose {
     PayloadChannel,
 }
 
+#[async_trait]
 pub trait Fixture: LoggingFixture {
-    fn create_handles(&self, purpose: CreateHandlePurpose) -> (fidl::Channel, fidl::Channel);
+    async fn create_handles(&self, purpose: CreateHandlePurpose) -> (fidl::Channel, fidl::Channel);
 }
 
 #[derive(Clone, Copy)]
@@ -33,12 +34,16 @@ enum AfterSend {
     CloseSender,
 }
 
-fn send_message(
+async fn send_message(
     fixture: &mut impl LoggingFixture,
     channels: (fidl::Channel, fidl::Channel),
     after_send: AfterSend,
     mut out: Vec<(&[u8], &mut Vec<fidl::Handle>)>,
 ) {
+    let channels = (
+        fidl::AsyncChannel::from_channel(channels.0).unwrap(),
+        fidl::AsyncChannel::from_channel(channels.1).unwrap(),
+    );
     let num_handles_in: Vec<_> = out.iter().map(|(_, handles)| handles.len()).collect();
     for (out_bytes, handles) in out.iter_mut() {
         fixture.log(&format!(
@@ -51,28 +56,19 @@ fn send_message(
         AfterSend::RemainOpen => (),
         AfterSend::CloseSender => drop(channels.0),
     }
-    let mut in_bytes = Vec::new();
-    for ((out_bytes, handles), num_handles_in) in out.iter_mut().zip(num_handles_in) {
-        loop {
-            // other channel should eventually receive the message, but we allow that propagation
-            // need not be instant
-            match channels.1.read_split(&mut in_bytes, *handles) {
-                Ok(()) => {
-                    assert_eq!(in_bytes.as_slice(), *out_bytes);
-                    assert_eq!(handles.len(), num_handles_in);
-                    return;
-                }
-                Err(zx_status::Status::SHOULD_WAIT) => {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                    continue;
-                }
-                Err(x) => panic!("Unexpected error {:?}", x),
-            }
-        }
+    for ((out_bytes, out_handles), num_handles_in) in out.iter_mut().zip(num_handles_in) {
+        let mut msg = fidl::MessageBuf::new();
+        // other channel should eventually receive the message, but we allow that propagation
+        // need not be instant
+        channels.1.recv_msg(&mut msg).await.unwrap();
+        let (bytes, handles) = msg.split_mut();
+        assert_eq!(bytes.as_slice(), *out_bytes);
+        assert_eq!(handles.len(), num_handles_in);
+        std::mem::swap(handles, out_handles);
     }
 }
 
-fn send_channel(
+async fn send_channel(
     fixture: &mut impl LoggingFixture,
     first: (fidl::Channel, fidl::Channel),
     second: (fidl::Channel, fidl::Channel),
@@ -80,29 +76,34 @@ fn send_channel(
     after_send_second: AfterSend,
 ) {
     let mut second_b = vec![second.1.into_handle()];
-    send_message(fixture, first, after_send_first, vec![(&[], &mut second_b)]);
+    send_message(fixture, first, after_send_first, vec![(&[], &mut second_b)]).await;
     send_message(
         fixture,
         (second.0, fidl::Channel::from_handle(second_b.into_iter().next().unwrap())),
         after_send_second,
         vec![(&[100, 101, 102, 103, 104], &mut vec![])],
-    );
+    )
+    .await;
 }
 
-pub fn run(mut fixture: impl Fixture) {
+pub async fn run(mut fixture: impl Fixture) {
     fixture.log(&format!("# send message a->b"));
-    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
-    send_message(&mut fixture, channels, AfterSend::RemainOpen, vec![(&[1, 2, 3], &mut vec![])]);
+    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel).await;
+    send_message(&mut fixture, channels, AfterSend::RemainOpen, vec![(&[1, 2, 3], &mut vec![])])
+        .await;
     fixture.log(&format!("# send message b->a"));
-    let channels = reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel));
-    send_message(&mut fixture, channels, AfterSend::RemainOpen, vec![(&[7, 8, 9], &mut vec![])]);
+    let channels = reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel).await);
+    send_message(&mut fixture, channels, AfterSend::RemainOpen, vec![(&[7, 8, 9], &mut vec![])])
+        .await;
 
     fixture.log(&format!("# send message then close a->b"));
-    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
-    send_message(&mut fixture, channels, AfterSend::CloseSender, vec![(&[1, 2, 3], &mut vec![])]);
+    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel).await;
+    send_message(&mut fixture, channels, AfterSend::CloseSender, vec![(&[1, 2, 3], &mut vec![])])
+        .await;
     fixture.log(&format!("# send message then close b->a"));
-    let channels = reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel));
-    send_message(&mut fixture, channels, AfterSend::CloseSender, vec![(&[7, 8, 9], &mut vec![])]);
+    let channels = reverse(fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel).await);
+    send_message(&mut fixture, channels, AfterSend::CloseSender, vec![(&[7, 8, 9], &mut vec![])])
+        .await;
 
     for reverse_ab in [false, true].iter() {
         for reverse_cd in [false, true].iter() {
@@ -127,22 +128,23 @@ pub fn run(mut fixture: impl Fixture) {
                             true => "d->c",
                         }
                     ));
-                    let ab = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
-                    let cd = fixture.create_handles(CreateHandlePurpose::PayloadChannel);
+                    let ab = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel).await;
+                    let cd = fixture.create_handles(CreateHandlePurpose::PayloadChannel).await;
                     send_channel(
                         &mut fixture,
                         maybe_reverse(*reverse_ab, ab),
                         maybe_reverse(*reverse_cd, cd),
                         *after_send_ab,
                         *after_send_cd,
-                    );
+                    )
+                    .await;
                 }
             }
         }
     }
 
     // Verify a very large send (just bytes to simplify the test for now)
-    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel);
+    let channels = fixture.create_handles(CreateHandlePurpose::PrimaryTestChannel).await;
     send_message(
         &mut fixture,
         channels,
@@ -405,13 +407,15 @@ pub fn run(mut fixture: impl Fixture) {
             (&[254], &mut vec![]),
             (&[255], &mut vec![]),
         ],
-    );
+    )
+    .await;
 }
 
 struct FidlFixture;
 
+#[async_trait]
 impl Fixture for FidlFixture {
-    fn create_handles(&self, _: CreateHandlePurpose) -> (fidl::Channel, fidl::Channel) {
+    async fn create_handles(&self, _: CreateHandlePurpose) -> (fidl::Channel, fidl::Channel) {
         fidl::Channel::create().unwrap()
     }
 }
@@ -423,7 +427,7 @@ impl LoggingFixture for FidlFixture {
 }
 
 #[cfg(test)]
-#[test]
-fn tests() {
-    run(FidlFixture)
+#[fuchsia_async::run_singlethreaded(test)]
+async fn tests() {
+    run(FidlFixture).await
 }

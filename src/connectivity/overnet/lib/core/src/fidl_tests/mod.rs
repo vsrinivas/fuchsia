@@ -12,7 +12,6 @@ use crate::test_util::NodeIdGenerator;
 use anyhow::Error;
 use fidl::HandleBased;
 use fuchsia_async::Task;
-use fuchsia_zircon_status as zx_status;
 use futures::prelude::*;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -49,9 +48,9 @@ impl fidl_fuchsia_overnet::ServiceProviderProxyInterface for Service {
 
 struct Fixture {
     dist_a_to_b: fidl::Channel,
-    dist_b: fidl::Channel,
+    dist_b: fidl::AsyncChannel,
     dist_a_to_c: fidl::Channel,
-    dist_c: fidl::Channel,
+    dist_c: fidl::AsyncChannel,
     test_name: String,
     _service_task: Task<()>,
 }
@@ -142,10 +141,12 @@ impl Fixture {
         router1.connect_to_service(router3.node_id(), &service, dist_c).await.unwrap();
         log::info!("{} {} get 3", test_name, fixture_id);
         let dist_c = recv_handle.next().await.unwrap();
+        let dist_b = fidl::AsyncChannel::from_channel(dist_b).unwrap();
+        let dist_c = fidl::AsyncChannel::from_channel(dist_c).unwrap();
         Fixture { dist_a_to_b, dist_b, dist_a_to_c, dist_c, test_name, _service_task: service_task }
     }
 
-    fn distribute_handle<H: HandleBased>(&self, h: H, target: Target) -> H {
+    async fn distribute_handle<H: HandleBased>(&self, h: H, target: Target) -> H {
         let h = h.into_handle();
         log::info!("{} distribute_handle: make {:?} on {:?}", self.test_name, h, target);
         let (dist_local, dist_remote) = match target {
@@ -154,23 +155,14 @@ impl Fixture {
             Target::C => (&self.dist_a_to_c, &self.dist_c),
         };
         assert!(dist_local.write(&[], &mut vec![h]) == Ok(()));
-        loop {
-            let (mut bytes, mut handles) = (Vec::new(), Vec::new());
-            match dist_remote.read_split(&mut bytes, &mut handles) {
-                Ok(()) => {
-                    assert_eq!(bytes, vec![]);
-                    assert_eq!(handles.len(), 1);
-                    let h = handles.into_iter().next().unwrap();
-                    log::info!("{} distribute_handle: remote is {:?}", self.test_name, h);
-                    return H::from_handle(h);
-                }
-                Err(zx_status::Status::SHOULD_WAIT) => {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                    continue;
-                }
-                Err(e) => panic!("{} Unexpected error {:?}", self.test_name, e),
-            }
-        }
+        let mut msg = fidl::MessageBuf::new();
+        dist_remote.recv_msg(&mut msg).await.unwrap();
+        let (bytes, handles) = msg.split_mut();
+        assert_eq!(bytes.len(), 0);
+        assert_eq!(handles.len(), 1);
+        let h = std::mem::replace(handles, vec![]).into_iter().next().unwrap();
+        log::info!("{} distribute_handle: remote is {:?}", self.test_name, h);
+        return H::from_handle(h);
     }
 
     pub fn log(&mut self, msg: &str) {
