@@ -40,7 +40,8 @@ class ROMTable {
     DEF_BIT(0, present);
 
     static auto GetAt(uint32_t offset, uint32_t N) {
-      return hwreg::RegisterAddr<Class0x1Entry>(offset + N * sizeof(uint32_t));
+      return hwreg::RegisterAddr<Class0x1Entry>(offset +
+                                                N * static_cast<uint32_t>(sizeof(uint32_t)));
     }
   };
 
@@ -54,7 +55,8 @@ class ROMTable {
     DEF_FIELD(1, 0, present);
 
     static auto GetAt(uint32_t offset, uint32_t N) {
-      return hwreg::RegisterAddr<Class0x9NarrowEntry>(offset + N * sizeof(uint32_t));
+      return hwreg::RegisterAddr<Class0x9NarrowEntry>(offset +
+                                                      N * static_cast<uint32_t>(sizeof(uint32_t)));
     }
   };
 
@@ -68,7 +70,8 @@ class ROMTable {
     DEF_FIELD(1, 0, present);
 
     static auto GetAt(uint32_t offset, uint32_t N) {
-      return hwreg::RegisterAddr<Class0x9WideEntry>(offset + N * sizeof(uint64_t));
+      return hwreg::RegisterAddr<Class0x9WideEntry>(offset +
+                                                    N * static_cast<uint32_t>(sizeof(uint64_t)));
     }
   };
 
@@ -128,11 +131,11 @@ class ROMTable {
     const ComponentIDRegister::Class classid =
         ComponentIDRegister::GetAt(offset).ReadFrom(&io).classid();
     const DeviceArchRegister arch_reg = DeviceArchRegister::GetAt(offset).ReadFrom(&io);
-    const auto architect = static_cast<const uint16_t>(arch_reg.architect());
-    const auto archid = static_cast<const uint16_t>(arch_reg.archid());
+    const auto architect = static_cast<uint16_t>(arch_reg.architect());
+    const auto archid = static_cast<uint16_t>(arch_reg.archid());
     if (IsTable(classid, architect, archid)) {
-      const auto format = static_cast<const uint8_t>(
-          Class0x9DeviceIDRegister::GetAt(offset).ReadFrom(&io).format());
+      const auto format =
+          static_cast<uint8_t>(Class0x9DeviceIDRegister::GetAt(offset).ReadFrom(&io).format());
 
       fitx::result<std::string_view, uint32_t> upper_bound = EntryIndexUpperBound(classid, format);
       if (upper_bound.is_error()) {
@@ -172,8 +175,8 @@ class ROMTable {
 
     printf(
         "expected ROM table or component at offset %u: "
-        "(class, architect, archid) = (%#hhx (%s), %#x, %#x)",
-        offset, classid, ToString(classid).data(), architect, archid);
+        "(class, architect, archid) = (%#x (%s), %#x, %#x)",
+        offset, static_cast<uint8_t>(classid), ToString(classid).data(), architect, archid);
     return fitx::error("unexpected component found");
   }
 

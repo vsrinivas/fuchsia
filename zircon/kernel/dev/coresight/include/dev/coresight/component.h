@@ -27,13 +27,28 @@ constexpr uint16_t kArchitect = 0x23b;
 // DEVARCH.ARCHID values.
 namespace archid {
 
+constexpr uint16_t kCTI = 0x1a14;
+constexpr uint16_t kETMv3 = 0x3a13;
+constexpr uint16_t kETMv4 = 0x4a13;
+constexpr uint16_t kPMUv2 = 0x1a16;
+constexpr uint16_t kPMUv3 = 0x2a16;
 constexpr uint16_t kROMTable = 0x0af7;
+constexpr uint16_t kV8Dot0A = 0x6a15;
+constexpr uint16_t kV8Dot1A = 0x7a15;
+constexpr uint16_t kV8Dot2A = 0x8a15;
 
 }  // namespace archid
 
 namespace partid {
 
+constexpr uint16_t kCTI400 = 0x0906;  // SoC400 generation
+constexpr uint16_t kCTI600 = 0x09ed;  // SoC600 generation
+constexpr uint16_t kETB = 0x0907;
 constexpr uint16_t kTimestampGenerator = 0x0101;
+constexpr uint16_t kTMC = 0x0961;
+constexpr uint16_t kTPIU = 0x0912;
+constexpr uint16_t kTraceFunnel = 0x0908;
+constexpr uint16_t kTraceReplicator = 0x0909;
 
 }  // namespace partid
 
@@ -67,7 +82,7 @@ struct ComponentIDRegister : public hwreg::RegisterBase<ComponentIDRegister, uin
   static auto Get() { return GetAt(0u); }
 };
 
-// [CS] B.2.2
+// B.2.2
 struct PeripheralID0Register : public hwreg::RegisterBase<PeripheralID0Register, uint32_t> {
   DEF_RSVDZ_FIELD(31, 8);
   DEF_FIELD(7, 0, part0);
@@ -88,6 +103,39 @@ struct PeripheralID1Register : public hwreg::RegisterBase<PeripheralID1Register,
   }
   static auto Get() { return GetAt(0); }
 };
+
+struct PeripheralID2Register : public hwreg::RegisterBase<PeripheralID2Register, uint32_t> {
+  DEF_RSVDZ_FIELD(31, 8);
+  DEF_FIELD(7, 4, revision);
+  DEF_BIT(3, jedec);
+  DEF_FIELD(2, 0, des1);
+
+  static auto GetAt(uint32_t offset) {
+    return hwreg::RegisterAddr<PeripheralID2Register>(offset + 0xfe8);
+  }
+  static auto Get() { return GetAt(0); }
+};
+
+struct PeripheralID4Register : public hwreg::RegisterBase<PeripheralID4Register, uint32_t> {
+  DEF_RSVDZ_FIELD(31, 8);
+  DEF_FIELD(7, 4, size);
+  DEF_FIELD(3, 0, des2);
+
+  static auto GetAt(uint32_t offset) {
+    return hwreg::RegisterAddr<PeripheralID4Register>(offset + 0xfd0);
+  }
+  static auto Get() { return GetAt(0); }
+};
+
+// [CS] B2.2.2
+// JEDEC ID of the designer.
+template <typename IoProvider>
+inline uint16_t GetDesigner(IoProvider io) {
+  const auto des0 = static_cast<uint16_t>(PeripheralID1Register::Get().ReadFrom(&io).des0());
+  const auto des1 = static_cast<uint16_t>(PeripheralID2Register::Get().ReadFrom(&io).des1());
+  const auto des2 = static_cast<uint16_t>(PeripheralID4Register::Get().ReadFrom(&io).des2());
+  return static_cast<uint16_t>((des2 << 7) | (des1 << 4) | des0);
+}
 
 // [CS] B2.2.2
 // This number is an ID chosen by the designer.
@@ -190,7 +238,7 @@ inline std::string_view ToString(ComponentIDRegister::Class classid) {
     case ComponentIDRegister::Class::kNonStandard:
       return "non-standard";
     default:
-      printf("unrecognized component class: %#hhx\n", classid);
+      printf("unrecognized component class: %#x\n", static_cast<uint8_t>(classid));
       return "unknown";
   }
 }

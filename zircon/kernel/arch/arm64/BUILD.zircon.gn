@@ -98,6 +98,7 @@ if (current_toolchain == default_toolchain) {
       "arch.cc",
       "asm.S",
       "cache-ops.S",
+      "coresight.cc",
       "debugger.cc",
       "exceptions.S",
       "exceptions_c.cc",
@@ -121,6 +122,7 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       ":boot-mmu",
+      "$zx/kernel/dev/coresight",
       "$zx/kernel/dev/interrupt/arm_gic/common",
       "$zx/kernel/dev/iommu/dummy",
       "$zx/kernel/dev/psci",
