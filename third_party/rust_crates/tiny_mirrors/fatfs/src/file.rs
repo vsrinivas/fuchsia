@@ -64,8 +64,11 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
         // Note: when between clusters it returns position after previous cluster
         match self.current_cluster {
             Some(n) => {
+                assert!(self.offset > 0); // offset == 0 should mean current_clusters is None.
                 let cluster_size = self.fs.cluster_size();
-                let offset_in_cluster = self.offset % cluster_size;
+                // We want offset_in_cluster to be in the range [1..cluster_size], and not
+                // [0..cluster_size - 1].
+                let offset_in_cluster = (self.offset - 1) % cluster_size + 1;
                 let offset_in_fs = self.fs.offset_from_cluster(n) + (offset_in_cluster as u64);
                 Some(offset_in_fs)
             },
