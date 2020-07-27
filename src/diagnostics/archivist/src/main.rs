@@ -32,6 +32,10 @@ pub struct Args {
     #[argh(switch)]
     disable_log_connector: bool,
 
+    /// whether to connecto to event source or not.
+    #[argh(switch)]
+    disable_event_source: bool,
+
     /// initializes syslog library with a log socket to itself
     #[argh(switch)]
     consume_own_logs: bool,
@@ -65,8 +69,6 @@ fn main() -> Result<(), Error> {
 
     let legacy_event_provider = connect_to_service::<ComponentEventProviderMarker>()
         .context("failed to connect to event provider")?;
-    let event_source =
-        connect_to_service::<EventSourceMarker>().context("failed to connect to event source")?;
 
     diagnostics::init();
 
@@ -78,10 +80,13 @@ fn main() -> Result<(), Error> {
     let num_threads = archivist_configuration.num_threads;
 
     let mut archivist = archivist::Archivist::new(archivist_configuration)?;
-    archivist
-        .install_logger_services()
-        .add_event_source("v1", Box::new(legacy_event_provider))
-        .add_event_source("v2", Box::new(event_source));
+    archivist.install_logger_services().add_event_source("v1", Box::new(legacy_event_provider));
+
+    if !opt.disable_event_source {
+        let event_source = connect_to_service::<EventSourceMarker>()
+            .context("failed to connect to event source")?;
+        archivist.add_event_source("v2", Box::new(event_source));
+    }
     if let Some(log_server) = log_server {
         fasync::Task::spawn(
             archivist.log_manager().clone().drain_internal_log_sink(log_server, log_name),

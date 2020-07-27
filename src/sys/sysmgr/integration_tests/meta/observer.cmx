@@ -2,6 +2,7 @@
     "program": {
         "args": [
             "--disable-klog",
+            "--disable-event-source",
             "--config-path",
             "/pkg/data/observer_config.json"
         ],
