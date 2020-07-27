@@ -32,7 +32,8 @@ namespace platform_bus {
 class PlatformBus;
 
 class PlatformDevice;
-using PlatformDeviceType = ddk::Device<PlatformDevice, ddk::GetProtocolable, ddk::Rxrpcable>;
+using PlatformDeviceType =
+    ddk::Device<PlatformDevice, ddk::GetProtocolable, ddk::Rxrpcable, ddk::Initializable>;
 
 // This class represents a platform device attached to the platform bus.
 // Instances of this class are created by PlatformBus at boot time when the board driver
@@ -65,6 +66,7 @@ class PlatformDevice : public PlatformDeviceType,
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_status_t DdkRxrpc(zx_handle_t channel);
+  void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
 
   // Platform device protocol implementation, for devices that run in-process.

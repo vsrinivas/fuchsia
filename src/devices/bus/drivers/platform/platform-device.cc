@@ -488,41 +488,34 @@ zx_status_t PlatformDevice::Start() {
     device_add_flags |= DEVICE_ADD_MUST_ISOLATE;
   }
 
-  const size_t metadata_count = resources_.metadata_count();
-  const size_t boot_metadata_count = resources_.boot_metadata_count();
-  if (metadata_count > 0 || boot_metadata_count > 0) {
-    // Keep device invisible until after we add its metadata.
-    device_add_flags |= DEVICE_ADD_INVISIBLE;
-  }
-
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, vid_},
       {BIND_PLATFORM_DEV_PID, 0, pid_},
       {BIND_PLATFORM_DEV_DID, 0, did_},
   };
-  zx_status_t status = DdkAdd(ddk::DeviceAddArgs(name)
-                                  .set_flags(device_add_flags)
-                                  .set_props(props)
-                                  .set_proto_id(ZX_PROTOCOL_PDEV)
-                                  .set_proxy_args((type_ == Isolated ? argstr : nullptr)));
-  if (status != ZX_OK) {
-    return status;
-  }
+  return DdkAdd(ddk::DeviceAddArgs(name)
+                    .set_flags(device_add_flags)
+                    .set_props(props)
+                    .set_proto_id(ZX_PROTOCOL_PDEV)
+                    .set_proxy_args((type_ == Isolated ? argstr : nullptr)));
+}
 
+void PlatformDevice::DdkInit(ddk::InitTxn txn) {
+  const size_t metadata_count = resources_.metadata_count();
+  const size_t boot_metadata_count = resources_.boot_metadata_count();
   if (metadata_count > 0 || boot_metadata_count > 0) {
     for (size_t i = 0; i < metadata_count; i++) {
       const auto& metadata = resources_.metadata(i);
-      status = DdkAddMetadata(metadata.type, metadata.data_buffer, metadata.data_size);
+      zx_status_t status = DdkAddMetadata(metadata.type, metadata.data_buffer, metadata.data_size);
       if (status != ZX_OK) {
-        DdkAsyncRemove();
-        return status;
+        return txn.Reply(status);
       }
     }
 
     for (size_t i = 0; i < boot_metadata_count; i++) {
       const auto& metadata = resources_.boot_metadata(i);
       fbl::Array<uint8_t> data;
-      status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &data);
+      zx_status_t status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &data);
       if (status == ZX_OK) {
         status = DdkAddMetadata(metadata.zbi_type, data.data(), data.size());
       }
@@ -530,11 +523,8 @@ zx_status_t PlatformDevice::Start() {
         zxlogf(WARNING, "%s failed to add metadata for new device", __func__);
       }
     }
-
-    DdkMakeVisible();
   }
-
-  return ZX_OK;
+  return txn.Reply(ZX_OK);
 }
 
 }  // namespace platform_bus

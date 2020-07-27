@@ -36,6 +36,8 @@ class DeviceResources {
   inline size_t boot_metadata_count() const { return boot_metadata_.size(); }
 
  private:
+  bool CopyMetadataDataBuffers();
+
   // Platform bus resources copied from the pbus_dev_t struct from the board driver.
   fbl::Array<pbus_mmio_t> mmios_;
   fbl::Array<pbus_irq_t> irqs_;
@@ -43,6 +45,9 @@ class DeviceResources {
   fbl::Array<pbus_smc_t> smcs_;
   fbl::Array<pbus_metadata_t> metadata_;
   fbl::Array<pbus_boot_metadata_t> boot_metadata_;
+
+  // Backing buffers for each |metadata_| data_buffer pointer.
+  fbl::Array<fbl::Array<uint8_t>> metadata_data_buffers_;
 };
 
 }  // namespace platform_bus

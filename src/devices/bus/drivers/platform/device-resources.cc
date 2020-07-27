@@ -36,7 +36,30 @@ zx_status_t DeviceResources::Init(const pbus_dev_t* pdev) {
     return ZX_ERR_NO_MEMORY;
   }
 
+  if (!CopyMetadataDataBuffers()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
   return ZX_OK;
+}
+
+bool DeviceResources::CopyMetadataDataBuffers() {
+  // Each pbus_metadata_t struct contains a data_buffer pointer. We need to copy the
+  // buffer into our own array and overwrite the existing pointer.
+  fbl::AllocChecker ac;
+  metadata_data_buffers_.reset(new (&ac) fbl::Array<uint8_t>[metadata_count()], metadata_count());
+  if (!ac.check()) {
+    return false;
+  }
+  for (size_t i = 0; i < metadata_count(); i++) {
+    size_t data_len = metadata(i).data_size;
+    auto data_buffer = static_cast<const uint8_t*>(metadata(i).data_buffer);
+    if (!CopyResources(data_len, data_buffer, &metadata_data_buffers_[i])) {
+      return false;
+    }
+    metadata_[i].data_buffer = metadata_data_buffers_[i].get();
+  }
+  return true;
 }
 
 }  // namespace platform_bus
