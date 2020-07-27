@@ -8,7 +8,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
     status: Status,
     expected_status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode,
 ) {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     let pkg_url = "fuchsia-pkg://fuchsia.com/failure/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
 
@@ -20,8 +20,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
     env.resolver.url(pkg_url).fail(status);
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -82,15 +81,14 @@ async fn reports_network() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_metrics_fail_to_send() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).build();
+    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()

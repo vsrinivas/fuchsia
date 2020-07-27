@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_paver_connect_error() {
-    let env = TestEnv::builder().unregister_protocol(Protocol::Paver).build();
+    let env = TestEnv::builder().unregister_protocol(Protocol::Paver).oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -14,8 +14,7 @@ async fn fails_on_paver_connect_error() {
         .add_file("zbi", "fake_zbi");
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -39,8 +38,10 @@ async fn fails_on_paver_connect_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_image_write_error() {
-    let env =
-        TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
+    let env = TestEnv::builder()
+        .paver_service(|builder| builder.call_hook(|_| Status::INTERNAL))
+        .oneshot(true)
+        .build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -48,8 +49,7 @@ async fn fails_on_image_write_error() {
         .add_file("zbi", "fake_zbi");
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -85,7 +85,7 @@ async fn fails_on_image_write_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -94,11 +94,10 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
-    env.run_system_updater(SystemUpdaterArgs {
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         skip_recovery: Some(true),
-        oneshot: Some(true),
         ..Default::default()
     })
     .await
@@ -129,6 +128,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
 async fn writes_to_both_configs_if_abr_not_supported() {
     let env = TestEnv::builder()
         .paver_service(|builder| builder.boot_manager_close_with_epitaph(Status::NOT_SUPPORTED))
+        .oneshot(true)
         .build();
 
     env.resolver
@@ -136,8 +136,7 @@ async fn writes_to_both_configs_if_abr_not_supported() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -186,16 +185,17 @@ async fn do_writes_to_inactive_config_if_abr_supported(
     active_config: paver::Configuration,
     target_config: paver::Configuration,
 ) {
-    let env =
-        TestEnv::builder().paver_service(|builder| builder.active_config(active_config)).build();
+    let env = TestEnv::builder()
+        .paver_service(|builder| builder.active_config(active_config))
+        .oneshot(true)
+        .build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake_zbi");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -252,7 +252,7 @@ async fn writes_to_inactive_config_if_abr_supported_and_active_config_b() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_called_legacy_zedboot() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -260,8 +260,7 @@ async fn writes_recovery_called_legacy_zedboot() {
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -298,7 +297,7 @@ async fn writes_recovery_called_legacy_zedboot() {
 // TODO(52356): drop this duplicate test when "zedboot" is no longer allowed/used.
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -306,8 +305,7 @@ async fn writes_recovery() {
         .add_file("zbi", "fake zbi")
         .add_file("recovery", "new recovery");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -343,7 +341,7 @@ async fn writes_recovery() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_vbmeta() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -352,8 +350,7 @@ async fn writes_recovery_vbmeta() {
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -394,7 +391,7 @@ async fn writes_recovery_vbmeta() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_fuchsia_vbmeta() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -402,8 +399,7 @@ async fn writes_fuchsia_vbmeta() {
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()

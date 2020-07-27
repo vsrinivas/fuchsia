@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn validates_board() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.set_board_name("x64");
 
@@ -17,8 +17,7 @@ async fn validates_board() {
         .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -31,7 +30,7 @@ async fn validates_board() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_mismatched_board() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.set_board_name("x64");
 
@@ -46,8 +45,7 @@ async fn rejects_mismatched_board() {
         .add_file("bootloader", "new bootloader");
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()

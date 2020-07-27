@@ -9,9 +9,15 @@ use {
     fidl_fuchsia_paver::DataSinkProxy,
     fidl_fuchsia_pkg::PackageCacheProxy,
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
+    fidl_fuchsia_update_installer::{
+        CompleteData, FailPrepareData, FetchData, PrepareData, RebootData, StageData,
+        State as FidlState, WaitToRebootData,
+    },
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::prelude::*,
+    parking_lot::Mutex,
     serde::{Deserialize, Serialize},
+    std::sync::Arc,
     update_package::{Image, UpdateMode, UpdatePackage},
 };
 
@@ -27,6 +33,7 @@ mod resolver;
 pub(super) use {
     config::Config,
     environment::{BuildInfo, CobaltConnector, Environment},
+    history::{UpdateAttempt, UpdateHistory},
     resolver::ResolveError,
 };
 
@@ -51,15 +58,32 @@ pub enum State {
     FAIL,
 }
 
+// TODO(fxb/55407): update this to match the new State implementation.
+impl From<&State> for FidlState {
+    fn from(state: &State) -> Self {
+        match state {
+            State::PREPARE => Self::Prepare(PrepareData {}),
+            State::DOWNLOAD => Self::Fetch(FetchData { info: None, progress: None }),
+            State::STAGE => Self::Stage(StageData { info: None, progress: None }),
+            State::REBOOT => Self::Reboot(RebootData { info: None, progress: None }),
+            State::FINALIZE => Self::WaitToReboot(WaitToRebootData { info: None, progress: None }),
+            State::COMPLETE => Self::Complete(CompleteData { info: None, progress: None }),
+            State::FAIL => Self::FailPrepare(FailPrepareData {}),
+        }
+    }
+}
+
 /// Updates the system in the given `Environment` using the provided config options.
-pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
+pub async fn update(
+    config: Config,
+    env: Environment,
+    history: Arc<Mutex<UpdateHistory>>,
+) -> Result<(), ()> {
     // The only operation allowed to fail in this function is update_attempt. The rest of the
     // functionality here sets up the update attempt and takes the appropriate actions based on
     // whether the update attempt succeeds or fails.
 
     let mut phase = metrics::Phase::Tufupdate;
-
-    let mut history = history::UpdateHistory::load().await;
 
     // wait for both the update attempt to finish and for all cobalt events to be flushed to the
     // service.
@@ -69,7 +93,7 @@ pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
             fx_log_info!("starting system update with config: {:?}", config);
             cobalt.log_ota_start(&config.target_version, config.initiator, config.start_time);
 
-            let attempt = history.start_update_attempt(
+            let attempt = history.lock().start_update_attempt(
                 // TODO(fxb/55408): replace with the real options
                 history::UpdateOptions,
                 config.update_url.clone(),
@@ -81,12 +105,12 @@ pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
 
             // TODO(fxb/55407): replace with the real terminal state
             let attempt = attempt.finish(target_version, State::COMPLETE);
-            history.record_update_attempt(attempt);
+            history.lock().record_update_attempt(attempt);
 
             cobalt.log_ota_result_attempt(
                 &config.target_version,
                 config.initiator,
-                history.attempts(),
+                history.lock().attempts(),
                 phase,
                 status_code,
             );
@@ -103,7 +127,7 @@ pub async fn update(config: Config, env: Environment) -> Result<(), ()> {
                 channel::update_current_channel().await;
             }
 
-            history.save().await;
+            history.lock().save().await;
 
             res
         },

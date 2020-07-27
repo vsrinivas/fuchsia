@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_invalid_package_name() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     // Name the update package something other than "update" and assert that the process fails to
     // validate the update package.
@@ -22,11 +22,10 @@ async fn rejects_invalid_package_name() {
     let not_update_package_url = "fuchsia-pkg://fuchsia.com/not_update";
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             update: Some(not_update_package_url),
-            oneshot: Some(true),
             ..Default::default()
         })
         .await;
@@ -58,13 +57,12 @@ async fn rejects_invalid_package_name() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_if_package_unavailable() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver.mock_resolve_failure(UPDATE_PKG_URL, Status::NOT_FOUND);
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -77,7 +75,7 @@ async fn fails_if_package_unavailable() {
 
 #[fasync::run_singlethreaded(test)]
 async fn packages_json_takes_precedence() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     let pkg1_url = "fuchsia-pkg://fuchsia.com/amber/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
     let pkg2_url = "fuchsia-pkg://fuchsia.com/pkgfs/0?hash=ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff";
@@ -102,8 +100,7 @@ async fn packages_json_takes_precedence() {
             .package("pkgfs/0", "ffeeddccbbaa9988776655443322110000112233445566778899aabbccddeeff"),
     );
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()

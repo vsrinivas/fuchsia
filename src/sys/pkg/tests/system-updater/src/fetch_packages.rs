@@ -10,11 +10,11 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_package_resolver_connect_error() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::PackageResolver).build();
+    let env =
+        TestEnvBuilder::new().unregister_protocol(Protocol::PackageResolver).oneshot(true).build();
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -34,7 +34,7 @@ async fn fails_on_package_resolver_connect_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_update_package_fetch_error() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver.register_package("update", "upd4t3").add_file(
         "packages",
@@ -45,8 +45,7 @@ async fn fails_on_update_package_fetch_error() {
     env.resolver.mock_resolve_failure(system_image_url, Status::NOT_FOUND);
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -81,7 +80,7 @@ async fn fails_on_update_package_fetch_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_content_package_fetch_error() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     let pkg1_url = pinned_pkg_url!("package1/0", "aa");
     let pkg2_url = pinned_pkg_url!("package2/0", "00");
@@ -122,8 +121,7 @@ async fn fails_on_content_package_fetch_error() {
     let ((), ()) = future::join(
         async {
             let result = env
-                .run_system_updater(SystemUpdaterArgs {
-                    oneshot: Some(true),
+                .run_system_updater_oneshot(SystemUpdaterArgs {
                     initiator: Some(Initiator::User),
                     target: Some("m3rk13"),
                     ..Default::default()
@@ -184,7 +182,7 @@ async fn fails_on_content_package_fetch_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_when_package_cache_sync_fails() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
     env.cache_service.set_sync_response(Err(Status::INTERNAL));
     env.resolver
         .register_package("update", "upd4t3")
@@ -194,8 +192,7 @@ async fn fails_when_package_cache_sync_fails() {
         .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()

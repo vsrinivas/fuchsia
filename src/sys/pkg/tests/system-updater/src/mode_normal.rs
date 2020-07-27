@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn updates_the_system() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -16,8 +16,7 @@ async fn updates_the_system() {
         .url(SYSTEM_IMAGE_URL)
         .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -63,7 +62,7 @@ async fn updates_the_system() {
 
 #[fasync::run_singlethreaded(test)]
 async fn requires_zbi() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -74,8 +73,7 @@ async fn requires_zbi() {
         .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()

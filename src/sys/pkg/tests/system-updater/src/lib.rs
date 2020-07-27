@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::AppBuilder,
+        client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_zircon::Status,
@@ -70,6 +70,8 @@ type SystemUpdaterInteractions = Arc<Mutex<Vec<SystemUpdaterInteraction>>>;
 struct TestEnvBuilder {
     paver_service_builder: MockPaverServiceBuilder,
     blocked_protocols: HashSet<Protocol>,
+    oneshot: bool,
+    history: Option<serde_json::Value>,
 }
 
 impl TestEnvBuilder {
@@ -77,6 +79,8 @@ impl TestEnvBuilder {
         TestEnvBuilder {
             paver_service_builder: MockPaverServiceBuilder::new(),
             blocked_protocols: HashSet::new(),
+            oneshot: false,
+            history: None,
         }
     }
 
@@ -93,8 +97,18 @@ impl TestEnvBuilder {
         self
     }
 
+    fn oneshot(mut self, oneshot: bool) -> Self {
+        self.oneshot = oneshot;
+        self
+    }
+
+    fn history(mut self, history: serde_json::Value) -> Self {
+        self.history = Some(history);
+        self
+    }
+
     fn build(self) -> TestEnv {
-        let Self { paver_service_builder, blocked_protocols } = self;
+        let Self { paver_service_builder, blocked_protocols, oneshot, history } = self;
 
         // A buffer to store all the interactions the system-updater has with external services.
         let interactions = Arc::new(Mutex::new(vec![]));
@@ -109,6 +123,27 @@ impl TestEnvBuilder {
 
         let misc_path = test_dir.path().join("misc");
         create_dir(&misc_path).expect("create misc dir");
+
+        // Optionally write the pre-configured update history.
+        if let Some(history) = history {
+            serde_json::to_writer(
+                File::create(data_path.join("update_history.json")).unwrap(),
+                &history,
+            )
+            .unwrap()
+        }
+
+        // Set up system-updater to run in --oneshot false code path.
+        let mut system_updater_builder = None;
+        if !oneshot {
+            system_updater_builder = Some(system_updater_app_builder(
+                &data_path,
+                &build_info_path,
+                &misc_path,
+                RawSystemUpdaterArgs(&[]),
+                Default::default(),
+            ));
+        }
 
         // Set up the paver service to push events to our interactions buffer by overriding
         // call_hook and firmware_hook.
@@ -213,6 +248,9 @@ impl TestEnvBuilder {
             .expect("nested environment to create successfully");
         fasync::Task::spawn(fs.collect()).detach();
 
+        let system_updater = system_updater_builder
+            .map(|builder| builder.spawn(env.launcher()).expect("sustem updater to launch"));
+
         TestEnv {
             env,
             resolver,
@@ -226,6 +264,7 @@ impl TestEnvBuilder {
             build_info_path,
             misc_path,
             interactions,
+            system_updater,
         }
     }
 }
@@ -243,6 +282,7 @@ struct TestEnv {
     build_info_path: PathBuf,
     misc_path: PathBuf,
     interactions: SystemUpdaterInteractions,
+    system_updater: Option<App>,
 }
 
 impl TestEnv {
@@ -302,42 +342,31 @@ impl TestEnv {
         .unwrap()
     }
 
-    async fn run_system_updater<'a>(
+    async fn run_system_updater_oneshot<'a>(
         &self,
         args: SystemUpdaterArgs<'a>,
     ) -> Result<(), fuchsia_component::client::OutputError> {
-        self.run_system_updater_args(args, Default::default()).await
+        self.run_system_updater_oneshot_args(args, Default::default()).await
     }
 
-    async fn run_system_updater_args<'a>(
+    async fn run_system_updater_oneshot_args<'a>(
         &'a self,
         args: impl ToSystemUpdaterCliArgs,
         env: SystemUpdaterEnv,
     ) -> Result<(), fuchsia_component::client::OutputError> {
         let launcher = self.launcher();
-        let data_dir = File::open(&self.data_path).expect("open data dir");
-        let build_info_dir = File::open(&self.build_info_path).expect("open config dir");
-        let misc_dir = File::open(&self.misc_path).expect("open misc dir");
 
-        let mut system_updater = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx",
+        let output = system_updater_app_builder(
+            &self.data_path,
+            &self.build_info_path,
+            &self.misc_path,
+            args,
+            env,
         )
-        .add_dir_to_namespace("/config/build-info".to_string(), build_info_dir)
-        .expect("/config/build-info to mount")
-        .add_dir_to_namespace("/misc".to_string(), misc_dir)
-        .expect("/misc to mount")
-        .args(args.to_args());
-        if env.mount_data {
-            system_updater = system_updater
-                .add_dir_to_namespace("/data".to_string(), data_dir)
-                .expect("/data to mount");
-        }
-
-        let output = system_updater
-            .output(launcher)
-            .expect("system updater to launch")
-            .await
-            .expect("no errors while waiting for exit");
+        .output(launcher)
+        .expect("system updater to launch")
+        .await
+        .expect("no errors while waiting for exit");
 
         if !output.stdout.is_empty() {
             eprintln!("TEST: system updater stdout:\n{}", String::from_utf8_lossy(&output.stdout));
@@ -350,6 +379,35 @@ impl TestEnv {
         assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
         output.ok()
     }
+}
+
+fn system_updater_app_builder(
+    data_path: &PathBuf,
+    build_info_path: &PathBuf,
+    misc_path: &PathBuf,
+    args: impl ToSystemUpdaterCliArgs,
+    env: SystemUpdaterEnv,
+) -> AppBuilder {
+    let data_dir = File::open(data_path).expect("open data dir");
+    let build_info_dir = File::open(build_info_path).expect("open config dir");
+    let misc_dir = File::open(misc_path).expect("open misc dir");
+
+    let mut system_updater = AppBuilder::new(
+        "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater.cmx",
+    )
+    .add_dir_to_namespace("/config/build-info".to_string(), build_info_dir)
+    .expect("/config/build-info to mount")
+    .add_dir_to_namespace("/misc".to_string(), misc_dir)
+    .expect("/misc to mount")
+    .args(args.to_args());
+
+    if env.mount_data {
+        system_updater = system_updater
+            .add_dir_to_namespace("/data".to_string(), data_dir)
+            .expect("/data to mount");
+    }
+
+    system_updater
 }
 
 trait ToSystemUpdaterCliArgs {
@@ -391,7 +449,6 @@ struct SystemUpdaterArgs<'a> {
     update: Option<&'a str>,
     reboot: Option<bool>,
     skip_recovery: Option<bool>,
-    oneshot: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -440,9 +497,7 @@ impl SystemUpdaterArgs<'_> {
         if let Some(skip_recovery) = self.skip_recovery {
             args.extend(vec!["--skip-recovery".to_owned(), skip_recovery.to_string()]);
         }
-        if let Some(oneshot) = self.oneshot {
-            args.extend(vec!["--oneshot".to_owned(), oneshot.to_string()]);
-        }
+        args.extend(vec!["--oneshot".to_owned(), "true".to_owned()]);
 
         args
     }

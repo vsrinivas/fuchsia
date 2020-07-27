@@ -16,7 +16,7 @@ fn force_recovery_json() -> String {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_and_force_reboots_into_it() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     let package_url = SYSTEM_IMAGE_URL;
     env.resolver
@@ -26,8 +26,7 @@ async fn writes_recovery_and_force_reboots_into_it() {
         .add_file("recovery", "the recovery image")
         .add_file("recovery.vbmeta", "the recovery vbmeta");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         ..Default::default()
@@ -81,18 +80,17 @@ async fn writes_recovery_and_force_reboots_into_it() {
 
 #[fasync::run_singlethreaded(test)]
 async fn reboots_regardless_of_reboot_arg() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages", "")
         .add_file("update-mode", &force_recovery_json());
 
-    env.run_system_updater(SystemUpdaterArgs {
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         target: Some("m3rk13"),
         reboot: Some(false),
-        oneshot: Some(true),
         ..Default::default()
     })
     .await
@@ -120,7 +118,7 @@ async fn reboots_regardless_of_reboot_arg() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_zbi() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -133,8 +131,7 @@ async fn rejects_zbi() {
         .add_file("zbi", "fake zbi");
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -147,7 +144,7 @@ async fn rejects_zbi() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_skip_recovery_flag() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -155,11 +152,10 @@ async fn rejects_skip_recovery_flag() {
         .add_file("update-mode", &force_recovery_json());
 
     let result = env
-        .run_system_updater(SystemUpdaterArgs {
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             skip_recovery: Some(true),
-            oneshot: Some(true),
             ..Default::default()
         })
         .await;

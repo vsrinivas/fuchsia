@@ -4,22 +4,25 @@
 
 use {
     super::{merkle_str, *},
+    fidl_fuchsia_pkg::PackageUrl,
+    fidl_fuchsia_update_installer::{
+        CompleteData, FetchData, InstallerMarker, Options, State, UpdateResult,
+    },
     pretty_assertions::assert_eq,
     serde_json::json,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_without_writable_data() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater_args(
+    env.run_system_updater_oneshot_args(
         SystemUpdaterArgs {
-            oneshot: Some(true),
             initiator: Some(Initiator::User),
             target: Some("m3rk13"),
             ..Default::default()
@@ -91,7 +94,7 @@ fn strip_attempt_ids(mut value: serde_json::Value) -> serde_json::Value {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_history() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     // source/target CLI params are no longer trusted for update history values.
     let source = merkle_str!("ab");
@@ -104,8 +107,7 @@ async fn writes_history() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
         source: Some(source),
         target: Some(target),
@@ -137,7 +139,7 @@ async fn writes_history() {
 
 #[fasync::run_singlethreaded(test)]
 async fn replaces_bogus_history() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.write_history(json!({
         "valid": "no",
@@ -148,13 +150,9 @@ async fn replaces_bogus_history() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
-        start: Some(42),
-        ..Default::default()
-    })
-    .await
-    .unwrap();
+    env.run_system_updater_oneshot(SystemUpdaterArgs { start: Some(42), ..Default::default() })
+        .await
+        .unwrap();
 
     assert_eq!(
         env.read_history().map(strip_attempt_ids),
@@ -178,7 +176,7 @@ async fn replaces_bogus_history() {
 
 #[fasync::run_singlethreaded(test)]
 async fn increments_attempts_counter_on_retry() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     let source = merkle_str!("ab");
     let target = merkle_str!("ba");
@@ -190,8 +188,7 @@ async fn increments_attempts_counter_on_retry() {
         .add_file("zbi", "fake zbi");
 
     let _ = env
-        .run_system_updater(SystemUpdaterArgs {
-            oneshot: Some(true),
+        .run_system_updater_oneshot(SystemUpdaterArgs {
             update: Some("fuchsia-pkg://fuchsia.com/not-found"),
             source: Some(source),
             target: Some(target),
@@ -201,8 +198,7 @@ async fn increments_attempts_counter_on_retry() {
         .await
         .unwrap_err();
 
-    env.run_system_updater(SystemUpdaterArgs {
-        oneshot: Some(true),
+    env.run_system_updater_oneshot(SystemUpdaterArgs {
         source: Some(source),
         target: Some(target),
         start: Some(20),
@@ -242,5 +238,104 @@ async fn increments_attempts_counter_on_retry() {
             }
             ],
         }))
+    );
+}
+
+/// When there's history, the history FIDL APIs should return that history.
+#[fasync::run_singlethreaded(test)]
+async fn serves_fidl_with_history_present() {
+    let env = TestEnv::builder()
+        .history(json!({
+            "version": "1",
+            "content": [
+            {
+                "id": "1",
+                "source": {
+                    "update_hash": "",
+                },
+                "target": {
+                    "update_hash": "",
+                },
+                "options": null,
+                "url": "fuchsia-pkg://fuchsia.com/second-attempt",
+                "start": 20,
+                "state": "COMPLETE",
+            },
+            {
+                "id": "0",
+                "source": {
+                    "update_hash": "",
+                },
+                "target": {
+                    "update_hash": "",
+                },
+                "options": null,
+                "url": "fuchsia-pkg://fuchsia.com/first-attempt",
+                "start": 10,
+                "state": "DOWNLOAD",
+            }
+            ],
+        }))
+        .build();
+
+    let installer_proxy =
+        env.system_updater.as_ref().unwrap().connect_to_service::<InstallerMarker>().unwrap();
+
+    assert_eq!(
+        installer_proxy.get_last_update_result().await.unwrap(),
+        UpdateResult {
+            attempt_id: Some("1".to_string()),
+            url: Some(PackageUrl { url: "fuchsia-pkg://fuchsia.com/second-attempt".to_string() }),
+            options: Some(Options {
+                initiator: None,
+                allow_attach_to_existing_attempt: None,
+                should_write_recovery: None,
+            }),
+            state: Some(State::Complete(CompleteData { info: None, progress: None })),
+        }
+    );
+    assert_eq!(
+        installer_proxy.get_update_result("0").await.unwrap(),
+        UpdateResult {
+            attempt_id: Some("0".to_string()),
+            url: Some(PackageUrl { url: "fuchsia-pkg://fuchsia.com/first-attempt".to_string() }),
+            options: Some(Options {
+                initiator: None,
+                allow_attach_to_existing_attempt: None,
+                should_write_recovery: None,
+            }),
+            state: Some(State::Fetch(FetchData { info: None, progress: None })),
+        }
+    );
+    assert_eq!(
+        installer_proxy.get_update_result("1").await.unwrap(),
+        UpdateResult {
+            attempt_id: Some("1".to_string()),
+            url: Some(PackageUrl { url: "fuchsia-pkg://fuchsia.com/second-attempt".to_string() }),
+            options: Some(Options {
+                initiator: None,
+                allow_attach_to_existing_attempt: None,
+                should_write_recovery: None,
+            }),
+            state: Some(State::Complete(CompleteData { info: None, progress: None })),
+        }
+    );
+}
+
+/// When there's no history, the history FIDL APIs should return results with empty fields.
+#[fasync::run_singlethreaded(test)]
+async fn serves_fidl_without_history_present() {
+    let env = TestEnv::new();
+
+    let installer_proxy =
+        env.system_updater.as_ref().unwrap().connect_to_service::<InstallerMarker>().unwrap();
+
+    assert_eq!(
+        installer_proxy.get_last_update_result().await.unwrap(),
+        UpdateResult { attempt_id: None, url: None, options: None, state: None }
+    );
+    assert_eq!(
+        installer_proxy.get_update_result("0").await.unwrap(),
+        UpdateResult { attempt_id: None, url: None, options: None, state: None }
     );
 }

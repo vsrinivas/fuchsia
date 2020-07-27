@@ -6,7 +6,7 @@ use super::*;
 
 #[fasync::run_singlethreaded(test)]
 async fn promotes_target_channel_as_current_channel() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.set_target_channel("target-channel");
 
@@ -15,9 +15,7 @@ async fn promotes_target_channel_as_current_channel() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
-        .await
-        .unwrap();
+    env.run_system_updater_oneshot(SystemUpdaterArgs { ..Default::default() }).await.unwrap();
 
     env.verify_current_channel(Some(b"target-channel"));
 
@@ -25,33 +23,31 @@ async fn promotes_target_channel_as_current_channel() {
 
     env.set_target_channel("target-channel-2");
 
-    env.run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
-        .await
-        .unwrap();
+    env.run_system_updater_oneshot(SystemUpdaterArgs { ..Default::default() }).await.unwrap();
 
     env.verify_current_channel(Some(b"target-channel-2"));
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_target_channel_does_not_exist() {
-    let env = TestEnv::new();
+    let env = TestEnv::builder().oneshot(true).build();
 
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    env.run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
-        .await
-        .unwrap();
+    env.run_system_updater_oneshot(SystemUpdaterArgs { ..Default::default() }).await.unwrap();
 
     env.verify_current_channel(None);
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn does_not_promote_target_channel_on_failure() {
-    let env =
-        TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
+    let env = TestEnv::builder()
+        .paver_service(|builder| builder.call_hook(|_| Status::INTERNAL))
+        .oneshot(true)
+        .build();
 
     env.set_target_channel("target-channel");
 
@@ -60,9 +56,7 @@ async fn does_not_promote_target_channel_on_failure() {
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
-    let result = env
-        .run_system_updater(SystemUpdaterArgs { oneshot: Some(true), ..Default::default() })
-        .await;
+    let result = env.run_system_updater_oneshot(SystemUpdaterArgs { ..Default::default() }).await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
     env.verify_current_channel(None);
