@@ -125,6 +125,26 @@ DEF_MESSAGE(role_list, "List");
 DEF_MESSAGE(list_items,
             "{num_items, plural, =0{with no items} =1{with one item} other{with # items}}");
 
+// Spoken message that describes when the user switches to the normal navigation granularity, which
+// allows one to navigate the interface visiting all focusable elements.
+DEF_MESSAGE(normal_navigation_granularity, "Normal navigation");
+
+// Spoken message that describes when the user switches to the adjust value granularity, which
+// allows one to control a slider value.
+DEF_MESSAGE(adjust_value_granularity, "Adjust value");
+
+// Spoken message that describes when the user switches to the heading granularity, which allows one
+// to navigate the interface one heading at a time.
+DEF_MESSAGE(heading_granularity, "Heading");
+
+// Spoken message that describes when the user switches to the form control granularity, which
+// allows one to navigate the interface one form control at a time.
+DEF_MESSAGE(form_control_granularity, "Form control");
+
+// Spoken message that describes when the user switches to the link granularity, which allows one to
+// navigate the interface one link at a time.
+DEF_MESSAGE(link_granularity, "Link");
+
 // Spoken message that describes when the user switches to the line granularity, which allows one to
 // navigate the interface one line at a time.
 DEF_MESSAGE(line_granularity, "Line");
@@ -140,6 +160,9 @@ DEF_MESSAGE(character_granularity, "Character");
 // Spoken message to the user that a control can be double tapped to be activated.
 DEF_MESSAGE(double_tap_hint, "Double tap to activate");
 
+// Spoken message to the user that a control's value can be adjusted.
+DEF_MESSAGE(adjust_value_hint, "Swipe left or right to adjust the value.");
+
 // Spoken message that describes that an element is the last of its type.
 DEF_MESSAGE(last_element, "Last");
 
@@ -149,6 +172,14 @@ DEF_MESSAGE(first_element, "First");
 // Spoken message to alert the user that the Screen Reader has no current focus when using a touch
 // screen.
 DEF_MESSAGE(no_focus_alert, "No focus. Touch and explore to find items.");
+
+// Spoken message to alert the user that the Screen Reader, an assistive technology software used by
+// the blindn and visually impaired to access computers or smartphones, is on.
+DEF_MESSAGE(screen_reader_on_hint, "Screen Reader on.");
+
+// Spoken message to alert the user that the Screen Reader, an assistive technology software used by
+// the blindn and visually impaired to access computers or smartphones, is off.
+DEF_MESSAGE(screen_reader_off_hint, "Screen Reader off.");
 
 }  // namespace i18n
 }  // namespace a11y

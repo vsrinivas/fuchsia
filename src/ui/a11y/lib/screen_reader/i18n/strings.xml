@@ -67,6 +67,16 @@
     <string name="role_list">List</string>
     <!-- Spoken message that describes a list-like element in detail. For example, this message can be combined with others to produce List with 3 items. -->
     <string name="list_items">{num_items, plural, =0{with no items} =1{with one item} other{with <xliff:g id="num" example="2">#</xliff:g> items}}</string>
+    <!-- Spoken message that describes when the user switches to the normal navigation granularity, which allows one to navigate the interface visiting all focusable elements. -->
+    <string name="normal_navigation_granularity">Normal navigation</string>
+    <!-- Spoken message that describes when the user switches to the adjust value granularity, which allows one to control a slider value. -->
+    <string name="adjust_value_granularity">Adjust value</string>
+    <!-- Spoken message that describes when the user switches to the heading granularity, which allows one to navigate the interface one heading at a time. -->
+    <string name="heading_granularity">Heading</string>
+    <!-- Spoken message that describes when the user switches to the form control granularity, which allows one to navigate the interface one form control at a time. -->
+    <string name="form_control_granularity">Form control</string>
+    <!-- Spoken message that describes when the user switches to the link granularity, which allows one to navigate the interface one link at a time. -->
+    <string name="link_granularity">Link</string>
     <!-- Spoken message that describes when the user switches to the line granularity, which allows one to navigate the interface one line at a time. -->
     <string name="line_granularity">Line</string>
     <!-- Spoken message that describes when the user switches to the word granularity, which allows one to navigate the interface one word at a time. -->
@@ -75,10 +85,16 @@
     <string name="character_granularity">Character</string>
     <!-- Spoken message to the user that a control can be double tapped to be activated. -->
     <string name="double_tap_hint">Double tap to activate</string>
+    <!-- Spoken message to the user that a control's value can be adjusted. -->
+    <string name="adjust_value_hint">Swipe left or right to adjust the value.</string>
     <!-- Spoken message that describes that an element is the last of its type. -->
     <string name="last_element">Last</string>
     <!-- Spoken message that describes that an element is the first of its type. -->
     <string name="first_element">First</string>
     <!-- Spoken message to alert the user that the Screen Reader has no current focus when using a touch screen. -->
     <string name="no_focus_alert">No focus. Touch and explore to find items.</string>
+    <!-- Spoken message to alert the user that the Screen Reader, an assistive technology software used by the blindn and visually impaired to access computers or smartphones, is on. -->
+    <string name="screen_reader_on_hint">Screen Reader on.</string>
+    <!-- Spoken message to alert the user that the Screen Reader, an assistive technology software used by the blindn and visually impaired to access computers or smartphones, is off. -->
+    <string name="screen_reader_off_hint">Screen Reader off.</string>
 </resources>
