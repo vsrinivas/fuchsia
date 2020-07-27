@@ -10,7 +10,8 @@ use {
     crate::diagnostics::CobaltMetrics,
     anyhow::{Context as _, Error},
     chrono::prelude::*,
-    fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime,
+    fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet,
+    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_time as ftime,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
@@ -52,14 +53,14 @@ async fn main() -> Result<(), Error> {
     info!("connecting to external update service");
     let time_service =
         fuchsia_component::client::connect_to_service::<ftz::TimeServiceMarker>().unwrap();
-    let connectivity_service =
-        fuchsia_component::client::connect_to_service::<fnet::ConnectivityMarker>().unwrap();
+    let netstack_service =
+        fuchsia_component::client::connect_to_service::<fnetstack::NetstackMarker>().unwrap();
 
     fasync::Task::spawn(maintain_utc(
         utc_clock,
         notifier.clone(),
         time_service,
-        connectivity_service,
+        netstack_service,
         cobalt,
     ))
     .detach();
@@ -94,7 +95,7 @@ async fn maintain_utc(
     utc_clock: Arc<zx::Clock>,
     notifs: Notifier,
     time_service: ftz::TimeServiceProxy,
-    connectivity: fnet::ConnectivityProxy,
+    netstack_service: fnetstack::NetstackProxy,
     mut cobalt: CobaltMetrics,
 ) {
     info!("record the state at initialization.");
@@ -108,12 +109,28 @@ async fn maintain_utc(
     }
 
     info!("waiting for network connectivity before attempting network time sync...");
-    let mut conn_events = connectivity.take_event_stream();
+    let mut netstack_events = netstack_service.take_event_stream();
     loop {
-        if let Ok(Some(fnet::ConnectivityEvent::OnNetworkReachable { reachable: true })) =
-            conn_events.try_next().await
+        if let Ok(Some(fnetstack::NetstackEvent::OnInterfacesChanged { interfaces })) =
+            netstack_events.try_next().await
         {
-            break;
+            if interfaces.into_iter().any(|fnetstack::NetInterface { flags, addr, .. }| {
+                if flags & (fnetstack::NET_INTERFACE_FLAG_UP | fnetstack::NET_INTERFACE_FLAG_DHCP)
+                    == 0
+                {
+                    return false;
+                }
+                match addr {
+                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
+                        addr.iter().copied().any(|octet| octet != 0)
+                    }
+                    fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
+                        addr.iter().copied().any(|octet| octet != 0)
+                    }
+                }
+            }) {
+                break;
+            }
         }
     }
 
@@ -266,13 +283,28 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let (time_service, mut time_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftz::TimeServiceMarker>().unwrap();
-        let (reachability, reachability_server) =
-            fidl::endpoints::create_proxy::<fnet::ConnectivityMarker>().unwrap();
+        let (netstack_service, netstack_server) =
+            fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>().unwrap();
 
         // the "network" the time sync server uses is de facto reachable here
-        let (_, reachability_control) =
-            reachability_server.into_stream_and_control_handle().unwrap();
-        reachability_control.send_on_network_reachable(true).unwrap();
+        let (_, netstack_control) = netstack_server.into_stream_and_control_handle().unwrap();
+        let () = netstack_control
+            .send_on_interfaces_changed(
+                &mut vec![fnetstack::NetInterface {
+                    id: 1,
+                    flags: fnetstack::NET_INTERFACE_FLAG_UP | fnetstack::NET_INTERFACE_FLAG_DHCP,
+                    features: 0,
+                    configuration: 0,
+                    name: "my little pony".to_string(),
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 1] }),
+                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
+                    ipv6addrs: vec![],
+                    hwaddr: vec![],
+                }]
+                .iter_mut(),
+            )
+            .unwrap();
 
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
         let (mut allow_update, mut wait_for_update) = futures::channel::mpsc::channel(1);
@@ -283,7 +315,7 @@ mod tests {
             Arc::clone(&clock),
             notifier.clone(),
             time_service,
-            reachability,
+            netstack_service,
             cobalt_metrics,
         ))
         .detach();

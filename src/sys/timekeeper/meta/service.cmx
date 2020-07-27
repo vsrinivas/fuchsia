@@ -9,8 +9,8 @@
         "services": [
             "fuchsia.deprecatedtimezone.TimeService",
             "fuchsia.logger.LogSink",
-            "fuchsia.net.Connectivity",
             "fuchsia.net.NameLookup",
+            "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.time.Maintenance",
             "fuchsia.timezone.TimeService"

@@ -16,6 +16,7 @@ rustc_binary("bin") {
     ":time_metrics_registry",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fidl/rust/fidl",
