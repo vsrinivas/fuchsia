@@ -34,9 +34,9 @@ class PackageRepository {
   /// The repository targets.json file is then parsed and produces a map of
   /// package name and package variant to their corresponding Merkle root
   /// hashes.
-  /// Returns null if the 'package-repositories.json' manifest doesn't exist.
-  /// Throws [PackageRepositoryException] if the 'targets.json' file referenced
-  /// in property 'targets' of 'package-repositories.json' cannot be opened.
+  /// Returns null if the 'package-repositories.json' manifest doesn't exist
+  /// or if the 'targets.json' file referenced in property 'targets' of
+  /// 'package-repositories.json' cannot be opened.
   static Future<PackageRepository> fromManifest(
       {@required String buildDir, String repositoriesFile = _defaultManifest}) {
     // The package-repositories manifest is usually very small, so it's ok to
@@ -52,8 +52,7 @@ class PackageRepository {
           PackageRepository.fromJson(jsonDecode(content));
       File targetsFile = File(p.join(buildDir, repository.targetsFile));
       if (!targetsFile.existsSync()) {
-        throw PackageRepositoryException(
-            'Targets file does not exist: $targetsFile');
+        return null;
       }
 
       // The targets.json file is usually large, so using a stream instead
