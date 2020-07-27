@@ -183,7 +183,10 @@ class StubPageSource : public PageSource {
  public:
   StubPageSource() {}
   ~StubPageSource() {}
-  bool GetPage(uint64_t offset, vm_page_t** const page_out, paddr_t* const pa_out) { return false; }
+  bool GetPage(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
+               paddr_t* const pa_out) {
+    return false;
+  }
   void GetPageAsync(page_request_t* request) { panic("Not implemented\n"); }
   void ClearAsyncRequest(page_request_t* request) { panic("Not implemented\n"); }
   void SwapRequest(page_request_t* old, page_request_t* new_req) { panic("Not implemented\n"); }

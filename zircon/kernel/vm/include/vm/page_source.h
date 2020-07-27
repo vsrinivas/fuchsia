@@ -42,6 +42,11 @@
 
 class PageRequest;
 
+struct VmoDebugInfo {
+  uintptr_t vmo_ptr;
+  uint64_t vmo_id;
+};
+
 // Object which provides pages to a vm_object.
 class PageSource : public fbl::RefCounted<PageSource> {
  public:
@@ -56,8 +61,8 @@ class PageSource : public fbl::RefCounted<PageSource> {
   // Returns ZX_ERR_NEXT if the PageRequest is in batch mode and the caller
   // can continue to add more pages to the request.
   // Returns ZX_ERR_NOT_FOUND if the request cannot be fulfilled.
-  zx_status_t GetPage(uint64_t offset, PageRequest* req, vm_page_t** const page_out,
-                      paddr_t* const pa_out);
+  zx_status_t GetPage(uint64_t offset, PageRequest* req, VmoDebugInfo vmo_debug_info,
+                      vm_page_t** const page_out, paddr_t* const pa_out);
 
   // Called to complete a batched PageRequest if the last call to GetPage
   // returned ZX_ERR_NEXT.
@@ -97,7 +102,8 @@ class PageSource : public fbl::RefCounted<PageSource> {
 
  protected:
   // Synchronously gets a page from the backing source.
-  virtual bool GetPage(uint64_t offset, vm_page_t** const page_out, paddr_t* const pa_out) = 0;
+  virtual bool GetPage(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
+                       paddr_t* const pa_out) = 0;
   // Informs the backing source of a page request. The callback has ownership
   // of |request| until the async request is cancelled.
   virtual void GetPageAsync(page_request_t* request) = 0;
@@ -165,7 +171,7 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
  private:
   // PageRequests passed to GetPage may or may not be initialized. offset_ must be checked
   // and the object must be initialized if necessary.
-  void Init(fbl::RefPtr<PageSource> src, uint64_t offset);
+  void Init(fbl::RefPtr<PageSource> src, uint64_t offset, VmoDebugInfo vmo_debug_info);
 
   const bool allow_batching_;
 
@@ -178,6 +184,8 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   uint64_t offset_ = UINT64_MAX;
   // The total length of the request.
   uint64_t len_ = 0;
+  // The vmobject this page request is for.
+  VmoDebugInfo vmo_debug_info_ = {};
 
   // Keeps track of the size of the request that still needs to be fulfilled. This
   // can become incorrect if some pages get supplied, decommitted, and then

@@ -19,8 +19,13 @@ KCOUNTER(dispatcher_pager_create_count, "dispatcher.pager.create")
 KCOUNTER(dispatcher_pager_destroy_count, "dispatcher.pager.destroy")
 KCOUNTER(dispatcher_pager_overtime_wait_count, "dispatcher.pager.overtime_waits")
 
-static constexpr uint64_t kDefaultPagerOvertimeSeconds = 20;
-static uint64_t pager_overtime_wait_seconds = kDefaultPagerOvertimeSeconds;
+// Log warnings every |pager_overtime_wait_seconds| a thread is blocked waiting on a page
+// request. If the thread has been waiting for |pager_overtime_timeout_seconds|, return an
+// error instead of waiting indefinitely.
+static constexpr uint64_t kDefaultPagerOvertimeWaitSeconds = 20;
+static constexpr uint64_t kDefaultPagerOvertimeTimeoutSeconds = 300;
+static uint64_t pager_overtime_wait_seconds = kDefaultPagerOvertimeWaitSeconds;
+static uint64_t pager_overtime_timeout_seconds = kDefaultPagerOvertimeTimeoutSeconds;
 
 zx_status_t PagerDispatcher::Create(KernelHandle<PagerDispatcher>* handle, zx_rights_t* rights) {
   fbl::AllocChecker ac;
@@ -275,6 +280,17 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
     if (waited == 1) {
       dispatcher_pager_overtime_wait_count.Add(1);
     }
+
+    // Error out if we've been waiting for longer than the specified timeout, to allow the rest of
+    // the system to make progress (if possible).
+    if (pager_overtime_timeout_seconds > 0 &&
+        waited * pager_overtime_wait_seconds >= pager_overtime_timeout_seconds) {
+      printf("ERROR Pager source %p has been blocked for %" PRIu64
+             " seconds. Page request timed out.\n",
+             this, pager_overtime_timeout_seconds);
+      return ZX_ERR_TIMED_OUT;
+    }
+
     // Determine whether we have any requests that have not yet been received off of the port.
     bool active;
     {
@@ -291,8 +307,10 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
 }
 
 static void pager_init_func(uint level) {
-  pager_overtime_wait_seconds =
-      gCmdline.GetUInt64("kernel.userpager.overtime_wait_seconds", kDefaultPagerOvertimeSeconds);
+  pager_overtime_wait_seconds = gCmdline.GetUInt64("kernel.userpager.overtime_wait_seconds",
+                                                   kDefaultPagerOvertimeWaitSeconds);
+  pager_overtime_timeout_seconds = gCmdline.GetUInt64("kernel.userpager.overtime_timeout_seconds",
+                                                      kDefaultPagerOvertimeTimeoutSeconds);
 }
 
 LK_INIT_HOOK(pager_init, &pager_init_func, LK_INIT_LEVEL_LAST)

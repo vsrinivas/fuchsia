@@ -283,7 +283,8 @@ class VmObjectPaged final : public VmObject {
   // to populate the page.
   VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
                                                VmObjectPaged** owner_out,
-                                               uint64_t* owner_offset_out) TA_REQ(lock_);
+                                               uint64_t* owner_offset_out, uint64_t* owner_id_out)
+      TA_REQ(lock_);
 
   // GetPageLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns

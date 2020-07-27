@@ -1197,6 +1197,15 @@ void VmObjectPaged::DumpLocked(uint depth, bool verbose) const {
          this, user_id_, size_, parent_offset_, parent_start_limit_, parent_limit_, count,
          ref_count_debug(), parent_.get(), parent_id);
 
+  char name[ZX_MAX_NAME_LEN];
+  get_name(name, sizeof(name));
+  if (strlen(name) > 0) {
+    for (uint i = 0; i < depth + 1; ++i) {
+      printf("  ");
+    }
+    printf("name %s\n", name);
+  }
+
   if (page_source_) {
     for (uint i = 0; i < depth + 1; ++i) {
       printf("  ");
@@ -1702,7 +1711,8 @@ zx_status_t VmObjectPaged::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t
 
 VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uint pf_flags,
                                                             VmObjectPaged** owner_out,
-                                                            uint64_t* owner_offset_out) {
+                                                            uint64_t* owner_offset_out,
+                                                            uint64_t* owner_id_out) {
   // Search up the clone chain for any committed pages. cur_offset is the offset
   // into cur we care about. The loop terminates either when that offset contains
   // a committed page or when that offset can't reach into the parent.
@@ -1738,6 +1748,7 @@ VmPageOrMarker* VmObjectPaged::FindInitialPageContentLocked(uint64_t offset, uin
 
   *owner_out = cur;
   *owner_offset_out = cur_offset;
+  *owner_id_out = cur->user_id_locked();
 
   return page;
 }
@@ -1802,6 +1813,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
   vm_page* p = nullptr;
   VmObjectPaged* page_owner;
   uint64_t owner_offset;
+  uint64_t owner_id;
   if (page_or_mark && page_or_mark->IsPage()) {
     // This is the common case where we have the page and don't need to do anything more, so
     // return it straight away.
@@ -1819,10 +1831,12 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
   // Get content from parent if available, otherwise accept we are the owner of the yet to exist
   // page.
   if ((!page_or_mark || page_or_mark->IsEmpty()) && parent_) {
-    page_or_mark = FindInitialPageContentLocked(offset, pf_flags, &page_owner, &owner_offset);
+    page_or_mark =
+        FindInitialPageContentLocked(offset, pf_flags, &page_owner, &owner_offset, &owner_id);
   } else {
     page_owner = this;
     owner_offset = offset;
+    owner_id = user_id_locked();
   }
 
   // At this point we might not have an actual page, but we should at least have a notional owner.
@@ -1851,8 +1865,10 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       // the zero page.
       p = vm_get_zero_page();
     } else {
-      zx_status_t status =
-          page_owner->page_source_->GetPage(owner_offset, page_request, &p, nullptr);
+      VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(page_owner),
+                                     .vmo_id = owner_id};
+      zx_status_t status = page_owner->page_source_->GetPage(owner_offset, page_request,
+                                                             vmo_debug_info, &p, nullptr);
       // Pager page sources will never synchronously return a page.
       DEBUG_ASSERT(status != ZX_OK);
 
@@ -2273,9 +2289,9 @@ zx_status_t VmObjectPaged::ZeroPartialPage(uint64_t page_base_offset, uint64_t z
   // If we don't have a committed page we need to check our parent.
   if (!slot || !slot->IsPage()) {
     VmObjectPaged* page_owner;
-    uint64_t owner_offset;
+    uint64_t owner_offset, owner_id;
     if (!FindInitialPageContentLocked(page_base_offset, VMM_PF_FLAG_WRITE, &page_owner,
-                                      &owner_offset)) {
+                                      &owner_offset, &owner_id)) {
       // Parent doesn't have a page either, so nothing to do this is already zero.
       return ZX_OK;
     }
@@ -2418,15 +2434,16 @@ zx_status_t VmObjectPaged::ZeroRangeLocked(uint64_t offset, uint64_t len, list_n
       bool inited = false;
       VmObjectPaged* page_owner;
       uint64_t owner_offset;
+      uint64_t owner_id;
       vm_page_t* page;
     } initial_content_;
     auto get_initial_page_content = [&initial_content_, can_see_parent, this, offset]()
                                         TA_REQ(lock_) -> const InitialPageContent& {
       if (!initial_content_.inited) {
         DEBUG_ASSERT(can_see_parent);
-        VmPageOrMarker* page_or_marker =
-            FindInitialPageContentLocked(offset, VMM_PF_FLAG_WRITE, &initial_content_.page_owner,
-                                         &initial_content_.owner_offset);
+        VmPageOrMarker* page_or_marker = FindInitialPageContentLocked(
+            offset, VMM_PF_FLAG_WRITE, &initial_content_.page_owner, &initial_content_.owner_offset,
+            &initial_content_.owner_id);
         // We only care about the parent having a 'true' vm_page for content. If the parent has a
         // marker then it's as if the parent has no content since that's a zero page anyway, which
         // is what we are trying to achieve.
@@ -3143,7 +3160,7 @@ zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char>
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.
@@ -3175,7 +3192,7 @@ zx_status_t VmObjectPaged::WriteUser(VmAspace* current_aspace, user_in_ptr<const
     // handle the fault.
     if (copy_result.fault_info.has_value()) {
       zx_status_t result;
-      guard->CallUnlocked([&info = *copy_result.fault_info, &result, current_aspace] {
+      guard->CallUnlocked([& info = *copy_result.fault_info, &result, current_aspace] {
         result = current_aspace->SoftFault(info.pf_va, info.pf_flags);
       });
       // If we handled the fault, tell the upper level to try again.

@@ -161,8 +161,8 @@ bool PageSource::IsValidFailureCode(zx_status_t error_status) {
   }
 }
 
-zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, vm_page_t** const page_out,
-                                paddr_t* const pa_out) {
+zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugInfo vmo_debug_info,
+                                vm_page_t** const page_out, paddr_t* const pa_out) {
   canary_.Assert();
   ASSERT(request);
   offset = fbl::round_down(offset, static_cast<uint64_t>(PAGE_SIZE));
@@ -172,14 +172,14 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, vm_page_t
     return ZX_ERR_NOT_FOUND;
   }
 
-  if (GetPage(offset, page_out, pa_out)) {
+  if (GetPage(offset, vmo_debug_info, page_out, pa_out)) {
     return ZX_OK;
   }
 
   // Check if request is initialized and initialize it if it isn't (it can be initialized
   // for batch requests).
   if (request->offset_ == UINT64_MAX) {
-    request->Init(fbl::RefPtr<PageSource>(this), offset);
+    request->Init(fbl::RefPtr<PageSource>(this), offset, vmo_debug_info);
     LTRACEF_LEVEL(2, "%p offset %lx\n", this, offset);
   }
 
@@ -338,8 +338,9 @@ void PageSource::Dump() const {
   Guard<Mutex> guard{&page_source_mtx_};
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);
   for (auto& req : outstanding_requests_) {
-    printf("  req [%lx, %lx) pending %lx overlap %lu\n", req.offset_, req.GetEnd(),
-           req.pending_size_, req.overlap_.size_slow());
+    printf("  vmo 0x%lx/k%lu req [%lx, %lx) pending %lx overlap %lu\n", req.vmo_debug_info_.vmo_ptr,
+           req.vmo_debug_info_.vmo_id, req.offset_, req.GetEnd(), req.pending_size_,
+           req.overlap_.size_slow());
   }
 }
 
@@ -349,8 +350,9 @@ PageRequest::~PageRequest() {
   }
 }
 
-void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset) {
+void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset, VmoDebugInfo vmo_debug_info) {
   DEBUG_ASSERT(offset_ == UINT64_MAX);
+  vmo_debug_info_ = vmo_debug_info;
   len_ = 0;
   offset_ = offset;
   src_ = ktl::move(src);

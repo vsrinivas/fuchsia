@@ -38,7 +38,8 @@ class PagerSource : public PageSource,
   }
   void Free(PortPacket* port_packet) final;
 
-  virtual bool GetPage(uint64_t offset, vm_page_t** const page_out, paddr_t* const pa_out) final {
+  virtual bool GetPage(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
+                       paddr_t* const pa_out) final {
     // Pagers cannot synchronusly fulfill requests.
     return false;
   }

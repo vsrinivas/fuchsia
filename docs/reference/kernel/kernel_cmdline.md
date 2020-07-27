@@ -470,9 +470,17 @@ behavior.
 ## kernel.userpager.overtime_wait_seconds=\<num>
 
 This option, 20 by default, configures how long a user pager fault may block
-before being considered overtime and triggering an action. Current action is to
-print an information message to the debuglog and continue to wait. A value of 0
-indicates a wait is never considered to be overtime.
+before being considered overtime and printing an information message to the
+debuglog and continuing to wait. A value of 0 indicates a wait is never
+considered to be overtime.
+
+## kernel.userpager.overtime_timeout_seconds=\<num>
+
+This option, 300 by default, configures how long a user pager fault may block
+before being aborted. For a hardware page fault, the faulting thread will
+terminate with a fatal page fault exception. For a software page fault
+triggered by a syscall, the syscall will fail with `ZX_ERR_TIMED_OUT`. A value
+of 0 indicates a page fault is never aborted due to a time out.
 
 ## kernel.x86.disable_spec_mitigations=\<bool>
 
