@@ -44,10 +44,7 @@ template("test") {
 
   executable(target_name) {
     original_target_name = target_name
-    forward_variables_from(invoker, "*", [ "test_group" ])
-
-    # TODO(53965): remove references to this attribute.
-    not_needed(invoker, [ "test_group" ])
+    forward_variables_from(invoker, "*")
 
     # TODO(44278): always force `testonly` once all ZN tests are moved to
     # packages.

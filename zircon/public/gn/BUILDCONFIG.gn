@@ -1503,13 +1503,8 @@ template("executable") {
 #     BOOTFS or package filesystem image built containing it.  Set this to
 #     false to prevent the file being included in the filesystem image
 #     altogether.
-#     Default: "test/$test_group/$output_name"
+#     Default: "test/sys/$output_name"
 #     Type: string or false
-#
-#   test_group
-#     Optional: Used to set the default $install_path.
-#     Type: string
-#     Default: "sys"
 #
 #   disabled
 #     Optional: A nonempty value indicates that the test is disabled, and the
@@ -1554,7 +1549,6 @@ template("test") {
                                "disabled",
                                "metadata",
                                "target_type",
-                               "test_group",
                                "testonly",
                                "visibility",
                              ])
@@ -1573,12 +1567,7 @@ template("test") {
       }
 
       if (!is_host && !defined(install_path)) {
-        if (defined(invoker.test_group)) {
-          test_group = invoker.test_group
-        } else {
-          test_group = "sys"
-        }
-        install_path = "test/$test_group/$output_name"
+        install_path = "test/sys/$output_name"
         if (output_extension != "") {
           install_path += ".$output_extension"
         }

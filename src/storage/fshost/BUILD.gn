@@ -219,7 +219,6 @@ test("fshost-inspect-test") {
       configs -= fdio_config
     }
   }
-  test_group = "ddk"
   sources = [ "inspect-manager-test.cc" ]
   deps = [
     ":inspect",

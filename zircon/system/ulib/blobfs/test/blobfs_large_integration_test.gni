@@ -18,7 +18,6 @@ template("blobfs_large_integration_test") {
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
     }
-    test_group = "fs"
     sources = [ "integration/large/main.cc" ]
     sources += test_case_sources
     include_dirs = [ "integration" ]
@@ -53,7 +52,6 @@ template("blobfs_large_integration_test") {
     if (configs + fdio_config - fdio_config != configs) {
       configs -= fdio_config
     }
-    test_group = "fs"
     sources = [
       "integration/large/paged_main.cc",
       "integration/launch.cc",
