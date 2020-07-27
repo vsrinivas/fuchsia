@@ -85,7 +85,7 @@ def main():
                     args.max_blob_contents_size,
                     debug=(
                         'To debug, reproduce the build as per '
-                        'http://go/fuchsia-infra/faq#repro-build-step,'
+                        'http://go/fuchsia-infra/faq#repro-build-step '
                         'then run `fx blobstats`')),
                 CmdSize(
                     'blob/image_size', blob_tool_prefix + ['used-size'],
