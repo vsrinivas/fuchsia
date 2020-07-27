@@ -124,7 +124,9 @@ TEST_P(UnlinkTest, Remove) {
   ASSERT_EQ(errno, ENOENT);
 }
 
-TEST_P(UnlinkTest, UnlinkLargeSparseFileAfterClose) {
+using UnlinkSparseTest = FilesystemTest;
+
+TEST_P(UnlinkSparseTest, UnlinkLargeSparseFileAfterClose) {
   const std::string foo = GetPath("foo");
   fbl::unique_fd fd(open(foo.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
   ASSERT_TRUE(fd);
@@ -138,6 +140,19 @@ TEST_P(UnlinkTest, UnlinkLargeSparseFileAfterClose) {
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, UnlinkTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
+
+// These tests will only work on a file system that supports sparse files.
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, UnlinkSparseTest,
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().supports_sparse_files) {
+            return options;
+          } else {
+            return std::nullopt;
+          }
+        })),
+    testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace fs_test

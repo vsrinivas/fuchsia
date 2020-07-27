@@ -171,11 +171,20 @@ std::string GetParamDescription(const testing::TestParamInfo<ParamType> param) {
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, TruncateTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, SparseTruncateTest,
-                         testing::Combine(testing::ValuesIn(AllTestFilesystems()),
-                                          testing::Values(SparseTestType::UnlinkThenClose,
-                                                          SparseTestType::CloseThenUnlink)),
-                         GetParamDescription);
+// These tests will only work on a file system that supports sparse files.
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, SparseTruncateTest,
+    testing::Combine(
+        testing::ValuesIn(MapAndFilterAllTestFilesystems(
+            [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+              if (options.filesystem->GetTraits().supports_sparse_files) {
+                return options;
+              } else {
+                return std::nullopt;
+              }
+            })),
+        testing::Values(SparseTestType::UnlinkThenClose, SparseTestType::CloseThenUnlink)),
+    GetParamDescription);
 
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, LargeTruncateTest,
