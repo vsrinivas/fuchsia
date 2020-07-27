@@ -188,9 +188,10 @@ mod tests {
         let mut handler = CallCountEventHandler::default();
 
         let sender = repo.sender.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             sender.unbounded_send(ElementEvent::Shutdown).expect("failed to send event");
-        });
+        })
+        .detach();
 
         repo.run_with_handler(&mut handler).await?;
         assert_eq!(handler.shutdown_call_count, 1);
@@ -205,7 +206,7 @@ mod tests {
 
         let (element, _channel) = make_mock_element();
         let sender = repo.sender.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             sender
                 .unbounded_send(ElementEvent::ElementAdded {
                     element,
@@ -215,7 +216,8 @@ mod tests {
 
             // need to shut down the handler
             sender.unbounded_send(ElementEvent::Shutdown).expect("failed to send event");
-        });
+        })
+        .detach();
 
         repo.run_with_handler(&mut handler).await?;
         assert_eq!(handler.add_call_count, 1);

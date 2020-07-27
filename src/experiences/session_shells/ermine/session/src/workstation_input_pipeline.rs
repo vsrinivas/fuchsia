@@ -108,13 +108,14 @@ async fn add_mouse_handler(
     );
     handlers.push(Box::new(mouse_handler));
 
-    fasync::spawn(async move {
+    fasync::Task::spawn(async move {
         while let Some(Position { x, y }) = receiver.next().await {
             let screen_coordinates =
                 ScreenCoordinates::from_pixels(x, y, scene_manager.display_metrics);
             scene_manager.set_cursor_location(screen_coordinates);
         }
-    });
+    })
+    .detach();
 }
 
 async fn add_mouse_hack(

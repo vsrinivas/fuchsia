@@ -32,9 +32,10 @@ impl PointerHackServer {
     ) -> PointerHackServer {
         let server = PointerHackServer { pointer_listeners: Arc::new(Mutex::new(vec![])) };
         let pointer_listeners = server.pointer_listeners.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             PointerHackServer::serve(server_chan, pointer_listeners, element_server).await;
-        });
+        })
+        .detach();
         server
     }
 

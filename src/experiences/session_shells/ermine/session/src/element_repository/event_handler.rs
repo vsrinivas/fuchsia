@@ -84,9 +84,10 @@ impl EventHandler for ElementEventHandler {
 
         // Hold the element in the spawn_local here. when the call closes all
         // of the proxies will be closed.
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             run_until_closed(element, stream, view_controller_proxy).await;
-        });
+        })
+        .detach();
     }
 }
 
@@ -332,7 +333,7 @@ mod tests {
         // tell the view controller to dismiss. The view controller then can
         // decide how it wants to dismiss the view. When it is done presenting
         // the view it closes the channel to indicate it is done presenting.
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let mut vc_stream = vc_server_end.into_stream().unwrap();
             while let Ok(Some(request)) = vc_stream.try_next().await {
                 match request {
@@ -342,7 +343,8 @@ mod tests {
                     _ => (),
                 }
             }
-        });
+        })
+        .detach();
 
         expect_element_wait_fut_completion!(element_wait_fut);
     }
@@ -370,9 +372,10 @@ mod tests {
         let element = Rc::new(RefCell::new(element));
 
         let element_clone = element.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             spawn_element_controller_stream(element_clone, Some(element_stream), None).await;
-        });
+        })
+        .detach();
 
         let new_annotations = Annotations {
             custom_annotations: Some(vec![Annotation {
@@ -402,12 +405,13 @@ mod tests {
         let element = Rc::new(RefCell::new(element));
 
         let element_clone = element.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             spawn_element_controller_stream(element_clone, Some(element_stream), Some(vc_proxy))
                 .await;
-        });
+        })
+        .detach();
 
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let new_annotations = Annotations {
                 custom_annotations: Some(vec![Annotation {
                     key: "foo".to_string(),
@@ -415,7 +419,8 @@ mod tests {
                 }]),
             };
             let _ = element_controller.set_annotations(new_annotations).await;
-        });
+        })
+        .detach();
 
         let mut got_annotation = false;
         if let Ok(Some(request)) = view_controller_stream.try_next().await {
@@ -455,9 +460,10 @@ mod tests {
         }
 
         let element_clone = element.clone();
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             spawn_element_controller_stream(element_clone, Some(element_stream), None).await;
-        });
+        })
+        .detach();
 
         let mut got_annotation = false;
         if let Ok(Ok(annotations)) = element_controller.get_annotations().await {

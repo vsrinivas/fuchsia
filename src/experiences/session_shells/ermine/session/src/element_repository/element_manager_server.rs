@@ -97,10 +97,11 @@ mod tests {
 
         let spec =
             ElementSpec { component_url: Some("foo".to_string()), ..ElementSpec::new_empty() };
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let _ = proxy.propose_element(spec, None).await;
             drop(proxy);
-        });
+        })
+        .detach();
         let _ = server.handle_request(stream).await;
 
         match wait_for_first_event_or_timeout(&mut receiver).await {
@@ -120,12 +121,13 @@ mod tests {
 
         let spec =
             ElementSpec { component_url: Some("foo".to_string()), ..ElementSpec::new_empty() };
-        fasync::spawn_local(async move {
+        fasync::Task::local(async move {
             let (_controller_proxy, server_end) =
                 create_proxy::<ElementControllerMarker>().expect("failed to create endpoints");
             let _ = proxy.propose_element(spec, Some(server_end)).await;
             drop(proxy);
-        });
+        })
+        .detach();
         let _ = server.handle_request(stream).await;
 
         match wait_for_first_event_or_timeout(&mut receiver).await {
