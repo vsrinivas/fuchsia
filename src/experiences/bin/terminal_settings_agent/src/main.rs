@@ -16,10 +16,10 @@ fn main() -> Result<(), Error> {
     let mut public = fs.dir("svc");
 
     public.add_fidl_service(move |stream| {
-        fasync::spawn(
+        fasync::Task::spawn(
             profiles_service::run_fidl_server(stream)
                 .unwrap_or_else(|e| panic!("Error while serving profiles service: {}", e)),
-        )
+        ).detach()
     });
 
     fs.take_and_serve_directory_handle()?;

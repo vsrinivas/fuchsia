@@ -40,11 +40,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn shuts_down_when_proxy_closes() -> Result<(), Error> {
         let (proxy, stream) = create_proxy_and_stream::<ProfilesMarker>()?;
-        fasync::spawn(async move {
+        fasync::Task::spawn(async move {
             let timeout = zx::Duration::from_nanos(100).after_now();
             fasync::Timer::new(timeout).await;
             drop(proxy);
-        });
+        })
+        .detach();
         run_fidl_server(stream)
             .await
             .unwrap_or_else(|e| panic!("Error while serving profiles service: {}", e));
@@ -55,10 +56,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn can_get_profiles_list() -> Result<(), Error> {
         let (proxy, stream) = create_proxy_and_stream::<ProfilesMarker>()?;
-        fasync::spawn(
+        fasync::Task::spawn(
             run_fidl_server(stream)
                 .unwrap_or_else(|e| panic!("Error while serving profiles service: {}", e)),
-        );
+        ).detach();
 
         let _list = proxy.get_profile_list().await?;
 
