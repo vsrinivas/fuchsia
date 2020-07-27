@@ -178,31 +178,35 @@ class FakeDdkOptee : public zxtest::Test {
     ddk_.SetProtocols(std::move(protocols));
   }
 
-  void TearDown() override { EXPECT_TRUE(ddk_.Ok()); }
+  void TearDown() override {
+    optee_.DdkAsyncRemove();
+    EXPECT_TRUE(ddk_.Ok());
+  }
 
  protected:
+  OpteeController optee_{fake_ddk::kFakeParent};
+
   FakeComposite composite_{fake_ddk::kFakeParent};
   FakePDev pdev_;
   FakeSysmem sysmem_;
+
+  // Fake ddk must be destroyed before optee because it may be executing messages against optee on
+  // another thread.
   fake_ddk::Bind ddk_;
 };
 
 TEST_F(FakeDdkOptee, PmtUnpinned) {
-  OpteeController optee{fake_ddk::kFakeParent};
+  EXPECT_EQ(optee_.Bind(), ZX_OK);
 
-  EXPECT_EQ(optee.Bind(), ZX_OK);
-
-  zx_handle_t pmt_handle = optee.pmt().get();
+  zx_handle_t pmt_handle = optee_.pmt().get();
   EXPECT_NE(pmt_handle, ZX_HANDLE_INVALID);
 
   EXPECT_TRUE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
   EXPECT_EQ(fake_object::HandleType::PMT, fake_object::FakeHandleTable().Get(pmt_handle)->type());
 
-  optee.DdkSuspend(ddk::SuspendTxn{fake_ddk::kFakeDevice, DEV_POWER_STATE_DCOLD, false,
-                                   DEVICE_SUSPEND_REASON_REBOOT});
+  optee_.DdkSuspend(ddk::SuspendTxn{fake_ddk::kFakeDevice, DEV_POWER_STATE_DCOLD, false,
+                                    DEVICE_SUSPEND_REASON_REBOOT});
   EXPECT_FALSE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
-
-  optee.DdkAsyncRemove();
 }
 
 }  // namespace
