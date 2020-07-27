@@ -115,11 +115,16 @@ enum DirEntryOrShortName<'a, IO: ReadWriteSeek, TP, OCC> {
 pub struct Dir<'a, IO: ReadWriteSeek, TP, OCC> {
     stream: DirRawStream<'a, IO, TP, OCC>,
     fs: &'a FileSystem<IO, TP, OCC>,
+    is_root: bool,
 }
 
 impl<'a, IO: ReadWriteSeek, TP, OCC> Dir<'a, IO, TP, OCC> {
-    pub(crate) fn new(stream: DirRawStream<'a, IO, TP, OCC>, fs: &'a FileSystem<IO, TP, OCC>) -> Self {
-        Dir { stream, fs }
+    pub(crate) fn new(
+        stream: DirRawStream<'a, IO, TP, OCC>,
+        fs: &'a FileSystem<IO, TP, OCC>,
+        is_root: bool,
+    ) -> Self {
+        Dir { stream, fs, is_root }
     }
 
     /// Creates directory entries iterator.
@@ -310,8 +315,9 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
                 let sfn_entry = self.create_sfn_entry(dot_sfn, FileAttributes::DIRECTORY, entry.first_cluster());
                 dir.write_entry(".", sfn_entry)?;
                 let dotdot_sfn = ShortNameGenerator::generate_dotdot();
+                let parent_cluster = if self.is_root { None } else { self.stream.first_cluster() };
                 let sfn_entry =
-                    self.create_sfn_entry(dotdot_sfn, FileAttributes::DIRECTORY, self.stream.first_cluster());
+                    self.create_sfn_entry(dotdot_sfn, FileAttributes::DIRECTORY, parent_cluster);
                 dir.write_entry("..", sfn_entry)?;
                 Ok(dir)
             },
@@ -534,7 +540,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
 // Note: derive cannot be used because of invalid bounds. See: https://github.com/rust-lang/rust/issues/26925
 impl<IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Clone for Dir<'_, IO, TP, OCC> {
     fn clone(&self) -> Self {
-        Self { stream: self.stream.clone(), fs: self.fs }
+        Self { stream: self.stream.clone(), fs: self.fs, is_root: self.is_root }
     }
 }
 

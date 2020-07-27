@@ -528,6 +528,13 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         Ok(())
     }
 
+    pub(crate) fn get_root_cluster(&self) -> u32 {
+        match self.fat_type {
+            FatType::Fat12 | FatType::Fat16 => 0,
+            _ => self.bpb.root_dir_first_cluster,
+        }
+    }
+
     /// Returns a root directory object allowing for futher penetration of a filesystem structure.
     pub fn root_dir<'a>(&'a self) -> Dir<'a, IO, TP, OCC> {
         trace!("root_dir");
@@ -543,7 +550,7 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
                 _ => DirRawStream::File(File::new(Some(self.bpb.root_dir_first_cluster), None, self)),
             }
         };
-        Dir::new(root_rdr, self)
+        Dir::new(root_rdr, self, true)
     }
 }
 
