@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -49,7 +49,7 @@ NT_GNU_BUILD_ID = 3
 SHT_SYMTAB = 2
 SHF_ALLOC = 2
 
-IS_PYTHON3 = sys.version_info > (3,)
+IS_PYTHON3 = sys.version_info[0] >= 3
 
 class elf_note(namedtuple('elf_note', [
         'name',

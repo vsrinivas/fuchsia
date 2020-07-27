@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,8 +7,12 @@
    '''
 
 import argparse
+import collections
 import json
 import sys
+
+
+Entry = collections.namedtuple('Entry', ['destination', 'source'])
 
 
 def main():
@@ -25,10 +29,10 @@ def main():
             lines = manifest_file.readlines()
         for line in lines:
             destination, source = line.strip().split('=', 1)
-            result.append({'destination': destination, 'source': source})
+            result.append(Entry(destination, source))
     with open(args.output, 'w') as output_file:
         json.dump(
-            sorted(result),
+            [dict(destination=r.destination, source=r.source) for r in sorted(result)],
             output_file,
             indent=2,
             sort_keys=True,

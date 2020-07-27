@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,6 +8,7 @@
 
 import argparse
 import collections
+import functools
 import json
 import sys
 
@@ -48,13 +49,13 @@ def main():
         d: set(e for e in entries if e.destination == d) for d in set(
             e.destination for e in entries)
     }
-    conflicts = {d: e for d, e in entries_by_dest.iteritems() if len(e) > 1}
+    conflicts = {d: e for d, e in entries_by_dest.items() if len(e) > 1}
     # Only report a conflict if the source files differ.
     # TODO(45680): remove this additional filtering when dependency trees are
     # cleaned up and //build/package.gni has gone the way of the dodo.
     conflicts = {
         d: e
-        for d, e in conflicts.iteritems()
+        for d, e in conflicts.items()
         if len(set(entry.source for entry in e)) >= 2
     }
     if conflicts:
@@ -68,7 +69,7 @@ def main():
 
     with open(args.output, 'w') as output_file:
         json.dump(
-            sorted(e._asdict() for e in entries),
+            [e._asdict() for e in sorted(entries)],
             output_file,
             indent=2,
             sort_keys=True,
