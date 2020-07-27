@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":loader-service-test" ]
+}
+
+source_set("loader_service") {
+  sources = [ "loader_service.cc" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_llcpp",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  ]
+}
+
+executable("loader_service_test") {
+  testonly = true
+  sources = [ "loader_service_test.cc" ]
+
+  deps = [
+    ":loader_service",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/ldmsg",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/memfs",
+    "//zircon/system/ulib/memfs:memfs-cpp",
+  ]
+}
+
+fuchsia_unittest_package("loader-service-test") {
+  manifest = "meta/loader-service-test.cmx"
+  deps = [ ":loader_service_test" ]
+}

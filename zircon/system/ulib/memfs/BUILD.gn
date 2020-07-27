@@ -29,15 +29,24 @@ zx_library("memfs-cpp") {
     "memfs.cc",
     "vmo.cc",
   ]
+  public_deps = [
+    # <lib/memfs/cpp/vnode.h> has #include <lib/fdio/io.h>
+    "//sdk/lib/fdio",
+
+    # <lib/memfs/cpp/vnode.h> has #include <fbl/ref_ptr.h>
+    "//zircon/public/lib/fbl",
+
+    # <lib/memfs/cpp/vnode.h> has #include <lib/zx/vmo.h>
+    "//zircon/public/lib/zx",
+
+    # <lib/memfs/cpp/vnode.h> has #include <fs/vfs.h> and many other <fs/*.h>
+    "//zircon/system/ulib/fs",
+  ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
-    "//zircon/system/ulib/fs",
   ]
 }
 
