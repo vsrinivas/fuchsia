@@ -98,6 +98,7 @@ static InternalConfigNode OutputMLFR(bool extended_fov) {
               },
           },
       .image_formats = MLFRImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -117,6 +118,7 @@ static InternalConfigNode OutputVideoConferencing(bool extended_fov) {
               },
           },
       .image_formats = VideoImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -159,6 +161,7 @@ static InternalConfigNode GdcVideo2(bool extended_fov) {
       // there is no need to create internal buffers.
       .output_constraints = InvalidConstraints(),
       .image_formats = MLFRImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -209,6 +212,7 @@ static InternalConfigNode Ge2d(bool extended_fov) {
       // there is no need to create internal buffers.
       .output_constraints = InvalidConstraints(),
       .image_formats = VideoImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -280,6 +284,7 @@ static InternalConfigNode GdcVideo1(bool extended_fov) {
       .input_constraints = GdcVideo1InputConstraints(),
       .output_constraints = GdcVideo1OutputConstraints(),
       .image_formats = GdcVideo1ImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -331,6 +336,7 @@ InternalConfigNode VideoConfigFullRes(bool extended_fov) {
       .input_constraints = InvalidConstraints(),
       .output_constraints = VideoConfigFullResConstraints(),
       .image_formats = IspImageFormats(),
+      .in_place = false,
   };
 }
 

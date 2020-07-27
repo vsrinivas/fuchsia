@@ -134,6 +134,7 @@ static InternalConfigNode OutputStreamMLFR() {
               },
           },
       .image_formats = OutputStreamMLFRImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -152,6 +153,7 @@ static InternalConfigNode OutputStreamMLDS() {
               },
           },
       .image_formats = OutputStreamMLDSImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -194,6 +196,7 @@ static InternalConfigNode Gdc1() {
       // there is no need to create internal buffers.
       .output_constraints = InvalidConstraints(),
       .image_formats = OutputStreamMLDSImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -241,6 +244,7 @@ InternalConfigNode MonitorConfigFullRes() {
       .input_constraints = InvalidConstraints(),
       .output_constraints = MonitorConfigFullResConstraints(),
       .image_formats = OutputStreamMLFRImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -260,6 +264,7 @@ static InternalConfigNode OutputStreamMonitoring() {
               },
           },
       .image_formats = OutputStreamMonitoringImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -337,6 +342,7 @@ static InternalConfigNode Ge2dMonitoring() {
       // there is no need to create internal buffers.
       .output_constraints = Ge2dMonitoringConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -382,6 +388,7 @@ static InternalConfigNode Gdc2() {
       .input_constraints = Gdc2Constraints(),
       .output_constraints = Gdc2OutputConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
+      .in_place = false,
   };
 }
 
@@ -419,6 +426,7 @@ InternalConfigNode MonitorConfigDownScaledRes() {
       .output_constraints = MonitorConfigDownScaledResConstraints(),
       // Input node doesn't need |input_constraints|
       .image_formats = MonitorConfigDownScaledResImageFormats(),
+      .in_place = false,
   };
 }
 

@@ -79,6 +79,7 @@ struct InternalConfigNode {
   fuchsia::sysmem::BufferCollectionConstraints output_constraints;
   // Image formats supported
   std::vector<fuchsia::sysmem::ImageFormat_2> image_formats;
+  bool in_place;
 };
 
 struct InternalConfigInfo {
