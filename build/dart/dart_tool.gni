@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_library.gni")
+import("//build/dart/dart_package_config.gni")
 import("//build/dart/toolchain.gni")
 
 # Wraps a dart snapshot in a script to be invoked by dart
@@ -91,6 +92,16 @@ template("_dart_snapshot_invocation") {
 template("dart_tool") {
   assert(defined(invoker.main_dart), "Must specify main_dart file")
 
+  _dart_deps = []
+  if (defined(invoker.deps)) {
+    _dart_deps += invoker.deps
+  }
+
+  _tool_deps = []
+  if (defined(invoker.non_dart_deps)) {
+    _tool_deps += invoker.non_dart_deps
+  }
+
   dart_library_target_name = target_name + "_dart_library"
 
   if (defined(invoker.package_name)) {
@@ -134,8 +145,9 @@ template("dart_tool") {
   dart_library(dart_library_target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "disable_analysis",
+                             "testonly",
+                             "visibility",
                            ])
     package_name = package_name
     package_root = package_root
@@ -151,6 +163,16 @@ template("dart_tool") {
       source_base = invoker.source_dir
     }
     sources += [ rebase_path(invoker.main_dart, source_base) ]
+    deps = _dart_deps
+  }
+
+  # We only need to make a library if we are specifying sources.
+  # If no sources are defined we still want to depend on the library
+  # so we can run analysis on the main file.
+  if (defined(invoker.sources)) {
+    _dart_deps += [ ":$dart_library_target_name" ]
+  } else {
+    _tool_deps += [ ":$dart_library_target_name" ]
   }
 
   dart_binary = prebuilt_dart
@@ -158,11 +180,24 @@ template("dart_tool") {
 
   snapshot_path = "$target_gen_dir/${target_name}.snapshot"
   depfile_path = "${snapshot_path}.d"
-  dart_target_gen_dir =
-      get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
-  packages_path = "$dart_target_gen_dir/$dart_library_target_name.packages"
 
   snapshot_target_name = target_name + "_snapshot"
+
+  _dart_package_config_target_name = "${target_name}_dart_package"
+  dart_package_config(_dart_package_config_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    deps = _dart_deps
+  }
+
+  _package_config_output = []
+  _package_config_output =
+      get_target_outputs(":$_dart_package_config_target_name")
+  _packages_path = _package_config_output[0]
 
   # Creates a snapshot file.
   # The main advantage of snapshotting is that it sets up source dependencies
@@ -183,15 +218,21 @@ template("dart_tool") {
     # that the resulting depfile gets properly formatted.
     rebased_snapshot_path = rebase_path(snapshot_path, root_build_dir)
     rebased_depfile_path = rebase_path(depfile_path)
-    rebased_packages_path = rebase_path(packages_path)
+    rebased_packages_path = rebase_path(_packages_path)
 
     main_uri = rebase_path(invoker.main_dart)
-    package_relative = rebase_path(invoker.main_dart, source_dir)
 
-    # Approximation for source_dir contains main_dart.
-    if (get_path_info(get_path_info(package_relative, "dir"), "file") !=
-        "bin") {
-      main_uri = "package:" + package_name + "/" + package_relative
+    # If we have sources defined we can check to see if the main file is included
+    # in the source list. If so, we want to call the snapshot generation with
+    # the `package:foo/main.dart` style. If not we want to pass in a file uri.
+    if (defined(invoker.sources)) {
+      package_relative = rebase_path(invoker.main_dart, source_dir)
+
+      # Approximation for source_dir contains main_dart.
+      if (get_path_info(get_path_info(package_relative, "dir"), "file") !=
+          "bin") {
+        main_uri = "package:" + package_name + "/" + package_relative
+      }
     }
 
     args = [
@@ -201,7 +242,7 @@ template("dart_tool") {
       main_uri,
     ]
 
-    deps = sdk_deps + [ ":$dart_library_target_name" ]
+    deps = sdk_deps + [ ":$_dart_package_config_target_name" ]
   }
 
   # Builds a convenience script to invoke the app.
@@ -214,10 +255,7 @@ template("dart_tool") {
     dart = dart_binary
     snapshot = snapshot_path
 
-    deps = sdk_deps + [ ":$snapshot_target_name" ]
-    if (defined(invoker.non_dart_deps)) {
-      deps += invoker.non_dart_deps
-    }
+    deps = sdk_deps + _tool_deps + [ ":$snapshot_target_name" ]
   }
 }
 
