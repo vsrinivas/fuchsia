@@ -12,8 +12,8 @@
             "fuchsia.net.NameLookup",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.time.Maintenance",
-            "fuchsia.timezone.TimeService"
+            "fuchsia.sys.Launcher",
+            "fuchsia.time.Maintenance"
         ]
     }
 }

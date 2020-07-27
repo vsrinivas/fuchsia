@@ -13,7 +13,10 @@ use {
     fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet,
     fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_time as ftime,
     fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_component::server::ServiceFs,
+    fuchsia_component::{
+        client::{launch, launcher},
+        server::ServiceFs,
+    },
     fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
     log::{debug, error, info, warn},
@@ -23,6 +26,10 @@ use {
 };
 
 mod diagnostics;
+
+/// URL of the time source. In the future, this value belongs in a config file.
+const NETWORK_TIME_SERVICE: &str =
+    "fuchsia-pkg://fuchsia.com/network_time_service#meta/network_time_service.cmx";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -51,18 +58,20 @@ async fn main() -> Result<(), Error> {
     let notifier = Notifier::new(source);
 
     info!("connecting to external update service");
-    let time_service =
-        fuchsia_component::client::connect_to_service::<ftz::TimeServiceMarker>().unwrap();
+    let launcher = launcher().context("starting launcher")?;
+    let time_app = launch(&launcher, NETWORK_TIME_SERVICE.to_string(), None)
+        .context("launching time service")?;
+    let time_service = time_app.connect_to_service::<ftz::TimeServiceMarker>().unwrap();
     let netstack_service =
         fuchsia_component::client::connect_to_service::<fnetstack::NetstackMarker>().unwrap();
+    let notifier_clone = notifier.clone();
 
-    fasync::Task::spawn(maintain_utc(
-        utc_clock,
-        notifier.clone(),
-        time_service,
-        netstack_service,
-        cobalt,
-    ))
+    fasync::Task::spawn(async move {
+        // Keep time_app in the same scope as time_service so the app is not stopped while
+        // we are still using it
+        let _time_app = time_app;
+        maintain_utc(utc_clock, notifier_clone, time_service, netstack_service, cobalt).await;
+    })
     .detach();
 
     info!("serving notifier on servicefs");
