@@ -503,6 +503,7 @@ impl Directory for FatDirectory {
             Err(e) => return AsyncReadDirents::Immediate(Err(e)),
         };
         // Figure out where to start from.
+        // TODO(fxb/57087): there's a subtle bug here.
         let next_name = match pos {
             AlphabeticalTraversal::Dot => ".".to_owned(),
             AlphabeticalTraversal::Name(name) => name,
@@ -529,6 +530,12 @@ impl Directory for FatDirectory {
                 }
             })
             .collect();
+
+        // If it's the root directory, we need to synthesize a "." entry if appropriate.
+        if self.data.read().unwrap().parent.is_none() && next_name.as_str() <= "." {
+            entries.push((".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)));
+        }
+
         // Sort them by alphabetical order.
         entries.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
@@ -681,7 +688,7 @@ mod tests {
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
 
-        let sink = Box::new(DummySink::new(3));
+        let sink = Box::new(DummySink::new(4));
         let mut pos = AlphabeticalTraversal::Dot;
         match dir.clone().read_dirents(pos, sink.clone()) {
             AsyncReadDirents::Immediate(Ok(_)) => {
@@ -689,6 +696,7 @@ mod tests {
                 assert_eq!(
                     inner.entries,
                     vec![
+                        (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
                         ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
                         (
                             "directory".to_owned(),
@@ -744,6 +752,7 @@ mod tests {
                 assert_eq!(
                     inner.entries,
                     vec![
+                        (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
                         ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
                         (
                             "directory".to_owned(),
