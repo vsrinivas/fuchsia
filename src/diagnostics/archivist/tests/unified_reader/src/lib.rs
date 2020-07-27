@@ -230,7 +230,7 @@ async fn retrieve_and_validate_results(
         pretty_results.retain(|c| !c.is_whitespace());
         expected_string.retain(|c| !c.is_whitespace());
 
-        assert_diff!(&expected_string, &pretty_results, "", 0);
+        assert_diff!(&expected_string, &pretty_results, "\n", 0);
 
         // Need to return to break loop when read succeeds.
         return;
