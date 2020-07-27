@@ -8,7 +8,9 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include "lib/fit/result.h"
 #include "lib/zx/vmo.h"
+#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace camera {
@@ -27,36 +29,56 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
   return nullptr;
 }
 
+fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetClientBuffer(
+    StreamCreationData* info) {
+  for (uint32_t i = 0; i < info->output_buffers.buffer_count; i++) {
+    std::string buffer_collection_name = "camera_controller_output_node";
+    auto buffer_name = buffer_collection_name.append(std::to_string(i));
+    fsl::MaybeSetObjectName(
+        info->output_buffers.buffers[i].vmo.get(), buffer_name,
+        [](std::string s) { return s.find("Sysmem") == 0 || s.find("ImagePipe2") == 0; });
+  }
+  return fit::ok(fidl::Clone(info->output_buffers));
+}
+
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
     StreamCreationData* info, const std::string& buffer_tag) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   const auto* consumer = GetNextNodeInPipeline(info->stream_type(), producer);
+  auto current_producer = &producer;
+
   if (!consumer) {
     FX_LOGST(ERROR, kTag) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
-  // If the consumer is the client, we use the client buffers
-  if (consumer->type == kOutputStream) {
-    for (uint32_t i = 0; i < info->output_buffers.buffer_count; i++) {
-      std::string buffer_collection_name = "camera_controller_output_node";
-      auto buffer_name = buffer_collection_name.append(std::to_string(i));
-      fsl::MaybeSetObjectName(
-          info->output_buffers.buffers[i].vmo.get(), buffer_name,
-          [](std::string s) { return s.find("Sysmem") == 0 || s.find("ImagePipe2") == 0; });
+  // The controller might need to allocate memory using sysmem.
+  // Populate the constraints.
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  constraints.push_back(producer.output_constraints);
+
+  while (consumer->in_place) {
+    if (current_producer->child_nodes.size() != 1) {
+      FX_LOGST(ERROR, kTag)
+          << "Invalid configuration. A buffer is shared with a node which does in place operations";
+      return fit::error(ZX_ERR_BAD_STATE);
     }
-    return fit::ok(std::move(info->output_buffers));
+    constraints.push_back(consumer->input_constraints);
+    current_producer = consumer;
+    consumer = &consumer->child_nodes[0];
+  };
+
+  // If the consumer is the client, we use the client buffers.
+  if (consumer->type == kOutputStream) {
+    return GetClientBuffer(info);
   }
 
-  // The controller will need to allocate memory using sysmem.
-  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
-  for (const auto& node : producer.child_nodes) {
+  for (const auto& node : current_producer->child_nodes) {
     if (node.type != kOutputStream) {
       constraints.push_back(node.input_constraints);
     }
   }
-  constraints.push_back(producer.output_constraints);
 
   auto status = memory_allocator.AllocateSharedMemory(constraints, &buffers);
   if (status != ZX_OK) {
