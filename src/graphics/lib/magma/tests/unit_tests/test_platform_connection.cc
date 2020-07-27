@@ -106,6 +106,7 @@ struct SharedData {
   };
   std::unique_ptr<magma::PlatformHandle> test_access_token;
   bool can_access_performance_counters;
+  uint64_t pool_id = UINT64_MAX;
 };
 
 static SharedData shared_data;
@@ -350,6 +351,56 @@ class TestPlatformConnection {
     }
   }
 
+  void TestPerformanceCounters() {
+    FlowControlInit();
+    uint32_t trigger_id;
+    uint64_t buffer_id;
+    uint32_t buffer_offset;
+    uint64_t time;
+    uint32_t result_flags;
+    uint64_t counter = 2;
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->EnablePerformanceCounters(&counter, 1).get());
+    std::unique_ptr<magma::PlatformPerfCountPoolClient> pool;
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->CreatePerformanceCounterBufferPool(&pool).get());
+
+    EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
+
+    // The GetError() above should wait until the performance counter completion event sent in
+    // CreatePerformanceCounterBufferPool is sent and therefore readable.
+    {
+      std::lock_guard<std::mutex> lock(shared_data.mutex);
+      EXPECT_EQ(shared_data.pool_id, pool->pool_id());
+    }
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              pool->ReadPerformanceCounterCompletion(&trigger_id, &buffer_id, &buffer_offset, &time,
+                                                     &result_flags)
+                  .get());
+    EXPECT_EQ(1u, trigger_id);
+    EXPECT_EQ(2u, buffer_id);
+    EXPECT_EQ(3u, buffer_offset);
+    EXPECT_EQ(4u, time);
+    EXPECT_EQ(1u, result_flags);
+
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->ReleasePerformanceCounterBufferPool(1).get());
+    magma_buffer_offset offset = {2, 3, 4};
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              client_connection_->AddPerformanceCounterBufferOffsetsToPool(1, &offset, 1).get());
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              client_connection_->RemovePerformanceCounterBufferFromPool(1, 2).get());
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->ClearPerformanceCounters(&counter, 1).get());
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->DumpPerformanceCounters(1, 2).get());
+    EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
+
+    // The CreatePerformanceCounterBufferPool implementation threw away the server side, so the
+    // client should be able to detect that.
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST,
+              pool->ReadPerformanceCounterCompletion(&trigger_id, &buffer_id, &buffer_offset, &time,
+                                                     &result_flags)
+                  .get());
+    EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
+    FlowControlCheck(7, 0);
+  }
+
  private:
   static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection) {
     magma::PlatformConnection::RunLoop(connection);
@@ -502,7 +553,72 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     return shared_data.can_access_performance_counters;
   }
 
+  magma::Status EnablePerformanceCounters(const uint64_t* counters,
+                                          uint64_t counter_count) override {
+    EXPECT_EQ(counter_count, 1u);
+    EXPECT_EQ(2u, counters[0]);
+
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status CreatePerformanceCounterBufferPool(
+      std::unique_ptr<magma::PlatformPerfCountPool> pool) override {
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    shared_data.pool_id = pool->pool_id();
+    constexpr uint32_t kTriggerId = 1;
+    constexpr uint64_t kBufferId = 2;
+    constexpr uint32_t kBufferOffset = 3;
+    constexpr uint64_t kTimestamp = 4;
+    constexpr uint64_t kResultFlags = 1;
+
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              pool->SendPerformanceCounterCompletion(kTriggerId, kBufferId, kBufferOffset,
+                                                     kTimestamp, kResultFlags)
+                  .get());
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status ReleasePerformanceCounterBufferPool(uint64_t pool_id) override {
+    EXPECT_EQ(1u, pool_id);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status AddPerformanceCounterBufferOffsetToPool(uint64_t pool_id, uint64_t buffer_id,
+                                                        uint32_t buffer_offset,
+                                                        uint32_t buffer_size) override {
+    EXPECT_EQ(1u, pool_id);
+    EXPECT_EQ(2u, buffer_id);
+    EXPECT_EQ(3u, buffer_offset);
+    EXPECT_EQ(4u, buffer_size);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
+                                                       uint64_t buffer_id) override {
+    EXPECT_EQ(1u, pool_id);
+    EXPECT_EQ(2u, buffer_id);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) override {
+    EXPECT_EQ(1u, pool_id);
+    EXPECT_EQ(2u, trigger_id);
+    std::unique_lock<std::mutex> lock(shared_data.mutex);
+    shared_data.test_complete = true;
+
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status ClearPerformanceCounters(const uint64_t* counters,
+                                         uint64_t counter_count) override {
+    EXPECT_EQ(1u, counter_count);
+    EXPECT_EQ(2u, counters[0]);
+    return MAGMA_STATUS_OK;
+  }
+
   uint64_t immediate_commands_bytes_executed_ = 0;
+
+  magma::PlatformConnection* connection_;
 };
 
 std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create(
@@ -515,10 +631,14 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create(
   client_connection = std::make_unique<magma::LinuxPlatformConnectionClient>(delegate.get());
 #endif
 
+  TestDelegate* delegate_ptr = delegate.get();
+
   auto connection =
       magma::PlatformConnection::Create(std::move(delegate), 1u, /*thread_profile*/ nullptr);
   if (!connection)
     return DRETP(nullptr, "failed to create PlatformConnection");
+
+  delegate_ptr->connection_ = connection.get();
 
   if (!client_connection) {
     client_connection = magma::PlatformConnectionClient::Create(
@@ -740,4 +860,10 @@ TEST(PlatformConnection, PrimaryWrapperFlowControlWithBytes) {
 #else
   GTEST_SKIP();
 #endif
+}
+
+TEST(PlatformConnection, TestPerformanceCounters) {
+  auto Test = TestPlatformConnection::Create();
+  ASSERT_NE(Test, nullptr);
+  Test->TestPerformanceCounters();
 }

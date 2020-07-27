@@ -149,6 +149,24 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
     return {messages_consumed_, bytes_imported_};
   }
 
+  void EnablePerformanceCounters(::fidl::VectorView<uint64_t> counters,
+                                 EnablePerformanceCountersCompleter::Sync completer) override;
+  void CreatePerformanceCounterBufferPool(
+      uint64_t pool_id, zx::channel event_channel,
+      CreatePerformanceCounterBufferPoolCompleter::Sync completer) override;
+  void ReleasePerformanceCounterBufferPool(
+      uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync completer) override;
+  void AddPerformanceCounterBufferOffsetsToPool(
+      uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset> offsets,
+      AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync completer) override;
+  void RemovePerformanceCounterBufferFromPool(
+      uint64_t pool_id, uint64_t buffer_id,
+      RemovePerformanceCounterBufferFromPoolCompleter::Sync completer) override;
+  void DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id,
+                               DumpPerformanceCountersCompleter::Sync completer) override;
+  void ClearPerformanceCounters(::fidl::VectorView<uint64_t> counters,
+                                ClearPerformanceCountersCompleter::Sync completer) override;
+
   void SetError(magma_status_t error) {
     if (!error_)
       error_ = DRET_MSG(error, "ZirconPlatformConnection encountered dispatcher error");
@@ -160,6 +178,7 @@ class ZirconPlatformConnection : public llcpp::fuchsia::gpu::magma::Primary::Int
   magma_status_t error_{};
   zx::channel server_notification_endpoint_;
   zx::channel client_notification_endpoint_;
+  zx::channel performance_counter_event_channel_;
   async::Loop async_loop_;
   AsyncWait async_wait_shutdown_;
 

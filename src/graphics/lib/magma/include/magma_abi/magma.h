@@ -536,6 +536,124 @@ magma_status_t magma_buffer_set_padding(
     magma_buffer_t buffer,
     uint64_t padding);
 
+///
+/// \brief Enables a set of performance counters (the precise definition depends on the GPU driver).
+///        Disables enabled performance counters that are not in the new set. Performance counters
+///        will also be automatically disabled on connection close. Performance counter access must
+///        have been enabled using magma_connection_access_performance_counters before calling this
+///        method.
+/// \param connection An open connection to a device.
+/// \param counters An implementation-defined list of counters.
+/// \param counters_count The number of entries in |counters|.
+///
+magma_status_t magma_connection_enable_performance_counters(
+    magma_connection_t connection,
+    uint64_t* counters,
+    uint64_t counters_count);
+
+///
+/// \brief Create a pool of buffers that performance counters can be dumped into. Performance
+///        counter access must have been enabled using magma_connection_access_performance_counters
+///        before calling this method.
+/// \param connection An open connection to a device.
+/// \param pool_out A new pool id. Must not currently be in use.
+/// \param notification_handle_out A handle that should be waited on.
+///
+magma_status_t magma_connection_create_performance_counter_buffer_pool(
+    magma_connection_t connection,
+    magma_perf_count_pool_t* pool_out,
+    magma_handle_t* notification_handle_out);
+
+///
+/// \brief Releases a pool of performance counter buffers. Performance counter access must have been
+///        enabled using magma_connection_access_performance_counters before calling this method.
+/// \param connection An open connection to a device.
+/// \param pool An existing pool id.
+///
+magma_status_t magma_connection_release_performance_counter_buffer_pool(
+    magma_connection_t connection,
+    magma_perf_count_pool_t pool);
+
+///
+/// \brief Adds a an array of buffers + offset to the pool. |offsets[n].buffer_id| is the koid of a
+///        buffer that was previously imported using ImportBuffer(). The same buffer may be added to
+///        multiple pools. The pool will hold on to a reference to the buffer even after
+///        ReleaseBuffer is called.  When dumped into this entry, counters will be written starting
+///        at |offsets[n].offset| bytes into the buffer, and up to |offsets[n].offset| +
+///        |offsets[n].size|. |offsets[n].size| must be large enough to fit all enabled counters.
+///        Performance counter access must have been enabled using
+///        magma_connection_access_performance_counters before calling this method.
+/// \param connection An open connection to a device.
+/// \param pool An existing pool.
+/// \param offsets An array of offsets to add.
+/// \param offsets_count The number of elements in offsets.
+///
+magma_status_t magma_connection_add_performance_counter_buffer_offsets_to_pool(
+    magma_connection_t connection,
+    magma_perf_count_pool_t pool,
+    const struct magma_buffer_offset* offsets,
+    uint64_t offsets_count);
+
+///
+/// \brief Removes every offset of a buffer from the pool. Performance counter access must have been
+///        enabled using magma_connection_access_performance_counters before calling this method.
+/// \param connection An open connection to a device.
+/// \param pool_id An existing pool.
+/// \param buffer A magma_buffer
+///
+magma_status_t magma_connection_remove_performance_counter_buffer_from_pool(
+    magma_connection_t connection,
+    magma_perf_count_pool_t pool_id,
+    magma_buffer_t buffer);
+
+///
+/// \brief Triggers dumping of the performance counters into a buffer pool. May fail silently if
+///        there are no buffers in the pool. |trigger_id| is an arbitrary ID assigned by the client
+///        that can be returned in OnPerformanceCounterReadCompleted. Performance counter access
+///        must have been enabled using magma_connection_access_performance_counters before calling
+///        this method.
+/// \param connection An open connection to a device.
+/// \param pool An existing pool
+/// \param trigger_id An arbitrary ID assigned by the client that will be returned in
+///        OnPerformanceCounterReadCompleted.
+///
+magma_status_t magma_connection_dump_performance_counters(
+    magma_connection_t connection,
+    magma_perf_count_pool_t pool,
+    uint32_t trigger_id);
+
+///
+/// \brief Sets the values of all listed performance counters to 0. May not be supported by some
+///        hardware. Performance counter access must have been enabled using
+///        magma_connection_access_performance_counters before calling this method.
+/// \param connection An open connection to a device.
+/// \param counters An implementation-defined list of counters.
+/// \param counters_count The number of entries in |counters|.
+///
+magma_status_t magma_connection_clear_performance_counters(
+    magma_connection_t connection,
+    uint64_t* counters,
+    uint64_t counters_count);
+
+///
+/// \brief Reads one performance counter completion event, if available.
+/// \param connection An open connection to a device.
+/// \param pool An existing pool.
+/// \param trigger_id_out The trigger ID for this event.
+/// \param buffer_id_out The buffer ID for this event.
+/// \param buffer_offset_out The buffer offset for this event.
+/// \param time_out The monotonic time this event happened.
+/// \param result_flags_out A set of flags giving more information about this event.
+///
+magma_status_t magma_connection_read_performance_counter_completion(
+    magma_connection_t connection,
+    magma_perf_count_pool_t pool,
+    uint32_t* trigger_id_out,
+    uint64_t* buffer_id_out,
+    uint32_t* buffer_offset_out,
+    uint64_t* time_out,
+    uint32_t* result_flags_out);
+
 #if defined(__cplusplus)
 }
 #endif

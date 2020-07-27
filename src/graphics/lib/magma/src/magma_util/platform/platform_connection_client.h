@@ -16,6 +16,18 @@
 
 namespace magma {
 
+class PlatformPerfCountPoolClient {
+ public:
+  virtual ~PlatformPerfCountPoolClient() = default;
+  virtual uint64_t pool_id() = 0;
+  virtual magma_handle_t handle() = 0;
+  virtual magma::Status ReadPerformanceCounterCompletion(uint32_t* trigger_id_out,
+                                                         uint64_t* buffer_id_out,
+                                                         uint32_t* buffer_offset_out,
+                                                         uint64_t* time_out,
+                                                         uint32_t* result_flags_out) = 0;
+};
+
 // Any implementation of PlatformConnectionClient shall be threadsafe.
 class PlatformConnectionClient : public magma_connection {
  public:
@@ -68,6 +80,17 @@ class PlatformConnectionClient : public magma_connection {
   virtual magma_status_t AccessPerformanceCounters(
       std::unique_ptr<magma::PlatformHandle> handle) = 0;
   virtual magma_status_t IsPerformanceCounterAccessEnabled(bool* enabled_out) = 0;
+  virtual magma::Status EnablePerformanceCounters(uint64_t* counters, uint64_t counter_count) = 0;
+  virtual magma::Status CreatePerformanceCounterBufferPool(
+      std::unique_ptr<PlatformPerfCountPoolClient>* pool_out) = 0;
+  virtual magma::Status ReleasePerformanceCounterBufferPool(uint64_t pool_id) = 0;
+  virtual magma::Status AddPerformanceCounterBufferOffsetsToPool(uint64_t pool_id,
+                                                                 const magma_buffer_offset* offsets,
+                                                                 uint64_t offsets_count) = 0;
+  virtual magma::Status RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
+                                                               uint64_t buffer_id) = 0;
+  virtual magma::Status DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) = 0;
+  virtual magma::Status ClearPerformanceCounters(uint64_t* counters, uint64_t counter_count) = 0;
 
   // Retrieve the performance counter access token from a channel to a gpu-performance-counters
   // device.

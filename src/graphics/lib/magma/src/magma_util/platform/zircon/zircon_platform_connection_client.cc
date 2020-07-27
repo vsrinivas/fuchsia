@@ -37,6 +37,65 @@ static magma_status_t MagmaChannelStatus(const zx_status_t status) {
 
 namespace magma {
 
+class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
+ public:
+  zx_status_t Initialize() {
+    static std::atomic_uint64_t ids;
+    pool_id_ = ids++;
+    zx::channel client_endpoint;
+    zx_status_t status = zx::channel::create(0, &client_endpoint, &server_endpoint_);
+    if (status == ZX_OK)
+      perf_counter_events_ = llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::SyncClient(
+          std::move(client_endpoint));
+    return status;
+  }
+  uint64_t pool_id() override { return pool_id_; }
+  zx::channel TakeServerEndpoint() {
+    DASSERT(server_endpoint_);
+    return std::move(server_endpoint_);
+  }
+
+  magma_handle_t handle() override { return perf_counter_events_.channel().get(); }
+  magma::Status ReadPerformanceCounterCompletion(uint32_t* trigger_id_out, uint64_t* buffer_id_out,
+                                                 uint32_t* buffer_offset_out, uint64_t* time_out,
+                                                 uint32_t* result_flags_out) override {
+    zx_signals_t pending;
+    zx_status_t status = perf_counter_events_.channel().wait_one(
+        ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time(), &pending);
+    if (status != ZX_OK) {
+      magma_status_t magma_status = MagmaChannelStatus(status);
+      return DRET(magma_status);
+    }
+    if (!(pending & ZX_CHANNEL_READABLE)) {
+      // If none of the signals were active then wait_one should have returned ZX_ERR_TIMED_OUT.
+      DASSERT(pending & ZX_CHANNEL_PEER_CLOSED);
+      return DRET(MAGMA_STATUS_CONNECTION_LOST);
+    }
+
+    llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::EventHandlers handlers;
+    handlers.on_performance_counter_read_completed =
+        [&](uint32_t trigger_id, uint64_t buffer_id, uint32_t buffer_offset, uint64_t timestamp,
+            llcpp::fuchsia::gpu::magma::ResultFlags result_flags) {
+          *trigger_id_out = trigger_id;
+          *buffer_id_out = buffer_id;
+          *buffer_offset_out = buffer_offset;
+          *time_out = timestamp;
+          *result_flags_out = static_cast<uint32_t>(result_flags);
+          return ZX_OK;
+        };
+    handlers.unknown = []() { return ZX_ERR_INTERNAL; };
+    magma_status_t magma_status =
+        MagmaChannelStatus(perf_counter_events_.HandleEvents(std::move(handlers)));
+    return DRET(magma_status);
+  }
+
+ private:
+  uint64_t pool_id_;
+
+  llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::SyncClient perf_counter_events_;
+  zx::channel server_endpoint_;
+};
+
 PrimaryWrapper::PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messages,
                                uint64_t max_inflight_bytes)
     : client_(std::move(channel)),
@@ -188,6 +247,81 @@ magma_status_t PrimaryWrapper::AccessPerformanceCounters(zx::event event) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status = client_.AccessPerformanceCounters(std::move(event)).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return MagmaChannelStatus(status);
+}
+
+magma_status_t PrimaryWrapper::EnablePerformanceCounters(fidl::VectorView<uint64_t> counters) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status = client_.EnablePerformanceCounters(std::move(counters)).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return MagmaChannelStatus(status);
+}
+
+magma_status_t PrimaryWrapper::CreatePerformanceCounterBufferPool(uint64_t pool_id,
+                                                                  zx::channel event_channel) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status =
+      client_.CreatePerformanceCounterBufferPool(pool_id, std::move(event_channel)).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return MagmaChannelStatus(status);
+}
+
+magma_status_t PrimaryWrapper::ReleasePerformanceCounterBufferPool(uint64_t pool_id) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status = client_.ReleasePerformanceCounterBufferPool(pool_id).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return MagmaChannelStatus(status);
+}
+
+magma_status_t PrimaryWrapper::AddPerformanceCounterBufferOffsetsToPool(
+    uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset> offsets) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status =
+      client_.AddPerformanceCounterBufferOffsetsToPool(pool_id, std::move(offsets)).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return MagmaChannelStatus(status);
+}
+
+magma_status_t PrimaryWrapper::RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
+                                                                      uint64_t buffer_id) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status = client_.RemovePerformanceCounterBufferFromPool(pool_id, buffer_id).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return MagmaChannelStatus(status);
+}
+
+magma_status_t PrimaryWrapper::DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status = client_.DumpPerformanceCounters(pool_id, trigger_id).status();
+  if (status == ZX_OK) {
+    UpdateFlowControl();
+  }
+  return MagmaChannelStatus(status);
+}
+
+magma_status_t PrimaryWrapper::ClearPerformanceCounters(fidl::VectorView<uint64_t> counters) {
+  std::lock_guard<std::mutex> lock(flow_control_mutex_);
+  FlowControl();
+  zx_status_t status = client_.ClearPerformanceCounters(std::move(counters)).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -521,6 +655,75 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
       return DRET_MSG(MagmaChannelStatus(rsp.status()), "failed to write to channel");
 
     *enabled_out = rsp->enabled;
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status EnablePerformanceCounters(uint64_t* counters, uint64_t counter_count) override {
+    magma_status_t result = client_.EnablePerformanceCounters(
+        fidl::VectorView<uint64_t>(fidl::unowned_ptr(counters), counter_count));
+
+    if (result != MAGMA_STATUS_OK)
+      return DRET(result);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status CreatePerformanceCounterBufferPool(
+      std::unique_ptr<PlatformPerfCountPoolClient>* pool_out) override {
+    auto zircon_pool = std::make_unique<ZirconPlatformPerfCountPoolClient>();
+    zx_status_t status = zircon_pool->Initialize();
+    if (status != ZX_OK)
+      return MagmaChannelStatus(status);
+    magma_status_t result = client_.CreatePerformanceCounterBufferPool(
+        zircon_pool->pool_id(), zircon_pool->TakeServerEndpoint());
+    if (result != MAGMA_STATUS_OK)
+      return DRET(result);
+    *pool_out = std::move(zircon_pool);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status ReleasePerformanceCounterBufferPool(uint64_t pool_id) override {
+    magma_status_t result = client_.ReleasePerformanceCounterBufferPool(pool_id);
+    if (result != MAGMA_STATUS_OK)
+      return DRET(result);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status AddPerformanceCounterBufferOffsetsToPool(uint64_t pool_id,
+                                                         const magma_buffer_offset* offsets,
+                                                         uint64_t offset_count) override {
+    DASSERT(sizeof(*offsets) == sizeof(llcpp::fuchsia::gpu::magma::BufferOffset));
+    // The LLCPP FIDL bindings don't take const pointers, but they don't modify the data unless it
+    // contains handles.
+    auto fidl_offsets = const_cast<llcpp::fuchsia::gpu::magma::BufferOffset*>(
+        reinterpret_cast<const llcpp::fuchsia::gpu::magma::BufferOffset*>(offsets));
+    magma_status_t result = client_.AddPerformanceCounterBufferOffsetsToPool(
+        pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset>(
+                     fidl::unowned_ptr(fidl_offsets), offset_count));
+    if (result != MAGMA_STATUS_OK)
+      return DRET(result);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
+                                                       uint64_t buffer_id) override {
+    magma_status_t result = client_.RemovePerformanceCounterBufferFromPool(pool_id, buffer_id);
+    if (result != MAGMA_STATUS_OK)
+      return DRET(result);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) override {
+    magma_status_t result = client_.DumpPerformanceCounters(pool_id, trigger_id);
+    if (result != MAGMA_STATUS_OK)
+      return DRET(result);
+    return MAGMA_STATUS_OK;
+  }
+
+  magma::Status ClearPerformanceCounters(uint64_t* counters, uint64_t counter_count) override {
+    magma_status_t result = client_.ClearPerformanceCounters(
+        fidl::VectorView<uint64_t>(fidl::unowned_ptr(counters), counter_count));
+    if (result != MAGMA_STATUS_OK)
+      return DRET(result);
     return MAGMA_STATUS_OK;
   }
 

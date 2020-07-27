@@ -385,3 +385,50 @@ magma_status_t magma_connection_access_performance_counters(magma_connection_t c
                                                             magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_connection_enable_performance_counters(magma_connection_t connection,
+                                                            uint64_t* counters,
+                                                            uint64_t counters_count) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_connection_create_performance_counter_buffer_pool(
+    magma_connection_t connection, magma_perf_count_pool_t* pool_out,
+    magma_handle_t* notification_handle_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_connection_release_performance_counter_buffer_pool(
+    magma_connection_t connection, magma_perf_count_pool_t pool) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_connection_add_performance_counter_buffer_offsets_to_pool(
+    magma_connection_t connection, magma_perf_count_pool_t pool, const magma_buffer_offset* offsets,
+    uint64_t offset_count) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_connection_remove_performance_counter_buffer_from_pool(
+    magma_connection_t connection, magma_perf_count_pool_t pool, magma_buffer_t buffer) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_connection_dump_performance_counters(magma_connection_t connection,
+                                                          magma_perf_count_pool_t pool,
+                                                          uint32_t trigger_id) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_connection_clear_performance_counters(magma_connection_t connection,
+                                                           uint64_t* counters,
+                                                           uint64_t counters_count) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_connection_read_performance_counter_completion(
+    magma_connection_t connection, magma_perf_count_pool_t pool, uint32_t* trigger_id_out,
+    uint64_t* buffer_id_out, uint32_t* buffer_offset_out, uint64_t* time_out,
+    uint32_t* result_flags_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

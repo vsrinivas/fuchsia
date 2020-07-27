@@ -249,6 +249,72 @@ bool MagmaSystemConnection::ReleaseObject(uint64_t object_id,
   return true;
 }
 
+magma::Status MagmaSystemConnection::EnablePerformanceCounters(const uint64_t* counters,
+                                                               uint64_t counter_count) {
+  if (!can_access_performance_counters_)
+    return DRET(MAGMA_STATUS_ACCESS_DENIED);
+
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
+magma::Status MagmaSystemConnection::CreatePerformanceCounterBufferPool(
+    std::unique_ptr<magma::PlatformPerfCountPool> pool) {
+  if (!can_access_performance_counters_)
+    return DRET(MAGMA_STATUS_ACCESS_DENIED);
+
+  // For now, throw out the pool.
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
+magma::Status MagmaSystemConnection::ReleasePerformanceCounterBufferPool(uint64_t pool_id) {
+  if (!can_access_performance_counters_)
+    return DRET(MAGMA_STATUS_ACCESS_DENIED);
+
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
+magma::Status MagmaSystemConnection::AddPerformanceCounterBufferOffsetToPool(uint64_t pool_id,
+                                                                             uint64_t buffer_id,
+                                                                             uint32_t buffer_offset,
+                                                                             uint32_t buffer_size) {
+  if (!can_access_performance_counters_)
+    return DRET(MAGMA_STATUS_ACCESS_DENIED);
+  std::shared_ptr<MagmaSystemBuffer> buffer = LookupBuffer(buffer_id);
+  if (!buffer) {
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  }
+
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
+magma::Status MagmaSystemConnection::RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
+                                                                            uint64_t buffer_id) {
+  if (!can_access_performance_counters_)
+    return DRET(MAGMA_STATUS_ACCESS_DENIED);
+  std::shared_ptr<MagmaSystemBuffer> buffer = LookupBuffer(buffer_id);
+  if (!buffer) {
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  }
+
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
+magma::Status MagmaSystemConnection::DumpPerformanceCounters(uint64_t pool_id,
+                                                             uint32_t trigger_id) {
+  if (!can_access_performance_counters_)
+    return DRET(MAGMA_STATUS_ACCESS_DENIED);
+
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
+magma::Status MagmaSystemConnection::ClearPerformanceCounters(const uint64_t* counters,
+                                                              uint64_t counter_count) {
+  if (!can_access_performance_counters_)
+    return DRET(MAGMA_STATUS_ACCESS_DENIED);
+
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint64_t id) {
   auto iter = buffer_map_.find(id);
   if (iter == buffer_map_.end())

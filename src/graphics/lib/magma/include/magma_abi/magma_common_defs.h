@@ -126,6 +126,8 @@ typedef uintptr_t magma_buffer_t;
 
 typedef uintptr_t magma_semaphore_t;
 
+typedef uintptr_t magma_perf_count_pool_t;
+
 typedef struct magma_connection {
   uint32_t magic_;
 } * magma_connection_t;
@@ -177,6 +179,12 @@ struct magma_inline_command_buffer {
 struct magma_total_time_query_result {
   uint64_t gpu_time_ns;        // GPU time in ns since driver start.
   uint64_t monotonic_time_ns;  // monotonic clock time measured at same time CPU time was.
+};
+
+struct magma_buffer_offset {
+  uint64_t buffer_id;
+  uint64_t offset;
+  uint64_t length;
 };
 
 // The top 16 bits are reserved for vendor-specific flags.

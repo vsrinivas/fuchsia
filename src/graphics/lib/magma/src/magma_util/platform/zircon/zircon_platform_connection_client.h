@@ -38,6 +38,14 @@ class PrimaryWrapper {
   magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va);
   magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count);
   magma_status_t AccessPerformanceCounters(zx::event event);
+  magma_status_t EnablePerformanceCounters(fidl::VectorView<uint64_t> counters);
+  magma_status_t CreatePerformanceCounterBufferPool(uint64_t pool_id, zx::channel event_channel);
+  magma_status_t ReleasePerformanceCounterBufferPool(uint64_t pool_id);
+  magma_status_t AddPerformanceCounterBufferOffsetsToPool(
+      uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset> offsets);
+  magma_status_t RemovePerformanceCounterBufferFromPool(uint64_t pool_id, uint64_t buffer_id);
+  magma_status_t DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id);
+  magma_status_t ClearPerformanceCounters(fidl::VectorView<uint64_t> counters);
 
   // Skipped for GetError
   auto GetError() { return client_.GetError(); }

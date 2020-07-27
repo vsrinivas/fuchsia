@@ -574,3 +574,80 @@ magma_status_t magma_connection_access_performance_counters(magma_connection_t c
 
   return enabled ? MAGMA_STATUS_OK : MAGMA_STATUS_ACCESS_DENIED;
 }
+
+magma_status_t magma_connection_enable_performance_counters(magma_connection_t connection,
+                                                            uint64_t* counters,
+                                                            uint64_t counters_count) {
+  return magma::PlatformConnectionClient::cast(connection)
+      ->EnablePerformanceCounters(counters, counters_count)
+      .get();
+}
+
+magma_status_t magma_connection_create_performance_counter_buffer_pool(
+    magma_connection_t connection, magma_perf_count_pool_t* pool_out,
+    magma_handle_t* notification_handle_out) {
+  std::unique_ptr<magma::PlatformPerfCountPoolClient> client;
+  magma::Status status = magma::PlatformConnectionClient::cast(connection)
+                             ->CreatePerformanceCounterBufferPool(&client);
+  if (!status.ok())
+    return status.get();
+  *notification_handle_out = client->handle();
+  *pool_out = reinterpret_cast<magma_perf_count_pool_t>(client.release());
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_connection_release_performance_counter_buffer_pool(
+    magma_connection_t connection, magma_perf_count_pool_t pool) {
+  auto platform_pool = reinterpret_cast<magma::PlatformPerfCountPoolClient*>(pool);
+  magma::Status status = magma::PlatformConnectionClient::cast(connection)
+                             ->ReleasePerformanceCounterBufferPool(platform_pool->pool_id());
+  delete platform_pool;
+  return status.get();
+}
+
+magma_status_t magma_connection_add_performance_counter_buffer_offsets_to_pool(
+    magma_connection_t connection, magma_perf_count_pool_t pool, const magma_buffer_offset* offsets,
+    uint64_t offset_count) {
+  auto platform_pool = reinterpret_cast<magma::PlatformPerfCountPoolClient*>(pool);
+  return magma::PlatformConnectionClient::cast(connection)
+      ->AddPerformanceCounterBufferOffsetsToPool(platform_pool->pool_id(), offsets, offset_count)
+      .get();
+}
+
+magma_status_t magma_connection_remove_performance_counter_buffer_from_pool(
+    magma_connection_t connection, magma_perf_count_pool_t pool, magma_buffer_t buffer) {
+  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+  auto platform_pool = reinterpret_cast<magma::PlatformPerfCountPoolClient*>(pool);
+
+  return magma::PlatformConnectionClient::cast(connection)
+      ->RemovePerformanceCounterBufferFromPool(platform_pool->pool_id(), platform_buffer->id())
+      .get();
+}
+
+magma_status_t magma_connection_dump_performance_counters(magma_connection_t connection,
+                                                          magma_perf_count_pool_t pool,
+                                                          uint32_t trigger_id) {
+  auto platform_pool = reinterpret_cast<magma::PlatformPerfCountPoolClient*>(pool);
+  return magma::PlatformConnectionClient::cast(connection)
+      ->DumpPerformanceCounters(platform_pool->pool_id(), trigger_id)
+      .get();
+}
+
+magma_status_t magma_connection_clear_performance_counters(magma_connection_t connection,
+                                                           uint64_t* counters,
+                                                           uint64_t counters_count) {
+  return magma::PlatformConnectionClient::cast(connection)
+      ->ClearPerformanceCounters(counters, counters_count)
+      .get();
+}
+
+magma_status_t magma_connection_read_performance_counter_completion(
+    magma_connection_t connection, magma_perf_count_pool_t pool, uint32_t* trigger_id_out,
+    uint64_t* buffer_id_out, uint32_t* buffer_offset_out, uint64_t* time_out,
+    uint32_t* result_flags_out) {
+  auto platform_pool = reinterpret_cast<magma::PlatformPerfCountPoolClient*>(pool);
+  return platform_pool
+      ->ReadPerformanceCounterCompletion(trigger_id_out, buffer_id_out, buffer_offset_out, time_out,
+                                         result_flags_out)
+      .get();
+}

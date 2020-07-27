@@ -75,6 +75,18 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   magma::Status AccessPerformanceCounters(
       std::unique_ptr<magma::PlatformHandle> access_token) override;
   bool IsPerformanceCounterAccessEnabled() override { return can_access_performance_counters_; }
+  magma::Status EnablePerformanceCounters(const uint64_t* counters,
+                                          uint64_t counter_count) override;
+  magma::Status CreatePerformanceCounterBufferPool(
+      std::unique_ptr<magma::PlatformPerfCountPool> pool) override;
+  magma::Status ReleasePerformanceCounterBufferPool(uint64_t pool_id) override;
+  magma::Status AddPerformanceCounterBufferOffsetToPool(uint64_t pool_id, uint64_t buffer_id,
+                                                        uint32_t buffer_offset,
+                                                        uint32_t buffer_size) override;
+  magma::Status RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
+                                                       uint64_t buffer_id) override;
+  magma::Status DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) override;
+  magma::Status ClearPerformanceCounters(const uint64_t* counters, uint64_t counter_count) override;
 
  private:
   struct BufferReference {

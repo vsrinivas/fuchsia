@@ -8,6 +8,38 @@
 
 namespace magma {
 
+class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
+ public:
+  ZirconPlatformPerfCountPool(uint64_t id, zx::channel channel)
+      : pool_id_(id), channel_(std::move(channel)) {}
+
+  uint64_t pool_id() override { return pool_id_; }
+
+  // Sends a OnPerformanceCounterReadCompleted. May be called from any thread.
+  magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
+                                                 uint32_t buffer_offset, uint64_t time,
+                                                 uint32_t result_flags) override {
+    zx_status_t status = llcpp::fuchsia::gpu::magma::PerformanceCounterEvents::
+        SendOnPerformanceCounterReadCompletedEvent(
+            zx::unowned_channel(channel_), trigger_id, buffer_id, buffer_offset, time,
+            static_cast<llcpp::fuchsia::gpu::magma::ResultFlags>(result_flags));
+    switch (status) {
+      case ZX_OK:
+        return MAGMA_STATUS_OK;
+      case ZX_ERR_PEER_CLOSED:
+        return MAGMA_STATUS_CONNECTION_LOST;
+      case ZX_ERR_TIMED_OUT:
+        return MAGMA_STATUS_TIMED_OUT;
+      default:
+        return MAGMA_STATUS_INTERNAL_ERROR;
+    }
+  }
+
+ private:
+  uint64_t pool_id_;
+  zx::channel channel_;
+};
+
 bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
   fidl::OnChannelClosedFn<llcpp::fuchsia::gpu::magma::Primary::Interface> channel_closed_callback =
       [](llcpp::fuchsia::gpu::magma::Primary::Interface* interface) {
@@ -282,6 +314,76 @@ void ZirconPlatformConnection::IsPerformanceCounterAccessEnabled(
     IsPerformanceCounterAccessEnabledCompleter::Sync completer) {
   DLOG("ZirconPlatformConnection:::IsPerformanceCounterAccessEnabled");
   completer.Reply(delegate_->IsPerformanceCounterAccessEnabled());
+}
+
+void ZirconPlatformConnection::EnablePerformanceCounters(
+    ::fidl::VectorView<uint64_t> counters, EnablePerformanceCountersCompleter::Sync completer) {
+  FlowControl();
+  magma::Status status = delegate_->EnablePerformanceCounters(counters.data(), counters.count());
+  if (!status) {
+    SetError(status.get());
+  }
+}
+
+void ZirconPlatformConnection::CreatePerformanceCounterBufferPool(
+    uint64_t pool_id, zx::channel event_channel,
+    CreatePerformanceCounterBufferPoolCompleter::Sync completer) {
+  FlowControl();
+  auto pool = std::make_unique<ZirconPlatformPerfCountPool>(pool_id, std::move(event_channel));
+  magma::Status status = delegate_->CreatePerformanceCounterBufferPool(std::move(pool));
+  if (!status) {
+    SetError(status.get());
+  }
+}
+
+void ZirconPlatformConnection::ReleasePerformanceCounterBufferPool(
+    uint64_t pool_id, ReleasePerformanceCounterBufferPoolCompleter::Sync completer) {
+  FlowControl();
+  magma::Status status = delegate_->ReleasePerformanceCounterBufferPool(pool_id);
+  if (!status) {
+    SetError(status.get());
+  }
+}
+
+void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
+    uint64_t pool_id, fidl::VectorView<llcpp::fuchsia::gpu::magma::BufferOffset> offsets,
+    AddPerformanceCounterBufferOffsetsToPoolCompleter::Sync completer) {
+  FlowControl();
+  for (auto& offset : offsets) {
+    magma::Status status = delegate_->AddPerformanceCounterBufferOffsetToPool(
+        pool_id, offset.buffer_id, offset.offset, offset.size);
+    if (!status) {
+      SetError(status.get());
+    }
+  }
+}
+
+void ZirconPlatformConnection::RemovePerformanceCounterBufferFromPool(
+    uint64_t pool_id, uint64_t buffer_id,
+    RemovePerformanceCounterBufferFromPoolCompleter::Sync completer) {
+  FlowControl();
+  magma::Status status = delegate_->RemovePerformanceCounterBufferFromPool(pool_id, buffer_id);
+  if (!status) {
+    SetError(status.get());
+  }
+}
+
+void ZirconPlatformConnection::DumpPerformanceCounters(
+    uint64_t pool_id, uint32_t trigger_id, DumpPerformanceCountersCompleter::Sync completer) {
+  FlowControl();
+  magma::Status status = delegate_->DumpPerformanceCounters(pool_id, trigger_id);
+  if (!status) {
+    SetError(status.get());
+  }
+}
+
+void ZirconPlatformConnection::ClearPerformanceCounters(
+    ::fidl::VectorView<uint64_t> counters, ClearPerformanceCountersCompleter::Sync completer) {
+  FlowControl();
+  magma::Status status = delegate_->ClearPerformanceCounters(counters.data(), counters.count());
+  if (!status) {
+    SetError(status.get());
+  }
 }
 
 std::shared_ptr<PlatformConnection> PlatformConnection::Create(

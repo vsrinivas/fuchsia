@@ -789,6 +789,58 @@ class TestConnection {
 #endif
   }
 
+  void DisabledPerformanceCounters() {
+    uint64_t counter = 5;
+    magma_semaphore_t semaphore;
+    ASSERT_EQ(magma_create_semaphore(connection_, &semaphore), MAGMA_STATUS_OK);
+    uint64_t size = page_size();
+    magma_buffer_t buffer;
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &size, &buffer));
+
+    // For the following, all the commands themselves should succeed (because the channel is fine),
+    // but magma_get_error() should return MAGMA_STATUS_ACCESS_DENIED because performance counters
+    // weren't enabled yet.
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_connection_enable_performance_counters(connection_, &counter, 1));
+    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+    magma_perf_count_pool_t pool;
+    magma_handle_t handle;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_connection_create_performance_counter_buffer_pool(connection_, &pool, &handle));
+    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+    struct magma_buffer_offset offset {};
+    offset.buffer_id = magma_get_buffer_id(buffer);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_add_performance_counter_buffer_offsets_to_pool(
+                                   connection_, pool, &offset, 1));
+    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_dump_performance_counters(connection_, pool, 1));
+    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_connection_clear_performance_counters(connection_, &counter, 1));
+    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+    uint32_t trigger_id;
+    uint64_t buffer_id;
+    uint32_t buffer_offset;
+    uint64_t time;
+    uint32_t result_flags;
+    // The server should close the channel because it didn't accept the connection.
+    EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_connection_read_performance_counter_completion(
+                                                connection_, pool, &trigger_id, &buffer_id,
+                                                &buffer_offset, &time, &result_flags));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_connection_remove_performance_counter_buffer_from_pool(
+                                   connection_, pool, buffer));
+    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_connection_release_performance_counter_buffer_pool(connection_, pool));
+    EXPECT_EQ(MAGMA_STATUS_ACCESS_DENIED, magma_get_error(connection_));
+
+    magma_release_buffer(connection_, buffer);
+    magma_release_semaphore(connection_, semaphore);
+  }
+
  private:
   int fd_ = -1;
   magma_device_t device_ = 0;
@@ -1000,3 +1052,5 @@ TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
 }
 
 TEST(MagmaAbi, EnablePerformanceCounters) { TestConnection().EnablePerformanceCounters(); }
+
+TEST(MagmaAbi, DisabledPerformanceCounters) { TestConnection().DisabledPerformanceCounters(); }

@@ -51,6 +51,24 @@ struct CommandBuffer {
     uint32 batch_start_offset;
 };
 
+/// Performance counter pools contain byte ranges of buffers. Whenever a performance counter dump is
+/// triggered, the driver removes a range from the pool, writes the performance counter values from
+/// the hardware into it, then signals the client using OnPerformanceCounterReadCompleted. Pool IDs
+/// are arbitrary uint64 values that are allocated by the client.
+using PerfCountPoolId = uint64;
+
+bits ResultFlags {
+    /// This bit is set in result_flags if the performance counters missed some samples, e.g. due to
+    /// the GPU being in protected mode for part of the time.
+    DISCONTINUITY = 1;
+};
+
+struct BufferOffset {
+    zx.koid buffer_id;
+    uint64 offset;
+    uint64 size;
+};
+
 protocol Primary {
     /// Imports a buffer for use in the system driver.
     ImportBuffer(zx.handle:VMO buffer);
@@ -128,6 +146,50 @@ protocol Primary {
     /// if the client's count of inflight bytes is less than max/2, the client should send the
     /// ImportBuffer message regardless of its size.
     -> OnNotifyMemoryImported(uint64 bytes);
+
+    /// Enables a set of performance counters (the precise definition depends on the GPU driver).
+    /// Disables enabled performance counters that are not in the new set. Performance counters will
+    /// also be automatically disabled on connection close. Performance counter access must have
+    /// been enabled using AccessPerformanceCounters before calling this method.
+    EnablePerformanceCounters(vector<uint64>:64 counters);
+
+    /// Creates a pool of buffers that performance counters can be dumped into. |pool| can be an
+    /// arbitrary integer that's currently not in use. Performance counter access must have been
+    /// enabled using AccessPerformanceCounters before calling this method.
+    CreatePerformanceCounterBufferPool(
+        PerfCountPoolId pool, request<PerformanceCounterEvents> event_channel);
+
+    /// Releases a pool of performance counter buffers. Performance counter access must have been
+    /// enabled using AccessPerformanceCounters before calling this method.
+    ReleasePerformanceCounterBufferPool(PerfCountPoolId pool);
+
+    /// Adds set of a offsets into buffers to the pool. |offsets[n].buffer_id| is the koid of a
+    /// buffer that was previously imported using ImportBuffer(). The same buffer may be added to
+    /// multiple pools. The pool will hold on to a reference to the buffer even after ReleaseBuffer
+    /// is called.  When dumped into this entry, counters will be written starting at
+    /// |buffer_offset| bytes into the buffer, and up to |offsets[n].buffer_offset| +
+    /// |offsets[n].buffer_size|. |offsets[n].buffer_size| must be large enough to fit all enabled
+    /// counters. Performance counter access must have been enabled using AccessPerformanceCounters
+    /// before calling this method.
+    AddPerformanceCounterBufferOffsetsToPool(
+        PerfCountPoolId pool, vector<BufferOffset>:64 offsets);
+
+    /// Removes every offset of a buffer from the pool. Once this is method is finished being
+    /// handled on the server, no more dumps will be processed into this buffer. In-flight dumps
+    /// into this buffer may be lost.  Performance counter access must have been enabled using
+    /// AccessPerformanceCounters before calling this method.
+    RemovePerformanceCounterBufferFromPool(PerfCountPoolId pool, zx.koid buffer_id);
+
+    /// Triggers dumping of the performance counters into a buffer pool. May fail silently if there
+    /// are no buffers in the pool. |trigger_id| is an arbitrary ID assigned by the client that can
+    /// be returned in OnPerformanceCounterReadCompleted. Performance counter access must have been
+    /// enabled using AccessPerformanceCounters before calling this method.
+    DumpPerformanceCounters(PerfCountPoolId pool, uint32 trigger_id);
+
+    /// Sets the values of all listed performance counters to 0. May not be supported by some
+    /// hardware. Performance counter access must have been enabled using AccessPerformanceCounters
+    /// before calling this method.
+    ClearPerformanceCounters(vector<uint64>:64 counters);
 };
 
 /// This protocol is implemented by ZX_PROTOCOL_GPU_PERFORMANCE_COUNTERS devices.
@@ -135,4 +197,11 @@ protocol PerformanceCounterAccess {
     /// This access token is not used as an event, but is instead passed to
     /// Primary.EnablePerformanceCounterAccess.
     GetPerformanceCountToken() -> (handle<event> access_token);
+};
+
+protocol PerformanceCounterEvents {
+    /// Signals that a performance counter buffer has data. These will be output in the order of
+    /// when the reads are completed.
+    -> OnPerformanceCounterReadCompleted(uint32 trigger_id, zx.koid buffer_id, uint32 buffer_offset,
+                                         zx.time timestamp, ResultFlags flags);
 };

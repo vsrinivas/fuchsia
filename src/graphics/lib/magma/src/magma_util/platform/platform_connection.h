@@ -21,6 +21,16 @@
 
 namespace magma {
 
+class PlatformPerfCountPool {
+ public:
+  virtual ~PlatformPerfCountPool() = default;
+  virtual uint64_t pool_id() = 0;
+  // Sends a OnPerformanceCounterReadCompleted. May be called from any thread.
+  virtual magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
+                                                         uint32_t buffer_offset, uint64_t time,
+                                                         uint32_t result_flags) = 0;
+};
+
 class PlatformConnection {
  public:
   // Allows for the temporary limit of 3500 messages in the channel,
@@ -56,6 +66,20 @@ class PlatformConnection {
     virtual magma::Status AccessPerformanceCounters(
         std::unique_ptr<magma::PlatformHandle> access_token) = 0;
     virtual bool IsPerformanceCounterAccessEnabled() = 0;
+    virtual magma::Status EnablePerformanceCounters(const uint64_t* counters,
+                                                    uint64_t counter_count) = 0;
+    virtual magma::Status CreatePerformanceCounterBufferPool(
+        std::unique_ptr<PlatformPerfCountPool> pool) = 0;
+    virtual magma::Status ReleasePerformanceCounterBufferPool(uint64_t pool_id) = 0;
+    virtual magma::Status AddPerformanceCounterBufferOffsetToPool(uint64_t pool_id,
+                                                                  uint64_t buffer_id,
+                                                                  uint32_t buffer_offset,
+                                                                  uint32_t buffer_size) = 0;
+    virtual magma::Status RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
+                                                                 uint64_t buffer_id) = 0;
+    virtual magma::Status DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) = 0;
+    virtual magma::Status ClearPerformanceCounters(const uint64_t* counters,
+                                                   uint64_t counter_count) = 0;
   };
 
   PlatformConnection(std::shared_ptr<magma::PlatformEvent> shutdown_event,
