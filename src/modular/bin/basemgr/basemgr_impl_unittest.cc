@@ -172,6 +172,15 @@ TEST_F(BasemgrImplTest, BasemgrImplGracefulShutdownAlsoShutsDownScenic) {
   zx_status_t status = svc_dir->Connect("fuchsia.process.lifecycle.Lifecycle",
                                         process_lifecycle.NewRequest().TakeChannel());
   FX_CHECK(ZX_OK == status);
+
+  bool is_terminated = false;
+  controller_.events().OnTerminated =
+      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) { is_terminated = true; };
+
   process_lifecycle->Stop();
   RunLoopUntil([&]() { return ui_lifecycle_terminate_calls() > 0; });
+
+  // Ensure basemgr has shut down completely before tearing down the test environment to avoid
+  // error logs from the cobalt client in basemgr.
+  RunLoopUntil([&]() { return is_terminated; });
 }
