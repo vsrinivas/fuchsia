@@ -15,9 +15,6 @@ use {
 mod service_discovery;
 
 const HUB_ROOT: &str = "/discovery_root";
-// Workaround for fxbug.dev/52248.
-// TODO: remove this once that is resolved.
-const SELECT_TRUNCATION_HACK: usize = 20;
 
 pub struct RemoteControlService {
     netstack_proxy: fnetstack::StackProxy,
@@ -118,14 +115,10 @@ impl RemoteControlService {
         selector: &Selector,
         matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
     ) -> Result<Vec<rcs::ServiceMatch>, rcs::SelectError> {
-        let mut paths = matcher_fut.await.map_err(|e| {
+        let paths = matcher_fut.await.map_err(|e| {
             log::warn!("error looking for matching services for selector {:?}: {}", selector, e);
             rcs::SelectError::ServiceDiscoveryFailed
         })?;
-
-        // Workaround for fxbug.dev/52248.
-        // TODO: remove this once that is resolved.
-        paths.truncate(SELECT_TRUNCATION_HACK);
 
         Ok(paths.iter().map(|p| p.into()).collect::<Vec<rcs::ServiceMatch>>())
     }
