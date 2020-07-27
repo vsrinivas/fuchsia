@@ -16,6 +16,10 @@ rustc_library("mold") {
     "//src/graphics/lib/compute/surpass",
     "//third_party/rust_crates:rustc-hash",
   ]
+
+  # TODO(56138): Fix the leaks and remove this.
+  test_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   configs += [ ":mold-performance" ]
 
   enforce_source_listing = true

@@ -93,6 +93,10 @@ rustc_test("core_test") {
            "//src/lib/fidl/rust/handle_tests:fidl_handle_tests",
            "//third_party/rust_crates:arbitrary",
          ]
+
+  # TODO(56138): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   if (is_host) {
     deps += [ ":test_certs" ]
   }

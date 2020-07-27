@@ -38,6 +38,9 @@ rustc_test("packet-lib-test") {
     "//third_party/rust_crates:rand",
   ]
 
+  # TODO(56138): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   enforce_source_listing = true
 
   sources = [
