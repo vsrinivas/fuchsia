@@ -2008,6 +2008,7 @@ void H264MultiDecoder::PumpDecoder() {
   // empty frame to decode into.
   if (!video_frames_.empty() && !IsUnusedReferenceFrameAvailable()) {
     waiting_for_surfaces_ = true;
+    set_not_in_pump_decoder.call();
     owner_->TryToReschedule();
     return;
   }
@@ -2016,6 +2017,7 @@ void H264MultiDecoder::PumpDecoder() {
   std::optional<DataInput> current_data_input = frame_data_provider_->ReadMoreInputData();
   if (!current_data_input) {
     waiting_for_input_ = true;
+    set_not_in_pump_decoder.call();
     owner_->TryToReschedule();
     return;
   }
@@ -2023,6 +2025,7 @@ void H264MultiDecoder::PumpDecoder() {
   auto& current_input = current_data_input.value();
   if (current_input.is_eos) {
     QueueInputEos();
+    set_not_in_pump_decoder.call();
     owner_->TryToReschedule();
     return;
   }

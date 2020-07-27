@@ -8,6 +8,7 @@
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 
+#include "amlogic_codec_adapter.h"
 #include "device_ctx.h"
 #include "hevcdec.h"
 #include "pts_manager.h"
@@ -98,7 +99,7 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, ui
 
 CodecAdapterVp9::CodecAdapterVp9(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                                  DeviceCtx* device)
-    : CodecAdapter(lock, codec_adapter_events),
+    : AmlogicCodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {

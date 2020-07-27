@@ -102,6 +102,16 @@ test("use_h264_multi_decoder_test") {
   deps = [ ":use_media_decoder_source_set" ]
 }
 
+test("use_h264_multi_decoder_flake_repro_test") {
+  testonly = true
+
+  output_name = "use_h264_multi_decoder_flake_repro_test"
+
+  sources = [ "test/use_h264_multi_decoder_flake_repro_test.cc" ]
+
+  deps = [ ":use_media_decoder_source_set" ]
+}
+
 test("use_h264_decoder_stream_switching_test") {
   testonly = true
 

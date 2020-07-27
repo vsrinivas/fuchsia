@@ -8,11 +8,11 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/zx/bti.h>
 
 #include <fbl/macros.h>
 
+#include "amlogic_codec_adapter.h"
 #include "h264_multi_decoder.h"
 #include "video_decoder.h"
 #include "zircon/system/ulib/fit/include/lib/fit/defer.h"
@@ -20,8 +20,7 @@
 class AmlogicVideo;
 class DeviceCtx;
 struct VideoFrame;
-class CodecAdapterH264Multi : public CodecAdapter,
-                              public VideoDecoder::Client,
+class CodecAdapterH264Multi : public AmlogicCodecAdapter,
                               public H264MultiDecoder::FrameDataProvider {
  public:
   explicit CodecAdapterH264Multi(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,

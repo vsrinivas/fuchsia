@@ -48,7 +48,6 @@ class CodecAdapter {
   CodecAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   virtual ~CodecAdapter();
 
-  //
   // Core codec.
   //
   // For the moment, these methods are placeholders for calls to the core codec.

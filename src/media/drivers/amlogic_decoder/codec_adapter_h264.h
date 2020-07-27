@@ -13,12 +13,13 @@
 
 #include <fbl/macros.h>
 
+#include "amlogic_codec_adapter.h"
 #include "video_decoder.h"
 
 class AmlogicVideo;
 class DeviceCtx;
 struct VideoFrame;
-class CodecAdapterH264 : public CodecAdapter, public VideoDecoder::Client {
+class CodecAdapterH264 : public AmlogicCodecAdapter {
  public:
   explicit CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                             DeviceCtx* device);

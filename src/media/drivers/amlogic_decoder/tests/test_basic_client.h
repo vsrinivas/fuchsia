@@ -56,10 +56,15 @@ class TestBasicClient : public VideoDecoder::Client {
   void SetErrorHandler(fit::closure error_handler) { error_handler_ = std::move(error_handler); }
   void SetEosHandler(fit::closure eos_handler) { eos_handler_ = std::move(eos_handler); }
 
+  virtual const AmlogicDecoderTestHooks& __WARN_UNUSED_RESULT test_hooks() const override {
+    return test_hooks_;
+  }
+
  private:
   FrameReadyNotifier frame_ready_notifier_;
   fit::closure error_handler_;
   fit::closure eos_handler_;
+  AmlogicDecoderTestHooks test_hooks_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_BASIC_CLIENT_H_

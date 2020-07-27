@@ -8,6 +8,7 @@
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 
+#include "amlogic_codec_adapter.h"
 #include "device_ctx.h"
 #include "h264_decoder.h"
 #include "macros.h"
@@ -100,7 +101,7 @@ constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 
 CodecAdapterH264::CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                                    DeviceCtx* device)
-    : CodecAdapter(lock, codec_adapter_events),
+    : AmlogicCodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {

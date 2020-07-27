@@ -7,6 +7,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
@@ -20,6 +21,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include "amlogic_decoder_test_hooks.h"
 #include "decoder_core.h"
 #include "firmware_blob.h"
 #include "macros.h"
@@ -145,6 +147,8 @@ class VideoDecoder {
                                                        uint32_t coded_width, uint32_t coded_height,
                                                        uint32_t stride, uint32_t display_width,
                                                        uint32_t display_height) = 0;
+    // Test hooks.
+    virtual const AmlogicDecoderTestHooks& __WARN_UNUSED_RESULT test_hooks() const = 0;
   };
 
   VideoDecoder(Owner* owner, Client* client, bool is_secure)
@@ -175,6 +179,11 @@ class VideoDecoder {
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }
 
   bool is_secure() const { return is_secure_; }
+
+  const AmlogicDecoderTestHooks& __WARN_UNUSED_RESULT test_hooks() const {
+    ZX_DEBUG_ASSERT(client_);
+    return client_->test_hooks();
+  }
 
  protected:
   std::unique_ptr<PtsManager> pts_manager_;

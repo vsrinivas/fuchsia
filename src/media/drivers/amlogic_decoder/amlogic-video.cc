@@ -187,6 +187,7 @@ void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
 
 void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
   DLOG("Removing decoder: %p", decoder);
+  ZX_DEBUG_ASSERT(decoder);
   if (current_instance_ && current_instance_->decoder() == decoder) {
     current_instance_.reset();
     video_decoder_ = nullptr;
@@ -444,6 +445,7 @@ void AmlogicVideo::SwapOutCurrentInstance() {
       // Continue trying to swap out.
     }
   }
+  video_decoder_ = nullptr;
   core_->StopDecoding();
   core_->WaitForIdle();
   // TODO: Avoid power off if swapping to another instance on the same core.
@@ -456,13 +458,18 @@ void AmlogicVideo::SwapOutCurrentInstance() {
 void AmlogicVideo::TryToReschedule() {
   TRACE_DURATION("media", "AmlogicVideo::TryToReschedule");
   DLOG("AmlogicVideo::TryToReschedule");
-  if (swapped_out_instances_.size() == 0) {
-    DLOG("Nothing swapped out; returning");
-    return;
-  }
 
   if (current_instance_ && !current_instance_->decoder()->CanBeSwappedOut()) {
     DLOG("Current instance can't be swapped out");
+    return;
+  }
+
+  if (current_instance_ && current_instance_->decoder()->test_hooks().force_context_save_restore) {
+    SwapOutCurrentInstance();
+  }
+
+  if (swapped_out_instances_.size() == 0) {
+    DLOG("Nothing swapped out; returning");
     return;
   }
 
@@ -478,9 +485,11 @@ void AmlogicVideo::TryToReschedule() {
     DLOG("nothing to swap to");
     return;
   }
+
   ZX_ASSERT(!watchdog_.is_running());
-  if (current_instance_)
+  if (current_instance_) {
     SwapOutCurrentInstance();
+  }
   current_instance_ = std::move(*other_instance);
   swapped_out_instances_.erase(other_instance);
 

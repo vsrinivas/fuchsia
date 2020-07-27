@@ -13,14 +13,14 @@
 
 #include <fbl/macros.h>
 
+#include "amlogic_codec_adapter.h"
 #include "h264_multi_decoder_v1.h"
 #include "video_decoder.h"
 
 class AmlogicVideo;
 class DeviceCtx;
 struct VideoFrame;
-class CodecAdapterH264MultiV1 : public CodecAdapter,
-                                public VideoDecoder::Client,
+class CodecAdapterH264MultiV1 : public AmlogicCodecAdapter,
                                 public H264MultiDecoderV1::FrameDataProvider {
  public:
   explicit CodecAdapterH264MultiV1(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,

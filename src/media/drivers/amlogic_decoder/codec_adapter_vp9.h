@@ -14,6 +14,7 @@
 
 #include <fbl/macros.h>
 
+#include "amlogic_codec_adapter.h"
 #include "video_decoder.h"
 #include "vp9_decoder.h"
 
@@ -21,9 +22,7 @@ class AmlogicVideo;
 class DeviceCtx;
 struct VideoFrame;
 
-class CodecAdapterVp9 : public CodecAdapter,
-                        public Vp9Decoder::FrameDataProvider,
-                        public VideoDecoder::Client {
+class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameDataProvider {
  public:
   explicit CodecAdapterVp9(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                            DeviceCtx* device);

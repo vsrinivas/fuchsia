@@ -37,7 +37,7 @@ constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 CodecAdapterH264Multi::CodecAdapterH264Multi(std::mutex& lock,
                                              CodecAdapterEvents* codec_adapter_events,
                                              DeviceCtx* device)
-    : CodecAdapter(lock, codec_adapter_events),
+    : AmlogicCodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
       core_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
