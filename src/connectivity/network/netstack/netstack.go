@@ -491,13 +491,13 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 
 		ifs.mu.Lock()
 		enabled := ifs.IsUpLocked()
-		ifs.mu.Unlock()
 
 		if metricTracksInterface {
 			metric = ifs.mu.metric
 		}
 
 		ns.routeTable.AddRoute(r, metric, metricTracksInterface, dynamic, enabled)
+		ifs.mu.Unlock()
 	}
 	ns.stack.SetRouteTable(ns.routeTable.GetNetstackTable())
 	return nil
