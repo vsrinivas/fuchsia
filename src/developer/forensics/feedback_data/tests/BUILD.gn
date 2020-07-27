@@ -438,8 +438,8 @@ source_set("zx_object_util") {
 resource("main_service_unittest_config") {
   sources = [ "configs/main_service_unittest.json" ]
 
-  # main_service.cc expects a config at /pkg/data/config.json
-  outputs = [ "data/config.json" ]
+  # main_service.cc expects a config at /pkg/data/feedback_data/config.json
+  outputs = [ "data/feedback_data/config.json" ]
 }
 
 resource("test_configs") {
@@ -702,7 +702,7 @@ group("tests") {
     # Packages for the components that we are injecting in the integration tests.
     "//garnet/bin/sysmem_connector",
     "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/developer/forensics/feedback_data:feedback_agent",
+    "//src/developer/forensics:copy-pkg",
     "//src/developer/forensics/testing/fakes:fake-last-reboot-info-provider",
     "//src/diagnostics/archivist",
     "//src/graphics/bin/vulkan_loader",

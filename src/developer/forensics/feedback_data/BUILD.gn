@@ -3,48 +3,35 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 ###############################################################################
-# PACKAGES
+# COMPONENTS
 ###############################################################################
-# TODO(49566): switch to fuchsia_package once using feedback-data as package
-# name.
-package("feedback_agent") {
-  binaries = [
-    {
-      name = "feedback_agent"
-    },
-    {
-      name = "system_log_recorder"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/feedback_agent.cmx"
-      dest = "feedback_agent.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = "config.json"
-      dest = "config.json"
-    },
-  ]
+fuchsia_component("feedback_data") {
+  manifest = "meta/feedback_data.cmx"
 
   deps = [
+    ":feedback_data_config",
     ":main",
-    "//src/developer/forensics/feedback_data/system_log_recorder",
+    "system_log_recorder",
   ]
+}
+
+###############################################################################
+# CONFIGS
+###############################################################################
+resource("feedback_data_config") {
+  sources = [ "config.json" ]
+
+  outputs = [ "data/feedback_data/config.json" ]
 }
 
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
 executable("main") {
-  output_name = "feedback_agent"
+  output_name = "feedback_data"
 
   sources = [ "main.cc" ]
 

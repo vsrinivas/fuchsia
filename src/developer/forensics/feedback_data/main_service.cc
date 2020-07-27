@@ -17,7 +17,7 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
-const char kConfigPath[] = "/pkg/data/config.json";
+const char kConfigPath[] = "/pkg/data/feedback_data/config.json";
 
 }  // namespace
 

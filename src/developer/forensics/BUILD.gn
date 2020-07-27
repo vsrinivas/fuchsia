@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/components.gni")
+
+###############################################################################
+# GROUPS
+###############################################################################
 group("forensics") {
   testonly = true
 
@@ -11,7 +16,7 @@ group("forensics") {
     "crash_reports:crash-reports",
     "crasher",
     "exceptions",
-    "feedback_data:feedback_agent",
+    "feedback_data",
     "last_reboot:last-reboot",
   ]
 }
@@ -36,4 +41,29 @@ group("infra_configs") {
 
 group("production_configs") {
   deps = [ "crash_reports:production_config" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+# We use a template to keep the real and copy packages in sync.
+template("forensics_package") {
+  fuchsia_package(target_name) {
+    package_name = invoker.package_name
+
+    deps = [ "feedback_data" ]
+  }
+}
+
+# The real package.
+forensics_package("pkg") {
+  package_name = "forensics"
+}
+
+# A copy package for integration test purposes to make sure that:
+# * all the components used in the test are updated ephemerally, even if the real package
+#   is a base package.
+# * any config_data() for the real package does not impact any component used in the test.
+forensics_package("copy-pkg") {
+  package_name = "copy-forensics"
 }
