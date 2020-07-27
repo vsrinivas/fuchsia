@@ -38,7 +38,7 @@ func init() {
 				Config: config.Config{
 					"size": 4096,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker, config.Rust},
 			},
 			{
 				Name: "ByteArray/65536",
@@ -48,7 +48,7 @@ func init() {
 				Config: config.Config{
 					"size": 65536,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker},
+				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Rust, config.Walker, config.Rust},
 			},
 		},
 	})

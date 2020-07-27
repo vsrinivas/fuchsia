@@ -57,7 +57,7 @@ benchmark("ByteArray/256") {
 // 4096 byte array in a struct
 // Disabled on HLCPP / LLCPP due to clang performance issues
 benchmark("ByteArray/4096") {
-    bindings_denylist = [cpp, llcpp, rust, walker],
+    bindings_denylist = [cpp, llcpp, rust, walker, rust],
     value = ByteArray4096{
         bytes: [
             // 1 - 256
@@ -610,7 +610,7 @@ benchmark("ByteArray/4096") {
 // 65536 byte array in a struct
 // Disabled on HLCPP / LLCPP due to clang performance issues
 benchmark("ByteArray/65536") {
-    bindings_denylist = [cpp, llcpp, rust, walker],
+    bindings_denylist = [cpp, llcpp, rust, walker, rust],
     value = ByteArray65536{
         bytes: [
             // 1 - 256

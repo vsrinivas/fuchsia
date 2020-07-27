@@ -41,7 +41,7 @@ benchmark("Table/AllSet/16") {
 
 // Table with 256 fields set
 benchmark("Table/AllSet/256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, cpp, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field1: 1,

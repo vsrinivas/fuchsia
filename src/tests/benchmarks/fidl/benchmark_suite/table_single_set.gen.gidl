@@ -26,7 +26,7 @@ benchmark("Table/SingleSet/1_of_16") {
 
 // Table with 256 fields with the 1st field set
 benchmark("Table/SingleSet/1_of_256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, cpp, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field1: 1,
@@ -46,7 +46,7 @@ benchmark("Table/SingleSet/16_of_16") {
 
 // Table with 256 fields with the 16th field set
 benchmark("Table/SingleSet/16_of_256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, cpp, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field16: 1,
@@ -56,7 +56,7 @@ benchmark("Table/SingleSet/16_of_256") {
 
 // Table with 256 fields with the 256th field set
 benchmark("Table/SingleSet/256_of_256") {
-    bindings_allowlist = [llcpp, cpp, rust, go, walker, reference],
+    bindings_allowlist = [llcpp, cpp, go, walker, reference],
     value = Table256Struct{
         value: Table256{
             field256: 1,

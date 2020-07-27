@@ -6,7 +6,7 @@
 
 // Binary tree with depth 8 composed of recursive optional nodes (255 elements)
 benchmark("OptionalStructTree/Depth8") {
-    bindings_denylist = [go, dart],
+    bindings_denylist = [go, dart, rust],
     value = OptionalStructTree{
         left:OptionalStructTree{
             left:OptionalStructTree{
