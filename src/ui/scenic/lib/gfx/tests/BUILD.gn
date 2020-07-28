@@ -15,6 +15,7 @@ group("tests") {
     ":unittests",
     ":viewstate_apptests",
     "//garnet/packages/examples:vkcube-on-scenic",
+    "//src/ui/examples:bouncing_ball",
   ]
 }
 
