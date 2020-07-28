@@ -42,10 +42,18 @@ type Test struct {
 	// Command is the command line to run to execute this test.
 	Command []string `json:"command,omitempty"`
 
+	// Settings of log produced by this test
+	LogSettings LogSettings `json:"log_settings,omitempty"`
+
 	// RuntimeDepsFile is a relative path within the build directory to a file
 	// containing a JSON list of the test's runtime dependencies, Currently this
 	// field only makes sense for Linux and Mac tests.
 	RuntimeDepsFile string `json:"runtime_deps,omitempty"`
+}
+
+type LogSettings struct {
+	// Max severity of logs produced by the test.
+	MaxSeverity string `json:"max_severity,omitempty"`
 }
 
 // Environment describes the full environment a test requires.

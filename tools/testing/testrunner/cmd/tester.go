@@ -363,8 +363,11 @@ func setCommand(test *testsharder.Test, useRuntests bool, remoteOutputDir string
 				test.Command = append(test.Command, "--timeout", fmt.Sprintf("%d", int64(timeout.Seconds())))
 			}
 		} else {
-			// See fxbug.dev/49735 for background on --restrict-logs.
-			test.Command = []string{runTestComponentName, "--restrict-logs"}
+			test.Command = []string{runTestComponentName}
+			if test.LogSettings.MaxSeverity != "" {
+				test.Command = append(test.Command, fmt.Sprintf("--max-log-severity=%s", test.LogSettings.MaxSeverity))
+			}
+
 			if timeout > 0 {
 				test.Command = append(test.Command, fmt.Sprintf("--timeout=%d", int64(timeout.Seconds())))
 			}
