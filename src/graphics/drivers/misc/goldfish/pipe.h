@@ -36,6 +36,15 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
   void Bind(zx::channel server_request);
 
  private:
+  struct Buffer {
+    Buffer& operator=(Buffer&&) noexcept;
+    ~Buffer();
+    zx::vmo vmo;
+    zx::pmt pmt;
+    size_t size;
+    zx_paddr_t phys;
+  };
+
   // |llcpp::fuchsia::hardware::goldfish::Pipe::Interface|
   void SetBufferSize(uint64_t size, SetBufferSizeCompleter::Sync completer) override;
 
@@ -77,12 +86,8 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
   int32_t id_ TA_GUARDED(lock_) = 0;
   zx::bti bti_;
   ddk::IoBuffer cmd_buffer_;
-  struct {
-    zx::vmo vmo;
-    zx::pmt pmt;
-    size_t size;
-    zx_paddr_t phys;
-  } buffer_ TA_GUARDED(lock_) = {};
+
+  Buffer buffer_ TA_GUARDED(lock_) = {};
   zx::event event_ TA_GUARDED(lock_);
 };
 

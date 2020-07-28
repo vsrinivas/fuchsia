@@ -9,6 +9,7 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
+#include <lib/zx/pmt.h>
 #include <zircon/types.h>
 
 #include <map>
@@ -72,6 +73,15 @@ class AddressSpaceChildDriver
       llcpp::fuchsia::hardware::goldfish::AddressSpaceChildDriverType type,
       AddressSpaceDevice* device, uint64_t dma_region_paddr, ddk::IoBuffer&& io_buffer,
       uint32_t child_device_handle);
+
+  // AddressSpaceChildDriver is destroyed when the fidl channel it binds to
+  // is disconnected by the client (the goldfish Vulkan ICD) when the client
+  // gets destroyed.
+  // This destructor unpins all the pinned memory when it destroys the block
+  // maps. Client (ICD) guarantees that all the blocks allocated / claimed
+  // by this device (including host-visible memory, user-space ring buffers)
+  // will not be accessed anymore after the ICD is destoryed, so it's safe
+  // to unpin the memory.
   ~AddressSpaceChildDriver();
 
   zx_status_t Bind();
@@ -89,12 +99,16 @@ class AddressSpaceChildDriver
   zx_status_t DdkClose(uint32_t flags);
   void DdkRelease();
 
- private:
   struct Block {
+   public:
+    Block(uint64_t offset, uint64_t size, zx::pmt pmt);
+    ~Block();
     uint64_t offset;
     uint64_t size;
     zx::pmt pmt;
   };
+
+ private:
   AddressSpaceDevice* const device_;
   const uint64_t dma_region_paddr_;
 

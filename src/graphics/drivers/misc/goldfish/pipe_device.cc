@@ -4,13 +4,14 @@
 
 #include "pipe_device.h"
 
+#include <inttypes.h>
+#include <zircon/syscalls/iommu.h>
+#include <zircon/threads.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
-#include <inttypes.h>
-#include <zircon/syscalls/iommu.h>
-#include <zircon/threads.h>
 
 #include "instance.h"
 
@@ -280,6 +281,14 @@ int PipeDevice::IrqHandler() {
   }
 
   return 0;
+}
+
+PipeDevice::Pipe::Pipe(zx_paddr_t paddr, zx::pmt pmt, const goldfish_pipe_signal_value_t* cb_value)
+    : paddr(paddr), pmt(std::move(pmt)), cb_value(*cb_value) {}
+
+PipeDevice::Pipe::~Pipe() {
+  ZX_DEBUG_ASSERT(pmt.is_valid());
+  pmt.unpin();
 }
 
 }  // namespace goldfish

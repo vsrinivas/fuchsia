@@ -345,10 +345,7 @@ zx_status_t Pipe::SetBufferSizeLocked(size_t size) {
     return status;
   }
 
-  buffer_.vmo = std::move(vmo);
-  buffer_.pmt = std::move(pmt);
-  buffer_.size = size;
-  buffer_.phys = phys;
+  buffer_ = Buffer{.vmo = std::move(vmo), .pmt = std::move(pmt), .size = size, .phys = phys};
   return ZX_OK;
 }
 
@@ -384,6 +381,23 @@ void Pipe::OnSignal(void* ctx, int32_t flags) {
   // The event_ signal is for client code, while the signal_cvar_ is for this class.
   pipe->event_.signal(0, state_set);
   pipe->signal_cvar_.Signal();
+}
+
+Pipe::Buffer& Pipe::Buffer::operator=(Pipe::Buffer&& other) noexcept {
+  if (pmt.is_valid()) {
+    pmt.unpin();
+  }
+  vmo = std::move(other.vmo);
+  pmt = std::move(other.pmt);
+  phys = other.phys;
+  size = other.size;
+  return *this;
+}
+
+Pipe::Buffer::~Buffer() {
+  if (pmt.is_valid()) {
+    pmt.unpin();
+  }
 }
 
 }  // namespace goldfish

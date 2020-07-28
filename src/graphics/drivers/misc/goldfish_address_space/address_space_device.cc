@@ -67,11 +67,7 @@ class Instance : public InstanceType,
   Instance(AddressSpaceDevice* device, uint64_t dma_region_paddr)
       : Device(device->zxdev()), device_(device), dma_region_paddr_(dma_region_paddr) {}
 
-  ~Instance() {
-    for (auto& block : allocated_blocks_) {
-      device_->DeallocateBlock(block.second.offset);
-    }
-  }
+  ~Instance() = default;
 
   zx_status_t Bind() {
     TRACE_DURATION("gfx", "Instance::Bind");
@@ -126,16 +122,8 @@ class Instance : public InstanceType,
   void DdkRelease() { delete this; }
 
  private:
-  struct Block {
-    uint64_t offset;
-    zx::pmt pmt;
-  };
   AddressSpaceDevice* const device_;
   const uint64_t dma_region_paddr_ = 0;
-
-  // TODO(TC-383): This should be std::unordered_map.
-  using BlockMap = std::map<uint64_t, Block>;
-  BlockMap allocated_blocks_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Instance);
 };
@@ -205,8 +193,17 @@ zx_status_t AddressSpaceDevice::Bind() {
 
   zx::pmt pmt;
   // Pin offset 0 just to get the starting physical address
-  bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, dma_region_, 0, PAGE_SIZE,
-           &dma_region_paddr_, 1, &pmt);
+  status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, dma_region_, 0,
+                    PAGE_SIZE, &dma_region_paddr_, 1, &pmt);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: bti_pin: could not pin pages: %d", kTag, status);
+    return status;
+  }
+
+  // The pinned memory will not be accessed but only used to get the starting
+  // physical address, so we unpin the PMT.
+  status = pmt.unpin();
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_), REGISTER_PHYS_START_LOW);
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_ >> 32), REGISTER_PHYS_START_HIGH);
@@ -331,7 +328,6 @@ AddressSpaceChildDriver::~AddressSpaceChildDriver() {
   for (auto& block : allocated_blocks_) {
     device_->DeallocateBlock(block.second.offset);
   }
-
   device_->DestroyChildDriver(handle_);
 }
 
@@ -364,7 +360,7 @@ void AddressSpaceChildDriver::AllocateBlock(uint64_t size, AllocateBlockComplete
   }
 
   deallocate_block.cancel();
-  allocated_blocks_[paddr] = {offset, size, std::move(pmt)};
+  allocated_blocks_.try_emplace(paddr, offset, size, std::move(pmt));
   completer.Reply(ZX_OK, paddr, std::move(vmo));
 }
 
@@ -417,19 +413,21 @@ void AddressSpaceChildDriver::ClaimSharedBlock(uint64_t offset, uint64_t size,
     return;
   }
 
-  claimed_blocks_[offset] = {offset, size, std::move(pmt)};
+  claimed_blocks_.try_emplace(offset, offset, size, std::move(pmt));
   completer.Reply(ZX_OK, std::move(vmo));
 };
 
 void AddressSpaceChildDriver::UnclaimSharedBlock(uint64_t offset,
                                                  UnclaimSharedBlockCompleter::Sync completer) {
-  if (claimed_blocks_.end() == claimed_blocks_.find(offset)) {
+  auto it = claimed_blocks_.find(offset);
+  if (it == claimed_blocks_.end()) {
     zxlogf(ERROR,
            "%s: tried to erase region at 0x%llx but there is no such region with that offset: %d\n",
            kTag, (unsigned long long)offset, ZX_ERR_INVALID_ARGS);
     completer.Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
+
   claimed_blocks_.erase(offset);
   completer.Reply(ZX_OK);
 };
@@ -457,6 +455,14 @@ zx_status_t AddressSpaceChildDriver::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn
 zx_status_t AddressSpaceChildDriver::DdkClose(uint32_t flags) { return ZX_OK; }
 
 void AddressSpaceChildDriver::DdkRelease() { delete this; }
+
+AddressSpaceChildDriver::Block::Block(uint64_t offset, uint64_t size, zx::pmt pmt)
+    : offset(offset), size(size), pmt(std::move(pmt)) {}
+
+AddressSpaceChildDriver::Block::~Block() {
+  ZX_DEBUG_ASSERT(pmt.is_valid());
+  pmt.unpin();
+}
 
 }  // namespace goldfish
 

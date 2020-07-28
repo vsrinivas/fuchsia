@@ -5,23 +5,24 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 
+#include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/event.h>
+#include <lib/zx/interrupt.h>
+#include <threads.h>
+#include <zircon/types.h>
+
+#include <map>
+#include <memory>
+#include <optional>
+
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/acpi.h>
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/mutex.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/event.h>
-#include <lib/zx/interrupt.h>
-#include <threads.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
-
-#include <map>
-#include <memory>
-#include <optional>
 
 namespace goldfish {
 
@@ -55,11 +56,10 @@ class PipeDevice : public DeviceType,
 
  private:
   struct Pipe {
-    Pipe(zx_paddr_t paddr, zx::pmt pmt, const goldfish_pipe_signal_value_t* cb_value)
-        : paddr(paddr), pmt(std::move(pmt)), cb_value(*cb_value) {}
-
+    Pipe(zx_paddr_t paddr, zx::pmt pmt, const goldfish_pipe_signal_value_t* cb_value);
+    ~Pipe();
     const zx_paddr_t paddr;
-    const zx::pmt pmt;
+    zx::pmt pmt;
     const goldfish_pipe_signal_value_t cb_value;
   };
 
