@@ -61,8 +61,7 @@ class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::UnbindableNew>;
 
 class Imx227Device : public DeviceType,
-                     public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol>,
-                     public ddk::CameraSensor2Protocol<Imx227Device> {
+                     public ddk::CameraSensor2Protocol<Imx227Device, ddk::base_protocol> {
  public:
   enum {
     FRAGMENT_PDEV,
@@ -184,6 +183,7 @@ class Imx227Device : public DeviceType,
   zx_status_t Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
 
   // Other
+  zx_status_t InitMipiCsi(uint8_t mode) __TA_REQUIRES(lock_);
   zx_status_t InitSensor(uint8_t idx) __TA_REQUIRES(lock_);
   void HwInit() __TA_REQUIRES(lock_);
   void HwDeInit() __TA_REQUIRES(lock_);
@@ -193,7 +193,9 @@ class Imx227Device : public DeviceType,
 
   // Sensor Context
   SensorCtx ctx_ __TA_GUARDED(lock_);
-  uint8_t mode_;
+  bool is_streaming_;
+  uint8_t num_modes_;
+  uint8_t current_mode_;
 
   // Sensor Status
   bool initialized_ = false;

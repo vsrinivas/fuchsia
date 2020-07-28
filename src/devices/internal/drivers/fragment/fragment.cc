@@ -1196,6 +1196,14 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
           static_cast<camera_sensor_protocol_t*>(out_protocol));
       return ZX_OK;
     }
+    case ZX_PROTOCOL_CAMERA_SENSOR2: {
+      if (!camera_sensor2_client_.proto_client().is_valid()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      camera_sensor2_client_.proto_client().GetProto(
+          static_cast<camera_sensor2_protocol_t*>(out_protocol));
+      return ZX_OK;
+    }
     case ZX_PROTOCOL_SCPI: {
       if (!scpi_client_.proto_client().is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;

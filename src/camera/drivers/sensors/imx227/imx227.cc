@@ -15,10 +15,12 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
+#include <ddk/protocol/camera/sensor.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 
+#include "src/camera/drivers/sensors/imx227/imx227_modes.h"
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
 
 namespace camera {
@@ -376,6 +378,25 @@ zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
   return status;
 }
 
+zx_status_t Imx227Device::InitMipiCsi(uint8_t mode) {
+  mipi_info_t mipi_info;
+  mipi_adap_info_t adap_info;
+
+  mipi_info.lanes = available_modes[mode].lanes;
+  mipi_info.ui_value = 1000 / available_modes[mode].mbps;
+  if ((1000 % available_modes[mode].mbps) != 0) {
+    mipi_info.ui_value += 1;
+  }
+
+  adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
+  adap_info.resolution.width = available_modes[mode].resolution_in.x;
+  adap_info.resolution.height = available_modes[mode].resolution_in.y;
+  adap_info.path = MIPI_PATH_PATH0;
+  adap_info.mode = MIPI_MODES_DIR_MODE;
+  auto status = mipi_.Init(&mipi_info, &adap_info);
+  return status;
+}
+
 zx_status_t Imx227Device::CameraSensorStartStreaming() {
   std::lock_guard guard(lock_);
   if (!IsSensorInitialized() || ctx_.streaming_flag) {
@@ -463,8 +484,7 @@ zx_status_t Imx227Device::CreateAndBind(void* /*ctx*/, zx_device_t* parent) {
     zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d", status);
     return status;
   }
-  std::array<zx_device_prop_t, 2> props = {{
-      {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_CAMERA_SENSOR},
+  std::array<zx_device_prop_t, 1> props = {{
       {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_CAMERA_SENSOR2},
   }};
 

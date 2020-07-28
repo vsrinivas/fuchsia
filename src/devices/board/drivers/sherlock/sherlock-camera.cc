@@ -175,17 +175,18 @@ static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
 static const zx_bind_inst_t camera_sensor_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR),
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR2),
 };
 
 static const zx_bind_inst_t amlogiccanvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
+
 static const device_fragment_part_t camera_sensor_fragment[] = {
     {countof(root_match), root_match},
     {countof(camera_sensor_match), camera_sensor_match},
 };
+
 static const device_fragment_t isp_fragments[] = {
     {countof(camera_sensor_fragment), camera_sensor_fragment},
 };
@@ -210,8 +211,8 @@ static const device_fragment_t ge2d_fragments[] = {
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36), // sherlock
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x1a), // luis
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36),  // sherlock
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x1a),  // luis
 };
 static const zx_bind_inst_t gpio_reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
