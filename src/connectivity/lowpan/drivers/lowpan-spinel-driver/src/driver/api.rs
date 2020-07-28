@@ -93,6 +93,17 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
                     .await?;
             }
 
+            if self.driver_state.lock().has_cap(Cap::NetSave) {
+                // If we have the NetSave capability, go ahead and send the
+                // net save command.
+                self.frame_handler.send_request(CmdNetSave).await?;
+            } else {
+                // If we don't have the NetSave capability, we assume that
+                // it is saved automatically and tickle PropNet::Saved to
+                // make sure the other parts of the driver are aware.
+                self.on_prop_value_is(Prop::Net(PropNet::Saved), &[1u8])?;
+            }
+
             Ok(())
         };
 

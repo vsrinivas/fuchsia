@@ -19,12 +19,14 @@ const INBOUND_WINDOW_SIZE: u32 = 2;
 #[derive(Debug)]
 struct FakeSpinelDevice {
     properties: Arc<Mutex<HashMap<Prop, Vec<u8>>>>,
+    saved_network: Arc<Mutex<HashMap<Prop, Vec<u8>>>>,
 }
 
 impl Default for FakeSpinelDevice {
     fn default() -> Self {
         let mut properties = HashMap::new();
 
+        properties.insert(Prop::Net(PropNet::Saved), vec![0x00]);
         properties.insert(Prop::Net(PropNet::InterfaceUp), vec![0x00]);
         properties.insert(Prop::Net(PropNet::StackUp), vec![0x00]);
         properties.insert(Prop::Net(PropNet::Role), vec![0x00]);
@@ -39,7 +41,10 @@ impl Default for FakeSpinelDevice {
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
         );
 
-        FakeSpinelDevice { properties: Arc::new(Mutex::new(properties)) }
+        FakeSpinelDevice {
+            properties: Arc::new(Mutex::new(properties)),
+            saved_network: Default::default(),
+        }
     }
 }
 
@@ -58,6 +63,47 @@ impl FakeSpinelDevice {
             Prop::Mac(PropMac::LongAddr),
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
         );
+    }
+
+    // Must send out updates for all network identifying properties after calling this
+    fn handle_net_recall(&self) {
+        let mut properties = self.properties.lock();
+        let saved_network = self.saved_network.lock();
+        properties.extend(saved_network.clone().into_iter());
+    }
+
+    // Must send out update to PropNet::Saved after calling this
+    fn handle_net_save(&self) {
+        let mut properties = self.properties.lock();
+        let mut saved_network = self.saved_network.lock();
+        saved_network.insert(
+            Prop::Net(PropNet::NetworkName),
+            properties.get(&Prop::Net(PropNet::NetworkName)).unwrap().clone(),
+        );
+        saved_network.insert(
+            Prop::Net(PropNet::Xpanid),
+            properties.get(&Prop::Net(PropNet::Xpanid)).unwrap().clone(),
+        );
+        saved_network.insert(
+            Prop::Mac(PropMac::Panid),
+            properties.get(&Prop::Mac(PropMac::Panid)).unwrap().clone(),
+        );
+        saved_network.insert(
+            Prop::Phy(PropPhy::Chan),
+            properties.get(&Prop::Phy(PropPhy::Chan)).unwrap().clone(),
+        );
+        saved_network.insert(
+            Prop::Net(PropNet::MasterKey),
+            properties.get(&Prop::Net(PropNet::MasterKey)).unwrap().clone(),
+        );
+        properties.insert(Prop::Net(PropNet::Saved), vec![0x01]);
+    }
+
+    fn handle_net_clear(&self) {
+        let mut properties = self.properties.lock();
+        let mut saved_network = self.saved_network.lock();
+        saved_network.clear();
+        properties.insert(Prop::Net(PropNet::Saved), vec![0x00]);
     }
 
     fn handle_set_prop(
@@ -226,7 +272,7 @@ impl FakeSpinelDevice {
     }
 
     fn handle_command(&self, frame: &[u8]) -> Vec<Vec<u8>> {
-        let frame = SpinelFrameRef::try_unpack_from_slice(frame).unwrap();
+        let mut frame = SpinelFrameRef::try_unpack_from_slice(frame).unwrap();
 
         if frame.header.tid().is_none() {
             return vec![];
@@ -265,6 +311,32 @@ impl FakeSpinelDevice {
                 prop.and_then(|prop| self.handle_set_prop(frame, prop, value))
                     .map(|r| vec![r])
                     .unwrap_or(vec![])
+            }
+            Cmd::NetClear => {
+                self.handle_net_clear();
+                self.handle_get_prop(frame, Prop::Net(PropNet::Saved))
+                    .map(|r| vec![r])
+                    .unwrap_or(vec![])
+            }
+            Cmd::NetSave => {
+                self.handle_net_save();
+                self.handle_get_prop(frame, Prop::Net(PropNet::Saved))
+                    .map(|r| vec![r])
+                    .unwrap_or(vec![])
+            }
+            Cmd::NetRecall => {
+                self.handle_net_recall();
+                let mut ret = self
+                    .handle_get_prop(frame, Prop::Net(PropNet::Saved))
+                    .map(|r| vec![r])
+                    .unwrap_or(vec![]);
+                frame.header = Header::new(frame.header.nli(), None).unwrap();
+                ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::NetworkName)));
+                ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::Xpanid)));
+                ret.extend(self.handle_get_prop(frame, Prop::Mac(PropMac::Panid)));
+                ret.extend(self.handle_get_prop(frame, Prop::Phy(PropPhy::Chan)));
+                ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::MasterKey)));
+                ret
             }
             _ => {
                 let mut response: Vec<u8> = vec![];

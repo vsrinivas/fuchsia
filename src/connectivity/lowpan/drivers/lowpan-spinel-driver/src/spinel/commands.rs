@@ -74,8 +74,102 @@ impl RequestDesc for CmdNetClear {
         self,
         response: Result<SpinelFrameRef<'_>, Canceled>,
     ) -> Result<Self::Result, Error> {
-        response?;
+        let frame = response?;
+        match (frame.cmd, SpinelPropValueRef::try_unpack_from_slice(frame.payload)?) {
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::LastStatus, value }) => {
+                match Status::try_owned_unpack_from_slice(value)? {
+                    Status::Ok => Ok(()),
+                    err => Err(err.into()),
+                }
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::Net(PropNet::Saved), .. }) => {
+                Ok(())
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop, value }) => Err(format_err!(
+                "Unexpected response to \"net clear\": \"{:?} is {:?}\"",
+                prop,
+                value
+            )),
+            _ => Err(format_err!("Unexpected response to \"net clear\": {:?}", frame)),
+        }
+    }
+}
+
+/// Spinel Save Network Settings Command.
+///
+/// Use with [`FrameHandler::send_request`].
+#[derive(Debug, Copy, Clone)]
+pub struct CmdNetSave;
+
+impl RequestDesc for CmdNetSave {
+    type Result = ();
+
+    fn write_request(&self, buffer: &mut dyn io::Write) -> io::Result<()> {
+        Cmd::NetSave.try_pack(buffer)?;
         Ok(())
+    }
+
+    fn on_response(
+        self,
+        response: Result<SpinelFrameRef<'_>, Canceled>,
+    ) -> Result<Self::Result, Error> {
+        let frame = response?;
+        match (frame.cmd, SpinelPropValueRef::try_unpack_from_slice(frame.payload)?) {
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::LastStatus, value }) => {
+                match Status::try_owned_unpack_from_slice(value)? {
+                    Status::Ok => Ok(()),
+                    err => Err(err.into()),
+                }
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::Net(PropNet::Saved), .. }) => {
+                Ok(())
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop, value }) => Err(format_err!(
+                "Unexpected response to \"net save\": \"{:?} is {:?}\"",
+                prop,
+                value
+            )),
+            _ => Err(format_err!("Unexpected response to \"net save\": {:?}", frame)),
+        }
+    }
+}
+
+/// Spinel Recall Network Settings Command.
+///
+/// Use with [`FrameHandler::send_request`].
+#[derive(Debug, Copy, Clone)]
+pub struct CmdNetRecall;
+
+impl RequestDesc for CmdNetRecall {
+    type Result = ();
+
+    fn write_request(&self, buffer: &mut dyn io::Write) -> io::Result<()> {
+        Cmd::NetRecall.try_pack(buffer)?;
+        Ok(())
+    }
+
+    fn on_response(
+        self,
+        response: Result<SpinelFrameRef<'_>, Canceled>,
+    ) -> Result<Self::Result, Error> {
+        let frame = response?;
+        match (frame.cmd, SpinelPropValueRef::try_unpack_from_slice(frame.payload)?) {
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::LastStatus, value }) => {
+                match Status::try_owned_unpack_from_slice(value)? {
+                    Status::Ok => Ok(()),
+                    err => Err(err.into()),
+                }
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::Net(PropNet::Saved), .. }) => {
+                Ok(())
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop, value }) => Err(format_err!(
+                "Unexpected response to \"net recall\": \"{:?} is {:?}\"",
+                prop,
+                value
+            )),
+            _ => Err(format_err!("Unexpected response to \"net recall\": {:?}", frame)),
+        }
     }
 }
 

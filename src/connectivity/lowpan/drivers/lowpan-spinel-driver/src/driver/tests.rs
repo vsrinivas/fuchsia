@@ -121,6 +121,19 @@ async fn test_spinel_lowpan_driver() {
             );
             traceln!("app_task: Did provision!");
 
+            traceln!("app_task: Checking device state... (Should be Ready)");
+            assert_eq!(
+                driver
+                    .watch_device_state()
+                    .try_next()
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .connectivity_state
+                    .unwrap(),
+                ConnectivityState::Ready
+            );
+
             traceln!("app_task: Leaving network...");
             assert_eq!(driver.leave_network().await, Ok(()));
             traceln!("app_task: Did leave!");
