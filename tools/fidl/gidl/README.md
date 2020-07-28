@@ -11,41 +11,37 @@ wire-format bytes.
 GIDL supports multiple languages, and will generate a conformance test for each
 supported language.
 
+## Structure
+
+* `parser`: Code for parsing GIDL syntax into the IR (see next item).
+* `ir`: The in memory representation of a suite of GIDL tests. For example, it
+  defines types to represent each type of test: success, encode/decode_success/failure.
+* `mixer`: Provides a `Schema` that wraps the FIDL IR. The mixer is responsible
+  for validating that FIDL value in GIDL match their corresponding type
+  declaration
+* Backends (`cpp`, `dart`, etc.): Each backend takes in GIDL IR and FIDL IR,
+  validates it using the mixer, and outputs the target language specific tests.
+
 ## Using GIDL
 
-The input files for GIDL are at <//tools/fidl/gidl-conformance-suite/>. That
-directory contains a `.gidl` file and multiple `.fidl` files.
+The input files for GIDL are at <//src/tests/fidl/conformance_suite/>. That
+directory contains multiple `.gidl` and `.fidl` files.
 
-Before building and running tests, be sure that you have the [configured the
-build][fx set] to include the `tests` bundle. For example, if using the `core`
-product configuration and `x64` architecture:
+Testing gidl:
 
-    fx set core.x64 --with //bundles:tests
+    fx test //tools/fidl/gidl
 
-The conformance tests will be generated at build-time and included in tests
-for each language / binding.
+Testing gidl and all conformance tests:
 
-* Go:
-    * Build: `fx build src/tests/fidl_go_conformance:fidl_go_conformance_tests`
-    * Run: `fx run-test fidl_go_conformance -- -test.v`
+    fidldev test gidl
 
-* C++ (HLCPP):
-    * Build: `fx build sdk/lib/fidl/cpp:conformance_test`
-    * Run: `fx run-test fidl_tests`
-    * Build (host): `fx build host_x64/fidl_cpp_host_conformance_test`
-    * Run (host): `fx run-host-tests fidl_cpp_host_conformance_test`
+Refer to the FIDL [contributing doc][contributing] for how to set up `fidldev`.
 
-* C++ (LLCPP):
-    * Build: `fx build src/lib/fidl/llcpp/tests:fidl_llcpp_conformance_test`
-    * Run: `fx run-test fidl_llcpp_conformance_test`
+To run conformance tests in a specific binding, you can use `--dry-run` to print
+out the test command for all of the conformance tests, then pick out the ones
+you want to run:
 
-* Rust:
-    * Build: `fx build src/lib/fidl/rust/fidl_tests`
-    * Run: `fx run-test fidl_rust_conformance_tests`
-
-* Dart:
-    * Build: `fx build topaz/bin/fidl_bindings_test/test:fidl_bindings_test`
-    * Run: `fx run-test fidl_bindings_test`
+    fidldev test gidl --dry-run
 
 ## Writing Conformance Tests
 
@@ -80,48 +76,5 @@ From this description, the following must be verified:
 * Decoding of the bytes into the value
 * Round-trips from value to bytes, back to value, back to bytes
 
-### Fails to Encode
-
-_GIDL does not currently output conformance tests for `fails_to_encode` cases_.
-
-A `fails_to_encode` test case captures a value (optionally with handles), which
-fails to encode (e.g. constraints not met).
-
-Here is an example:
-
-    fails_to_encode("OneStringOfMaxLengthFive-too-long") {
-        value = OneStringOfMaxLengthFive {
-            the_string: "bonjour", // 6 characters
-        }
-        err = FIDL_STRING_TOO_LONG
-    }
-
-From this description, the following must be verified:
-
-* Encoding of the value fails
-* Failure triggers exactly the expected error
-
-### Fails to Decode
-
-_GIDL does not currently output conformance tests for `fails_to_decode` cases_.
-
-A `fails_to_decode` test case captures bytes encoding (optionally with handles),
-which fails to decode (e.g. incorrect wire encoding).
-
-Here is an example:
-
-    fails_to_decode("OneStringOfMaxLengthFive-wrong-length") {
-        bytes = {
-            1, 0, 0, 0, 0, 0, 0, 0, // length
-            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-            // one character missing
-        }
-        err = FIDL_STRING_INCORRECT_SIZE
-    }
-
-From this description, the following must be verified:
-
-* Decoding of the bytes encoding fails
-* Failure triggers exactly the expected error
-
 [fx set]: https://fuchsia.dev/fuchsia-src/development/workflows/fx#configure-a-build
+[contributing]: /docs/contribute/contributing-to-fidl

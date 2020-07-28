@@ -537,6 +537,9 @@ func (decl *UnionDecl) conforms(value interface{}) error {
 			if _, ok := decl.fieldByOrdinal(field.Key.UnknownOrdinal); ok {
 				return fmt.Errorf("field name must be used rather than ordinal %d", field.Key.UnknownOrdinal)
 			}
+			if decl.unionDecl.IsStrict() {
+				return fmt.Errorf("cannot use unknown ordinal in a strict union")
+			}
 			continue
 		}
 		if fieldDecl, ok := decl.Field(field.Key.Name); !ok {

@@ -446,6 +446,15 @@ func TestUnionDeclConformsNonNullable(t *testing.T) {
 					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
 				},
 			}},
+			conformOk{gidlir.Record{
+				Name: "ExampleXUnion",
+				Fields: []gidlir.Field{
+					{
+						Key:   gidlir.FieldKey{UnknownOrdinal: 2},
+						Value: gidlir.UnknownData{},
+					},
+				},
+			}},
 			conformFail{gidlir.Record{
 				Name: "ExampleXUnion",
 				Fields: []gidlir.Field{
@@ -456,6 +465,15 @@ func TestUnionDeclConformsNonNullable(t *testing.T) {
 				Name: "DefinitelyNotExampleXUnion",
 				Fields: []gidlir.Field{
 					{Key: gidlir.FieldKey{Name: "x"}, Value: "foo"},
+				},
+			}},
+			conformFail{gidlir.Record{
+				Name: "KnownUnknownOrdinal",
+				Fields: []gidlir.Field{
+					{
+						Key:   gidlir.FieldKey{UnknownOrdinal: 1},
+						Value: gidlir.UnknownData{},
+					},
 				},
 			}},
 			conformFail{nil},
@@ -481,6 +499,28 @@ func TestUnionDeclConformsNullable(t *testing.T) {
 				},
 			}},
 			conformOk{nil},
+		},
+	)
+}
+
+func TestStrictUnionConforms(t *testing.T) {
+	decl, ok := testSchema.lookupDeclByName("ExampleUnion", false)
+	if !ok {
+		t.Fatalf("lookupDeclByName failed")
+	}
+	unionDecl := decl.(*UnionDecl)
+	checkConforms(t,
+		unionDecl,
+		[]conformTest{
+			conformFail{gidlir.Record{
+				Name: "UnknownOrdinal",
+				Fields: []gidlir.Field{
+					{
+						Key:   gidlir.FieldKey{UnknownOrdinal: 2},
+						Value: gidlir.UnknownData{},
+					},
+				},
+			}},
 		},
 	)
 }
