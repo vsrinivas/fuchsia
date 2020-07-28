@@ -10,6 +10,8 @@ toc:
   path: /docs/development/languages/rust/fidl_crates.md
 - title: "Rust editor configurations"
   path: /docs/development/languages/rust/editors.md
+- title: "Using cargo on Fuchsia"
+  path: /docs/development/languages/rust/cargo.md
 - title: "Logging"
   path: /docs/development/languages/rust/logging.md
 - title: "Ergonomic Inspect"

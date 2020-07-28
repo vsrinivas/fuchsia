@@ -39,7 +39,7 @@ Next, run `fx build` within your Fuchsia source directory.
 
 ### Create Cargo.toml
 
-Follow the instructions to [generate a `Cargo.toml` for your project][gen-cargo].
+Follow the instructions to [generate a `Cargo.toml` for your project][cargo-toml-gen].
 
 ## Build with fargo
 
@@ -132,5 +132,5 @@ File .text     Size        Crate Name
 [bloat]: https://github.com/RazrFalcon/cargo-bloat
 [fargo]: https://fuchsia.googlesource.com/fargo/#getting-started
 [fx-common-tools]: /docs/development/build/fx.md#common-daily-tools
-[gen-cargo]: ./README.md#cargotoml
+[cargo-toml-gen]: /docs/development/languages/rust/cargo.md#cargo-toml-gen
 [google-bloaty]: https://github.com/google/bloaty
