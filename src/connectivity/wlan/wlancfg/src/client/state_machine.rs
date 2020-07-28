@@ -32,7 +32,7 @@ use {
 
 // TODO(53513): add Cobalt metrics
 
-const SME_STATUS_INTERVAL_SEC: i64 = 5;
+const SME_STATUS_INTERVAL_SEC: i64 = 1; // this poll is very cheap, so we can do it frequently
 const MAX_CONNECTION_ATTEMPTS: u8 = 4; // arbitrarily chosen until we have some data
 
 #[derive(Debug)]
@@ -506,6 +506,7 @@ async fn connected_state(
 ) -> Result<State, ExitReason> {
     debug!("Entering connected state");
 
+    // TODO(57237): replace this poll with a notification from wlanstack in the ConnectTxn
     // Holds a pending SME status request.  Request status immediately upon entering the started state.
     let mut pending_status_req = FuturesUnordered::new();
     pending_status_req.push(common_options.proxy.status());
