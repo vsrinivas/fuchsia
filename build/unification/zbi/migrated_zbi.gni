@@ -2,11 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/unification/zbi/zbi_input.gni")
 
-# Composes a test zbi out of Zircon artifacts.
+declare_args() {
+  # Compression setting for ZBI "storage" items.
+  # This can be "zstd", optionally followed by ".LEVEL"
+  # where `LEVEL` can be an integer or "max".
+  zbi_compression = "zstd"
+}
+
+# Assembles a Zircon Boot Image file from various inputs.
 #
 # Parameters
 #
@@ -42,7 +48,7 @@ import("//build/unification/zbi/zbi_input.gni")
 #     Type: string
 #     Default: target_name
 #
-#   deps, data_deps, testonly, assert_no_deps, metadata
+#   deps, data_deps, testonly, assert_no_deps, metadata, visibility
 #     See `gn help`.
 template("migrated_zbi") {
   main_target = target_name

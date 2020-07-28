@@ -4,7 +4,6 @@
 
 import("//build/board.gni")
 import("//build/config/compiler.gni")
-import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
@@ -12,6 +11,7 @@ import("//build/info/info.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
 
 # TODO(fxb/32978): This is temporary until the kernel build is unified or
 # kernel PCI is removed.
