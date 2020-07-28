@@ -25,6 +25,7 @@
 
 #include <atomic>
 #include <memory>
+#include <optional>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
@@ -44,7 +45,7 @@ using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 // Forward declaration
 class VPartitionManager;
 using ManagerDeviceType =
-    ddk::Device<VPartitionManager, ddk::Messageable, ddk::UnbindableDeprecated>;
+    ddk::Device<VPartitionManager, ddk::Initializable, ddk::Messageable, ddk::UnbindableNew>;
 
 class VPartitionManager : public ManagerDeviceType {
  public:
@@ -86,8 +87,9 @@ class VPartitionManager : public ManagerDeviceType {
   uint64_t VSliceMax() const { return fvm::kMaxVSlices; }
   const block_info_t& Info() const { return info_; }
 
+  void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   void SetFormatInfoForTest(const fvm::FormatInfo& format_info) { format_info_ = format_info; }
@@ -175,6 +177,7 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command);
 
   thrd_t initialization_thread_;
+  std::atomic_bool initialization_thread_started_ = false;
   block_info_t info_;  // Cached info from parent device
 
   fbl::Mutex lock_;
@@ -191,8 +194,8 @@ class VPartitionManager : public ManagerDeviceType {
   const size_t block_op_size_;
   block_impl_protocol_t bp_;
 
-  // Lock used to prevent multiple device remove calls.
-  std::atomic<bool> device_remove_ = false;
+  // For replying to the device init hook.
+  std::optional<ddk::InitTxn> init_txn_;
 
   // Worker completion.
   sync_completion_t worker_completed_;

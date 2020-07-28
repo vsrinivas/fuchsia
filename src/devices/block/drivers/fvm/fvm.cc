@@ -71,25 +71,27 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
             zx_status_get_string(status));
     return status;
   }
-
-  // Read vpartition table asynchronously.
-  int rc =
-      thrd_create_with_name(&vpm->initialization_thread_, FvmLoadThread, vpm.get(), "fvm-init");
-  if (rc < 0) {
-    fprintf(stderr, "fvm: ERROR: block device '%s': Could not load initialization thread\n",
-            device_get_name(dev));
-    // See comment in Load()
-    if (!vpm->device_remove_.exchange(true)) {
-      sync_completion_signal(&vpm->worker_completed_);
-      vpm->DdkRemoveDeprecated();
-    }
-    return ZX_ERR_NO_MEMORY;
-  }
-
   // The VPartitionManager object is owned by the DDK, now that it has been
   // added. It will be deleted when the device is released.
   __UNUSED auto ptr = vpm.release();
   return ZX_OK;
+}
+
+void VPartitionManager::DdkInit(ddk::InitTxn txn) {
+  init_txn_ = std::move(txn);
+
+  // Read vpartition table asynchronously.
+  int rc =
+      thrd_create_with_name(&initialization_thread_, FvmLoadThread, this, "fvm-init");
+  if (rc < 0) {
+    fprintf(stderr, "fvm: ERROR: block device '%s': Could not load initialization thread\n",
+            device_get_name(parent()));
+    sync_completion_signal(&worker_completed_);
+    // This will schedule the device to be unbound.
+    return init_txn_->Reply(ZX_ERR_NO_MEMORY);
+  }
+  // The initialization thread will reply to |init_txn_| once it is ready to make the
+  // device visible and able to be unbound.
 }
 
 zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) const {
@@ -178,26 +180,21 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
 zx_status_t VPartitionManager::Load() {
   fbl::AutoLock lock(&lock_);
 
+  ZX_DEBUG_ASSERT(init_txn_.has_value());
+
+  // Let DdkRelease know the thread was successfully created. It is guaranteed
+  // that DdkRelease will not be run until after we reply to |init_txn_|.
+  initialization_thread_started_ = true;
+
   // Signal all threads blocked on this thread completion. Join Only happens in DdkRelease, but we
   // need to block earlier to avoid races between DdkRemove and any API call.
   auto singal_completion =
       fbl::MakeAutoCall([this]() { sync_completion_signal(&worker_completed_); });
 
   auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    // Need to release the lock before calling DdkRemoveDeprecated(), since it will
-    // free |this|.  Need to disable thread safety analysis since it doesn't
-    // recognize that we were holding lock_.
-    lock.release();
-
     fprintf(stderr, "fvm: Aborting Driver Load\n");
-    // DdkRemove will cause the Release() hook to be called, cleaning up our
-    // state.  The exchange below is sufficient to protect against a
-    // use-after-free, since if DdkRemoveDeprecated() has already been called by
-    // another thread (via DdkUnbindDeprecated()), the release hook will block on thread_join()
-    // until this method returns.
-    if (!device_remove_.exchange(true)) {
-      DdkRemoveDeprecated();
-    }
+    // This will schedule the device to be unbound.
+    init_txn_->Reply(ZX_ERR_INTERNAL);
   });
 
   zx::vmo vmo;
@@ -317,7 +314,9 @@ zx_status_t VPartitionManager::Load() {
   }
 
   // Begin initializing the underlying partitions
-  DdkMakeVisible();
+
+  // This will make the device visible and able to be unbound.
+  init_txn_->Reply(ZX_OK);
   auto_detach.cancel();
 
   // 0th vpartition is invalid
@@ -701,18 +700,18 @@ zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partiti
   return fuchsia_hardware_block_volume_VolumeManagerActivate_reply(txn, status);
 }
 
-void VPartitionManager::DdkUnbindDeprecated() {
+void VPartitionManager::DdkUnbindNew(ddk::UnbindTxn txn) {
   // Wait untill all work has been completed, before removing the device.
   sync_completion_wait(&worker_completed_, zx::duration::infinite().get());
 
-  if (!device_remove_.exchange(true)) {
-    DdkRemoveDeprecated();
-  }
+  txn.Reply();
 }
 
 void VPartitionManager::DdkRelease() {
-  // Wait until the worker thread exits before freeing the resources.
-  thrd_join(initialization_thread_, nullptr);
+  if (initialization_thread_started_) {
+    // Wait until the worker thread exits before freeing the resources.
+    thrd_join(initialization_thread_, nullptr);
+  }
   delete this;
 }
 
