@@ -45,6 +45,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:unicode-segmentation",
   ]
 
+  # TODO(56138): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   enforce_source_listing = true
 
   sources = [
