@@ -511,6 +511,10 @@ group("serde") {
   deps = [ ":serde-v1_0_104" ]
 }
 
+group("serde_cbor") {
+  deps = [ ":serde_cbor-v0_11_1" ]
+}
+
 group("serde_derive") {
   deps = [ ":serde_derive-v1_0_104($host_toolchain)" ]
 }
@@ -3023,6 +3027,27 @@ rust_library("h2-v0_2_5") {
     "--edition=2018",
     "-Cmetadata=85a3d30816d5adab",
     "-Cextra-filename=-85a3d30816d5adab",
+  ]
+}
+
+rust_library("half-v1_6_0") {
+  crate_name = "half"
+  crate_root = "//third_party/rust_crates/vendor/half/src/lib.rs"
+  output_name = "half-d9b7b38cc4103d3d"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=d9b7b38cc4103d3d",
+    "-Cextra-filename=-d9b7b38cc4103d3d",
   ]
 }
 
@@ -7041,6 +7066,31 @@ rust_library("serde-v1_0_104") {
     "--cfg=num_nonzero_signed",
     "--cfg=std_atomic64",
     "--cfg=std_atomic",
+  ]
+}
+
+rust_library("serde_cbor-v0_11_1") {
+  crate_name = "serde_cbor"
+  crate_root = "//third_party/rust_crates/vendor/serde_cbor/src/lib.rs"
+  output_name = "serde_cbor-196735531d02fccc"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":half-v1_6_0" ]
+  deps += [ ":serde-v1_0_104" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=196735531d02fccc",
+    "-Cextra-filename=-196735531d02fccc",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
