@@ -6,15 +6,44 @@
 
 use alloc::vec::Vec;
 use core::fmt::Debug;
+use core::marker::PhantomData;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use never::Never;
-use packet::{BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
+use packet::{BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{ByteSlice, ByteSliceMut};
 
 use crate::error::{IpParseError, IpParseResult};
 use crate::ipv4::{Ipv4Header, Ipv4Packet, Ipv4PacketBuilder};
 use crate::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
+
+mod private {
+    use super::*;
+
+    /// Used as a default type for traits. Not exported.
+    #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+    pub struct NeverPacket<I: Ip>(never::Never, PhantomData<I>);
+}
+use private::NeverPacket;
+
+impl<B: ByteSlice, I: Ip, ParseArgs> ParsablePacket<B, ParseArgs> for NeverPacket<I> {
+    type Error = IpParseError<I>;
+
+    fn parse<BV: BufferView<B>>(_buffer: BV, _args: ParseArgs) -> Result<Self, Self::Error> {
+        unreachable!()
+    }
+
+    fn parse_mut<BV: BufferViewMut<B>>(_buffer: BV, _args: ParseArgs) -> Result<Self, Self::Error>
+    where
+        B: ByteSliceMut,
+    {
+        unreachable!()
+    }
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        unreachable!()
+    }
+}
 
 /// An extension trait to the `Ip` trait adding an associated `PacketBuilder`
 /// type.
@@ -44,7 +73,12 @@ impl IpExt for Ipv6 {
 /// ByteSlice` parameter (due to the requirements of `packet::ParsablePacket`).
 pub trait IpExtByteSlice<B: ByteSlice>: IpExt {
     /// An IP packet type for the IP version.
-    type Packet: IpPacket<B, Self, Builder = Self::PacketBuilder>;
+    // TODO(48578): This previously had the bound `Builder =
+    // Self::PacketBuilder`, but that cannot be satisfied when writing an
+    // implementation for NeverPacket<I: Ip>; the only value for
+    // Self::PacketBuilder we have is a defaulted type, which could be
+    // overridden for some particular value of I.
+    type Packet: IpPacket<B, Self>;
 
     /// Reassembles a fragmented packet into a parsed IP packet.
     fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
@@ -59,7 +93,7 @@ pub trait IpExtByteSlice<B: ByteSlice>: IpExt {
 // NOTE(joshlf): We know that this is safe because the Ip trait is sealed to
 // only be implemented by Ipv4 and Ipv6.
 impl<B: ByteSlice, I: Ip> IpExtByteSlice<B> for I {
-    default type Packet = Never;
+    default type Packet = NeverPacket<I>;
 
     default fn reassemble_fragmented_packet<BV: BufferViewMut<B>, IT: Iterator<Item = Vec<u8>>>(
         _buffer: BV,
@@ -199,6 +233,32 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
     }
 }
 
+impl<B: ByteSlice, I: Ip> IpPacket<B, I> for NeverPacket<I> {
+    type Builder = Never;
+
+    fn src_ip(&self) -> I::Addr {
+        unreachable!()
+    }
+    fn dst_ip(&self) -> I::Addr {
+        unreachable!()
+    }
+    fn proto(&self) -> IpProto {
+        unreachable!()
+    }
+    fn ttl(&self) -> u8 {
+        unreachable!()
+    }
+    fn set_ttl(&mut self, _ttl: u8)
+    where
+        B: ByteSliceMut,
+    {
+        unreachable!()
+    }
+    fn body(&self) -> &[u8] {
+        unreachable!()
+    }
+}
+
 /// A builder for IP packets.
 ///
 /// `IpPacketBuilder` is implemented by `Ipv4PacketBuilder` and
@@ -219,6 +279,12 @@ impl IpPacketBuilder<Ipv4> for Ipv4PacketBuilder {
 impl IpPacketBuilder<Ipv6> for Ipv6PacketBuilder {
     fn new(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, ttl: u8, proto: IpProto) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto)
+    }
+}
+
+impl<I: Ip> IpPacketBuilder<I> for Never {
+    fn new(_src_ip: I::Addr, _dst_ip: I::Addr, _ttl: u8, _proto: IpProto) -> Never {
+        unreachable!()
     }
 }
 

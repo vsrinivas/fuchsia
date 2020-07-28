@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO Follow 2018 idioms
-#![allow(elided_lifetimes_in_paths)]
-
 //! This module contains the core algorithm for `WorkScheduler`, a component manager subsytem for
 //! dispatching batches of work.
 //!

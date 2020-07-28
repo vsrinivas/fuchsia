@@ -44,7 +44,10 @@ config("rust_no_features") {
 }
 
 config("netstack3_only_specialization_feature") {
-  rustflags = [ "-Zallow-features=specialization" ]
+  rustflags = [
+    "-Zallow-features=specialization",
+    "-Aincomplete-features",
+  ]
 }
 
 config("rust_2018_idioms") {

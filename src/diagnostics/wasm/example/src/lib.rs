@@ -14,12 +14,12 @@ pub fn set_args(op: Option<String>) -> Option<String> {
 mod bindings {
     use wasm_bindgen::prelude::*;
     #[wasm_bindgen]
-    pub extern "C" fn my_function() -> u8 {
+    pub fn my_function() -> u8 {
         super::my_function()
     }
 
     #[wasm_bindgen]
-    pub extern "C" fn set_args(op: Option<String>) -> Option<String> {
+    pub fn set_args(op: Option<String>) -> Option<String> {
         super::set_args(op)
     }
 }

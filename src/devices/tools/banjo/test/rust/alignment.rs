@@ -11,7 +11,7 @@ use fuchsia_zircon as zircon;
 
 
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct packing_0 {
     pub i16_0: i16,
@@ -19,7 +19,7 @@ pub struct packing_0 {
     pub i16_1: i16,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct packing_1 {
     pub i16_0: i16,
@@ -28,7 +28,7 @@ pub struct packing_1 {
     pub i8_1: i8,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct packing_2 {
     pub i16_0: i16,
@@ -37,7 +37,7 @@ pub struct packing_2 {
     pub i16_1: i16,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct packing_3 {
     pub i32_0: i32,

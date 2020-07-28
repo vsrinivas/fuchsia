@@ -887,9 +887,9 @@ numeric_property!(double, Double, f64);
 /// Utility for generating a byte/string property datatype impl
 ///   `name`: the readable name of the type of the function (example: String)
 ///   `type`: the type of the argument of the function to generate (example: str)
-///   `bytes`: an expression to get the bytes of the property
+///   `bytes`: an optional method to get the bytes of the property
 macro_rules! property {
-    ($name:ident, $type:expr, $bytes:expr) => {
+    ($name:ident, $type:expr $(, $bytes:ident)?) => {
         paste::item! {
             inspect_type_impl!(
                 /// Inspect API Property data type.
@@ -902,7 +902,7 @@ macro_rules! property {
 
                 fn set(&'t self, value: &'t $type) {
                     if let Some(ref inner_ref) = self.inner.inner_ref() {
-                        inner_ref.state.lock().set_property(inner_ref.block_index, $bytes)
+                        inner_ref.state.lock().set_property(inner_ref.block_index, value$(.$bytes())?)
                             .unwrap_or_else(|e| fx_log_err!("Failed to set property. Error: {:?}", e));
                     }
                 }
@@ -912,8 +912,8 @@ macro_rules! property {
     };
 }
 
-property!(String, str, value.as_bytes());
-property!(Bytes, [u8], value);
+property!(String, str, as_bytes);
+property!(Bytes, [u8]);
 
 inspect_type_impl!(
     /// Inspect API Bool Property data type.

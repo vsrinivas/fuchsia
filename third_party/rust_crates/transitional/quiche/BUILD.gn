@@ -4,11 +4,20 @@
 
 import("//build/rust/rustc_library.gni")
 
+# Ignore warnings because this is third-party code.
+config("ignore_rust_warnings") {
+  rustflags = [ "-Awarnings" ]
+}
+
 rustc_library("quiche") {
   name = "quiche"
   edition = "2018"
   source_root = "//third_party/rust-mirrors/quiche/src/lib.rs"
-  configs -= [ "//build/config:rust_2018_idioms" ]
+  configs -= [
+    "//build/config:rust_2018_idioms",
+    "//build/config:werror",
+  ]
+  configs += [ ":ignore_rust_warnings" ]
   deps = [
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",

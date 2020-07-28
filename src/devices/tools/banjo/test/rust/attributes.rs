@@ -19,7 +19,7 @@ pub struct none_struct {
     pub baz: i32,
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct packed_struct {
     pub foo: i32,
@@ -43,7 +43,7 @@ impl std::fmt::Debug for none_union {
     }
 }
 
-#[repr(packed)]
+#[repr(C, packed)]
 #[derive(Copy, Clone)]
 pub union packed_union {
     pub foo: i32,

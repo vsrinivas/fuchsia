@@ -819,6 +819,13 @@ impl PacketBuilder for () {
     fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
 }
 
+impl PacketBuilder for Never {
+    fn constraints(&self) -> PacketConstraints {
+        unreachable!()
+    }
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
+}
+
 /// One object encapsulated in another one.
 ///
 /// `Nested`s are constructed using the [`NestedPacketBuilder::encapsulate`] and

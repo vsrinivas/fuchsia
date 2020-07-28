@@ -320,7 +320,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 let mut field_str = Vec::new();
                 let alignment =
                     if attributes.0.contains(&ast::Attr { key: "Packed".to_string(), val: None }) {
-                        "packed"
+                        "C, packed"
                     } else {
                         "C"
                     };
@@ -364,7 +364,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 let mut field_str = Vec::new();
                 let alignment =
                     if attributes.0.contains(&ast::Attr { key: "Packed".to_string(), val: None }) {
-                        "packed"
+                        "C, packed"
                     } else {
                         "C"
                     };
