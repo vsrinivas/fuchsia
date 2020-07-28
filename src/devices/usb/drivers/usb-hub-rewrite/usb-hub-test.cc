@@ -11,6 +11,8 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -25,9 +27,12 @@
 #include <cstring>
 #include <variant>
 
+#include <ddk/protocol/usb/hub.h>
+#include <ddk/protocol/usb/request.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb.h>
 #include <ddktl/protocol/usb/bus.h>
+#include <ddktl/protocol/usb/hub.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
@@ -37,9 +42,6 @@
 #include <fbl/string.h>
 #include <usb/usb-request.h>
 #include <zxtest/zxtest.h>
-
-#include "ddk/protocol/usb/hub.h"
-#include "ddktl/protocol/usb/hub.h"
 
 namespace {
 
@@ -117,7 +119,11 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  void UsbRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb) {}
+  void UsbRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb) {
+    if (request_callback_.has_value()) {
+      (*request_callback_)(usb_request, *complete_cb);
+    }
+  }
 
   usb_speed_t UsbGetSpeed() { return USB_SPEED_HIGH; }
 
@@ -170,6 +176,12 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
 
   size_t UsbGetRequestSize() { return sizeof(usb_request_t); }
 
+  usb_hub::UsbHubDevice* device() { return static_cast<usb_hub::UsbHubDevice*>(ctx_); }
+
+  void SetRequestCallback(fit::function<void(usb_request_t*, usb_request_complete_t)> callback) {
+    request_callback_ = std::move(callback);
+  }
+
   bool HasOps() { return ops_table_; }
 
   zx_status_t GetProtocol(uint32_t proto, void* protocol) {
@@ -192,6 +204,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
   }
 
  private:
+  std::optional<fit::function<void(usb_request_t*, usb_request_complete_t)>> request_callback_;
   async::Loop loop_;
   uint8_t interrupt_endpoint_ = 0;
   const zx_protocol_device_t* ops_table_ = nullptr;
@@ -206,6 +219,12 @@ class UsbHarness : public zxtest::Test {
     device_.emplace(mode);
     usb_hub::UsbHubDevice::Bind(nullptr, reinterpret_cast<zx_device_t*>(&device_.value()));
     ASSERT_TRUE(device_->HasOps());
+  }
+
+  usb_hub::UsbHubDevice* device() { return device_->device(); }
+
+  void SetRequestCallback(fit::function<void(usb_request_t*, usb_request_complete_t)> callback) {
+    device_->SetRequestCallback(std::move(callback));
   }
 
   void TearDown() override {
@@ -227,6 +246,7 @@ class Binder : public fake_ddk::Bind {
     auto context = const_cast<FakeDevice*>(reinterpret_cast<const FakeDevice*>(device));
     return context->GetProtocol(proto_id, protocol);
   }
+  void SetRequestCallback(fit::function<void(usb_request_t*, sync_completion_t)> callback) {}
   zx_status_t DeviceRemove(zx_device_t* device) override { return ZX_OK; }
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
@@ -243,5 +263,120 @@ class Binder : public fake_ddk::Bind {
 static Binder bind;
 
 TEST_F(SmaysHarness, BindTest) { ASSERT_OK(bind.WaitUntilInitComplete()); }
+
+TEST_F(SmaysHarness, Timeout) {
+  auto dev = device();
+  zx::time start = zx::clock::get_monotonic();
+  zx::time timeout = zx::deadline_after(zx::msec(30));
+  bool ran = false;
+  ASSERT_OK(dev->RunSynchronously(dev->Sleep(timeout).and_then([&]() {
+    ASSERT_GT((zx::clock::get_monotonic() - start).to_msecs(), 29);
+    ran = true;
+  })));
+  ASSERT_TRUE(ran);
+}
+
+TEST_F(SmaysHarness, SetFeature) {
+  auto dev = device();
+  bool ran = false;
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+    ASSERT_EQ(request->setup.bmRequestType, 3);
+    ASSERT_EQ(request->setup.bRequest, USB_REQ_SET_FEATURE);
+    ASSERT_EQ(request->setup.wIndex, 2);
+    ran = true;
+    usb_request_complete(request, ZX_OK, 0, &completion);
+  });
+  ASSERT_OK(dev->RunSynchronously(dev->SetFeature(3, 7, 2)));
+  ASSERT_TRUE(ran);
+}
+
+TEST_F(SmaysHarness, ClearFeature) {
+  auto dev = device();
+  bool ran = false;
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+    ASSERT_EQ(request->setup.bmRequestType, 3);
+    ASSERT_EQ(request->setup.bRequest, USB_REQ_CLEAR_FEATURE);
+    ASSERT_EQ(request->setup.wIndex, 2);
+    ran = true;
+    usb_request_complete(request, ZX_OK, 0, &completion);
+  });
+  ASSERT_OK(dev->RunSynchronously(dev->ClearFeature(3, 7, 2)));
+  ASSERT_TRUE(ran);
+}
+
+TEST_F(SmaysHarness, GetPortStatus) {
+  auto dev = device();
+  // Run through all 127 permutations of port configuration states
+  // and ensure we set the correct bits for each one.
+  for (uint16_t i = 0; i < 127; i++) {
+    bool ran = false;
+    uint16_t features_cleared = 0;
+    SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+      switch (request->setup.bmRequestType) {
+        case USB_RECIP_PORT | USB_DIR_IN: {
+          usb_port_status_t* stat;
+          usb_request_mmap(request, reinterpret_cast<void**>(&stat));
+          stat->wPortChange = i;
+          usb_request_complete(request, ZX_OK, sizeof(usb_port_status_t), &completion);
+          return;
+        } break;
+        case USB_RECIP_PORT | USB_DIR_OUT: {
+          switch (request->setup.wValue) {
+            case USB_FEATURE_C_PORT_CONNECTION:
+              features_cleared |= USB_C_PORT_CONNECTION;
+              break;
+            case USB_FEATURE_C_PORT_ENABLE:
+              features_cleared |= USB_C_PORT_ENABLE;
+              break;
+            case USB_FEATURE_C_PORT_SUSPEND:
+              features_cleared |= USB_C_PORT_SUSPEND;
+              break;
+            case USB_FEATURE_C_PORT_OVER_CURRENT:
+              features_cleared |= USB_C_PORT_OVER_CURRENT;
+              break;
+            case USB_FEATURE_C_PORT_RESET:
+              features_cleared |= USB_C_PORT_RESET;
+              break;
+            case USB_FEATURE_C_BH_PORT_RESET:
+              features_cleared |= USB_C_BH_PORT_RESET;
+              break;
+            case USB_FEATURE_C_PORT_LINK_STATE:
+              features_cleared |= USB_C_PORT_LINK_STATE;
+              break;
+            case USB_FEATURE_C_PORT_CONFIG_ERROR:
+              features_cleared |= USB_C_PORT_CONFIG_ERROR;
+              break;
+          }
+        } break;
+        default:
+          ASSERT_TRUE(false);
+      }
+      usb_request_complete(request, ZX_OK, 0, &completion);
+    });
+    ASSERT_OK(dev->RunSynchronously(
+        dev->GetPortStatus(static_cast<uint8_t>(i)).and_then([&](usb_port_status_t& port_status) {
+          ran = true;
+          ASSERT_EQ(port_status.wPortChange, i);
+        })));
+    ASSERT_TRUE(ran);
+    ASSERT_EQ(features_cleared, i);
+  }
+}
+
+TEST_F(SmaysHarness, BadDescriptorTest) {
+  auto dev = device();
+  SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
+    usb_device_descriptor_t* devdesc;
+    usb_request_mmap(request, reinterpret_cast<void**>(&devdesc));
+    devdesc->bLength = sizeof(usb_device_descriptor_t);
+    usb_request_complete(request, ZX_OK, sizeof(usb_descriptor_header_t), &completion);
+  });
+  ASSERT_EQ(dev->RunSynchronously(
+                dev->GetVariableLengthDescriptor<usb_device_descriptor_t>(0, 0, 0).and_then(
+                    [=](usb_hub::VariableLengthDescriptor<usb_device_descriptor_t>& descriptor) {
+                      return fit::ok();
+                    })),
+            ZX_ERR_BAD_STATE);
+}
 
 }  // namespace
