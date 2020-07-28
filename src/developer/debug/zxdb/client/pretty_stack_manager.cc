@@ -78,26 +78,39 @@ void PrettyStackManager::LoadDefaultMatchers() {
   // Rust async loop waiting.
   StackGlob rust_async_loop(
       "Waiting for event in Executor::run_singlethreaded()",
-      {PrettyFrameGlob::Wildcard(1, 1),  // syscalls-<platform>.S
+      {PrettyFrameGlob::Wildcard(1, 1),  // syscalls file (name depends on platform).
        PrettyFrameGlob::Func("_zx_port_wait"),
        PrettyFrameGlob::Func("fuchsia_zircon::port::Port::wait"),
        PrettyFrameGlob::Wildcard(2, 2),  // Lambdas
        PrettyFrameGlob::Func("std::thread::local::LocalKey<*>::try_with<*>"),
        PrettyFrameGlob::Func("std::thread::local::LocalKey<*>::with<*>"),
-       PrettyFrameGlob::Func("fuchsia_async::executor::with_local_timer_heap<*>"),
-       PrettyFrameGlob::Func("fuchsia_async::executor::Executor::run_singlethreaded<*>")});
+       PrettyFrameGlob::Func("fuchsia_async::runtime::fuchsia::executor::with_local_timer_heap<*>"),
+       PrettyFrameGlob::Func(
+           "fuchsia_async::runtime::fuchsia::executor::Executor::run_singlethreaded<*>")});
   matchers.push_back(std::move(rust_async_loop));
 
   // C startup code (although it is only one frame, it hides several lines of complex useless
-  // parameters in the "backtrace" view).
-  PrettyFrameGlob libc_start_main = PrettyFrameGlob::FuncFile("start_main", "__libc_start_main.c");
+  // parameters in the "backtrace" view). The function name depends on the platform, so just match
+  // the file name.
+  PrettyFrameGlob libc_start_main = PrettyFrameGlob::File("__libc_start_main.c");
   matchers.push_back(StackGlob("libc startup", {libc_start_main}));
 
-  // Rust startup code.
+  // Rust startup code, debug.
+  matchers.push_back(StackGlob(
+      "Rust startup",
+      {PrettyFrameGlob::File("src/libstd/rt.rs"), PrettyFrameGlob::File("src/libstd/rt.rs"),
+       PrettyFrameGlob::Func("std::panicking::try::do_call<*>"),
+       PrettyFrameGlob::Func("std::panicking::try<*>"),
+       PrettyFrameGlob::Func("std::panic::catch_unwind<*>"),
+       PrettyFrameGlob::Func("std::rt::lang_start_internal"),
+       PrettyFrameGlob::Func("std::rt::lang_start<*>"),
+       PrettyFrameGlob::Func("main"),  // C main function
+       libc_start_main}));
+
+  // Rust startup code, optimized.
   matchers.push_back(
-      StackGlob("Rust startup", {PrettyFrameGlob::Wildcard(2, 2),  // lambda, try
-                                 PrettyFrameGlob::Func("__rust_maybe_catch_panic"),
-                                 PrettyFrameGlob::Wildcard(1, 1),  // lang_start_internal
+      StackGlob("Rust startup", {PrettyFrameGlob::File("src/libstd/rt.rs"),
+                                 PrettyFrameGlob::Func("std::rt::lang_start_internal"),
                                  PrettyFrameGlob::Func("std::rt::lang_start<*>"),
                                  PrettyFrameGlob::Func("main"),  // C main function
                                  libc_start_main}));
