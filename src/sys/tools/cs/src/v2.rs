@@ -71,7 +71,7 @@ impl V2Component {
             let exec_path = format!("{}/exec", hub_path);
             let in_services = get_services(format!("{}/in", exec_path)).await;
             let out_services = get_services(format!("{}/out", exec_path)).await;
-            let exposed_services = get_services(format!("{}/exposed", exec_path)).await;
+            let exposed_services = get_services(format!("{}/expose", exec_path)).await;
 
             // Recurse on the children
             let child_path = format!("{}/children", hub_path);
