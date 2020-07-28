@@ -26,8 +26,6 @@ base_package_labels += [
   "//garnet/packages/prod:tracing",
   "//garnet/packages/prod:vboot_reference",
   "//garnet/packages/prod:vim",
-  "//garnet/packages/prod:wlanif",
-  "//garnet/packages/prod:wlanphy",
   "//src/connectivity/management/network-manager",
   "//src/connectivity/management/network-manager/sysmgr:config",
   "//src/connectivity/management/network-manager:config-toulouse",
@@ -40,6 +38,9 @@ base_package_labels += [
   "//src/connectivity/wlan:tests",
   "//src/connectivity/wlan:tools",
   "//src/connectivity/wlan/config:default",
+  "//src/connectivity/wlan/drivers/wlan",
+  "//src/connectivity/wlan/drivers/wlanif",
+  "//src/connectivity/wlan/drivers/wlanphy",
   "//third_party/boringssl:boringssl_tool",
 ]
 

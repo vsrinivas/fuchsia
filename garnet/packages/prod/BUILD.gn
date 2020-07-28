@@ -62,8 +62,6 @@ group("all") {
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
     "//garnet/packages/prod:wlan_drivers",
-    "//garnet/packages/prod:wlanif",
-    "//garnet/packages/prod:wlanphy",
     "//src/connectivity/network/dhcp:dhcpd",
     "//src/connectivity/network/mdns/bundles:services",
     "//src/connectivity/network/mdns/bundles:utils",
@@ -577,21 +575,5 @@ group("wlan_drivers") {
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:wifi_intel",
-    "//garnet/packages/prod:wlanif",
-    "//garnet/packages/prod:wlanphy",
-  ]
-}
-
-group("wlanif") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanif",
-  ]
-}
-
-group("wlanphy") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
