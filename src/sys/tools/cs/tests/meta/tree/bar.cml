@@ -4,7 +4,7 @@
     children: [
         {
             name: "baz",
-            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/baz.cm",
+            url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/baz.cm",
             startup: "eager",
         },
     ],

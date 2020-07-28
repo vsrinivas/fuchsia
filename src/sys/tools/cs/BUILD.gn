@@ -11,13 +11,17 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -27,6 +31,8 @@ rustc_library("lib") {
     "src/inspect.rs",
     "src/lib.rs",
     "src/log_stats.rs",
+    "src/v1.rs",
+    "src/v2.rs",
   ]
 }
 
@@ -69,4 +75,10 @@ package("cs") {
       dest = "cs.cmx"
     },
   ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ "tests:cs-tests" ]
 }

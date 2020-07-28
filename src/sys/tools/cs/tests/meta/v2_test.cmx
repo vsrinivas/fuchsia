@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/cs2_test"
+        "binary": "test/v2_test"
     },
     "sandbox": {
         "features": [

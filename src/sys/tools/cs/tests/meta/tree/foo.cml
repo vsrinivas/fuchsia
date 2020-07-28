@@ -4,12 +4,12 @@
     children: [
         {
             name: "bar",
-            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/bar.cm",
+            url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/bar.cm",
             startup: "eager",
         },
         {
             name: "baz",
-            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/baz.cm",
+            url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/baz.cm",
             startup: "eager",
         },
     ],

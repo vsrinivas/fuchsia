@@ -5,11 +5,11 @@
     children: [
         {
             name: "echo_server",
-            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_server.cm",
+            url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/echo_server.cm",
         },
         {
             name: "indef_echo_client",
-            url: "fuchsia-pkg://fuchsia.com/cs2_test#meta/indef_echo_client.cm",
+            url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/indef_echo_client.cm",
             startup: "eager",
         },
     ],

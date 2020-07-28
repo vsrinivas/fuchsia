@@ -1,10 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use {
+    crate::v1::V1Realm,
     files_async::readdir_with_timeout,
     fuchsia_zircon as zx,
     futures::future::{BoxFuture, FutureExt},
     io_util::{directory, file},
 };
 
+static SPACER: &str = "  ";
 static IO_TIMEOUT: zx::Duration = zx::Duration::from_seconds(2);
 
 async fn get_file_names(path: String) -> Result<Vec<String>, files_async::Error> {
@@ -17,20 +23,35 @@ async fn get_file(path: String) -> Result<String, file::ReadNamedError> {
     file::read_in_namespace_to_string_with_timeout(&path, IO_TIMEOUT).await
 }
 
-static SPACER: &str = "  ";
+async fn get_services(path: String) -> Vec<String> {
+    let full_path = format!("{}/svc", path);
+    let result = get_file_names(full_path).await;
+    match result {
+        Ok(entries) => entries,
+        Err(_) => vec![],
+    }
+}
 
-pub struct Component {
+fn generate_services(services_type: &str, services: &Vec<String>, lines: &mut Vec<String>) {
+    lines.push(format!("- {} ({})", services_type, services.len()));
+    for service in services {
+        lines.push(format!("{}- {}", SPACER, service));
+    }
+}
+
+pub struct V2Component {
     name: String,
     url: String,
     id: String,
     component_type: String,
-    children: Vec<Component>,
+    children: Vec<Self>,
     in_services: Vec<String>,
     out_services: Vec<String>,
     exposed_services: Vec<String>,
+    appmgr_root_v1_realm: Option<V1Realm>,
 }
 
-impl Component {
+impl V2Component {
     pub async fn new_root_component(hub_path: String) -> Self {
         Self::explore("<root>".to_string(), hub_path).await
     }
@@ -63,6 +84,16 @@ impl Component {
                 children.push(child);
             }
 
+            // If this component is appmgr, use it to explore the v1 component world
+            let appmgr_root_v1_realm = if name == "appmgr" {
+                let path_to_v1_hub = format!("{}/exec/out/hub", hub_path);
+                Some(
+                    V1Realm::create(path_to_v1_hub).expect("Could not traverse v1 component world"),
+                )
+            } else {
+                None
+            };
+
             Self {
                 name,
                 url,
@@ -72,21 +103,16 @@ impl Component {
                 in_services,
                 out_services,
                 exposed_services,
+                appmgr_root_v1_realm,
             }
         }
         .boxed()
     }
 
-    pub fn generate_output(&self) -> Vec<String> {
-        let mut output: Vec<String> = vec![];
-        self.generate_tree(&mut output);
-        output.push("".to_string());
-        self.generate_details(&mut output);
-        output
-    }
-
-    pub fn generate_tree(&self, lines: &mut Vec<String>) {
-        self.generate_tree_recursive(1, lines);
+    pub fn generate_tree(&self) -> Vec<String> {
+        let mut lines: Vec<String> = vec![];
+        self.generate_tree_recursive(1, &mut lines);
+        lines
     }
 
     fn generate_tree_recursive(&self, level: usize, lines: &mut Vec<String>) {
@@ -96,10 +122,17 @@ impl Component {
         for child in &self.children {
             child.generate_tree_recursive(level + 1, lines);
         }
+
+        // If this component is appmgr, generate tree for all v1 components
+        if let Some(v1_realm) = &self.appmgr_root_v1_realm {
+            v1_realm.generate_tree_recursive(level + 1, lines);
+        }
     }
 
-    fn generate_details(&self, lines: &mut Vec<String>) {
-        self.generate_details_recursive("", lines);
+    pub fn generate_details(&self) -> Vec<String> {
+        let mut lines: Vec<String> = vec![];
+        self.generate_details_recursive("", &mut lines);
+        lines
     }
 
     fn generate_details_recursive(&self, prefix: &str, lines: &mut Vec<String>) {
@@ -107,7 +140,7 @@ impl Component {
 
         lines.push(moniker.clone());
         lines.push(format!("- URL: {}", self.url));
-        lines.push(format!("- Component Type: {}", self.component_type));
+        lines.push(format!("- Type: v2 {} component", self.component_type));
         generate_services("Exposed Services", &self.exposed_services, lines);
         generate_services("Incoming Services", &self.in_services, lines);
         generate_services("Outgoing Services", &self.out_services, lines);
@@ -118,21 +151,11 @@ impl Component {
             lines.push("".to_string());
             child.generate_details_recursive(&prefix, lines);
         }
-    }
-}
 
-async fn get_services(path: String) -> Vec<String> {
-    let full_path = format!("{}/svc", path);
-    let result = get_file_names(full_path).await;
-    match result {
-        Ok(entries) => entries,
-        Err(_) => vec![],
-    }
-}
-
-fn generate_services(services_type: &str, services: &Vec<String>, lines: &mut Vec<String>) {
-    lines.push(format!("- {} ({})", services_type, services.len()));
-    for service in services {
-        lines.push(format!("{}- {}", SPACER, service));
+        // If this component is appmgr, generate details for all v1 components
+        if let Some(v1_realm) = &self.appmgr_root_v1_realm {
+            lines.push("".to_string());
+            v1_realm.generate_details_recursive(&prefix, lines);
+        }
     }
 }

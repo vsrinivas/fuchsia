@@ -6,25 +6,24 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-rustc_test("cs2_test_bin") {
-  name = "cs2_test"
+rustc_test("v2_test_bin") {
+  name = "v2_test"
   edition = "2018"
-  source_root = "cs2_test.rs"
+  source_root = "v2_test.rs"
   deps = [
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/tools/cs2:lib",
+    "//src/sys/tools/cs:lib",
     "//third_party/rust_crates:anyhow",
   ]
 
   enforce_source_listing = true
-
-  sources = [ "cs2_test.rs" ]
+  sources = [ "v2_test.rs" ]
 }
 
-test_package("cs2_test") {
+test_package("cs-tests") {
   deps = [
-    ":cs2_test_bin",
+    ":v2_test_bin",
     "indef_echo_client",
     "//examples/components/routing/echo_server",
   ]
@@ -73,7 +72,7 @@ test_package("cs2_test") {
   ]
   tests = [
     {
-      name = "cs2_test"
+      name = "v2_test"
     },
   ]
 }
