@@ -9,11 +9,12 @@ import (
 
 // genString generates a random UTF8 string with a byte length equal or just
 // over targetLen.
-func genString(targetLen int) string {
+func genString(maxRune int, seed int64, targetLen int) string {
+	random := rand.New(rand.NewSource(seed))
 	var r rune
 	var b strings.Builder
 	for b.Len() < targetLen {
-		r = rune(rand.Int() % 0x1fffff)
+		r = rune(random.Intn(maxRune))
 		b.WriteRune(r)
 	}
 	return b.String()
@@ -21,11 +22,11 @@ func genString(targetLen int) string {
 
 const hexPerLine int = 32
 
-func print(src string) {
+func print(name, src string) {
 	dst := make([]byte, hex.EncodedLen(len(src)))
 	hex.Encode(dst, []byte(src))
 
-	fmt.Printf("const char S_%d[] = \n", len(src))
+	fmt.Printf("const char %s_S_%d[] = \n", name, len(src))
 	for i := 0; i < len(dst); i += 2 {
 		if i%hexPerLine == 0 {
 			fmt.Printf("\"")
@@ -40,15 +41,44 @@ func print(src string) {
 
 func main() {
 	fmt.Print(top)
+	// Seeds must be set to preserve benchmark size.
+	for _, s := range []struct {
+		seed int64
+		size int
+	}{
+		{
+			seed: 45,
+			size: 257,
+		},
+		{
+			seed: 23,
+			size: 1024,
+		},
+		{
+			seed: 34,
+			size: 4097,
+		},
+		{
+			seed: 2,
+			size: 16384,
+		},
+		{
+			seed: 118,
+			size: 65535,
+		},
+	} {
+		s := genString(0x1fffff, s.seed, s.size)
+		print("Utf8", s)
+	}
 	for _, size := range []int{
-		256,
-		1024,
-		4096,
-		16384,
+		258,
+		1025,
+		4098,
+		16385,
 		65536,
 	} {
-		s := genString(size)
-		print(s)
+		s := genString(128, 0, size)
+		print("Ascii", s)
 	}
 	fmt.Print(bottom)
 }
