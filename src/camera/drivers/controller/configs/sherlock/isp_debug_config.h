@@ -43,6 +43,19 @@ InternalConfigNode DebugConfigDownScaledRes();
 // Return the external debug configuration.
 fuchsia::camera2::hal::Config DebugConfig();
 
+constexpr FrameRateRange kDebugFrameRateRange = {
+    .min =
+        {
+            .frames_per_sec_numerator = kFRStreamFrameRate,
+            .frames_per_sec_denominator = 1,
+        },
+    .max =
+        {
+            .frames_per_sec_numerator = kFRStreamFrameRate,
+            .frames_per_sec_denominator = 1,
+        },
+};
+
 }  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_ISP_DEBUG_CONFIG_H_

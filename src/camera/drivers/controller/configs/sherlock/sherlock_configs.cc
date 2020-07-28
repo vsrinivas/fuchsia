@@ -36,6 +36,7 @@ InternalConfigs SherlockInternalConfigs() {
                               MonitorConfigDownScaledRes(),
                           },
                       },
+                  .frame_rate_range = kMonitoringFrameRateRange,
               },
               // Video conferencing configuration with extended FOV disabled.
               {
@@ -43,6 +44,7 @@ InternalConfigs SherlockInternalConfigs() {
                       {
                           VideoConfigFullRes(false),
                       },
+                  .frame_rate_range = kVideoFrameRateRange,
               },
               // Video conferencing configuration with extended FOV enabled.
               {
@@ -50,6 +52,7 @@ InternalConfigs SherlockInternalConfigs() {
                       {
                           VideoConfigFullRes(true),
                       },
+                  .frame_rate_range = kVideoFrameRateRange,
               },
           },
   };

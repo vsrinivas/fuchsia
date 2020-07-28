@@ -70,6 +70,19 @@ InternalConfigNode VideoConfigFullRes(bool extended_fov);
 // Return the external video conferencing configuration.
 fuchsia::camera2::hal::Config VideoConferencingConfig(bool extended_fov);
 
+constexpr FrameRateRange kVideoFrameRateRange = {
+    .min =
+        {
+            .frames_per_sec_numerator = kVideoFrameRate,
+            .frames_per_sec_denominator = 1,
+        },
+    .max =
+        {
+            .frames_per_sec_numerator = kVideoFrameRate,
+            .frames_per_sec_denominator = 1,
+        },
+};
+
 }  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_VIDEO_CONFERENCING_CONFIG_H_

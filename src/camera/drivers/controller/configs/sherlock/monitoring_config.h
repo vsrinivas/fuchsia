@@ -49,7 +49,8 @@ constexpr uint32_t kOutputStreamMonitoringWidth1 = 720;
 constexpr uint32_t kOutputStreamMonitoringHeight1 = 540;
 constexpr uint32_t kOutputStreamMonitoringWidth2 = 512;
 constexpr uint32_t kOutputStreamMonitoringHeight2 = 384;
-constexpr uint32_t kOutputStreamMonitoringFrameRate = 30;
+constexpr uint32_t kMaxOutputStreamMonitoringFrameRate = 30;
+constexpr uint32_t kMinOutputStreamMonitoringFrameRate = 15;
 constexpr fuchsia::sysmem::PixelFormatType kOutputStreamMonitoringPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
@@ -76,6 +77,19 @@ InternalConfigNode MonitorConfigFullRes();
 
 // Return the external monitor configuration.
 fuchsia::camera2::hal::Config MonitoringConfig();
+
+constexpr FrameRateRange kMonitoringFrameRateRange = {
+    .min =
+        {
+            .frames_per_sec_numerator = kMinOutputStreamMonitoringFrameRate,
+            .frames_per_sec_denominator = 1,
+        },
+    .max =
+        {
+            .frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
+            .frames_per_sec_denominator = 1,
+        },
+};
 
 }  // namespace camera
 

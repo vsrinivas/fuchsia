@@ -82,12 +82,19 @@ struct InternalConfigNode {
   bool in_place;
 };
 
+struct FrameRateRange {
+  fuchsia::camera2::FrameRate min;
+  fuchsia::camera2::FrameRate max;
+};
+
 struct InternalConfigInfo {
   // List of all the streams part of this configuration
   // These streams are high level streams which are coming in from
   // the ISP and not the output streams which are provided to the clients.
   // That information is part of this |InternalConfigNode| in |supported_streams|
   std::vector<InternalConfigNode> streams_info;
+  // The frame rate range supported by this configuration.
+  FrameRateRange frame_rate_range;
 };
 
 struct InternalConfigs {

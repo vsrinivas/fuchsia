@@ -97,7 +97,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
                         kOutputStreamMonitoringPixelFormat);
   stream.set_bytes_per_row_divisor(kGe2dBytesPerRowDivisor);
   stream.set_contiguous(true);
-  stream.set_frames_per_second(kOutputStreamMonitoringFrameRate);
+  stream.set_frames_per_second(kMaxOutputStreamMonitoringFrameRate);
   stream.set_buffer_count_for_camping(kOutputStreamMonitoringMinBufferForCamping);
   return stream.ConvertToStreamConfig();
 };
@@ -213,7 +213,7 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
 InternalConfigNode MonitorConfigFullRes() {
   return {
       .type = kInputStream,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
       .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
       .supported_streams =
@@ -253,7 +253,7 @@ InternalConfigNode MonitorConfigFullRes() {
 static InternalConfigNode OutputStreamMonitoring() {
   return {
       .type = kOutputStream,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
@@ -295,7 +295,7 @@ fuchsia::sysmem::BufferCollectionConstraints Ge2dMonitoringConstraints() {
 static InternalConfigNode Ge2dMonitoring() {
   return {
       .type = kGe2d,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
@@ -363,7 +363,7 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc2OutputConstraints() {
 static InternalConfigNode Gdc2() {
   return {
       .type = kGdc,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
       .supported_streams =
           {
@@ -405,7 +405,7 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigDownScaledResConstrain
 InternalConfigNode MonitorConfigDownScaledRes() {
   return {
       .type = kInputStream,
-      .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
+      .output_frame_rate.frames_per_sec_numerator = kMaxOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
       .input_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
       .supported_streams =
