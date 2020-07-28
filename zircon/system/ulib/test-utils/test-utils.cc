@@ -280,11 +280,6 @@ int tu_process_get_return_code(zx_handle_t process) {
   return static_cast<int>(info.return_code);
 }
 
-int tu_process_wait_exit(zx_handle_t process) {
-  tu_process_wait_signaled(process);
-  return tu_process_get_return_code(process);
-}
-
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals) {
   zx_info_handle_basic_t info;
   zx_status_t status =

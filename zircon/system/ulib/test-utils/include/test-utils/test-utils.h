@@ -86,10 +86,6 @@ void tu_process_wait_signaled(zx_handle_t process);
 
 int tu_process_get_return_code(zx_handle_t process);
 
-// Wait for |process| to exit and then fetch its return code.
-
-int tu_process_wait_exit(zx_handle_t process);
-
 // Add |handle| to the list of things |port| watches.
 // When |handle| is signaled with a signal in |signals| a zx_packet_signal_t
 // packet is sent to |port| with the key being the koid of |handle|.
