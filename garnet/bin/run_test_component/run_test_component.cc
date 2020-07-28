@@ -7,6 +7,7 @@
 #include <fuchsia/sys/index/cpp/fidl.h>
 #include <glob.h>
 #include <lib/fit/defer.h>
+#include <lib/fitx/result.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/logger.h>
 #include <limits.h>
@@ -31,6 +32,7 @@ static constexpr char kLabelArgPrefix[] = "--realm-label=";
 static constexpr char kTimeoutArgPrefix[] = "--timeout=";
 static constexpr char kSeverityArgPrefix[] = "--min-severity-logs=";
 static constexpr char kRestrictLogsArgPrefix[] = "--restrict-logs";
+static constexpr char kMaxSeverityArgPrefix[] = "--max-log-severity=";
 
 bool to_bool(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(), ::tolower);
@@ -38,6 +40,28 @@ bool to_bool(std::string str) {
   bool b;
   is >> std::boolalpha >> b;
   return b;
+}
+
+fitx::result<bool, uint32_t> ParseLogLevel(const std::string& level) {
+  if (level == "TRACE") {
+    return fitx::success(FX_LOG_TRACE);
+  }
+  if (level == "DEBUG") {
+    return fitx::success(FX_LOG_DEBUG);
+  }
+  if (level == "INFO") {
+    return fitx::success(FX_LOG_INFO);
+  }
+  if (level == "WARN") {
+    return fitx::success(FX_LOG_WARNING);
+  }
+  if (level == "ERROR") {
+    return fitx::success(FX_LOG_ERROR);
+  }
+  if (level == "FATAL") {
+    return fitx::success(FX_LOG_FATAL);
+  }
+  return fitx::error(false);
 }
 
 ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services, int argc,
@@ -60,30 +84,37 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     const size_t kTimeoutArgPrefixLength = strlen(kTimeoutArgPrefix);
     const size_t kSeverityArgPrefixLength = strlen(kSeverityArgPrefix);
     const size_t kRestrictLogsArgPrefixLength = strlen(kRestrictLogsArgPrefix);
+    const size_t kMaxSeverityArgPrefixLength = strlen(kMaxSeverityArgPrefix);
+
     if (argument.substr(0, kLabelArgPrefixLength) == kLabelArgPrefix) {
       result.realm_label = argument.substr(kLabelArgPrefixLength);
       url_or_matcher_argi++;
       continue;
     }
+
     if (argument.substr(0, kSeverityArgPrefixLength) == kSeverityArgPrefix) {
       std::string level = argument.substr(kSeverityArgPrefixLength);
-      if (level == "TRACE") {
-        result.min_log_severity = FX_LOG_TRACE;
-      } else if (level == "DEBUG") {
-        result.min_log_severity = FX_LOG_DEBUG;
-      } else if (level == "INFO") {
-        result.min_log_severity = FX_LOG_INFO;
-      } else if (level == "WARN") {
-        result.min_log_severity = FX_LOG_WARNING;
-      } else if (level == "ERROR") {
-        result.min_log_severity = FX_LOG_ERROR;
-      } else if (level == "FATAL") {
-        result.min_log_severity = FX_LOG_FATAL;
-      } else {
+      auto level_result = ParseLogLevel(level);
+      if (level_result.is_error()) {
         result.error = true;
-        result.error_msg = fxl::StringPrintf("Invalid severity %s", level.c_str());
+        result.error_msg = fxl::StringPrintf("Invalid --min-severity-logs %s", level.c_str());
         return result;
       }
+      result.min_log_severity = level_result.value();
+
+      url_or_matcher_argi++;
+      continue;
+    }
+
+    if (argument.substr(0, kMaxSeverityArgPrefixLength) == kMaxSeverityArgPrefix) {
+      std::string level = argument.substr(kMaxSeverityArgPrefixLength);
+      auto level_result = ParseLogLevel(level);
+      if (level_result.is_error()) {
+        result.error = true;
+        result.error_msg = fxl::StringPrintf("Invalid --max-log-severity %s", level.c_str());
+        return result;
+      }
+      result.max_log_severity = level_result.value();
       url_or_matcher_argi++;
       continue;
     }

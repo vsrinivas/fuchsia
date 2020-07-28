@@ -58,7 +58,7 @@ const std::string max_severity_config_path =
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--restrict-logs] <test_url>|<test_matcher> [arguments...]
+Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--max-log-severity=string] [--restrict-logs] <test_url>|<test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -85,6 +85,10 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
 
        If --restrict-logs is specified then tests will fail by default if they produce ERROR logs.
        For more information see: https://fuchsia.googlesource.com/fuchsia/+/master/docs/concepts/testing/test_component.md#restricting-log-severity
+
+       If --max-log-severity is passed, then the test will fail if it produces logs with higher severity.
+       This is right now a placeholder and would be enabled in future. Allowed values:
+       TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
 
        By default when installing log listener, all logs more than severity INFO are collected.
        To enable verbose logs or to filter by higher severity please pass severity:
@@ -281,6 +285,11 @@ int main(int argc, const char** argv) {
   auto max_severity_allowed = FX_LOG_FATAL;
 
   bool restrict_logs = parse_result.restrict_logs;
+  if (!restrict_logs) {
+    // Also use max_log_severity, so that when host testrunners stop passing --restrict_logs flag we
+    // can simply remove it.
+    restrict_logs = parse_result.max_log_severity != FX_LOG_NONE;
+  }
   if (restrict_logs) {
     std::string simplified_url = run::GetSimplifiedUrl(program_name);
     max_severity_allowed = FX_LOG_WARNING;

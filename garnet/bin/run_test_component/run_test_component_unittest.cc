@@ -223,6 +223,28 @@ TEST(RunTest, ParseArgs) {
   }
 
   {
+    const char* argv[] = {kBinName, "--max-log-severity=invalid", component_url, "myarg1",
+                          "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_TRUE(result.error);
+  }
+
+  {
+    const char* argv[] = {kBinName, "--max-log-severity=ERROR", component_url, "myarg1", "myarg2"};
+    auto result = ParseArgs(env_services, 5, argv);
+    EXPECT_FALSE(result.error) << result.error_msg;
+    EXPECT_EQ(component_url, result.launch_info.url);
+    ASSERT_TRUE(result.launch_info.arguments.has_value());
+    EXPECT_EQ(2u, result.launch_info.arguments->size());
+    EXPECT_EQ(argv[3], result.launch_info.arguments->at(0));
+    EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
+    EXPECT_EQ("", result.realm_label);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_ERROR, result.max_log_severity);
+    EXPECT_FALSE(result.restrict_logs);
+  }
+
+  {
     const char* argv[] = {kBinName, "run_test_component_test_invalid_matcher"};
     auto result = ParseArgs(env_services, 2, argv);
     EXPECT_TRUE(result.error);

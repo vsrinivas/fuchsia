@@ -9,6 +9,8 @@
 #include <rapidjson/document.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
+#include "garnet/bin/run_test_component/run_test_component.h"
+
 using fxl::StringPrintf;
 
 namespace run {
@@ -54,18 +56,9 @@ void MaxSeverityConfig::ParseDocument(rapidjson::Document document) {
         std::string url = test[kUrl].GetString();
         std::string severity = test[kMaxSeverity].GetString();
         int32_t log_severity;
-        if (severity == "TRACE") {
-          log_severity = FX_LOG_TRACE;
-        } else if (severity == "DEBUG") {
-          log_severity = FX_LOG_DEBUG;
-        } else if (severity == "INFO") {
-          log_severity = FX_LOG_INFO;
-        } else if (severity == "WARN") {
-          log_severity = FX_LOG_WARNING;
-        } else if (severity == "ERROR") {
-          log_severity = FX_LOG_ERROR;
-        } else if (severity == "FATAL") {
-          log_severity = FX_LOG_FATAL;
+        auto level_result = run::ParseLogLevel(severity);
+        if (level_result.is_ok()) {
+          log_severity = level_result.value();
         } else {
           json_parser_.ReportError(StringPrintf(
               "'%s' is not a valid severity for %s. Must be one of: [TRACE, DEBUG, INFO, "
