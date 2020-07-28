@@ -265,8 +265,8 @@ void DeviceImpl::ConnectToStream(uint32_t index,
 // Returns when the provided allocator will likely succeed in allocating a collection with the given
 // constraints and some number of other participants. This is necessary prior to a solution for
 // fxbug.dev/53305. Returns true iff the wait completed successfully.
-static bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
-                             fuchsia::sysmem::BufferCollectionConstraints constraints) {
+bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
+                      fuchsia::sysmem::BufferCollectionConstraints constraints) {
   // Incorporate typical client constraints.
   constexpr uint32_t kMaxClientBuffers = 5;
   constexpr uint32_t kBytesPerRowDivisor = 32 * 16;  // GPU-optimal stride.
@@ -292,9 +292,13 @@ static bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
   constexpr uint32_t kFinalDelayMs = 1000;
   do {
     fuchsia::sysmem::BufferCollectionSyncPtr collection;
-    ZX_ASSERT(allocator->AllocateNonSharedCollection(collection.NewRequest()) == ZX_OK);
-    ZX_ASSERT(collection->SetName(0, "FreeSpaceProbe") == ZX_OK);
-    ZX_ASSERT(collection->SetConstraints(true, constraints) == ZX_OK);
+    status = allocator->AllocateNonSharedCollection(collection.NewRequest());
+    if (status != ZX_OK) {
+      // Skip loop to shorten test execution.
+      break;
+    }
+    collection->SetName(0, "FreeSpaceProbe");
+    collection->SetConstraints(true, constraints);
 
     // After calling SetConstraints, allocation may fail. This results in Wait returning NO_MEMORY
     // followed by channel closure. Because the client may observe these in either order, treat
@@ -317,8 +321,13 @@ static bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
     zx::nanosleep(zx::deadline_after(zx::msec(delay_ms)));
   } while (++num_attempts < kMaxAttempts && status == ZX_ERR_NO_MEMORY);
 
-  // Return the channel to the async binding.
-  ZX_ASSERT(allocator_ptr.Bind(allocator.Unbind()) == ZX_OK);
+  // Restore the channel to the async binding.
+  zx_status_t restore_status = allocator_ptr.Bind(allocator.Unbind());
+  if (restore_status != ZX_OK) {
+    ZX_ASSERT(restore_status == ZX_ERR_CANCELED);
+    // Thread is shutting down.
+    return false;
+  }
 
   if (status != ZX_OK) {
     FX_PLOGS(INFO, status) << "Timeout waiting for free space.";

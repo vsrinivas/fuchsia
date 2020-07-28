@@ -46,7 +46,12 @@ void StreamImpl::Client::PostReceiveBufferCollection(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   ZX_ASSERT(async::PostTask(loop_.dispatcher(), [this, token_handle = std::move(token)]() mutable {
               fuchsia::sysmem::BufferCollectionTokenPtr token;
-              ZX_ASSERT(token.Bind(std::move(token_handle)) == ZX_OK);
+              zx_status_t status = token.Bind(std::move(token_handle));
+              if (status != ZX_OK) {
+                ZX_ASSERT(status == ZX_ERR_CANCELED);
+                // Thread is shutting down.
+                return;
+              }
               token->Sync(
                   [this, token = std::move(token)]() mutable { buffers_.Set(std::move(token)); });
             }) == ZX_OK);

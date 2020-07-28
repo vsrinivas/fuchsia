@@ -176,7 +176,12 @@ void StreamImpl::PostSetBufferCollection(
 
     // Bind and duplicate the token for each participating client.
     fuchsia::sysmem::BufferCollectionTokenPtr token;
-    ZX_ASSERT(token.Bind(std::move(token_handle), loop_.dispatcher()) == ZX_OK);
+    zx_status_t status = token.Bind(std::move(token_handle), loop_.dispatcher());
+    if (status != ZX_OK) {
+      ZX_ASSERT(status == ZX_ERR_CANCELED);
+      // Thread is shutting down.
+      return;
+    }
     for (auto& client : clients_) {
       if (client.second->Participant()) {
         fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> client_token;

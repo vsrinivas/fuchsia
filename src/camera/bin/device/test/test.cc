@@ -838,4 +838,31 @@ TEST_F(DeviceTest, GetProperties) {
   RunLoopUntilFailureOr(properties_returned);
 }
 
+TEST_F(DeviceTest, BindFailureOk) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loop.StartThread("BindFailureOk");
+  volatile bool started = false;
+  volatile bool quit = false;
+  volatile bool done = false;
+  async::PostTask(loop.dispatcher(), [&] {
+    started = true;
+    while (!quit) {
+      zx::nanosleep({});
+    }
+    fuchsia::sysmem::AllocatorPtr allocator;
+    allocator.NewRequest().TakeChannel().reset();
+    EXPECT_FALSE(WaitForFreeSpace(allocator, {}));
+    done = true;
+  });
+  while (!started) {
+    zx::nanosleep({});
+  }
+  loop.Quit();
+  quit = true;
+  while (!done) {
+    zx::nanosleep({});
+  }
+  loop.Shutdown();
+}
+
 }  // namespace camera

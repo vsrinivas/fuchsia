@@ -146,4 +146,7 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   friend class Client;
 };
 
+bool WaitForFreeSpace(fuchsia::sysmem::AllocatorPtr& allocator_ptr,
+                      fuchsia::sysmem::BufferCollectionConstraints constraints);
+
 #endif  // SRC_CAMERA_BIN_DEVICE_DEVICE_IMPL_H_

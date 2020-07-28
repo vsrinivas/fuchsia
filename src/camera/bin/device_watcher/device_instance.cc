@@ -29,12 +29,16 @@ fit::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create
   auto instance = std::make_unique<DeviceInstance>();
 
   // Bind the camera channel.
-  ZX_ASSERT(instance->camera_.Bind(std::move(camera), instance->loop_.dispatcher()) == ZX_OK);
+  zx_status_t status = instance->camera_.Bind(std::move(camera), instance->loop_.dispatcher());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+    return fit::error(status);
+  }
 
   // Add the camera controller as an injected service.
   fidl::InterfaceRequestHandler<fuchsia::camera2::hal::Controller> handler =
       fit::bind_member(instance.get(), &DeviceInstance::OnControllerRequested);
-  zx_status_t status = instance->injected_services_dir_.AddEntry(
+  status = instance->injected_services_dir_.AddEntry(
       fuchsia::camera2::hal::Controller::Name_, std::make_unique<vfs::Service>(std::move(handler)));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
