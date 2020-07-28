@@ -6,7 +6,7 @@ use {
         directory::FatDirectory,
         filesystem::{FatFilesystem, FatFilesystemInner},
         refs::FatfsFileRef,
-        types::File,
+        types::{Dir, File},
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
     },
     async_trait::async_trait,
@@ -64,7 +64,7 @@ fn seek_for_write(file: &mut File<'_>, offset: u64) -> Result<(), Status> {
 /// Represents a single file on the disk.
 pub struct FatFile {
     file: UnsafeCell<FatfsFileRef>,
-    parent: RwLock<Arc<FatDirectory>>,
+    parent: RwLock<Option<Arc<FatDirectory>>>,
     filesystem: Arc<FatFilesystem>,
 }
 
@@ -81,7 +81,11 @@ impl FatFile {
         parent: Arc<FatDirectory>,
         filesystem: Arc<FatFilesystem>,
     ) -> Arc<Self> {
-        Arc::new(FatFile { file: UnsafeCell::new(file), parent: RwLock::new(parent), filesystem })
+        Arc::new(FatFile {
+            file: UnsafeCell::new(file),
+            parent: RwLock::new(Some(parent)),
+            filesystem,
+        })
     }
 
     /// Borrow the underlying Fatfs File mutably.
@@ -115,8 +119,8 @@ impl FatFile {
         fs: &FatFilesystemInner,
     ) -> Result<(), Status> {
         let mut parent = self.parent.write().unwrap();
-        *parent = new_parent;
-        let entry = parent.find_child(fs, name)?.ok_or(Status::NOT_FOUND)?;
+        parent.replace(new_parent);
+        let entry = parent.as_ref().unwrap().find_child(fs, name)?.ok_or(Status::NOT_FOUND)?;
         // Safe because we have a reference to the FatFilesystem.
         let file_ref = unsafe { FatfsFileRef::from(entry.to_file()) };
         // Safe because we hold the fs lock.
@@ -150,6 +154,17 @@ impl FatFile {
         }
         Ok((total_written as u64, file_offset))
     }
+
+    /// Mark this file as deleted, and remove its dirent from the parent directory,
+    /// without actually deleting the file. The caller must remove this file from any caches.
+    pub fn remove_from(&self, fs: &FatFilesystemInner, dir: &Dir<'_>) -> Result<(), Status> {
+        // Detach from our parent.
+        self.parent.write().unwrap().take();
+
+        // Remove the direntry from the on-disk directory.
+        let file = self.borrow_file_mut(fs)?;
+        dir.unlink_file(file).map_err(fatfs_error_to_status)
+    }
 }
 
 impl Debug for FatFile {
@@ -163,7 +178,9 @@ impl Drop for FatFile {
         // We need to drop the underlying Fatfs `File` while holding the filesystem lock,
         // to make sure that it's able to flush, etc. before getting dropped.
         let fs_lock = self.filesystem.lock().unwrap();
+
         // Safe because fs_lock guarantees we are the only place trying to access this file.
+        // If the file has been deleted, fatfs will free its clusters automatically.
         unsafe { self.file.get().as_mut() }.unwrap().take(&fs_lock);
     }
 }

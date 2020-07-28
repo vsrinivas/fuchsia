@@ -198,12 +198,7 @@ impl FatDirectory {
     /// cache.  The caller must ensure that the corresponding filesystem entry is removed to prevent
     /// the item being added back to the cache, and must later attach() the returned node somewhere.
     pub fn remove_child(&self, fs: &FatFilesystemInner, name: &str) -> Option<FatNode> {
-        let node = {
-            let mut data = self.data.write().unwrap();
-            data.children
-                .remove(&name as &dyn InsensitiveStringRef)
-                .and_then(|entry| entry.upgrade())
-        };
+        let node = self.cache_remove(fs, name);
         if let Some(node) = node {
             node.detach(fs);
             Some(node)
@@ -230,6 +225,13 @@ impl FatDirectory {
             "conflicting cache entries with the same name"
         );
         Ok(())
+    }
+
+    /// Remove a child entry from the cache, if it exists. The caller must hold the fs lock, as
+    /// otherwise another thread could immediately add the entry back to the cache.
+    fn cache_remove(&self, _fs: &FatFilesystemInner, name: &str) -> Option<FatNode> {
+        let mut data = self.data.write().unwrap();
+        data.children.remove(&name as &dyn InsensitiveStringRef).and_then(|entry| entry.upgrade())
     }
 
     /// Lookup a child entry in the cache.
@@ -383,17 +385,19 @@ impl MutableDirectory for FatDirectory {
         // TODO(fxb/55465): To properly implement this, we need a way to keep the file while
         // it's still connected. For now, refuse to remove a file if anyone else is looking at it.
         // We could mark files as "hidden", and refuse to serve any new connections to them?
-        match self.cache_get(&name) {
-            Some(_) => {
-                // This reference is still alive, so we can't safely delete it.
-                return Err(Status::UNAVAILABLE);
-            }
-            // The file is not currently open by anyone, so it's safe to continue.
-            None => {}
-        }
-
         let fs_lock = self.filesystem.lock().unwrap();
-        self.borrow_dir(&fs_lock)?.remove(&name).map_err(fatfs_error_to_status)
+        let dir = self.borrow_dir(&fs_lock)?;
+        match self.cache_remove(&fs_lock, &name) {
+            Some(entry) => {
+                match entry {
+                    FatNode::File(file) => file.remove_from(&fs_lock, dir),
+                    // TODO(fxb/55465): support deleting directories which are still open.
+                    _ => return Err(Status::UNAVAILABLE),
+                }
+            }
+            // The file is not currently open by anyone, so it's safe to remove directly.
+            None => self.borrow_dir(&fs_lock)?.remove(&name).map_err(fatfs_error_to_status),
+        }
     }
 
     fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {

@@ -376,6 +376,34 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         Ok(())
     }
 
+    /// Unlink the given File from this directory.
+    ///
+    /// Will cause filesystem corruption if the file is not actually in this directory,
+    /// but continuing to use the file is legal. It will be completely removed from the filesystem
+    /// once it is dropped.
+    pub fn unlink_file(&self, file: &mut File<IO, TP, OCC>) -> io::Result<()> {
+        file.mark_deleted();
+        let mut stream = self.stream.clone();
+        // Note that we have to treat the file's "real" direntry specially, as we want to keep
+        // track within the in-memory file that it is being deleted.
+        let mut entry = file
+            .editor_mut()
+            .ok_or(io::Error::new(ErrorKind::InvalidInput, "Can't delete file with no dirent"))?;
+        entry.set_deleted();
+        entry.flush(self.fs)?;
+
+        stream.seek(io::SeekFrom::Start(entry.offset_range.0));
+        let num = (entry.offset_range.1 - entry.offset_range.0) as usize / DIR_ENTRY_SIZE as usize;
+        for _ in 0..num - 1 {
+            let mut data = DirEntryData::deserialize(&mut stream)?;
+            trace!("removing dir entry {:?}", data);
+            data.set_deleted();
+            stream.seek(SeekFrom::Current(-(DIR_ENTRY_SIZE as i64)))?;
+            data.serialize(&mut stream)?;
+        }
+        Ok(())
+    }
+
     /// Renames or moves existing file or directory.
     ///
     /// `src_path` is a '/' separated source file path relative to self directory.

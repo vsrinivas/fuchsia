@@ -148,6 +148,37 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
         }
     }
 
+    /// Avoid writing any more updates to the file's dirent. This should be called if the file's
+    /// dirent is being deleted but the actual file clusters are being left as-is.
+    pub(crate) fn mark_deleted(&mut self) {
+        if let Some(ref mut e) = self.entry {
+            e.set_deleted();
+        }
+    }
+
+    /// Delete the file if it has been removed from its parent directory using `Dir::remove_dirent`.
+    pub fn purge(mut self) -> io::Result<()> {
+        let entry = match self.entry {
+            Some(ref e) => e,
+            None => {
+                return Err(io::Error::new(
+                    ErrorKind::InvalidInput,
+                    "Can't delete file with no dirent",
+                ))
+            }
+        };
+
+        if !entry.inner().is_deleted() {
+            return Err(io::Error::new(ErrorKind::InvalidInput, "Must call remove_dirent() first"));
+        }
+
+        if let Some(cluster) = self.first_cluster.take() {
+            self.fs.free_cluster_chain(cluster)?;
+        }
+
+        Ok(())
+    }
+
     pub(crate) fn editor_mut(&mut self) -> Option<&mut DirEntryEditor> {
         self.entry.as_mut()
     }
@@ -210,6 +241,17 @@ impl<IO: ReadWriteSeek, TP, OCC> Drop for File<'_, IO, TP, OCC> {
     fn drop(&mut self) {
         if let Err(err) = self.flush() {
             error!("flush failed {}", err);
+        }
+
+        // If we've been deleted, then mark clusters as free.
+        if let Some(ref entry) = self.entry {
+            if entry.inner().is_deleted() {
+                if let Some(cluster) = self.first_cluster.take() {
+                    self.fs
+                        .free_cluster_chain(cluster)
+                        .map_err(|e| error!("free_cluster_chain failed {}", e));
+                }
+            }
         }
     }
 }

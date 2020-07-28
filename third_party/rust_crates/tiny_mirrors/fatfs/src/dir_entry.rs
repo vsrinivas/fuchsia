@@ -428,23 +428,37 @@ impl DirEntryData {
 #[derive(Clone, Debug)]
 pub(crate) struct DirEntryEditor {
     data: DirFileEntryData,
+    // Absolute offset of this entry on the disk.
     pos: u64,
+    // Start and end offset of LFN entries and this entry within the directory's stream.
+    pub(crate) offset_range: (u64, u64),
     dirty: bool,
 }
 
 impl DirEntryEditor {
-    fn new(data: DirFileEntryData, pos: u64) -> Self {
-        DirEntryEditor { data, pos, dirty: false }
+    fn new(data: DirFileEntryData, pos: u64, offset_range: (u64, u64)) -> Self {
+        DirEntryEditor { data, pos, offset_range, dirty: false }
     }
 
     pub(crate) fn inner(&self) -> &DirFileEntryData {
         &self.data
     }
 
+    /// Mark the DirEntry as deleted. Once a flush() has written this to disk, any future flushes()
+    /// will be no-ops.
+    pub(crate) fn set_deleted(&mut self) {
+        if !self.data.is_deleted() {
+            self.data.set_deleted();
+            // Bypass maybe_set_dirty() here, because we want to write the deleted flag out to
+            // disk.
+            self.dirty = true;
+        }
+    }
+
     pub(crate) fn set_first_cluster(&mut self, first_cluster: Option<u32>, fat_type: FatType) {
         if first_cluster != self.data.first_cluster(fat_type) {
             self.data.set_first_cluster(first_cluster, fat_type);
-            self.dirty = true;
+            self.maybe_set_dirty();
         }
     }
 
@@ -452,7 +466,7 @@ impl DirEntryEditor {
         match self.data.size() {
             Some(n) if size != n => {
                 self.data.set_size(size);
-                self.dirty = true;
+                self.maybe_set_dirty();
             }
             _ => {}
         }
@@ -461,21 +475,21 @@ impl DirEntryEditor {
     pub(crate) fn set_created(&mut self, date_time: DateTime) {
         if date_time != self.data.created() {
             self.data.set_created(date_time);
-            self.dirty = true;
+            self.maybe_set_dirty();
         }
     }
 
     pub(crate) fn set_accessed(&mut self, date: Date) {
         if date != self.data.accessed() {
             self.data.set_accessed(date);
-            self.dirty = true;
+            self.maybe_set_dirty();
         }
     }
 
     pub(crate) fn set_modified(&mut self, date_time: DateTime) {
         if date_time != self.data.modified() {
             self.data.set_modified(date_time);
-            self.dirty = true;
+            self.maybe_set_dirty();
         }
     }
 
@@ -488,6 +502,13 @@ impl DirEntryEditor {
             self.dirty = false;
         }
         Ok(())
+    }
+
+    /// Mark this entry as dirty if it hasn't been removed from the disk.
+    fn maybe_set_dirty(&mut self) {
+        if !self.data.is_deleted() {
+            self.dirty = true;
+        }
     }
 
     fn write<IO: ReadWriteSeek, TP, OCC>(&self, fs: &FileSystem<IO, TP, OCC>) -> io::Result<()> {
@@ -573,7 +594,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC: OemCpConverter> DirEntry<'a, IO, TP, OCC> {
     }
 
     fn editor(&self) -> DirEntryEditor {
-        DirEntryEditor::new(self.data.clone(), self.entry_pos)
+        DirEntryEditor::new(self.data.clone(), self.entry_pos, self.offset_range)
     }
 
     pub(crate) fn is_same_entry(&self, other: &DirEntry<IO, TP, OCC>) -> bool {

@@ -96,6 +96,28 @@ TEST_P(UnlinkTest, OpenElsewhere) {
   ASSERT_EQ(open(path.c_str(), O_RDWR, 0644), -1);
 }
 
+TEST_P(UnlinkTest, OpenElsewhereLongName) {
+  // Test a filename that's not 8.3
+  const std::string path = GetPath("really_really_long_file_name");
+  fbl::unique_fd fd1(open(path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
+  ASSERT_TRUE(fd1);
+  fbl::unique_fd fd2(open(path.c_str(), O_RDWR, 0644));
+  ASSERT_TRUE(fd2);
+
+  ASSERT_NO_FATAL_FAILURE(SimpleWriteTest(fd1.get(), 0));
+  ASSERT_EQ(close(fd1.release()), 0);
+
+  // When we unlink path, fd2 is still open.
+  ASSERT_EQ(unlink(path.c_str()), 0);
+  ASSERT_NO_FATAL_FAILURE(
+      SimpleReadTest(fd2.get(), 0));  // It should contain the same data as before
+  ASSERT_NO_FATAL_FAILURE(SimpleWriteTest(fd2.get(), 1));  // It should still be writable
+  ASSERT_EQ(close(fd2.release()), 0);                      // This actually releases the file
+
+  // Now, opening the file should fail without O_CREAT
+  ASSERT_EQ(open(path.c_str(), O_RDWR, 0644), -1);
+}
+
 TEST_P(UnlinkTest, Remove) {
   // Test the trivial cases of removing files and directories
   const std::string filename = GetPath("file");
