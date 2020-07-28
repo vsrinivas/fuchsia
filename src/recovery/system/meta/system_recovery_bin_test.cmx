@@ -31,7 +31,8 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.test.IsolatedDevmgr"
+            "fuchsia.test.IsolatedDevmgr",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
