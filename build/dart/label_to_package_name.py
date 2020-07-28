@@ -3,7 +3,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import string
 import sys
 
 # TODO(abarth): Base these paths on the sdk_dirs variable in gn.
@@ -28,7 +27,7 @@ def convert(label):
         sys.stderr.write("expected label to start with //, got %s\n" % label)
         return 1
     base = _remove_sdk_dir(label[2:])
-    separator_index = string.rfind(base, ":")
+    separator_index = base.rfind(":")
     if separator_index < 0:
         sys.stderr.write("could not find target name in label %s\n" % label)
         return 1
