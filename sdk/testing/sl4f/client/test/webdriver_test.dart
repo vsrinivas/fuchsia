@@ -20,15 +20,12 @@ class MockWebDriver extends Mock implements WebDriver {}
 
 void main(List<String> args) {
   MockSl4f sl4f;
-  MockSsh ssh;
   MockProcessHelper processHelper;
   MockWebDriverHelper webDriverHelper;
   WebDriverConnector webDriverConnector;
 
   setUp(() {
     sl4f = MockSl4f();
-    ssh = MockSsh();
-    when(sl4f.ssh).thenReturn(ssh);
     processHelper = MockProcessHelper();
     webDriverHelper = MockWebDriverHelper();
     webDriverConnector = WebDriverConnector('path/to/chromedriver', sl4f,
@@ -42,7 +39,7 @@ void main(List<String> args) {
       20002: 'https://www.test.com/path/2',
       20003: 'https://www.example.com/path/2'
     };
-    mockAvailableWebDrivers(webDriverHelper, sl4f, ssh, openContexts);
+    mockAvailableWebDrivers(webDriverHelper, sl4f, openContexts);
     final webDrivers =
         await webDriverConnector.webDriversForHost('www.test.com');
     expect(webDrivers.length, 2);
@@ -57,7 +54,7 @@ void main(List<String> args) {
       20000: 'https://www.test.com/path/1',
       20001: 'https://www.example.com/path/1',
     };
-    mockAvailableWebDrivers(webDriverHelper, sl4f, ssh, openContexts);
+    mockAvailableWebDrivers(webDriverHelper, sl4f, openContexts);
 
     final webDrivers =
         await webDriverConnector.webDriversForHost('www.test.com');
@@ -73,13 +70,13 @@ void main(List<String> args) {
     when(webDrivers.single.window).thenAnswer(
         (_) => throw NoSuchWindowException(1, 'Session not displayed'));
 
-    when(ssh.forwardPort(remotePort: anyNamed('remotePort')))
-        .thenAnswer((invocation) {
-      final remotePort = invocation.namedArguments[#remotePort];
-      return Future.value(remotePort + 10);
+    when(sl4f.request('proxy_facade.OpenProxy', any)).thenAnswer((invocation) {
+      final targetPort = invocation.positionalArguments[1];
+      return Future.value(targetPort + 10);
     });
 
-    when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) {
+    when(webDriverHelper.createDriver(any, any, any, any))
+        .thenAnswer((invocation) {
       WebDriver webDriver = MockWebDriver();
       when(webDriver.currentUrl).thenReturn('https://www.test.com/path/2');
       return webDriver;
@@ -90,7 +87,7 @@ void main(List<String> args) {
   });
 
   test('webDriversForHost no contexts', () async {
-    mockAvailableWebDrivers(webDriverHelper, sl4f, ssh, {});
+    mockAvailableWebDrivers(webDriverHelper, sl4f, {});
     var webDrivers = await webDriverConnector.webDriversForHost('www.test.com');
     expect(webDrivers.length, 0);
   });
@@ -98,24 +95,24 @@ void main(List<String> args) {
 
 /// Set up mocks as if there are chrome contexts with the given ports exposing a url.
 void mockAvailableWebDrivers(MockWebDriverHelper webDriverHelper, MockSl4f sl4f,
-    MockSsh ssh, Map<int, String> remotePortToUrl) {
-  final remotePortList = {'ports': List.from(remotePortToUrl.keys)};
+    Map<int, String> targetPortToUrl) {
+  final targetPortList = {'ports': List.from(targetPortToUrl.keys)};
   when(sl4f.request('webdriver_facade.GetDevToolsPorts'))
-      .thenAnswer((_) => Future.value(remotePortList));
+      .thenAnswer((_) => Future.value(targetPortList));
 
-  // Pretend that local port == remote port + 10, this lets us easily convert
+  // Pretend that open port == target port + 10, this lets us easily convert
   // between the two for mocking.
-  when(ssh.forwardPort(remotePort: anyNamed('remotePort')))
-      .thenAnswer((invocation) {
-    final remotePort = invocation.namedArguments[#remotePort];
-    return Future.value(remotePort + 10);
+  when(sl4f.request('proxy_facade.OpenProxy', any)).thenAnswer((invocation) {
+    final targetPort = invocation.positionalArguments[1];
+    return Future.value(targetPort + 10);
   });
 
-  when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) {
-    final localPort = invocation.positionalArguments.first;
-    final remotePort = localPort - 10;
+  when(webDriverHelper.createDriver(any, any, any, any))
+      .thenAnswer((invocation) {
+    final openPort = invocation.positionalArguments[1];
+    final targetPort = openPort - 10;
     WebDriver webDriver = MockWebDriver();
-    when(webDriver.currentUrl).thenReturn(remotePortToUrl[remotePort]);
+    when(webDriver.currentUrl).thenReturn(targetPortToUrl[targetPort]);
     return webDriver;
   });
 }
