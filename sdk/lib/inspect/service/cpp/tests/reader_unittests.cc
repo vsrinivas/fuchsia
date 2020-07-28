@@ -31,10 +31,14 @@ class InspectReaderTest : public gtest::RealLoopFixture {
  protected:
   inspect::Node& root() { return inspector_.GetRoot(); }
 
-  fuchsia::inspect::TreePtr Connect() {
+  fuchsia::inspect::TreePtr Connect(async_dispatcher_t* dispatcher = nullptr) {
     fuchsia::inspect::TreePtr ret;
-    handler_(ret.NewRequest());
+    handler_(ret.NewRequest(dispatcher));
     return ret;
+  }
+
+  void ResetHandler(async_dispatcher_t* dispatcher) {
+    handler_ = inspect::MakeTreeHandler(&inspector_, dispatcher);
   }
 
   async::Executor executor_;
@@ -44,10 +48,10 @@ class InspectReaderTest : public gtest::RealLoopFixture {
   fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> handler_;
 };
 
-TEST_F(InspectReaderTest, ReadHierarchy) {
+inspect::ValueList RecordValues(inspect::Node& root) {
   inspect::ValueList values;
-  root().CreateInt("val", 1, &values);
-  root().CreateLazyNode(
+  root.CreateInt("val", 1, &values);
+  root.CreateLazyNode(
       "test",
       [] {
         Inspector insp;
@@ -63,7 +67,7 @@ TEST_F(InspectReaderTest, ReadHierarchy) {
         return fit::make_ok_promise(std::move(insp));
       },
       &values);
-  root().CreateLazyNode(
+  root.CreateLazyNode(
       "next",
       [] {
         Inspector insp;
@@ -71,12 +75,18 @@ TEST_F(InspectReaderTest, ReadHierarchy) {
         return fit::make_ok_promise(std::move(insp));
       },
       &values);
-  root().CreateLazyNode(
+  root.CreateLazyNode(
       "node_error", [] { return fit::make_result_promise<Inspector>(fit::error()); }, &values);
-  root().CreateLazyNode(
+  root.CreateLazyNode(
       "values_error", [] { return fit::make_result_promise<Inspector>(fit::error()); }, &values);
 
+  return values;
+}
+
+TEST_F(InspectReaderTest, ReadHierarchy) {
+  inspect::ValueList values;
   fit::result<Hierarchy> hierarchy;
+  auto value_list = RecordValues(root());
   bool done = false;
 
   executor_.schedule_task(
@@ -86,6 +96,41 @@ TEST_F(InspectReaderTest, ReadHierarchy) {
       }));
 
   RunLoopUntil([&] { return done; });
+
+  ASSERT_TRUE(hierarchy.is_ok());
+
+  EXPECT_THAT(
+      hierarchy.value(),
+      AllOf(NodeMatches(NameMatches("root")),
+            ChildrenMatch(UnorderedElementsAre(
+                AllOf(NodeMatches(
+                    AllOf(NameMatches("test"),
+                          PropertyList(UnorderedElementsAre(IntIs("val2", 2), IntIs("val3", 3)))))),
+                AllOf(NodeMatches(AllOf(NameMatches("next"),
+                                        PropertyList(UnorderedElementsAre(IntIs("val4", 4))))))))));
+}
+
+TEST_F(InspectReaderTest, ReadHierarchyWithDifferentDispatcher) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ResetHandler(loop.dispatcher());
+  inspect::ValueList values;
+  fit::result<Hierarchy> hierarchy;
+  auto value_list = RecordValues(root());
+  bool done = false;
+
+  async::Executor local_executor(loop.dispatcher());
+  local_executor.schedule_task(
+      inspect::ReadFromTree(Connect(loop.dispatcher())).then([&](fit::result<Hierarchy>& result) {
+        hierarchy = std::move(result);
+        done = true;
+      }));
+
+  while (true) {
+    loop.Run(zx::deadline_after(zx::msec(10)));
+    if (done) {
+      break;
+    }
+  }
 
   ASSERT_TRUE(hierarchy.is_ok());
 

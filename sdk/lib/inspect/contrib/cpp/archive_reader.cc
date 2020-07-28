@@ -154,7 +154,8 @@ fit::promise<std::vector<DiagnosticsData>, std::string> ArchiveReader::GetInspec
            params.set_client_selector_configuration(std::move(client_selector_config));
 
            fuchsia::diagnostics::BatchIteratorPtr iterator;
-           archive_->StreamDiagnostics(std::move(params), iterator.NewRequest());
+           archive_->StreamDiagnostics(std::move(params),
+                                       iterator.NewRequest(archive_.dispatcher()));
            return ReadBatches(std::move(iterator));
          })
       .wrap_with(scope_);

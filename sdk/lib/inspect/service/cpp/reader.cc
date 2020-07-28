@@ -15,7 +15,7 @@ fit::promise<SnapshotTree> SnapshotTreeFromTree(fuchsia::inspect::TreePtr tree) 
   fit::bridge<fuchsia::inspect::TreeContent> content_bridge;
   fuchsia::inspect::TreeNameIteratorPtr child_ptr;
   tree->GetContent(content_bridge.completer.bind());
-  tree->ListChildNames(child_ptr.NewRequest());
+  tree->ListChildNames(child_ptr.NewRequest(tree.dispatcher()));
   return fit::join_promises(content_bridge.consumer.promise_or(fit::error()),
                             ReadAllChildNames(std::move(child_ptr)))
       .and_then([tree = std::move(tree)](
@@ -27,7 +27,7 @@ fit::promise<SnapshotTree> SnapshotTreeFromTree(fuchsia::inspect::TreePtr tree) 
 
         SnapshotTree ret;
         if (!content.is_ok() || !children.is_ok() ||
-            Snapshot::Create(content.take_value().buffer().vmo, &ret.snapshot)) {
+            Snapshot::Create(content.take_value().buffer().vmo, &ret.snapshot) != ZX_OK) {
           return fit::make_result_promise<SnapshotTree>(fit::error());
         }
 
@@ -36,7 +36,7 @@ fit::promise<SnapshotTree> SnapshotTreeFromTree(fuchsia::inspect::TreePtr tree) 
         std::vector<fit::promise<SnapshotTree>> child_promises;
         for (const auto& child_name : children.value()) {
           fuchsia::inspect::TreePtr child_ptr;
-          tree->OpenChild(child_name, child_ptr.NewRequest());
+          tree->OpenChild(child_name, child_ptr.NewRequest(tree.dispatcher()));
           child_promises.emplace_back(SnapshotTreeFromTree(std::move(child_ptr)).wrap_with(seq));
         }
 
@@ -54,8 +54,6 @@ fit::promise<SnapshotTree> SnapshotTreeFromTree(fuchsia::inspect::TreePtr tree) 
 
                   return fit::ok(std::move(ret));
                 });
-
-        return fit::make_result_promise<SnapshotTree>(fit::error());
       });
 }
 }  // namespace
@@ -69,7 +67,7 @@ fit::promise<std::vector<std::string>> ReadAllChildNames(
   return bridge.consumer.promise_or(fit::error())
       .then([it = std::move(iterator)](fit::result<std::vector<std::string>>& result) mutable
             -> fit::promise<std::vector<std::string>> {
-        if (!result.is_ok() || result.value().size() == 0) {
+        if (!result.is_ok() || result.value().empty()) {
           return fit::make_ok_promise(std::vector<std::string>());
         }
 

@@ -86,7 +86,8 @@ class InspectTreeService final : public fuchsia::inspect::Tree {
               auto child = std::unique_ptr<InspectTreeService>(new InspectTreeService(
                   std::move(inspector), executor_.dispatcher(),
                   [this](InspectTreeService* ptr) { child_bindings_.RemoveBinding(ptr); }));
-              child_bindings_.AddBinding(std::move(child), std::move(request));
+              child_bindings_.AddBinding(std::move(child), std::move(request),
+                                         executor_.dispatcher());
             }));
   }
 

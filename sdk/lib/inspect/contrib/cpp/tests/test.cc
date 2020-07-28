@@ -10,6 +10,8 @@
 #include <gmock/gmock.h>
 #include <rapidjson/pointer.h>
 
+#include "lib/zx/time.h"
+
 namespace component {
 namespace {
 
@@ -83,6 +85,40 @@ TEST_F(ArchiveReaderTest, ReadHierarchy) {
                                   {"archive_reader_test_app.cmx", "archive_reader_test_app_2.cmx"})
                               .then([&](ResultType& r) { result = std::move(r); }));
   RunLoopUntil([&] { return !!result; });
+
+  ASSERT_TRUE(result.is_ok()) << "Error: " << result.error();
+
+  auto value = result.take_value();
+  std::sort(value.begin(), value.end(),
+            [](auto& a, auto& b) { return a.component_name() < b.component_name(); });
+
+  EXPECT_EQ(cmx1, value[0].component_name());
+  EXPECT_EQ(cmx2, value[1].component_name());
+
+  EXPECT_STREQ("v1", value[0].content()["root"]["version"].GetString());
+  EXPECT_STREQ("v1", value[1].content()["root"]["version"].GetString());
+}
+
+TEST_F(ArchiveReaderTest, ReadHierarchyWithAlternativeDispatcher) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fuchsia::diagnostics::ArchiveAccessorPtr archive;
+  real_services()->Connect(archive.NewRequest(loop.dispatcher()));
+  async::Executor local_executor(loop.dispatcher());
+  inspect::contrib::ArchiveReader reader(std::move(archive), {cmx1_selector, cmx2_selector});
+
+  ResultType result;
+  local_executor.schedule_task(reader
+                                   .SnapshotInspectUntilPresent({"archive_reader_test_app.cmx",
+                                                                 "archive_reader_test_app_2.cmx"})
+                                   .then([&](ResultType& r) { result = std::move(r); }));
+
+  // Use the alternate loop.
+  while (true) {
+    loop.Run(zx::deadline_after(zx::msec(10)));
+    if (!!result) {
+      break;
+    }
+  }
 
   ASSERT_TRUE(result.is_ok()) << "Error: " << result.error();
 
