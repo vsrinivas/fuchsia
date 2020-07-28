@@ -7,6 +7,7 @@
             "class/block",
             "class/display-controller",
             "class/input",
+            "class/input-report",
             "sys/pci",
             "sys/platform"
         ],
@@ -20,6 +21,7 @@
             "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
+            "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",

@@ -43,8 +43,10 @@ rustc_binary("bin") {
   deps = [
     "//garnet/public/rust/fuchsia-hyper",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -79,6 +81,7 @@ rustc_binary("bin") {
   enforce_source_listing = true
 
   sources = [
+    "src/fdr.rs",
     "src/main.rs",
     "src/ota.rs",
     "src/setup.rs",
@@ -95,7 +98,9 @@ rustc_binary("bin_fdr") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -110,6 +115,15 @@ rustc_binary("bin_fdr") {
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/fdr.rs",
+    "src/main.rs",
+  ]
+
+  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
 }
 
 config_data("config") {

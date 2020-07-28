@@ -6,6 +6,7 @@ use anyhow::Error;
 use carnelian::{
     color::Color,
     drawing::{FontFace, GlyphMap, Text},
+    input, make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear,
         RenderExt, Style,
@@ -13,7 +14,14 @@ use carnelian::{
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Point,
     ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use fuchsia_zircon::{AsHandleRef, Event, Signals};
+use fidl_fuchsia_input_report::ConsumerControlButton;
+use fidl_fuchsia_recovery::FactoryResetMarker;
+use fuchsia_async::{self as fasync, Task};
+use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
+use futures::StreamExt;
+
+const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
 
 #[cfg(feature = "http_setup_server")]
 mod setup;
@@ -27,14 +35,24 @@ use crate::setup::SetupEvent;
 #[cfg(feature = "http_setup_server")]
 mod storage;
 
+mod fdr;
+use fdr::{FactoryResetState, ResetEvent};
+
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 
-#[cfg(feature = "http_setup_server")]
 enum RecoveryMessages {
+    #[cfg(feature = "http_setup_server")]
     EventReceived,
+    #[cfg(feature = "http_setup_server")]
     StartingOta,
-    OtaFinished { result: Result<(), Error> },
+    #[cfg(feature = "http_setup_server")]
+    OtaFinished {
+        result: Result<(), Error>,
+    },
+    ResetMessage(FactoryResetState),
+    CountdownTick(u8),
+    ResetFailed,
 }
 
 struct RecoveryAppAssistant {
@@ -71,6 +89,10 @@ struct RecoveryViewAssistant<'a> {
     heading_label: Option<Text>,
     body: String,
     body_label: Option<Text>,
+    reset_state_machine: fdr::FactoryResetStateMachine,
+    app_context: AppContext,
+    view_key: ViewKey,
+    countdown_task: Option<Task<()>>,
 }
 
 impl<'a> RecoveryViewAssistant<'a> {
@@ -95,6 +117,10 @@ impl<'a> RecoveryViewAssistant<'a> {
             heading_label: None,
             body: body.to_string(),
             body_label: None,
+            reset_state_machine: fdr::FactoryResetStateMachine::new(),
+            app_context: app_context.clone(),
+            view_key: 0,
+            countdown_task: None,
         })
     }
 
@@ -105,10 +131,6 @@ impl<'a> RecoveryViewAssistant<'a> {
 
     #[cfg(feature = "http_setup_server")]
     fn setup(app_context: &AppContext, view_key: ViewKey) -> Result<(), Error> {
-        use carnelian::make_message;
-        use fuchsia_async as fasync;
-        use futures::StreamExt;
-
         let mut receiver = setup::start_server()?;
         let local_app_context = app_context.clone();
         let f = async move {
@@ -134,10 +156,33 @@ impl<'a> RecoveryViewAssistant<'a> {
 
         Ok(())
     }
+
+    async fn execute_reset(view_key: ViewKey, app_context: AppContext) {
+        let factory_reset_service = connect_to_service::<FactoryResetMarker>();
+        let proxy = match factory_reset_service {
+            Ok(marker) => marker.clone(),
+            Err(error) => {
+                app_context.queue_message(view_key, make_message(RecoveryMessages::ResetFailed));
+                panic!("Could not connect to factory_reset_service: {}", error);
+            }
+        };
+
+        println!("recovery: Executing factory reset command");
+
+        let res = proxy.reset().await;
+        match res {
+            Ok(_) => {}
+            Err(error) => {
+                app_context.queue_message(view_key, make_message(RecoveryMessages::ResetFailed));
+                eprintln!("recovery: Error occurred : {}", error);
+            }
+        };
+    }
 }
 
 impl ViewAssistant for RecoveryViewAssistant<'_> {
-    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        self.view_key = context.key;
         Ok(())
     }
 
@@ -218,16 +263,18 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         Ok(())
     }
 
-    #[cfg(feature = "http_setup_server")]
     fn handle_message(&mut self, message: carnelian::Message) {
         if let Some(message) = message.downcast_ref::<RecoveryMessages>() {
             match message {
+                #[cfg(feature = "http_setup_server")]
                 RecoveryMessages::EventReceived => {
                     self.body = "Got event".to_string();
                 }
+                #[cfg(feature = "http_setup_server")]
                 RecoveryMessages::StartingOta => {
                     self.body = "Starting OTA update".to_string();
                 }
+                #[cfg(feature = "http_setup_server")]
                 RecoveryMessages::OtaFinished { result } => {
                     if let Err(e) = result {
                         self.body = format!("OTA failed: {:?}", e);
@@ -235,8 +282,108 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                         self.body = "OTA succeeded".to_string();
                     }
                 }
+                RecoveryMessages::ResetMessage(state) => {
+                    match state {
+                        FactoryResetState::Waiting => {
+                            self.body = "Waiting...".to_string();
+                            self.app_context.request_render(self.view_key);
+                        }
+                        FactoryResetState::StartCountdown => {
+                            let view_key = self.view_key;
+                            let local_app_context = self.app_context.clone();
+
+                            let mut counter = FACTORY_RESET_TIMER_IN_SECONDS;
+                            local_app_context.queue_message(
+                                view_key,
+                                make_message(RecoveryMessages::CountdownTick(counter)),
+                            );
+
+                            // start the countdown timer
+                            let f = async move {
+                                let mut interval_timer =
+                                    fasync::Interval::new(Duration::from_seconds(1));
+                                while let Some(()) = interval_timer.next().await {
+                                    counter -= 1;
+                                    local_app_context.queue_message(
+                                        view_key,
+                                        make_message(RecoveryMessages::CountdownTick(counter)),
+                                    );
+                                    if counter == 0 {
+                                        break;
+                                    }
+                                }
+                            };
+                            self.countdown_task = Some(fasync::Task::local(f));
+                        }
+                        FactoryResetState::CancelCountdown => {
+                            self.countdown_task
+                                .take()
+                                .and_then(|task| Some(fasync::Task::local(task.cancel())));
+                            let state = self
+                                .reset_state_machine
+                                .handle_event(ResetEvent::CountdownCancelled);
+                            assert_eq!(state, fdr::FactoryResetState::Waiting);
+                            self.app_context.queue_message(
+                                self.view_key,
+                                make_message(RecoveryMessages::ResetMessage(state)),
+                            );
+                        }
+                        FactoryResetState::ExecuteReset => {
+                            let view_key = self.view_key;
+                            let local_app_context = self.app_context.clone();
+                            let f = async move {
+                                RecoveryViewAssistant::execute_reset(view_key, local_app_context)
+                                    .await;
+                            };
+                            fasync::spawn_local(f);
+                        }
+                    };
+                }
+                RecoveryMessages::CountdownTick(count) => {
+                    self.heading = "Factory Reset".to_string();
+                    if *count == 0 {
+                        self.body = "Resetting device...".to_string();
+                        let state =
+                            self.reset_state_machine.handle_event(ResetEvent::CountdownFinished);
+                        assert_eq!(state, FactoryResetState::ExecuteReset);
+                        self.app_context.queue_message(
+                            self.view_key,
+                            make_message(RecoveryMessages::ResetMessage(state)),
+                        );
+                    } else {
+                        self.body = format!("Resetting in {}", count);
+                    }
+                    self.app_context.request_render(self.view_key);
+                }
+                RecoveryMessages::ResetFailed => {
+                    self.heading = "Reset failed".to_string();
+                    self.body = "Please restart device to try again".to_string();
+                    self.app_context.request_render(self.view_key);
+                }
             }
         }
+    }
+
+    fn handle_consumer_control_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        _: &input::Event,
+        consumer_control_event: &input::consumer_control::Event,
+    ) -> Result<(), Error> {
+        match consumer_control_event.button {
+            ConsumerControlButton::VolumeUp | ConsumerControlButton::VolumeDown => {
+                let state: FactoryResetState =
+                    self.reset_state_machine.handle_event(ResetEvent::ButtonPress(
+                        consumer_control_event.button,
+                        consumer_control_event.phase,
+                    ));
+                if state != fdr::FactoryResetState::ExecuteReset {
+                    context.queue_message(make_message(RecoveryMessages::ResetMessage(state)));
+                }
+            }
+            _ => {}
+        }
+        Ok(())
     }
 }
 

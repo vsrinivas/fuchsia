@@ -311,7 +311,7 @@ mod pointer_tests {
 pub mod consumer_control {
     use super::*;
 
-    #[derive(Debug, PartialEq, Clone)]
+    #[derive(Debug, PartialEq, Clone, Copy)]
     pub enum Phase {
         Down,
         Up,
