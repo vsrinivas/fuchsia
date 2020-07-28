@@ -2,8 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.sys.internal.CrashIntrospect",
-                "fuchsia.sys.internal.Introspect"
+                "fuchsia.sys.internal.CrashIntrospect"
             ]
         }
     },
@@ -20,8 +19,7 @@
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
-            "fuchsia.sys.internal.CrashIntrospect",
-            "fuchsia.sys.internal.Introspect"
+            "fuchsia.sys.internal.CrashIntrospect"
         ]
     }
 }

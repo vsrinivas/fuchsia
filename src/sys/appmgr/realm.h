@@ -39,7 +39,6 @@
 #include "src/sys/appmgr/environment_controller_impl.h"
 #include "src/sys/appmgr/hub/hub_info.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
-#include "src/sys/appmgr/introspector.h"
 #include "src/sys/appmgr/log_connector_impl.h"
 #include "src/sys/appmgr/namespace.h"
 #include "src/sys/appmgr/namespace_builder.h"
@@ -117,8 +116,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::shared_ptr<sys::ServiceDirectory> environment_services() const {
     return environment_services_;
   }
-
-  const std::unique_ptr<IntrospectImpl>& introspector() const { return introspector_; }
 
   HubInfo HubInfo();
 
@@ -202,13 +199,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   // Whether a `ComponentEventListener` has been bound to this realm `ComponentEventProvider`.
   bool HasComponentEventListenerBound();
-
-  // Parses component tree and finds the component whose job contains `process_koid`.
-  // Returns: Component's source identity.
-  // Errors:
-  // `ZX_ERR_NOT_FOUND`: if `process_koid` is not found in component tree.
-  // `ZX_ERR_*`: Errors which might occur when parsing this realm's job tree.
-  zx::status<fuchsia::sys::internal::SourceIdentity> FindComponent(zx_koid_t process_koid);
 
   // Given a component url |fp|, initializes and returns the component's absolute storage
   // directory for the given |storage_path|. Returns an empty string on failure.
@@ -329,9 +319,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   fbl::RefPtr<ComponentIdIndex> component_id_index_;
 
   fxl::WeakPtrFactory<Realm> weak_ptr_factory_;
-
-  // Implement introspect service. Only initialized in root realm.
-  std::unique_ptr<IntrospectImpl> introspector_;
 
   // Implement crash introspect service. Only initialized in root realm.
   std::unique_ptr<CrashIntrospector> crash_introspector_;

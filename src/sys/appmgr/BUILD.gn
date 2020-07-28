@@ -39,8 +39,6 @@ source_set("lib") {
     "hub/hub_info.h",
     "hub/realm_hub.cc",
     "hub/realm_hub.h",
-    "introspector.cc",
-    "introspector.h",
     "job_provider_impl.cc",
     "job_provider_impl.h",
     "log_connector_impl.cc",

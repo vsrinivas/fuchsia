@@ -132,7 +132,6 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.sys.Launcher",
                                                "fuchsia.sys.Loader",
                                                "fuchsia.sys.test.CacheControl",
-                                               "fuchsia.sys.internal.Introspect",
                                                "fuchsia.sysinfo.SysInfo",
                                                "fuchsia.virtualconsole.SessionManager"};
     sysmgr::Config config;
