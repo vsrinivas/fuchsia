@@ -50,7 +50,7 @@ if (is_host) {
 
   host_test_data("test_data") {
     sources = [
-      "//prebuilt/third_party/rust/$host_platform/bin/rustfmt",
+      "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
       "//rustfmt.toml",
     ]
     outputs = [ "$root_out_dir/test_data/fidlgen_rust/{{source_file_part}}" ]

@@ -147,7 +147,7 @@ for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
     ${FIDLGEN_RUST} \
         -json "${GOLDENS_DIR}/${json_name}" \
         -output-filename "${GOLDENS_DIR}/${rust_name}.golden" \
-        -rustfmt "${PREBUILT_RUST_DIR}/bin/rustfmt"
+        -rustfmt "${PREBUILT_RUST_TOOLS_DIR}/bin/rustfmt"
 
     # TODO(fxb/45007): Syzkaller does not support enum member references in struct
     # defaults.

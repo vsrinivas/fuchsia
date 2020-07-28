@@ -604,7 +604,7 @@ group("tool_paths.metadata") {
     "//prebuilt/third_party/rust/$host_platform/bin/cargo",
     "//prebuilt/third_party/rust/$host_platform/bin/rustc",
     "//prebuilt/third_party/rust/$host_platform/bin/rustdoc",
-    "//prebuilt/third_party/rust/$host_platform/bin/rustfmt",
+    "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-format-diff.py",
     "//prebuilt/third_party/clang/$host_platform/share/clang/clang-tidy-diff.py",
     "//prebuilt/third_party/go/$host_platform/bin/go",
