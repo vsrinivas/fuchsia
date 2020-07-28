@@ -26,8 +26,7 @@
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.weave.FactoryDataManager",
-            "fuchsia.wlan.device.service.DeviceService"
+            "fuchsia.weave.FactoryDataManager"
         ]
     }
 }

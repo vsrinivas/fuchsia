@@ -19,8 +19,7 @@
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.weave.FactoryDataManager",
-            "fuchsia.wlan.device.service.DeviceService"
+            "fuchsia.weave.FactoryDataManager"
         ]
     }
 }

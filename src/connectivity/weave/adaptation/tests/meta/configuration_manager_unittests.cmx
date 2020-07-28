@@ -4,7 +4,7 @@
             "system-services": [
                 "fuchsia.boot.FactoryItems"
             ]
-         }
+        }
     },
     "program": {
         "binary": "test/configuration_manager_unittests"
@@ -19,8 +19,7 @@
             "fuchsia.hwinfo.Device",
             "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.weave.FactoryDataManager",
-            "fuchsia.wlan.device.service.DeviceService"
+            "fuchsia.weave.FactoryDataManager"
         ]
     }
 }

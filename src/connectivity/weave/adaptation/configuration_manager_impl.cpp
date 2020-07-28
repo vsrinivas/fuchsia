@@ -46,10 +46,6 @@ WEAVE_ERROR ConfigurationManagerImpl::_GetProductId(uint16_t& product_id) {
   return delegate_->GetProductId(product_id);
 }
 
-WEAVE_ERROR ConfigurationManagerImpl::_GetPrimaryWiFiMACAddress(uint8_t* buf) {
-  return delegate_->GetPrimaryWiFiMACAddress(buf);
-}
-
 WEAVE_ERROR ConfigurationManagerImpl::_GetVendorId(uint16_t& vendor_id) {
   return delegate_->GetVendorId(vendor_id);
 }

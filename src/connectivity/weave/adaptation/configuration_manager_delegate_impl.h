@@ -7,7 +7,6 @@
 #include <fuchsia/factory/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/weave/cpp/fidl.h>
-#include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <Weave/DeviceLayer/ConfigurationManager.h>
@@ -35,7 +34,6 @@ class ConfigurationManagerDelegateImpl : public ConfigurationManagerImpl::Delega
   WEAVE_ERROR GetManufacturerDeviceCertificate(uint8_t* buf, size_t buf_size,
                                                size_t& out_len) override;
   WEAVE_ERROR GetProductId(uint16_t& product_id) override;
-  WEAVE_ERROR GetPrimaryWiFiMACAddress(uint8_t* buf) override;
   WEAVE_ERROR GetVendorId(uint16_t& vendor_id) override;
   GroupKeyStoreBase* GetGroupKeyStore(void) override;
   bool CanFactoryReset(void) override;
@@ -74,7 +72,6 @@ class ConfigurationManagerDelegateImpl : public ConfigurationManagerImpl::Delega
   fuchsia::hwinfo::DeviceSyncPtr hwinfo_device_;
   fuchsia::factory::WeaveFactoryStoreProviderSyncPtr factory_store_provider_;
   fuchsia::weave::FactoryDataManagerSyncPtr weave_factory_data_manager_;
-  fuchsia::wlan::device::service::DeviceServiceSyncPtr wlan_device_service_;
 
   std::unique_ptr<WeaveConfigReader> device_info_;
 };

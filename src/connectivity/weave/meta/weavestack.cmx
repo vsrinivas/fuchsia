@@ -18,8 +18,7 @@
             "fuchsia.net.tun.Control",
             "fuchsia.posix.socket.Provider",
             "fuchsia.weave.FactoryDataManager",
-            "fuchsia.weave.Signer",
-            "fuchsia.wlan.device.service.DeviceService"
+            "fuchsia.weave.Signer"
         ]
     }
 }

@@ -60,8 +60,6 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
   auto context = PlatformMgrImpl().GetComponentContextForProcess();
 
-  FX_CHECK(context->svc()->Connect(wlan_device_service_.NewRequest()) == ZX_OK)
-      << "Failed to connect to wlan service.";
   FX_CHECK(context->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
   FX_CHECK(context->svc()->Connect(weave_factory_data_manager_.NewRequest()) == ZX_OK)
@@ -134,32 +132,6 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetManufacturerDeviceCertificate(u
 
   return EnvironmentConfig::ReadConfigValueBin(EnvironmentConfig::kConfigKey_MfrDeviceCert, buf,
                                                buf_size, out_len);
-}
-
-WEAVE_ERROR ConfigurationManagerDelegateImpl::GetPrimaryWiFiMACAddress(uint8_t* buf) {
-  fuchsia::wlan::device::service::ListPhysResponse phy_list_resp;
-  if (ZX_OK != wlan_device_service_->ListPhys(&phy_list_resp)) {
-    return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
-  }
-  for (auto phy : phy_list_resp.phys) {
-    fuchsia::wlan::device::service::QueryPhyRequest req;
-    int32_t out_status;
-    std::unique_ptr<fuchsia::wlan::device::service::QueryPhyResponse> phy_resp;
-
-    req.phy_id = phy.phy_id;
-    if (ZX_OK != wlan_device_service_->QueryPhy(std::move(req), &out_status, &phy_resp) ||
-        0 != out_status) {
-      continue;
-    }
-
-    for (auto role : phy_resp->info.mac_roles) {
-      if (role == fuchsia::wlan::device::MacRole::CLIENT) {
-        memcpy(buf, phy_resp->info.hw_mac_address.data(), ETH_ALEN);
-        return WEAVE_NO_ERROR;
-      }
-    }
-  }
-  return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
 }
 
 GroupKeyStoreBase* ConfigurationManagerDelegateImpl::GetGroupKeyStore() {

@@ -12,7 +12,6 @@
 #include <fuchsia/factory/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/weave/cpp/fidl.h>
-#include <fuchsia/wlan/device/service/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/connectivity/weave/adaptation/environment_config.h"
@@ -84,10 +83,6 @@ class ConfigurationManagerImpl final
 
     // Populates |product_id| with the weave product ID.
     virtual WEAVE_ERROR GetProductId(uint16_t& product_id) = 0;
-
-    // Populates |buf| with the MAC address of the primary WiFi interface.
-    // It is expected that the |buf| has at least |ETH_MAX| bytes.
-    virtual WEAVE_ERROR GetPrimaryWiFiMACAddress(uint8_t* buf) = 0;
 
     // Populates |vendor_id| with the weave vendor ID.
     virtual WEAVE_ERROR GetVendorId(uint16_t& vendor_id) = 0;
@@ -168,7 +163,6 @@ class ConfigurationManagerImpl final
   WEAVE_ERROR _GetFirmwareRevision(char* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetManufacturerDeviceCertificate(uint8_t* buf, size_t buf_size, size_t& out_len);
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
-  WEAVE_ERROR _GetPrimaryWiFiMACAddress(uint8_t* buf);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
   WEAVE_ERROR _GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len);
 

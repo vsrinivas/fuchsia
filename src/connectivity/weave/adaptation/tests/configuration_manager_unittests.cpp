@@ -17,7 +17,6 @@
 #include <fuchsia/hwinfo/cpp/fidl_test_base.h>
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <fuchsia/weave/cpp/fidl_test_base.h>
-#include <fuchsia/wlan/device/service/cpp/fidl_test_base.h>
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/outgoing_directory.h>
@@ -38,10 +37,6 @@ using nl::Weave::DeviceLayer::ConfigurationManager;
 using nl::Weave::DeviceLayer::ConfigurationManagerImpl;
 using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
 
-constexpr uint8_t kExpectedMac[] = {124, 46, 119, 21, 27, 102};
-constexpr uint16_t kExpectedPhyId = 0;
-constexpr char kExpectedPath[] = "/dev/wifi/wlanphy";
-
 // Below expected values are from testdata JSON files and should be
 // consistent with the file for the related tests to pass.
 constexpr uint16_t kExpectedVendorId = 5050;
@@ -55,44 +50,6 @@ constexpr uint16_t kMaxSerialNumberSize = ConfigurationManager::kMaxSerialNumber
 constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLength + 1;
 
 }  // namespace
-
-class FakeWlanStack : public fuchsia::wlan::device::service::testing::DeviceService_TestBase {
- public:
-  void NotImplemented_(const std::string& name) override { FAIL() << __func__; }
-
-  void ListPhys(ListPhysCallback callback) override {
-    fuchsia::wlan::device::service::ListPhysResponse resp;
-    fuchsia::wlan::device::service::PhyListItem item;
-    item.phy_id = kExpectedPhyId;
-    item.path = kExpectedPath;
-    resp.phys.push_back(item);
-    callback(resp);
-  }
-
-  void QueryPhy(fuchsia::wlan::device::service::QueryPhyRequest req,
-                QueryPhyCallback callback) override {
-    std::unique_ptr<fuchsia::wlan::device::service::QueryPhyResponse> resp =
-        std::make_unique<fuchsia::wlan::device::service::QueryPhyResponse>();
-    resp->info.id = 0;
-    std::copy(std::begin(kExpectedMac), std::end(kExpectedMac), resp->info.hw_mac_address.begin());
-    resp->info.mac_roles = {fuchsia::wlan::device::MacRole::CLIENT,
-                            fuchsia::wlan::device::MacRole::AP};
-    callback(0, std::move(resp));
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::wlan::device::service::DeviceService> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    dispatcher_ = dispatcher;
-    return [this, dispatcher](
-               fidl::InterfaceRequest<fuchsia::wlan::device::service::DeviceService> request) {
-      binding_.Bind(std::move(request), dispatcher);
-    };
-  }
-
- private:
-  fidl::Binding<fuchsia::wlan::device::service::DeviceService> binding_{this};
-  async_dispatcher_t* dispatcher_;
-};
 
 // This fake class hosts device protocol in the backgroud thread
 class FakeHwinfo : public fuchsia::hwinfo::testing::Device_TestBase {
@@ -219,8 +176,6 @@ class ConfigurationManagerTest : public WeaveTestFixture {
  public:
   ConfigurationManagerTest() {
     context_provider_.service_directory_provider()->AddService(
-        fake_wlan_stack_.GetHandler(dispatcher()));
-    context_provider_.service_directory_provider()->AddService(
         fake_hwinfo_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_weave_factory_data_manager_.GetHandler(dispatcher()));
@@ -243,7 +198,6 @@ class ConfigurationManagerTest : public WeaveTestFixture {
 
  protected:
   FakeHwinfo fake_hwinfo_;
-  FakeWlanStack fake_wlan_stack_;
   FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
   FakeWeaveFactoryStoreProvider fake_weave_factory_store_provider_;
 
@@ -264,12 +218,6 @@ TEST_F(ConfigurationManagerTest, GetDeviceId) {
   uint64_t device_id = 0U;
   EXPECT_EQ(ConfigurationMgr().GetDeviceId(device_id), WEAVE_NO_ERROR);
   EXPECT_EQ(device_id, kExpectedDeviceId);
-}
-
-TEST_F(ConfigurationManagerTest, GetPrimaryWiFiMacAddress) {
-  uint8_t mac[ETH_ALEN];
-  EXPECT_EQ(ConfigurationMgr().GetPrimaryWiFiMACAddress(mac), WEAVE_NO_ERROR);
-  EXPECT_TRUE(std::equal(std::begin(kExpectedMac), std::end(kExpectedMac), std::begin(mac)));
 }
 
 TEST_F(ConfigurationManagerTest, GetVendorId) {
