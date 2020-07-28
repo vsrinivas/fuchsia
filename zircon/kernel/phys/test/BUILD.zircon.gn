@@ -7,6 +7,7 @@
 import("$zx/kernel/phys/phys_executable.gni")
 import("$zx/kernel/phys/qemu.gni")
 import("$zx/kernel/phys/zbi_executable.gni")
+import("$zx/public/gn/resource.gni")
 import("$zx/public/gn/test/zbi_test.gni")
 
 assert(toolchain.environment == "kernel.phys" ||
@@ -105,6 +106,17 @@ template("phys_qemu_test") {
   }
 }
 
+# TODO(fxbug.dev/57245): We provide a dummy resource to contrive 'completeness'
+# in the following ZBI tests, which is a requirement for bootability under the
+# current policy of zedboot, gigaboot, and the boot-shims using the old
+# `zbi_check`. Once that is no longer a requirement, remove this target.
+generated_resource("dummy.txt") {
+  testonly = true
+  visibility = [ ":*" ]
+  contents = "This space is intentionally left blank."
+  outputs = [ "$target_gen_dir/dummy.txt" ]
+}
+
 # Build these tests in both phys_qemu_test() and zbi_executable()/zbi_test()
 # incarnations.
 common_tests = [
@@ -129,11 +141,10 @@ foreach(test, common_tests) {
 
     zbi_test("zbi-$test") {
       args = []
-      deps = [ ":zbi-$test.executable" ]
-
-      # There is no BOOTFS so this doesn't count as a "complete" ZBI.
-      cpu = ""
-      tags = [ "incomplete" ]
+      deps = [
+        ":dummy.txt",
+        ":zbi-$test.executable",
+      ]
 
       # TODO(mcgrathr): enable on hardware too
       device_types = [ "QEMU" ]
