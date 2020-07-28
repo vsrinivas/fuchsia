@@ -115,6 +115,7 @@ test("blobfs-unit") {
     "unit/metrics-test.cc",
     "unit/node-populator-test.cc",
     "unit/node-reserver-test.cc",
+    "unit/pager-watchdog-test.cc",
     "unit/parser_test.cc",
     "unit/seekable-compressor-test.cc",
     "unit/utils.cc",

@@ -47,6 +47,15 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(std::unique_ptr<Transfe
     return zx::error(status);
   }
 
+  // Start the watchdog thread.
+  constexpr zx::duration kWatchdogTimeout = zx::sec(60);
+  auto watchdog_or = PagerWatchdog::Create(kWatchdogTimeout);
+  if (!watchdog_or.is_ok()) {
+    FS_TRACE_ERROR("blobfs: Failed to initialize pager watchdog\n");
+    return zx::error(watchdog_or.status_value());
+  }
+  pager->watchdog_ = std::move(watchdog_or).value();
+
   // Start the pager thread.
   status = pager->pager_loop_.StartThread("blobfs-pager-thread");
   if (status != ZX_OK) {
@@ -107,6 +116,9 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
                    length);
     return PagerErrorStatus::kErrBadState;
   }
+
+  ZX_DEBUG_ASSERT(watchdog_ != nullptr);
+  PagerWatchdog::ArmToken watchdog_token = watchdog_->Arm();
 
   if (info.decompressor != nullptr) {
     return TransferChunkedPagesToVmo(offset, length, vmo, info);

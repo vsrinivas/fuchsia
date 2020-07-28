@@ -18,6 +18,7 @@
 
 #include "../metrics.h"
 #include "../transaction-manager.h"
+#include "pager-watchdog.h"
 #include "transfer-buffer.h"
 #include "user-pager-info.h"
 
@@ -173,6 +174,9 @@ class UserPager {
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  // Watchdog which triggers if any page faults exceed a threshold deadline.
+  std::unique_ptr<PagerWatchdog> watchdog_;
 
   // Records all metrics for this instance of blobfs.
   BlobfsMetrics* metrics_ = nullptr;
