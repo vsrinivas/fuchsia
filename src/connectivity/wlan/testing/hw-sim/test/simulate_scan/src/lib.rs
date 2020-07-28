@@ -117,4 +117,5 @@ async fn simulate_scan() {
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &aps[..]);
+    helper.stop().await;
 }

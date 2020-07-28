@@ -138,16 +138,6 @@ fuchsia_test_package("wlan-hw-sim-test") {
     ":simulate-scan",
     ":verify-ethernet",
   ]
-
-  # TODO(56611): Remove this section once the isolated_devmgr crash is fixed.
-  test_specs = {
-    environments = [
-      {
-        dimensions = emu_env.dimensions
-        tags = [ "flaky" ]
-      },
-    ]
-  }
 }
 
 fuchsia_component("rate-selection") {

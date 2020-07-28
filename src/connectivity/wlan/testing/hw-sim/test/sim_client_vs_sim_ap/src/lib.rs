@@ -237,4 +237,6 @@ async fn sim_client_vs_sim_ap() {
         &mut ap_helper,
     )
     .await;
+    client_helper.stop().await;
+    ap_helper.stop().await;
 }

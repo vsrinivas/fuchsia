@@ -107,4 +107,5 @@ async fn ethernet_tx_rx() {
         .expect(&format!("ethernet client not found {:?}", &CLIENT_MAC_ADDR));
 
     verify_tx_and_rx(&mut client, &mut helper).await;
+    helper.stop().await;
 }

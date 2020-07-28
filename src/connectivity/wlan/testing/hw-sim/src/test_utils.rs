@@ -27,6 +27,7 @@ pub struct TestHelper {
     _wlantap: Wlantap,
     proxy: Arc<wlantap::WlantapPhyProxy>,
     event_stream: Option<EventStream>,
+    is_stopped: bool,
 }
 
 struct TestHelperFuture<F, H>
@@ -94,7 +95,7 @@ impl TestHelper {
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
 
         let event_stream = Some(proxy.take_event_stream());
-        TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream }
+        TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream, is_stopped: false }
     }
 
     async fn wait_for_wlanmac_start(&mut self) {
@@ -145,6 +146,20 @@ impl TestHelper {
         .await;
         self.event_stream = Some(stream);
         item
+    }
+
+    // stop must be called at the end of the test to tell wlantap-phy driver that the proxy's
+    // channel that is about to be closed (dropped) from our end so that the driver would not try to
+    // access it. Otherwise it could crash the isolated devmgr.
+    pub async fn stop(mut self) {
+        let () = self.proxy.shutdown().await.expect("shut down fake phy");
+        self.is_stopped = true;
+    }
+}
+
+impl Drop for TestHelper {
+    fn drop(&mut self) {
+        assert!(self.is_stopped, "Must call stop() on a TestHelper before dropping it");
     }
 }
 

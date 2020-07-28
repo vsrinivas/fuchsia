@@ -253,4 +253,5 @@ async fn rate_selection() {
          DNO-389). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
     );
     assert_eq!(max_key_prev, MAX_SUCCESSFUL_IDX);
+    helper.stop().await;
 }

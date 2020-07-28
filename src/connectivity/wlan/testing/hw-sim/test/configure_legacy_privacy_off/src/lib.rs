@@ -87,4 +87,5 @@ async fn configure_legacy_privacy_off() {
         [(BSS_WPA1.0.to_vec(), false), (BSS_WEP.0.to_vec(), false), (BSS_MIXED.0.to_vec(), true)];
     expected_aps.sort();
     assert_eq!(&expected_aps, &aps[..]);
+    helper.stop().await;
 }

@@ -115,4 +115,5 @@ async fn connect_with_failed_association() {
 
     let status = wlan_service.status().await.expect("getting wlan status");
     assert_eq!(status.current_ap, None);
+    helper.stop().await;
 }

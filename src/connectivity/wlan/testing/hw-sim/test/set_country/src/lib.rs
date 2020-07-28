@@ -62,4 +62,5 @@ async fn set_country() {
             set_country_fut,
         )
         .await;
+    helper.stop().await;
 }

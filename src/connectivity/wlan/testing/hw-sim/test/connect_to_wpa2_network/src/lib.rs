@@ -4,8 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_service::WlanMarker, fuchsia_component::client::connect_to_service,
-    wlan_common::mac::Bssid,
-    wlan_hw_sim::*,
+    wlan_common::mac::Bssid, wlan_hw_sim::*,
 };
 
 /// Test a client can connect to a network protected by WPA2-PSK by simulating an AP that
@@ -26,4 +25,5 @@ async fn connect_to_wpa2_network() {
     let status = wlan_service.status().await.expect("getting wlan status");
     let is_protected = true;
     assert_associated_state(status, &BSS, SSID, &CHANNEL, is_protected);
+    helper.stop().await;
 }

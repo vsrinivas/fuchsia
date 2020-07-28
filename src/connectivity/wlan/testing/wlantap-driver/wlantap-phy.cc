@@ -282,6 +282,14 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   // wlantap::WlantapPhy impl
 
+  virtual void Shutdown(ShutdownCallback callback) override {
+    zxlogf(INFO, "%s: Shutdown", name_.c_str());
+    std::lock_guard<std::mutex> guard(lock_);
+    stopped_ = true;
+    callback();
+    zxlogf(INFO, "%s: Shutdown done", name_.c_str());
+  }
+
   virtual void Rx(uint16_t wlanmac_id, ::std::vector<uint8_t> data,
                   wlantap::WlanRxInfo info) override {
     zxlogf(INFO, "%s: Rx(%zu bytes)", name_.c_str(), data.size());
@@ -320,7 +328,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   virtual void WlantapMacStart(uint16_t wlanmac_id) override {
     zxlogf(INFO, "%s: WlantapMacStart id=%u", name_.c_str(), wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
-    if (!user_binding_.is_bound()) {
+    if (stopped_ || !user_binding_.is_bound()) {
       return;
     }
     user_binding_.events().WlanmacStart({.wlanmac_id = wlanmac_id});
@@ -332,18 +340,21 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   }
 
   virtual void WlantapMacQueueTx(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) override {
-    if (!phy_config_->quiet || report_tx_status_count_ < 32) {
-      zxlogf(INFO, "%s: WlantapMacQueueTx id=%u, tx_report_count=%zu", name_.c_str(), wlanmac_id,
-             report_tx_status_count_);
-    }
-    std::lock_guard<std::mutex> guard(lock_);
-    if (!user_binding_.is_bound()) {
-      return;
-    }
     size_t pkt_size = pkt->packet_head.data_size;
     if (pkt->packet_tail_list != nullptr) {
       pkt_size += pkt->packet_tail_list->data_size - pkt->tail_offset;
     }
+    if (!phy_config_->quiet || report_tx_status_count_ < 32) {
+      zxlogf(INFO, "%s: WlantapMacQueueTx id=%u, size=%zu, tx_report_count=%zu", name_.c_str(),
+             wlanmac_id, pkt_size, report_tx_status_count_);
+    }
+
+    std::lock_guard<std::mutex> guard(lock_);
+    if (stopped_ || !user_binding_.is_bound()) {
+      zxlogf(INFO, "%s: WlantapMacQueueTx ignored, shutting down", name_.c_str());
+      return;
+    }
+
     user_binding_.events().Tx(ToTxArgs(wlanmac_id, pkt));
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "%s: WlantapMacQueueTx done(%zu bytes), tx_report_count=%zu", name_.c_str(),
@@ -353,10 +364,12 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   virtual void WlantapMacSetChannel(uint16_t wlanmac_id, const wlan_channel_t* channel) override {
     if (!phy_config_->quiet) {
-      zxlogf(INFO, "%s: WlantapMacSetChannel id=%u", name_.c_str(), wlanmac_id);
+      zxlogf(INFO, "%s: WlantapMacSetChannel id=%u, channel=%u", name_.c_str(), wlanmac_id,
+             channel->primary);
     }
     std::lock_guard<std::mutex> guard(lock_);
-    if (!user_binding_.is_bound()) {
+    if (stopped_ || !user_binding_.is_bound()) {
+      zxlogf(INFO, "%s: WlantapMacSetChannel ignored, shutting down", name_.c_str());
       return;
     }
     user_binding_.events().SetChannel({.wlanmac_id = wlanmac_id,
@@ -372,7 +385,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
                                       const wlan_bss_config_t* config) override {
     zxlogf(INFO, "%s: WlantapMacConfigureBss id=%u", name_.c_str(), wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
-    if (!user_binding_.is_bound()) {
+    if (stopped_ || !user_binding_.is_bound()) {
+      zxlogf(INFO, "%s: WlantapMacConfigureBss ignored, shutting down", name_.c_str());
       return;
     }
     user_binding_.events().ConfigureBss({.wlanmac_id = wlanmac_id,
@@ -385,7 +399,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   virtual void WlantapMacSetKey(uint16_t wlanmac_id, const wlan_key_config_t* key_config) override {
     zxlogf(INFO, "%s: WlantapMacSetKey id=%u", name_.c_str(), wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
-    if (!user_binding_.is_bound()) {
+    if (stopped_ || !user_binding_.is_bound()) {
+      zxlogf(INFO, "%s: WlantapMacSetKey ignored, shutting down", name_.c_str());
       return;
     }
     user_binding_.events().SetKey(ToSetKeyArgs(wlanmac_id, key_config));
@@ -401,6 +416,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
   fidl::Binding<wlantap::WlantapPhy> user_binding_ __TA_GUARDED(lock_);
   size_t report_tx_status_count_ = 0;
   std::string name_;
+  bool stopped_ = false;
 };
 
 }  // namespace

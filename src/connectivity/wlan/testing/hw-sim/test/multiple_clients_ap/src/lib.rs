@@ -95,7 +95,6 @@ async fn multiple_clients_ap() {
                 .then(|_| future::ok(())),
         )
         .unwrap_or_else(|oneshot::Canceled| panic!("waiting for connect confirmation"));
-    pin_mut!(ap_fut);
 
     // Start client 1
     let mut client1_connect_req = ConnectRequest {
@@ -129,7 +128,6 @@ async fn multiple_clients_ap() {
             }),
         )
         .unwrap_or_else(|e| panic!("waiting for connect confirmation: {:?}", e));
-    pin_mut!(client1_fut);
 
     // Start client 2
     let mut client2_connect_req = ConnectRequest {
@@ -163,7 +161,9 @@ async fn multiple_clients_ap() {
             }),
         )
         .unwrap_or_else(|e| panic!("waiting for connect confirmation: {:?}", e));
-    pin_mut!(client2_fut);
 
     join!(ap_fut, client1_fut, client2_fut);
+    client1_helper.stop().await;
+    client2_helper.stop().await;
+    ap_helper.stop().await;
 }

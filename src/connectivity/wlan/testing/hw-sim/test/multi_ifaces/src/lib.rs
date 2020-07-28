@@ -17,7 +17,7 @@ use {
 /// Verify both interfaces are created successfully.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn multiple_interfaces_per_phy() {
-    let _client_helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
+    let client_helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
 
     let wlanstack_svc =
         connect_to_service::<DeviceServiceMarker>().expect("connecting to wlanstack");
@@ -46,4 +46,5 @@ async fn multiple_interfaces_per_phy() {
 
     let resp = wlanstack_svc.list_ifaces().await.expect("listing ifaces #2");
     assert_eq!(resp.ifaces.len(), 2);
+    client_helper.stop().await;
 }
