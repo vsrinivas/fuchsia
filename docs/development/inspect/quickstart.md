@@ -346,11 +346,11 @@ See below for the quick start guide in your language of choice.
   With the `create_*` methods, the ownership of the property or node object to the caller.
   When the returned object is dropped, it is removed. For example:
 
-    ```rust
-    {
-        let property = root.create_int("name", 1);
-    }
-    ```
+  ```rust
+  {
+      let property = root.create_int("name", 1);
+  }
+  ```
 
   In this example, the property went out of scope so a drop on the property is
   called. Readers won't see this property.
@@ -359,17 +359,17 @@ See below for the quick start guide in your language of choice.
   called on is entangled with the resulting property. When the node the method was called
   is deleted, the recorded property is deleted.
 
-    ```rust
-    {
-        let node = root.create_child("name");
-        {
-          node.record_uint(2); // no return
-        }
-        // The uint property will still be visible to readers.
-    }
-    ```
+  ```rust
+  {
+      let node = root.create_child("name");
+      {
+        node.record_uint(2); // no return
+      }
+      // The uint property will still be visible to readers.
+  }
+  ```
 
-  In this example, neither the `name` node nor the uint property is visible to readers 
+  In this example, neither the `name` node nor the uint property is visible to readers
   after `node` is dropped.
 
   #### Dynamic Value Support
