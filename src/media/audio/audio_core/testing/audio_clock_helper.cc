@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
+
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_clock.h"
-#include "src/media/audio/audio_core/testing/audio_clock_helper.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 
 namespace media::audio::audio_clock_helper {

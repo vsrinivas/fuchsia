@@ -5,8 +5,8 @@
 group("test") {
   testonly = true
   deps = [
-    "api:audio-core-api-tests",
     "api:audio-core-api-pipeline-tests",
+    "api:audio-core-api-tests",
     "api:audio-core-with-inversion-filter",
     "device:audio-device-tests",
     "hardware:audio_core_hardware_tests",

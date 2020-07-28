@@ -697,7 +697,7 @@ zx_status_t BaseRenderer::SetOptimalReferenceClock() {
 // Ensure that the clock has appropriate rights.
 // Should also read it here, to ensure everything works?
 zx_status_t BaseRenderer::SetCustomReferenceClock(zx::clock ref_clock) {
-constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
+  constexpr auto kRequiredClockRights = ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_READ;
   auto status = ref_clock.replace(kRequiredClockRights, &raw_clock_);
   if (status != ZX_OK || !raw_clock_.is_valid()) {
     FX_PLOGS(WARNING, status) << "Could not set rights on client-submitted reference clock";
