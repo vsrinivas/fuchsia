@@ -50,8 +50,6 @@ pub enum ClientError {
     TimerOverflow(Duration),
     #[error("IO error: {}", _0)]
     Io(std::io::Error),
-    #[error("parsing error: {}", _0)]
-    Parse(v6::ParseError),
     #[error("fidl error: {}", _0)]
     Fidl(fidl::Error),
     #[error("got watch request while the previous one is pending")]
@@ -321,7 +319,16 @@ impl Client {
 
     /// Handles a received message.
     async fn handle_message_recv(&mut self, mut msg: &[u8]) -> Result<(), ClientError> {
-        let msg = v6::Message::parse(&mut msg, ()).map_err(ClientError::Parse)?;
+        let msg = match v6::Message::parse(&mut msg, ()) {
+            Ok(msg) => msg,
+            Err(e) => {
+                // Discard invalid messages.
+                //
+                // https://tools.ietf.org/html/rfc8415#section-16.
+                log::warn!("failed to parse received message: {}", e);
+                return Ok(());
+            }
+        };
         let actions = self.state_machine.handle_message_receive(msg);
         self.run_actions(actions).await
     }
@@ -1065,6 +1072,15 @@ mod tests {
         let () = send_reply_with_options(&server_socket, client_addr, [5, 6, 7], &[])
             .await
             .expect("failed to send test message");
+        assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
+        assert_eq!(
+            client.timer_abort_handles.keys().collect::<Vec<_>>(),
+            vec![&dhcpv6_core::client::ClientTimerType::Retransmission]
+        );
+
+        // Invalid messages should be discarded. Empty buffer is invalid.
+        let _: usize =
+            server_socket.send_to(&[], client_addr).await.expect("failed to send test message");
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),

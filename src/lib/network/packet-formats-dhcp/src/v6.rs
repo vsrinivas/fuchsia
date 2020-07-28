@@ -39,7 +39,7 @@ pub enum ParseError {
     InvalidOpCode(u16),
     #[error("invalid option length {} for option code {:?}", _1, _0)]
     InvalidOpLen(OptionCode, usize),
-    #[error("buffer exhausted while more byts are expected")]
+    #[error("buffer exhausted while more bytes are expected")]
     BufferExhausted,
     #[error("failed to parse domain {:?}", _0)]
     DomainParseError(MdnsParseError),
@@ -262,7 +262,20 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
             usize::from(data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?.get());
         let mut opt_val = data.take_front(opt_len).ok_or(ParseError::BufferExhausted)?;
 
-        let opt = match OptionCode::try_from(opt_code)? {
+        let opt_code = match OptionCode::try_from(opt_code) {
+            Ok(opt_code) => opt_code,
+            // TODO(https://fxbug.dev/57177): surface skipped codes so we know which ones are not
+            // supported.
+            Err(ParseError::InvalidOpCode(_)) => {
+                // Skip unknown option codes to keep useful information.
+                //
+                // https://tools.ietf.org/html/rfc8415#section-16
+                return Ok(ParsedRecord::Skipped);
+            }
+            Err(e) => unreachable!("unexpected error from op code conversion: {}", e),
+        };
+
+        let opt = match opt_code {
             OptionCode::ClientId => Ok(DhcpOption::ClientId(opt_val)),
             OptionCode::ServerId => Ok(DhcpOption::ServerId(opt_val)),
             OptionCode::Oro => match opt_len % 2 {
@@ -762,14 +775,18 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_op_code() {
+    fn test_skip_invalid_op_code() {
         let mut buf = test_buf_with_no_options();
         buf.append(&mut vec![
             0, 0, // opt code = 0, invalid op code
             0, 1, // valid opt length
             0, // valid opt value
+            0, 1, 0, 3, 4, 5, 6, // option - client ID
         ]);
-        assert_matches!(Message::parse(&mut &buf[..], ()), Err(ParseError::InvalidOpCode(0)));
+        let mut buf = &buf[..];
+        let msg = Message::parse(&mut buf, ()).expect("parse should succeed");
+        let got_options: Vec<_> = msg.options.iter().collect();
+        assert_eq!(got_options, [DhcpOption::ClientId(&[4, 5, 6])]);
     }
 
     // Oro must have a even option length, according to [RFC 8415, Section 21.7].
