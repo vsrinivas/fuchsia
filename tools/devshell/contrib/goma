@@ -6,7 +6,8 @@
 #### CATEGORY=Build
 ### manage Goma distributed compilation client
 
-## Usage: fx goma [--browser] [--update]
+## Usage: fx goma [--browser] [--update] [--disable-http2] [--disable-local-cache]
+##                [--local-cache-dir ABS_PATH]
 ##
 ## This makes sure that both initial setup tasks are complete and that
 ## periodic maintenance actions are done.  It's probably only really
@@ -36,6 +37,22 @@
 ## Without that switch, it will print out a URL you need to visit in your
 ## browser to (authenticate and) copy a token to paste into a prompt.
 ##
+## The `--disable-http2` switch disables the experimental HTTP2 proxy.
+## By default, the HTTP2 proxy is enabled to improve Goma network
+## performance.
+##
+## The `--disable-local-cache` switch disables the experimental local
+## output cache. By default, this is enabled to reduce Goma network
+## traffic.
+##
+## The `--local-cache-dir ABS_PATH` switch sets the cache directory for Goma.
+## By default it uses the `//.jiri_root/goma_cache` directory. If you have
+## multiple Fuchsia checkouts, it is recommended to set its value to
+## `${HOME}/.goma_cache` to allow cache sharing. The value needs to be an
+## absolute path.
+##
+## The `--kill` switch shuts down all goma related processes.
+##
 ## **NOTE:** _The following features are temporary for the transition._
 ##
 ## `fx goma` checks for an old Goma installation and recommends commands to
@@ -61,6 +78,7 @@ readonly GOMA_CTL="$PREBUILT_GOMA_DIR/goma_ctl.py"
 readonly GOMACC="$PREBUILT_GOMA_DIR/gomacc"
 readonly GOMA_HTTP2_PROXY="$PREBUILT_GOMA_DIR/http_proxy"
 readonly GOMA_HTTP2_PROXY_PORT="8199"
+GOMA_CACHE_DIR="${FUCHSIA_DIR}/.jiri_root/goma_cache"
 # The URL of the backend cannot be read from prebuilt. Hard-code it for now.
 BACKEND_URL="rbe-prod1.endpoints.fuchsia-infra-goma-prod.cloud.goog"
 
@@ -91,6 +109,15 @@ function main {
       use_local_cache=false
       shift
       ;;
+    --local-cache-dir)
+      if [[ $# -lt 2 ]]; then
+        fx-command-help
+        return 1
+      fi
+      shift
+      GOMA_CACHE_DIR="$1"
+      shift
+      ;;
     --kill)
       kill-goma
       return 0
@@ -113,11 +140,16 @@ function main {
   fi
   goma_tmp_dir=""
   if $use_local_cache; then
-    goma_tmp_dir=$("$GOMACC" tmp_dir)/goma_cache
+    goma_tmp_dir="$GOMA_CACHE_DIR"
     echo "*** Using Goma local output cache at \`$goma_tmp_dir\`"
     echo "*** If you experience cache errors, please run: "
     echo "*** \`fx goma --kill && fx goma --disable-local-cache\`"
     echo "*** to restart goma without local caching."
+    echo ""
+    echo "*** If you want to change the local output cache directory, please run"
+    echo "*** \`fx goma --kill && fx goma --local-cache-dir ABS_PATH\`"
+    echo "*** to restart goma with your desired cache location."
+    echo ""
   fi
 
   if $use_http2; then
@@ -130,6 +162,7 @@ function main {
     echo "*** If you experiencing instability, please run: "
     echo "*** \`fx goma --kill && fx goma --disable-http2\`"
     echo "*** to restart goma without HTTP2 proxy."
+    echo ""
     GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" GOMA_SERVER_HOST=127.0.0.1 GOMA_SERVER_PORT="$GOMA_HTTP2_PROXY_PORT" GOMA_USE_SSL=false "$GOMA_CTL" ensure_start
   else
     GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$GOMA_CTL" ensure_start
