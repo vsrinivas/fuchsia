@@ -12,8 +12,8 @@
 #include <fvm/fvm-sparse.h>
 
 #include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/utils/block_utils.h"
 #include "src/storage/volume_image/utils/compressor.h"
-#include "src/storage/volume_image/utils/extent.h"
 
 namespace storage::volume_image {
 namespace fvm_sparse_internal {
@@ -97,8 +97,13 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   current_offset += sizeof(fvm::sparse_image_t);
 
   for (const auto& partition : descriptor.partitions()) {
-    FvmSparsePartitionEntry entry =
+    auto partition_entry_result =
         FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
+    if (partition_entry_result.is_error()) {
+      return partition_entry_result.take_error_result();
+    }
+
+    FvmSparsePartitionEntry entry = partition_entry_result.take_value();
     auto partition_result = writer->Write(current_offset, FixedSizeStructToSpan(entry.descriptor));
     if (partition_result.is_error()) {
       return partition_result.take_error_result();
@@ -131,11 +136,11 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   for (const auto& partition : descriptor.partitions()) {
     const auto* reader = partition.reader();
     for (const auto& mapping : partition.address().mappings) {
-      uint64_t remaining_bytes = mapping.count * partition.volume().block_size;
+      uint64_t remaining_bytes = mapping.count;
 
       memset(data.data(), 0, data.size());
 
-      uint64_t read_offset = mapping.source * partition.volume().block_size;
+      uint64_t read_offset = mapping.source;
       while (remaining_bytes > 0) {
         uint64_t bytes_to_read = std::min(kReadBufferSize, remaining_bytes);
         remaining_bytes -= bytes_to_read;
@@ -185,8 +190,8 @@ fvm::sparse_image_t FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
   return sparse_image_header;
 }
 
-FvmSparsePartitionEntry FvmSparseGeneratePartitionEntry(uint64_t slice_size,
-                                                        const Partition& partition) {
+fit::result<FvmSparsePartitionEntry, std::string> FvmSparseGeneratePartitionEntry(
+    uint64_t slice_size, const Partition& partition) {
   FvmSparsePartitionEntry partition_entry = {};
 
   partition_entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
@@ -199,17 +204,24 @@ FvmSparsePartitionEntry FvmSparseGeneratePartitionEntry(uint64_t slice_size,
   partition_entry.descriptor.flags = fvm_sparse_internal::GetPartitionFlags(partition);
 
   for (const auto& mapping : partition.address().mappings) {
-    Extent extent(mapping.source, mapping.count, partition.volume().block_size);
-    auto [slice_extents, tail] = extent.Convert(mapping.target, slice_size);
+    uint64_t size = std::max(mapping.count, mapping.size.value_or(0));
+    uint64_t slice_count = GetBlockCount(mapping.target, size, slice_size);
+    uint64_t slice_offset = GetBlockFromBytes(mapping.target, slice_size);
+    if (!IsOffsetBlockAligned(mapping.target, slice_size)) {
+      return fit::error("Partition " + partition.volume().name + " contains unaligned mapping " +
+                        std::to_string(mapping.target) +
+                        ". FVM Sparse Image requires slice aligned extent |vslice_start|.");
+    }
+
     fvm::extent_descriptor_t extent_entry = {};
     extent_entry.magic = fvm::kExtentDescriptorMagic;
-    extent_entry.slice_start = slice_extents.offset();
-    extent_entry.slice_count = slice_extents.count();
-    extent_entry.extent_length = slice_extents.count() * slice_extents.block_size() - tail.count;
+    extent_entry.slice_start = slice_offset;
+    extent_entry.slice_count = slice_count;
+    extent_entry.extent_length = mapping.count;
     partition_entry.extents.push_back(extent_entry);
   }
 
-  return partition_entry;
+  return fit::ok(partition_entry);
 }
 
 fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
@@ -229,7 +241,7 @@ uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor
     for (const auto& mapping : partition.address().mappings) {
       // Account for extent size, in the current format trailing zeroes are omitted,
       // and later filled as the difference between extent_length and slice_count * slice_size.
-      image_size += partition.volume().block_size * mapping.count;
+      image_size += mapping.count;
       // Extent descriptor size.
       image_size += sizeof(fvm::extent_descriptor_t);
     }

@@ -20,6 +20,9 @@ rapidjson::Value ToValue(AddressMap map, rapidjson::Document::AllocatorType* all
   value.AddMember("source", map.source, *allocator);
   value.AddMember("target", map.target, *allocator);
   value.AddMember("count", map.count, *allocator);
+  if (map.size.has_value()) {
+    value.AddMember("size", map.size.value(), *allocator);
+  }
 
   if (!map.options.empty()) {
     rapidjson::Value option_map;
@@ -38,6 +41,12 @@ AddressMap FromValue(const rapidjson::Value& value) {
   map.source = value["source"].GetUint64();
   map.target = value["target"].GetUint64();
   map.count = value["count"].GetUint64();
+  map.size = std::nullopt;
+
+  if (value.HasMember("size") && value["size"].IsUint64()) {
+    map.size = value["size"].GetUint64();
+  }
+
   if (value.HasMember("options") && value["options"].IsObject()) {
     const auto& option_map = value["options"].GetObject();
     for (const auto& option : option_map) {
@@ -104,6 +113,23 @@ fit::result<std::vector<uint8_t>, std::string> AddressDescriptor::Serialize() co
   data.push_back('\0');
 
   return fit::ok(data);
+}
+
+std::string AddressMap::DebugString() const {
+  std::string debug_string =
+      "\n{\n"
+      "   source: " +
+      std::to_string(source) + "\n" + "   target: " + std::to_string(target) + "\n" +
+      "   count:  " + std::to_string(count) + "\n" +
+      "   size:   " + (size.has_value() ? std::to_string(size.value()) : "std::nullopt") + "\n" +
+      "   options: {\n";
+  for (const auto& option : options) {
+    debug_string += "        " + option.first + ": " + std::to_string(option.second) + "\n";
+  }
+  debug_string += "   }\n";
+  debug_string += "}\n";
+
+  return debug_string;
 }
 
 }  // namespace storage::volume_image

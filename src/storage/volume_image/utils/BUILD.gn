@@ -116,30 +116,25 @@ source_set("fd-io-test") {
   ]
 }
 
-source_set("extent") {
-  sources = [ "extent.cc" ]
-  public = [ "extent.h" ]
-  public_deps = [
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
-  ]
+source_set("block-utils") {
+  public = [ "block_utils.h" ]
+  public_deps = [ "//zircon/public/lib/fbl" ]
 }
 
-source_set("extent-test") {
+source_set("block-utils-test") {
   testonly = true
-  sources = [ "extent_test.cc" ]
+  sources = [ "block_utils_test.cc" ]
   deps = [
-    ":extent",
+    ":block-utils",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":extent-test",
+    ":block-utils-test",
     ":fd-io-test",
     ":guid-test",
     ":lz4-compression-test",

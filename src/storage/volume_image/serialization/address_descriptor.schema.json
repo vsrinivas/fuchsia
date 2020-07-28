@@ -18,6 +18,10 @@
                     "type": "integer",
                     "minimum": 0
                 },
+                "size": {
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "options": {
                     "type": "object",
                     "additionalProperties": {

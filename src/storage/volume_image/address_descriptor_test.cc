@@ -36,6 +36,12 @@ std::string GetSerializedJson(fit::function<void(rapidjson::Document*)> mutator 
             "source": 250,
             "target": 160,
             "count": 10
+          },
+          {
+            "source": 2900,
+            "target": 170,
+            "count": 10,
+            "size": 20
           }
         ]
     })";
@@ -79,7 +85,7 @@ TEST(AddressDescriptorTest, SerializeReturnsSchemaValidData) {
 
 MATCHER(AddressMapEq, "") {
   auto [a, b] = arg;
-  return a.source == b.source && a.target == b.target && a.count == b.count;
+  return a.source == b.source && a.target == b.target && a.count == b.count && a.size == b.size;
 }
 
 TEST(AddressDescriptorTest, DeserializeSerializedDataIsOk) {
@@ -105,10 +111,45 @@ TEST(AddressDescriptorTest, DeserializeFromValidDataReturnsAddressDescritptor) {
 
   ASSERT_THAT(
       deserialized_result.value().mappings,
-      testing::UnorderedPointwise(AddressMapEq(), std::vector<AddressMap>({
-                                                      {.source = 250, .target = 160, .count = 10},
-                                                      {.source = 20, .target = 120, .count = 10},
-                                                  })));
+      testing::UnorderedPointwise(
+          AddressMapEq(), std::vector<AddressMap>({
+                              {.source = 250, .target = 160, .count = 10, .size = std::nullopt},
+                              {.source = 20, .target = 120, .count = 10, .size = std::nullopt},
+                              {.source = 2900, .target = 170, .count = 10, .size = 20},
+                          })));
+}
+
+TEST(AddressMapTest, DebugStringIsOk) {
+  AddressMap map = {
+      .source = 100,
+      .target = 200,
+      .count = 50,
+  };
+
+  EXPECT_THAT(map.DebugString(),
+              testing::AllOf(testing::ContainsRegex("source:[ ]+100"),
+                             testing::ContainsRegex("target:[ ]+200"),
+                             testing::ContainsRegex("count:[ ]+50"),
+                             testing::ContainsRegex("size:[ ]+std::nullopt"),
+                             testing::ContainsRegex("options:[ ]+\\{[ \n]*\\}")));
+
+  map.size = 150;
+  EXPECT_THAT(
+      map.DebugString(),
+      testing::AllOf(testing::ContainsRegex("source:[ ]+100"),
+                     testing::ContainsRegex("target:[ ]+200"),
+                     testing::ContainsRegex("count:[ ]+50"), testing::ContainsRegex("size:[ ]+150"),
+                     testing::ContainsRegex("options:[ ]+\\{[ \n]*\\}")));
+
+  map.options["option_name"] = 1234;
+  map.options["option_name_2"] = 12345;
+  EXPECT_THAT(
+      map.DebugString(),
+      testing::AllOf(
+          testing::ContainsRegex("source:[ ]+100"), testing::ContainsRegex("target:[ ]+200"),
+          testing::ContainsRegex("count:[ ]+50"), testing::ContainsRegex("size:[ ]+150"),
+          testing::ContainsRegex(
+              "options:[ ]+\\{\n[ ]+option_name:[ ]+1234[ \n]+option_name_2:[ ]+12345[ \n]+\\}")));
 }
 
 TEST(AddressDescriptorTest, DeserializeWithBadMagicIsError) {
@@ -126,4 +167,5 @@ TEST(AddressDescriptorTest, DeserializeWithEmptyMappingsIsError) {
 }
 
 }  // namespace
+
 }  // namespace storage::volume_image

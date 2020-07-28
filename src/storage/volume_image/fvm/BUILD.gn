@@ -13,10 +13,12 @@ source_set("fvm-descriptor") {
   public_deps = [
     ":options",
     "//src/storage/volume_image:partition",
-    "//src/storage/volume_image/utils:extent",
     "//zircon/public/lib/fit",
   ]
-  deps = [ "//zircon/system/ulib/fvm" ]
+  deps = [
+    "//src/storage/volume_image/utils:block-utils",
+    "//zircon/system/ulib/fvm",
+  ]
 }
 
 source_set("fvm-sparse-image") {
@@ -28,7 +30,10 @@ source_set("fvm-sparse-image") {
     "//src/storage/volume_image/utils:io-interfaces",
     "//zircon/system/ulib/fvm",
   ]
-  deps = [ "//src/storage/volume_image/utils:lz4-compression" ]
+  deps = [
+    "//src/storage/volume_image/utils:block-utils",
+    "//src/storage/volume_image/utils:lz4-compression",
+  ]
 }
 
 source_set("fvm-test") {

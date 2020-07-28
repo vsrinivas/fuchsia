@@ -5,16 +5,19 @@
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fvm/format.h>
 
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
-#include "src/storage/volume_image/utils/extent.h"
+#include "src/storage/volume_image/utils/block_utils.h"
 
 namespace storage::volume_image {
 namespace {
@@ -94,25 +97,35 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
   for (auto& partition : partitions_) {
     auto it = descriptor.partitions_.find(partition);
     if (it != descriptor.partitions_.end()) {
-      std::string error = "Partition already exists, could not add partition ";
-      error.append(partition.volume().name)
-          .append(" and instance guid ")
-          .append(Guid::ToString(partition.volume().instance).value())
-          .append(" failed.\n Partition");
-
-      error.append(it->volume().name)
-          .append(" and instance guid ")
-          .append(Guid::ToString(it->volume().instance).value())
-          .append(" was added before.");
+      std::string error = "Partition already exists, could not add partition " +
+                          partition.volume().name + " and instance guid " +
+                          Guid::ToString(partition.volume().instance).value() +
+                          " failed.\n Partition" + it->volume().name + " and instance guid " +
+                          Guid::ToString(it->volume().instance).value() + " was added before.";
       partitions_.clear();
       return fit::error(error);
     }
 
-    // Update total slices accounted for.
+    // Update accumulated slice count, and check for overlapping extents.
+    std::set<const AddressMap*, std::function<bool(const AddressMap*, const AddressMap*)>> extents(
+        [](auto* a, auto* b) { return a->target < b->target; });
     for (const auto& mapping : partition.address().mappings) {
-      Extent extent(mapping.source, mapping.count, partition.volume().block_size);
-      auto [slice_extents, tail] = extent.Convert(mapping.target, options_->slice_size);
-      accumulated_slices_ += slice_extents.count();
+      for (auto it = extents.lower_bound(&mapping); it != extents.end(); ++it) {
+        auto* current_extent = *it;
+        // We are past the end of the extent.
+        if (current_extent->target >= mapping.target + mapping.count) {
+          break;
+        }
+
+        if (current_extent->target + current_extent->count > mapping.target) {
+          // Get the other mapping
+          return fit::error("Address descriptor of " + partition.volume().name +
+                            " contains overlapping mappings. Conflict between " +
+                            mapping.DebugString() + " and " + current_extent->DebugString());
+        }
+      }
+      extents.insert(&mapping);
+      accumulated_slices_ += GetBlockCount(mapping.target, mapping.count, options_->slice_size);
     }
 
     descriptor.partitions_.emplace(std::move(partition));
@@ -124,11 +137,10 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
   // We are not allowed to exceed the  target disk size when set.
   if (minimum_size > options_->target_volume_size.value_or(std::numeric_limits<uint64_t>::max())) {
     std::string error =
-        "Failed to build FVMDescriptor. Image does not fit in target volume size. Minimum size is ";
-    error.append(ToSizeString(minimum_size))
-        .append(" and target size is ")
-        .append(ToSizeString(options_->target_volume_size.value()))
-        .append(".");
+        "Failed to build FVMDescriptor. Image does not fit in target volume size. Minimum size "
+        "is " +
+        ToSizeString(minimum_size) + " and target size is " +
+        ToSizeString(options_->target_volume_size.value()) + ".";
     return fit::error(error);
   }
 

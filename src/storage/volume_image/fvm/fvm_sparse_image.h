@@ -38,8 +38,8 @@ struct FvmSparsePartitionEntry {
 fvm::sparse_image_t FvmSparseGenerateHeader(const FvmDescriptor& descriptor);
 
 // Returns a |FvmSparsePartitionEntry| representation of |partition| on success.
-FvmSparsePartitionEntry FvmSparseGeneratePartitionEntry(uint64_t slice_size,
-                                                        const Partition& partition);
+fit::result<FvmSparsePartitionEntry, std::string> FvmSparseGeneratePartitionEntry(
+    uint64_t slice_size, const Partition& partition);
 
 // Returns the size in bytes of the generated sparse image for |descriptor|.
 uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor);
