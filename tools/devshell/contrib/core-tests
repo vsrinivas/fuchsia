@@ -6,8 +6,16 @@
 #### CATEGORY=Run, inspect and debug
 ### run zircon core-tests
 
-## usage: core-tests [gtest-filter]
+## usage: core-tests [-...`fx run-zbi-test` switches...] [gtest-filter]
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-fx-config-read
-${FUCHSIA_DIR}/scripts/run-core-tests.py "${FUCHSIA_DIR}/tools/devshell/emu" "${FUCHSIA_BUILD_DIR}" "${FUCHSIA_BUILD_DIR}/zbi_tests.json" "$@"
+
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+  -*) ARGS+=("$arg") ;;
+  *) ARGS+=(--cmdline="--gtest_filter=$arg") ;;
+  esac
+done
+
+fx-command-exec contrib/run-zbi-test "${ARGS[@]}" core-tests
