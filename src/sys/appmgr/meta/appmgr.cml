@@ -76,6 +76,10 @@
             as: "/svc_for_sys/fuchsia.boot.RootResource",
         },
         {
+            protocol: "/svc/fuchsia.security.resource.Vmex",
+            as: "/svc_for_sys/fuchsia.security.resource.Vmex",
+        },
+        {
             protocol: "/svc/fuchsia.boot.WriteOnlyLog",
             as: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
         },

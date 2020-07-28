@@ -25,6 +25,8 @@ lazy_static! {
     static ref ROOT_JOB_ALLOWED_URL: String = policy_url!("root_job_allowed.cmx");
     static ref ROOT_RESOURCE_DENIED_URL: String = policy_url!("root_resource_denied.cmx");
     static ref ROOT_RESOURCE_ALLOWED_URL: String = policy_url!("root_resource_allowed.cmx");
+    static ref VMEX_RESOURCE_DENIED_URL: String = policy_url!("vmex_resource_denied.cmx");
+    static ref VMEX_RESOURCE_ALLOWED_URL: String = policy_url!("vmex_resource_allowed.cmx");
     static ref PKGFS_VERSIONS_DENIED_URL: String = policy_url!("pkgfs_versions_denied.cmx");
     static ref PKGFS_VERSIONS_ALLOWED_URL: String = policy_url!("pkgfs_versions_allowed.cmx");
     static ref DEPRECATED_SHELL_DENIED_URL: String = policy_url!("deprecated_shell_denied.cmx");
@@ -105,6 +107,18 @@ async fn root_resource_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn root_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&ROOT_RESOURCE_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn vmex_resource_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&VMEX_RESOURCE_ALLOWED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn vmex_resource_denied() -> Result<(), Error> {
+    assert_launch_denied(&VMEX_RESOURCE_DENIED_URL).await;
     Ok(())
 }
 

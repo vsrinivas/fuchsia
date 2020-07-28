@@ -66,6 +66,14 @@ test_package("policy-integration-tests") {
       dest = "root_resource_allowed.cmx"
     },
     {
+      path = "meta/vmex_resource.cmx"
+      dest = "vmex_resource_denied.cmx"
+    },
+    {
+      path = "meta/vmex_resource.cmx"
+      dest = "vmex_resource_allowed.cmx"
+    },
+    {
       path = "meta/deprecated_shell.cmx"
       dest = "deprecated_shell_denied.cmx"
     },

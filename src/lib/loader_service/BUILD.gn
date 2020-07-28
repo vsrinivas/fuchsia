@@ -35,6 +35,7 @@ executable("loader_service_test") {
 
   deps = [
     ":loader_service",
+    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/fbl",

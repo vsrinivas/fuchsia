@@ -20,6 +20,7 @@ constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
 constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
 constexpr char kRootJobAllowList[] = "allowlist/root_job.txt";
 constexpr char kRootResourceAllowList[] = "allowlist/root_resource.txt";
+constexpr char kVmexResourceAllowList[] = "allowlist/vmex_resource.txt";
 
 }  // end of namespace.
 
@@ -84,6 +85,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "fuchsia.boot.RootResource";
     return std::nullopt;
   }
+  if (sandbox.HasService("fuchsia.security.resource.Vmex") && !CheckVmexResource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.security.resource.Vmex";
+    return std::nullopt;
+  }
   return policy;
 }
 
@@ -135,6 +141,11 @@ bool PolicyChecker::CheckRootJob(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckRootResource(const FuchsiaPkgUrl& pkg_url) {
   AllowList root_resource_allowlist(config_, kRootResourceAllowList);
   return root_resource_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckVmexResource(const FuchsiaPkgUrl& pkg_url) {
+  AllowList vmex_resource_allowlist(config_, kVmexResourceAllowList);
+  return vmex_resource_allowlist.IsAllowed(pkg_url);
 }
 
 }  // namespace component

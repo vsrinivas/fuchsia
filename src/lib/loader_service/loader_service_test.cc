@@ -5,8 +5,10 @@
 #include "src/lib/loader_service/loader_service.h"
 
 #include <fuchsia/ldsvc/llcpp/fidl.h>
+#include <fuchsia/security/resource/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl/llcpp/memory.h>
@@ -36,6 +38,7 @@ namespace loader {
 namespace {
 
 namespace fldsvc = ::llcpp::fuchsia::ldsvc;
+namespace fsec = ::llcpp::fuchsia::security::resource;
 
 #define ASSERT_OK(expr) ASSERT_EQ(ZX_OK, expr)
 #define EXPECT_OK(expr) EXPECT_EQ(ZX_OK, expr)
@@ -49,6 +52,30 @@ struct TestDirectoryEntry {
       : path(std::move(path)), file_contents(std::move(file_contents)), executable(executable) {}
 };
 
+zx::status<zx::unowned_resource> GetVmexResource() {
+  static const std::string kVmexResourcePath = "/svc/" + std::string(fsec::Vmex::Name);
+
+  static zx::resource vmex_resource;
+  if (!vmex_resource.is_valid()) {
+    zx::channel client, server;
+    auto status = zx::make_status(zx::channel::create(0, &client, &server));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    status = zx::make_status(fdio_service_connect(kVmexResourcePath.c_str(), server.release()));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+
+    auto result = fsec::Vmex::Call::Get(client.borrow());
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    vmex_resource = std::move(result.Unwrap()->vmex);
+  }
+  return zx::ok(vmex_resource.borrow());
+}
+
 void AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& root, TestDirectoryEntry entry) {
   ASSERT_FALSE(entry.path.empty() || entry.path.front() == '/' || entry.path.back() == '/');
 
@@ -56,7 +83,10 @@ void AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& root, TestDirectoryEn
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
   ASSERT_OK(vmo.write(entry.file_contents.data(), 0, entry.file_contents.size()));
   if (entry.executable) {
-    ASSERT_OK(vmo.replace_as_executable(zx::resource(), &vmo));
+    auto vmex_rsrc = GetVmexResource();
+    ASSERT_OK(vmex_rsrc.status_value());
+    ASSERT_TRUE(vmex_rsrc.value()->is_valid());
+    ASSERT_OK(vmo.replace_as_executable(*vmex_rsrc.value(), &vmo));
   }
 
   fbl::RefPtr<memfs::VnodeDir> dir(root);

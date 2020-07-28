@@ -48,6 +48,7 @@ class PolicyChecker final {
   bool CheckPkgFsVersions(const FuchsiaPkgUrl& pkg_url);
   bool CheckRootJob(const FuchsiaPkgUrl& pkg_url);
   bool CheckRootResource(const FuchsiaPkgUrl& pkg_url);
+  bool CheckVmexResource(const FuchsiaPkgUrl& pkg_url);
 
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyPresent);
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyAbsent);
@@ -57,6 +58,7 @@ class PolicyChecker final {
   FRIEND_TEST(PolicyCheckerTest, PkgFsVersionsPolicy);
   FRIEND_TEST(PolicyCheckerTest, RootJobPolicy);
   FRIEND_TEST(PolicyCheckerTest, RootResourcePolicy);
+  FRIEND_TEST(PolicyCheckerTest, VmexResourcePolicy);
 };
 
 }  // end of namespace component.

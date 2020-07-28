@@ -36,6 +36,7 @@
                 "/svc/fuchsia.boot.WriteOnlyLog",
                 "/svc/fuchsia.kernel.Stats",
                 "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.security.resource.Vmex",
             ],
             from: "parent",
             to: [
@@ -53,10 +54,7 @@
             to: [ "#core" ],
         },
         {
-            protocol: [
-                "/svc/fuchsia.security.resource.Vmex",
-                "/svc/fuchsia.sys2.SystemController",
-            ],
+            protocol: [ "/svc/fuchsia.sys2.SystemController" ],
             from: "parent",
             to: [ "#bootstrap" ],
         },
