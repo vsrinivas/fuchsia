@@ -6,7 +6,7 @@
 
 // This header file has been generated from the strings library fuchsia.intl.l10n.
 #include "fuchsia/intl/l10n/cpp/fidl.h"
-#include "src/ui/a11y/lib/screen_reader/node_describer.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_message_generator.h"
 #include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
@@ -19,8 +19,9 @@ using fuchsia::intl::l10n::MessageIds;
 static constexpr zx::duration kDefaultDelay = zx::msec(40);
 
 // Returns a message that describes a node where Role == BUTTON.
-NodeDescriber::UtteranceAndContext DescribeButton(a11y::i18n::MessageFormatter* formatter) {
-  NodeDescriber::UtteranceAndContext utterance;
+ScreenReaderMessageGenerator::UtteranceAndContext DescribeButton(
+    a11y::i18n::MessageFormatter* formatter) {
+  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
   auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_BUTTON));
   FX_DCHECK(message);
   utterance.utterance.set_message(std::move(*message));
@@ -29,8 +30,9 @@ NodeDescriber::UtteranceAndContext DescribeButton(a11y::i18n::MessageFormatter* 
 }
 
 // Returns a message that describes a node where Role == HEADER.
-NodeDescriber::UtteranceAndContext DescribeHeader(a11y::i18n::MessageFormatter* formatter) {
-  NodeDescriber::UtteranceAndContext utterance;
+ScreenReaderMessageGenerator::UtteranceAndContext DescribeHeader(
+    a11y::i18n::MessageFormatter* formatter) {
+  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
   auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_HEADER));
   FX_DCHECK(message);
   utterance.utterance.set_message(std::move(*message));
@@ -39,8 +41,9 @@ NodeDescriber::UtteranceAndContext DescribeHeader(a11y::i18n::MessageFormatter* 
 }
 
 // Returns a message that describes a node where Role == IMAGE.
-NodeDescriber::UtteranceAndContext DescribeImage(a11y::i18n::MessageFormatter* formatter) {
-  NodeDescriber::UtteranceAndContext utterance;
+ScreenReaderMessageGenerator::UtteranceAndContext DescribeImage(
+    a11y::i18n::MessageFormatter* formatter) {
+  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
   auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_IMAGE));
   FX_DCHECK(message);
   utterance.utterance.set_message(std::move(*message));
@@ -49,8 +52,9 @@ NodeDescriber::UtteranceAndContext DescribeImage(a11y::i18n::MessageFormatter* f
 }
 
 // Returns a message that describes a node where Role == SLIDER.
-NodeDescriber::UtteranceAndContext DescribeSlider(a11y::i18n::MessageFormatter* formatter) {
-  NodeDescriber::UtteranceAndContext utterance;
+ScreenReaderMessageGenerator::UtteranceAndContext DescribeSlider(
+    a11y::i18n::MessageFormatter* formatter) {
+  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
   auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_SLIDER));
   FX_DCHECK(message);
   utterance.utterance.set_message(std::move(*message));
@@ -74,11 +78,12 @@ std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantic
 
 }  // namespace
 
-NodeDescriber::NodeDescriber(std::unique_ptr<i18n::MessageFormatter> message_formatter)
+ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
+    std::unique_ptr<i18n::MessageFormatter> message_formatter)
     : message_formatter_(std::move(message_formatter)) {}
 
-std::vector<NodeDescriber::UtteranceAndContext> NodeDescriber::DescribeNode(
-    const fuchsia::accessibility::semantics::Node* node) {
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeNode(const fuchsia::accessibility::semantics::Node* node) {
   std::vector<UtteranceAndContext> description;
   {
     Utterance utterance;

@@ -11,7 +11,7 @@
 #include <memory>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_node_describer.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_message_generator.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
@@ -40,16 +40,17 @@ class SpeakerTest : public gtest::RealLoopFixture {
                             });
     RunLoopUntilIdle();
 
-    auto node_describer = std::make_unique<MockNodeDescriber>();
-    mock_node_describer_ptr_ = node_describer.get();
-    speaker_ = std::make_unique<a11y::Speaker>(&tts_engine_ptr_, std::move(node_describer));
+    auto screen_reader_message_generator = std::make_unique<MockScreenReaderMessageGenerator>();
+    mock_screen_reader_message_generator_ptr_ = screen_reader_message_generator.get();
+    speaker_ = std::make_unique<a11y::Speaker>(&tts_engine_ptr_,
+                                               std::move(screen_reader_message_generator));
   }
   ~SpeakerTest() = default;
 
  protected:
   std::unique_ptr<a11y::Speaker> speaker_;
   fuchsia::accessibility::tts::EnginePtr tts_engine_ptr_;
-  MockNodeDescriber* mock_node_describer_ptr_;
+  MockScreenReaderMessageGenerator* mock_screen_reader_message_generator_ptr_;
   MockTtsEngine mock_tts_engine_;
   sys::testing::ComponentContextProvider context_provider_;
   a11y::TtsManager tts_manager_;
@@ -94,15 +95,15 @@ TEST_F(SpeakerTest, SpeaksANodeRightAwayWhenFrontOfTheQueue) {
 }
 
 TEST_F(SpeakerTest, SpeaksANodeWithTimeSpacedUtterances) {
-  std::vector<a11y::NodeDescriber::UtteranceAndContext> description;
-  a11y::NodeDescriber::UtteranceAndContext utterance1;
+  std::vector<a11y::ScreenReaderMessageGenerator::UtteranceAndContext> description;
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance1;
   utterance1.utterance.set_message("foo");
-  a11y::NodeDescriber::UtteranceAndContext utterance2;
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance2;
   utterance2.utterance.set_message("button");
   utterance2.delay = zx::duration(zx::msec(300));
   description.push_back(std::move(utterance1));
   description.push_back(std::move(utterance2));
-  mock_node_describer_ptr_->set_description(std::move(description));
+  mock_screen_reader_message_generator_ptr_->set_description(std::move(description));
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
@@ -120,15 +121,15 @@ TEST_F(SpeakerTest, SpeaksANodeWithTimeSpacedUtterances) {
 }
 
 TEST_F(SpeakerTest, TaskWaitsInQueueWhenNotInterrupting) {
-  std::vector<a11y::NodeDescriber::UtteranceAndContext> description;
-  a11y::NodeDescriber::UtteranceAndContext utterance1;
+  std::vector<a11y::ScreenReaderMessageGenerator::UtteranceAndContext> description;
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance1;
   utterance1.utterance.set_message("foo");
-  a11y::NodeDescriber::UtteranceAndContext utterance2;
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance2;
   utterance2.utterance.set_message("button");
   utterance2.delay = zx::duration(zx::msec(300));
   description.push_back(std::move(utterance1));
   description.push_back(std::move(utterance2));
-  mock_node_describer_ptr_->set_description(std::move(description));
+  mock_screen_reader_message_generator_ptr_->set_description(std::move(description));
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
@@ -152,15 +153,15 @@ TEST_F(SpeakerTest, TaskWaitsInQueueWhenNotInterrupting) {
 }
 
 TEST_F(SpeakerTest, TaskTrumpsOtherTasksWhenInterrupting) {
-  std::vector<a11y::NodeDescriber::UtteranceAndContext> description;
-  a11y::NodeDescriber::UtteranceAndContext utterance1;
+  std::vector<a11y::ScreenReaderMessageGenerator::UtteranceAndContext> description;
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance1;
   utterance1.utterance.set_message("foo");
-  a11y::NodeDescriber::UtteranceAndContext utterance2;
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance2;
   utterance2.utterance.set_message("button");
   utterance2.delay = zx::duration(zx::msec(300));
   description.push_back(std::move(utterance1));
   description.push_back(std::move(utterance2));
-  mock_node_describer_ptr_->set_description(std::move(description));
+  mock_screen_reader_message_generator_ptr_->set_description(std::move(description));
   Node node;
   node.mutable_attributes()->set_label("foo");
   node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);

@@ -25,8 +25,10 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
   FX_DCHECK(result.is_ok()) << "Load of l10n resources failed.";
   auto message_formatter =
       std::make_unique<i18n::MessageFormatter>(icu::Locale("en-US"), result.take_value());
-  auto node_describer = std::make_unique<NodeDescriber>(std::move(message_formatter));
-  speaker_ = std::make_unique<Speaker>(&tts_engine_ptr_, std::move(node_describer));
+  auto screen_reader_message_generator =
+      std::make_unique<ScreenReaderMessageGenerator>(std::move(message_formatter));
+  speaker_ =
+      std::make_unique<Speaker>(&tts_engine_ptr_, std::move(screen_reader_message_generator));
 }
 
 ScreenReaderContext::ScreenReaderContext() : executor_(async_get_default_dispatcher()) {}

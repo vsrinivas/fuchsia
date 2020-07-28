@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_node_describer.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_message_generator.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 namespace accessibility_test {
 
-void MockNodeDescriber::set_description(std::vector<UtteranceAndContext> description) {
+void MockScreenReaderMessageGenerator::set_description(
+    std::vector<UtteranceAndContext> description) {
   description_ = std::move(description);
 }
 
-std::vector<a11y::NodeDescriber::UtteranceAndContext> MockNodeDescriber::DescribeNode(
+std::vector<a11y::ScreenReaderMessageGenerator::UtteranceAndContext>
+MockScreenReaderMessageGenerator::DescribeNode(
     const fuchsia::accessibility::semantics::Node* node) {
   if (description_) {
     auto value = std::move(*description_);

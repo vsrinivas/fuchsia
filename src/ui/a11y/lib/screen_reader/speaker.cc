@@ -27,22 +27,23 @@ void DelayTask(int64_t delay, fit::suspended_task task) {
 }  // namespace
 
 Speaker::Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
-                 std::unique_ptr<NodeDescriber> node_describer)
-    : tts_engine_ptr_(tts_engine_ptr), node_describer_(std::move(node_describer)) {
+                 std::unique_ptr<ScreenReaderMessageGenerator> screen_reader_message_generator)
+    : tts_engine_ptr_(tts_engine_ptr),
+      screen_reader_message_generator_(std::move(screen_reader_message_generator)) {
   FX_DCHECK(tts_engine_ptr_);
 }
 
 fit::promise<> Speaker::SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
                                          Options options) {
-  auto utterances = node_describer_->DescribeNode(node);
+  auto utterances = screen_reader_message_generator_->DescribeNode(node);
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
 
   return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
 }
 
 fit::promise<> Speaker::SpeakMessagePromise(Utterance utterance, Options options) {
-  std::vector<NodeDescriber::UtteranceAndContext> utterances;
-  NodeDescriber::UtteranceAndContext utterance_and_context;
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> utterances;
+  ScreenReaderMessageGenerator::UtteranceAndContext utterance_and_context;
   utterance_and_context.utterance = std::move(utterance);
   utterances.push_back(std::move(utterance_and_context));
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
@@ -193,7 +194,8 @@ fit::promise<> Speaker::WaitInQueue(std::weak_ptr<SpeechTask> weak_task) {
   return bridge.consumer.promise_or(fit::error());
 }
 
-Speaker::SpeechTask::SpeechTask(std::vector<NodeDescriber::UtteranceAndContext> utterances_arg)
+Speaker::SpeechTask::SpeechTask(
+    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> utterances_arg)
     : utterances(std::move(utterances_arg)) {}
 
 Speaker::SpeechTask::~SpeechTask() {

@@ -6,10 +6,10 @@ source_set("mocks") {
   testonly = true
 
   sources = [
-    "mock_node_describer.cc",
-    "mock_node_describer.h",
     "mock_screen_reader_context.cc",
     "mock_screen_reader_context.h",
+    "mock_screen_reader_message_generator.cc",
+    "mock_screen_reader_message_generator.h",
     "mock_tts_engine.cc",
     "mock_tts_engine.h",
   ]

@@ -14,7 +14,7 @@
 #include <memory>
 #include <queue>
 
-#include "src/ui/a11y/lib/screen_reader/node_describer.h"
+#include "src/ui/a11y/lib/screen_reader/screen_reader_message_generator.h"
 
 namespace a11y {
 
@@ -22,14 +22,15 @@ namespace a11y {
 //
 // Speech tasks are represented in the form of fit::promises. A task manages the dispatch of
 // utterances, in the right order and at the right time,  that together make a node description.
-// Please see NodeDescriber for more details. Speech tasks must run at the same executor. A task can
-// wait on another task to finish before it starts or start right away, depending on the option
-// selected. Please see Options for details. A task is not added to the queue of tasks until it
-// runs. This allows creating multiple speech tasks in any order, but controlling the order they
-// will run at dispatch time, not at building time. Important! The description of a node is built at
-// task creation time, not during run time. this simplifies the management of semantic nodes and
-// their life time. This guarantees that no reference to a semantic node is kept inside of the task,
-// creating the problem of keeping a node alive until the task finishes running.
+// Please see ScreenReaderMessageGenerator for more details. Speech tasks must run at the same
+// executor. A task can wait on another task to finish before it starts or start right away,
+// depending on the option selected. Please see Options for details. A task is not added to the
+// queue of tasks until it runs. This allows creating multiple speech tasks in any order, but
+// controlling the order they will run at dispatch time, not at building time. Important! The
+// description of a node is built at task creation time, not during run time. this simplifies the
+// management of semantic nodes and their life time. This guarantees that no reference to a semantic
+// node is kept inside of the task, creating the problem of keeping a node alive until the task
+// finishes running.
 class Speaker {
  public:
   // Options that controls how a task will run.
@@ -40,7 +41,7 @@ class Speaker {
   };
 
   explicit Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
-                   std::unique_ptr<NodeDescriber> node_describer);
+                   std::unique_ptr<ScreenReaderMessageGenerator> screen_reader_message_generator);
   virtual ~Speaker() = default;
 
   // Returns a speech task that speaks the node description.
@@ -67,9 +68,9 @@ class Speaker {
   // tasks, constructs them in a std::shared_ptr, while async code receive a std::weak_ptr, which
   // must be locked before accessing, to guarantee the existence of the task.
   struct SpeechTask {
-    SpeechTask(std::vector<NodeDescriber::UtteranceAndContext> utterances_arg);
+    SpeechTask(std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> utterances_arg);
     ~SpeechTask();
-    std::vector<NodeDescriber::UtteranceAndContext> utterances;
+    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> utterances;
     // The current utterance in |utterances| being spoken.
     int utterance_index = 0;
     // Invoked when this task is at the front of the queue and can be executed.
@@ -106,7 +107,7 @@ class Speaker {
   fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr_ = nullptr;
 
   // Used to generate node descriptions.
-  std::unique_ptr<NodeDescriber> node_describer_;
+  std::unique_ptr<ScreenReaderMessageGenerator> screen_reader_message_generator_;
 
   // queue of speech tasks. Only the front of the queue is running, while others wait for it to
   // finish.
