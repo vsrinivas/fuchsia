@@ -23,6 +23,7 @@
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
 #include "src/ui/bin/root_presenter/presentation.h"
+#include "src/ui/bin/root_presenter/safe_presenter.h"
 
 namespace root_presenter {
 
@@ -45,7 +46,8 @@ class Presentation : fuchsia::ui::policy::Presentation,
                scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-               ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment);
+               SafePresenter* safe_presenter, ActivityNotifier* activity_notifier,
+               int32_t display_startup_rotation_adjustment);
   ~Presentation() override;
 
   void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
@@ -58,8 +60,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   const scenic::ViewHolder& view_holder() const { return view_holder_; }
 
  private:
-  enum SessionPresentState { kNoPresentPending, kPresentPending, kPresentPendingAndSceneDirty };
-
   // |fuchsia::ui::policy::Presentation|
   void CapturePointerEventsHACK(
       fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override {
@@ -104,8 +104,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   scenic::EntityNode root_node_;
   scenic::ViewHolder view_holder_;
 
-  SessionPresentState session_present_state_ = kNoPresentPending;
-
   bool display_model_initialized_ = false;
 
   DisplayModel display_model_;
@@ -130,6 +128,8 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;
+
+  SafePresenter* safe_presenter_ = nullptr;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 

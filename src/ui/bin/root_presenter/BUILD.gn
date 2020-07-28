@@ -90,6 +90,7 @@ source_set("lib") {
     ":displays",
     ":factory_reset_manager",
     ":media_buttons_handler",
+    ":safe_presenter",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -189,12 +190,27 @@ source_set("color_transform") {
   public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
+    ":safe_presenter",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+    "//sdk/lib/ui/scenic/cpp",
+  ]
+}
+
+source_set("safe_presenter") {
+  sources = [
+    "safe_presenter.cc",
+    "safe_presenter.h",
+  ]
+
+  public_deps = [ "//sdk/lib/sys/cpp" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
   ]
 }

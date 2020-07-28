@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ui/bin/root_presenter/safe_presenter.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_color_transform_manager.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_scenic.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_session.h"
@@ -55,6 +56,7 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
     fake_session_ = fake_scenic_.fakeSession();
     session_ =
         std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
+    safe_presenter_ = std::make_unique<SafePresenter>(session_.get());
   }
 
   void TearDown() override {
@@ -69,12 +71,13 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
   FakeScenic fake_scenic_;
   FakeColorTransformManager fake_color_transform_manager_;
   std::unique_ptr<ColorTransformHandler> color_transform_handler_;
+  std::unique_ptr<SafePresenter> safe_presenter_;
 };
 // Basic test to make sure the color transform handler can send updates to Scenic.
 TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   // Change settings.
@@ -101,8 +104,8 @@ TEST_F(ColorTransformHandlerTest, VerifyA11yColorTransform) {
 // Ensures identical color transforms are sent to Scenic exactly once.
 TEST_F(ColorTransformHandlerTest, VerifyMultipleIdenticalA11yColorTransforms) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   const std::array<float, 9> matrix = {2, 1, 3, 4, 5, 6, 7, 8, 9};
@@ -145,8 +148,8 @@ TEST_F(ColorTransformHandlerTest, VerifyMultipleIdenticalA11yColorTransforms) {
 // Verify that we don't call scenic when the accessibility matrix is missing.
 TEST_F(ColorTransformHandlerTest, A11yMissingMatrix) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   // Change settings.
@@ -168,8 +171,8 @@ TEST_F(ColorTransformHandlerTest, A11yMissingMatrix) {
 // Verify that we don't call scenic when the accessibility pre-offset is missing.
 TEST_F(ColorTransformHandlerTest, A11yMissingPreOffset) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   // Change settings.
@@ -191,8 +194,8 @@ TEST_F(ColorTransformHandlerTest, A11yMissingPreOffset) {
 // Verify that we don't call scenic when the accessibility post-offset is missing.
 TEST_F(ColorTransformHandlerTest, A11yMissingPostOffset) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   // Change settings.
@@ -214,8 +217,8 @@ TEST_F(ColorTransformHandlerTest, A11yMissingPostOffset) {
 // Verify that a color adjustment from the brightness API is sent to scenic correctly.
 TEST_F(ColorTransformHandlerTest, VerifyColorAdjustment) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   // Change color adjustment via brightness.
@@ -236,8 +239,8 @@ TEST_F(ColorTransformHandlerTest, VerifyColorAdjustment) {
 // Verify that two identical color adjustments get sent to Scenic only once.
 TEST_F(ColorTransformHandlerTest, VerifyMultipleIdenticalColorAdjustments) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   // Change color adjustment via brightness.
@@ -274,7 +277,7 @@ TEST_F(ColorTransformHandlerTest, VerifyMultipleIdenticalColorAdjustments) {
 TEST_F(ColorTransformHandlerTest, VerifyColorAdjustmentNoOpWithA11y) {
   // Create ColorTransformHandler.
   color_transform_handler_ = std::make_unique<ColorTransformHandler>(
-      context_provider_.context(), id, session_.get(),
+      context_provider_.context(), id, session_.get(), safe_presenter_.get(),
       ColorTransformState(/* color_inversion_enabled */ false,
                           fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY));
   RunLoopUntilIdle();
@@ -293,8 +296,8 @@ TEST_F(ColorTransformHandlerTest, VerifyColorAdjustmentNoOpWithA11y) {
 // Verify that we don't call scenic when the brightness color adjustment matrix is not present.
 TEST_F(ColorTransformHandlerTest, BrightnessMissingMatrix) {
   // Create ColorTransformHandler.
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   // Change color adjustment via brightness.
@@ -309,8 +312,8 @@ TEST_F(ColorTransformHandlerTest, BrightnessMissingMatrix) {
 
 // Makes sure that color adjustment service is available.
 TEST_F(ColorTransformHandlerTest, OffersColorAdjustment) {
-  color_transform_handler_ =
-      std::make_unique<ColorTransformHandler>(context_provider_.context(), id, session_.get());
+  color_transform_handler_ = std::make_unique<ColorTransformHandler>(
+      context_provider_.context(), id, session_.get(), safe_presenter_.get());
   RunLoopUntilIdle();
 
   fuchsia::ui::brightness::ColorAdjustmentHandlerPtr color_adjustment_ptr;

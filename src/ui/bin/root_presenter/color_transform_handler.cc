@@ -8,25 +8,33 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "src/ui/bin/root_presenter/safe_presenter.h"
+
 namespace root_presenter {
 
 const std::array<float, 3> kZero = {0, 0, 0};
 
 ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_context,
                                              scenic::ResourceId compositor_id,
-                                             scenic::Session* session)
-    : ColorTransformHandler(component_context, compositor_id, session, ColorTransformState()) {}
+                                             scenic::Session* session,
+                                             SafePresenter* safe_presenter)
+    : ColorTransformHandler(component_context, compositor_id, session, safe_presenter,
+                            ColorTransformState()) {}
 
 ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_context,
                                              scenic::ResourceId compositor_id,
-                                             scenic::Session* session, ColorTransformState state)
+                                             scenic::Session* session,
+                                             SafePresenter* safe_presenter,
+                                             ColorTransformState state)
     : component_context_(component_context),
       session_(session),
+      safe_presenter_(safe_presenter),
       compositor_id_(compositor_id),
       color_transform_handler_bindings_(this),
       color_transform_state_(state) {
   FX_DCHECK(component_context_);
   FX_DCHECK(session_);
+  FX_DCHECK(safe_presenter_);
   component_context->svc()->Connect(color_transform_manager_.NewRequest());
   color_transform_manager_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Unable to connect to ColorTransformManager" << zx_status_get_string(status);
@@ -104,7 +112,7 @@ void ColorTransformHandler::SetScenicColorConversion(
   color_adjustment_cmd.set_set_display_color_conversion(std::move(display_color_conversion_cmd));
   session_->Enqueue(std::move(color_adjustment_cmd));
 
-  session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
+  safe_presenter_->QueuePresent([] {});
 }
 
 void ColorTransformHandler::InitColorConversionCmd(
