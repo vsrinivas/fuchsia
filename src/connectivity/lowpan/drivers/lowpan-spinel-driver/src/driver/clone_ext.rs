@@ -20,3 +20,15 @@ impl CloneExt for fidl_fuchsia_lowpan_device::DeviceState {
         Self { connectivity_state: self.connectivity_state.clone(), role: self.role.clone() }
     }
 }
+
+impl CloneExt for fidl_fuchsia_lowpan::Identity {
+    fn clone(&self) -> Self {
+        Self {
+            raw_name: self.raw_name.clone(),
+            xpanid: self.xpanid.clone(),
+            net_type: self.net_type.clone(),
+            channel: self.channel.clone(),
+            panid: self.panid.clone(),
+        }
+    }
+}

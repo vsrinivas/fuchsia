@@ -14,7 +14,7 @@ use futures::{FutureExt, StreamExt};
 use std::convert::TryInto;
 use std::sync::Arc;
 
-const INBOUND_FRAME_WINDOW_SIZE: usize = 4;
+pub(super) const INBOUND_FRAME_WINDOW_SIZE: usize = 8;
 
 /// A helpful adapter around [`fidl_fuchsia_lowpan_spinel::Error`]
 /// that implements [`std::error::Error`] and works well with

@@ -8,6 +8,7 @@ use crate::spinel::*;
 use futures::prelude::*;
 use mock::*;
 
+use fidl_fuchsia_lowpan::{Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
 use lowpan_driver_common::Driver as _;
 
 impl<DS> SpinelDriver<DS> {
@@ -34,7 +35,7 @@ async fn test_spinel_lowpan_driver() {
 
         let mut device_state_stream = driver.watch_device_state();
 
-        traceln!("app_task: Checking device state...");
+        traceln!("app_task: Checking device state... (Should be Inactive)");
         assert_eq!(
             device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
             ConnectivityState::Inactive
@@ -89,7 +90,7 @@ async fn test_spinel_lowpan_driver() {
             assert_eq!(driver.reset().await, Ok(()));
             traceln!("app_task: Did reset!");
 
-            traceln!("app_task: Checking device state...");
+            traceln!("app_task: Checking device state...  (Should be Inactive)");
             assert_eq!(
                 driver
                     .watch_device_state()
@@ -101,6 +102,28 @@ async fn test_spinel_lowpan_driver() {
                     .unwrap(),
                 ConnectivityState::Inactive
             );
+
+            traceln!("app_task: Setting identity...");
+            assert_eq!(
+                driver
+                    .provision_network(ProvisioningParams {
+                        identity: Identity {
+                            raw_name: Some("MyNetwork".as_bytes().to_vec()),
+                            xpanid: Some([0, 1, 2, 3, 4, 5, 6, 7].to_vec()),
+                            net_type: Some(NET_TYPE_THREAD_1_X.to_string()),
+                            channel: Some(11),
+                            panid: Some(0x1234),
+                        },
+                        credential: None
+                    })
+                    .await,
+                Ok(())
+            );
+            traceln!("app_task: Did provision!");
+
+            traceln!("app_task: Leaving network...");
+            assert_eq!(driver.leave_network().await, Ok(()));
+            traceln!("app_task: Did leave!");
         }
     };
 

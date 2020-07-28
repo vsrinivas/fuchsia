@@ -5,6 +5,7 @@
 use super::*;
 use crate::spinel::*;
 
+use fidl_fuchsia_lowpan::Identity;
 use std::fmt::Debug;
 use std::ops::Deref;
 
@@ -27,6 +28,11 @@ pub(super) struct DriverState {
     ///
     /// This is kept in sync by [`SpinelDriver::on_prop_value_is()`].
     pub(super) role: Role,
+
+    /// The current network identity configured on the device.
+    ///
+    /// This is kept in sync by [`SpinelDriver::on_prop_value_is()`].
+    pub(super) identity: Identity,
 }
 
 impl Clone for DriverState {
@@ -36,6 +42,7 @@ impl Clone for DriverState {
             connectivity_state: self.connectivity_state.clone(),
             caps: self.caps.clone(),
             role: self.role.clone(),
+            identity: self.identity.clone(),
         }
     }
 }
@@ -46,6 +53,11 @@ impl PartialEq for DriverState {
             && self.connectivity_state.eq(&other.connectivity_state)
             && self.caps.eq(&other.caps)
             && self.role.eq(&other.role)
+            && self.identity.net_type.eq(&other.identity.net_type)
+            && self.identity.channel.eq(&other.identity.channel)
+            && self.identity.panid.eq(&other.identity.panid)
+            && self.identity.raw_name.eq(&other.identity.raw_name)
+            && self.identity.xpanid.eq(&other.identity.xpanid)
     }
 }
 
@@ -58,6 +70,7 @@ impl Default for DriverState {
             connectivity_state: ConnectivityState::Inactive,
             caps: Default::default(),
             role: Role::Detached,
+            identity: Identity::empty(),
         }
     }
 }
@@ -83,6 +96,12 @@ impl DriverState {
     #[allow(dead_code)]
     pub fn is_active(&self) -> bool {
         self.connectivity_state.is_active()
+    }
+
+    /// Convenience method for checking if a cap is set.
+    #[allow(dead_code)]
+    pub fn has_cap(&self, cap: Cap) -> bool {
+        self.caps.contains(&cap)
     }
 
     /// Prepares the driver state for (re-)initialization.

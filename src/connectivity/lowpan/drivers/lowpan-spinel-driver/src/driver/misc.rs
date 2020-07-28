@@ -60,6 +60,26 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     pub(super) fn on_prop_value_is(&self, prop: Prop, value: &[u8]) -> Result<(), Error> {
         fx_log_info!("on_prop_value_is: {:?} {:?}", prop, value);
         match prop {
+            Prop::Net(PropNet::Saved) => {
+                let saved = bool::try_unpack_from_slice(value)?;
+                let mut driver_state = self.driver_state.lock();
+                let new_connectivity_state = if saved {
+                    driver_state.connectivity_state.provisioned()
+                } else {
+                    driver_state.connectivity_state.unprovisioned()
+                };
+                if new_connectivity_state != driver_state.connectivity_state {
+                    let old_connectivity_state = driver_state.connectivity_state;
+                    driver_state.connectivity_state = new_connectivity_state;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                    self.on_connectivity_state_change(
+                        new_connectivity_state,
+                        old_connectivity_state,
+                    );
+                }
+            }
+
             Prop::Net(PropNet::Role) => {
                 let new_role = match NetRole::try_unpack_from_slice(value)? {
                     NetRole::Detached => Role::Detached,
@@ -74,6 +94,85 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                 if new_role != driver_state.role {
                     fx_log_info!("Role changed from {:?} to {:?}", driver_state.role, new_role);
                     driver_state.role = new_role;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+
+            Prop::Net(PropNet::NetworkName) => {
+                let mut driver_state = self.driver_state.lock();
+
+                if Some(true)
+                    != driver_state.identity.raw_name.as_ref().map(|x| x.as_slice() == value)
+                {
+                    fx_log_info!(
+                        "Network name changed from {:?} to {:?}",
+                        driver_state.identity.raw_name,
+                        value
+                    );
+                    driver_state.identity.raw_name = Some(value.to_vec());
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+
+            Prop::Net(PropNet::Xpanid) => {
+                let value = if value.is_empty() {
+                    None
+                } else if value.len() == 8 {
+                    Some(value)
+                } else {
+                    return Err(format_err!(
+                        "Invalid XPANID from NCP: {:?} (Must by 8 bytes)",
+                        value
+                    ));
+                };
+
+                let mut driver_state = self.driver_state.lock();
+
+                if Some(true)
+                    != driver_state.identity.xpanid.as_ref().map(|x| Some(x.as_slice()) == value)
+                {
+                    fx_log_info!(
+                        "XPANID changed from {:?} to {:?}",
+                        driver_state.identity.xpanid,
+                        value
+                    );
+                    driver_state.identity.xpanid = value.map(Vec::<u8>::from);
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+
+            Prop::Phy(PropPhy::Chan) => {
+                let value = u8::try_unpack_from_slice(value)? as u16;
+
+                let mut driver_state = self.driver_state.lock();
+
+                if Some(value) != driver_state.identity.channel {
+                    fx_log_info!(
+                        "Channel changed from {:?} to {:?}",
+                        driver_state.identity.channel,
+                        value
+                    );
+                    driver_state.identity.channel = Some(value);
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+
+            Prop::Mac(PropMac::Panid) => {
+                let value = u16::try_unpack_from_slice(value)?;
+
+                let mut driver_state = self.driver_state.lock();
+
+                if Some(value) != driver_state.identity.panid {
+                    fx_log_info!(
+                        "PANID changed from {:?} to {:?}",
+                        driver_state.identity.channel,
+                        value
+                    );
+                    driver_state.identity.panid = Some(value);
                     std::mem::drop(driver_state);
                     self.driver_state_change.trigger();
                 }

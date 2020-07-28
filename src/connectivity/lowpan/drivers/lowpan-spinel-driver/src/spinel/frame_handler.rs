@@ -132,6 +132,7 @@ pub(crate) mod tests {
     use futures::future::{join, select};
     use matches::assert_matches;
     use mock::DeviceRequest;
+    use std::convert::TryInto;
 
     #[fasync::run_until_stalled(test)]
     async fn test_spinel_frame_handler() {
@@ -172,7 +173,9 @@ pub(crate) mod tests {
             traceln!("ncp_task: Waiting for DeviceRequest::ReadyToReceiveFrames");
             assert_eq!(
                 device_request_receiver.next().await,
-                Some(DeviceRequest::ReadyToReceiveFrames(4))
+                Some(DeviceRequest::ReadyToReceiveFrames(
+                    crate::spinel::device_client::INBOUND_FRAME_WINDOW_SIZE.try_into().unwrap()
+                ))
             );
 
             traceln!("ncp_task: Sending SpinelDeviceEvent::OnReadyForSendFrames");

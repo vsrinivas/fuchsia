@@ -20,12 +20,117 @@ use lowpan_driver_common::{AsyncConditionWait, Driver as LowpanDriver, FutureExt
 /// API-related tasks. Implementation of [`lowpan_driver_common::Driver`].
 #[async_trait]
 impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
-    async fn provision_network(&self, _params: ProvisioningParams) -> ZxResult<()> {
-        Err(ZxStatus::NOT_SUPPORTED)
+    async fn provision_network(&self, params: ProvisioningParams) -> ZxResult<()> {
+        use std::convert::TryInto;
+        fx_log_info!("Got provision command: {:?}", params);
+
+        if params.identity.raw_name.is_none() {
+            // We must at least have the network name specified.
+            Err(ZxStatus::INVALID_ARGS)?;
+        }
+
+        let u8_channel: Option<u8> = if let Some(channel) = params.identity.channel {
+            Some(channel.try_into().map_err(|err| {
+                fx_log_err!("Error with channel value: {:?}", err);
+                ZxStatus::INVALID_ARGS
+            })?)
+        } else {
+            None
+        };
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        let task = async {
+            // Bring down the mesh networking stack, if it is up.
+            self.frame_handler
+                .send_request(CmdPropValueSet(PropNet::StackUp.into(), false).verify())
+                .await?;
+
+            // Bring down the interface, if it is up.
+            self.frame_handler
+                .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), false).verify())
+                .await?;
+
+            // Make sure that any existing network state is cleared out.
+            self.frame_handler.send_request(CmdNetClear).await?;
+
+            // From here down we are provisioning the NCP with the new network identity.
+
+            // Set the network name.
+            if let Some(network_name) = params.identity.raw_name {
+                self.frame_handler
+                    .send_request(
+                        CmdPropValueSet(PropNet::NetworkName.into(), network_name).verify(),
+                    )
+                    .await?;
+            } else {
+                // This code is unreachable because to verified that this
+                // field was populated in an earlier check.
+                unreachable!("Network name not set");
+            }
+
+            // Set the channel.
+            if let Some(channel) = u8_channel {
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropPhy::Chan.into(), channel).verify())
+                    .await?;
+            } else {
+                // In this case we are using whatever the previous channel was.
+            }
+
+            // Set the XPANID, if we have one.
+            if let Some(xpanid) = params.identity.xpanid {
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropNet::Xpanid.into(), xpanid).verify())
+                    .await?;
+            }
+
+            // Set the PANID, if we have one.
+            if let Some(panid) = params.identity.panid {
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropMac::Panid.into(), panid).verify())
+                    .await?;
+            }
+
+            Ok(())
+        };
+
+        self.apply_standard_combinators(task.boxed()).await
     }
 
     async fn leave_network(&self) -> ZxResult<()> {
-        Err(ZxStatus::NOT_SUPPORTED)
+        fx_log_info!("Got leave command");
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        let task = async {
+            // Bring down the mesh networking stack, if it is up.
+            self.frame_handler
+                .send_request(CmdPropValueSet(PropNet::StackUp.into(), false).verify())
+                .await?;
+
+            // Bring down the interface, if it is up.
+            self.frame_handler
+                .send_request(CmdPropValueSet(PropNet::InterfaceUp.into(), false).verify())
+                .await?;
+
+            // Make sure that any existing network state is cleared out.
+            self.frame_handler.send_request(CmdNetClear).await?;
+
+            Ok(())
+        };
+
+        let ret = self.apply_standard_combinators(task.boxed()).await;
+
+        // Finally, issue a software reset command to make sure that
+        // we have a clean slate.
+        self.frame_handler
+            .send_request(CmdReset)
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+            .await
+            .or(ret)
     }
 
     async fn set_active(&self, _enabled: bool) -> ZxResult<()> {
@@ -125,7 +230,41 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 
     fn watch_identity(&self) -> BoxStream<'_, ZxResult<Identity>> {
-        ready(Err(ZxStatus::NOT_SUPPORTED)).into_stream().boxed()
+        futures::stream::unfold(
+            None,
+            move |last_state: Option<(Identity, AsyncConditionWait<'_>)>| async move {
+                let mut snapshot;
+                if let Some((last_state, mut condition)) = last_state {
+                    // The first copy of the identity has already been emitted
+                    // by the stream, so we need to wait for changes before we emit more.
+                    loop {
+                        // This loop is where our stream waits for
+                        // the next change to the identity.
+
+                        // Wait for the driver state change condition to unblock.
+                        condition.await;
+
+                        // Set up the condition for the next iteration.
+                        condition = self.driver_state_change.wait();
+
+                        // Grab our identity snapshot and make sure it is actually different.
+                        snapshot = self.identity_snapshot();
+                        if snapshot != last_state {
+                            break;
+                        }
+                    }
+                    Some((Ok(snapshot.clone()), Some((snapshot, condition))))
+                } else {
+                    // This is the first item being emitted from the stream,
+                    // so we end up emitting the current identity and
+                    // setting ourselves up for the next iteration.
+                    let condition = self.driver_state_change.wait();
+                    snapshot = self.identity_snapshot();
+                    Some((Ok(snapshot.clone()), Some((snapshot, condition))))
+                }
+            },
+        )
+        .boxed()
     }
 
     async fn form_network(
@@ -285,5 +424,10 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
             connectivity_state: Some(driver_state.connectivity_state),
             role: Some(driver_state.role),
         }
+    }
+
+    fn identity_snapshot(&self) -> Identity {
+        let driver_state = self.driver_state.lock();
+        driver_state.identity.clone()
     }
 }
