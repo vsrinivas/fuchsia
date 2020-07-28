@@ -6,6 +6,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
 #include "src/media/audio/lib/effects_loader/effects_processor.h"
 
@@ -64,15 +65,63 @@ class MultiLibEffectsLoader {
   std::vector<Holder> holders_;
 };
 
+template <typename T>
+static constexpr T RoundUp(T t, uint32_t alignment) {
+  return fbl::round_up(t, alignment);
+}
+
+template <typename T>
+static constexpr T RoundDown(T t, uint32_t alignment) {
+  using UnsignedType = typename std::make_unsigned<T>::type;
+  if (t < 0) {
+    return -fbl::round_up(static_cast<UnsignedType>(std::abs(t)), alignment);
+  }
+  return fbl::round_down(static_cast<UnsignedType>(t), alignment);
+}
+
 std::pair<int64_t, uint32_t> AlignBufferRequest(int64_t frame, uint32_t length,
                                                 uint32_t alignment) {
-  uint64_t mask = ~(static_cast<uint64_t>(alignment) - 1);
-  int64_t aligned_frame = frame & mask;
-  uint32_t aligned_length = (length + alignment - 1) & mask;
-  return {aligned_frame, aligned_length};
+  return {RoundDown(frame, alignment), RoundUp(length, alignment)};
 }
 
 }  // namespace
+
+EffectsStage::RingoutBuffer EffectsStage::RingoutBuffer::Create(const Format& format,
+                                                                const EffectsProcessor& processor) {
+  return RingoutBuffer::Create(format, processor.ring_out_frames(), processor.max_batch_size(),
+                               processor.block_size());
+}
+
+EffectsStage::RingoutBuffer EffectsStage::RingoutBuffer::Create(const Format& format,
+                                                                uint32_t ringout_frames,
+                                                                uint32_t max_batch_size,
+                                                                uint32_t block_size) {
+  uint32_t buffer_frames = 0;
+  std::vector<float> buffer;
+  if (ringout_frames) {
+    // Target our ringout buffer as no larger than a single mix job of frames.
+    const uint32_t kTargetRingoutBufferFrames =
+        format.frames_per_ns().Scale(ThreadingModel::kMixProfilePeriod.to_nsecs());
+
+    // If the ringout frames is less than our target buffer size, we'll lower it to our ringout
+    // frames. Also ensure we do not exceed the max batch size for the effect.
+    buffer_frames = std::min(ringout_frames, kTargetRingoutBufferFrames);
+    if (max_batch_size) {
+      buffer_frames = std::min(buffer_frames, max_batch_size);
+    }
+
+    // Block-align our buffer.
+    buffer_frames = RoundUp(buffer_frames, block_size);
+
+    // Allocate the memory to use for the ring-out frames.
+    buffer.resize(buffer_frames * format.channels());
+  }
+  return {
+      .total_frames = ringout_frames,
+      .buffer_frames = buffer_frames,
+      .buffer = std::move(buffer),
+  };
+}
 
 // static
 std::shared_ptr<EffectsStage> EffectsStage::Create(
@@ -127,7 +176,8 @@ EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
     : ReadableStream(ComputeFormat(source->format(), *effects_processor)),
       source_(std::move(source)),
       effects_processor_(std::move(effects_processor)),
-      volume_curve_(std::move(volume_curve)) {
+      volume_curve_(std::move(volume_curve)),
+      ringout_(RingoutBuffer::Create(source_->format(), *effects_processor_)) {
   // Initialize our lead time. Setting 0 here will resolve our lead time to effect delay in our
   // |SetMinLeadTime| override.
   SetMinLeadTime(zx::duration(0));
@@ -171,11 +221,8 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
 
   auto source_buffer = source_->ReadLock(dest_ref_time, aligned_first_frame, aligned_frame_count);
   if (source_buffer) {
-    // TODO(50669): We assume that ReadLock always returns exactly the frames we request. This is
-    // not true in general, but in practice it's true because source_ is always a MixStage that
-    // outputs to an IntermediateBuffer.
-    FX_DCHECK(source_buffer->start().Floor() == aligned_first_frame);
-    FX_DCHECK(source_buffer->length().Floor() == aligned_frame_count);
+    // We expect an integral buffer length.
+    FX_CHECK(source_buffer->length().Floor() == source_buffer->length().Ceiling());
 
     fuchsia_audio_effects_stream_info stream_info;
     stream_info.usage_mask = source_buffer->usage_mask().mask() & kSupportedUsageMask;
@@ -185,7 +232,12 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
 
     float* buf_out = nullptr;
     auto payload = static_cast<float*>(source_buffer->payload());
-    effects_processor_->Process(aligned_frame_count, payload, &buf_out);
+    effects_processor_->Process(source_buffer->length().Floor(), payload, &buf_out);
+
+    // Since we just sent some frames through the effects, we need to reset our ringout counter if
+    // we had one.
+    ringout_frames_sent_ = 0;
+    next_ringout_frame_ = source_buffer->end().Floor();
 
     // If the processor has done in-place processing, we want to retain |source_buffer| until we
     // no longer need the frames. If the processor has made a copy then we can release our
@@ -196,12 +248,32 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
       current_block_ = std::move(source_buffer);
     } else {
       current_block_ = ReadableStream::Buffer(
-          aligned_first_frame, aligned_frame_count, buf_out, source_buffer->is_continuous(),
+          source_buffer->start(), source_buffer->length(), buf_out, source_buffer->is_continuous(),
           source_buffer->usage_mask(), source_buffer->gain_db());
     }
     return DupCurrentBlock();
+  } else if (ringout_frames_sent_ < ringout_.total_frames) {
+    if (aligned_first_frame != next_ringout_frame_) {
+      FX_LOGS(DEBUG) << "Skipping ringout due to discontinuous buffer";
+      ringout_frames_sent_ = ringout_.total_frames;
+      return std::nullopt;
+    }
+    // We have no buffer. If we are still within the ringout period we need to feed some silence
+    // into the effects.
+    std::fill(ringout_.buffer.begin(), ringout_.buffer.end(), 0.0);
+    float* buf_out = nullptr;
+    effects_processor_->Process(ringout_.buffer_frames, ringout_.buffer.data(), &buf_out);
+    // Ringout frames are by definition continuous with the previous buffer.
+    const bool is_continuous = true;
+    // TODO(50669): Should we clamp length to |frame_count|?
+    current_block_ = ReadableStream::Buffer(aligned_first_frame, ringout_.buffer_frames, buf_out,
+                                            is_continuous, StreamUsageMask(), 0.0);
+    ringout_frames_sent_ += ringout_.buffer_frames;
+    next_ringout_frame_ = current_block_->end().Floor();
+    return DupCurrentBlock();
   }
 
+  // No buffer and we have no ringout frames remaining, so return silence.
   return std::nullopt;
 }
 

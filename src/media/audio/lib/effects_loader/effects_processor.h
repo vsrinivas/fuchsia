@@ -58,7 +58,7 @@ class EffectsProcessor {
   // provide frames in multiples of |block_size()|.
   [[nodiscard]] uint32_t block_size() const { return block_size_; }
 
-  // Returns the maximum buffer size the processor is prepared to handle with a single call to
+  // Returns the maximum buffer size (in frames) the processor is prepared to handle with a single call to
   // |ProcessInPlace| or |Process|.
   //
   // Returns 0 if the plugin can handle arbitrary buffer sizes.

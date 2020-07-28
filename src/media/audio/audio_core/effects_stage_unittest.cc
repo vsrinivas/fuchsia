@@ -21,7 +21,7 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 
-const Format kDefaultFormat =
+const Format k48k2ChanFloatFormat =
     Format::Create(fuchsia::media::AudioStreamType{
                        .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
                        .channels = 2,
@@ -46,15 +46,15 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
 };
 
 TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
   auto stream = std::make_shared<PacketQueue>(
-      kDefaultFormat, timeline_function,
+      k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
@@ -93,7 +93,7 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
 
 TEST_F(EffectsStageTest, BlockAlignRequests) {
   // Create a source stream.
-  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
 
   // Create an effect we can load.
   const uint32_t kBlockSize = 128;
@@ -111,6 +111,13 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
   auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
+
+  {
+    // Ask for a single negative frame. We should recevie an entire block.
+    auto buffer = effects_stage->ReadLock(zx::time(0), -1, 1);
+    EXPECT_EQ(buffer->start().Floor(), -static_cast<int32_t>(kBlockSize));
+    EXPECT_EQ(buffer->length().Floor(), kBlockSize);
+  }
 
   {
     // Ask for 1 frame; expect to get a full block.
@@ -143,7 +150,7 @@ TEST_F(EffectsStageTest, BlockAlignRequests) {
 
 TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
   // Create a source stream.
-  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
 
   const uint32_t kBlockSize = 128;
   const uint32_t kMaxBufferSize = 300;
@@ -171,12 +178,12 @@ TEST_F(EffectsStageTest, TruncateToMaxBufferSize) {
 }
 
 TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
-  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
   stream->timeline_function()->Update(TimelineFunction(
-      TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<int64_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
   test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
@@ -206,7 +213,7 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
 
   // Similarly, at the time we produce output frame 0, we had to draw upon the source frame from
   // time -13. Use a fuzzy compare to allow for slight rounding errors.
-  int64_t frame_13_time = (zx::sec(-13).to_nsecs()) / kDefaultFormat.frames_per_second();
+  int64_t frame_13_time = (zx::sec(-13).to_nsecs()) / k48k2ChanFloatFormat.frames_per_second();
   auto frame_13_frac_frames =
       FractionalFrames<int64_t>::FromRaw(ref_clock_to_output_frac_frame.Apply(frame_13_time))
           .Absolute();
@@ -214,12 +221,12 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
 }
 
 TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
-  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat);
+  auto stream = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat);
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
   stream->timeline_function()->Update(TimelineFunction(
-      TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<int64_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
   test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
@@ -240,7 +247,8 @@ TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
   auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
 
   // Check our initial lead time is only the effect delay.
-  auto effect_lead_time = zx::duration(zx::sec(13).to_nsecs() / kDefaultFormat.frames_per_second());
+  auto effect_lead_time =
+      zx::duration(zx::sec(13).to_nsecs() / k48k2ChanFloatFormat.frames_per_second());
   EXPECT_EQ(effect_lead_time, effects_stage->GetMinLeadTime());
 
   // Check that setting an external min lead time includes our internal lead time.
@@ -254,15 +262,15 @@ static const std::string kInitialConfig = "different size than kConfig";
 static const std::string kConfig = "config";
 
 TEST_F(EffectsStageTest, UpdateEffect) {
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
 
   auto stream = std::make_shared<PacketQueue>(
-      kDefaultFormat, timeline_function,
+      k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
@@ -301,14 +309,14 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
       .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
       .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
-      kDefaultFormat, timeline_function,
+      k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create the effects stage.
@@ -362,14 +370,14 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
 
 TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
-      kDefaultFormat, timeline_function,
+      k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
@@ -404,14 +412,14 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
 
 TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
-      kDefaultFormat, timeline_function,
+      k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
 
   // Create a simple effects stage.
@@ -456,10 +464,10 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
 
   // Set timeline rate to match our format.
   auto timeline_function = TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
                    zx::sec(1).to_nsecs()));
 
-  auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, PAGE_SIZE);
+  auto input = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, PAGE_SIZE);
   input->timeline_function()->Update(timeline_function);
 
   // Create a simple effects stage.
@@ -527,6 +535,243 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
     first_frame = buf->end().Floor();
   }
 }
+
+TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
+  testing::PacketFactory packet_factory{dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE};
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+  auto stream = std::make_shared<PacketQueue>(
+      k48k2ChanFloatFormat, timeline_function,
+      AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
+
+  static const uint32_t kBlockSize = 48;
+  static const uint32_t kRingOutBlocks = 4;
+  static const uint32_t kRingOutFrames = kBlockSize * kRingOutBlocks;
+  test_effects_.AddEffect("effect")
+      .WithRingOutFrames(kRingOutFrames)
+      .WithBlockSize(kBlockSize)
+      .WithMaxFramesPerBuffer(kBlockSize);
+
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "effect",
+      .instance_name = "",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
+  EXPECT_EQ(2u, effects_stage->format().channels());
+
+  // Add 48 frames to our source.
+  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(1)));
+
+  // Effects stage doesn't directly depend on this value, but is passed through to the source
+  // stream. Pick a value that is in the future of all the frames we need.
+  const zx::time kStreamTime = zx::time(0) + zx::msec(100);
+
+  {  // Read the frames out.
+    auto buf = effects_stage->ReadLock(kStreamTime, 0, 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(0u, buf->start().Floor());
+    EXPECT_EQ(48u, buf->length().Floor());
+  }
+
+  // Now we expect 3 buffers of ringout; Read the first.
+  {
+    auto buf = effects_stage->ReadLock(kStreamTime, 1 * kBlockSize, kBlockSize);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(kBlockSize, buf->start().Floor());
+    EXPECT_EQ(kBlockSize, buf->length().Floor());
+  }
+
+  // Now skip the second and try to read the 3rd. This is discontinuous and should not return any
+  // data.
+  //
+  // The skipped buffer:
+  //     buf = effects_stage->ReadLock(kStreamTime, 2 * kBlockSize, kBlockSize);
+  {
+    auto buf = effects_stage->ReadLock(kStreamTime, 3 * kBlockSize, kBlockSize);
+    ASSERT_FALSE(buf);
+  }
+
+  // Now read the 4th packet. Since we had a previous discontinuous buffer, this is still silent.
+  {
+    auto buf = effects_stage->ReadLock(kStreamTime, 4 * kBlockSize, kBlockSize);
+    ASSERT_FALSE(buf);
+  }
+}
+
+struct RingOutTestParameters {
+  Format format;
+  uint32_t effect_ring_out_frames;
+  uint32_t effect_block_size;
+  uint32_t effect_max_frames_per_buffer;
+  // The expected number of frames in the ring-out buffers.
+  uint32_t ring_out_block_frames;
+};
+
+class EffectsStageRingoutTest : public EffectsStageTest,
+                                public ::testing::WithParamInterface<RingOutTestParameters> {
+ protected:
+  void SetUp() override {
+    auto timeline_function =
+        fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+            FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
+            zx::sec(1).to_nsecs())));
+    stream_ = std::make_shared<PacketQueue>(
+        k48k2ChanFloatFormat, timeline_function,
+        AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
+  }
+
+  testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE};
+  std::shared_ptr<PacketQueue> stream_;
+};
+
+TEST_P(EffectsStageRingoutTest, RingoutBuffer) {
+  auto ringout_buffer = EffectsStage::RingoutBuffer::Create(
+      GetParam().format, GetParam().effect_ring_out_frames, GetParam().effect_max_frames_per_buffer,
+      GetParam().effect_block_size);
+
+  EXPECT_EQ(GetParam().ring_out_block_frames, ringout_buffer.buffer_frames);
+  EXPECT_EQ(GetParam().effect_ring_out_frames, ringout_buffer.total_frames);
+
+  if (GetParam().effect_ring_out_frames) {
+    EXPECT_EQ(GetParam().format.channels() * GetParam().ring_out_block_frames,
+              ringout_buffer.buffer.size());
+  } else {
+    EXPECT_EQ(0u, ringout_buffer.buffer.size());
+  }
+
+  if (GetParam().effect_block_size && GetParam().ring_out_block_frames) {
+    EXPECT_EQ(0u, ringout_buffer.buffer_frames % GetParam().ring_out_block_frames);
+  }
+}
+
+TEST_P(EffectsStageRingoutTest, RingoutFrames) {
+  test_effects_.AddEffect("effect")
+      .WithRingOutFrames(GetParam().effect_ring_out_frames)
+      .WithBlockSize(GetParam().effect_block_size)
+      .WithMaxFramesPerBuffer(GetParam().effect_max_frames_per_buffer);
+
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "effect",
+      .instance_name = "",
+      .effect_config = "",
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream_, volume_curve_);
+  EXPECT_EQ(2u, effects_stage->format().channels());
+
+  // Add 48 frames to our source.
+  stream_->PushPacket(packet_factory_.CreatePacket(1.0, zx::msec(1)));
+
+  // Effects stage doesn't directly depend on this value, but is passed through to the source
+  // stream. Pick a value that is in the future of all the frames we need.
+  const zx::time kStreamTime = zx::time(0) + zx::msec(100);
+
+  {  // Read the frames out.
+    auto buf = effects_stage->ReadLock(kStreamTime, 0, 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(0u, buf->start().Floor());
+    EXPECT_EQ(48u, buf->length().Floor());
+  }
+
+  // Now we expect our ringout to be split across many buffers.
+  int64_t start_frame = 48;
+  uint32_t ringout_frames = 0;
+  {
+    while (ringout_frames < GetParam().effect_ring_out_frames) {
+      auto buf =
+          effects_stage->ReadLock(kStreamTime, start_frame, GetParam().effect_ring_out_frames);
+      ASSERT_TRUE(buf);
+      EXPECT_EQ(start_frame, buf->start().Floor());
+      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length().Floor());
+      start_frame += GetParam().ring_out_block_frames;
+      ringout_frames += GetParam().ring_out_block_frames;
+    }
+  }
+
+  {
+    auto buf = effects_stage->ReadLock(kStreamTime, start_frame, 480);
+    EXPECT_FALSE(buf);
+  }
+
+  // Add another data packet to verify we correctly reset the ringout when the source goes silent
+  // again.
+  start_frame += 480;
+  packet_factory_.SeekToFrame(start_frame);
+  stream_->PushPacket(packet_factory_.CreatePacket(1.0, zx::msec(1)));
+
+  {  // Read the frames out.
+    zx::time buffer_time(stream_->format().frames_per_ns().Inverse().Scale(start_frame));
+    auto buf = effects_stage->ReadLock(buffer_time, start_frame, 48);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(start_frame, buf->start().Floor());
+    EXPECT_EQ(48u, buf->length().Floor());
+    start_frame += buf->length().Floor();
+  }
+
+  // Now we expect our ringout to be split across many buffers.
+  ringout_frames = 0;
+  {
+    while (ringout_frames < GetParam().effect_ring_out_frames) {
+      zx::time buffer_time(stream_->format().frames_per_ns().Inverse().Scale(start_frame));
+      auto buf =
+          effects_stage->ReadLock(buffer_time, start_frame, GetParam().effect_ring_out_frames);
+      ASSERT_TRUE(buf);
+      EXPECT_EQ(start_frame, buf->start().Floor());
+      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length().Floor());
+      start_frame += GetParam().ring_out_block_frames;
+      ringout_frames += GetParam().ring_out_block_frames;
+    }
+  }
+
+  {
+    auto buf = effects_stage->ReadLock(zx::time(0) + zx::msec(10), 48, 480);
+    EXPECT_FALSE(buf);
+  }
+}
+
+const RingOutTestParameters kNoRingout{
+    .format = k48k2ChanFloatFormat,
+    .effect_ring_out_frames = 0,
+    .effect_block_size = 1,
+    .effect_max_frames_per_buffer = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
+    .ring_out_block_frames = 0,
+};
+
+const RingOutTestParameters kSmallRingOutNoBlockSize{
+    .format = k48k2ChanFloatFormat,
+    .effect_ring_out_frames = 4,
+    .effect_block_size = 1,
+    .effect_max_frames_per_buffer = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
+    // Should be a single block
+    .ring_out_block_frames = 4,
+};
+
+const RingOutTestParameters kLargeRingOutNoBlockSize{
+    .format = k48k2ChanFloatFormat,
+    .effect_ring_out_frames = 8192,
+    .effect_block_size = 1,
+    .effect_max_frames_per_buffer = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
+    // Matches |kTargetRingoutBufferFrames| in effects_stage.cc
+    .ring_out_block_frames = 240,
+};
+
+const RingOutTestParameters kMaxFramesPerBufferLowerThanRingOutFrames{
+    .format = k48k2ChanFloatFormat,
+    .effect_ring_out_frames = 8192,
+    .effect_block_size = 1,
+    .effect_max_frames_per_buffer = 128,
+    .ring_out_block_frames = 128,
+};
+
+INSTANTIATE_TEST_SUITE_P(EffectsStageRingoutTestInstance, EffectsStageRingoutTest,
+                         ::testing::Values(kNoRingout, kSmallRingOutNoBlockSize,
+                                           kLargeRingOutNoBlockSize,
+                                           kMaxFramesPerBufferLowerThanRingOutFrames));
 
 }  // namespace
 }  // namespace media::audio

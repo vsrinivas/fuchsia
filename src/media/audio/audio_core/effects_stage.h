@@ -19,6 +19,16 @@ namespace media::audio {
 // |ReadableStream|, and then running a set of audio 'effects' on those frames.
 class EffectsStage : public ReadableStream {
  public:
+  struct RingoutBuffer {
+    static RingoutBuffer Create(const Format& format, const EffectsProcessor& processor);
+    static RingoutBuffer Create(const Format& format, uint32_t ringout_frames,
+                                uint32_t max_batch_size, uint32_t block_size);
+
+    const uint32_t total_frames = 0;
+    const uint32_t buffer_frames = 0;
+    std::vector<float> buffer;
+  };
+
   static std::shared_ptr<EffectsStage> Create(const std::vector<PipelineConfig::Effect>& effects,
                                               std::shared_ptr<ReadableStream> source,
                                               VolumeCurve volume_curve);
@@ -59,6 +69,10 @@ class EffectsStage : public ReadableStream {
   std::unique_ptr<EffectsProcessor> effects_processor_;
   std::optional<ReadableStream::Buffer> current_block_;
   VolumeCurve volume_curve_;
+
+  uint32_t ringout_frames_sent_ = 0;
+  int64_t next_ringout_frame_ = 0;
+  RingoutBuffer ringout_;
 };
 
 }  // namespace media::audio
