@@ -182,7 +182,6 @@ pub fn create_auth_conf(
             peer_sta_address: bssid,
             auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
             result_code,
-            auth_content: None,
         },
     }
 }

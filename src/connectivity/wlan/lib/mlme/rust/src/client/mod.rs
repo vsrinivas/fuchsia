@@ -805,7 +805,6 @@ impl<'a> BoundClient<'a> {
                 peer_sta_address: self.sta.bssid.0,
                 auth_type,
                 result_code,
-                auth_content: None,
             })
         });
         if let Err(e) = result {

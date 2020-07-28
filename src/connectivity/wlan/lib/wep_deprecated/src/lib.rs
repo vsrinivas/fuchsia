@@ -87,7 +87,6 @@ pub fn make_mlme_authenticate_request(
         peer_sta_address: bssid,
         auth_type: fidl_mlme::AuthenticationTypes::SharedKey,
         auth_failure_timeout: timeout,
-        auth_content: None,
     }
 }
 
@@ -165,7 +164,6 @@ mod tests {
             peer_sta_address: [4; 6],
             auth_type: fidl_mlme::AuthenticationTypes::SharedKey,
             auth_failure_timeout: 5,
-            auth_content: None,
         };
         assert_eq!(actual, expected);
     }

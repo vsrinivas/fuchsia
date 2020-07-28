@@ -217,7 +217,6 @@ struct AuthenticateRequest {
     array<uint8>:6 peer_sta_address;
     AuthenticationTypes auth_type;
     uint32 auth_failure_timeout;
-    bytes? auth_content;
 
     // etc
 };
@@ -238,7 +237,6 @@ struct AuthenticateConfirm {
     array<uint8>:6 peer_sta_address;
     AuthenticationTypes auth_type;
     AuthenticateResultCodes result_code;
-    bytes? auth_content;
 
     // etc
 };
