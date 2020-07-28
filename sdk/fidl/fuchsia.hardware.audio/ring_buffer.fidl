@@ -95,7 +95,8 @@ protocol RingBuffer {
         -> (uint32 num_frames, zx.handle:VMO ring_buffer)
         error GetVmoError;
 
-    /// Start the ring buffer.
+    /// Start the ring buffer. The `start_time` value (in the CLOCK_MONOTONIC timeline) indicates
+    /// when position began moving, starting at the beginning of the ring buffer.
     Start() -> (zx.time start_time);
 
     /// Stop the ring buffer. Once this call's response is received, no further position
