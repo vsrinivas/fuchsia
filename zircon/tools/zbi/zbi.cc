@@ -2610,14 +2610,14 @@ int main(int argc, char** argv) {
       exit(1);
     }
   } else {
-    if (!outfile && !extract) {
+    if (!outfile && !extract && !json_output) {
       fprintf(stderr, "no output file\n");
       exit(1);
     }
   }
 
   // Don't merge incoming items when only listing or extracting.
-  const bool merge = !list_contents && !extract;
+  const bool merge = outfile != nullptr;
 
   auto is_bootfs = [](const ItemPtr& item) { return item->type() == ZBI_TYPE_STORAGE_BOOTFS; };
 
@@ -2683,7 +2683,7 @@ int main(int argc, char** argv) {
     items.back()->TakeOwned(std::move(keepalive));
   }
 
-  if (!list_contents && complete_arch != kImageArchUndefined) {
+  if (outfile && complete_arch != kImageArchUndefined) {
     // The only hard requirement is that the kernel be first.
     // But it seems most orderly to put the BOOTFS second,
     // other storage in the middle, and CMDLINE last.
@@ -2728,7 +2728,9 @@ int main(int argc, char** argv) {
     fclose(f);
   }
 
-  if (list_contents || verbose || extract) {
+  if (outfile) {
+    Item::WriteZBI(&writer, "boot.zbi", items);
+  } else if (list_contents || verbose || extract) {
     if (list_contents || verbose) {
       const char* incomplete = IncompleteImage(items, complete_arch);
       if (incomplete) {
@@ -2776,8 +2778,6 @@ int main(int argc, char** argv) {
     if (status) {
       exit(status);
     }
-  } else {
-    Item::WriteZBI(&writer, "boot.zbi", items);
   }
 
   name_matcher.Summary(extract ? "extracted" : "matched",
