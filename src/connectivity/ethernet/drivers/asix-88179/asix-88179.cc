@@ -954,7 +954,7 @@ zx_status_t Asix88179Ethernet::Initialize() {
   }
   */
 
-  status = DdkAdd("ax88179", DEVICE_ADD_INVISIBLE);
+  status = DdkAdd("ax88179");
   if (status != ZX_OK) {
     zxlogf(ERROR, "ax88179: failed to create device: %d", status);
     Shutdown();
