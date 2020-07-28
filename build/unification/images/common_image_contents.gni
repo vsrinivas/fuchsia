@@ -152,7 +152,6 @@ common_image_contents = [
   "//src/devices/spi/drivers/spi",
   "//src/devices/sysmem/drivers/sysmem",
   "//src/devices/tee/drivers/optee",
-  "//src/devices/temperature/drivers/tmp112",
   "//src/devices/thermal/bin/thermal-cli",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",
   "//src/devices/thermal/drivers/aml-thermal-s912",
