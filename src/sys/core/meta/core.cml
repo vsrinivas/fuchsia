@@ -200,7 +200,10 @@
             // is the v1 root hub.
             directory: "/hub",
             from: "parent",
-            to: [ "#remote-control" ],
+            to: [
+                "#appmgr",
+                "#remote-control",
+            ],
         },
 
         // Offer core events to appmgr for routing to the archivist

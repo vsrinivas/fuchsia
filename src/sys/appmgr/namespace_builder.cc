@@ -141,6 +141,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
       PushDirectoryFromPath("/pkgfs");
       PushDirectoryFromPath("/system");
       PushDirectoryFromPath("/tmp");
+      PushDirectoryFromPath("/hub-v2");
     } else if (feature == "shell-commands") {
       PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
     } else if (feature == "vulkan") {

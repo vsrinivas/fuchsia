@@ -37,6 +37,11 @@
             directory: "/tmp",
             rights: [ "rw*" ],
         },
+        {
+            directory: "/hub",
+            as: "/hub-v2",
+            rights: [ "r*" ],
+        },
 
         // Services used by appmgr with the svc_for_sys prefix are passed through to
         // the sys realm
