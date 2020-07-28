@@ -335,7 +335,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                                 RecoveryViewAssistant::execute_reset(view_key, local_app_context)
                                     .await;
                             };
-                            fasync::spawn_local(f);
+                            fasync::Task::local(f).detach();
                         }
                     };
                 }
