@@ -4,7 +4,6 @@
 
 import("//build/compiled_action.gni")
 import("//build/config.gni")
-import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zircon_images.gni")
 import("//build/images/bootfs_manifest_additions.gni")
@@ -16,6 +15,11 @@ import("//build/images/ta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
+import("//build/unification/future/images/devmgr_config.gni")
+import("//build/unification/images/common_image_contents.gni")
+import("//build/unification/zbi/generated_resource.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
+import("//build/unification/zbi/zbi_input.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
 # Assembles a Fuchsia system.
@@ -276,6 +280,18 @@ template("assemble_system") {
     ]
   }
 
+  zbi_input("${image_name}_fvm.blk_ramdisk") {
+    testonly = true
+
+    type = "ramdisk"
+
+    # Use data_deps and not deps so that the contents of the fvm don't get
+    # included in the dependent zbi.
+    data_deps = [ ":${image_name}_fvm.blk" ]
+
+    sources = [ "$target_out_dir/${image_name}_fvm.blk" ]
+  }
+
   action("${image_name}_devmgr_config.txt") {
     visibility = [ ":*" ]
     testonly = true
@@ -344,19 +360,45 @@ template("assemble_system") {
     ]
   }
 
-  generated_file("${image_name}_zxcrypt_config.txt") {
-    outputs = [ "$target_out_dir/$target_name" ]
+  devmgr_config("${image_name}_devmgr_config") {
+    label = ":${image_name}_devmgr_config.txt"
+    testonly = true
+  }
+
+  generated_resource("${image_name}_zxcrypt_config") {
+    outputs = [ "config/zxcrypt" ]
     contents = zxcrypt_key_source
   }
 
-  additional_manifests = []
-  foreach(label, bootfs_manifest_additions) {
-    target_dir = get_label_info(label, "target_out_dir")
-    target_name = get_label_info(label, "name")
-    additional_manifests += [ target_dir + "/" + target_name ]
+  zbi_input("${image_name}_cmdline") {
+    type = "cmdline"
+    args = []
+    if (defined(invoker.cmdline)) {
+      foreach(arg, invoker.cmdline) {
+        args += [ "--entry=$arg" ]
+      }
+    }
+    if (defined(invoker.cmdline_inputs)) {
+      sources = invoker.cmdline_inputs
+    }
   }
 
-  zbi(image_name) {
+  ta_deps = []
+  if (defined(invoker.ta_uuids)) {
+    foreach(ta_uuid, invoker.ta_uuids) {
+      resource("${image_name}_ta_$ta_uuid") {
+        sources = [ "${ta_path}/${ta_uuid}${ta_src_suffix}" ]
+        outputs = [ "lib/firmware/${ta_uuid}${ta_dest_suffix}" ]
+      }
+
+      ta_deps += [ ":${image_name}_ta_$ta_uuid" ]
+    }
+  }
+  group("${image_name}_ta") {
+    deps = ta_deps
+  }
+
+  migrated_zbi(image_name) {
     metadata = {
       # We insert a package barrier because the packages inside this ZBI
       # shouldn't leak to targets that depend on the ZBI. For example,
@@ -365,13 +407,13 @@ template("assemble_system") {
       # the packages from the ZBI into its own package list.
       package_barrier = []
       config_package_barrier = []
+      distribution_entries_barrier = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
     }
 
-    output_dir = target_out_dir
     if (defined(invoker.output_dir)) {
       output_dir = invoker.output_dir
     }
@@ -380,47 +422,22 @@ template("assemble_system") {
 
     forward_variables_from(invoker,
                            [
-                             "cmdline",
-                             "cmdline_inputs",
                              "testonly",
                              "visibility",
                            ])
 
     testonly = true
     deps = [
-             ":${image_name}_devmgr_config.txt",
-             ":${image_name}_fvm.blk",
+             ":${image_name}_cmdline",
+             ":${image_name}_devmgr_config",
              ":${image_name}_system_image.manifest",
-             ":${image_name}_zxcrypt_config.txt",
-           ] + bootfs_manifest_additions
-    inputs = [
-               boot_manifest,
-               zircon_kernel_zbi,
-             ] + additional_manifests
-    manifest = [
-      {
-        outputs = [ "config/devmgr" ]
-        sources = get_target_outputs(":${image_name}_devmgr_config.txt")
-      },
-      {
-        outputs = [ "config/zxcrypt" ]
-        sources = get_target_outputs(":${image_name}_zxcrypt_config.txt")
-      },
-    ]
-
-    if (defined(invoker.ta_uuids)) {
-      foreach(ta_uuid, invoker.ta_uuids) {
-        manifest += [
-          {
-            outputs = [ "lib/firmware/$ta_uuid$ta_dest_suffix" ]
-            sources = [ rebase_path("$ta_path/$ta_uuid$ta_src_suffix") ]
-          },
-        ]
-      }
-    }
+             ":${image_name}_zxcrypt_config",
+             ":${image_name}_ta",
+             "//build/unification/zbi:kernel",
+           ] + bootfs_manifest_additions + common_image_contents
 
     if (netboot) {
-      ramdisk_inputs = get_target_outputs(":${image_name}_fvm.blk")
+      deps += [ ":${image_name}_fvm.blk_ramdisk" ]
     }
   }
 }
