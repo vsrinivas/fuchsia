@@ -1643,7 +1643,12 @@ void TakeSnapshot(zx_handle_t diagnostics_dir,
   async::Loop tree_loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(tree_loop.StartThread("inspect-treeptr"));
 
+  // The default dispatcher must be set for inspect::ReadFromTree().
+  // TODO(57223): Pass in a dispatcher to the inspect library instead
+  // of setting the default dispatcher.
+  async_dispatcher_t* old_dispatcher = async_get_default_dispatcher();
   async_set_default_dispatcher(tree_loop.dispatcher());
+
   ASSERT_OK(fdio_service_connect_at(diagnostics_dir, "fuchsia.inspect.Tree",
                                     tree.NewRequest().TakeChannel().release()));
 
@@ -1653,6 +1658,9 @@ void TakeSnapshot(zx_handle_t diagnostics_dir,
   exec.schedule_task(read.then(
       [&](fit::result<inspect::Hierarchy>& res) { hierarchy_or_error = std::move(res); }));
   exec.run();
+
+  // Restore the old dispatcher
+  async_set_default_dispatcher(old_dispatcher);
 }
 
 TEST_F(FdioTest, AllocateIncrementsMetricTest) {
