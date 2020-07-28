@@ -125,6 +125,24 @@ test_package("overnetstack-tests") {
       environments = [ emu_env ]
     },
   ]
+
+  #Use quiche example certs for unit tests
+  resources = [
+    {
+      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.crt")
+      dest = "cert.crt"
+    },
+    {
+      path = rebase_path("//third_party/rust-mirrors/quiche/examples/cert.key")
+      dest = "cert.key"
+    },
+    {
+      path =
+          rebase_path("//third_party/rust-mirrors/quiche/examples/rootca.crt")
+      dest = "root.crt"
+    },
+  ]
+
 }
 
 group("tests") {

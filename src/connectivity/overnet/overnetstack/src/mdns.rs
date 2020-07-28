@@ -88,7 +88,7 @@ fn convert_ipv6_buffer(in_arr: [u8; 16]) -> [u16; 8] {
     let mut out_arr: [u16; 8] = [0; 8];
 
     for i in 0..8 {
-        out_arr[i] = ((in_arr[2 * i] as u16) << 8) | (in_arr[i] as u16);
+        out_arr[i] = ((in_arr[2 * i] as u16) << 8) | (in_arr[2 * i + 1] as u16);
     }
 
     out_arr
@@ -203,3 +203,25 @@ pub async fn subscribe(
 
     Ok(())
 }
+
+// [START test_mod]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_fuchsia_to_rust_ipaddr6() {
+        //test example IPv6 address [fe80::5054:ff:fe40:5763]
+        //fidl_fuchsia_net::Ipv6Address
+        let ipv6_addr = fidl_fuchsia_net::Ipv6Address{
+            addr : [0xff, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x54, 0x00, 0xff, 0xfe, 0x40, 0x57, 0x63]
+        };
+
+        //std::net::IpAddr
+        let net_addr =  std::net::IpAddr::V6(std::net::Ipv6Addr::new(
+            0xff80, 0x0000, 0x0000, 0x0000, 0x5054, 0x00ff, 0xfe40, 0x5763));
+
+        //expected:[fuchsia_to_rust_ipaddr6(ipv6_addr)] == [net_addr]
+        assert_eq!(fuchsia_to_rust_ipaddr6(ipv6_addr), net_addr);
+    }
+}
+// [END test_mod]

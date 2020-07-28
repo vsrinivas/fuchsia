@@ -83,7 +83,7 @@ type UdpLinks = Arc<Mutex<HashMap<SocketAddrV6, LinkReceiver>>>;
 
 fn normalize_addr(addr: SocketAddr) -> SocketAddrV6 {
     match addr {
-        SocketAddr::V6(a) => a,
+        SocketAddr::V6(a) => SocketAddrV6::new(*a.ip(), a.port(), 0, 0),
         SocketAddr::V4(a) => SocketAddrV6::new(a.ip().to_ipv6_mapped(), a.port(), 0, 0),
     }
 }
@@ -293,4 +293,52 @@ async fn main() -> Result<(), Error> {
     })
     .await;
     Ok(())
+}
+
+// [START test_mod]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_udplinks_hashmap() {
+
+        //construct a router node
+        let node = Router::new(
+            RouterOptions::new(),
+            Box::new(SimpleSecurityContext {
+                node_cert: "/pkg/data/cert.crt",
+                node_private_key: "/pkg/data/cert.key",
+                root_cert: "/pkg/data/root.crt",
+            }),
+        ).unwrap();
+
+        //let peer node id=9999 ,udp socket: [fe80::5054:ff:fe40:5763] port 56424
+        //in function register_udp, arg: SocketAddr is construct at function endpoint6_to_socket in mdns.rs
+        let socket_addr = SocketAddr::new(std::net::IpAddr::V6(std::net::Ipv6Addr::new(
+            0xff80, 0x0000, 0x0000, 0x0000, 0x5054, 0x00ff, 0xfe40, 0x5763)), 56424);
+        let node_id =NodeId{0 : 9999};
+
+        //construct a peer link
+        let (_link_sender, link_receiver) = node.new_link(node_id).await.unwrap();
+        let udp_links: UdpLinks = Arc::new(Mutex::new(HashMap::new()));
+        let mut udp_links = udp_links.lock().await;
+        assert_eq!(udp_links.is_empty(), true);
+
+        //insert (addr, link_receiver) hashmap
+        let addr = normalize_addr(socket_addr);
+        udp_links.insert(addr, link_receiver);
+        assert_eq!(udp_links.is_empty(), false);
+
+        //let socket_addr_v6 recv from udp package. flowinfo:0,scope_id:0
+        let socket_addr_v6 = SocketAddrV6::new(std::net::Ipv6Addr::new(
+            0xff80, 0x0000, 0x0000, 0x0000, 0x5054, 0x00ff, 0xfe40, 0x5763), 56424, 0, 0);
+        assert_eq!(udp_links.get(&socket_addr_v6).is_none(), false);
+
+        //let socket_addr_v6 recv from udp package. flowinfo:2,scope_id:0
+        let socket_addr_v6 = SocketAddrV6::new(std::net::Ipv6Addr::new(
+            0xff80, 0x0000, 0x0000, 0x0000, 0x5054, 0x00ff, 0xfe40, 0x5763), 56424, 2, 0);
+        assert_eq!(udp_links.get(&socket_addr_v6).is_none(), true);
+        assert_eq!(udp_links.get(&normalize_addr(SocketAddr::V6(socket_addr_v6))).is_none(), false);
+    }
 }
