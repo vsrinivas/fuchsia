@@ -4,8 +4,6 @@
 
 library fuchsia.input.report;
 
-const uint32 MAX_DEVICE_NAME_LENGTH = 256;
-
 /// DeviceInfo provides more information about the device and lets a client
 /// distinguish between devices (e.g between two touchscreens that come from
 /// different vendors). If the device is a HID device, then the id information
@@ -16,7 +14,6 @@ struct DeviceInfo {
     uint32 vendor_id;
     uint32 product_id;
     uint32 version;
-    string:MAX_DEVICE_NAME_LENGTH name;
 };
 
 /// `DeviceDescriptor` describes a physical input device. Some physical devices may

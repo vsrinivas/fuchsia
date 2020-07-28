@@ -307,12 +307,7 @@ mod tests {
     async fn get_device_descriptor() {
         let (facade, expectations) = MockInputReportBuilder::new()
             .expect_get_descriptor(DeviceDescriptor {
-                device_info: Some(DeviceInfo {
-                    vendor_id: 1,
-                    product_id: 2,
-                    version: 3,
-                    name: "abcd".to_string(),
-                }),
+                device_info: Some(DeviceInfo { vendor_id: 1, product_id: 2, version: 3 }),
                 mouse: None,
                 sensor: Some(SensorDescriptor {
                     input: Some(SensorInputDescriptor {
@@ -428,7 +423,6 @@ mod tests {
                         vendor_id: 1,
                         product_id: 2,
                         version: 3,
-                        name: "abcd".to_string(),
                     }),
                     sensor: Some(SerializableSensorDescriptor {
                         input: Some(SerializableSensorInputDescriptor {

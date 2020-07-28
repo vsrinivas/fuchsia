@@ -67,7 +67,6 @@ pub struct SerializableDeviceInfo {
     pub vendor_id: u32,
     pub product_id: u32,
     pub version: u32,
-    pub name: String,
 }
 
 impl SerializableDeviceInfo {
@@ -76,7 +75,6 @@ impl SerializableDeviceInfo {
             vendor_id: device_info.vendor_id,
             product_id: device_info.product_id,
             version: device_info.version,
-            name: device_info.name.clone(),
         }
     }
 }
