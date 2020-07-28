@@ -65,7 +65,7 @@ class DspChannel {
 
 // Create a new DspChannel backed by real hardware.
 std::unique_ptr<DspChannel> CreateHardwareDspChannel(
-    fbl::String log_prefix, adsp_registers_t* regs,
+    fbl::String log_prefix, MMIO_PTR adsp_registers_t* regs,
     std::optional<std::function<void(NotificationType)>> notification_callback = std::nullopt,
     zx::duration hardware_timeout = DspChannel::kDefaultTimeout);
 

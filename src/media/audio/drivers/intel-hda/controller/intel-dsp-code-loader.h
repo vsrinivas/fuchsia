@@ -20,7 +20,8 @@ namespace intel_hda {
 
 class IntelDspCodeLoader : public fbl::RefCounted<IntelDspCodeLoader> {
  public:
-  IntelDspCodeLoader(adsp_code_loader_registers_t* regs, const fbl::RefPtr<RefCountedBti>& pci_bti);
+  IntelDspCodeLoader(MMIO_PTR adsp_code_loader_registers_t* regs,
+                     const fbl::RefPtr<RefCountedBti>& pci_bti);
   ~IntelDspCodeLoader();
 
   // Hardware allows buffer descriptor lists (BDLs) to be up to 256
@@ -46,7 +47,7 @@ class IntelDspCodeLoader : public fbl::RefCounted<IntelDspCodeLoader> {
   fzl::PinnedVmo bdl_dsp_mem_;
 
   // Registers
-  adsp_code_loader_registers_t* regs_ = nullptr;
+  MMIO_PTR adsp_code_loader_registers_t* regs_ = nullptr;
 
   // A reference to our controller's BTI. We will need this to grant the controller
   // access to the BDLs and memory holding the DSP firmware.

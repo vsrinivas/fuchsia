@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-protocol/pci.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <limits.h>
 #include <zircon/errors.h>
@@ -53,7 +54,7 @@ zx_status_t IntelHDAController::ResetControllerHW() {
     unsigned int total_stream_cnt =
         HDA_REG_GCAP_ISS(gcap) + HDA_REG_GCAP_OSS(gcap) + HDA_REG_GCAP_BSS(gcap);
 
-    if (total_stream_cnt > countof(regs()->stream_desc)) {
+    if (total_stream_cnt > std::size(regs()->stream_desc)) {
       LOG(ERROR,
           "Fatal error during reset!  Controller reports more streams (%u) "
           "than should be possible for IHDA hardware.  (GCAP = 0x%04hx)\n",
@@ -61,7 +62,7 @@ zx_status_t IntelHDAController::ResetControllerHW() {
       return ZX_ERR_INTERNAL;
     }
 
-    hda_stream_desc_regs_t* sregs = regs()->stream_desc;
+    MMIO_PTR hda_stream_desc_regs_t* sregs = regs()->stream_desc;
     for (uint32_t i = 0; i < total_stream_cnt; ++i) {
       IntelHDAStream::Reset(sregs + i);
     }
@@ -146,7 +147,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   }
 
   ZX_DEBUG_ASSERT(irq_ != nullptr);
-  ZX_DEBUG_ASSERT(mapped_regs_.start() == nullptr);
+  ZX_DEBUG_ASSERT(!mapped_regs_.has_value());
   ZX_DEBUG_ASSERT(pci_.ops == nullptr);
 
   pci_dev_ = pci_dev;
@@ -158,10 +159,12 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     return res;
   }
 
+  ddk::Pci pci(pci_);
+
   // Fetch our device info and use it to re-generate our debug tag once we
   // know our BDF address.
   ZX_DEBUG_ASSERT(pci_.ops != nullptr);
-  res = pci_get_device_info(&pci_, &pci_dev_info_);
+  res = pci.GetDeviceInfo(&pci_dev_info_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch basic PCI device info! (res %d)\n", res);
     return res;
@@ -174,7 +177,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   // counted object (so we can manage the lifecycle as we share the handle
   // with various pinned VMOs we need to grant the controller BTI access to).
   zx::bti pci_bti;
-  res = pci_get_bti(&pci_, 0, pci_bti.reset_and_get_address());
+  res = pci.GetBti(0, &pci_bti);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to get BTI handle for IHDA Controller (res %d)\n", res);
     return res;
@@ -186,45 +189,22 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Fetch the BAR which holds our main registers, then sanity check the type
-  // and size.
-  zx_pci_bar_t bar_info;
-  res = pci_get_bar(&pci_, 0u, &bar_info);
+  // Fetch the BAR which holds our main registers.
+  std::optional<ddk::MmioBuffer> mmio;
+  res = pci.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {
-    LOG(ERROR, "Error attempting to fetch registers from PCI (res %d)\n", res);
+    LOG(ERROR, "Failed to fetch and map registers from PCI (res %d)\n", res);
     return res;
-  }
-
-  if (bar_info.type != ZX_PCI_BAR_TYPE_MMIO) {
-    LOG(ERROR, "Bad register window type (expected %u got %u)\n", ZX_PCI_BAR_TYPE_MMIO,
-        bar_info.type);
-    return ZX_ERR_INTERNAL;
   }
 
   // We should have a valid handle now, make sure we don't leak it.
-  zx::vmo bar_vmo(bar_info.handle);
-  if (bar_info.size != sizeof(hda_all_registers_t)) {
+  if (mmio->get_size() < sizeof(hda_all_registers_t)) {
     LOG(ERROR, "Bad register window size (expected 0x%zx got 0x%zx)\n", sizeof(hda_all_registers_t),
-        bar_info.size);
+        mmio->get_size());
     return ZX_ERR_INTERNAL;
   }
 
-  // Since this VMO provides access to our registers, make sure to set the
-  // cache policy to UNCACHED_DEVICE
-  res = bar_vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
-  if (res != ZX_OK) {
-    LOG(ERROR, "Error attempting to set cache policy for PCI registers (res %d)\n", res);
-    return res;
-  }
-
-  // Map the VMO in, make sure to put it in the same VMAR as the rest of our
-  // registers.
-  constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  res = mapped_regs_.Map(bar_vmo, 0, bar_info.size, CPU_MAP_FLAGS, vmar_manager_);
-  if (res != ZX_OK) {
-    LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
-    return res;
-  }
+  mapped_regs_ = std::move(mmio);
 
   return ZX_OK;
 }
@@ -288,12 +268,13 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
   bidir_stream_cnt = HDA_REG_GCAP_BSS(gcap);
   total_stream_cnt = input_stream_cnt + output_stream_cnt + bidir_stream_cnt;
 
-  static_assert(MAX_STREAMS_PER_CONTROLLER == countof(regs()->stream_desc),
+  using RegType = decltype(IntelHDAController::regs());
+  static_assert(MAX_STREAMS_PER_CONTROLLER == countof(RegType()->stream_desc),
                 "Max stream count mismatch!");
 
-  if (!total_stream_cnt || (total_stream_cnt > countof(regs()->stream_desc))) {
+  if (!total_stream_cnt || (total_stream_cnt > countof(RegType()->stream_desc))) {
     LOG(ERROR, "Invalid stream counts in GCAP register (In %u Out %u Bidir %u; Max %zu)\n",
-        input_stream_cnt, output_stream_cnt, bidir_stream_cnt, countof(regs()->stream_desc));
+        input_stream_cnt, output_stream_cnt, bidir_stream_cnt, countof(RegType()->stream_desc));
     return ZX_ERR_INTERNAL;
   }
 
@@ -312,7 +293,7 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
       return ZX_ERR_NO_MEMORY;
     }
 
-    ZX_DEBUG_ASSERT(i < countof(all_streams_));
+    ZX_DEBUG_ASSERT(i < std::size(all_streams_));
     ZX_DEBUG_ASSERT(all_streams_[i] == nullptr);
     all_streams_[i] = stream;
     ReturnStreamLocked(std::move(stream));
@@ -321,7 +302,7 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
   return ZX_OK;
 }
 
-zx_status_t IntelHDAController::SetupCommandBufferSize(uint8_t* size_reg,
+zx_status_t IntelHDAController::SetupCommandBufferSize(MMIO_PTR uint8_t* size_reg,
                                                        unsigned int* entry_count) {
   // Note: this method takes advantage of the fact that the TX and RX ring
   // buffer size register bitfield definitions are identical.
@@ -492,19 +473,19 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
   // Look for the processing pipe capability structure. Existence of this
   // structure means the Audio DSP is supported by the HW.
   uint32_t offset = REG_RD(&regs()->llch);
-  if ((offset == 0) || (offset >= mapped_regs_.size())) {
+  if ((offset == 0) || (offset >= mapped_regs_->get_size())) {
     LOG(DEBUG, "Invalid LLCH offset to capability structures: 0x%08x\n", offset);
     return ZX_ERR_INTERNAL;
   }
 
-  hda_pp_registers_t* pp_regs = nullptr;
-  hda_pp_registers_t* found_regs = nullptr;
-  uint8_t* regs_ptr = nullptr;
+  MMIO_PTR hda_pp_registers_t* pp_regs = nullptr;
+  MMIO_PTR hda_pp_registers_t* found_regs = nullptr;
+  MMIO_PTR uint8_t* regs_ptr = nullptr;
   unsigned int count = 0;
   uint32_t cap;
   do {
-    regs_ptr = reinterpret_cast<uint8_t*>(regs()) + offset;
-    pp_regs = reinterpret_cast<hda_pp_registers_t*>(regs_ptr);
+    regs_ptr = reinterpret_cast<MMIO_PTR uint8_t*>(regs()) + offset;
+    pp_regs = reinterpret_cast<MMIO_PTR hda_pp_registers_t*>(regs_ptr);
     cap = REG_RD(&pp_regs->ppch);
     if ((cap & HDA_CAP_ID_MASK) == HDA_CAP_PP_ID) {
       found_regs = pp_regs;

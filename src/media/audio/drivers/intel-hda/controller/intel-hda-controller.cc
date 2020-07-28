@@ -77,7 +77,7 @@ IntelHDAController::~IntelHDAController() {
   // TODO(johngro) : place the device into reset.
 
   // Release our register window.
-  mapped_regs_.Unmap();
+  mapped_regs_.reset();
 
   // Release our IRQ.
   irq_.reset();

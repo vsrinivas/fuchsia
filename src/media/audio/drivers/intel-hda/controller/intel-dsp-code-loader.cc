@@ -39,7 +39,7 @@ void IntelDspCodeLoader::DumpRegisters() {
   LOG(INFO, "   SPIB=0x%08x\n", REG_RD(&regs_->spib));
 }
 
-IntelDspCodeLoader::IntelDspCodeLoader(adsp_code_loader_registers_t* regs,
+IntelDspCodeLoader::IntelDspCodeLoader(MMIO_PTR adsp_code_loader_registers_t* regs,
                                        const fbl::RefPtr<RefCountedBti>& pci_bti)
     : regs_(regs), pci_bti_(pci_bti) {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP Code Loader");

@@ -83,17 +83,17 @@ zx_status_t IntelHDAController::SnapshotRegs(dispatcher::Channel* channel,
       HDA_REG_GCAP_ISS(gcap) + HDA_REG_GCAP_OSS(gcap) + HDA_REG_GCAP_BSS(gcap);
 
   for (unsigned int i = 0; i < stream_cnt; ++i) {
-    auto& sin = regs()->stream_desc[i];
+    MMIO_PTR auto* sin = &regs()->stream_desc[i];
     auto& sout = out_regs.stream_desc[i];
 
-    sout.ctl_sts.w = REG_RD(&sin.ctl_sts.w);
-    sout.lpib = REG_RD(&sin.lpib);
-    sout.cbl = REG_RD(&sin.cbl);
-    sout.lvi = REG_RD(&sin.lvi);
-    sout.fifod = REG_RD(&sin.fifod);
-    sout.fmt = REG_RD(&sin.fmt);
-    sout.bdpl = REG_RD(&sin.bdpl);
-    sout.bdpu = REG_RD(&sin.bdpu);
+    sout.ctl_sts.w = REG_RD(&sin->ctl_sts.w);
+    sout.lpib = REG_RD(&sin->lpib);
+    sout.cbl = REG_RD(&sin->cbl);
+    sout.lvi = REG_RD(&sin->lvi);
+    sout.fifod = REG_RD(&sin->fifod);
+    sout.fmt = REG_RD(&sin->fmt);
+    sout.bdpl = REG_RD(&sin->bdpl);
+    sout.bdpu = REG_RD(&sin->bdpu);
   }
 
   return channel->Write(&snapshot_regs_buffer, sizeof(snapshot_regs_buffer));

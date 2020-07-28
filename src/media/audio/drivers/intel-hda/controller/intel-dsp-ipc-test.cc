@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <ddk/debug.h>
+#include <mmio-ptr/fake.h>
 #include <zxtest/zxtest.h>
 
 #include "debug-logging.h"
@@ -72,7 +73,7 @@ void WaitForCond(F cond) {
 }
 
 // Simulate the hardware sending an IPC reply, and firing an interrupt.
-void SendReply(DspChannel* dsp, adsp_registers_t* regs, const IpcMessage& reply) {
+void SendReply(DspChannel* dsp, MMIO_PTR adsp_registers_t* regs, const IpcMessage& reply) {
   // Send the reply.
   REG_WR(&regs->hipct, reply.primary | ADSP_REG_HIPCT_BUSY | (1 << IPC_PRI_RSP_SHIFT));
   REG_WR(&regs->hipcte, reply.extension);
@@ -81,7 +82,7 @@ void SendReply(DspChannel* dsp, adsp_registers_t* regs, const IpcMessage& reply)
 }
 
 // Simulate the hardware sending an IPC notification, and firing an interrupt.
-void SendNotification(DspChannel* dsp, adsp_registers_t* regs, NotificationType type) {
+void SendNotification(DspChannel* dsp, MMIO_PTR adsp_registers_t* regs, NotificationType type) {
   REG_WR(&regs->hipct, static_cast<uint8_t>(MsgTarget::FW_GEN_MSG) << IPC_PRI_MSG_TGT_SHIFT |
                            static_cast<uint8_t>(MsgDir::MSG_NOTIFICATION) << IPC_PRI_RSP_SHIFT |
                            static_cast<uint8_t>(GlobalType::NOTIFICATION) << IPC_PRI_TYPE_SHIFT |
@@ -93,7 +94,7 @@ void SendNotification(DspChannel* dsp, adsp_registers_t* regs, NotificationType 
 }
 
 // Poll the IPC-related registers until a message is sent by the driver.
-IpcMessage ReadMessage(adsp_registers_t* regs) {
+IpcMessage ReadMessage(MMIO_PTR adsp_registers_t* regs) {
   // Wait for a message.
   WaitForCond([&]() { return (REG_RD(&regs->hipci) & ADSP_REG_HIPCI_BUSY) != 0; });
 
@@ -109,14 +110,14 @@ IpcMessage ReadMessage(adsp_registers_t* regs) {
 
 TEST(Ipc, ConstructDestruct) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 }
 
 TEST(Ipc, SimpleSend) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 
   // Start a thread, give it a chance to run.
   auto worker = Thread([&]() {
@@ -126,7 +127,7 @@ TEST(Ipc, SimpleSend) {
   });
 
   // Simulate the DSP reading the message.
-  IpcMessage message = ReadMessage(&regs);
+  IpcMessage message = ReadMessage(FakeMmioPtr(&regs));
   EXPECT_EQ(message.primary & IPC_PRI_MODULE_ID_MASK, 0xaa);
   EXPECT_EQ(message.extension & IPC_EXT_DATA_OFF_SIZE_MASK, 0x55);
 
@@ -135,13 +136,13 @@ TEST(Ipc, SimpleSend) {
   EXPECT_TRUE(dsp->IsOperationPending());
 
   // Simulate the DSP sending a successful reply.
-  SendReply(dsp.get(), &regs, IpcMessage(0, 0));
+  SendReply(dsp.get(), FakeMmioPtr(&regs), IpcMessage(0, 0));
 }
 
 TEST(Ipc, ErrorReply) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 
   // Start a thread.
   auto worker = Thread([&]() {
@@ -151,18 +152,18 @@ TEST(Ipc, ErrorReply) {
   });
 
   // Read (and ignore) the message.
-  (void)ReadMessage(&regs);
+  (void)ReadMessage(FakeMmioPtr(&regs));
 
   // Simulate the DSP sending an error reply, with an arbitrary error code (42).
   //
   // The test will abort if the child thread gets the wrong error code.
-  SendReply(dsp.get(), &regs, IpcMessage(42, 0));
+  SendReply(dsp.get(), FakeMmioPtr(&regs), IpcMessage(42, 0));
 }
 
 TEST(Ipc, HardwareTimeout) {
   adsp_registers_t regs = {};
   std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::usec(1));
+      CreateHardwareDspChannel("UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::usec(1));
 
   // Start a thread.
   auto worker = Thread([&]() {
@@ -177,18 +178,18 @@ TEST(Ipc, HardwareTimeout) {
 
 TEST(Ipc, UnsolicitedReply) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 
   // Ensuring sending a reply and an IRQ doesn't crash.
-  SendReply(dsp.get(), &regs, IpcMessage(42, 0));
+  SendReply(dsp.get(), FakeMmioPtr(&regs), IpcMessage(42, 0));
 }
 
 TEST(Ipc, QueuedMessages) {
   constexpr int kNumThreads = 10;
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 
   // Start many threads, racing to send messages.
   std::array<std::unique_ptr<Thread>, kNumThreads> workers;
@@ -204,17 +205,17 @@ TEST(Ipc, QueuedMessages) {
   // we got all the messages.
   std::unordered_set<int> seen_messages{};
   for (int i = 0; i < kNumThreads; i++) {
-    IpcMessage message = ReadMessage(&regs);
+    IpcMessage message = ReadMessage(FakeMmioPtr(&regs));
     EXPECT_TRUE(seen_messages.find(message.extension) == seen_messages.end());
     seen_messages.insert(message.extension);
-    SendReply(dsp.get(), &regs, IpcMessage(0, 0));
+    SendReply(dsp.get(), FakeMmioPtr(&regs), IpcMessage(0, 0));
   }
 }
 
 TEST(Ipc, ShutdownWithQueuedSend) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
@@ -231,8 +232,8 @@ TEST(Ipc, ShutdownWithQueuedSend) {
 
 TEST(Ipc, DestructWithQueuedThread) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
@@ -249,12 +250,12 @@ TEST(Ipc, DestructWithQueuedThread) {
 
 TEST(Ipc, NotificationNoReceiver) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp =
-      CreateHardwareDspChannel("UnitTests", &regs, std::nullopt, zx::duration::infinite());
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
+      "UnitTests", FakeMmioPtr(&regs), std::nullopt, zx::duration::infinite());
 
   // Ensure notifications without a receiver don't crash.
   for (int i = 0; i < 10; i++) {
-    SendNotification(dsp.get(), &regs, NotificationType::FW_READY);
+    SendNotification(dsp.get(), FakeMmioPtr(&regs), NotificationType::FW_READY);
   }
 }
 
@@ -262,17 +263,17 @@ TEST(Ipc, NotificationReceived) {
   std::optional<NotificationType> received_notification;
   adsp_registers_t regs = {};
   std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel(
-      "UnitTests", &regs, [&](NotificationType type) { received_notification = type; },
+      "UnitTests", FakeMmioPtr(&regs), [&](NotificationType type) { received_notification = type; },
       zx::duration::infinite());
 
   // Ensure a notification is sent and received.
-  SendNotification(dsp.get(), &regs, NotificationType::FW_READY);
+  SendNotification(dsp.get(), FakeMmioPtr(&regs), NotificationType::FW_READY);
   EXPECT_EQ(received_notification, NotificationType::FW_READY);
 }
 
 TEST(Ipc, SendBigData) {
   adsp_registers_t regs = {};
-  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel("UnitTests", &regs);
+  std::unique_ptr<DspChannel> dsp = CreateHardwareDspChannel("UnitTests", FakeMmioPtr(&regs));
 
   // Create a large amount of data.
   std::vector<uint8_t> data;

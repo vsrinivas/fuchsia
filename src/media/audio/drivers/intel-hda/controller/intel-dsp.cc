@@ -4,6 +4,7 @@
 
 #include "intel-dsp.h"
 
+#include <lib/device-protocol/pci.h>
 #include <string.h>
 #include <zircon/errors.h>
 
@@ -47,7 +48,7 @@ struct skl_adspfw_ext_manifest_hdr_t {
   uint32_t entries;
 } __PACKED;
 
-IntelDsp::IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs)
+IntelDsp::IntelDsp(IntelHDAController* controller, MMIO_PTR hda_pp_registers_t* pp_regs)
     : controller_(controller), pp_regs_(pp_regs) {
   const auto& info = controller_->dev_info();
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", info.bus_id, info.dev_id,
@@ -139,13 +140,13 @@ Status IntelDsp::Init(zx_device_t* dsp_dev) {
   return OkStatus();
 }
 
-adsp_registers_t* IntelDsp::regs() const {
-  return reinterpret_cast<adsp_registers_t*>(mapped_regs_.start());
+MMIO_PTR adsp_registers_t* IntelDsp::regs() const {
+  return reinterpret_cast<MMIO_PTR adsp_registers_t*>(mapped_regs_->get());
 }
 
-adsp_fw_registers_t* IntelDsp::fw_regs() const {
-  return reinterpret_cast<adsp_fw_registers_t*>(static_cast<uint8_t*>(mapped_regs_.start()) +
-                                                SKL_ADSP_SRAM0_OFFSET);
+MMIO_PTR adsp_fw_registers_t* IntelDsp::fw_regs() const {
+  return reinterpret_cast<MMIO_PTR adsp_fw_registers_t*>(
+      static_cast<MMIO_PTR uint8_t*>(mapped_regs_->get()) + SKL_ADSP_SRAM0_OFFSET);
 }
 
 zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out) {
@@ -398,37 +399,21 @@ Status IntelDsp::SetupDspDevice() {
   const zx_pcie_device_info_t& hda_dev_info = controller_->dev_info();
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", hda_dev_info.bus_id,
            hda_dev_info.dev_id, hda_dev_info.func_id);
-  // Fetch the bar which holds the Audio DSP registers.
-  zx::vmo bar_vmo;
-  size_t bar_size;
-  zx_status_t res = GetMmio(bar_vmo.reset_and_get_address(), &bar_size);
+  // Fetch the BAR which holds the Audio DSP registers (BAR 4).
+  std::optional<ddk::MmioBuffer> mmio;
+  ddk::Pci pci(*controller_->pci());
+  zx_status_t res = pci.MapMmio(4u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to fetch DSP register VMO (err %u)\n", res);
+    LOG(ERROR, "Failed to fetch and map DSP register (err %u)\n", res);
     return Status(res);
   }
 
-  if (bar_size != sizeof(adsp_registers_t)) {
+  if (mmio->get_size() < sizeof(adsp_registers_t)) {
     LOG(ERROR, "Bad register window size (expected 0x%zx got 0x%zx)\n", sizeof(adsp_registers_t),
-        bar_size);
+        mmio->get_size());
     return Status(res);
   }
-
-  // Since this VMO provides access to our registers, make sure to set the
-  // cache policy to UNCACHED_DEVICE
-  res = bar_vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
-  if (res != ZX_OK) {
-    LOG(ERROR, "Error attempting to set cache policy for PCI registers (res %d)\n", res);
-    return Status(res);
-  }
-
-  // Map the VMO in, make sure to put it in the same VMAR as the rest of our
-  // registers.
-  constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  res = mapped_regs_.Map(bar_vmo, 0, bar_size, CPU_MAP_FLAGS);
-  if (res != ZX_OK) {
-    LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
-    return Status(res);
-  }
+  mapped_regs_ = std::move(mmio);
 
   // Initialize IPC.
   ipc_ = CreateHardwareDspChannel(log_prefix_, regs(),
@@ -767,27 +752,6 @@ void IntelDsp::ProcessIrq() {
   if (ipc_ != nullptr) {
     ipc_->ProcessIrq();
   }
-}
-
-zx_status_t IntelDsp::GetMmio(zx_handle_t* out_vmo, size_t* out_size) {
-  // Fetch the BAR which the Audio DSP registers (BAR 4), then sanity check the type
-  // and size.
-  zx_pci_bar_t bar_info;
-  zx_status_t res = pci_get_bar(controller_->pci(), 4u, &bar_info);
-  if (res != ZX_OK) {
-    LOG(ERROR, "Error attempting to fetch registers from PCI (res %d)\n", res);
-    return res;
-  }
-
-  if (bar_info.type != ZX_PCI_BAR_TYPE_MMIO) {
-    LOG(ERROR, "Bad register window type (expected %u got %u)\n", ZX_PCI_BAR_TYPE_MMIO,
-        bar_info.type);
-    return ZX_ERR_INTERNAL;
-  }
-
-  *out_vmo = bar_info.handle;
-  *out_size = bar_info.size;
-  return ZX_OK;
 }
 
 void IntelDsp::Enable() {

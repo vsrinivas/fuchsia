@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/mmio/mmio.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
@@ -42,7 +43,7 @@ class IntelHDAController;
 
 class IntelDsp : public codecs::IntelHDACodecDriverBase {
  public:
-  IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs);
+  IntelDsp(IntelHDAController* controller, MMIO_PTR hda_pp_registers_t* pp_regs);
   ~IntelDsp();
 
   Status Init(zx_device_t* dsp_dev);
@@ -65,8 +66,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
  private:
   // Accessor for our mapped registers
-  adsp_registers_t* regs() const;
-  adsp_fw_registers_t* fw_regs() const;
+  MMIO_PTR adsp_registers_t* regs() const;
+  MMIO_PTR adsp_fw_registers_t* fw_regs() const;
 
   Status SetupDspDevice();
   Status ParseNhlt();
@@ -93,7 +94,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   void EnableInterrupts();
 
-  zx_status_t GetMmio(zx_handle_t* out_vmo, size_t* out_size);
   void Enable();
   void Disable();
   void IrqEnable();
@@ -135,10 +135,10 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   IntelHDAController* controller_ = nullptr;
 
   // Pipe processintg registers
-  hda_pp_registers_t* pp_regs_ = nullptr;
+  MMIO_PTR hda_pp_registers_t* pp_regs_ = nullptr;
 
   // PCI registers
-  fzl::VmoMapper mapped_regs_;
+  std::optional<ddk::MmioBuffer> mapped_regs_;
 
   // IPC Channel and controller for DSP hardware.
   std::unique_ptr<DspChannel> ipc_;

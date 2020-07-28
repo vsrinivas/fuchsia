@@ -9,6 +9,7 @@
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
@@ -16,6 +17,7 @@
 
 #include <atomic>
 #include <memory>
+#include <optional>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -79,8 +81,8 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   static constexpr uint RIRB_RESERVED_RESPONSE_SLOTS = 8u;
 
   // Accessor for our mapped registers
-  hda_registers_t* regs() const {
-    return &reinterpret_cast<hda_all_registers_t*>(mapped_regs_.start())->regs;
+  MMIO_PTR hda_registers_t* regs() const {
+    return &reinterpret_cast<MMIO_PTR hda_all_registers_t*>(mapped_regs_->get())->regs;
   }
 
   // Internal stream bookkeeping.
@@ -110,7 +112,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   zx_status_t SetupPCIDevice(zx_device_t* pci_dev);
   zx_status_t SetupPCIInterrupts();
   zx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
-  zx_status_t SetupCommandBufferSize(uint8_t* size_reg, unsigned int* entry_count);
+  zx_status_t SetupCommandBufferSize(MMIO_PTR uint8_t* size_reg, unsigned int* entry_count);
   zx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);
   zx_status_t ProbeAudioDSP(zx_device_t* dsp_dev);
 
@@ -159,7 +161,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   zx_device_t* dev_node_ = nullptr;
 
   // PCI Registers
-  fzl::VmoMapper mapped_regs_;
+  std::optional<ddk::MmioBuffer> mapped_regs_;
 
   // A handle to the Bus Transaction Initiator for this PCI device.  Used to
   // grant access to specific regions of physical mememory to the controller

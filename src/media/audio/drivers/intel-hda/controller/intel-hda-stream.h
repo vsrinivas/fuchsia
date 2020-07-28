@@ -39,7 +39,8 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   // entries long.
   static constexpr size_t MAX_BDL_LENGTH = 256;
 
-  static fbl::RefPtr<IntelHDAStream> Create(Type type, uint16_t id, hda_stream_desc_regs_t* regs,
+  static fbl::RefPtr<IntelHDAStream> Create(Type type, uint16_t id,
+                                            MMIO_PTR hda_stream_desc_regs_t* regs,
                                             const fbl::RefPtr<RefCountedBti>& pci_bti,
                                             fbl::RefPtr<fzl::VmarManager> vmar_manager);
 
@@ -65,7 +66,7 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   friend class IntelHDAController;  // Controllers have access to stuff like Reset and Configure
   friend class fbl::RefPtr<IntelHDAStream>;  // Only our ref ptrs may destruct us.
 
-  IntelHDAStream(Type type, uint16_t id, hda_stream_desc_regs_t* regs,
+  IntelHDAStream(Type type, uint16_t id, MMIO_PTR hda_stream_desc_regs_t* regs,
                  const fbl::RefPtr<RefCountedBti>& pci_bti,
                  fbl::RefPtr<fzl::VmarManager> vmar_manager);
   ~IntelHDAStream();
@@ -103,8 +104,8 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   void Configure(Type type, uint8_t tag);
 
   // Static helpers which can be used during early initialization
-  static void EnsureStopped(hda_stream_desc_regs_t* regs);
-  static void Reset(hda_stream_desc_regs_t* regs);
+  static void EnsureStopped(MMIO_PTR hda_stream_desc_regs_t* regs);
+  static void Reset(MMIO_PTR hda_stream_desc_regs_t* regs);
 
   // Accessor for the CPU accessible view of the Buffer Descriptor List
   IntelHDABDLEntry* bdl() const {
@@ -114,7 +115,7 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   // Parameters determined construction time.
   const Type type_ = Type::INVALID;
   const uint16_t id_ = 0;
-  hda_stream_desc_regs_t* const regs_ = nullptr;
+  MMIO_PTR hda_stream_desc_regs_t* const regs_ = nullptr;
 
   // Parameters determined at allocation time.
   Type configured_type_;

@@ -34,7 +34,7 @@ constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
 }  // namespace
 
 fbl::RefPtr<IntelHDAStream> IntelHDAStream::Create(Type type, uint16_t id,
-                                                   hda_stream_desc_regs_t* regs,
+                                                   MMIO_PTR hda_stream_desc_regs_t* regs,
                                                    const fbl::RefPtr<RefCountedBti>& pci_bti,
                                                    fbl::RefPtr<fzl::VmarManager> vmar_manager) {
   fbl::AllocChecker ac;
@@ -53,7 +53,7 @@ fbl::RefPtr<IntelHDAStream> IntelHDAStream::Create(Type type, uint16_t id,
   return ret;
 }
 
-IntelHDAStream::IntelHDAStream(Type type, uint16_t id, hda_stream_desc_regs_t* regs,
+IntelHDAStream::IntelHDAStream(Type type, uint16_t id, MMIO_PTR hda_stream_desc_regs_t* regs,
                                const fbl::RefPtr<RefCountedBti>& pci_bti,
                                fbl::RefPtr<fzl::VmarManager> vmar_manager)
     : type_(type), id_(id), regs_(regs), vmar_manager_(std::move(vmar_manager)), pci_bti_(pci_bti) {
@@ -100,7 +100,7 @@ zx_status_t IntelHDAStream::Initialize() {
   return ZX_OK;
 }
 
-void IntelHDAStream::EnsureStopped(hda_stream_desc_regs_t* regs) {
+void IntelHDAStream::EnsureStopped(MMIO_PTR hda_stream_desc_regs_t* regs) {
   // Stop the stream, but do not place it into reset.  Ack any lingering IRQ
   // status bits in the process.
   REG_CLR_BITS(&regs->ctl_sts.w, HDA_SD_REG_CTRL_RUN);
@@ -113,7 +113,7 @@ void IntelHDAStream::EnsureStopped(hda_stream_desc_regs_t* regs) {
   hw_wmb();
 }
 
-void IntelHDAStream::Reset(hda_stream_desc_regs_t* regs) {
+void IntelHDAStream::Reset(MMIO_PTR hda_stream_desc_regs_t* regs) {
   // Enter the reset state  To do this, we...
   // 1) Clear the RUN bit if it was set.
   // 2) Set the SRST bit to 1.

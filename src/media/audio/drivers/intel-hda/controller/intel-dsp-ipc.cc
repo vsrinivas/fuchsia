@@ -34,7 +34,7 @@ class HardwareDspChannel : public DspChannel {
   // |hardware_timeout| specifies how long we should wait for hardware to respond
   // to our requests before failing operations.
   HardwareDspChannel(
-      fbl::String log_prefix, adsp_registers_t* regs,
+      fbl::String log_prefix, MMIO_PTR adsp_registers_t* regs,
       std::optional<std::function<void(NotificationType)>> notification_callback = std::nullopt,
       zx::duration hardware_timeout = kDefaultTimeout);
 
@@ -81,8 +81,9 @@ class HardwareDspChannel : public DspChannel {
   // IPC Mailboxes
   class Mailbox {
    public:
-    void Initialize(void* base, size_t size) {
-      base_ = base;
+    void Initialize(MMIO_PTR void* base, size_t size) {
+      // TODO(56253): avoid casting away the MMIO_PTR annotation.
+      base_ = (void*)base;
       size_ = size;
     }
 
@@ -136,7 +137,7 @@ class HardwareDspChannel : public DspChannel {
   fbl::DoublyLinkedList<Txn*> ipc_queue_ TA_GUARDED(lock_);
 
   // Hardware registers.
-  adsp_registers_t* const regs_ TA_GUARDED(lock_);
+  MMIO_PTR adsp_registers_t* const regs_ TA_GUARDED(lock_);
 
   // Callback for unsolicited notifications from the DSP.
   const std::optional<const std::function<void(NotificationType)>> callback_;
@@ -149,18 +150,19 @@ class HardwareDspChannel : public DspChannel {
 constexpr size_t MAILBOX_SIZE = 0x1000;
 
 HardwareDspChannel::HardwareDspChannel(
-    fbl::String log_prefix, adsp_registers_t* regs,
+    fbl::String log_prefix, MMIO_PTR adsp_registers_t* regs,
     std::optional<std::function<void(NotificationType)>> notification_callback,
     zx::duration hardware_timeout)
     : log_prefix_(std::move(log_prefix)),
       regs_(regs),
       callback_(std::move(notification_callback)),
       hardware_timeout_(hardware_timeout) {
-  uint8_t* mapped_base = reinterpret_cast<uint8_t*>(regs);
+  MMIO_PTR uint8_t* mapped_base = reinterpret_cast<MMIO_PTR uint8_t*>(regs);
   mailbox_in_.Initialize(
-      static_cast<void*>(mapped_base + SKL_ADSP_SRAM0_OFFSET + ADSP_MAILBOX_IN_OFFSET),
+      static_cast<MMIO_PTR void*>(mapped_base + SKL_ADSP_SRAM0_OFFSET + ADSP_MAILBOX_IN_OFFSET),
       MAILBOX_SIZE);
-  mailbox_out_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET), MAILBOX_SIZE);
+  mailbox_out_.Initialize(static_cast<MMIO_PTR void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET),
+                          MAILBOX_SIZE);
 }
 
 HardwareDspChannel::~HardwareDspChannel() { Shutdown(); }
@@ -384,7 +386,7 @@ void HardwareDspChannel::IpcMailboxWrite(const void* data, size_t size) {
 void HardwareDspChannel::IpcMailboxRead(void* data, size_t size) { mailbox_in_.Read(data, size); }
 
 std::unique_ptr<DspChannel> CreateHardwareDspChannel(
-    fbl::String log_prefix, adsp_registers_t* regs,
+    fbl::String log_prefix, MMIO_PTR adsp_registers_t* regs,
     std::optional<std::function<void(NotificationType)>> notification_callback,
     zx::duration hardware_timeout) {
   return std::make_unique<HardwareDspChannel>(log_prefix, regs, std::move(notification_callback),

@@ -13,6 +13,8 @@
 
 #include <type_traits>
 
+#include <mmio-ptr/mmio-ptr.h>
+
 /**
  * Register definitions taken from
  *
@@ -391,29 +393,49 @@ struct IntelHDABDLEntry {
 // Someday, we should update these template/macros to deal with conversion
 // to/from host endian instead of assuming a little endian host.
 template <typename T>
-static inline T REG_RD(const T* reg) {
-  return *(reinterpret_cast<const volatile T*>(reg));
+static inline T REG_RD(const MMIO_PTR T* reg) {
+  if constexpr (sizeof(T) == sizeof(uint8_t)) {
+    return MmioRead8(reg);
+  } else if constexpr (sizeof(T) == sizeof(uint16_t)) {
+    return MmioRead16(reg);
+  } else if constexpr (sizeof(T) == sizeof(uint32_t)) {
+    return MmioRead32(reg);
+  } else if constexpr (sizeof(T) == sizeof(uint64_t)) {
+    return MmioRead64(reg);
+  } else {
+    static_assert(sizeof(T) < 0, "Unsupported type");
+  }
 }
 
 template <typename T, typename U>
-static inline void REG_WR(T* reg, U val) {
+static inline void REG_WR(MMIO_PTR T* reg, U val) {
   static_assert(std::is_unsigned_v<T>, "");
   ZX_DEBUG_ASSERT(static_cast<T>(-1) >= val);
-  *(reinterpret_cast<volatile T*>(reg)) = static_cast<T>(val);
+  if constexpr (sizeof(T) == sizeof(uint8_t)) {
+    MmioWrite8(val, reg);
+  } else if constexpr (sizeof(T) == sizeof(uint16_t)) {
+    MmioWrite16(val, reg);
+  } else if constexpr (sizeof(T) == sizeof(uint32_t)) {
+    MmioWrite32(val, reg);
+  } else if constexpr (sizeof(T) == sizeof(uint64_t)) {
+    MmioWrite64(val, reg);
+  } else {
+    static_assert(sizeof(T) < 0, "Unsupported type");
+  }
 }
 
 template <typename T>
-static inline void REG_MOD(T* reg, T clr_bits, T set_bits) {
+static inline void REG_MOD(MMIO_PTR T* reg, T clr_bits, T set_bits) {
   REG_WR(reg, static_cast<T>((REG_RD(reg) & ~clr_bits) | set_bits));
 }
 
 template <typename T>
-static inline void REG_SET_BITS(T* reg, T bits) {
+static inline void REG_SET_BITS(MMIO_PTR T* reg, T bits) {
   REG_MOD(reg, static_cast<T>(0), bits);
 }
 
 template <typename T>
-static inline void REG_CLR_BITS(T* reg, T bits) {
+static inline void REG_CLR_BITS(MMIO_PTR T* reg, T bits) {
   REG_MOD(reg, bits, static_cast<T>(0));
 }
 
