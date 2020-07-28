@@ -9,6 +9,7 @@ use std::task::{Context, Poll};
 
 /// A spawned future.
 /// When a task is dropped the future will stop being polled by the executor.
+#[must_use]
 pub struct Task<T> {
     remote_handle: RemoteHandle<T>,
 }

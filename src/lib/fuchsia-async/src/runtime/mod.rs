@@ -18,7 +18,7 @@ mod stub;
 use self::stub as implementation;
 
 pub use implementation::{
-    executor::{spawn, spawn_local, Executor, Time},
+    executor::{Executor, Time},
     task::Task,
     timer::Timer,
 };
@@ -117,11 +117,6 @@ where
     }
 }
 
-/// Spawn a future in a separate thread (that may be part of some thread pool).
-pub fn spawn_blocking(future: impl Future<Output = ()> + Send + 'static) {
-    Task::blocking(future).detach()
-}
-
 #[cfg(test)]
 mod task_tests {
 
@@ -179,17 +174,6 @@ mod task_tests {
         // can we spawn, then join a task locally
         Executor::new().unwrap().run_singlethreaded(async move {
             assert_eq!(42, Task::local(async move { 42u8 }).await);
-        })
-    }
-
-    #[test]
-    fn can_spawn_blocking() {
-        run(async move {
-            let (tx, rx) = oneshot::channel();
-            spawn_blocking(async move {
-                tx.send(()).unwrap();
-            });
-            rx.await.unwrap();
         })
     }
 

@@ -7,36 +7,11 @@ pub mod task {
 }
 
 pub mod executor {
-    use super::task::Task;
     use crate::runtime::WakeupTime;
     use fuchsia_zircon_status as zx_status;
     use futures::channel::oneshot;
     use futures::prelude::*;
     use std::thread::JoinHandle;
-
-    /// Spawn a new task to be run on the global executor.
-    ///
-    /// Tasks spawned using this method must be threadsafe (implement the `Send` trait),
-    /// as they may be run on either a singlethreaded or multithreaded executor.
-    pub fn spawn<F>(future: F)
-    where
-        F: Future<Output = ()> + Send + 'static,
-    {
-        Task::spawn(future).detach()
-    }
-
-    /// Spawn a new task to be run on the global executor.
-    ///
-    /// This is similar to the `spawn` function, but tasks spawned using this method
-    /// do not have to be threadsafe (implement the `Send` trait). In return, this method
-    /// requires that the current executor never be run in a multithreaded mode-- only
-    /// `run_singlethreaded` can be used.
-    pub fn spawn_local<F>(future: F)
-    where
-        F: Future<Output = ()> + 'static,
-    {
-        Task::local(future).detach()
-    }
 
     /// A time relative to the executor's clock.
     pub use std::time::Instant as Time;

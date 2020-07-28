@@ -28,7 +28,7 @@ const TASK_READY_WAKEUP_ID: u64 = u64::MAX - 1;
 ///
 /// Tasks spawned using this method must be threadsafe (implement the `Send` trait),
 /// as they may be run on either a singlethreaded or multithreaded executor.
-pub fn spawn<F>(future: F)
+pub(crate) fn spawn<F>(future: F)
 where
     F: Future<Output = ()> + Send + 'static,
 {
@@ -41,7 +41,7 @@ where
 /// do not have to be threadsafe (implement the `Send` trait). In return, this method
 /// requires that the current executor never be run in a multithreaded mode-- only
 /// `run_singlethreaded` can be used.
-pub fn spawn_local<F>(future: F)
+pub(crate) fn spawn_local<F>(future: F)
 where
     F: Future<Output = ()> + 'static,
 {
