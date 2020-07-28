@@ -3,12 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/config/fuchsia/zbi.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//build/unification/zbi/migrated_zbi.gni")
+import("//build/unification/zbi/resource.gni")
 
 rustc_binary("bin") {
   name = "factory_store_providers"
@@ -95,12 +96,36 @@ rustc_test("factory_store_providers_test") {
   sources = [ "tests/factory_store_providers_test.rs" ]
 }
 
-zbi("items") {
-  testonly = true
-  complete = false
-  compress = false
+test_files = [
+  "alpha_file",
+  "another_cast_file",
+  "failed_widevine_file",
+  "ignored_misc_file",
+  "multi_validated_file",
+  "other/misc",
+  "passed_misc_file",
+  "pr/file1",
+  "some_cast_file",
+  "weave_file",
+  "widevine_file",
+]
 
-  inputs = [ rebase_path("testdata/input") ]
+zbi_deps = []
+foreach(file, test_files) {
+  name = "zbi_$file"
+  zbi_deps += [ ":$name" ]
+  resource(name) {
+    testonly = true
+    sources = [ "testdata/input/$file" ]
+    outputs = [ file ]
+  }
+}
+
+migrated_zbi("items") {
+  testonly = true
+  cpu = ""  # Mark the zbi as incomplete.
+  compress = false
+  deps = zbi_deps
 }
 
 items_zbi_outputs = get_target_outputs(":items")
