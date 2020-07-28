@@ -7,6 +7,7 @@
 #include <lib/fit/defer.h>
 #include <sys/ioctl.h>
 
+#include <iostream>
 #include <memory>
 #include <utility>
 
@@ -249,7 +250,7 @@ zx_status_t FvmContainer::Verify() const {
     }
 
     if ((status = Format::Check(std::move(dupfd), start, end, extent_lengths, part)) != ZX_OK) {
-      fprintf(stderr, "%s fsck returned an error.\n", vpart->name);
+      std::cerr << vpart->name() << " fsck returned an error." << std::endl;
       return status;
     }
 

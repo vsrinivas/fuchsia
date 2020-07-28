@@ -325,7 +325,7 @@ int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
   zx_status_t status;
   zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
       caller.borrow_channel(), request->slice_count, &type_guid, &instance_guid, request->name,
-      BLOCK_NAME_LEN, request->flags, &status);
+      request_name_size, request->flags, &status);
   if (io_status != ZX_OK || status != ZX_OK) {
     return -1;
   }

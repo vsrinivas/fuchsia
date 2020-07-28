@@ -220,7 +220,7 @@ void FilesystemTestWithFvm::CreatePartition() {
   auto guid = reinterpret_cast<const fuchsia_hardware_block_partition_GUID*>(kTestUniqueGUID);
   zx_status_t status;
   zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-      caller.borrow_channel(), 1, type, guid, name.c_str(), name.size() + 1, 0, &status);
+      caller.borrow_channel(), 1, type, guid, name.c_str(), name.size(), 0, &status);
   ASSERT_OK(io_status, "Could not send message to FVM driver");
   ASSERT_OK(status, "Could not allocate FVM partition");
 
@@ -250,13 +250,9 @@ FixedDiskSizeTestWithFvm::FixedDiskSizeTestWithFvm(uint64_t disk_size) {
   device_path_ = ramdisk_->path();
 }
 
-void PowerFailureRunner::Run(std::function<void()> function) {
-  Run(function, false);
-}
+void PowerFailureRunner::Run(std::function<void()> function) { Run(function, false); }
 
-void PowerFailureRunner::RunWithRestart(std::function<void()> function) {
-  Run(function, true);
-}
+void PowerFailureRunner::RunWithRestart(std::function<void()> function) { Run(function, true); }
 
 void PowerFailureRunner::Run(std::function<void()> function, bool restart) {
   const RamDisk* disk = test_->environment()->ramdisk();
@@ -272,8 +268,8 @@ void PowerFailureRunner::Run(std::function<void()> function, bool restart) {
   ASSERT_NO_FAILURES(test_->Remount());
 
   const auto& config = test_->environment()->config();
-  uint32_t limit = config.power_cycles ? config.power_cycles :
-                   static_cast<uint32_t>(counts.received - mount_count);
+  uint32_t limit = config.power_cycles ? config.power_cycles
+                                       : static_cast<uint32_t>(counts.received - mount_count);
 
   zx::ticks start_ticks = zx::ticks::now();
   zxtest::LogSink* log = zxtest::Runner::GetInstance()->mutable_reporter()->mutable_log_sink();

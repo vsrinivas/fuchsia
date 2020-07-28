@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef __LIB_FVM_FORMAT_H__
-#define __LIB_FVM_FORMAT_H__
+#ifndef FVM_FORMAT_H_
+#define FVM_FORMAT_H_
 
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +11,7 @@
 #ifdef __cplusplus
 
 #include <limits>
+#include <string>
 #include <type_traits>
 
 #include <digest/digest.h>
@@ -101,6 +102,19 @@ static_assert(internal::is_persistable<Header>::value && sizeof(Header) <= kBloc
 
 // Represent an entry in the FVM Partition table, which is fixed size contiguous flat buffer.
 struct VPartitionEntry {
+  // std::string_view's constructor is not explicit and because of past confusion, we want to make
+  // sure nobody accidentally initialises with a char* that isn't NULL terminated.
+  struct Name {
+    explicit Name(std::string_view name) : name(name) {}
+
+    template <size_t N>
+    explicit constexpr Name(const uint8_t (&array)[N])
+        : name(std::string_view(reinterpret_cast<const char*>(&array[0]),
+                                std::find(&array[0], &array[N], 0) - &array[0])) {}
+
+    std::string_view name;
+  };
+
   // Returns a new blank entry.
   static VPartitionEntry Create() {
     VPartitionEntry entry;
@@ -111,7 +125,7 @@ struct VPartitionEntry {
   // Returns a new entry with a the respective |type|, |guid|, |name|, |slices| and |flags|.
   // Note: This is subject to NRVO.
   static VPartitionEntry Create(const uint8_t* type, const uint8_t* guid, uint32_t slices,
-                                const char* name, uint32_t flags);
+                                Name name, uint32_t flags);
 
   // Returns the allowed set of flags in |raw_flags|.
   static uint32_t ParseFlags(uint32_t raw_flags);
@@ -134,6 +148,8 @@ struct VPartitionEntry {
   // Marks this entry active status as |is_active|.
   void SetActive(bool is_active);
 
+  std::string name() const { return std::string(Name(unsafe_name).name); }
+
   // Mirrors GPT value.
   uint8_t type[kGuidSize];
 
@@ -145,8 +161,9 @@ struct VPartitionEntry {
 
   uint32_t flags;
 
-  // Partition name.
-  uint8_t name[fvm::kMaxVPartitionNameLength];
+  // Partition name. This is not necessarily NULL terminated. Prefer to use the name() accessor
+  // above.
+  uint8_t unsafe_name[fvm::kMaxVPartitionNameLength];
 };
 
 // TODO(gevalentino): remove after updating callsites.
@@ -426,4 +443,4 @@ zx_status_t fvm_validate_header(const void* metadata, const void* backup, size_t
 
 __END_CDECLS
 
-#endif  //  __LIB_FVM_FORMAT_H__
+#endif  //  FVM_FORMAT_H_

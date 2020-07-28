@@ -295,7 +295,7 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
       logger_.Log("Partition %zu allocated\n", i);
       logger_.Log("  Has %u slices allocated\n", slices);
       logger_.Log("  Type: %s\n", gpt_guid_to_type(guid_string));
-      logger_.Log("  Name: %.*s\n", fvm::kMaxVPartitionNameLength, vpart_table[i].name);
+      logger_.Log("  Name: %s\n", vpart_table[i].name().c_str());
     }
   }
   logger_.Log("\n");

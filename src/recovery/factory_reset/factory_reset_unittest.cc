@@ -220,7 +220,6 @@ class FactoryResetTest : public Test {
     req.slice_count = 1;
     static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
     memcpy(req.type, data_guid, BLOCK_GUID_LEN);
-    snprintf(req.name, BLOCK_NAME_LEN, "%s", kDataName);
 
     fuchsia_hardware_block_partition_GUID type_guid;
     memcpy(type_guid.value, req.type, BLOCK_GUID_LEN);
@@ -230,8 +229,8 @@ class FactoryResetTest : public Test {
     fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
     zx_status_t status;
     ASSERT_EQ(fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-                  caller.borrow_channel(), req.slice_count, &type_guid, &instance_guid, req.name,
-                  BLOCK_NAME_LEN, req.flags, &status),
+                  caller.borrow_channel(), req.slice_count, &type_guid, &instance_guid, kDataName,
+                  strlen(kDataName), req.flags, &status),
               ZX_OK);
     ASSERT_EQ(status, ZX_OK);
 

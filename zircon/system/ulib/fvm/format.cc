@@ -51,14 +51,16 @@ static_assert(kSliceEntryVPartitionBits + kSliceEntryVSliceBits + kSliceEntryRes
 }  // namespace
 
 VPartitionEntry VPartitionEntry::Create(const uint8_t* type, const uint8_t* guid, uint32_t slices,
-                                        const char* name, uint32_t flags) {
+                                        Name name, uint32_t flags) {
   VPartitionEntry entry = VPartitionEntry::Create();
   entry.slices = slices;
   // Filter out unallowed flags.
   entry.flags = ParseFlags(flags);
   memcpy(&entry.type, type, kGuidSize);
   memcpy(&entry.guid, guid, kGuidSize);
-  memcpy(&entry.name, name, kMaxVPartitionNameLength);
+  const size_t name_len = std::min<size_t>(kMaxVPartitionNameLength, name.name.size());
+  memcpy(entry.unsafe_name, name.name.data(), name_len);
+  memset(&entry.unsafe_name[name_len], 0, kMaxVPartitionNameLength - name_len);
   return entry;
 }
 

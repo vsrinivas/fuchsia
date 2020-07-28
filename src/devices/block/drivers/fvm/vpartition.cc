@@ -428,8 +428,8 @@ zx_status_t VPartition::BlockPartitionGetName(char* out_name, size_t capacity) {
   if (IsKilledLocked()) {
     return ZX_ERR_BAD_STATE;
   }
-  memcpy(out_name, mgr_->GetAllocatedVPartEntry(entry_index_)->name, fvm::kMaxVPartitionNameLength);
-  out_name[fvm::kMaxVPartitionNameLength] = 0;
+  const std::string name = mgr_->GetAllocatedVPartEntry(entry_index_)->name();
+  memcpy(out_name, name.c_str(), name.size() + 1);
   return ZX_OK;
 }
 

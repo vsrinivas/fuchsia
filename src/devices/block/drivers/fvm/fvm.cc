@@ -93,13 +93,11 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
 }
 
 zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) const {
-  auto ename = reinterpret_cast<const char*>(GetAllocatedVPartEntry(vp->GetEntryIndex())->name);
-  char name[fvm::kMaxVPartitionNameLength + 32];
-  snprintf(name, sizeof(name), "%.*s-p-%zu", fvm::kMaxVPartitionNameLength, ename,
-           vp->GetEntryIndex());
+  const std::string name = GetAllocatedVPartEntry(vp->GetEntryIndex())->name() + "-p-" +
+                           std::to_string(vp->GetEntryIndex());
 
   zx_status_t status;
-  if ((status = vp->DdkAdd(name)) != ZX_OK) {
+  if ((status = vp->DdkAdd(name.c_str())) != ZX_OK) {
     return status;
   }
 
@@ -635,16 +633,22 @@ zx_status_t VPartitionManager::FIDLAllocatePartition(
     uint32_t flags, fidl_txn_t* txn) {
   const auto reply = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition_reply;
 
+  constexpr size_t max_name_len =
+      std::min<size_t>(fuchsia_hardware_block_partition_NAME_LENGTH, kMaxVPartitionNameLength);
   if (slice_count >= std::numeric_limits<uint32_t>::max()) {
     return reply(txn, ZX_ERR_OUT_OF_RANGE);
   } else if (slice_count == 0) {
     return reply(txn, ZX_ERR_OUT_OF_RANGE);
-  } else if (name_size > fuchsia_hardware_block_partition_NAME_LENGTH) {
+  } else if (name_size > max_name_len) {
     return reply(txn, ZX_ERR_INVALID_ARGS);
   }
 
-  char name[fuchsia_hardware_block_partition_NAME_LENGTH + 1] = {};
-  strlcpy(name, name_data, name_size);
+  std::string_view name(name_data, name_size);
+
+  // Check that name does not have any NULL terminators in it.
+  if (name.find('\0') != std::string::npos) {
+    return reply(txn, ZX_ERR_INVALID_ARGS);
+  }
 
   zx_status_t status;
   std::unique_ptr<VPartition> vpart;
@@ -660,7 +664,8 @@ zx_status_t VPartitionManager::FIDLAllocatePartition(
     }
 
     auto* entry = GetVPartEntryLocked(vpart_entry);
-    *entry = VPartitionEntry::Create(type->value, instance->value, 0, name, flags);
+    *entry = VPartitionEntry::Create(type->value, instance->value, 0, VPartitionEntry::Name(name),
+                                     flags);
 
     if ((status = AllocateSlicesLocked(vpart.get(), 0, slice_count)) != ZX_OK) {
       entry->slices = 0;  // Undo VPartition allocation
