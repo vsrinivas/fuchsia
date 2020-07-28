@@ -47,7 +47,6 @@
             "fuchsia.media.sessions2.Discovery",
             "fuchsia.media.sessions2.Publisher",
             "fuchsia.media.sounds.Player",
-            "fuchsia.net.Connectivity",
             "fuchsia.net.NameLookup",
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Subscriber",

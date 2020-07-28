@@ -17,7 +17,6 @@
                 "/svc/fuchsia.media.AudioCore",
                 "/svc/fuchsia.media.sounds.Player",
                 "/svc/fuchsia.media.UsageReporter",
-                "/svc/fuchsia.net.Connectivity",
                 "/svc/fuchsia.netstack.Netstack",
                 "/svc/fuchsia.stash.Store",
                 "/svc/fuchsia.sys.Environment",

@@ -1297,7 +1297,7 @@ mod tests {
                   { "service": "fuchsia.sys2.Realm", "from": "framework" },
                   { "protocol": "/fonts/CoolFonts", "as": "/svc/MyFonts" },
                   { "protocol": "/svc/fuchsia.test.hub.HubReport", "from": "framework" },
-                  { "protocol": ["/svc/fuchsia.ui.scenic.Scenic", "/svc/fuchsia.net.Connectivity"] },
+                  { "protocol": ["/svc/fuchsia.ui.scenic.Scenic", "/svc/fuchsia.logger.LogSink"] },
                   {
                     "directory": "/data/assets",
                     "rights": ["rw*"],

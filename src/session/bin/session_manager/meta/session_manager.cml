@@ -58,7 +58,6 @@
                 "/svc/fuchsia.media.sessions2.Publisher",
                 "/svc/fuchsia.media.sounds.Player",
                 "/svc/fuchsia.media.UsageReporter",
-                "/svc/fuchsia.net.Connectivity",
                 "/svc/fuchsia.net.mdns.Publisher",
                 "/svc/fuchsia.net.mdns.Subscriber",
                 "/svc/fuchsia.net.NameLookup",
