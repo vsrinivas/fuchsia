@@ -1,11 +1,14 @@
 # Using cargo on Fuchsia
 
-This is a volunteer-maintained workflow that exists because many tools in the Rust ecosystem assume
-cargo integration. GN and Cargo have some design mismatches that may result in manual tweaks
-being needed for the generated `Cargo.toml`s.
+Many tools in the Rust ecosystem assume you are using cargo. For tools like
+this which don't have a counterpart in our build, there is a utility for
+generating `Cargo.toml` files. You can run cargo itself (`cargo check` for
+instance) using it.
 
-Because of this, cargo in the Fuchsia tree is **not** officially supported; things may break
-from time to time.
+This functionality is maintained by volunteers. GN and Cargo have some design
+mismatches that may result in the generated `Cargo.toml` files not working at
+all or needing manual tweaks. Because of this, cargo in the Fuchsia tree is
+**not** officially supported; things may break from time to time.
 
 ### Generating `Cargo.toml` files {#cargo-toml-gen}
 
