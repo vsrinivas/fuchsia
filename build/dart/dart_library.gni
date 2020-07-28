@@ -82,6 +82,11 @@ declare_args() {
 #     the pubspec.yaml in the package root. It is not common that this value will
 #     need to be set but can be useful for generated code.
 #
+#   options_file (optional)
+#     Path to the analysis_options.yaml file. If not provided, will default to
+#     looking for the analysis_options.yaml in the package root. It is not common
+#     that this value needs to be set but can be useful for generated code.
+#
 # Example of usage:
 #
 #   dart_library("baz") {
@@ -292,6 +297,9 @@ if (current_toolchain == dart_toolchain) {
     with_analysis = enable_dart_analysis && with_analysis
     if (with_analysis) {
       options_file = "$package_root/analysis_options.yaml"
+      if (defined(invoker.options_file)) {
+        options_file = invoker.options_file
+      }
       invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
       invocation_target_name = "${target_name}_analysis_runner"
       group_deps += [ ":$invocation_target_name" ]
