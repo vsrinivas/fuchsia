@@ -52,10 +52,9 @@ class FuchsiaSystemClock : public FuchsiaSystemClockInterface {
   void AwaitExternalSource(std::function<void()> callback) override;
 
  private:
-  void WatchStateCallback(const fuchsia::time::UtcState& utc_state);
+  void WatchExternalSource(std::function<void()> callback);
 
   fuchsia::time::UtcPtr utc_;
-  std::function<void()> callback_;
   std::atomic_bool accurate_ = false;
 };
 

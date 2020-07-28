@@ -21,22 +21,27 @@ std::optional<std::chrono::system_clock::time_point> FuchsiaSystemClock::now() {
 }
 
 void FuchsiaSystemClock::AwaitExternalSource(std::function<void()> callback) {
-  callback_ = std::move(callback);
   FX_LOGS(INFO) << "Making initial call to check the state of the system clock";
-  utc_->WatchState([this](fuchsia::time::UtcState utc_state) { WatchStateCallback(utc_state); });
+  WatchExternalSource(std::move(callback));
 }
 
-void FuchsiaSystemClock::WatchStateCallback(const fuchsia::time::UtcState& utc_state) {
-  if (utc_state.source() == fuchsia::time::UtcSource::EXTERNAL) {
-    FX_LOGS(INFO) << "Clock has been initialized from an external source";
-    accurate_ = true;
-    callback_();
-  } else {
-    FX_LOGS(INFO) << "Clock is not accurate yet, "
-                  << "making another call to check the state of the "
-                  << "system clock. Expect response when clock becomes accurate.";
-    utc_->WatchState([this](fuchsia::time::UtcState utc_state) { WatchStateCallback(utc_state); });
-  }
+void FuchsiaSystemClock::WatchExternalSource(std::function<void()> callback) {
+  utc_->WatchState([this, callback = std::move(callback)](const fuchsia::time::UtcState& state) {
+    switch (state.source()) {
+      case fuchsia::time::UtcSource::EXTERNAL:
+        FX_LOGS(INFO) << "Clock has been initialized from an external source";
+        accurate_ = true;
+        utc_.Unbind();
+        callback();
+        break;
+      case fuchsia::time::UtcSource::BACKSTOP:
+        FX_LOGS(INFO) << "Clock is not accurate yet, "
+                      << "making another call to check the state of the "
+                      << "system clock. Expect response when clock becomes accurate.";
+        WatchExternalSource(callback);
+        break;
+    }
+  });
 }
 
 }  // namespace cobalt
