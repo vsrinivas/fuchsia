@@ -1833,7 +1833,8 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
   }
 
   ext_key = false;
-  if (mac_addr && (req->cipher_suite_type != WPA_CIPHER_WEP_40) &&
+  if (mac_addr && !address_is_multicast(mac_addr) &&
+      (req->cipher_suite_type != WPA_CIPHER_WEP_40) &&
       (req->cipher_suite_type != WPA_CIPHER_WEP_104)) {
     BRCMF_DBG(TRACE, "Ext key, mac %02x:%02x:%02x:%02x:%02x:%02x", mac_addr[0], mac_addr[1],
               mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);

@@ -1509,7 +1509,14 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
     if (value_len < sizeof(brcmf_wsec_key_le)) {
       return ZX_ERR_IO;
     }
+
     auto wk_req = reinterpret_cast<const brcmf_wsec_key_le*>(value);
+    // Ensure that Primary Key does not have a mac address (all zeros)
+    if (wk_req->flags == BRCMF_PRIMARY_KEY) {
+      common::MacAddr zero_mac({0x0, 0x0, 0x0, 0x0, 0x0, 0x0});
+      ZX_ASSERT_MSG(std::memcmp(wk_req->ea, zero_mac.byte, ETH_ALEN) == 0,
+                    "Group Key Mac should be all zeros");
+    }
     std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
     auto key_iter = std::find_if(key_list.begin(), key_list.end(),
                                  [=](brcmf_wsec_key_le& k) { return k.index == wk_req->index; });
