@@ -23,7 +23,7 @@ the component health status.
 
 Examples:
 
-```
+```none
 $ iquery show `iquery list`
 a.cmx:
   root:
@@ -51,7 +51,9 @@ c.cmx:
       start_timestamp_nanos = ...
       status = UNHEALTHY
       message = "Failed to connect to fuchsia.example.RequiredService"
+```
 
+```none
 $ iquery show a.cmx:root/fuchsia.inspect.Health:status b.cmx:root/fuchsia.inspect.Healh:status c.cmx:root/fuchsia.inspect.Health:status
 a:
   root:
@@ -74,60 +76,61 @@ various programming languages.
 
 * {C++}
 
-```cpp
-  #include <lib/async-loop/cpp/loop.h>
-  #include <lib/async-loop/default.h>
-  #include <lib/sys/cpp/component_context.h>
-  #include <lib/sys/inspect/cpp/component.h>
+  ```cpp
+    #include <lib/async-loop/cpp/loop.h>
+    #include <lib/async-loop/default.h>
+    #include <lib/sys/cpp/component_context.h>
+    #include <lib/sys/inspect/cpp/component.h>
 
-  int main(int argc, char** argv) {
-    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-    sys::ComponentInspector inspector(context.get());
-    inspector.Health().StartingUp();
+    int main(int argc, char** argv) {
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+      auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+      sys::ComponentInspector inspector(context.get());
+      inspector.Health().StartingUp();
 
-    // ...Do startup work...
+      // ...Do startup work...
 
-    inspector.Health().Ok();
-    inspector.Health().Unhealthy("I'm not feeling well.");
-    inspector.Health().Ok();
+      inspector.Health().Ok();
+      inspector.Health().Unhealthy("I'm not feeling well.");
+      inspector.Health().Ok();
 
-    loop.Run();
-    return 0;
-  }
-```
+      loop.Run();
+      return 0;
+    }
+  ```
 
 * {Rust}
 
-```rust
-  use fuchsia_inspect as inspect;
-  use fuchsia_inspect::health;
+  ```rust
+    use fuchsia_inspect as inspect;
+    use fuchsia_inspect::health;
 
-  fn main() {
-    // If you have your own inspector, it's also possible to export its health.
+    fn main() {
+      // If you have your own inspector, it's also possible to export its health.
 
-    /* inspector needs to be initialized */
-    let inspector = /* ... */
-    let mut node = inspector::root();
-    let mut health = fuchsia_inspect::health::Node(node);
-    // ...
-    health.set_ok();
-    health.set_unhealthy("I'm not feeling well.");
-    health.set_ok();  // The component is healthy again.
-  }
-```
+      /* inspector needs to be initialized */
+      let inspector = /* ... */
+      let mut node = inspector::root();
+      let mut health = fuchsia_inspect::health::Node(node);
+      // ...
+      health.set_ok();
+      health.set_unhealthy("I'm not feeling well.");
+      health.set_ok();  // The component is healthy again.
+    }
+  ```
 
 * {Dart}
 
-```dart
-  import 'package:fuchsia_inspect/inspect.dart' as inspect;
+  ```dart
+    import 'package:fuchsia_inspect/inspect.dart' as inspect;
 
-  void main(List<String> args) {
-    final inspector = inspect.Inspect();
-    inspector.health.setStartingUp();
-    // ...Do startup work...
-    inspector.health.setOk();
-    inspector.health.setUnhealthy("I'm not feeling well.");
-    inspector.health.setOk();
-  }
-```
+    void main(List<String> args) {
+      final inspector = inspect.Inspect();
+      inspector.health.setStartingUp();
+      // ...Do startup work...
+      inspector.health.setOk();
+      inspector.health.setUnhealthy("I'm not feeling well.");
+      inspector.health.setOk();
+    }
+  ```
+
