@@ -293,10 +293,10 @@ func TestRun(t *testing.T) {
 		// Wait for the connection to be canceled.
 		select {
 		case <-time.After(testTimeout):
-			t.Errorf("canceling the context should cause connect to exit")
+			t.Errorf("canceling the context should cause connect() to exit")
 		case err := <-connectErrs:
 			if !errors.Is(err, context.Canceled) {
-				t.Errorf("context was canceled but Run() returned wrong error: %v", err)
+				t.Errorf("context was canceled but connect() returned wrong error: %v", err)
 			}
 		}
 	})
