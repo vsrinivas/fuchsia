@@ -270,14 +270,14 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   auto get_metrics = fbl::MakeAutoCall(
       [&ticker, &out_actual, this]() { fs_->UpdateWriteMetrics(*out_actual, ticker.End()); });
 
-  blk_t reserve_blocks;
   // Calculate maximum number of blocks to reserve for this write operation.
-  zx_status_t status = GetRequiredBlockCount(offset, len, &reserve_blocks);
-  if (status != ZX_OK) {
-    return status;
+  auto reserve_blocks_or = GetRequiredBlockCount(offset, len, fs_->BlockSize());
+  if (reserve_blocks_or.is_error()) {
+    return reserve_blocks_or.error_value();
   }
   std::unique_ptr<Transaction> transaction;
-  if ((status = fs_->BeginTransaction(0, reserve_blocks, &transaction)) != ZX_OK) {
+  zx_status_t status;
+  if ((status = fs_->BeginTransaction(0, reserve_blocks_or.value(), &transaction)) != ZX_OK) {
     return status;
   }
 

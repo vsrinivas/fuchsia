@@ -649,13 +649,14 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 
   // Calculate maximum blocks to reserve for the current directory, based on the size and offset
   // of the new direntry (Assuming that the offset is the current size of the directory).
-  blk_t reserve_blocks = 0;
-  if ((status = GetRequiredBlockCount(GetSize(), args.reclen, &reserve_blocks)) != ZX_OK) {
-    return status;
+  auto reserve_blocks_or = GetRequiredBlockCount(GetSize(), args.reclen, fs_->BlockSize());
+  if (reserve_blocks_or.is_error()) {
+    return reserve_blocks_or.error_value();
   }
 
   // Reserve 1 additional block for the new directory's initial . and .. entries.
-  reserve_blocks += 1;
+  blk_t reserve_blocks = reserve_blocks_or.value() + 1;
+
   ZX_DEBUG_ASSERT(reserve_blocks <= fs_->Limits().GetMaximumMetaDataBlocks());
 
   // In addition to reserve_blocks, reserve 1 inode for the vnode to be created.
@@ -820,14 +821,14 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   DirectoryOffset append_offs = args.offs;
 
   // Reserve potential blocks to add a new direntry to newdir.
-  blk_t reserved_blocks;
-  if ((status = GetRequiredBlockCount(newdir->GetInode()->size, args.reclen, &reserved_blocks)) !=
-      ZX_OK) {
-    return status;
+  auto reserved_blocks_or =
+      GetRequiredBlockCount(newdir->GetInode()->size, args.reclen, fs_->BlockSize());
+  if (reserved_blocks_or.is_error()) {
+    return reserved_blocks_or.error_value();
   }
 
   std::unique_ptr<Transaction> transaction;
-  if ((status = fs_->BeginTransaction(0, reserved_blocks, &transaction)) != ZX_OK) {
+  if ((status = fs_->BeginTransaction(0, reserved_blocks_or.value(), &transaction)) != ZX_OK) {
     return status;
   }
 
@@ -913,13 +914,13 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   }
 
   // Reserve potential blocks to write a new direntry.
-  blk_t reserved_blocks;
-  if ((status = GetRequiredBlockCount(GetInode()->size, args.reclen, &reserved_blocks)) != ZX_OK) {
-    return status;
+  auto reserved_blocks_or = GetRequiredBlockCount(GetInode()->size, args.reclen, fs_->BlockSize());
+  if (reserved_blocks_or.is_error()) {
+    return reserved_blocks_or.error_value();
   }
 
   std::unique_ptr<Transaction> transaction;
-  if ((status = fs_->BeginTransaction(0, reserved_blocks, &transaction)) != ZX_OK) {
+  if ((status = fs_->BeginTransaction(0, reserved_blocks_or.value(), &transaction)) != ZX_OK) {
     return status;
   }
 

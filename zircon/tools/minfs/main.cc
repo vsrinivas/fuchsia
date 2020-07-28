@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <minfs/host.h>
 #include <minfs/minfs.h>
@@ -330,6 +331,7 @@ zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
 
   minfs::Superblock info;
   info.flags = 0;
+  info.block_size = minfs::kMinfsBlockSize;
   info.inode_count = minfs::kMinfsDefaultInodeCount;
   info.block_count = ToU32(data_blocks_ + dir_blocks);
 
@@ -348,7 +350,7 @@ zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
   minfs::TransactionLimits limits(info);
   info.dat_block = info.integrity_start_block + limits.GetRecommendedIntegrityBlocks();
 
-  *out = (info.dat_block + info.block_count) * minfs::kMinfsBlockSize;
+  *out = (info.dat_block + info.block_count) * info.BlockSize();
   return ZX_OK;
 }
 

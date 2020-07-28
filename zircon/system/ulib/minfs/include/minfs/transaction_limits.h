@@ -5,7 +5,9 @@
 #ifndef MINFS_TRANSACTION_LIMITS_H_
 #define MINFS_TRANSACTION_LIMITS_H_
 
-#include "format.h"
+#include <lib/zx/status.h>
+
+#include <minfs/format.h>
 
 namespace minfs {
 
@@ -15,16 +17,16 @@ namespace minfs {
 // Calculates and returns the maximum number of block bitmap blocks, based on |info_|.
 blk_t GetBlockBitmapBlocks(const Superblock& info);
 
-// Calculates the required number of blocks into |num_req_blocks| for a write at the given |offset|
+// Returns the required number of blocks for a write at the given |offset|
 // and |length|.
-zx_status_t GetRequiredBlockCount(size_t offset, size_t length, uint32_t* num_req_blocks);
+zx::status<blk_t> GetRequiredBlockCount(size_t offset, size_t length, uint32_t block_size);
 
 // Calculates and tracks the number of Minfs metadata / data blocks that can be modified within one
 // transaction, as well as the corresponding Journal sizes.
 // Once we can grow the block bitmap, we will need to be able to recalculate these limits.
 class TransactionLimits {
  public:
-  TransactionLimits(const Superblock& info);
+  explicit TransactionLimits(const Superblock& info);
 
   // Returns the maximum number of metadata blocks that we expect to be modified in the data
   // section within one transaction. For data vnodes, based on a max write size of 64kb, this is
@@ -94,6 +96,16 @@ class TransactionLimits {
   // section of Minfs (journal + backup superblock).
   void CalculateIntegrityBlocks(blk_t block_bitmap_blocks);
 
+  uint32_t BlockSize() const {
+    // Either intentionally or unintenttionally, we do not want to change block
+    // size to anything other than kMinfsBlockSize yet. This is because changing
+    // block size might lead to format change and also because anything other
+    // than 8k is not well tested. So assert when we find block size other
+    // than 8k.
+    ZX_ASSERT(block_size_ == kMinfsBlockSize);
+    return block_size_;
+  }
+  uint32_t block_size_ = {};
   blk_t max_meta_data_blocks_;
   blk_t max_data_blocks_;
   blk_t max_entry_data_blocks_;

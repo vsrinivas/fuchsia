@@ -59,6 +59,7 @@ test("minfs-unit") {
     "unit/resizeable_array_buffer_test.cc",
     "unit/resizeable_vmo_buffer_test.cc",
     "unit/superblock_test.cc",
+    "unit/transaction_limits_test.cc",
     "unit/transaction_test.cc",
     "unit/truncate_test.cc",
     "unit/vnode_mapper_test.cc",
