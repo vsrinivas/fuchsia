@@ -11,6 +11,7 @@ group("tests") {
   deps = [
     "bin:tests",
     "blobfs-corrupt:tests",
+    "blobfs-stress-test",
     "conformance:tests",
     "ext4:tests",
     "factory:tests",

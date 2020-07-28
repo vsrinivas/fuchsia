@@ -1,0 +1,19 @@
+{
+    program: {
+        binary: "bin/blobfs-mounter",
+    },
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            directory: "/dev",
+            rights: [ "rw*" ],
+        },
+    ],
+}

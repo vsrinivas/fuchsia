@@ -1,0 +1,87 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+rustc_test("blobfs-stress-test-bin") {
+  name = "blobfs_stress_test_runner"
+  edition = "2018"
+  source_root = "runner.rs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",  # for initialization
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:log",  # for recording messages
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rand_core",
+  ]
+}
+
+executable("blobfs-mounter") {
+  testonly = true
+  sources = [ "blobfs-mounter.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/isolated_devmgr/v2_component",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/block-client",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fs",
+    "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/fvm",
+    "//zircon/system/ulib/ramdevice-client",
+  ]
+}
+
+test_package("blobfs-stress-test") {
+  deps = [
+    ":blobfs-mounter",
+    ":blobfs-stress-test-bin",
+    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
+    "//src/storage/bin/blobfs:blobfs",
+    "//src/sys/component_manager:bin",
+  ]
+
+  meta = [
+    {
+      path =
+          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
+      dest = "component_manager.cmx"
+    },
+    {
+      path = rebase_path("//src/storage/blobfs-stress-test/meta/root.cml")
+      dest = "root.cm"
+    },
+    {
+      path = rebase_path(
+              "//src/storage/blobfs-stress-test/meta/blobfs-mounter.cml")
+      dest = "blobfs-mounter.cm"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "component_manager"
+    },
+    {
+      name = "blobfs"
+    },
+    {
+      name = "blobfs-mounter"
+    },
+  ]
+
+  tests = [
+    {
+      name = "blobfs_stress_test_runner"
+    },
+  ]
+}

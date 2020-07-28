@@ -1,0 +1,37 @@
+{
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated_devmgr.cm",
+        },
+        {
+            name: "blobfs-mounter",
+            url: "fuchsia-pkg://fuchsia.com/blobfs-stress-test#meta/blobfs-mounter.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            runner: "elf",
+            from: "parent",
+            to: [ "#isolated_devmgr" ],
+        },
+        {
+            protocol: [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [
+                "#blobfs-mounter",
+                "#isolated_devmgr",
+            ],
+        },
+        {
+            directory: "/dev",
+            from: "#isolated_devmgr",
+            to: [ "#blobfs-mounter" ],
+        },
+    ],
+}

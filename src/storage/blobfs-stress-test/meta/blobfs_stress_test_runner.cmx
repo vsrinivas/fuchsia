@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "test/blobfs_stress_test_runner"
+    },
+    "sandbox": {
+        "features": [
+            "hub",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.boot.Arguments",
+            "fuchsia.boot.Items",
+            "fuchsia.boot.WriteOnlyLog",
+            "fuchsia.ldsvc.Loader",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
