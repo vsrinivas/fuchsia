@@ -221,43 +221,45 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
   }
   inspector::decoded_registers decoded = inspector::decode_registers(&regs);
 
+  // Backtrace requests are special software breakpoints that get resumed. They need to be clearly
+  // differentiable from other exceptions.
+  bool backtrace_requested = false;
+
   // Check if the process is on an exception.
   zx_exception_report_t report;
-  status =
-      thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr, nullptr);
-
-  // ZX_OK means the thread is in a valid exception state.
-  if (status == ZX_OK) {
+  if (thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr, nullptr)
+      == ZX_OK) {
+    // The thread is in a valid exception state.
     if (!ZX_EXCP_IS_ARCH(report.header.type) && report.header.type != ZX_EXCP_POLICY_ERROR) {
       return;
     }
 
-    // We don't want to print "fatal" when we are printing the debug info from a
-    // backtrace request as we will resume the thread at the end.
-    const char* fatal = "fatal ";
-    if (is_backtrace_request(report.header.type, &regs)) {
-      fatal = "";
-    }
-
-    fprintf(out, "<== %s: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", fatal, process_name,
-            pid, thread_name, tid);
-    inspector::print_exception_report(out, report, &regs);
+    backtrace_requested = is_backtrace_request(report.header.type, &regs);
+    if (backtrace_requested) {
+      fprintf(out, "<== BACKTRACE REQUEST: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n",
+              process_name, pid, thread_name, tid);
+    } else {
+      // Normal exception.
+      fprintf(out, "<== CRASH: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", process_name, pid,
+              thread_name, tid);
+      inspector::print_exception_report(out, report, &regs);
 
 #if defined(__x86_64__)
-    inspector_print_general_regs(out, &regs, &report.context.arch.u.x86_64);
+      inspector_print_general_regs(out, &regs, &report.context.arch.u.x86_64);
 #elif defined(__aarch64__)
-    inspector_print_general_regs(out, &regs, &report.context.arch.u.arm_64);
+      inspector_print_general_regs(out, &regs, &report.context.arch.u.arm_64);
 
-    // Only output the Fault address register and ESR if there's a data or
-    // alignment fault.
-    if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type ||
-        ZX_EXCP_UNALIGNED_ACCESS == report.header.type) {
-      fprintf(out, " far %#18" PRIx64 " esr %#18x\n", report.context.arch.u.arm_64.far,
-              report.context.arch.u.arm_64.esr);
-    }
+      // Only output the Fault address register and ESR if there's a data or
+      // alignment fault.
+      if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type ||
+          ZX_EXCP_UNALIGNED_ACCESS == report.header.type) {
+        fprintf(out, " far %#18" PRIx64 " esr %#18x\n", report.context.arch.u.arm_64.far,
+                report.context.arch.u.arm_64.esr);
+      }
 #else
 #error unsupported architecture
 #endif
+    }
   } else {
     // The thread is suspended so we can safely print the stack trace.
     fprintf(out, "<== process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", process_name, pid,
@@ -266,11 +268,14 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
     inspector_print_general_regs(out, &regs, nullptr);
   }
 
-  // Print the common stack part of the thread.
-  fprintf(out, "bottom of user stack:\n");
-  inspector_print_memory(out, process->get(), decoded.sp, inspector::kMemoryDumpSize);
+  if (!backtrace_requested) {
+    // Print the common stack part of the thread.
+    fprintf(out, "bottom of user stack:\n");
+    inspector_print_memory(out, process->get(), decoded.sp, inspector::kMemoryDumpSize);
 
-  fprintf(out, "arch: %s\n", inspector::kArch);
+    fprintf(out, "arch: %s\n", inspector::kArch);
+  }
+
   inspector_print_stack_trace(out, process->get(), thread->get(), &regs);
 
   if (inspector::verbosity_level >= 1)

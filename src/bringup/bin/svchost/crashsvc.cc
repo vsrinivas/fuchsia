@@ -81,13 +81,13 @@ void HandOffException(
     async::Loop* loop) {
   zx::process process;
   if (const zx_status_t status = exception.get_process(&process); status != ZX_OK) {
-    LogError("failed to get exception process", info, status);
+    LogError("failed to get exception process when receiving exception", info, status);
     return;
   }
 
   zx::thread thread;
   if (const zx_status_t status = exception.get_thread(&thread); status != ZX_OK) {
-    LogError("failed to get exception thread", info, status);
+    LogError("failed to get exception thread when receiving exception", info, status);
     return;
   }
 
@@ -105,6 +105,7 @@ void HandOffException(
   }
 
   // Dump the crash info to the logs whether we have a FIDL handler or not.
+  fprintf(stdout, "crashsvc: exception received, processing\n");
   inspector_print_debug_info(stdout, process.get(), thread.get());
 
   // Send over the exception to the handler.
@@ -193,8 +194,6 @@ int crash_svc(void* arg) {
       LogError("failed to wait on the exception channel", status);
       continue;
     }
-
-    fprintf(stdout, "crashsvc: exception received, processing\n");
 
     if (signals & ZX_CHANNEL_PEER_CLOSED) {
       // We should only get here in crashsvc's unit tests. In production, our job is actually the
