@@ -19,6 +19,7 @@ namespace {
 
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
+using fuchsia::accessibility::semantics::States;
 using fuchsia::intl::l10n::MessageIds;
 
 class NodeDescriberTest : public gtest::RealLoopFixture {
@@ -90,6 +91,22 @@ TEST_F(NodeDescriberTest, NodeImage) {
   ASSERT_EQ(result[0].utterance.message(), "foo");
   ASSERT_TRUE(result[1].utterance.has_message());
   ASSERT_EQ(result[1].utterance.message(), "image");
+}
+
+TEST_F(NodeDescriberTest, NodeSlider) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(Role::SLIDER);
+  node.set_states(States());
+  node.mutable_states()->set_range_value(10.0);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_SLIDER),
+                                               "slider");
+  auto result = node_describer_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo, 10");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "slider");
 }
 
 }  // namespace

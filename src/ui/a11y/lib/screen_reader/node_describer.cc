@@ -7,6 +7,7 @@
 // This header file has been generated from the strings library fuchsia.intl.l10n.
 #include "fuchsia/intl/l10n/cpp/fidl.h"
 #include "src/ui/a11y/lib/screen_reader/node_describer.h"
+#include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
 namespace {
@@ -47,6 +48,30 @@ NodeDescriber::UtteranceAndContext DescribeImage(a11y::i18n::MessageFormatter* f
   return utterance;
 }
 
+// Returns a message that describes a node where Role == SLIDER.
+NodeDescriber::UtteranceAndContext DescribeSlider(a11y::i18n::MessageFormatter* formatter) {
+  NodeDescriber::UtteranceAndContext utterance;
+  auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_SLIDER));
+  FX_DCHECK(message);
+  utterance.utterance.set_message(std::move(*message));
+  utterance.delay = kDefaultDelay;
+  return utterance;
+}
+
+// Returns a message that describes the label and range value of a slider.
+std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantics::Node* node) {
+  std::string message;
+  if (node->has_attributes() && node->attributes().has_label()) {
+    message += node->attributes().label();
+  }
+
+  if (node->has_states() && node->states().has_range_value()) {
+    message = message + ", " + FormatFloat(node->states().range_value());
+  }
+
+  return message;
+}
+
 }  // namespace
 
 NodeDescriber::NodeDescriber(std::unique_ptr<i18n::MessageFormatter> message_formatter)
@@ -75,6 +100,13 @@ std::vector<NodeDescriber::UtteranceAndContext> NodeDescriber::DescribeNode(
         description.emplace_back(DescribeHeader(message_formatter_.get()));
       } else if (node->role() == Role::IMAGE) {
         description.emplace_back(DescribeImage(message_formatter_.get()));
+      } else if (node->role() == Role::SLIDER) {
+        // Add the slider's range value to the label utterance, if specified.
+        auto& label_utterance = description.back().utterance;
+        label_utterance.set_message(GetSliderLabelAndRangeMessage(node));
+
+        // Add a role description for the slider.
+        description.emplace_back(DescribeSlider(message_formatter_.get()));
       }
     }
   }

@@ -14,7 +14,7 @@ namespace {
 
 TEST(ScreenReaderUtilTest, NodeIsDescribableNullNode) {
   EXPECT_FALSE(a11y::NodeIsDescribable(nullptr));
-}  
+}
 
 TEST(ScreenReaderUtilTest, NodeIsDescribableButton) {
   fuchsia::accessibility::semantics::Node node;
@@ -45,6 +45,21 @@ TEST(ScreenReaderUtilTest, NodeIsDescribableNoLabel) {
   fuchsia::accessibility::semantics::Node node;
   node.set_node_id(0u);
   EXPECT_FALSE(a11y::NodeIsDescribable(&node));
+}
+
+TEST(ScreenReaderUtilTest, FormatFloatInteger) {
+  auto result = a11y::FormatFloat(1.0f);
+  EXPECT_EQ(result, "1");
+}
+
+TEST(ScreenReaderUtilTest, FormatFloatDecimal) {
+  auto result = a11y::FormatFloat(1.01f);
+  EXPECT_EQ(result, "1.01");
+}
+
+TEST(ScreenReaderUtilTest, FormatFloatZero) {
+  auto result = a11y::FormatFloat(0.0f);
+  EXPECT_EQ(result, "0");
 }
 
 }  // namespace
