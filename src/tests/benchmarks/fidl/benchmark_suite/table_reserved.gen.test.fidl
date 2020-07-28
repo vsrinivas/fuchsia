@@ -29,7 +29,7 @@ table TableReserved16 {
     16: uint8 field16;
 };
 
-[BindingsDenylist = "dart"]
+[BindingsDenylist = "dart, rust"]
 struct TableReserved256Struct {
     TableReserved256 value;
 };

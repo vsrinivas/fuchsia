@@ -7,6 +7,7 @@ library benchmarkfidl;
 using koid = uint64;
 
 // Based on fuchsia.gpu.magma.Primary.ExecuteImmediateCommand.
+[BindingsDenylist = "rust"]
 struct ExecuteImmediateCommandsRequest {
     uint32 context_id;
     bytes:2048 command_data;

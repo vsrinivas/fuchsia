@@ -11,6 +11,7 @@ enum EnumArrayElement {
     B = 2;
 };
 
+[BindingsDenylist = "rust"]
 struct EnumArray256 {
     array<EnumArrayElement>:256 values;
 };

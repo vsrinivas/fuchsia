@@ -6,6 +6,7 @@
 
 library benchmarkfidl;
 
+[BindingsDenylist = "rust"]
 struct BoolArray256 {
     array<bool>:256 values;
 };

@@ -32,7 +32,7 @@ func init() {
 				},
 				// Dart has a 256 argument limit and all set table fields are passed into
 				// the constructor.
-				Denylist: []config.Binding{config.Dart},
+				Denylist: []config.Binding{config.Dart, config.Rust},
 			},
 		},
 	})
@@ -40,12 +40,18 @@ func init() {
 
 func fidlGenTable(config config.Config) (string, error) {
 	size := config.GetInt("size")
+	// TODO(fxb/57224) Make it possible to apply denylists to multiple types.
+	denylist := ""
+	if size == 256 {
+		denylist = `[BindingsDenylist = "rust"]`
+	}
 	return fmt.Sprintf(`
 struct Table%[1]dStruct {
 	Table%[1]d value;
 };
 
+%[3]s
 table Table%[1]d {
 	%[2]s
-};`, size, util.OrdinalFields(types.Uint8, "field", size)), nil
+};`, size, util.OrdinalFields(types.Uint8, "field", size), denylist), nil
 }

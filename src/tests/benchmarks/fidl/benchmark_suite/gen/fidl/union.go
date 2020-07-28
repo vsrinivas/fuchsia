@@ -30,6 +30,7 @@ func init() {
 				Config: config.Config{
 					"size": 256,
 				},
+				Denylist: []config.Binding{config.Rust},
 			},
 		},
 	})
@@ -37,12 +38,17 @@ func init() {
 
 func fidlGenUnion(config config.Config) (string, error) {
 	size := config.GetInt("size")
+	denylist := ""
+	if size == 256 {
+		denylist = `[BindingsDenylist = "rust"]`
+	}
 	return fmt.Sprintf(`
 struct Union%[1]dStruct {
 	Union%[1]d u;
 };
 
+%[3]s
 union Union%[1]d {
 	%[2]s
-};`, size, util.OrdinalFields(types.Uint8, "field", size)), nil
+};`, size, util.OrdinalFields(types.Uint8, "field", size), denylist), nil
 }

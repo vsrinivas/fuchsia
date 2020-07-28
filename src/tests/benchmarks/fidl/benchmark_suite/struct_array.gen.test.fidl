@@ -12,6 +12,7 @@ struct StructArrayElement {
     uint16 b;
 };
 
+[BindingsDenylist = "rust"]
 struct StructArray256 {
     array<StructArrayElement>:256 elems;
 };

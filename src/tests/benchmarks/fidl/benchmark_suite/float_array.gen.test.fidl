@@ -6,6 +6,7 @@
 
 library benchmarkfidl;
 
+[BindingsDenylist = "rust"]
 struct FloatArray256 {
     array<float32>:256 values;
 };

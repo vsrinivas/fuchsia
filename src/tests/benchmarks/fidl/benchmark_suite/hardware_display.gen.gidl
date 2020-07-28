@@ -6,6 +6,7 @@
 
 // Based on fuchsia.hardware.display.Controller.OnVsync
 benchmark("HardwareDisplay/OnVsyncEvent/Image64") {
+    bindings_denylist = [rust],
     value = OnVsyncEvent{
         display_id: 1,
         timestamp: 1,
