@@ -63,6 +63,7 @@ impl ElementEventHandler {
         let view_spec = ViewSpec {
             view_holder_token: Some(token_pair.view_holder_token),
             annotations: Some(annotations),
+            ..ViewSpec::empty()
         };
 
         let (view_controller_proxy, server_end) = create_proxy::<ViewControllerMarker>()?;
