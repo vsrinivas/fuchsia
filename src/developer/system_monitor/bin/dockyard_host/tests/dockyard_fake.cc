@@ -11,6 +11,9 @@
 // code.
 namespace dockyard {
 
+// This is an arbitrary default port.
+const char kDefaultServerAddress[] = "0.0.0.0:50051";
+
 uint64_t MessageRequest::next_request_id_ = 0u;
 
 Dockyard::Dockyard() = default;
@@ -80,7 +83,8 @@ void Dockyard::OnConnection(MessageType /*message_type*/,
                             uint32_t /*harvester_version*/) {}
 
 bool Dockyard::StartCollectingFrom(ConnectionRequest&& /*request*/,
-                                   OnConnectionCallback /*callback*/) {
+                                   OnConnectionCallback /*callback*/,
+                                   std::string /*server_address*/) {
   return true;
 }
 

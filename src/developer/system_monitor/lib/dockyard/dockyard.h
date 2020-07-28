@@ -28,6 +28,9 @@ namespace dockyard {
 class DockyardServiceImpl;
 class SystemMonitorDockyardTest;
 
+// The default address to use to reach the Dockyard gRPC server.
+extern const char kDefaultServerAddress[];
+
 // An integer value representing a dockyard path.
 typedef uint32_t DockyardId;
 constexpr DockyardId INVALID_DOCKYARD_ID = 0;
@@ -557,9 +560,13 @@ class Dockyard {
   // four short words, such as "duck-floor-quick-rock". If |StartCollectingFrom|
   // was previously called, call |StopCollectingFromDevice| before starting a
   // new connection (otherwise this call will fail and return false).
+  // |server_address| is the address the dockyard should use for
+  // its gRPC server.
+  //
   // Returns true if successful.
   bool StartCollectingFrom(ConnectionRequest&& request,
-                           OnConnectionCallback callback);
+                           OnConnectionCallback callback,
+                           std::string server_adress = kDefaultServerAddress);
 
   // The inverse of |StartCollectingFrom|. It's safe to call this regardless of
   // whether |StartCollectingFrom| succeeded (no work is done unless
@@ -594,6 +601,9 @@ class Dockyard {
 
   // The server handles grpc messages (runs in a background thread).
   std::unique_ptr<grpc::Server> grpc_server_;
+
+  // The port bound to the gRPC service.
+  int grpc_server_port_;
 
   // The service handles proto buffers. The |service_| must remain valid until
   // the |server_| (which holds a weak pointer to |service_|) is finished.
@@ -682,7 +692,7 @@ class Dockyard {
   // Listen for incoming samples.
   //
   // Returns |false| on problems with starting the gRPC server.
-  bool Initialize();
+  bool Initialize(std::string server_adress);
 
   // A private version of MatchPaths that expects that a lock has already been
   // acquired.

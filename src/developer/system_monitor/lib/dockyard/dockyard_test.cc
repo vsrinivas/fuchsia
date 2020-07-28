@@ -13,6 +13,13 @@
 
 namespace dockyard {
 
+namespace {
+
+// A server address that gets the OS to choose a free port.
+const char kgRPCServerAddressForTest[] = "0.0.0.0:0";
+
+}
+
 class SystemMonitorDockyardTest : public ::testing::Test {
  public:
   void SetUp() {
@@ -824,9 +831,10 @@ TEST_F(SystemMonitorDockyardTest, DockyardIdToString) {
 
 TEST_F(SystemMonitorDockyardTest, ServerListening) {
   // Test for: https://bugs.chromium.org/p/fuchsia/issues/detail?id=72
-  const std::string kDeviceName = "apple.banana.carrot.dog";
+  const std::string device_name = "apple.banana.carrot.dog";
+
   ConnectionRequest request;
-  request.SetDeviceName(kDeviceName);
+  request.SetDeviceName(device_name);
   EXPECT_TRUE(dockyard_.StartCollectingFrom(
       std::move(request), [](const dockyard::ConnectionRequest& request,
                              const dockyard::ConnectionResponse& response) {
@@ -836,15 +844,18 @@ TEST_F(SystemMonitorDockyardTest, ServerListening) {
         EXPECT_EQ(response.GetMessageType(),
                   dockyard::MessageType::kResponseOk);
         EXPECT_EQ(response.DockyardVersion(), response.HarvesterVersion());
-      }));
+      },
+      kgRPCServerAddressForTest));
+
   ConnectionRequest second_request;
-  second_request.SetDeviceName(kDeviceName);
+  second_request.SetDeviceName(device_name);
   EXPECT_FALSE(dockyard_.StartCollectingFrom(
       std::move(second_request),
       [](const dockyard::ConnectionRequest& request,
          const dockyard::ConnectionResponse& response) {
         FAIL() << "Unexpected callback";
-      }));
+      },
+      kgRPCServerAddressForTest));
   dockyard_.OnConnection(dockyard::MessageType::kResponseOk,
                          /*harvester_version=*/dockyard::DOCKYARD_VERSION);
   EXPECT_TRUE(IsGrpcServerActive());
@@ -853,9 +864,10 @@ TEST_F(SystemMonitorDockyardTest, ServerListening) {
 }
 
 TEST_F(SystemMonitorDockyardTest, VersionMismatch) {
-  const std::string kDeviceName = "apple.banana.carrot.dog";
+  const std::string device_name = "apple.banana.carrot.dog";
+
   ConnectionRequest request;
-  request.SetDeviceName(kDeviceName);
+  request.SetDeviceName(device_name);
   EXPECT_TRUE(dockyard_.StartCollectingFrom(
       std::move(request), [](const dockyard::ConnectionRequest& request,
                              const dockyard::ConnectionResponse& response) {
@@ -865,7 +877,8 @@ TEST_F(SystemMonitorDockyardTest, VersionMismatch) {
         EXPECT_EQ(response.GetMessageType(),
                   dockyard::MessageType::kVersionMismatch);
         EXPECT_NE(response.DockyardVersion(), response.HarvesterVersion());
-      }));
+      },
+      kgRPCServerAddressForTest));
   dockyard_.OnConnection(dockyard::MessageType::kVersionMismatch,
                          /*harvester_version=*/dockyard::DOCKYARD_VERSION - 1);
 }
