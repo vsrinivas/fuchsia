@@ -79,6 +79,15 @@ class Geometry {
   HashLocation NextIntegrityBlockUp(uint32_t distance_from_leaf,
                                     IntegrityBlockIndex integrity_block_index);
 
+  // Returns the device block offset for the `index`th integrity block.
+  uint64_t AbsoluteLocationForIntegrity(IntegrityBlockIndex index) const;
+
+  // Returns the device block offset for the `index`th data block.
+  uint64_t AbsoluteLocationForData(DataBlockIndex index) const;
+
+  uint64_t total_blocks_;
+  uint32_t hash_size_;
+  uint32_t block_size_;
   uint32_t hashes_per_block_;
   BlockAllocation allocation_;
 };

@@ -70,7 +70,10 @@ BlockAllocation BestSplitFor(uint32_t block_size, uint32_t hash_size, uint64_t t
 }
 
 Geometry::Geometry(uint32_t block_size, uint32_t hash_size, uint64_t total_blocks)
-    : hashes_per_block_(block_size / hash_size),
+    : total_blocks_(total_blocks),
+      hash_size_(hash_size),
+      block_size_(block_size),
+      hashes_per_block_(block_size / hash_size),
       allocation_(BestSplitFor(block_size, hash_size, total_blocks)) {}
 
 HashLocation Geometry::IntegrityDataLocationForDataBlock(DataBlockIndex data_block_index) {
@@ -136,7 +139,8 @@ HashLocation Geometry::NextIntegrityBlockUp(uint32_t distance_from_leaf,
   uint64_t next_tier_stride = current_tier_stride * hashes_per_block_ + 1;
 
   // TODO: clean up these printfs once verified read is implemented/tested
-  // printf("                                       current tier stride %lu, next tier stride %lu\n",
+  // printf("                                       current tier stride %lu, next tier stride
+  // %lu\n",
   //       current_tier_stride, next_tier_stride);
 
   // Compute which hash in the containing integrity block (which sits up one
@@ -220,6 +224,14 @@ HashLocation Geometry::NextIntegrityBlockUp(uint32_t distance_from_leaf,
     // printf("clamped %u to %u\n", zero_indexed_containing_block_index, max_block_index_at_tier);
   }
   return HashLocation{clamped_containing_block_index, offset_within_block};
+}
+
+uint64_t Geometry::AbsoluteLocationForIntegrity(IntegrityBlockIndex index) const {
+  return allocation_.superblock_count + index;
+}
+
+uint64_t Geometry::AbsoluteLocationForData(DataBlockIndex index) const {
+  return allocation_.superblock_count + allocation_.padded_integrity_block_count + index;
 }
 
 }  // namespace block_verity

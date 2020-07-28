@@ -39,7 +39,8 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 
 zx_off_t Device::DdkGetSize() {
   zx_off_t data_size;
-  if (mul_overflow(info_.block_size, info_.block_allocation.data_block_count, &data_size)) {
+  if (mul_overflow(info_.geometry.block_size_, info_.geometry.allocation_.data_block_count,
+                   &data_size)) {
     zxlogf(ERROR, "overflowed when computing device size\n");
     return 0;
   }
@@ -65,7 +66,7 @@ void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
   // blocks.  We keep the superblock & integrity blocks to ourselves.
   // Besides block count and the op size, we're happy to pass through all values
   // from the underlying block device here.
-  out_info->block_count = info_.block_allocation.data_block_count;
+  out_info->block_count = info_.geometry.allocation_.data_block_count;
   *out_op_size = info_.op_size;
 }
 
@@ -74,7 +75,8 @@ void Device::BlockImplQueue(block_op_t* block_op, block_impl_queue_callback comp
   fbl::AutoLock lock(&mtx_);
   extra_op_t* extra = BlockToExtra(block_op, info_.op_size);
   // Save original values in extra, and adjust block_op's block offset.
-  zx_status_t rc = extra->Init(block_op, completion_cb, cookie, info_.data_start_offset);
+  uint64_t data_start_offset = info_.geometry.AbsoluteLocationForData(0);
+  zx_status_t rc = extra->Init(block_op, completion_cb, cookie, data_start_offset);
   if (rc != ZX_OK) {
     zxlogf(ERROR, "failed to initialize extra info: %s", zx_status_get_string(rc));
     BlockComplete(block_op, rc);

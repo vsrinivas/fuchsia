@@ -21,34 +21,32 @@ namespace block_verity {
 // |block_verity::DeviceInfo| bundles block device configuration details passed from the controller
 // to the device.
 struct DeviceInfo {
-  DeviceInfo(zx_device_t* device);
+  DeviceInfo(zx_device_t* device, Geometry geometry_in, uint64_t upstream_op_size_in,
+             uint64_t op_size_in);
   DeviceInfo(DeviceInfo&& other);
+
   // Disallow copy and assign.  Allow move.
   DeviceInfo(const DeviceInfo&) = delete;
   DeviceInfo& operator=(const DeviceInfo&) = delete;
 
   ~DeviceInfo() = default;
 
+  // Factory function
+  static DeviceInfo CreateFromDevice(zx_device_t* device);
+
   // Callbacks to the parent's block protocol methods.
   ddk::BlockProtocolClient block_protocol;
   // The parent block device
   zx_device_t* block_device;
 
-  // The parent device's block information
-  uint32_t block_size;
+  // The device's geometry and allocation
+  Geometry geometry;
 
-  // The parent device's block count
-  uint64_t block_count;
+  // The parent device's required block_op_t size.
+  uint64_t upstream_op_size;
 
   // This device's required block_op_t size.
   uint64_t op_size;
-
-  // The way that this device will use blocks from the parent device's size.
-  BlockAllocation block_allocation;
-
-  // Some precomputed offsets to make fast add/subtraction
-  uint64_t integrity_start_offset;
-  uint64_t data_start_offset;
 
   // Returns true if the block device can be used by block_verity.  This may fail, for example, if
   // the constructor was unable to get a valid block protocol.

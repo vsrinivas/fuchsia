@@ -22,6 +22,35 @@ test("geometry-test") {
   ]
 }
 
+source_set("sealer") {
+  sources = [
+    "hash-block-accumulator.cc",
+    "sealer.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/digest",
+  ]
+}
+
+test("sealer-test") {
+  testonly = true
+
+  output_name = "sealer-test"
+  sources = [ "sealer-tests.cc" ]
+  deps = [
+    ":geometry",
+    ":sealer",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/digest",
+  ]
+}
+
 driver_module("block-verity") {
   output_name = "block-verity"
 
@@ -32,6 +61,7 @@ driver_module("block-verity") {
     "device-info.cc",
     "device-manager.cc",
     "device.cc",
+    "driver-sealer.cc",
     "extra.cc",
   ]
 
@@ -39,11 +69,15 @@ driver_module("block-verity") {
 
   deps = [
     ":geometry",
+    ":sealer",
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/digest",
   ]
 }
 
@@ -68,7 +102,12 @@ fuchsia_unittest_package("block-verity-geometry-test") {
   deps = [ ":geometry-test" ]
 }
 
-isolated_devmgr_unittest_package("block-verity-test-package") {
+fuchsia_unittest_package("block-verity-sealer-test") {
+  executable_path = "test/sealer-test"
+  deps = [ ":sealer-test" ]
+}
+
+isolated_devmgr_unittest_package("block-verity-integration-test-package") {
   package_name = "block-verity-test"
   executable_path = "test/block-verity-test"
   deps = [
@@ -85,6 +124,7 @@ group("tests") {
   testonly = true
   deps = [
     ":block-verity-geometry-test",
-    ":block-verity-test-package",
+    ":block-verity-integration-test-package",
+    ":block-verity-sealer-test",
   ]
 }

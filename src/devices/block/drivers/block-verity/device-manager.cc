@@ -105,10 +105,29 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
       close_completer_ = std::nullopt;
       state_ = kClosed;
       break;
-    case kClosingForSeal:
+    case kClosingForSeal: {
       state_ = kSealing;
-      // TODO: start generating integrity data
+      // Now that the mutable device is unbound and about to release, we can
+      // start generating integrity data.
+      DeviceInfo info = DeviceInfo::CreateFromDevice(parent());
+      if (!info.IsValid()) {
+        zxlogf(ERROR, "failed to get valid device info");
+        seal_completer_->ReplyError(ZX_ERR_BAD_STATE);
+        seal_completer_ = std::nullopt;
+        state_ = kError;
+        return;
+      }
+      sealer_ = std::make_unique<DriverSealer>(std::move(info));
+      // The sealer will recompute and write out all verified block data, update
+      // the superblock, issue a flush, and then return the hash of the
+      // superblock.
+      zx_status_t result = sealer_->StartSealing(this, SealCompletedCallback);
+      if (result != ZX_OK) {
+        zxlogf(ERROR, "sealer failed to start: %d", result);
+        state_ = kError;
+      }
       break;
+    }
     case kBinding:
     case kClosed:
     case kSealing:
@@ -178,7 +197,7 @@ void DeviceManager::OpenForWrite(::llcpp::fuchsia::hardware::block::verified::Co
   // Go ahead and create the mutable child device.
 
   fbl::AllocChecker ac;
-  DeviceInfo info(parent());
+  DeviceInfo info = DeviceInfo::CreateFromDevice(parent());
   if (!info.IsValid()) {
     zxlogf(ERROR, "failed to get valid device info");
     async_completer.ReplyError(ZX_ERR_BAD_STATE);
@@ -221,14 +240,46 @@ void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync com
     return;
   }
 
-  // TODO: implement
-  //
-  // Unbind the mutable child device
-  // wait for that child to be removed
-  // recompute and write out all verified block data
-  // flush
-  // return root hash
-  async_completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  // Unbind the mutable child device.  We'll wait for the prerelease hook to be
+  // called to ensure that new reads and writes have quiesced before we start sealing.
+  state_ = kClosingForSeal;
+  (*child_)->DdkAsyncRemove();
+
+  // Stash the completer somewhere so we can signal it when we've finished
+  // generating the seal.
+  seal_completer_ = std::move(async_completer);
+}
+
+void DeviceManager::SealCompletedCallback(void* cookie, zx_status_t status, const uint8_t* seal_buf,
+                                          size_t seal_len) {
+  auto device_manager = static_cast<DeviceManager*>(cookie);
+  device_manager->OnSealCompleted(status, seal_buf, seal_len);
+}
+
+void DeviceManager::OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len) {
+  fbl::AutoLock lock(&mtx_);
+  ZX_ASSERT(state_ == kSealing);
+  ZX_ASSERT(seal_completer_.has_value());
+  ZX_ASSERT(seal_len == 32);
+
+  if (status == ZX_OK) {
+    // Assemble the result struct and reply with success
+    ::llcpp::fuchsia::hardware::block::verified::Sha256Seal sha256;
+    memcpy(sha256.superblock_hash.begin(), seal_buf, seal_len);
+
+    fidl::aligned<::llcpp::fuchsia::hardware::block::verified::Sha256Seal> aligned =
+        std::move(sha256);
+    seal_completer_->ReplySuccess(
+        ::llcpp::fuchsia::hardware::block::verified::Seal::WithSha256(fidl::unowned_ptr(&aligned)));
+  } else {
+    zxlogf(WARNING, "Sealer returned failure: %s", zx_status_get_string(status));
+    seal_completer_->ReplyError(status);
+  }
+
+  // Clean up.
+  state_ = kClosed;
+  sealer_.reset();
+  seal_completer_ = std::nullopt;
 }
 
 void DeviceManager::OpenForVerifiedRead(::llcpp::fuchsia::hardware::block::verified::Config config,

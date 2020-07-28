@@ -16,6 +16,8 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
+#include "driver-sealer.h"
+
 namespace block_verity {
 
 class Device;
@@ -70,6 +72,10 @@ class DeviceManager final
                            OpenForVerifiedReadCompleter::Sync completer) override
       __TA_EXCLUDES(mtx_);
   void Close(CloseCompleter::Sync completer) override __TA_EXCLUDES(mtx_);
+
+  static void SealCompletedCallback(void* cookie, zx_status_t status, const uint8_t* seal_buf,
+                                    size_t seal_len);
+  void OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len);
 
  private:
   // Represents the state of this device.
@@ -127,6 +133,18 @@ class DeviceManager final
   // `ChildPreRelease` hook.  This is expected to be valid when `state_` is
   // `kClosing` and nullopt all other times.
   std::optional<CloseCompleter::Async> close_completer_;
+
+  // If we are currently sealing, this holds the DriverSealer which is responsible for
+  // scheduling and performing that computation, then calling a callback.  This
+  // is expected to be valid when `state_` is `kSealing` and nullopt all other
+  // times.
+  std::unique_ptr<DriverSealer> sealer_;
+
+  // A place to hold a FIDL transaction completer so we can asynchronously
+  // complete the transaction after doing a bunch of I/O to regenerate the
+  // integrity data, superblock, and seal.  This is expected to be valid when
+  // `state_` is `kClosingForSeal` and `kSealing`, and nullopt all other times.
+  std::optional<CloseAndGenerateSealCompleter::Async> seal_completer_;
 
   // Used to ensure FIDL calls are exclusive to each other, and protects access to `state_`.
   fbl::Mutex mtx_;

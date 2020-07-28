@@ -8,35 +8,34 @@
 
 namespace block_verity {
 
-DeviceInfo::DeviceInfo(zx_device_t* device)
-    : block_protocol(device), block_device(device), block_size(0), op_size(0) {
+DeviceInfo DeviceInfo::CreateFromDevice(zx_device_t* device) {
+  ddk::BlockProtocolClient block_protocol(device);
   block_info_t blk;
-  block_protocol.Query(&blk, &op_size);
-  block_count = blk.block_count;
-  block_size = blk.block_size;
-  op_size += sizeof(extra_op_t);
-  block_allocation = BestSplitFor(blk.block_size, 32, blk.block_count);
-  integrity_start_offset = block_allocation.superblock_count;
-  data_start_offset =
-      block_allocation.superblock_count + block_allocation.padded_integrity_block_count;
+  uint64_t upstream_op_size;
+  block_protocol.Query(&blk, &upstream_op_size);
+  Geometry geometry(blk.block_size, 32, blk.block_count);
+  uint64_t op_size = upstream_op_size + sizeof(extra_op_t);
+  return DeviceInfo(device, geometry, upstream_op_size, op_size);
 }
+
+DeviceInfo::DeviceInfo(zx_device_t* device, Geometry geometry_in, uint64_t upstream_op_size_in,
+                       uint64_t op_size_in)
+    : block_protocol(device),
+      block_device(device),
+      geometry(geometry_in),
+      upstream_op_size(upstream_op_size_in),
+      op_size(op_size_in) {}
 
 DeviceInfo::DeviceInfo(DeviceInfo&& other)
     : block_protocol(other.block_device),
       block_device(other.block_device),
-      block_size(other.block_size),
-      block_count(other.block_count),
-      op_size(other.op_size),
-      block_allocation(other.block_allocation),
-      integrity_start_offset(other.integrity_start_offset),
-      data_start_offset(other.data_start_offset) {
+      geometry(other.geometry),
+      upstream_op_size(other.upstream_op_size),
+      op_size(other.op_size) {
   other.block_protocol.clear();
   other.block_device = nullptr;
-  other.block_size = 0;
-  other.block_count = 0;
+  other.upstream_op_size = 0;
   other.op_size = 0;
-  other.integrity_start_offset = 0;
-  other.data_start_offset = 0;
 }
 
 bool DeviceInfo::IsValid() const { return block_protocol.is_valid(); }
