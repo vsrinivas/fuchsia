@@ -33,6 +33,15 @@ table BasemgrConfig {
     6: StoryShellConfig story_shell;
 
     7: reserved;
+
+    /// Launch configuration for a session launcher component.
+    ///
+    /// If specified, this component is started instead of sessionmgr,
+    /// and all other configuration fields are ignored, except `enable_cobalt`.
+    ///
+    /// The session launcher component can then use the `Launcher` protocol
+    /// to launch sessionmgr with a particular configuration.
+    8: AppConfig session_launcher;
 };
 
 table BaseShellConfig {

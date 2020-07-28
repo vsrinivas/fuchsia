@@ -122,6 +122,16 @@ TestHarnessBuilder& TestHarnessBuilder::InterceptStoryShell(InterceptOptions opt
   return *this;
 }
 
+TestHarnessBuilder& TestHarnessBuilder::InterceptSessionLauncherComponent(
+    InterceptOptions options, fit::optional<std::vector<std::string>> args) {
+  spec_.mutable_basemgr_config()->mutable_session_launcher()->set_url(options.url);
+  if (args.has_value()) {
+    spec_.mutable_basemgr_config()->mutable_session_launcher()->set_args(std::move(args.value()));
+  }
+  InterceptComponent(std::move(options));
+  return *this;
+}
+
 TestHarnessBuilder& TestHarnessBuilder::AddService(const std::string& service_name,
                                                    vfs::Service::Connector connector) {
   env_services_->AddEntry(service_name, std::make_unique<vfs::Service>(std::move(connector)));

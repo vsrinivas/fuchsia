@@ -32,47 +32,55 @@ class SessionProvider {
         fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) = 0;
   };
 
+  using StartSessionResult = fit::result<void, zx_status_t>;
+
   // Target constructor.
   //
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
   // meant to be a callback for BasemgrImpl to start a new session.
   SessionProvider(Delegate* delegate, fuchsia::sys::Launcher* launcher,
-                  fuchsia::hardware::power::statecontrol::AdminPtr administrator,
+                  fuchsia::hardware::power::statecontrol::Admin* administrator,
                   const modular::ModularConfigAccessor* config_accessor,
                   intl::IntlPropertyProviderImpl* intl_property_provider,
                   fit::function<void()> on_zero_sessions);
 
-  // Starts a new sessionmgr process if there isn't one already. Returns false
-  // if there is an existing sessionmgr process, and does not start a new
-  // session. Returns true if a new session was started successfully.
-  bool StartSession(fuchsia::ui::views::ViewToken view_token, bool use_random_id);
+  // Starts a new sessionmgr process if there isn't one already.
+  //
+  // Returns |ZX_ERR_BAD_STATE| if there is an existing sessionmgr process, and does not
+  // start a new session.
+  //
+  // Returns fit::ok if a new session was started successfully.
+  StartSessionResult StartSession(fuchsia::ui::views::ViewToken view_token);
 
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
   // once teardown is complete or has timed out.
   void Teardown(fit::function<void()> callback);
 
-  // Callback function for session_provider to invoke when there is no active
-  // session
+  // Callback function for session_provider to invoke when there is no active session.
   void OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason);
 
   // Shuts down the running session, causing a new session to be created.
   void RestartSession(fit::function<void()> on_restart_complete);
 
+  // Returns true if sessionmgr is running.
+  bool is_session_running() const { return !!session_context_; }
+
  private:
-  // Returns a a service directory for serving `fuchsia.intl.PropertyProvider` to `sessionmgr`.
+  // Returns a service list for serving |fuchsia.intl.PropertyProvider| to sessionmgr,
+  // served from |sessionmgr_service_dir_|.
   fuchsia::sys::ServiceListPtr CreateAndServeSessionmgrServices();
 
-  Delegate* const delegate_;                // Neither owned nor copied.
-  fuchsia::sys::Launcher* const launcher_;  // Not owned.
-  fuchsia::hardware::power::statecontrol::AdminPtr administrator_;
-  const modular::ModularConfigAccessor* const config_accessor_;   // Not owned.
-  intl::IntlPropertyProviderImpl* const intl_property_provider_;  // Not owned.
+  Delegate* const delegate_;                                            // Neither owned nor copied.
+  fuchsia::sys::Launcher* const launcher_;                              // Not owned.
+  fuchsia::hardware::power::statecontrol::Admin* const administrator_;  // Not owned.
+  const modular::ModularConfigAccessor* const config_accessor_;         // Not owned.
+  intl::IntlPropertyProviderImpl* const intl_property_provider_;        // Not owned.
   fit::function<void()> on_zero_sessions_;
 
   std::unique_ptr<SessionContextImpl> session_context_;
 
-  // Service directory from which `fuchsia.intl.PropertyProvider` and others
-  // will be served to child `Sessionmgr`s.
+  // Service directory from which |fuchsia.intl.PropertyProvider| and others will be served
+  // to child |sessionmgr|s.
   vfs::PseudoDir sessionmgr_service_dir_;
 
   // The number of times that session had to be recovered from a crash, during a
@@ -82,6 +90,10 @@ class SessionProvider {
 
   // The timestamp of when last crash happened
   zx::time last_crash_time_;
+
+  // If set, this will be used for the value of |use_random_session_id| instead of
+  // the one from the configuration.
+  std::optional<bool> use_random_session_id_ = std::nullopt;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionProvider);
 };

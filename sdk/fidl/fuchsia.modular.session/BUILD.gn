@@ -13,9 +13,13 @@ fidl("fuchsia.modular.session") {
 
   sdk_category = "partner"
 
-  sources = [ "modular_config.fidl" ]
+  sources = [
+    "launcher.fidl",
+    "modular_config.fidl",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
   ]

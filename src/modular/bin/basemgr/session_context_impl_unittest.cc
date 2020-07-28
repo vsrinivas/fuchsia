@@ -39,13 +39,11 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
   auto modular_config_accessor = modular::ModularConfigAccessor(modular::DefaultConfig());
 
   modular::SessionContextImpl impl(
-      &launcher,
-      /*use_random_id=*/false, std::move(sessionmgr_app_config), &modular_config_accessor,
-      std::move(view_token),
+      &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
       /*additional_services=*/nullptr,
       /*get_presentation=*/
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
-      /*done_callback=*/[](modular::SessionContextImpl::ShutDownReason /* unused */) {});
+      /*on_session_shutdown=*/[](modular::SessionContextImpl::ShutDownReason /* unused */) {});
 
   EXPECT_TRUE(callback_called);
 }
@@ -69,13 +67,11 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
 
   bool done_callback_called = false;
   modular::SessionContextImpl impl(
-      &launcher,
-      /*use_random_id=*/false, std::move(sessionmgr_app_config), &modular_config_accessor,
-      std::move(view_token),
+      &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
       /*additional_services=*/nullptr,
       /*get_presentation=*/
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
-      /*done_callback=*/
+      /*on_session_shutdown=*/
       [&done_callback_called](modular::SessionContextImpl::ShutDownReason /* unused */) {
         done_callback_called = true;
       });

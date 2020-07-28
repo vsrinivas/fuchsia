@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/modular/lib/modular_config/modular_config.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace {
 
@@ -34,13 +35,12 @@ bool ModularConfigAccessor::use_random_session_id() const {
   // TODO(fxb/51752): Change base manager config to use a more direct declaration of persistence
   // and remove the base shell configuration entirely.
   FX_DCHECK(basemgr_config().has_base_shell());
+  FX_DCHECK(basemgr_config().base_shell().has_app_config());
   const auto& app_config = basemgr_config().base_shell().app_config();
   if (app_config.has_args()) {
-    for (const auto& arg : app_config.args()) {
-      if (arg == "--persist_user") {
-        return false;
-      }
-    }
+    const auto& args = app_config.args();
+
+    return std::find(args.begin(), args.end(), modular_config::kPersistUserArg) != args.end();
   }
 
   return true;

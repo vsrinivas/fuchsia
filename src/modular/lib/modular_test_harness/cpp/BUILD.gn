@@ -21,6 +21,8 @@ source_set("test_harness_fixture") {
   sources = [
     "fake_module.cc",
     "fake_module.h",
+    "fake_session_launcher_component.cc",
+    "fake_session_launcher_component.h",
     "fake_session_shell.cc",
     "fake_session_shell.h",
     "fake_settings_intl.cc",

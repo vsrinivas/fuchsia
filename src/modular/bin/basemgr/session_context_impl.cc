@@ -119,7 +119,7 @@ std::string GetStableSessionId() {
 
 }  // namespace
 
-SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher, bool use_random_id,
+SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher,
                                        fuchsia::modular::session::AppConfig sessionmgr_app_config,
                                        const modular::ModularConfigAccessor* const config_accessor,
                                        fuchsia::ui::views::ViewToken view_token,
@@ -132,6 +132,14 @@ SessionContextImpl::SessionContextImpl(fuchsia::sys::Launcher* const launcher, b
       weak_factory_(this) {
   FX_CHECK(get_presentation_);
   FX_CHECK(on_session_shutdown_);
+
+  const auto use_random_id = config_accessor->use_random_session_id();
+
+  if (use_random_id) {
+    FX_LOGS(INFO) << "Starting session with random session ID.";
+  } else {
+    FX_LOGS(INFO) << "Starting session with stable session ID.";
+  }
 
   // 0. Generate the path to map '/data' for the sessionmgr we are starting
   std::string session_id = use_random_id ? GetRandomSessionId() : GetStableSessionId();

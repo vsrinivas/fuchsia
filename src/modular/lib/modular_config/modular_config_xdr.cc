@@ -103,7 +103,16 @@ void XdrSessionShellMapEntry(XdrContext* const xdr,
                         has_args, std::vector<std::string>());
 }
 
+void XdrAppConfig(XdrContext* const xdr, fuchsia::modular::session::AppConfig* const data) {
+  xdr->Field(modular_config::kUrl, data->mutable_url());
+
+  bool has_args = data->has_args();
+  std::vector<std::string> default_args;
+  xdr->FieldWithDefault(modular_config::kArgs, data->mutable_args(), has_args, default_args);
+}
+
 void XdrComponentArgs(XdrContext* const xdr, fuchsia::modular::session::AppConfig* const data) {
+  // TODO(fxbug.dev/55895): component_args should use "url" instead of "uri"
   xdr->Field(modular_config::kUri, data->mutable_url());
 
   bool has_args = data->has_args();
@@ -222,6 +231,12 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
                         has_story_shell_url, std::string(modular_config::kDefaultStoryShellUrl));
   if (xdr->op() == XdrOp::FROM_JSON) {
     data->mutable_story_shell()->mutable_app_config()->set_args(std::vector<std::string>());
+  }
+
+  if (xdr->HasField(modular_config::kSessionLauncher, data->has_session_launcher())) {
+    xdr->Field(modular_config::kSessionLauncher, data->mutable_session_launcher(), XdrAppConfig);
+  } else {
+    data->clear_session_launcher();
   }
 }
 

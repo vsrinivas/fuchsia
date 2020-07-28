@@ -19,7 +19,8 @@
         "story_shell_url": {
           "$ref": "#/definitions/fuchsia_pkg_url",
           "default": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
-        }
+        },
+        "session_launcher": { "$ref": "#/definitions/url_and_args" }
       },
       "additionalProperties": false,
       "required": ["base_shell", "session_shells"]
@@ -84,6 +85,17 @@
         }
       },
       "additionalProperties": false
+    },
+    "url_and_args": {
+      "type": "object",
+      "properties": {
+        "url": { "$ref": "#/definitions/fuchsia_pkg_url" },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["url", "args"]
     },
     "component_args": {
       "type": "object",

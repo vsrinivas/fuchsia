@@ -14,7 +14,11 @@
         "screen_width": 100.0
       }
     ],
-    "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+    "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
+    "session_launcher": {
+      "url": "fuchsia-pkg://fuchsia.com/session_launcher_component#meta/session_launcher_component.cmx",
+      "args": [ "--arg" ]
+    }
   },
   "sessionmgr": {
     "enable_cobalt": false,

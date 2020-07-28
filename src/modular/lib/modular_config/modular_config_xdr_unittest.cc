@@ -43,6 +43,7 @@ TEST(ModularConfigXdr, BasemgrWriteDefaultValues) {
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
+  ASSERT_FALSE(expected_json_doc.HasParseError());
 
   // Serialize an empty BasemgrConfig to JSON.
   rapidjson::Document write_config_json_doc;
@@ -76,6 +77,79 @@ TEST(ModularConfigXdr, BasemgrReadDefaultValues) {
   EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_height());
   EXPECT_EQ(0, read_config.session_shell_map().at(0).config().screen_width());
   EXPECT_EQ(modular_config::kDefaultStoryShellUrl, read_config.story_shell().app_config().url());
+  EXPECT_FALSE(read_config.has_session_launcher());
+}
+
+// Tests that values are set correctly for BasemgrConfig when reading JSON.
+// All of the fields are set to a non-default value.
+TEST(ModularConfigXdr, BasemgrReadValues) {
+  static constexpr auto kTestBaseShellUrl =
+      "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx";
+  static constexpr auto kTestSessionShellUrl =
+      "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx";
+  static constexpr auto kTestStoryShellUrl =
+      "fuchsia-pkg://fuchsia.com/test_story_shell#meta/test_story_shell.cmx";
+  static constexpr auto kTestSessionLauncherUrl =
+      "fuchsia-pkg://fuchsia.com/test_session_launcher#meta/test_session_launcher.cmx";
+  static constexpr auto kTestSessionLauncherArg = "--test_session_launcher_arg";
+
+  static constexpr auto kJson = R"({
+      "enable_cobalt": false,
+      "use_session_shell_for_story_shell_factory": true,
+      "base_shell": {
+        "url": "fuchsia-pkg://fuchsia.com/test_base_shell#meta/test_base_shell.cmx",
+        "keep_alive_after_login": true
+      },
+      "session_shells": [
+        {
+          "url": "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx",
+          "display_usage": "near",
+          "screen_height": 50.0,
+          "screen_width": 100.0
+        }
+      ],
+      "story_shell_url": "fuchsia-pkg://fuchsia.com/test_story_shell#meta/test_story_shell.cmx",
+      "session_launcher": {
+        "url": "fuchsia-pkg://fuchsia.com/test_session_launcher#meta/test_session_launcher.cmx",
+        "args": [ "--test_session_launcher_arg" ]
+      }
+    })";
+  rapidjson::Document json_doc;
+  json_doc.Parse(kJson);
+  ASSERT_FALSE(json_doc.HasParseError());
+
+  // Deserialize it from the JSON string to a BasemgrConfig.
+  fuchsia::modular::session::BasemgrConfig read_config;
+  EXPECT_TRUE(XdrRead(&json_doc, &read_config, XdrBasemgrConfig));
+
+  EXPECT_FALSE(read_config.enable_cobalt());
+  EXPECT_TRUE(read_config.use_session_shell_for_story_shell_factory());
+
+  ASSERT_TRUE(read_config.has_base_shell());
+  ASSERT_TRUE(read_config.base_shell().has_app_config());
+  EXPECT_EQ(kTestBaseShellUrl, read_config.base_shell().app_config().url());
+  EXPECT_TRUE(read_config.base_shell().keep_alive_after_login());
+
+  ASSERT_EQ(1u, read_config.session_shell_map().size());
+  const auto& session_shell = read_config.session_shell_map().at(0);
+  EXPECT_EQ("", session_shell.name());
+  ASSERT_TRUE(session_shell.has_config());
+  ASSERT_TRUE(session_shell.config().has_app_config());
+  EXPECT_EQ(kTestSessionShellUrl, session_shell.config().app_config().url());
+  EXPECT_EQ(0u, session_shell.config().app_config().args().size());
+  EXPECT_EQ(fuchsia::ui::policy::DisplayUsage::kNear, session_shell.config().display_usage());
+  EXPECT_EQ(50.f, session_shell.config().screen_height());
+  EXPECT_EQ(100.f, session_shell.config().screen_width());
+
+  ASSERT_TRUE(read_config.has_story_shell());
+  ASSERT_TRUE(read_config.story_shell().has_app_config());
+  ASSERT_EQ(kTestStoryShellUrl, read_config.story_shell().app_config().url());
+  EXPECT_EQ(0u, read_config.story_shell().app_config().args().size());
+
+  ASSERT_TRUE(read_config.has_session_launcher());
+  ASSERT_EQ(kTestSessionLauncherUrl, read_config.session_launcher().url());
+  ASSERT_EQ(1u, read_config.session_launcher().args().size());
+  EXPECT_EQ(kTestSessionLauncherArg, read_config.session_launcher().args().at(0));
 }
 
 // Tests that default JSON values are set correctly when SessionmgrConfig contains no values.
@@ -90,6 +164,7 @@ TEST(ModularConfigXdr, SessionmgrWriteDefaultValues) {
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
+  ASSERT_FALSE(expected_json_doc.HasParseError());
 
   // Serialize an empty SessionmgrConfig to JSON.
   rapidjson::Document write_config_json_doc;
@@ -152,6 +227,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
+  ASSERT_FALSE(expected_json_doc.HasParseError());
 
   // Create a SessionmgrConfig with non-default values.
   fuchsia::modular::session::SessionmgrConfig write_config;

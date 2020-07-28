@@ -13,9 +13,13 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
+#include <lib/fit/promise.h>
 #include <lib/svc/cpp/service_namespace.h>
+
+#include <optional>
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
@@ -25,6 +29,8 @@
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
 
 namespace modular {
+
+class LauncherImpl;
 
 // Basemgr is the parent process of the modular framework, and it is started by
 // the sysmgr as part of the boot sequence.
@@ -37,6 +43,19 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
                     fuchsia::modular::internal::BasemgrDebug,
                     modular::SessionProvider::Delegate {
  public:
+  using LauncherBinding =
+      fidl::Binding<fuchsia::modular::session::Launcher, std::unique_ptr<LauncherImpl>>;
+
+  using LauncherBindingSet =
+      fidl::BindingSet<fuchsia::modular::session::Launcher, std::unique_ptr<LauncherImpl>>;
+
+  enum class State {
+    // normal mode of operation
+    RUNNING,
+    // basemgr is shutting down.
+    SHUTTING_DOWN
+  };
+
   // Creates a BasemgrImpl instance with the given parameters:
   //
   // |config_accessor| Contains configuration for starting sessions.
@@ -62,18 +81,34 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |fuchsia::process::lifecycle::Lifecycle|
   void Stop() override;
 
- private:
-  FuturePtr<> StopScenic();
+  // Launches sessionmgr with the given |config|.
+  void LaunchSessionmgr(fuchsia::modular::session::ModularConfig config);
 
-  // Starts the basemgr functionalities in the following order:
-  // 1. Initialize session provider.
-  // 2. Launch a session.
+  State state() const { return state_; }
+
+ private:
+  using StartSessionResult = fit::result<void, zx_status_t>;
+
+  // Stops the Scenic component.
+  //
+  // Resolves to an zx_status_t error if Scenic's lifecycle control channel closes for a reason
+  // other than ZX_ERR_PEER_CLOSED.
+  fit::promise<void, zx_status_t> StopScenic();
+
+  // Starts the session launcher component, if configured, or starts a session using the
+  // configuration read from |config_accessor_|.
   void Start();
 
+  // Shuts down the session, session launcher component, and Scenic, if any are running.
   void Shutdown() override;
 
   // Starts a new session.
-  void StartSession(bool use_random_id);
+  //
+  // Requires that |session_provider_| exists but is not running a session.
+  //
+  // Returns |ZX_ERR_BAD_STATE| if basemgr is shutting down, |session_provider_| does not exist,
+  // or a session is already running.
+  StartSessionResult StartSession();
 
   // |BasemgrDebug|
   void RestartSession(RestartSessionCallback on_restart_complete) override;
@@ -84,8 +119,23 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |SessionProvider::Delegate|
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
 
-  // Contains basemgr and sessionmgr configuration.
+  // Starts the session launcher component defined in the default basemgr configuration.
+  void StartSessionLauncherComponent();
+
+  // Creates a |session_provider_| that uses the given config.
+  //
+  // |config_accessor| must live for the duration of the session, outliving |session_provider_|.
+  void CreateSessionProvider(const ModularConfigAccessor* config_accessor);
+
+  // Returns a service list for serving |fuchsia.modular.session.Launcher| to the session
+  // launcher component, served from |session_launcher_component_service_dir_|.
+  fuchsia::sys::ServiceListPtr CreateAndServeSessionLauncherComponentServices();
+
+  // Contains initial basemgr and sessionmgr configuration.
   modular::ModularConfigAccessor config_accessor_;
+
+  // Contains configuration passed in via |Launcher.LaunchSessionmgr|
+  std::unique_ptr<modular::ModularConfigAccessor> launch_sessionmgr_config_accessor_;
 
   // Retained to be used in creating a `SessionProvider`.
   const std::shared_ptr<sys::ServiceDirectory> component_context_services_;
@@ -93,7 +143,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Used to export protocols like IntlPropertyProviderImpl and Lifecycle
   const std::shared_ptr<sys::OutgoingDirectory> outgoing_services_;
 
-  // Used to launch component instances, such as the base shell.
+  // Used to launch component instances.
   fuchsia::sys::LauncherPtr launcher_;
   // Used to connect the |presentation_container_| to scenic.
   fuchsia::ui::policy::PresenterPtr presenter_;
@@ -104,6 +154,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Holds the presentation service.
   std::unique_ptr<PresentationContainer> presentation_container_;
 
+  LauncherBindingSet session_launcher_bindings_;
   fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
   fidl::BindingSet<fuchsia::process::lifecycle::Lifecycle> process_lifecycle_bindings_;
@@ -114,12 +165,13 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   std::unique_ptr<intl::IntlPropertyProviderImpl> intl_property_provider_;
 
-  enum class State {
-    // normal mode of operation
-    RUNNING,
-    // basemgr is shutting down.
-    SHUTTING_DOWN
-  };
+  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_launcher_component_app_;
+
+  // Service directory from which |fuchsia.modular.session.Launcher| is served to
+  // session launcher components.
+  vfs::PseudoDir session_launcher_component_service_dir_;
+
+  async::Executor executor_;
 
   State state_ = State::RUNNING;
 

@@ -16,6 +16,30 @@ The file may contain (non-standard JSON) C-style comments
 
 ## Example
 
+The fields used in the startup configuration depend on whether a session launcher
+component is specified in the `basemgr.session_launcher` field.
+
+If `basemgr.session` is present, all other fields except for
+`basemgr.enable_cobalt` are ignored, and the session launcher component is responsible
+for instructing `basemgr` to launch a session with a complete configuration file.
+
+### Session launcher component
+
+```
+// Fields not specified here are ignored.
+{
+  "basemgr": {
+    "enable_cobalt": false,
+    "session_launcher": {
+      "url": "fuchsia-pkg://fuchsia.com/custom_session#meta/custom_session.cmx",
+      "args": [ "--foo", "--bar" ]
+    }
+  }
+}
+```
+
+### Typical configuration
+
 ```
 {
   /* This is a block comment.
@@ -112,6 +136,15 @@ The file may contain (non-standard JSON) C-style comments
     instead of creating separate story shell components. When set,
     `story_shell_url` and any story shell args are ignored.
   - **default**: `false`
+- `session_launcher` **object** _(optional)_
+  - When set, basemgr will launch this component instead of sessionmgr
+    on startup and ignore all other configuration properties, except
+    `basemgr.enable_cobalt`. This component can use the `fuchsia.session.Launcher`
+    protocol to launch sessionmgr.
+    - `url`: **string** _(required)_
+      - The Fuchsia component URL for the session component.
+    - `args` **string[]** _(optional)_
+      - A list of arguments to be passed to the session component specified by `url`.
 
 ## Sessionmgr fields
 

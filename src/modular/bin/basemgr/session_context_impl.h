@@ -14,6 +14,8 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
+#include <optional>
+
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/fidl/app_client.h"
@@ -48,7 +50,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // |additional_services| are services that will be installed into the
   // Sessionmgr's namespace, including an implementation of
   // `fuchsia.intl.PropertyProvider`.
-  SessionContextImpl(fuchsia::sys::Launcher* launcher, bool use_random_id,
+  SessionContextImpl(fuchsia::sys::Launcher* launcher,
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
                      fuchsia::ui::views::ViewToken view_token,

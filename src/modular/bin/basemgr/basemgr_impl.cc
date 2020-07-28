@@ -5,22 +5,77 @@
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <lib/async/default.h>
+#include <lib/fit/bridge.h>
+#include <lib/fostr/fidl/fuchsia/modular/session/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <zxtest/zxtest.h>
 
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "src/modular/lib/common/async_holder.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 
+// Timeout for tearing down the session launcher component.
+static constexpr auto kSessionLauncherComponentTimeout = zx::sec(1);
+
 using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
 using intl::IntlPropertyProviderImpl;
+
+// Implementation of the |fuchsia::modular::session::Launcher| protocol.
+class LauncherImpl : public fuchsia::modular::session::Launcher {
+ public:
+  explicit LauncherImpl(modular::BasemgrImpl* basemgr_impl) : basemgr_impl_(basemgr_impl) {}
+
+  // |Launcher|
+  void LaunchSessionmgr(fuchsia::mem::Buffer config) override {
+    FX_DCHECK(binding_);
+
+    if (basemgr_impl_->state() == BasemgrImpl::State::SHUTTING_DOWN) {
+      binding_->Close(ZX_ERR_BAD_STATE);
+      return;
+    }
+
+    // Read the configuration from the buffer.
+    std::string config_str;
+    if (auto is_read_ok = fsl::StringFromVmo(config, &config_str); !is_read_ok) {
+      binding_->Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    // Parse the configuration.
+    auto config_result = modular::ParseConfig(config_str);
+    if (config_result.is_error()) {
+      binding_->Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    // The configuration cannot try to override the session launcher component.
+    if (config_result.value().has_basemgr_config() &&
+        config_result.value().basemgr_config().has_session_launcher()) {
+      binding_->Close(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    basemgr_impl_->LaunchSessionmgr(config_result.take_value());
+  }
+
+  void set_binding(modular::BasemgrImpl::LauncherBinding* binding) { binding_ = binding; }
+
+  DISALLOW_COPY_ASSIGN_AND_MOVE(LauncherImpl);
+
+ private:
+  modular::BasemgrImpl* basemgr_impl_;                        // Not owned.
+  modular::BasemgrImpl::LauncherBinding* binding_ = nullptr;  // Not owned.
+};
 
 BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          std::shared_ptr<sys::ServiceDirectory> incoming_services,
@@ -36,12 +91,28 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       presenter_(std::move(presenter)),
       device_administrator_(std::move(device_administrator)),
       on_shutdown_(std::move(on_shutdown)),
-      session_provider_("SessionProvider") {
+      session_provider_("SessionProvider"),
+      executor_(async_get_default_dispatcher()) {
   intl_property_provider_ = IntlPropertyProviderImpl::Create(component_context_services_);
-  outgoing_services_->AddPublicService(intl_property_provider_->GetHandler());
 
+  outgoing_services_->AddPublicService(intl_property_provider_->GetHandler());
   outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
       lifecycle_bindings_.GetHandler(this));
+  outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
+                                       "fuchsia.process.lifecycle.Lifecycle");
+
+  // Bind the |Launcher| protocol to a client-specific implementation that delegates back to |this|.
+  fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher> launcher_handler =
+      [this](fidl::InterfaceRequest<fuchsia::modular::session::Launcher> request) {
+        auto impl = std::make_unique<LauncherImpl>(this);
+        session_launcher_bindings_.AddBinding(std::move(impl), std::move(request),
+                                              /*dispatcher=*/nullptr);
+        const auto& binding = session_launcher_bindings_.bindings().back().get();
+        binding->impl()->set_binding(binding);
+      };
+  session_launcher_component_service_dir_.AddEntry(
+      fuchsia::modular::session::Launcher::Name_,
+      std::make_unique<vfs::Service>(std::move(launcher_handler)));
 
   Start();
 }
@@ -53,51 +124,49 @@ void BasemgrImpl::Connect(
   basemgr_debug_bindings_.AddBinding(this, std::move(request));
 }
 
-FuturePtr<> BasemgrImpl::StopScenic() {
-  auto fut = Future<>::Create("StopScenic");
+fit::promise<void, zx_status_t> BasemgrImpl::StopScenic() {
+  fit::bridge<void, zx_status_t> bridge;
+
   if (!presenter_) {
     FX_LOGS(INFO) << "StopScenic: no presenter; assuming that Scenic has not been launched";
-    fut->Complete();
-    return fut;
+    bridge.completer.complete_ok();
+    return bridge.consumer.promise();
   }
 
   // Lazily connect to lifecycle controller, instead of keeping open an often-unused channel.
   component_context_services_->Connect(scenic_lifecycle_controller_.NewRequest());
   scenic_lifecycle_controller_->Terminate();
 
-  scenic_lifecycle_controller_.set_error_handler([fut](zx_status_t status) {
-    FX_CHECK(status == ZX_ERR_PEER_CLOSED)
-        << "LifecycleController experienced some error other than PEER_CLOSED : " << status
-        << std::endl;
-    fut->Complete();
-  });
-  return fut;
+  scenic_lifecycle_controller_.set_error_handler(
+      [completer = std::move(bridge.completer)](zx_status_t status) mutable {
+        if (status == ZX_ERR_PEER_CLOSED) {
+          completer.complete_ok();
+        } else {
+          completer.complete_error(status);
+        }
+      });
+
+  return bridge.consumer.promise();
 }
 
 void BasemgrImpl::Start() {
-  auto use_random_session_id = config_accessor_.use_random_session_id();
-
-  outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
-                                       "fuchsia.process.lifecycle.Lifecycle");
-
-  session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, launcher_.get(), std::move(device_administrator_), &config_accessor_,
-      intl_property_provider_.get(),
-      /* on_zero_sessions= */
-      [this, use_random_session_id] {
-        if (state_ == State::SHUTTING_DOWN) {
-          return;
-        }
-        FX_DLOGS(INFO) << "Re-starting due to session closure";
-        StartSession(use_random_session_id);
-      }));
-
   ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
-  StartSession(use_random_session_id);
+
+  if (config_accessor_.basemgr_config().has_session_launcher()) {
+    StartSessionLauncherComponent();
+  } else {
+    CreateSessionProvider(&config_accessor_);
+
+    auto start_session_result = StartSession();
+    if (start_session_result.is_error()) {
+      FX_PLOGS(FATAL, start_session_result.error()) << "Could not start session";
+    }
+  }
 }
 
 void BasemgrImpl::Shutdown() {
   FX_LOGS(INFO) << "Shutting down basemgr";
+
   // Prevent the shutdown sequence from running twice.
   if (state_ == State::SHUTTING_DOWN) {
     return;
@@ -105,37 +174,86 @@ void BasemgrImpl::Shutdown() {
 
   state_ = State::SHUTTING_DOWN;
 
-  // |session_provider_| teardown is asynchronous because it holds the
-  // sessionmgr processes.
-  session_provider_.Teardown(kSessionProviderTimeout, [this] {
-    StopScenic()->Then([this] {
-      FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
-      basemgr_debug_bindings_.CloseAll(ZX_OK);
-      on_shutdown_();
+  // Teardown the session provider if it exists.
+  // Always completes successfully.
+  auto teardown_session_provider = [this]() {
+    auto bridge = fit::bridge();
+    if (session_provider_.get()) {
+      session_provider_.Teardown(kSessionProviderTimeout, bridge.completer.bind());
+    } else {
+      bridge.completer.complete_ok();
+    }
+    return bridge.consumer.promise();
+  };
+
+  // Teardown the session component if it exists.
+  // Always completes successfully.
+  auto teardown_session_component_app = [this]() {
+    auto bridge = fit::bridge();
+    if (session_launcher_component_app_) {
+      session_launcher_component_app_->Teardown(kSessionLauncherComponentTimeout,
+                                                bridge.completer.bind());
+    } else {
+      bridge.completer.complete_ok();
+    }
+    return bridge.consumer.promise();
+  };
+
+  // Always completes successfully.
+  auto stop_scenic = [this]() {
+    return StopScenic().then([](const fit::result<void, zx_status_t>& result) {
+      if (result.is_error()) {
+        FX_PLOGS(ERROR, result.error())
+            << "Scenic LifecycleController experienced some error other than PEER_CLOSED";
+      } else {
+        FX_DLOGS(INFO) << "- fuchsia::ui::Scenic down";
+      }
     });
-  });
+  };
+
+  auto shutdown = teardown_session_provider()
+                      .and_then(teardown_session_component_app())
+                      .and_then(stop_scenic())
+                      .and_then([this]() {
+                        basemgr_debug_bindings_.CloseAll(ZX_OK);
+                        on_shutdown_();
+                      });
+
+  executor_.schedule_task(std::move(shutdown));
 }
 
 void BasemgrImpl::Terminate() { Shutdown(); }
 
 void BasemgrImpl::Stop() { Shutdown(); }
 
-void BasemgrImpl::StartSession(bool use_random_id) {
-  if (state_ == State::SHUTTING_DOWN) {
-    return;
-  }
-  if (use_random_id) {
-    FX_LOGS(INFO) << "Starting session with random session ID.";
-  } else {
-    FX_LOGS(INFO) << "Starting session with stable session ID.";
+void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const config_accessor) {
+  FX_DCHECK(!session_provider_.get());
+
+  session_provider_.reset(new SessionProvider(
+      /* delegate= */ this, launcher_.get(), device_administrator_.get(), config_accessor,
+      intl_property_provider_.get(),
+      /* on_zero_sessions= */
+      [this] {
+        if (state_ == State::SHUTTING_DOWN) {
+          return;
+        }
+        FX_DLOGS(INFO) << "Re-starting due to session closure";
+        auto start_session_result = StartSession();
+        if (start_session_result.is_error()) {
+          FX_PLOGS(FATAL, start_session_result.error()) << "Could not restart session";
+        }
+      }));
+}
+
+BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
+  if (state_ == State::SHUTTING_DOWN || !session_provider_.get() ||
+      session_provider_->is_session_running()) {
+    return fit::error(ZX_ERR_BAD_STATE);
   }
 
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  auto did_start_session = session_provider_->StartSession(std::move(view_token), use_random_id);
-  if (!did_start_session) {
-    FX_LOGS(WARNING) << "New session could not be started.";
-    return;
-  }
+  auto start_session_result = session_provider_->StartSession(std::move(view_token));
+  FX_CHECK(start_session_result.is_ok());
 
   // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
   if (presenter_) {
@@ -144,16 +262,67 @@ void BasemgrImpl::StartSession(bool use_random_id) {
     presenter_.set_error_handler(
         [this](zx_status_t /* unused */) { presentation_container_.reset(); });
   }
+
+  return fit::ok();
 }
 
 void BasemgrImpl::RestartSession(RestartSessionCallback on_restart_complete) {
-  if (state_ == State::SHUTTING_DOWN) {
+  if (state_ == State::SHUTTING_DOWN || !session_provider_.get()) {
     return;
   }
   session_provider_->RestartSession(std::move(on_restart_complete));
 }
 
-void BasemgrImpl::StartSessionWithRandomId() { StartSession(/* use_random_id */ true); }
+void BasemgrImpl::StartSessionWithRandomId() {
+  // If there is a session already running, stop it and try again.
+  // If it's not running, but there's a configured session provider, tear it down because
+  // we need to create a new one with an updated configuration.
+  if (session_provider_.get() || session_provider_->is_session_running()) {
+    session_provider_.Teardown(kSessionProviderTimeout, [this]() {
+      session_provider_.reset(nullptr);
+      StartSessionWithRandomId();
+    });
+    return;
+  }
+
+  FX_CHECK(!session_provider_.get());
+
+  // The new session uses a configuration based on its existing configuration,
+  // with an argument set that ensures it starts with a random session ID.
+  //
+  // If the session was previously launched through LaunchSessionmgr, the session configuration
+  // is stored in |launch_sessionmgr_config_accessor_|, and in |config_accessor_| if it was
+  // launched with configuration read by basemgr on startup.
+  const auto& accessor = launch_sessionmgr_config_accessor_
+                             ? launch_sessionmgr_config_accessor_.get()
+                             : &config_accessor_;
+
+  // Create a copy of the configuration that ensures a random session ID is used.
+  // TODO(fxb/51752): Create a config field for use_random_session_id and remove base shell
+  auto new_config = CloneStruct(accessor->config());
+  new_config.mutable_basemgr_config()
+      ->mutable_base_shell()
+      ->mutable_app_config()
+      ->mutable_args()
+      ->push_back(modular_config::kPersistUserArg);
+
+  // Set the new config and create a session provider.
+  //
+  // Overwrite the config accessor that was the source for the original configuration,
+  // and which will be used to launch sessions in the future.
+  if (launch_sessionmgr_config_accessor_) {
+    launch_sessionmgr_config_accessor_ =
+        std::make_unique<modular::ModularConfigAccessor>(std::move(new_config));
+    CreateSessionProvider(launch_sessionmgr_config_accessor_.get());
+  } else {
+    config_accessor_ = ModularConfigAccessor(std::move(new_config));
+    CreateSessionProvider(&config_accessor_);
+  }
+
+  if (auto result = StartSession(); result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Could not start session";
+  }
+}
 
 void BasemgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
@@ -162,6 +331,52 @@ void BasemgrImpl::GetPresentation(
     return;
   }
   presentation_container_->GetPresentation(std::move(request));
+}
+
+void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {
+  // If there is a session provider, tear it down and try again. This stops any running session.
+  if (session_provider_.get()) {
+    session_provider_.Teardown(kSessionProviderTimeout,
+                               [this, config = std::move(config)]() mutable {
+                                 session_provider_.reset(nullptr);
+                                 LaunchSessionmgr(std::move(config));
+                               });
+    return;
+  }
+
+  launch_sessionmgr_config_accessor_ =
+      std::make_unique<modular::ModularConfigAccessor>(std::move(config));
+
+  CreateSessionProvider(launch_sessionmgr_config_accessor_.get());
+
+  if (auto result = StartSession(); result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Could not start session";
+  }
+}
+
+void BasemgrImpl::StartSessionLauncherComponent() {
+  auto app_config = CloneStruct(config_accessor_.basemgr_config().session_launcher());
+
+  auto services = CreateAndServeSessionLauncherComponentServices();
+
+  FX_LOGS(INFO) << "Starting session launcher component: " << app_config.url();
+
+  session_launcher_component_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
+      launcher_.get(), std::move(app_config), /*data_origin=*/"", std::move(services),
+      /*flat_namespace=*/nullptr);
+}
+
+fuchsia::sys::ServiceListPtr BasemgrImpl::CreateAndServeSessionLauncherComponentServices() {
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
+  session_launcher_component_service_dir_.Serve(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      dir_handle.NewRequest().TakeChannel());
+
+  auto services = fuchsia::sys::ServiceList::New();
+  services->names.push_back(fuchsia::modular::session::Launcher::Name_);
+  services->host_directory = dir_handle.TakeChannel();
+
+  return services;
 }
 
 }  // namespace modular

@@ -24,13 +24,13 @@ static constexpr auto kMaxCrashRecoveryLimit = 3;
 static constexpr auto kMaxCrashRecoveryDuration = zx::hour(1);
 
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
-                                 fuchsia::hardware::power::statecontrol::AdminPtr administrator,
+                                 fuchsia::hardware::power::statecontrol::Admin* const administrator,
                                  const modular::ModularConfigAccessor* const config_accessor,
                                  IntlPropertyProviderImpl* const intl_property_provider,
                                  fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
-      administrator_(std::move(administrator)),
+      administrator_(administrator),
       config_accessor_(config_accessor),
       intl_property_provider_(intl_property_provider),
       on_zero_sessions_(std::move(on_zero_sessions)) {
@@ -41,11 +41,12 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
       std::make_unique<vfs::Service>(intl_property_provider_->GetHandler()));
 }
 
-bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token, bool use_random_id) {
-  if (session_context_) {
+SessionProvider::StartSessionResult SessionProvider::StartSession(
+    fuchsia::ui::views::ViewToken view_token) {
+  if (is_session_running()) {
     FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
-    return false;
+    return fit::error(ZX_ERR_BAD_STATE);
   }
 
   auto services = CreateAndServeSessionmgrServices();
@@ -59,19 +60,19 @@ bool SessionProvider::StartSession(fuchsia::ui::views::ViewToken view_token, boo
 
   // Session context initializes and holds the sessionmgr process.
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, use_random_id, std::move(sessionmgr_app_config), config_accessor_,
-      std::move(view_token), std::move(services),
+      launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
+      std::move(services),
       /* get_presentation= */
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
       },
       done);
 
-  return true;
+  return fit::ok();
 }
 
 void SessionProvider::Teardown(fit::function<void()> callback) {
-  if (!session_context_) {
+  if (!is_session_running()) {
     callback();
     return;
   }
@@ -81,7 +82,7 @@ void SessionProvider::Teardown(fit::function<void()> callback) {
 }
 
 void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) {
-  if (!session_context_) {
+  if (!is_session_running()) {
     return;
   }
 
@@ -107,7 +108,7 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
           fuchsia::hardware::power::statecontrol::RebootReason::SESSION_FAILURE,
           [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result status) {
             if (status.is_err()) {
-              FX_LOGS(ERROR) << "Failed to reboot: " << zx_status_get_string(status.err());
+              FX_PLOGS(FATAL, status.err()) << "Failed to reboot";
             }
           });
       return;
