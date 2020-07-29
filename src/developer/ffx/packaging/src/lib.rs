@@ -4,7 +4,7 @@
 
 mod repository;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{anyhow, Context, Result};
 use ffx_core::ffx_plugin;
 use ffx_packaging_args::{BuildCommand, PackageCommand, SubCommand};
 use repository::Repository;
@@ -14,7 +14,7 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
 #[ffx_plugin()]
-pub async fn cmd_package(cmd: PackageCommand) -> Result<(), Error> {
+pub async fn cmd_package(cmd: PackageCommand) -> Result<()> {
     let repo = &Repository::default_repo().await;
     match cmd.sub {
         SubCommand::Build(subcmd) => cmd_package_build(subcmd, std::io::stdout(), repo),
@@ -26,7 +26,7 @@ struct ManifestEntry {
     source: std::path::PathBuf,
 }
 
-fn parse_entry(entry: String) -> Result<ManifestEntry, Error> {
+fn parse_entry(entry: String) -> Result<ManifestEntry> {
     let equals_index = entry.find('=').ok_or(anyhow!("manifest entry must contain ="))?;
     let (path, source) = entry.split_at(equals_index);
     let source = &source[1..];
@@ -37,7 +37,7 @@ fn cmd_package_build(
     cmd: BuildCommand,
     mut w: impl std::io::Write,
     repo: &Repository,
-) -> Result<(), Error> {
+) -> Result<()> {
     let mut entries = Vec::new();
     for entry in cmd.entries {
         if entry.starts_with("@") {
@@ -79,7 +79,7 @@ fn build_package(
     repo: &Repository,
     contents: BTreeMap<String, PathBuf>,
     mut meta_files: BTreeMap<String, Vec<u8>>,
-) -> Result<fuchsia_merkle::Hash, Error> {
+) -> Result<fuchsia_merkle::Hash> {
     // copy the blobs and build the meta/contents map
     let mut merkles = BTreeMap::new();
     for (path, source) in contents {

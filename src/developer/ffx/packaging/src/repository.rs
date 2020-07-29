@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::Result;
 use ffx_config::constants::PACKAGE_REPO;
 use ffx_config::get;
 use std::{fs, path};
@@ -25,7 +25,7 @@ impl BlobsDir {
         BlobsDir { dir }
     }
 
-    pub fn add_blob<F>(&self, mut blob: F) -> Result<fuchsia_merkle::Hash, Error>
+    pub fn add_blob<F>(&self, mut blob: F) -> Result<fuchsia_merkle::Hash>
     where
         F: std::io::Read + std::io::Seek,
     {
@@ -60,11 +60,11 @@ impl Repository {
 #[cfg(test)]
 mod test {
     #[cfg(target_os = "linux")]
-    use {crate::repository::Repository, anyhow::Error, std::path};
+    use {crate::repository::Repository, anyhow::Result, std::path};
 
     #[fuchsia_async::run_singlethreaded(test)]
     #[cfg(target_os = "linux")]
-    async fn test_package_repo_config() -> Result<(), Error> {
+    async fn test_package_repo_config() -> Result<()> {
         let default_repo_dir = Repository::default_repo().await.packages_dir;
         let expected_repo_dir =
             path::PathBuf::from(std::env::var("HOME")?).join(".local/share/ffx/packages");
