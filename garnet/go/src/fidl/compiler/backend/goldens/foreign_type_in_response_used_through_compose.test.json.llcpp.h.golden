@@ -135,31 +135,39 @@ class Top final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class GetFoo_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      GetFoo_Impl(::zx::unowned_channel _client_end,
-                  ::fidl::BytePart _response_buffer);
-      ~GetFoo_Impl() = default;
-      GetFoo_Impl(GetFoo_Impl&& other) = default;
-      GetFoo_Impl& operator=(GetFoo_Impl&& other) = default;
-      GetFoo_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using GetFoo = GetFoo_Impl<GetFooResponse>;
+    class GetFoo final : public ::fidl::Result {
+     public:
+      explicit GetFoo(zx_handle_t _client, uint8_t* _response_bytes,
+                      uint32_t _response_byte_capacity);
+      explicit GetFoo(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      GetFoo(GetFoo&&) = delete;
+      GetFoo(const GetFoo&) = delete;
+      GetFoo* operator=(GetFoo&&) = delete;
+      GetFoo* operator=(const GetFoo&) = delete;
+      ~GetFoo() = default;
+
+      GetFooResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<GetFooResponse*>(bytes_);
+      }
+      const GetFooResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const GetFooResponse*>(bytes_);
+      }
+
+      GetFooResponse& value() { return *Unwrap(); }
+      const GetFooResponse& value() const { return *Unwrap(); }
+
+      GetFooResponse* operator->() { return &value(); }
+      const GetFooResponse* operator->() const { return &value(); }
+
+      GetFooResponse& operator*() { return value(); }
+      const GetFooResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class GetFooUnownedRequest final {
@@ -251,17 +259,6 @@ class Top final {
     // response buffers.
     static UnownedResultOf::GetFoo GetFoo(::zx::unowned_channel _client_end,
                                           ::fidl::BytePart _response_buffer);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<GetFooResponse> GetFoo(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;

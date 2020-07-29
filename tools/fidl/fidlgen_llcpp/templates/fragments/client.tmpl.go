@@ -69,7 +69,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
   //{{ . }}
       {{- end }}
   // {{- if .HasResponse }} Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. {{- end }} Caller provides the backing storage for FIDL message via request and response buffers.
-  {{ if .HasResponse }}UnownedResultOf::{{ .Name }}{{ else }}::fidl::StatusAndError{{ end }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}({{ template "SyncRequestCallerAllocateMethodArguments" . }});
+  {{ if .HasResponse }}UnownedResultOf::{{ .Name }}{{ else }}::fidl::Result{{ end }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}({{ template "SyncRequestCallerAllocateMethodArguments" . }});
     {{- end }}
 {{ "" }}
   {{- end }}

@@ -35,28 +35,6 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(
   return ResultOf::MethodOnSecond(_client_end->get());
 }
 
-::fidl::internal::StatusAndError SecondProtocol::InPlace::MethodOnSecond(
-    ::zx::unowned_channel _client_end) {
-  constexpr uint32_t _write_num_bytes = sizeof(MethodOnSecondRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<MethodOnSecondRequest> params(
-      std::move(_request_buffer));
-  MethodOnSecondRequest* request =
-      reinterpret_cast<MethodOnSecondRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0,
-                       kSecondProtocol_MethodOnSecond_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
-}
-
 ::fidl::Result SecondProtocol::ClientImpl::MethodOnSecond() {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     auto _res = ResultOf::MethodOnSecond(_binding->handle());
@@ -128,27 +106,6 @@ FirstProtocol::SyncClient::MethodOnFirst() {
 FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(
     ::zx::unowned_channel _client_end) {
   return ResultOf::MethodOnFirst(_client_end->get());
-}
-
-::fidl::internal::StatusAndError FirstProtocol::InPlace::MethodOnFirst(
-    ::zx::unowned_channel _client_end) {
-  constexpr uint32_t _write_num_bytes = sizeof(MethodOnFirstRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<MethodOnFirstRequest> params(
-      std::move(_request_buffer));
-  MethodOnFirstRequest* request =
-      reinterpret_cast<MethodOnFirstRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kFirstProtocol_MethodOnFirst_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
 }
 
 ::fidl::Result FirstProtocol::ClientImpl::MethodOnFirst() {

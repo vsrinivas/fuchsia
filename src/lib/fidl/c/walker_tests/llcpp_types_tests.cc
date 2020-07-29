@@ -509,42 +509,6 @@ void LargeStruct::MakeDecodedMessageHelper(fidl::BytePart buffer, uint64_t fill,
   }
 }
 
-TEST(LlcppTypesTests, UnownedSyncCallTest) {
-  // Manually define the unowned OwnedSyncCallBase type for InlinePODStruct.
-  // This is similar to the llcpp codegen output.
-  class MyUnownedSyncCall : private fidl::internal::UnownedSyncCallBase<InlinePODStruct> {
-    using Super = fidl::internal::UnownedSyncCallBase<InlinePODStruct>;
-
-   public:
-    explicit MyUnownedSyncCall(fidl::BytePart buffer, uint64_t payload) {
-      fidl::DecodedMessage<InlinePODStruct> decoded_message;
-      InlinePODStruct::MakeDecodedMessageHelper(std::move(buffer), payload, &decoded_message);
-      Super::SetResult(fidl::DecodeResult(ZX_OK, nullptr, std::move(decoded_message)));
-    }
-
-    ~MyUnownedSyncCall() = default;
-    MyUnownedSyncCall(MyUnownedSyncCall&& other) = default;
-    MyUnownedSyncCall& operator=(MyUnownedSyncCall&& other) = default;
-    using Super::error;
-    using Super::status;
-    using Super::Unwrap;
-  };
-
-  // When using caller-allocated buffer, it has to be FIDL-aligned.
-  FIDL_ALIGNDECL uint8_t response_buffer[64];
-  MyUnownedSyncCall call_1(fidl::BytePart::WrapEmpty(response_buffer), 0xABCDABCD);
-  ASSERT_EQ(call_1.status(), ZX_OK);
-  ASSERT_EQ(call_1.error(), nullptr);
-  ASSERT_EQ(call_1.Unwrap()->payload, 0xABCDABCD);
-  ASSERT_EQ(reinterpret_cast<uint8_t*>(call_1.Unwrap()), &response_buffer[0]);
-
-  MyUnownedSyncCall call_2(std::move(call_1));
-  ASSERT_EQ(call_2.status(), ZX_OK);
-  ASSERT_EQ(call_2.error(), nullptr);
-  ASSERT_EQ(call_2.Unwrap()->payload, 0xABCDABCD);
-  ASSERT_EQ(reinterpret_cast<uint8_t*>(call_2.Unwrap()), &response_buffer[0]);
-}
-
 TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {
   // The stack allocation limit of 512 bytes is defined in
   // zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h

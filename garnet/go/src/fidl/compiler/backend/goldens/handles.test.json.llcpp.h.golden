@@ -191,7 +191,6 @@ class SomeProtocol final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
    public:
   };
 
@@ -215,15 +214,6 @@ class SomeProtocol final {
   // setting up a client.
   class Call final {
     Call() = delete;
-
-   public:
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
 
    public:
   };

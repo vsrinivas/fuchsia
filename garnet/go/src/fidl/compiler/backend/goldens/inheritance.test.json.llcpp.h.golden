@@ -139,32 +139,40 @@ class super final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class foo_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      foo_Impl(::zx::unowned_channel _client_end,
-               ::fidl::BytePart _request_buffer, ::fidl::StringView s,
-               ::fidl::BytePart _response_buffer);
-      ~foo_Impl() = default;
-      foo_Impl(foo_Impl&& other) = default;
-      foo_Impl& operator=(foo_Impl&& other) = default;
-      foo_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using foo = foo_Impl<fooResponse>;
+    class foo final : public ::fidl::Result {
+     public:
+      explicit foo(zx_handle_t _client, uint8_t* _request_bytes,
+                   uint32_t _request_byte_capacity, const ::fidl::StringView& s,
+                   uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      foo(foo&&) = delete;
+      foo(const foo&) = delete;
+      foo* operator=(foo&&) = delete;
+      foo* operator=(const foo&) = delete;
+      ~foo() = default;
+
+      fooResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<fooResponse*>(bytes_);
+      }
+      const fooResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const fooResponse*>(bytes_);
+      }
+
+      fooResponse& value() { return *Unwrap(); }
+      const fooResponse& value() const { return *Unwrap(); }
+
+      fooResponse* operator->() { return &value(); }
+      const fooResponse* operator->() const { return &value(); }
+
+      fooResponse& operator*() { return value(); }
+      const fooResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class fooUnownedRequest final {
@@ -261,24 +269,6 @@ class super final {
                                     ::fidl::BytePart _request_buffer,
                                     ::fidl::StringView s,
                                     ::fidl::BytePart _response_buffer);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<fooResponse> foo(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<fooRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<fooResponse> foo(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<fooRequest> params,
-        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -442,32 +432,40 @@ class sub final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class foo_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      foo_Impl(::zx::unowned_channel _client_end,
-               ::fidl::BytePart _request_buffer, ::fidl::StringView s,
-               ::fidl::BytePart _response_buffer);
-      ~foo_Impl() = default;
-      foo_Impl(foo_Impl&& other) = default;
-      foo_Impl& operator=(foo_Impl&& other) = default;
-      foo_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using foo = foo_Impl<fooResponse>;
+    class foo final : public ::fidl::Result {
+     public:
+      explicit foo(zx_handle_t _client, uint8_t* _request_bytes,
+                   uint32_t _request_byte_capacity, const ::fidl::StringView& s,
+                   uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      explicit foo(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      foo(foo&&) = delete;
+      foo(const foo&) = delete;
+      foo* operator=(foo&&) = delete;
+      foo* operator=(const foo&) = delete;
+      ~foo() = default;
+
+      fooResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<fooResponse*>(bytes_);
+      }
+      const fooResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const fooResponse*>(bytes_);
+      }
+
+      fooResponse& value() { return *Unwrap(); }
+      const fooResponse& value() const { return *Unwrap(); }
+
+      fooResponse* operator->() { return &value(); }
+      const fooResponse* operator->() const { return &value(); }
+
+      fooResponse& operator*() { return value(); }
+      const fooResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class fooUnownedRequest final {
@@ -564,24 +562,6 @@ class sub final {
                                     ::fidl::BytePart _request_buffer,
                                     ::fidl::StringView s,
                                     ::fidl::BytePart _response_buffer);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<fooResponse> foo(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<fooRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<fooResponse> foo(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<fooRequest> params,
-        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;

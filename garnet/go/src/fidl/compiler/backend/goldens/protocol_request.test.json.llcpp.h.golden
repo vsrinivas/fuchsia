@@ -311,86 +311,106 @@ class Parent final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class GetChild_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      GetChild_Impl(::zx::unowned_channel _client_end,
-                    ::fidl::BytePart _response_buffer);
-      ~GetChild_Impl() = default;
-      GetChild_Impl(GetChild_Impl&& other) = default;
-      GetChild_Impl& operator=(GetChild_Impl&& other) = default;
-      GetChild_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class GetChildRequest_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      GetChildRequest_Impl(::zx::unowned_channel _client_end,
-                           ::fidl::BytePart _response_buffer);
-      ~GetChildRequest_Impl() = default;
-      GetChildRequest_Impl(GetChildRequest_Impl&& other) = default;
-      GetChildRequest_Impl& operator=(GetChildRequest_Impl&& other) = default;
-      GetChildRequest_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    class TakeChild_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      TakeChild_Impl(::zx::unowned_channel _client_end,
-                     ::fidl::BytePart _request_buffer, ::zx::channel c);
-      ~TakeChild_Impl() = default;
-      TakeChild_Impl(TakeChild_Impl&& other) = default;
-      TakeChild_Impl& operator=(TakeChild_Impl&& other) = default;
-      TakeChild_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-    class TakeChildRequest_Impl final
-        : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      TakeChildRequest_Impl(::zx::unowned_channel _client_end,
-                            ::fidl::BytePart _request_buffer, ::zx::channel r);
-      ~TakeChildRequest_Impl() = default;
-      TakeChildRequest_Impl(TakeChildRequest_Impl&& other) = default;
-      TakeChildRequest_Impl& operator=(TakeChildRequest_Impl&& other) = default;
-      TakeChildRequest_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using GetChild = GetChild_Impl<GetChildResponse>;
-    using GetChildRequest = GetChildRequest_Impl<GetChildRequestResponse>;
-    using TakeChild = TakeChild_Impl;
-    using TakeChildRequest = TakeChildRequest_Impl;
+    class GetChild final : public ::fidl::Result {
+     public:
+      explicit GetChild(zx_handle_t _client, uint8_t* _response_bytes,
+                        uint32_t _response_byte_capacity);
+      explicit GetChild(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      GetChild(GetChild&&) = delete;
+      GetChild(const GetChild&) = delete;
+      GetChild* operator=(GetChild&&) = delete;
+      GetChild* operator=(const GetChild&) = delete;
+      ~GetChild() {
+        if (ok()) {
+          fidl_close_handles(GetChildResponse::Type, bytes_, nullptr);
+        }
+      }
+
+      GetChildResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<GetChildResponse*>(bytes_);
+      }
+      const GetChildResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const GetChildResponse*>(bytes_);
+      }
+
+      GetChildResponse& value() { return *Unwrap(); }
+      const GetChildResponse& value() const { return *Unwrap(); }
+
+      GetChildResponse* operator->() { return &value(); }
+      const GetChildResponse* operator->() const { return &value(); }
+
+      GetChildResponse& operator*() { return value(); }
+      const GetChildResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class GetChildRequest final : public ::fidl::Result {
+     public:
+      explicit GetChildRequest(zx_handle_t _client, uint8_t* _response_bytes,
+                               uint32_t _response_byte_capacity);
+      explicit GetChildRequest(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      GetChildRequest(GetChildRequest&&) = delete;
+      GetChildRequest(const GetChildRequest&) = delete;
+      GetChildRequest* operator=(GetChildRequest&&) = delete;
+      GetChildRequest* operator=(const GetChildRequest&) = delete;
+      ~GetChildRequest() {
+        if (ok()) {
+          fidl_close_handles(GetChildRequestResponse::Type, bytes_, nullptr);
+        }
+      }
+
+      GetChildRequestResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<GetChildRequestResponse*>(bytes_);
+      }
+      const GetChildRequestResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const GetChildRequestResponse*>(bytes_);
+      }
+
+      GetChildRequestResponse& value() { return *Unwrap(); }
+      const GetChildRequestResponse& value() const { return *Unwrap(); }
+
+      GetChildRequestResponse* operator->() { return &value(); }
+      const GetChildRequestResponse* operator->() const { return &value(); }
+
+      GetChildRequestResponse& operator*() { return value(); }
+      const GetChildRequestResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class TakeChild final : public ::fidl::Result {
+     public:
+      explicit TakeChild(zx_handle_t _client, uint8_t* _request_bytes,
+                         uint32_t _request_byte_capacity, ::zx::channel& c);
+      explicit TakeChild(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      TakeChild(TakeChild&&) = delete;
+      TakeChild(const TakeChild&) = delete;
+      TakeChild* operator=(TakeChild&&) = delete;
+      TakeChild* operator=(const TakeChild&) = delete;
+      ~TakeChild() = default;
+    };
+    class TakeChildRequest final : public ::fidl::Result {
+     public:
+      explicit TakeChildRequest(zx_handle_t _client, uint8_t* _request_bytes,
+                                uint32_t _request_byte_capacity,
+                                ::zx::channel& r);
+      explicit TakeChildRequest(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      TakeChildRequest(TakeChildRequest&&) = delete;
+      TakeChildRequest(const TakeChildRequest&) = delete;
+      TakeChildRequest* operator=(TakeChildRequest&&) = delete;
+      TakeChildRequest* operator=(const TakeChildRequest&) = delete;
+      ~TakeChildRequest() = default;
+    };
   };
 
   class GetChildUnownedRequest final {
@@ -718,36 +738,6 @@ class Parent final {
         ::zx::channel r);
   };
 
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<GetChildResponse> GetChild(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<GetChildRequestResponse> GetChildRequest(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    static ::fidl::internal::StatusAndError TakeChild(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<TakeChildRequest> params);
-
-    static ::fidl::internal::StatusAndError TakeChild(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<TakeChildRequest> params);
-
-    static ::fidl::internal::StatusAndError TakeChildRequest(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<TakeChildRequestRequest> params);
-
-    static ::fidl::internal::StatusAndError TakeChildRequest(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<TakeChildRequestRequest> params);
-  };
-
   struct AsyncEventHandlers;
   class GetChildResponseContext;
   class GetChildRequestResponseContext;
@@ -861,7 +851,6 @@ class Child final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
    public:
   };
 
@@ -885,15 +874,6 @@ class Child final {
   // setting up a client.
   class Call final {
     Call() = delete;
-
-   public:
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
 
    public:
   };
@@ -1046,8 +1026,7 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError TakeChild(::fidl::BytePart _request_buffer,
-                                   ::zx::channel c);
+  ::fidl::Result TakeChild(::fidl::BytePart _request_buffer, ::zx::channel c);
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -1055,8 +1034,8 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError TakeChildRequest(::fidl::BytePart _request_buffer,
-                                          ::zx::channel r);
+  ::fidl::Result TakeChildRequest(::fidl::BytePart _request_buffer,
+                                  ::zx::channel r);
 
  private:
   friend class ::fidl::Client<Parent>;

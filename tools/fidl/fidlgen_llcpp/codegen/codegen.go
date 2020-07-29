@@ -94,7 +94,6 @@ func NewGenerator() *Generator {
 		fragments.SyncEventHandler,
 		fragments.SyncRequestManaged,
 		fragments.SyncRequestCallerAllocate,
-		fragments.SyncRequestInPlace,
 		fragments.SyncServer,
 		fragments.Table,
 		fragments.Union,

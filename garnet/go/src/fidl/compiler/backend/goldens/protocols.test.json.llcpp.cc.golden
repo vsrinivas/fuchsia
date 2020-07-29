@@ -63,75 +63,32 @@ Transitional::ResultOf::Request Transitional::Call::Request(
   return ResultOf::Request(_client_end->get(), x);
 }
 
-template <>
-Transitional::UnownedResultOf::Request_Impl<Transitional::RequestResponse>::
-    Request_Impl(::zx::unowned_channel _client_end,
-                 ::fidl::BytePart _request_buffer, int64_t x,
-                 ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < RequestRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<RequestResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  new (_request_buffer.data()) RequestRequest(0, x);
-  _request_buffer.set_actual(sizeof(RequestRequest));
-  ::fidl::DecodedMessage<RequestRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<RequestRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<RequestRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(Transitional::InPlace::Request(std::move(_client_end),
-                                                  std::move(_encoded_request),
-                                                  std::move(_response_buffer)));
+Transitional::UnownedResultOf::Request::Request(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, int64_t x, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  RequestUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, x);
+  _request.GetFidlMessage().Call(RequestResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Transitional::UnownedResultOf::Request Transitional::SyncClient::Request(
     ::fidl::BytePart _request_buffer, int64_t x,
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Request(::zx::unowned_channel(this->channel_),
-                                  std::move(_request_buffer), std::move(x),
-                                  std::move(_response_buffer));
+  return UnownedResultOf::Request(
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      x, _response_buffer.data(), _response_buffer.capacity());
 }
 
 Transitional::UnownedResultOf::Request Transitional::Call::Request(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     int64_t x, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Request(std::move(_client_end),
-                                  std::move(_request_buffer), std::move(x),
-                                  std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Transitional::RequestResponse>
-Transitional::InPlace::Request(::zx::unowned_channel _client_end,
-                               ::fidl::DecodedMessage<RequestRequest> params,
-                               ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Transitional::RequestResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return Request(std::move(_client_end),
-                 std::move(_encode_request_result.message),
-                 std::move(response_buffer));
-}
-
-::fidl::DecodeResult<Transitional::RequestResponse>
-Transitional::InPlace::Request(::zx::unowned_channel _client_end,
-                               ::fidl::EncodedMessage<RequestRequest> params,
-                               ::fidl::BytePart response_buffer) {
-  RequestRequest* request =
-      reinterpret_cast<RequestRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kTransitional_Request_Ordinal);
-  auto _call_result = ::fidl::Call<RequestRequest, RequestResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Transitional::RequestResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::Request(
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), x,
+      _response_buffer.data(), _response_buffer.capacity());
 }
 
 Transitional::ResultOf::OneWay::OneWay(zx_handle_t _client, int64_t x) {
@@ -150,67 +107,27 @@ Transitional::ResultOf::OneWay Transitional::Call::OneWay(
   return ResultOf::OneWay(_client_end->get(), x);
 }
 
-Transitional::UnownedResultOf::OneWay_Impl::OneWay_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    int64_t x) {
-  if (_request_buffer.capacity() < OneWayRequest::PrimarySize) {
-    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
-    return;
-  }
-  new (_request_buffer.data()) OneWayRequest(0, x);
-  _request_buffer.set_actual(sizeof(OneWayRequest));
-  ::fidl::DecodedMessage<OneWayRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<OneWayRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<OneWayRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(Transitional::InPlace::OneWay(std::move(_client_end),
-                                                 std::move(_encoded_request)));
+Transitional::UnownedResultOf::OneWay::OneWay(zx_handle_t _client,
+                                              uint8_t* _request_bytes,
+                                              uint32_t _request_byte_capacity,
+                                              int64_t x) {
+  OneWayUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, x);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Transitional::UnownedResultOf::OneWay Transitional::SyncClient::OneWay(
     ::fidl::BytePart _request_buffer, int64_t x) {
-  return UnownedResultOf::OneWay(::zx::unowned_channel(this->channel_),
-                                 std::move(_request_buffer), std::move(x));
+  return UnownedResultOf::OneWay(this->channel().get(), _request_buffer.data(),
+                                 _request_buffer.capacity(), x);
 }
 
 Transitional::UnownedResultOf::OneWay Transitional::Call::OneWay(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     int64_t x) {
-  return UnownedResultOf::OneWay(std::move(_client_end),
-                                 std::move(_request_buffer), std::move(x));
-}
-
-::fidl::internal::StatusAndError Transitional::InPlace::OneWay(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<OneWayRequest> params) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return OneWay(std::move(_client_end),
-                std::move(_encode_request_result.message));
-}
-
-::fidl::internal::StatusAndError Transitional::InPlace::OneWay(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<OneWayRequest> params) {
-  OneWayRequest* request =
-      reinterpret_cast<OneWayRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kTransitional_OneWay_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
+  return UnownedResultOf::OneWay(_client_end->get(), _request_buffer.data(),
+                                 _request_buffer.capacity(), x);
 }
 
 Transitional::ResultOf::Request Transitional::ClientImpl::Request_Sync(
@@ -226,11 +143,12 @@ Transitional::UnownedResultOf::Request Transitional::ClientImpl::Request_Sync(
     ::fidl::BytePart _request_buffer, int64_t x,
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::Request(_binding->channel(),
-                                    std::move(_request_buffer), std::move(x),
-                                    std::move(_response_buffer));
+    return UnownedResultOf::Request(
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        x, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return Transitional::UnownedResultOf::Request(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError Transitional::ClientImpl::Request(
@@ -305,14 +223,15 @@ Transitional::UnownedResultOf::Request Transitional::ClientImpl::Request_Sync(
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError Transitional::ClientImpl::OneWay(
+::fidl::Result Transitional::ClientImpl::OneWay(
     ::fidl::BytePart _request_buffer, int64_t x) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = UnownedResultOf::OneWay(
-        _binding->channel(), std::move(_request_buffer), std::move(x));
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res =
+        UnownedResultOf::OneWay(_binding->handle(), _request_buffer.data(),
+                                _request_buffer.capacity(), x);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 std::optional<::fidl::UnbindInfo> Transitional::ClientImpl::Dispatch(
@@ -633,69 +552,27 @@ ChannelProtocol::ResultOf::MethodA ChannelProtocol::Call::MethodA(
   return ResultOf::MethodA(_client_end->get(), a, b);
 }
 
-ChannelProtocol::UnownedResultOf::MethodA_Impl::MethodA_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    int64_t a, int64_t b) {
-  if (_request_buffer.capacity() < MethodARequest::PrimarySize) {
-    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
-    return;
-  }
-  new (_request_buffer.data()) MethodARequest(0, a, b);
-  _request_buffer.set_actual(sizeof(MethodARequest));
-  ::fidl::DecodedMessage<MethodARequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<MethodARequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<MethodARequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(ChannelProtocol::InPlace::MethodA(
-      std::move(_client_end), std::move(_encoded_request)));
+ChannelProtocol::UnownedResultOf::MethodA::MethodA(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, int64_t a, int64_t b) {
+  MethodAUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, a,
+                                 b);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 ChannelProtocol::UnownedResultOf::MethodA ChannelProtocol::SyncClient::MethodA(
     ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
-  return UnownedResultOf::MethodA(::zx::unowned_channel(this->channel_),
-                                  std::move(_request_buffer), std::move(a),
-                                  std::move(b));
+  return UnownedResultOf::MethodA(this->channel().get(), _request_buffer.data(),
+                                  _request_buffer.capacity(), a, b);
 }
 
 ChannelProtocol::UnownedResultOf::MethodA ChannelProtocol::Call::MethodA(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     int64_t a, int64_t b) {
-  return UnownedResultOf::MethodA(std::move(_client_end),
-                                  std::move(_request_buffer), std::move(a),
-                                  std::move(b));
-}
-
-::fidl::internal::StatusAndError ChannelProtocol::InPlace::MethodA(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<MethodARequest> params) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return MethodA(std::move(_client_end),
-                 std::move(_encode_request_result.message));
-}
-
-::fidl::internal::StatusAndError ChannelProtocol::InPlace::MethodA(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<MethodARequest> params) {
-  MethodARequest* request =
-      reinterpret_cast<MethodARequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kChannelProtocol_MethodA_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
+  return UnownedResultOf::MethodA(_client_end->get(), _request_buffer.data(),
+                                  _request_buffer.capacity(), a, b);
 }
 
 ChannelProtocol::ResultOf::MethodB::MethodB(zx_handle_t _client, int64_t a,
@@ -718,75 +595,33 @@ ChannelProtocol::ResultOf::MethodB ChannelProtocol::Call::MethodB(
   return ResultOf::MethodB(_client_end->get(), a, b);
 }
 
-template <>
-ChannelProtocol::UnownedResultOf::
-    MethodB_Impl<ChannelProtocol::MethodBResponse>::MethodB_Impl(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        int64_t a, int64_t b, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < MethodBRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<MethodBResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  new (_request_buffer.data()) MethodBRequest(0, a, b);
-  _request_buffer.set_actual(sizeof(MethodBRequest));
-  ::fidl::DecodedMessage<MethodBRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<MethodBRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<MethodBRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(ChannelProtocol::InPlace::MethodB(
-      std::move(_client_end), std::move(_encoded_request),
-      std::move(_response_buffer)));
+ChannelProtocol::UnownedResultOf::MethodB::MethodB(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, int64_t a, int64_t b,
+    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  MethodBUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, a,
+                                 b);
+  _request.GetFidlMessage().Call(MethodBResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 ChannelProtocol::UnownedResultOf::MethodB ChannelProtocol::SyncClient::MethodB(
     ::fidl::BytePart _request_buffer, int64_t a, int64_t b,
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MethodB(::zx::unowned_channel(this->channel_),
-                                  std::move(_request_buffer), std::move(a),
-                                  std::move(b), std::move(_response_buffer));
+  return UnownedResultOf::MethodB(
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      a, b, _response_buffer.data(), _response_buffer.capacity());
 }
 
 ChannelProtocol::UnownedResultOf::MethodB ChannelProtocol::Call::MethodB(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     int64_t a, int64_t b, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MethodB(std::move(_client_end),
-                                  std::move(_request_buffer), std::move(a),
-                                  std::move(b), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<ChannelProtocol::MethodBResponse>
-ChannelProtocol::InPlace::MethodB(::zx::unowned_channel _client_end,
-                                  ::fidl::DecodedMessage<MethodBRequest> params,
-                                  ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<ChannelProtocol::MethodBResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return MethodB(std::move(_client_end),
-                 std::move(_encode_request_result.message),
-                 std::move(response_buffer));
-}
-
-::fidl::DecodeResult<ChannelProtocol::MethodBResponse>
-ChannelProtocol::InPlace::MethodB(::zx::unowned_channel _client_end,
-                                  ::fidl::EncodedMessage<MethodBRequest> params,
-                                  ::fidl::BytePart response_buffer) {
-  MethodBRequest* request =
-      reinterpret_cast<MethodBRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kChannelProtocol_MethodB_Ordinal);
-  auto _call_result = ::fidl::Call<MethodBRequest, MethodBResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<ChannelProtocol::MethodBResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::MethodB(
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), a,
+      b, _response_buffer.data(), _response_buffer.capacity());
 }
 
 ChannelProtocol::ResultOf::MutateSocket::MutateSocket(zx_handle_t _client,
@@ -809,38 +644,26 @@ ChannelProtocol::ResultOf::MutateSocket ChannelProtocol::Call::MutateSocket(
   return ResultOf::MutateSocket(_client_end->get(), a);
 }
 
-template <>
-ChannelProtocol::UnownedResultOf::
-    MutateSocket_Impl<ChannelProtocol::MutateSocketResponse>::MutateSocket_Impl(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-        ::zx::socket a, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < MutateSocketRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<MutateSocketResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  new (_request_buffer.data()) MutateSocketRequest(0, a);
-  _request_buffer.set_actual(sizeof(MutateSocketRequest));
-  ::fidl::DecodedMessage<MutateSocketRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<MutateSocketRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<MutateSocketRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(ChannelProtocol::InPlace::MutateSocket(
-      std::move(_client_end), std::move(_encoded_request),
-      std::move(_response_buffer)));
+ChannelProtocol::UnownedResultOf::MutateSocket::MutateSocket(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, ::zx::socket& a, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  MutateSocketUnownedRequest _request(_request_bytes, _request_byte_capacity, 0,
+                                      a);
+  _request.GetFidlMessage().Call(MutateSocketResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 ChannelProtocol::UnownedResultOf::MutateSocket
 ChannelProtocol::SyncClient::MutateSocket(::fidl::BytePart _request_buffer,
                                           ::zx::socket a,
                                           ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MutateSocket(::zx::unowned_channel(this->channel_),
-                                       std::move(_request_buffer), std::move(a),
-                                       std::move(_response_buffer));
+  return UnownedResultOf::MutateSocket(
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      a, _response_buffer.data(), _response_buffer.capacity());
 }
 
 ChannelProtocol::UnownedResultOf::MutateSocket
@@ -848,42 +671,9 @@ ChannelProtocol::Call::MutateSocket(::zx::unowned_channel _client_end,
                                     ::fidl::BytePart _request_buffer,
                                     ::zx::socket a,
                                     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::MutateSocket(std::move(_client_end),
-                                       std::move(_request_buffer), std::move(a),
-                                       std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>
-ChannelProtocol::InPlace::MutateSocket(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<MutateSocketRequest> params,
-    ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>::
-        FromFailure(std::move(_encode_request_result));
-  }
-  return MutateSocket(std::move(_client_end),
-                      std::move(_encode_request_result.message),
-                      std::move(response_buffer));
-}
-
-::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>
-ChannelProtocol::InPlace::MutateSocket(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<MutateSocketRequest> params,
-    ::fidl::BytePart response_buffer) {
-  MutateSocketRequest* request =
-      reinterpret_cast<MutateSocketRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0,
-                       kChannelProtocol_MutateSocket_Ordinal);
-  auto _call_result = ::fidl::Call<MutateSocketRequest, MutateSocketResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<ChannelProtocol::MutateSocketResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::MutateSocket(
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), a,
+      _response_buffer.data(), _response_buffer.capacity());
 }
 
 ::fidl::Result ChannelProtocol::ClientImpl::MethodA(int64_t a, int64_t b) {
@@ -894,15 +684,15 @@ ChannelProtocol::InPlace::MutateSocket(
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError ChannelProtocol::ClientImpl::MethodA(
+::fidl::Result ChannelProtocol::ClientImpl::MethodA(
     ::fidl::BytePart _request_buffer, int64_t a, int64_t b) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = UnownedResultOf::MethodA(_binding->channel(),
-                                         std::move(_request_buffer),
-                                         std::move(a), std::move(b));
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res =
+        UnownedResultOf::MethodA(_binding->handle(), _request_buffer.data(),
+                                 _request_buffer.capacity(), a, b);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 ChannelProtocol::ResultOf::MethodB ChannelProtocol::ClientImpl::MethodB_Sync(
@@ -919,11 +709,12 @@ ChannelProtocol::ClientImpl::MethodB_Sync(::fidl::BytePart _request_buffer,
                                           int64_t a, int64_t b,
                                           ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::MethodB(_binding->channel(),
-                                    std::move(_request_buffer), std::move(a),
-                                    std::move(b), std::move(_response_buffer));
+    return UnownedResultOf::MethodB(
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        a, b, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ChannelProtocol::UnownedResultOf::MethodB(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError ChannelProtocol::ClientImpl::MethodB(
@@ -1005,10 +796,11 @@ ChannelProtocol::ClientImpl::MutateSocket_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     return UnownedResultOf::MutateSocket(
-        _binding->channel(), std::move(_request_buffer), std::move(a),
-        std::move(_response_buffer));
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        a, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ChannelProtocol::UnownedResultOf::MutateSocket(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError ChannelProtocol::ClientImpl::MutateSocket(
@@ -1524,30 +1316,6 @@ WithAndWithoutRequestResponse::Call::NoRequestNoResponse(
   return ResultOf::NoRequestNoResponse(_client_end->get());
 }
 
-::fidl::internal::StatusAndError
-WithAndWithoutRequestResponse::InPlace::NoRequestNoResponse(
-    ::zx::unowned_channel _client_end) {
-  constexpr uint32_t _write_num_bytes = sizeof(NoRequestNoResponseRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<NoRequestNoResponseRequest> params(
-      std::move(_request_buffer));
-  NoRequestNoResponseRequest* request =
-      reinterpret_cast<NoRequestNoResponseRequest*>(params.bytes().data());
-  fidl_init_txn_header(
-      &request->_hdr, 0,
-      kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
-}
-
 WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse::
     NoRequestEmptyResponse(zx_handle_t _client) {
   NoRequestEmptyResponseOwnedRequest _request(0);
@@ -1568,32 +1336,6 @@ WithAndWithoutRequestResponse::ResultOf::NoRequestEmptyResponse
 WithAndWithoutRequestResponse::Call::NoRequestEmptyResponse(
     ::zx::unowned_channel _client_end) {
   return ResultOf::NoRequestEmptyResponse(_client_end->get());
-}
-
-::fidl::DecodeResult<
-    WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>
-WithAndWithoutRequestResponse::InPlace::NoRequestEmptyResponse(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(NoRequestEmptyResponseRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<NoRequestEmptyResponseRequest> params(
-      std::move(_request_buffer));
-  NoRequestEmptyResponseRequest* request =
-      reinterpret_cast<NoRequestEmptyResponseRequest*>(params.bytes().data());
-  fidl_init_txn_header(
-      &request->_hdr, 0,
-      kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal);
-  auto _call_result = ::fidl::Call<NoRequestEmptyResponseRequest,
-                                   NoRequestEmptyResponseResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<
-        WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
 }
 
 WithAndWithoutRequestResponse::ResultOf::NoRequestWithResponse::
@@ -1618,70 +1360,30 @@ WithAndWithoutRequestResponse::Call::NoRequestWithResponse(
   return ResultOf::NoRequestWithResponse(_client_end->get());
 }
 
-template <>
-WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse_Impl<
-    WithAndWithoutRequestResponse::NoRequestWithResponseResponse>::
-    NoRequestWithResponse_Impl(::zx::unowned_channel _client_end,
-                               ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t
-      _write_bytes[sizeof(NoRequestWithResponseRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  new (_request_buffer.data()) NoRequestWithResponseRequest(0);
-  _request_buffer.set_actual(sizeof(NoRequestWithResponseRequest));
-  ::fidl::DecodedMessage<NoRequestWithResponseRequest> _msg(
-      std::move(_request_buffer));
-  auto _encode_result =
-      ::fidl::Encode<NoRequestWithResponseRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<NoRequestWithResponseRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(
-      WithAndWithoutRequestResponse::InPlace::NoRequestWithResponse(
-          std::move(_client_end), std::move(_response_buffer)));
+WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse::
+    NoRequestWithResponse(zx_handle_t _client, uint8_t* _response_bytes,
+                          uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  NoRequestWithResponseOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(NoRequestWithResponseResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
 WithAndWithoutRequestResponse::SyncClient::NoRequestWithResponse(
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::NoRequestWithResponse(
-      ::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::NoRequestWithResponse(this->channel().get(),
+                                                _response_buffer.data(),
+                                                _response_buffer.capacity());
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
 WithAndWithoutRequestResponse::Call::NoRequestWithResponse(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::NoRequestWithResponse(std::move(_client_end),
-                                                std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<
-    WithAndWithoutRequestResponse::NoRequestWithResponseResponse>
-WithAndWithoutRequestResponse::InPlace::NoRequestWithResponse(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(NoRequestWithResponseRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<NoRequestWithResponseRequest> params(
-      std::move(_request_buffer));
-  NoRequestWithResponseRequest* request =
-      reinterpret_cast<NoRequestWithResponseRequest*>(params.bytes().data());
-  fidl_init_txn_header(
-      &request->_hdr, 0,
-      kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal);
-  auto _call_result =
-      ::fidl::Call<NoRequestWithResponseRequest, NoRequestWithResponseResponse>(
-          std::move(_client_end), std::move(params),
-          std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<
-        WithAndWithoutRequestResponse::NoRequestWithResponseResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::NoRequestWithResponse(
+      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestNoResponse::
@@ -1704,36 +1406,23 @@ WithAndWithoutRequestResponse::Call::WithRequestNoResponse(
   return ResultOf::WithRequestNoResponse(_client_end->get(), arg);
 }
 
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse_Impl::
-    WithRequestNoResponse_Impl(::zx::unowned_channel _client_end,
-                               ::fidl::BytePart _request_buffer,
-                               ::fidl::StringView arg) {
-  if (_request_buffer.capacity() < WithRequestNoResponseRequest::PrimarySize) {
-    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
-    return;
-  }
-  WithRequestNoResponseRequest _request(0, arg);
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<WithRequestNoResponseRequest>(
-          &_request, std::move(_request_buffer));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<WithRequestNoResponseRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(
-      WithAndWithoutRequestResponse::InPlace::WithRequestNoResponse(
-          std::move(_client_end), std::move(_encoded_request)));
+WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse::
+    WithRequestNoResponse(zx_handle_t _client, uint8_t* _request_bytes,
+                          uint32_t _request_byte_capacity,
+                          const ::fidl::StringView& arg) {
+  WithRequestNoResponseUnownedRequest _request(_request_bytes,
+                                               _request_byte_capacity, 0, arg);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse
 WithAndWithoutRequestResponse::SyncClient::WithRequestNoResponse(
     ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
   return UnownedResultOf::WithRequestNoResponse(
-      ::zx::unowned_channel(this->channel_), std::move(_request_buffer),
-      std::move(arg));
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      arg);
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestNoResponse
@@ -1741,39 +1430,8 @@ WithAndWithoutRequestResponse::Call::WithRequestNoResponse(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     ::fidl::StringView arg) {
   return UnownedResultOf::WithRequestNoResponse(
-      std::move(_client_end), std::move(_request_buffer), std::move(arg));
-}
-
-::fidl::internal::StatusAndError
-WithAndWithoutRequestResponse::InPlace::WithRequestNoResponse(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<WithRequestNoResponseRequest> params) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return WithRequestNoResponse(std::move(_client_end),
-                               std::move(_encode_request_result.message));
-}
-
-::fidl::internal::StatusAndError
-WithAndWithoutRequestResponse::InPlace::WithRequestNoResponse(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<WithRequestNoResponseRequest> params) {
-  WithRequestNoResponseRequest* request =
-      reinterpret_cast<WithRequestNoResponseRequest*>(params.bytes().data());
-  fidl_init_txn_header(
-      &request->_hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(),
+      arg);
 }
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse::
@@ -1800,33 +1458,20 @@ WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(
   return ResultOf::WithRequestEmptyResponse(_client_end->get(), arg);
 }
 
-template <>
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse_Impl<
-    WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>::
-    WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
-                                  ::fidl::BytePart _request_buffer,
-                                  ::fidl::StringView arg,
-                                  ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() <
-      WithRequestEmptyResponseRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<WithRequestEmptyResponseResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  WithRequestEmptyResponseRequest _request(0, arg);
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<WithRequestEmptyResponseRequest>(
-          &_request, std::move(_request_buffer));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<WithRequestEmptyResponseRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(
-      WithAndWithoutRequestResponse::InPlace::WithRequestEmptyResponse(
-          std::move(_client_end), std::move(_encoded_request),
-          std::move(_response_buffer)));
+WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse::
+    WithRequestEmptyResponse(zx_handle_t _client, uint8_t* _request_bytes,
+                             uint32_t _request_byte_capacity,
+                             const ::fidl::StringView& arg,
+                             uint8_t* _response_bytes,
+                             uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  WithRequestEmptyResponseUnownedRequest _request(
+      _request_bytes, _request_byte_capacity, 0, arg);
+  _request.GetFidlMessage().Call(WithRequestEmptyResponseResponse::Type,
+                                 _client, _response_bytes,
+                                 _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse
@@ -1834,8 +1479,8 @@ WithAndWithoutRequestResponse::SyncClient::WithRequestEmptyResponse(
     ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
     ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WithRequestEmptyResponse(
-      ::zx::unowned_channel(this->channel_), std::move(_request_buffer),
-      std::move(arg), std::move(_response_buffer));
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      arg, _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestEmptyResponse
@@ -1843,47 +1488,8 @@ WithAndWithoutRequestResponse::Call::WithRequestEmptyResponse(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     ::fidl::StringView arg, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WithRequestEmptyResponse(
-      std::move(_client_end), std::move(_request_buffer), std::move(arg),
-      std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<
-    WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>
-WithAndWithoutRequestResponse::InPlace::WithRequestEmptyResponse(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params,
-    ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<
-        WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>::
-        FromFailure(std::move(_encode_request_result));
-  }
-  return WithRequestEmptyResponse(std::move(_client_end),
-                                  std::move(_encode_request_result.message),
-                                  std::move(response_buffer));
-}
-
-::fidl::DecodeResult<
-    WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>
-WithAndWithoutRequestResponse::InPlace::WithRequestEmptyResponse(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<WithRequestEmptyResponseRequest> params,
-    ::fidl::BytePart response_buffer) {
-  WithRequestEmptyResponseRequest* request =
-      reinterpret_cast<WithRequestEmptyResponseRequest*>(params.bytes().data());
-  fidl_init_txn_header(
-      &request->_hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal);
-  auto _call_result = ::fidl::Call<WithRequestEmptyResponseRequest,
-                                   WithRequestEmptyResponseResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<
-        WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(),
+      arg, _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestWithResponse::
@@ -1909,33 +1515,19 @@ WithAndWithoutRequestResponse::Call::WithRequestWithResponse(
   return ResultOf::WithRequestWithResponse(_client_end->get(), arg);
 }
 
-template <>
-WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse_Impl<
-    WithAndWithoutRequestResponse::WithRequestWithResponseResponse>::
-    WithRequestWithResponse_Impl(::zx::unowned_channel _client_end,
-                                 ::fidl::BytePart _request_buffer,
-                                 ::fidl::StringView arg,
-                                 ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() <
-      WithRequestWithResponseRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<WithRequestWithResponseResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  WithRequestWithResponseRequest _request(0, arg);
-  auto _encode_result =
-      ::fidl::LinearizeAndEncode<WithRequestWithResponseRequest>(
-          &_request, std::move(_request_buffer));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<WithRequestWithResponseRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(
-      WithAndWithoutRequestResponse::InPlace::WithRequestWithResponse(
-          std::move(_client_end), std::move(_encoded_request),
-          std::move(_response_buffer)));
+WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse::
+    WithRequestWithResponse(zx_handle_t _client, uint8_t* _request_bytes,
+                            uint32_t _request_byte_capacity,
+                            const ::fidl::StringView& arg,
+                            uint8_t* _response_bytes,
+                            uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  WithRequestWithResponseUnownedRequest _request(
+      _request_bytes, _request_byte_capacity, 0, arg);
+  _request.GetFidlMessage().Call(WithRequestWithResponseResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse
@@ -1943,8 +1535,8 @@ WithAndWithoutRequestResponse::SyncClient::WithRequestWithResponse(
     ::fidl::BytePart _request_buffer, ::fidl::StringView arg,
     ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WithRequestWithResponse(
-      ::zx::unowned_channel(this->channel_), std::move(_request_buffer),
-      std::move(arg), std::move(_response_buffer));
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      arg, _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithAndWithoutRequestResponse::UnownedResultOf::WithRequestWithResponse
@@ -1952,47 +1544,8 @@ WithAndWithoutRequestResponse::Call::WithRequestWithResponse(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     ::fidl::StringView arg, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WithRequestWithResponse(
-      std::move(_client_end), std::move(_request_buffer), std::move(arg),
-      std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<
-    WithAndWithoutRequestResponse::WithRequestWithResponseResponse>
-WithAndWithoutRequestResponse::InPlace::WithRequestWithResponse(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<WithRequestWithResponseRequest> params,
-    ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<
-        WithAndWithoutRequestResponse::WithRequestWithResponseResponse>::
-        FromFailure(std::move(_encode_request_result));
-  }
-  return WithRequestWithResponse(std::move(_client_end),
-                                 std::move(_encode_request_result.message),
-                                 std::move(response_buffer));
-}
-
-::fidl::DecodeResult<
-    WithAndWithoutRequestResponse::WithRequestWithResponseResponse>
-WithAndWithoutRequestResponse::InPlace::WithRequestWithResponse(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<WithRequestWithResponseRequest> params,
-    ::fidl::BytePart response_buffer) {
-  WithRequestWithResponseRequest* request =
-      reinterpret_cast<WithRequestWithResponseRequest*>(params.bytes().data());
-  fidl_init_txn_header(
-      &request->_hdr, 0,
-      kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal);
-  auto _call_result = ::fidl::Call<WithRequestWithResponseRequest,
-                                   WithRequestWithResponseResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<
-        WithAndWithoutRequestResponse::WithRequestWithResponseResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(),
+      arg, _response_buffer.data(), _response_buffer.capacity());
 }
 
 ::fidl::Result
@@ -2083,10 +1636,12 @@ WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse
 WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::NoRequestWithResponse(_binding->channel(),
-                                                  std::move(_response_buffer));
+    return UnownedResultOf::NoRequestWithResponse(_binding->handle(),
+                                                  _response_buffer.data(),
+                                                  _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return WithAndWithoutRequestResponse::UnownedResultOf::NoRequestWithResponse(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError
@@ -2158,15 +1713,15 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse(
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError
-WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
+::fidl::Result WithAndWithoutRequestResponse::ClientImpl::WithRequestNoResponse(
     ::fidl::BytePart _request_buffer, ::fidl::StringView arg) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     auto _res = UnownedResultOf::WithRequestNoResponse(
-        _binding->channel(), std::move(_request_buffer), std::move(arg));
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        arg);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 WithAndWithoutRequestResponse::ResultOf::WithRequestEmptyResponse
@@ -2185,10 +1740,12 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     return UnownedResultOf::WithRequestEmptyResponse(
-        _binding->channel(), std::move(_request_buffer), std::move(arg),
-        std::move(_response_buffer));
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        arg, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return WithAndWithoutRequestResponse::UnownedResultOf::
+      WithRequestEmptyResponse(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError
@@ -2272,10 +1829,12 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     return UnownedResultOf::WithRequestWithResponse(
-        _binding->channel(), std::move(_request_buffer), std::move(arg),
-        std::move(_response_buffer));
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        arg, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return WithAndWithoutRequestResponse::UnownedResultOf::
+      WithRequestWithResponse(
+          ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError
@@ -2990,65 +2549,30 @@ WithErrorSyntax::Call::ResponseAsStruct(::zx::unowned_channel _client_end) {
   return ResultOf::ResponseAsStruct(_client_end->get());
 }
 
-template <>
-WithErrorSyntax::UnownedResultOf::ResponseAsStruct_Impl<
-    WithErrorSyntax::ResponseAsStructResponse>::
-    ResponseAsStruct_Impl(::zx::unowned_channel _client_end,
-                          ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ResponseAsStructRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  new (_request_buffer.data()) ResponseAsStructRequest(0);
-  _request_buffer.set_actual(sizeof(ResponseAsStructRequest));
-  ::fidl::DecodedMessage<ResponseAsStructRequest> _msg(
-      std::move(_request_buffer));
-  auto _encode_result =
-      ::fidl::Encode<ResponseAsStructRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<ResponseAsStructRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(WithErrorSyntax::InPlace::ResponseAsStruct(
-      std::move(_client_end), std::move(_response_buffer)));
+WithErrorSyntax::UnownedResultOf::ResponseAsStruct::ResponseAsStruct(
+    zx_handle_t _client, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  ResponseAsStructOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(ResponseAsStructResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 WithErrorSyntax::UnownedResultOf::ResponseAsStruct
 WithErrorSyntax::SyncClient::ResponseAsStruct(
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ResponseAsStruct(
-      ::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::ResponseAsStruct(this->channel().get(),
+                                           _response_buffer.data(),
+                                           _response_buffer.capacity());
 }
 
 WithErrorSyntax::UnownedResultOf::ResponseAsStruct
 WithErrorSyntax::Call::ResponseAsStruct(::zx::unowned_channel _client_end,
                                         ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ResponseAsStruct(std::move(_client_end),
-                                           std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<WithErrorSyntax::ResponseAsStructResponse>
-WithErrorSyntax::InPlace::ResponseAsStruct(::zx::unowned_channel _client_end,
-                                           ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(ResponseAsStructRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<ResponseAsStructRequest> params(
-      std::move(_request_buffer));
-  ResponseAsStructRequest* request =
-      reinterpret_cast<ResponseAsStructRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0,
-                       kWithErrorSyntax_ResponseAsStruct_Ordinal);
-  auto _call_result =
-      ::fidl::Call<ResponseAsStructRequest, ResponseAsStructResponse>(
-          std::move(_client_end), std::move(params),
-          std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<WithErrorSyntax::ResponseAsStructResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::ResponseAsStruct(
+      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithErrorSyntax::ResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
@@ -3072,65 +2596,30 @@ WithErrorSyntax::Call::ErrorAsPrimitive(::zx::unowned_channel _client_end) {
   return ResultOf::ErrorAsPrimitive(_client_end->get());
 }
 
-template <>
-WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive_Impl<
-    WithErrorSyntax::ErrorAsPrimitiveResponse>::
-    ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end,
-                          ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  new (_request_buffer.data()) ErrorAsPrimitiveRequest(0);
-  _request_buffer.set_actual(sizeof(ErrorAsPrimitiveRequest));
-  ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> _msg(
-      std::move(_request_buffer));
-  auto _encode_result =
-      ::fidl::Encode<ErrorAsPrimitiveRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<ErrorAsPrimitiveRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(WithErrorSyntax::InPlace::ErrorAsPrimitive(
-      std::move(_client_end), std::move(_response_buffer)));
+WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive::ErrorAsPrimitive(
+    zx_handle_t _client, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  ErrorAsPrimitiveOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(ErrorAsPrimitiveResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
 WithErrorSyntax::SyncClient::ErrorAsPrimitive(
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsPrimitive(
-      ::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+  return UnownedResultOf::ErrorAsPrimitive(this->channel().get(),
+                                           _response_buffer.data(),
+                                           _response_buffer.capacity());
 }
 
 WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
 WithErrorSyntax::Call::ErrorAsPrimitive(::zx::unowned_channel _client_end,
                                         ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsPrimitive(std::move(_client_end),
-                                           std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse>
-WithErrorSyntax::InPlace::ErrorAsPrimitive(::zx::unowned_channel _client_end,
-                                           ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(ErrorAsPrimitiveRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<ErrorAsPrimitiveRequest> params(
-      std::move(_request_buffer));
-  ErrorAsPrimitiveRequest* request =
-      reinterpret_cast<ErrorAsPrimitiveRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0,
-                       kWithErrorSyntax_ErrorAsPrimitive_Ordinal);
-  auto _call_result =
-      ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
-          std::move(_client_end), std::move(params),
-          std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::ErrorAsPrimitive(
+      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithErrorSyntax::ResultOf::ErrorAsEnum::ErrorAsEnum(zx_handle_t _client) {
@@ -3152,57 +2641,29 @@ WithErrorSyntax::ResultOf::ErrorAsEnum WithErrorSyntax::Call::ErrorAsEnum(
   return ResultOf::ErrorAsEnum(_client_end->get());
 }
 
-template <>
-WithErrorSyntax::UnownedResultOf::
-    ErrorAsEnum_Impl<WithErrorSyntax::ErrorAsEnumResponse>::ErrorAsEnum_Impl(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  new (_request_buffer.data()) ErrorAsEnumRequest(0);
-  _request_buffer.set_actual(sizeof(ErrorAsEnumRequest));
-  ::fidl::DecodedMessage<ErrorAsEnumRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<ErrorAsEnumRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<ErrorAsEnumRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(WithErrorSyntax::InPlace::ErrorAsEnum(
-      std::move(_client_end), std::move(_response_buffer)));
+WithErrorSyntax::UnownedResultOf::ErrorAsEnum::ErrorAsEnum(
+    zx_handle_t _client, uint8_t* _response_bytes,
+    uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  ErrorAsEnumOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(ErrorAsEnumResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 WithErrorSyntax::UnownedResultOf::ErrorAsEnum
 WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsEnum(::zx::unowned_channel(this->channel_),
-                                      std::move(_response_buffer));
+  return UnownedResultOf::ErrorAsEnum(this->channel().get(),
+                                      _response_buffer.data(),
+                                      _response_buffer.capacity());
 }
 
 WithErrorSyntax::UnownedResultOf::ErrorAsEnum
 WithErrorSyntax::Call::ErrorAsEnum(::zx::unowned_channel _client_end,
                                    ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ErrorAsEnum(std::move(_client_end),
-                                      std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse>
-WithErrorSyntax::InPlace::ErrorAsEnum(::zx::unowned_channel _client_end,
-                                      ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(ErrorAsEnumRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<ErrorAsEnumRequest> params(std::move(_request_buffer));
-  ErrorAsEnumRequest* request =
-      reinterpret_cast<ErrorAsEnumRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kWithErrorSyntax_ErrorAsEnum_Ordinal);
-  auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::ErrorAsEnum(
+      _client_end->get(), _response_buffer.data(), _response_buffer.capacity());
 }
 
 WithErrorSyntax::ResultOf::ResponseAsStruct
@@ -3218,10 +2679,12 @@ WithErrorSyntax::UnownedResultOf::ResponseAsStruct
 WithErrorSyntax::ClientImpl::ResponseAsStruct_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::ResponseAsStruct(_binding->channel(),
-                                             std::move(_response_buffer));
+    return UnownedResultOf::ResponseAsStruct(_binding->handle(),
+                                             _response_buffer.data(),
+                                             _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return WithErrorSyntax::UnownedResultOf::ResponseAsStruct(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError WithErrorSyntax::ClientImpl::ResponseAsStruct(
@@ -3302,10 +2765,12 @@ WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
 WithErrorSyntax::ClientImpl::ErrorAsPrimitive_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::ErrorAsPrimitive(_binding->channel(),
-                                             std::move(_response_buffer));
+    return UnownedResultOf::ErrorAsPrimitive(_binding->handle(),
+                                             _response_buffer.data(),
+                                             _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError WithErrorSyntax::ClientImpl::ErrorAsPrimitive(
@@ -3386,10 +2851,12 @@ WithErrorSyntax::UnownedResultOf::ErrorAsEnum
 WithErrorSyntax::ClientImpl::ErrorAsEnum_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::ErrorAsEnum(_binding->channel(),
-                                        std::move(_response_buffer));
+    return UnownedResultOf::ErrorAsEnum(_binding->handle(),
+                                        _response_buffer.data(),
+                                        _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return WithErrorSyntax::UnownedResultOf::ErrorAsEnum(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError WithErrorSyntax::ClientImpl::ErrorAsEnum(

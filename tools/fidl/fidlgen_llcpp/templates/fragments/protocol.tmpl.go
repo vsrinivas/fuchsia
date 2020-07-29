@@ -311,39 +311,57 @@ class {{ .Name }} final {
   // when the caller-allocate flavor or in-place call is used.
   class UnownedResultOf final {
     UnownedResultOf() = delete;
-   private:
-    {{- range FilterMethodsWithoutReqs .Methods -}}
-    {{- if .HasResponse -}}
-{{ "" }}
-    template <typename ResponseType>
-    {{- end }}
-    class {{ .Name }}_Impl final : private ::fidl::internal::{{ if .HasResponse -}} UnownedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }} {
-      using Super = ::fidl::internal::{{ if .HasResponse -}} UnownedSyncCallBase<ResponseType> {{- else -}} StatusAndError {{- end }};
-     public:
-      {{ .Name }}_Impl({{ template "StaticCallSyncRequestCallerAllocateMethodArguments" . }});
-      ~{{ .Name }}_Impl() = default;
-      {{ .Name }}_Impl({{ .Name }}_Impl&& other) = default;
-      {{ .Name }}_Impl& operator=({{ .Name }}_Impl&& other) = default;
-      {{ .Name }}_Impl(::fidl::internal::StatusAndError&& other) : Super(std::move(other)) {}
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      {{- if .HasResponse }}
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-      {{- end }}
-    };
-    {{- end }}
 
    public:
     {{- range FilterMethodsWithoutReqs .Methods -}}
-      {{- if .HasResponse }}
-    using {{ .Name }} = {{ .Name }}_Impl<{{ .Name }}Response>;
+    class {{ .Name }} final : public ::fidl::Result {
+     public:
+      explicit {{ .Name }}(zx_handle_t _client
+        {{- if .Request -}}
+        , uint8_t* _request_bytes, uint32_t _request_byte_capacity
+        {{- end -}}
+        {{- template "CommaMessagePrototype" .Request }}
+        {{- if .HasResponse -}}
+        , uint8_t* _response_bytes, uint32_t _response_byte_capacity
+        {{- end -}});
+      explicit {{ .Name }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      {{ .Name }}({{ .Name }}&&) = delete;
+      {{ .Name }}(const {{ .Name }}&) = delete;
+      {{ .Name }}* operator=({{ .Name }}&&) = delete;
+      {{ .Name }}* operator=(const {{ .Name }}&) = delete;
+      {{- if and .HasResponse .ResponseIsResource }}
+      ~{{ .Name }}() {
+        if (ok()) {
+          fidl_close_handles({{ .Name }}Response::Type, bytes_, nullptr);
+        }
+      }
       {{- else }}
-    using {{ .Name }} = {{ .Name }}_Impl;
+      ~{{ .Name }}() = default;
       {{- end }}
+      {{- if .HasResponse }}
+
+      {{ .Name }}Response* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<{{ .Name }}Response*>(bytes_);
+      }
+      const {{ .Name }}Response* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const {{ .Name }}Response*>(bytes_);
+      }
+
+      {{ .Name }}Response& value() { return *Unwrap(); }
+      const {{ .Name }}Response& value() const { return *Unwrap(); }
+
+      {{ .Name }}Response* operator->() { return &value(); }
+      const {{ .Name }}Response* operator->() const { return &value(); }
+
+      {{ .Name }}Response& operator*() { return value(); }
+      const {{ .Name }}Response& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+      {{- end }}
+    };
     {{- end }}
   };
 
@@ -499,32 +517,6 @@ class {{ .Name }} final {
     // defined in |EventHandlers|. The return status of the handler function is folded with any
     // transport-level errors and returned.
     static zx_status_t HandleEvents(::zx::unowned_channel client_end, EventHandlers handlers);
-    {{- end }}
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL wire-format.
-  class InPlace final {
-    InPlace() = delete;
-   public:
-{{ "" }}
-    {{- range FilterMethodsWithoutReqs .Methods -}}
-      {{- range .DocComments }}
-    //{{ . }}
-      {{- end }}
-    {{ if .Request }}
-    static {{ if .HasResponse -}}
-    ::fidl::DecodeResult<{{ .Name }}Response>
-    {{- else -}}
-    ::fidl::internal::StatusAndError
-    {{- end }} {{ template "StaticCallSyncRequestInPlaceMethodSignatureDecodedMessage" . }};
-    {{ end }}
-    static {{ if .HasResponse -}}
-    ::fidl::DecodeResult<{{ .Name }}Response>
-    {{- else -}}
-    ::fidl::internal::StatusAndError
-    {{- end }} {{ template "StaticCallSyncRequestInPlaceMethodSignatureEncodedMessage" . }};
-{{ "" }}
     {{- end }}
   };
 
@@ -711,8 +703,6 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ "" }}
     {{- template "StaticCallSyncRequestCallerAllocateMethodDefinition" . }}
   {{- end }}
-{{ "" }}
-  {{- template "StaticCallSyncRequestInPlaceMethodDefinition" . }}
 {{ "" }}
 {{- end }}
 

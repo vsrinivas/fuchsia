@@ -32,54 +32,27 @@ Top::ResultOf::GetFoo Top::Call::GetFoo(::zx::unowned_channel _client_end) {
   return ResultOf::GetFoo(_client_end->get());
 }
 
-template <>
-Top::UnownedResultOf::GetFoo_Impl<Top::GetFooResponse>::GetFoo_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFooRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  new (_request_buffer.data()) GetFooRequest(0);
-  _request_buffer.set_actual(sizeof(GetFooRequest));
-  ::fidl::DecodedMessage<GetFooRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<GetFooRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<GetFooRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(Top::InPlace::GetFoo(std::move(_client_end),
-                                        std::move(_response_buffer)));
+Top::UnownedResultOf::GetFoo::GetFoo(zx_handle_t _client,
+                                     uint8_t* _response_bytes,
+                                     uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  GetFooOwnedRequest _request(0);
+  _request.GetFidlMessage().Call(GetFooResponse::Type, _client, _response_bytes,
+                                 _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 Top::UnownedResultOf::GetFoo Top::SyncClient::GetFoo(
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFoo(::zx::unowned_channel(this->channel_),
-                                 std::move(_response_buffer));
+  return UnownedResultOf::GetFoo(this->channel().get(), _response_buffer.data(),
+                                 _response_buffer.capacity());
 }
 
 Top::UnownedResultOf::GetFoo Top::Call::GetFoo(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetFoo(std::move(_client_end),
-                                 std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Top::GetFooResponse> Top::InPlace::GetFoo(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(GetFooRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<GetFooRequest> params(std::move(_request_buffer));
-  GetFooRequest* request =
-      reinterpret_cast<GetFooRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kTop_GetFoo_Ordinal);
-  auto _call_result = ::fidl::Call<GetFooRequest, GetFooResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Top::GetFooResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::GetFoo(_client_end->get(), _response_buffer.data(),
+                                 _response_buffer.capacity());
 }
 
 Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
@@ -93,10 +66,11 @@ Top::ResultOf::GetFoo Top::ClientImpl::GetFoo_Sync() {
 Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::GetFoo(_binding->channel(),
-                                   std::move(_response_buffer));
+    return UnownedResultOf::GetFoo(_binding->handle(), _response_buffer.data(),
+                                   _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return Top::UnownedResultOf::GetFoo(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError Top::ClientImpl::GetFoo(

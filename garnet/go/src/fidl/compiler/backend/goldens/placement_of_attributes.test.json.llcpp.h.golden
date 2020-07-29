@@ -481,26 +481,19 @@ class ExampleProtocol final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    class Method_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      Method_Impl(::zx::unowned_channel _client_end,
-                  ::fidl::BytePart _request_buffer,
-                  ::llcpp::exampleusing::Empty arg);
-      ~Method_Impl() = default;
-      Method_Impl(Method_Impl&& other) = default;
-      Method_Impl& operator=(Method_Impl&& other) = default;
-      Method_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using Method = Method_Impl;
+    class Method final : public ::fidl::Result {
+     public:
+      explicit Method(zx_handle_t _client, uint8_t* _request_bytes,
+                      uint32_t _request_byte_capacity,
+                      ::llcpp::exampleusing::Empty& arg);
+      explicit Method(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Method(Method&&) = delete;
+      Method(const Method&) = delete;
+      Method* operator=(Method&&) = delete;
+      Method* operator=(const Method&) = delete;
+      ~Method() = default;
+    };
   };
 
   class MethodUnownedRequest final {
@@ -597,22 +590,6 @@ class ExampleProtocol final {
     static UnownedResultOf::Method Method(::zx::unowned_channel _client_end,
                                           ::fidl::BytePart _request_buffer,
                                           ::llcpp::exampleusing::Empty arg);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::internal::StatusAndError Method(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<MethodRequest> params);
-
-    static ::fidl::internal::StatusAndError Method(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<MethodRequest> params);
   };
 
   struct AsyncEventHandlers;
@@ -732,8 +709,8 @@ class ExampleProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError Method(::fidl::BytePart _request_buffer,
-                                ::llcpp::exampleusing::Empty arg);
+  ::fidl::Result Method(::fidl::BytePart _request_buffer,
+                        ::llcpp::exampleusing::Empty arg);
 
  private:
   friend class ::fidl::Client<ExampleProtocol>;

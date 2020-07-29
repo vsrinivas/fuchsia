@@ -655,48 +655,52 @@ class Transitional final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class Request_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      Request_Impl(::zx::unowned_channel _client_end,
-                   ::fidl::BytePart _request_buffer, int64_t x,
-                   ::fidl::BytePart _response_buffer);
-      ~Request_Impl() = default;
-      Request_Impl(Request_Impl&& other) = default;
-      Request_Impl& operator=(Request_Impl&& other) = default;
-      Request_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    class OneWay_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      OneWay_Impl(::zx::unowned_channel _client_end,
-                  ::fidl::BytePart _request_buffer, int64_t x);
-      ~OneWay_Impl() = default;
-      OneWay_Impl(OneWay_Impl&& other) = default;
-      OneWay_Impl& operator=(OneWay_Impl&& other) = default;
-      OneWay_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using Request = Request_Impl<RequestResponse>;
-    using OneWay = OneWay_Impl;
+    class Request final : public ::fidl::Result {
+     public:
+      explicit Request(zx_handle_t _client, uint8_t* _request_bytes,
+                       uint32_t _request_byte_capacity, int64_t x,
+                       uint8_t* _response_bytes,
+                       uint32_t _response_byte_capacity);
+      explicit Request(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Request(Request&&) = delete;
+      Request(const Request&) = delete;
+      Request* operator=(Request&&) = delete;
+      Request* operator=(const Request&) = delete;
+      ~Request() = default;
+
+      RequestResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<RequestResponse*>(bytes_);
+      }
+      const RequestResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const RequestResponse*>(bytes_);
+      }
+
+      RequestResponse& value() { return *Unwrap(); }
+      const RequestResponse& value() const { return *Unwrap(); }
+
+      RequestResponse* operator->() { return &value(); }
+      const RequestResponse* operator->() const { return &value(); }
+
+      RequestResponse& operator*() { return value(); }
+      const RequestResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class OneWay final : public ::fidl::Result {
+     public:
+      explicit OneWay(zx_handle_t _client, uint8_t* _request_bytes,
+                      uint32_t _request_byte_capacity, int64_t x);
+      explicit OneWay(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      OneWay(OneWay&&) = delete;
+      OneWay(const OneWay&) = delete;
+      OneWay* operator=(OneWay&&) = delete;
+      OneWay* operator=(const OneWay&) = delete;
+      ~OneWay() = default;
+    };
   };
 
   class RequestUnownedRequest final {
@@ -880,32 +884,6 @@ class Transitional final {
     // returned.
     static zx_status_t HandleEvents(::zx::unowned_channel client_end,
                                     EventHandlers handlers);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<RequestResponse> Request(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<RequestRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<RequestResponse> Request(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<RequestRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::internal::StatusAndError OneWay(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<OneWayRequest> params);
-
-    static ::fidl::internal::StatusAndError OneWay(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<OneWayRequest> params);
   };
 
   struct AsyncEventHandlers;
@@ -1258,71 +1236,91 @@ class ChannelProtocol final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    class MethodA_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      MethodA_Impl(::zx::unowned_channel _client_end,
-                   ::fidl::BytePart _request_buffer, int64_t a, int64_t b);
-      ~MethodA_Impl() = default;
-      MethodA_Impl(MethodA_Impl&& other) = default;
-      MethodA_Impl& operator=(MethodA_Impl&& other) = default;
-      MethodA_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-    template <typename ResponseType>
-    class MethodB_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      MethodB_Impl(::zx::unowned_channel _client_end,
-                   ::fidl::BytePart _request_buffer, int64_t a, int64_t b,
-                   ::fidl::BytePart _response_buffer);
-      ~MethodB_Impl() = default;
-      MethodB_Impl(MethodB_Impl&& other) = default;
-      MethodB_Impl& operator=(MethodB_Impl&& other) = default;
-      MethodB_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class MutateSocket_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      MutateSocket_Impl(::zx::unowned_channel _client_end,
-                        ::fidl::BytePart _request_buffer, ::zx::socket a,
-                        ::fidl::BytePart _response_buffer);
-      ~MutateSocket_Impl() = default;
-      MutateSocket_Impl(MutateSocket_Impl&& other) = default;
-      MutateSocket_Impl& operator=(MutateSocket_Impl&& other) = default;
-      MutateSocket_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using MethodA = MethodA_Impl;
-    using MethodB = MethodB_Impl<MethodBResponse>;
-    using MutateSocket = MutateSocket_Impl<MutateSocketResponse>;
+    class MethodA final : public ::fidl::Result {
+     public:
+      explicit MethodA(zx_handle_t _client, uint8_t* _request_bytes,
+                       uint32_t _request_byte_capacity, int64_t a, int64_t b);
+      explicit MethodA(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      MethodA(MethodA&&) = delete;
+      MethodA(const MethodA&) = delete;
+      MethodA* operator=(MethodA&&) = delete;
+      MethodA* operator=(const MethodA&) = delete;
+      ~MethodA() = default;
+    };
+    class MethodB final : public ::fidl::Result {
+     public:
+      explicit MethodB(zx_handle_t _client, uint8_t* _request_bytes,
+                       uint32_t _request_byte_capacity, int64_t a, int64_t b,
+                       uint8_t* _response_bytes,
+                       uint32_t _response_byte_capacity);
+      explicit MethodB(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      MethodB(MethodB&&) = delete;
+      MethodB(const MethodB&) = delete;
+      MethodB* operator=(MethodB&&) = delete;
+      MethodB* operator=(const MethodB&) = delete;
+      ~MethodB() = default;
+
+      MethodBResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<MethodBResponse*>(bytes_);
+      }
+      const MethodBResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const MethodBResponse*>(bytes_);
+      }
+
+      MethodBResponse& value() { return *Unwrap(); }
+      const MethodBResponse& value() const { return *Unwrap(); }
+
+      MethodBResponse* operator->() { return &value(); }
+      const MethodBResponse* operator->() const { return &value(); }
+
+      MethodBResponse& operator*() { return value(); }
+      const MethodBResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class MutateSocket final : public ::fidl::Result {
+     public:
+      explicit MutateSocket(zx_handle_t _client, uint8_t* _request_bytes,
+                            uint32_t _request_byte_capacity, ::zx::socket& a,
+                            uint8_t* _response_bytes,
+                            uint32_t _response_byte_capacity);
+      explicit MutateSocket(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      MutateSocket(MutateSocket&&) = delete;
+      MutateSocket(const MutateSocket&) = delete;
+      MutateSocket* operator=(MutateSocket&&) = delete;
+      MutateSocket* operator=(const MutateSocket&) = delete;
+      ~MutateSocket() {
+        if (ok()) {
+          fidl_close_handles(MutateSocketResponse::Type, bytes_, nullptr);
+        }
+      }
+
+      MutateSocketResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<MutateSocketResponse*>(bytes_);
+      }
+      const MutateSocketResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const MutateSocketResponse*>(bytes_);
+      }
+
+      MutateSocketResponse& value() { return *Unwrap(); }
+      const MutateSocketResponse& value() const { return *Unwrap(); }
+
+      MutateSocketResponse* operator->() { return &value(); }
+      const MutateSocketResponse* operator->() const { return &value(); }
+
+      MutateSocketResponse& operator*() { return value(); }
+      const MutateSocketResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class MethodAUnownedRequest final {
@@ -1586,42 +1584,6 @@ class ChannelProtocol final {
     // returned.
     static zx_status_t HandleEvents(::zx::unowned_channel client_end,
                                     EventHandlers handlers);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::internal::StatusAndError MethodA(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<MethodARequest> params);
-
-    static ::fidl::internal::StatusAndError MethodA(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<MethodARequest> params);
-
-    static ::fidl::DecodeResult<MethodBResponse> MethodB(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<MethodBRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<MethodBResponse> MethodB(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<MethodBRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<MutateSocketRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<MutateSocketResponse> MutateSocket(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<MutateSocketRequest> params,
-        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -2266,148 +2228,193 @@ class WithAndWithoutRequestResponse final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    class NoRequestNoResponse_Impl final
-        : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      NoRequestNoResponse_Impl(::zx::unowned_channel _client_end);
-      ~NoRequestNoResponse_Impl() = default;
-      NoRequestNoResponse_Impl(NoRequestNoResponse_Impl&& other) = default;
-      NoRequestNoResponse_Impl& operator=(NoRequestNoResponse_Impl&& other) =
-          default;
-      NoRequestNoResponse_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-    template <typename ResponseType>
-    class NoRequestEmptyResponse_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      NoRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
-                                  ::fidl::BytePart _response_buffer);
-      ~NoRequestEmptyResponse_Impl() = default;
-      NoRequestEmptyResponse_Impl(NoRequestEmptyResponse_Impl&& other) =
-          default;
-      NoRequestEmptyResponse_Impl& operator=(
-          NoRequestEmptyResponse_Impl&& other) = default;
-      NoRequestEmptyResponse_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class NoRequestWithResponse_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      NoRequestWithResponse_Impl(::zx::unowned_channel _client_end,
-                                 ::fidl::BytePart _response_buffer);
-      ~NoRequestWithResponse_Impl() = default;
-      NoRequestWithResponse_Impl(NoRequestWithResponse_Impl&& other) = default;
-      NoRequestWithResponse_Impl& operator=(
-          NoRequestWithResponse_Impl&& other) = default;
-      NoRequestWithResponse_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    class WithRequestNoResponse_Impl final
-        : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      WithRequestNoResponse_Impl(::zx::unowned_channel _client_end,
-                                 ::fidl::BytePart _request_buffer,
-                                 ::fidl::StringView arg);
-      ~WithRequestNoResponse_Impl() = default;
-      WithRequestNoResponse_Impl(WithRequestNoResponse_Impl&& other) = default;
-      WithRequestNoResponse_Impl& operator=(
-          WithRequestNoResponse_Impl&& other) = default;
-      WithRequestNoResponse_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-    template <typename ResponseType>
-    class WithRequestEmptyResponse_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      WithRequestEmptyResponse_Impl(::zx::unowned_channel _client_end,
-                                    ::fidl::BytePart _request_buffer,
-                                    ::fidl::StringView arg,
-                                    ::fidl::BytePart _response_buffer);
-      ~WithRequestEmptyResponse_Impl() = default;
-      WithRequestEmptyResponse_Impl(WithRequestEmptyResponse_Impl&& other) =
-          default;
-      WithRequestEmptyResponse_Impl& operator=(
-          WithRequestEmptyResponse_Impl&& other) = default;
-      WithRequestEmptyResponse_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class WithRequestWithResponse_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      WithRequestWithResponse_Impl(::zx::unowned_channel _client_end,
-                                   ::fidl::BytePart _request_buffer,
-                                   ::fidl::StringView arg,
-                                   ::fidl::BytePart _response_buffer);
-      ~WithRequestWithResponse_Impl() = default;
-      WithRequestWithResponse_Impl(WithRequestWithResponse_Impl&& other) =
-          default;
-      WithRequestWithResponse_Impl& operator=(
-          WithRequestWithResponse_Impl&& other) = default;
-      WithRequestWithResponse_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using NoRequestNoResponse = NoRequestNoResponse_Impl;
-    using NoRequestEmptyResponse =
-        NoRequestEmptyResponse_Impl<NoRequestEmptyResponseResponse>;
-    using NoRequestWithResponse =
-        NoRequestWithResponse_Impl<NoRequestWithResponseResponse>;
-    using WithRequestNoResponse = WithRequestNoResponse_Impl;
-    using WithRequestEmptyResponse =
-        WithRequestEmptyResponse_Impl<WithRequestEmptyResponseResponse>;
-    using WithRequestWithResponse =
-        WithRequestWithResponse_Impl<WithRequestWithResponseResponse>;
+    class NoRequestNoResponse final : public ::fidl::Result {
+     public:
+      explicit NoRequestNoResponse(zx_handle_t _client);
+      explicit NoRequestNoResponse(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      NoRequestNoResponse(NoRequestNoResponse&&) = delete;
+      NoRequestNoResponse(const NoRequestNoResponse&) = delete;
+      NoRequestNoResponse* operator=(NoRequestNoResponse&&) = delete;
+      NoRequestNoResponse* operator=(const NoRequestNoResponse&) = delete;
+      ~NoRequestNoResponse() = default;
+    };
+    class NoRequestEmptyResponse final : public ::fidl::Result {
+     public:
+      explicit NoRequestEmptyResponse(zx_handle_t _client,
+                                      uint8_t* _response_bytes,
+                                      uint32_t _response_byte_capacity);
+      explicit NoRequestEmptyResponse(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      NoRequestEmptyResponse(NoRequestEmptyResponse&&) = delete;
+      NoRequestEmptyResponse(const NoRequestEmptyResponse&) = delete;
+      NoRequestEmptyResponse* operator=(NoRequestEmptyResponse&&) = delete;
+      NoRequestEmptyResponse* operator=(const NoRequestEmptyResponse&) = delete;
+      ~NoRequestEmptyResponse() = default;
+
+      NoRequestEmptyResponseResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<NoRequestEmptyResponseResponse*>(bytes_);
+      }
+      const NoRequestEmptyResponseResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const NoRequestEmptyResponseResponse*>(bytes_);
+      }
+
+      NoRequestEmptyResponseResponse& value() { return *Unwrap(); }
+      const NoRequestEmptyResponseResponse& value() const { return *Unwrap(); }
+
+      NoRequestEmptyResponseResponse* operator->() { return &value(); }
+      const NoRequestEmptyResponseResponse* operator->() const {
+        return &value();
+      }
+
+      NoRequestEmptyResponseResponse& operator*() { return value(); }
+      const NoRequestEmptyResponseResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class NoRequestWithResponse final : public ::fidl::Result {
+     public:
+      explicit NoRequestWithResponse(zx_handle_t _client,
+                                     uint8_t* _response_bytes,
+                                     uint32_t _response_byte_capacity);
+      explicit NoRequestWithResponse(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      NoRequestWithResponse(NoRequestWithResponse&&) = delete;
+      NoRequestWithResponse(const NoRequestWithResponse&) = delete;
+      NoRequestWithResponse* operator=(NoRequestWithResponse&&) = delete;
+      NoRequestWithResponse* operator=(const NoRequestWithResponse&) = delete;
+      ~NoRequestWithResponse() = default;
+
+      NoRequestWithResponseResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<NoRequestWithResponseResponse*>(bytes_);
+      }
+      const NoRequestWithResponseResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const NoRequestWithResponseResponse*>(bytes_);
+      }
+
+      NoRequestWithResponseResponse& value() { return *Unwrap(); }
+      const NoRequestWithResponseResponse& value() const { return *Unwrap(); }
+
+      NoRequestWithResponseResponse* operator->() { return &value(); }
+      const NoRequestWithResponseResponse* operator->() const {
+        return &value();
+      }
+
+      NoRequestWithResponseResponse& operator*() { return value(); }
+      const NoRequestWithResponseResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class WithRequestNoResponse final : public ::fidl::Result {
+     public:
+      explicit WithRequestNoResponse(zx_handle_t _client,
+                                     uint8_t* _request_bytes,
+                                     uint32_t _request_byte_capacity,
+                                     const ::fidl::StringView& arg);
+      explicit WithRequestNoResponse(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      WithRequestNoResponse(WithRequestNoResponse&&) = delete;
+      WithRequestNoResponse(const WithRequestNoResponse&) = delete;
+      WithRequestNoResponse* operator=(WithRequestNoResponse&&) = delete;
+      WithRequestNoResponse* operator=(const WithRequestNoResponse&) = delete;
+      ~WithRequestNoResponse() = default;
+    };
+    class WithRequestEmptyResponse final : public ::fidl::Result {
+     public:
+      explicit WithRequestEmptyResponse(zx_handle_t _client,
+                                        uint8_t* _request_bytes,
+                                        uint32_t _request_byte_capacity,
+                                        const ::fidl::StringView& arg,
+                                        uint8_t* _response_bytes,
+                                        uint32_t _response_byte_capacity);
+      explicit WithRequestEmptyResponse(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      WithRequestEmptyResponse(WithRequestEmptyResponse&&) = delete;
+      WithRequestEmptyResponse(const WithRequestEmptyResponse&) = delete;
+      WithRequestEmptyResponse* operator=(WithRequestEmptyResponse&&) = delete;
+      WithRequestEmptyResponse* operator=(const WithRequestEmptyResponse&) =
+          delete;
+      ~WithRequestEmptyResponse() = default;
+
+      WithRequestEmptyResponseResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<WithRequestEmptyResponseResponse*>(bytes_);
+      }
+      const WithRequestEmptyResponseResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const WithRequestEmptyResponseResponse*>(
+            bytes_);
+      }
+
+      WithRequestEmptyResponseResponse& value() { return *Unwrap(); }
+      const WithRequestEmptyResponseResponse& value() const {
+        return *Unwrap();
+      }
+
+      WithRequestEmptyResponseResponse* operator->() { return &value(); }
+      const WithRequestEmptyResponseResponse* operator->() const {
+        return &value();
+      }
+
+      WithRequestEmptyResponseResponse& operator*() { return value(); }
+      const WithRequestEmptyResponseResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class WithRequestWithResponse final : public ::fidl::Result {
+     public:
+      explicit WithRequestWithResponse(zx_handle_t _client,
+                                       uint8_t* _request_bytes,
+                                       uint32_t _request_byte_capacity,
+                                       const ::fidl::StringView& arg,
+                                       uint8_t* _response_bytes,
+                                       uint32_t _response_byte_capacity);
+      explicit WithRequestWithResponse(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      WithRequestWithResponse(WithRequestWithResponse&&) = delete;
+      WithRequestWithResponse(const WithRequestWithResponse&) = delete;
+      WithRequestWithResponse* operator=(WithRequestWithResponse&&) = delete;
+      WithRequestWithResponse* operator=(const WithRequestWithResponse&) =
+          delete;
+      ~WithRequestWithResponse() = default;
+
+      WithRequestWithResponseResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<WithRequestWithResponseResponse*>(bytes_);
+      }
+      const WithRequestWithResponseResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const WithRequestWithResponseResponse*>(bytes_);
+      }
+
+      WithRequestWithResponseResponse& value() { return *Unwrap(); }
+      const WithRequestWithResponseResponse& value() const { return *Unwrap(); }
+
+      WithRequestWithResponseResponse* operator->() { return &value(); }
+      const WithRequestWithResponseResponse* operator->() const {
+        return &value();
+      }
+
+      WithRequestWithResponseResponse& operator*() { return value(); }
+      const WithRequestWithResponseResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class NoRequestNoResponseUnownedRequest final {
@@ -2886,57 +2893,6 @@ class WithAndWithoutRequestResponse final {
                                     EventHandlers handlers);
   };
 
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::internal::StatusAndError NoRequestNoResponse(
-        ::zx::unowned_channel _client_end);
-
-    static ::fidl::DecodeResult<NoRequestEmptyResponseResponse>
-    NoRequestEmptyResponse(::zx::unowned_channel _client_end,
-                           ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<NoRequestWithResponseResponse>
-    NoRequestWithResponse(::zx::unowned_channel _client_end,
-                          ::fidl::BytePart response_buffer);
-
-    static ::fidl::internal::StatusAndError WithRequestNoResponse(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<WithRequestNoResponseRequest> params);
-
-    static ::fidl::internal::StatusAndError WithRequestNoResponse(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<WithRequestNoResponseRequest> params);
-
-    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse>
-    WithRequestEmptyResponse(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<WithRequestEmptyResponseRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<WithRequestEmptyResponseResponse>
-    WithRequestEmptyResponse(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<WithRequestEmptyResponseRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<WithRequestWithResponseResponse>
-    WithRequestWithResponse(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<WithRequestWithResponseRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<WithRequestWithResponseResponse>
-    WithRequestWithResponse(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<WithRequestWithResponseRequest> params,
-        ::fidl::BytePart response_buffer);
-  };
-
   struct AsyncEventHandlers;
   class NoRequestEmptyResponseResponseContext;
   class NoRequestWithResponseResponseContext;
@@ -3373,75 +3329,106 @@ class WithErrorSyntax final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class ResponseAsStruct_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      ResponseAsStruct_Impl(::zx::unowned_channel _client_end,
-                            ::fidl::BytePart _response_buffer);
-      ~ResponseAsStruct_Impl() = default;
-      ResponseAsStruct_Impl(ResponseAsStruct_Impl&& other) = default;
-      ResponseAsStruct_Impl& operator=(ResponseAsStruct_Impl&& other) = default;
-      ResponseAsStruct_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class ErrorAsPrimitive_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      ErrorAsPrimitive_Impl(::zx::unowned_channel _client_end,
-                            ::fidl::BytePart _response_buffer);
-      ~ErrorAsPrimitive_Impl() = default;
-      ErrorAsPrimitive_Impl(ErrorAsPrimitive_Impl&& other) = default;
-      ErrorAsPrimitive_Impl& operator=(ErrorAsPrimitive_Impl&& other) = default;
-      ErrorAsPrimitive_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class ErrorAsEnum_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      ErrorAsEnum_Impl(::zx::unowned_channel _client_end,
-                       ::fidl::BytePart _response_buffer);
-      ~ErrorAsEnum_Impl() = default;
-      ErrorAsEnum_Impl(ErrorAsEnum_Impl&& other) = default;
-      ErrorAsEnum_Impl& operator=(ErrorAsEnum_Impl&& other) = default;
-      ErrorAsEnum_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using ResponseAsStruct = ResponseAsStruct_Impl<ResponseAsStructResponse>;
-    using ErrorAsPrimitive = ErrorAsPrimitive_Impl<ErrorAsPrimitiveResponse>;
-    using ErrorAsEnum = ErrorAsEnum_Impl<ErrorAsEnumResponse>;
+    class ResponseAsStruct final : public ::fidl::Result {
+     public:
+      explicit ResponseAsStruct(zx_handle_t _client, uint8_t* _response_bytes,
+                                uint32_t _response_byte_capacity);
+      explicit ResponseAsStruct(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      ResponseAsStruct(ResponseAsStruct&&) = delete;
+      ResponseAsStruct(const ResponseAsStruct&) = delete;
+      ResponseAsStruct* operator=(ResponseAsStruct&&) = delete;
+      ResponseAsStruct* operator=(const ResponseAsStruct&) = delete;
+      ~ResponseAsStruct() = default;
+
+      ResponseAsStructResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<ResponseAsStructResponse*>(bytes_);
+      }
+      const ResponseAsStructResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const ResponseAsStructResponse*>(bytes_);
+      }
+
+      ResponseAsStructResponse& value() { return *Unwrap(); }
+      const ResponseAsStructResponse& value() const { return *Unwrap(); }
+
+      ResponseAsStructResponse* operator->() { return &value(); }
+      const ResponseAsStructResponse* operator->() const { return &value(); }
+
+      ResponseAsStructResponse& operator*() { return value(); }
+      const ResponseAsStructResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class ErrorAsPrimitive final : public ::fidl::Result {
+     public:
+      explicit ErrorAsPrimitive(zx_handle_t _client, uint8_t* _response_bytes,
+                                uint32_t _response_byte_capacity);
+      explicit ErrorAsPrimitive(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      ErrorAsPrimitive(ErrorAsPrimitive&&) = delete;
+      ErrorAsPrimitive(const ErrorAsPrimitive&) = delete;
+      ErrorAsPrimitive* operator=(ErrorAsPrimitive&&) = delete;
+      ErrorAsPrimitive* operator=(const ErrorAsPrimitive&) = delete;
+      ~ErrorAsPrimitive() = default;
+
+      ErrorAsPrimitiveResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<ErrorAsPrimitiveResponse*>(bytes_);
+      }
+      const ErrorAsPrimitiveResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const ErrorAsPrimitiveResponse*>(bytes_);
+      }
+
+      ErrorAsPrimitiveResponse& value() { return *Unwrap(); }
+      const ErrorAsPrimitiveResponse& value() const { return *Unwrap(); }
+
+      ErrorAsPrimitiveResponse* operator->() { return &value(); }
+      const ErrorAsPrimitiveResponse* operator->() const { return &value(); }
+
+      ErrorAsPrimitiveResponse& operator*() { return value(); }
+      const ErrorAsPrimitiveResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class ErrorAsEnum final : public ::fidl::Result {
+     public:
+      explicit ErrorAsEnum(zx_handle_t _client, uint8_t* _response_bytes,
+                           uint32_t _response_byte_capacity);
+      explicit ErrorAsEnum(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      ErrorAsEnum(ErrorAsEnum&&) = delete;
+      ErrorAsEnum(const ErrorAsEnum&) = delete;
+      ErrorAsEnum* operator=(ErrorAsEnum&&) = delete;
+      ErrorAsEnum* operator=(const ErrorAsEnum&) = delete;
+      ~ErrorAsEnum() = default;
+
+      ErrorAsEnumResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<ErrorAsEnumResponse*>(bytes_);
+      }
+      const ErrorAsEnumResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const ErrorAsEnumResponse*>(bytes_);
+      }
+
+      ErrorAsEnumResponse& value() { return *Unwrap(); }
+      const ErrorAsEnumResponse& value() const { return *Unwrap(); }
+
+      ErrorAsEnumResponse* operator->() { return &value(); }
+      const ErrorAsEnumResponse* operator->() const { return &value(); }
+
+      ErrorAsEnumResponse& operator*() { return value(); }
+      const ErrorAsEnumResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class ResponseAsStructUnownedRequest final {
@@ -3684,23 +3671,6 @@ class WithErrorSyntax final {
     // response buffers.
     static UnownedResultOf::ErrorAsEnum ErrorAsEnum(
         ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<ResponseAsStructResponse> ResponseAsStruct(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;
@@ -4352,7 +4322,7 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError OneWay(::fidl::BytePart _request_buffer, int64_t x);
+  ::fidl::Result OneWay(::fidl::BytePart _request_buffer, int64_t x);
 
  private:
   friend class ::fidl::Client<Transitional>;
@@ -4431,8 +4401,8 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError MethodA(::fidl::BytePart _request_buffer, int64_t a,
-                                 int64_t b);
+  ::fidl::Result MethodA(::fidl::BytePart _request_buffer, int64_t a,
+                         int64_t b);
 
   // Asynchronous variant of |ChannelProtocol.MethodB()|. Allocates 32 bytes of
   // request buffer on the stack. The callback is stored on the heap.
@@ -4623,8 +4593,8 @@ class WithAndWithoutRequestResponse::ClientImpl final
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError WithRequestNoResponse(::fidl::BytePart _request_buffer,
-                                               ::fidl::StringView arg);
+  ::fidl::Result WithRequestNoResponse(::fidl::BytePart _request_buffer,
+                                       ::fidl::StringView arg);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. The request and

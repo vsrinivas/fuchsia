@@ -2648,65 +2648,125 @@ class TestProtocol final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class StrictXUnionHenceResponseMayBeStackAllocated_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
-          ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~StrictXUnionHenceResponseMayBeStackAllocated_Impl() = default;
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
-          StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl& operator=(
-          StrictXUnionHenceResponseMayBeStackAllocated_Impl&& other) = default;
-      StrictXUnionHenceResponseMayBeStackAllocated_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
-          ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl() = default;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) =
-          default;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl& operator=(
-          FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl&& other) =
-          default;
-      FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using StrictXUnionHenceResponseMayBeStackAllocated =
-        StrictXUnionHenceResponseMayBeStackAllocated_Impl<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse>;
-    using FlexibleXUnionHenceResponseMustBeHeapAllocated =
-        FlexibleXUnionHenceResponseMustBeHeapAllocated_Impl<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>;
+    class StrictXUnionHenceResponseMayBeStackAllocated final
+        : public ::fidl::Result {
+     public:
+      explicit StrictXUnionHenceResponseMayBeStackAllocated(
+          zx_handle_t _client, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
+      explicit StrictXUnionHenceResponseMayBeStackAllocated(
+          const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      StrictXUnionHenceResponseMayBeStackAllocated(
+          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
+      StrictXUnionHenceResponseMayBeStackAllocated(
+          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
+      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
+          StrictXUnionHenceResponseMayBeStackAllocated&&) = delete;
+      StrictXUnionHenceResponseMayBeStackAllocated* operator=(
+          const StrictXUnionHenceResponseMayBeStackAllocated&) = delete;
+      ~StrictXUnionHenceResponseMayBeStackAllocated() = default;
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(bytes_);
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse* Unwrap()
+          const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            const StrictXUnionHenceResponseMayBeStackAllocatedResponse*>(
+            bytes_);
+      }
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse& value() {
+        return *Unwrap();
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse& value()
+          const {
+        return *Unwrap();
+      }
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse* operator->() {
+        return &value();
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse* operator->()
+          const {
+        return &value();
+      }
+
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*() {
+        return value();
+      }
+      const StrictXUnionHenceResponseMayBeStackAllocatedResponse& operator*()
+          const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class FlexibleXUnionHenceResponseMustBeHeapAllocated final
+        : public ::fidl::Result {
+     public:
+      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          zx_handle_t _client, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
+      explicit FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated(
+          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
+          FlexibleXUnionHenceResponseMustBeHeapAllocated&&) = delete;
+      FlexibleXUnionHenceResponseMustBeHeapAllocated* operator=(
+          const FlexibleXUnionHenceResponseMustBeHeapAllocated&) = delete;
+      ~FlexibleXUnionHenceResponseMustBeHeapAllocated() = default;
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(bytes_);
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* Unwrap()
+          const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<
+            const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*>(
+            bytes_);
+      }
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value() {
+        return *Unwrap();
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value()
+          const {
+        return *Unwrap();
+      }
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* operator->() {
+        return &value();
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* operator->()
+          const {
+        return &value();
+      }
+
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*() {
+        return value();
+      }
+      const FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator*()
+          const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class StrictXUnionHenceResponseMayBeStackAllocatedUnownedRequest final {
@@ -2904,24 +2964,6 @@ class TestProtocol final {
     static UnownedResultOf::FlexibleXUnionHenceResponseMustBeHeapAllocated
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
         ::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<
-        StrictXUnionHenceResponseMayBeStackAllocatedResponse>
-    StrictXUnionHenceResponseMayBeStackAllocated(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<
-        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
-    FlexibleXUnionHenceResponseMustBeHeapAllocated(
-        ::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;

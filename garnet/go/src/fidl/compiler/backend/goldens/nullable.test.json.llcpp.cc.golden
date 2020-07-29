@@ -37,74 +37,34 @@ SimpleProtocol::ResultOf::Add SimpleProtocol::Call::Add(
   return ResultOf::Add(_client_end->get(), a, b);
 }
 
-template <>
-SimpleProtocol::UnownedResultOf::Add_Impl<
-    SimpleProtocol::AddResponse>::Add_Impl(::zx::unowned_channel _client_end,
-                                           ::fidl::BytePart _request_buffer,
-                                           int32_t a, int32_t b,
-                                           ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < AddRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<AddResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  new (_request_buffer.data()) AddRequest(0, a, b);
-  _request_buffer.set_actual(sizeof(AddRequest));
-  ::fidl::DecodedMessage<AddRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<AddRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<AddRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(SimpleProtocol::InPlace::Add(std::move(_client_end),
-                                                std::move(_encoded_request),
-                                                std::move(_response_buffer)));
+SimpleProtocol::UnownedResultOf::Add::Add(zx_handle_t _client,
+                                          uint8_t* _request_bytes,
+                                          uint32_t _request_byte_capacity,
+                                          int32_t a, int32_t b,
+                                          uint8_t* _response_bytes,
+                                          uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  AddUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, a, b);
+  _request.GetFidlMessage().Call(AddResponse::Type, _client, _response_bytes,
+                                 _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 SimpleProtocol::UnownedResultOf::Add SimpleProtocol::SyncClient::Add(
     ::fidl::BytePart _request_buffer, int32_t a, int32_t b,
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Add(::zx::unowned_channel(this->channel_),
-                              std::move(_request_buffer), std::move(a),
-                              std::move(b), std::move(_response_buffer));
+  return UnownedResultOf::Add(
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      a, b, _response_buffer.data(), _response_buffer.capacity());
 }
 
 SimpleProtocol::UnownedResultOf::Add SimpleProtocol::Call::Add(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     int32_t a, int32_t b, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::Add(std::move(_client_end),
-                              std::move(_request_buffer), std::move(a),
-                              std::move(b), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<SimpleProtocol::AddResponse> SimpleProtocol::InPlace::Add(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<AddRequest> params,
-    ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SimpleProtocol::AddResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return Add(std::move(_client_end), std::move(_encode_request_result.message),
-             std::move(response_buffer));
-}
-
-::fidl::DecodeResult<SimpleProtocol::AddResponse> SimpleProtocol::InPlace::Add(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<AddRequest> params,
-    ::fidl::BytePart response_buffer) {
-  AddRequest* request = reinterpret_cast<AddRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kSimpleProtocol_Add_Ordinal);
-  auto _call_result = ::fidl::Call<AddRequest, AddResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<SimpleProtocol::AddResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::Add(
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), a,
+      b, _response_buffer.data(), _response_buffer.capacity());
 }
 
 SimpleProtocol::ResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(int32_t a,
@@ -120,11 +80,12 @@ SimpleProtocol::UnownedResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(
     ::fidl::BytePart _request_buffer, int32_t a, int32_t b,
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::Add(_binding->channel(), std::move(_request_buffer),
-                                std::move(a), std::move(b),
-                                std::move(_response_buffer));
+    return UnownedResultOf::Add(
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        a, b, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return SimpleProtocol::UnownedResultOf::Add(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError SimpleProtocol::ClientImpl::Add(

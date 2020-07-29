@@ -44,26 +44,6 @@ Interface::ResultOf::Method Interface::Call::Method(
   return ResultOf::Method(_client_end->get());
 }
 
-::fidl::internal::StatusAndError Interface::InPlace::Method(
-    ::zx::unowned_channel _client_end) {
-  constexpr uint32_t _write_num_bytes = sizeof(MethodRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::EncodedMessage<MethodRequest> params(std::move(_request_buffer));
-  MethodRequest* request =
-      reinterpret_cast<MethodRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kInterface_Method_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
-}
-
 ::fidl::Result Interface::ClientImpl::Method() {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     auto _res = ResultOf::Method(_binding->handle());

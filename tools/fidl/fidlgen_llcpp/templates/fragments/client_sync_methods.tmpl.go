@@ -7,27 +7,30 @@ package fragments
 const ClientSyncMethods = `
 {{- define "ClientSyncRequestCallerAllocateMethodDefinition" }}
   {{- if .HasResponse }}
-{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync({{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
+{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}_Sync(
+     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::{{ .Name }}(_binding->channel()
-      {{- if .Request -}}
-        , std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
-      {{- end -}}
-        , std::move(_response_buffer));
+    return UnownedResultOf::{{ .Name }}(_binding->handle()
+    {{- if .Request -}}
+      , _request_buffer.data(), _request_buffer.capacity()
+    {{- end -}}
+      {{- template "CommaPassthroughMessageParams" .Request -}},
+      _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}(
+    ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
   {{- else }}{{ if .Request }}
-::fidl::StatusAndError {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
+::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = UnownedResultOf::{{ .Name }}(_binding->channel()
-      {{- if .Request -}}
-        , std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
-      {{- end -}}
-    );
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res = UnownedResultOf::{{ .Name }}(_binding->handle()
+    {{- if .Request -}}
+      , _request_buffer.data(), _request_buffer.capacity()
+    {{- end }}
+      {{- template "CommaPassthroughMessageParams" .Request -}});
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
   {{- end }}{{ end }}
 {{- end }}

@@ -22,85 +22,56 @@ const SyncRequestCallerAllocate = `
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
-{{ if .HasResponse -}} template <> {{- end }}
-{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}_Impl {{- if .HasResponse -}} <{{ .LLProps.ProtocolName }}::{{ .Name }}Response> {{- end }}::{{ .Name }}_Impl(
-  {{- template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
-  {{- if not .Request }}
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  {{- else }}
-  if (_request_buffer.capacity() < {{ .Name }}Request::PrimarySize) {
-    {{- if .HasResponse }}
-    Super::SetFailure(::fidl::DecodeResult<{{ .Name }}Response>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    {{- else }}
-    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
-    {{- end }}
-    return;
-  }
-  {{- end }}
-  {{- if .LLProps.LinearizeRequest }}
-  {{ .Name }}Request _request(0
-  {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-  {{- else }}
-  new (_request_buffer.data()) {{ .Name }}Request(0
-  {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-  {{- end }}
-
-  {{- if .LLProps.LinearizeRequest }}
-  auto _encode_result = ::fidl::LinearizeAndEncode<{{ .Name }}Request>(&_request, std::move(_request_buffer));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  {{- else }}
-  _request_buffer.set_actual(sizeof({{ .Name }}Request));
-  ::fidl::DecodedMessage<{{ .Name }}Request> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<{{ .Name }}Request>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  {{- end }}
-  ::fidl::EncodedMessage<{{ .Name }}Request> _encoded_request = std::move(_encode_result.message);
-
+{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}::{{ .Name }}(
+  zx_handle_t _client
+  {{- if .Request -}}
+  , uint8_t* _request_bytes, uint32_t _request_byte_capacity
+  {{- end -}}
+  {{- template "CommaMessagePrototype" .Request }}
   {{- if .HasResponse }}
-  Super::SetResult(
-      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
-      {{- if .Request }}, std::move(_encoded_request){{ end -}}
-      , std::move(_response_buffer)));
+  , uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
   {{- else }}
-  Super::operator=(
-      {{ .LLProps.ProtocolName }}::InPlace::{{ .Name }}(std::move(_client_end)
-      {{- if .Request }}, std::move(_encoded_request){{ end -}}
-  ));
+  ) {
   {{- end }}
+  {{- if .Request -}}
+  {{ .Name }}UnownedRequest _request(_request_bytes, _request_byte_capacity, 0
+  {{- else -}}
+  {{ .Name }}OwnedRequest _request(0
+  {{- end -}}
+    {{- template "CommaPassthroughMessageParams" .Request -}});
+  {{- if .HasResponse }}
+  _request.GetFidlMessage().Call({{ .Name }}Response::Type, _client, _response_bytes, _response_byte_capacity);
+  {{- else }}
+  _request.GetFidlMessage().Write(_client);
+  {{- end }}
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::SyncClient::{{ .Name }}(
   {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
-  return UnownedResultOf::{{ .Name }}(::zx::unowned_channel(this->channel_)
+  return UnownedResultOf::{{ .Name }}(this->channel().get()
     {{- if .Request -}}
-      , std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
-    {{- end }}
-    {{- if .HasResponse -}}
-      , std::move(_response_buffer)
+      , _request_buffer.data(), _request_buffer.capacity()
     {{- end -}}
-  );
+      {{- template "CommaPassthroughMessageParams" .Request -}}
+    {{- if .HasResponse -}}
+      , _response_buffer.data(), _response_buffer.capacity()
+    {{- end -}});
 }
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodDefinition" }}
 {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }} {{ .LLProps.ProtocolName }}::Call::{{ .Name }}(
   {{- template "StaticCallSyncRequestCallerAllocateMethodArguments" . }}) {
-  return UnownedResultOf::{{ .Name }}(std::move(_client_end)
+  return UnownedResultOf::{{ .Name }}(_client_end->get()
     {{- if .Request -}}
-      , std::move(_request_buffer), {{ template "SyncClientMoveParams" .Request }}
-    {{- end }}
+      , _request_buffer.data(), _request_buffer.capacity()
+    {{- end -}}
+      {{- template "CommaPassthroughMessageParams" .Request -}}
     {{- if .HasResponse -}}
-      , std::move(_response_buffer)
+      , _response_buffer.data(), _response_buffer.capacity()
     {{- end -}});
 }
 {{- end }}

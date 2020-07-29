@@ -353,32 +353,40 @@ class SimpleProtocol final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class Add_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      Add_Impl(::zx::unowned_channel _client_end,
-               ::fidl::BytePart _request_buffer, int32_t a, int32_t b,
-               ::fidl::BytePart _response_buffer);
-      ~Add_Impl() = default;
-      Add_Impl(Add_Impl&& other) = default;
-      Add_Impl& operator=(Add_Impl&& other) = default;
-      Add_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using Add = Add_Impl<AddResponse>;
+    class Add final : public ::fidl::Result {
+     public:
+      explicit Add(zx_handle_t _client, uint8_t* _request_bytes,
+                   uint32_t _request_byte_capacity, int32_t a, int32_t b,
+                   uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      explicit Add(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Add(Add&&) = delete;
+      Add(const Add&) = delete;
+      Add* operator=(Add&&) = delete;
+      Add* operator=(const Add&) = delete;
+      ~Add() = default;
+
+      AddResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<AddResponse*>(bytes_);
+      }
+      const AddResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const AddResponse*>(bytes_);
+      }
+
+      AddResponse& value() { return *Unwrap(); }
+      const AddResponse& value() const { return *Unwrap(); }
+
+      AddResponse* operator->() { return &value(); }
+      const AddResponse* operator->() const { return &value(); }
+
+      AddResponse& operator*() { return value(); }
+      const AddResponse& operator*() const { return value(); }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class AddUnownedRequest final {
@@ -475,24 +483,6 @@ class SimpleProtocol final {
                                     ::fidl::BytePart _request_buffer, int32_t a,
                                     int32_t b,
                                     ::fidl::BytePart _response_buffer);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<AddResponse> Add(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<AddRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<AddResponse> Add(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<AddRequest> params,
-        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;

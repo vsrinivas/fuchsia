@@ -46,66 +46,26 @@ EmptyProtocol::ResultOf::Send EmptyProtocol::Call::Send(
   return ResultOf::Send(_client_end->get(), e);
 }
 
-EmptyProtocol::UnownedResultOf::Send_Impl::Send_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::llcpp::fidl::test::json::Empty e) {
-  if (_request_buffer.capacity() < SendRequest::PrimarySize) {
-    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
-    return;
-  }
-  new (_request_buffer.data()) SendRequest(0, e);
-  _request_buffer.set_actual(sizeof(SendRequest));
-  ::fidl::DecodedMessage<SendRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<SendRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<SendRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(EmptyProtocol::InPlace::Send(std::move(_client_end),
-                                                std::move(_encoded_request)));
+EmptyProtocol::UnownedResultOf::Send::Send(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, ::llcpp::fidl::test::json::Empty& e) {
+  SendUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, e);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 EmptyProtocol::UnownedResultOf::Send EmptyProtocol::SyncClient::Send(
     ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::Empty e) {
-  return UnownedResultOf::Send(::zx::unowned_channel(this->channel_),
-                               std::move(_request_buffer), std::move(e));
+  return UnownedResultOf::Send(this->channel().get(), _request_buffer.data(),
+                               _request_buffer.capacity(), e);
 }
 
 EmptyProtocol::UnownedResultOf::Send EmptyProtocol::Call::Send(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     ::llcpp::fidl::test::json::Empty e) {
-  return UnownedResultOf::Send(std::move(_client_end),
-                               std::move(_request_buffer), std::move(e));
-}
-
-::fidl::internal::StatusAndError EmptyProtocol::InPlace::Send(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<SendRequest> params) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return Send(std::move(_client_end),
-              std::move(_encode_request_result.message));
-}
-
-::fidl::internal::StatusAndError EmptyProtocol::InPlace::Send(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<SendRequest> params) {
-  SendRequest* request = reinterpret_cast<SendRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kEmptyProtocol_Send_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
+  return UnownedResultOf::Send(_client_end->get(), _request_buffer.data(),
+                               _request_buffer.capacity(), e);
 }
 
 EmptyProtocol::ResultOf::SendAndReceive::SendAndReceive(
@@ -128,32 +88,17 @@ EmptyProtocol::ResultOf::SendAndReceive EmptyProtocol::Call::SendAndReceive(
   return ResultOf::SendAndReceive(_client_end->get(), e);
 }
 
-template <>
-EmptyProtocol::UnownedResultOf::SendAndReceive_Impl<
-    EmptyProtocol::SendAndReceiveResponse>::
-    SendAndReceive_Impl(::zx::unowned_channel _client_end,
-                        ::fidl::BytePart _request_buffer,
-                        ::llcpp::fidl::test::json::Empty e,
-                        ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < SendAndReceiveRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<SendAndReceiveResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  new (_request_buffer.data()) SendAndReceiveRequest(0, e);
-  _request_buffer.set_actual(sizeof(SendAndReceiveRequest));
-  ::fidl::DecodedMessage<SendAndReceiveRequest> _msg(
-      std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<SendAndReceiveRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<SendAndReceiveRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(EmptyProtocol::InPlace::SendAndReceive(
-      std::move(_client_end), std::move(_encoded_request),
-      std::move(_response_buffer)));
+EmptyProtocol::UnownedResultOf::SendAndReceive::SendAndReceive(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, ::llcpp::fidl::test::json::Empty& e,
+    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  SendAndReceiveUnownedRequest _request(_request_bytes, _request_byte_capacity,
+                                        0, e);
+  _request.GetFidlMessage().Call(SendAndReceiveResponse::Type, _client,
+                                 _response_bytes, _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 EmptyProtocol::UnownedResultOf::SendAndReceive
@@ -161,8 +106,8 @@ EmptyProtocol::SyncClient::SendAndReceive(::fidl::BytePart _request_buffer,
                                           ::llcpp::fidl::test::json::Empty e,
                                           ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SendAndReceive(
-      ::zx::unowned_channel(this->channel_), std::move(_request_buffer),
-      std::move(e), std::move(_response_buffer));
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      e, _response_buffer.data(), _response_buffer.capacity());
 }
 
 EmptyProtocol::UnownedResultOf::SendAndReceive
@@ -171,43 +116,8 @@ EmptyProtocol::Call::SendAndReceive(::zx::unowned_channel _client_end,
                                     ::llcpp::fidl::test::json::Empty e,
                                     ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SendAndReceive(
-      std::move(_client_end), std::move(_request_buffer), std::move(e),
-      std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<EmptyProtocol::SendAndReceiveResponse>
-EmptyProtocol::InPlace::SendAndReceive(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<SendAndReceiveRequest> params,
-    ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<EmptyProtocol::SendAndReceiveResponse>::
-        FromFailure(std::move(_encode_request_result));
-  }
-  return SendAndReceive(std::move(_client_end),
-                        std::move(_encode_request_result.message),
-                        std::move(response_buffer));
-}
-
-::fidl::DecodeResult<EmptyProtocol::SendAndReceiveResponse>
-EmptyProtocol::InPlace::SendAndReceive(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<SendAndReceiveRequest> params,
-    ::fidl::BytePart response_buffer) {
-  SendAndReceiveRequest* request =
-      reinterpret_cast<SendAndReceiveRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0,
-                       kEmptyProtocol_SendAndReceive_Ordinal);
-  auto _call_result =
-      ::fidl::Call<SendAndReceiveRequest, SendAndReceiveResponse>(
-          std::move(_client_end), std::move(params),
-          std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<EmptyProtocol::SendAndReceiveResponse>::
-        FromFailure(std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), e,
+      _response_buffer.data(), _response_buffer.capacity());
 }
 
 ::fidl::Result EmptyProtocol::ClientImpl::Send(
@@ -219,14 +129,15 @@ EmptyProtocol::InPlace::SendAndReceive(
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError EmptyProtocol::ClientImpl::Send(
+::fidl::Result EmptyProtocol::ClientImpl::Send(
     ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::Empty e) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = UnownedResultOf::Send(_binding->channel(),
-                                      std::move(_request_buffer), std::move(e));
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res =
+        UnownedResultOf::Send(_binding->handle(), _request_buffer.data(),
+                              _request_buffer.capacity(), e);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 EmptyProtocol::ResultOf::SendAndReceive
@@ -245,10 +156,11 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
     return UnownedResultOf::SendAndReceive(
-        _binding->channel(), std::move(_request_buffer), std::move(e),
-        std::move(_response_buffer));
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        e, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return EmptyProtocol::UnownedResultOf::SendAndReceive(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError EmptyProtocol::ClientImpl::SendAndReceive(

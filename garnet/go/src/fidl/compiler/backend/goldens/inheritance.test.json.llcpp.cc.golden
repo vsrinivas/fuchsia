@@ -35,71 +35,33 @@ super::ResultOf::foo super::Call::foo(::zx::unowned_channel _client_end,
   return ResultOf::foo(_client_end->get(), s);
 }
 
-template <>
-super::UnownedResultOf::foo_Impl<super::fooResponse>::foo_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < fooRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<fooResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  fooRequest _request(0, s);
-  auto _encode_result = ::fidl::LinearizeAndEncode<fooRequest>(
-      &_request, std::move(_request_buffer));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<fooRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(super::InPlace::foo(std::move(_client_end),
-                                       std::move(_encoded_request),
-                                       std::move(_response_buffer)));
+super::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
+                                 uint32_t _request_byte_capacity,
+                                 const ::fidl::StringView& s,
+                                 uint8_t* _response_bytes,
+                                 uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  fooUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, s);
+  _request.GetFidlMessage().Call(fooResponse::Type, _client, _response_bytes,
+                                 _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 super::UnownedResultOf::foo super::SyncClient::foo(
     ::fidl::BytePart _request_buffer, ::fidl::StringView s,
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(::zx::unowned_channel(this->channel_),
-                              std::move(_request_buffer), std::move(s),
-                              std::move(_response_buffer));
+  return UnownedResultOf::foo(
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      s, _response_buffer.data(), _response_buffer.capacity());
 }
 
 super::UnownedResultOf::foo super::Call::foo(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(std::move(_client_end),
-                              std::move(_request_buffer), std::move(s),
-                              std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<super::fooResponse> super::InPlace::foo(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<fooRequest> params,
-    ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<super::fooResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return foo(std::move(_client_end), std::move(_encode_request_result.message),
-             std::move(response_buffer));
-}
-
-::fidl::DecodeResult<super::fooResponse> super::InPlace::foo(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<fooRequest> params,
-    ::fidl::BytePart response_buffer) {
-  fooRequest* request = reinterpret_cast<fooRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, ksuper_foo_Ordinal);
-  auto _call_result = ::fidl::Call<fooRequest, fooResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<super::fooResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::foo(
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), s,
+      _response_buffer.data(), _response_buffer.capacity());
 }
 
 super::ResultOf::foo super::ClientImpl::foo_Sync(::fidl::StringView s) {
@@ -114,10 +76,12 @@ super::UnownedResultOf::foo super::ClientImpl::foo_Sync(
     ::fidl::BytePart _request_buffer, ::fidl::StringView s,
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::foo(_binding->channel(), std::move(_request_buffer),
-                                std::move(s), std::move(_response_buffer));
+    return UnownedResultOf::foo(
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        s, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return super::UnownedResultOf::foo(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError super::ClientImpl::foo(
@@ -331,72 +295,34 @@ sub::ResultOf::foo sub::Call::foo(::zx::unowned_channel _client_end,
   return ResultOf::foo(_client_end->get(), s);
 }
 
-template <>
-sub::UnownedResultOf::foo_Impl<sub::fooResponse>::foo_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < fooRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<fooResponse>(
-        ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall));
-    return;
-  }
-  fooRequest _request(0, s);
-  auto _encode_result = ::fidl::LinearizeAndEncode<fooRequest>(
-      &_request, std::move(_request_buffer));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<fooRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::SetResult(sub::InPlace::foo(std::move(_client_end),
-                                     std::move(_encoded_request),
-                                     std::move(_response_buffer)));
+sub::UnownedResultOf::foo::foo(zx_handle_t _client, uint8_t* _request_bytes,
+                               uint32_t _request_byte_capacity,
+                               const ::fidl::StringView& s,
+                               uint8_t* _response_bytes,
+                               uint32_t _response_byte_capacity)
+    : bytes_(_response_bytes) {
+  fooUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, s);
+  _request.GetFidlMessage().Call(fooResponse::Type, _client, _response_bytes,
+                                 _response_byte_capacity);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 sub::UnownedResultOf::foo sub::SyncClient::foo(
     ::fidl::BytePart _request_buffer, ::fidl::StringView s,
     ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(::zx::unowned_channel(this->channel_),
-                              std::move(_request_buffer), std::move(s),
-                              std::move(_response_buffer));
+  return UnownedResultOf::foo(
+      this->channel().get(), _request_buffer.data(), _request_buffer.capacity(),
+      s, _response_buffer.data(), _response_buffer.capacity());
 }
 
 sub::UnownedResultOf::foo sub::Call::foo(::zx::unowned_channel _client_end,
                                          ::fidl::BytePart _request_buffer,
                                          ::fidl::StringView s,
                                          ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::foo(std::move(_client_end),
-                              std::move(_request_buffer), std::move(s),
-                              std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<sub::fooResponse> sub::InPlace::foo(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<fooRequest> params,
-    ::fidl::BytePart response_buffer) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<sub::fooResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return foo(std::move(_client_end), std::move(_encode_request_result.message),
-             std::move(response_buffer));
-}
-
-::fidl::DecodeResult<sub::fooResponse> sub::InPlace::foo(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<fooRequest> params,
-    ::fidl::BytePart response_buffer) {
-  fooRequest* request = reinterpret_cast<fooRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, ksub_foo_Ordinal);
-  auto _call_result = ::fidl::Call<fooRequest, fooResponse>(
-      std::move(_client_end), std::move(params), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<sub::fooResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
+  return UnownedResultOf::foo(
+      _client_end->get(), _request_buffer.data(), _request_buffer.capacity(), s,
+      _response_buffer.data(), _response_buffer.capacity());
 }
 
 sub::ResultOf::foo sub::ClientImpl::foo_Sync(::fidl::StringView s) {
@@ -411,10 +337,12 @@ sub::UnownedResultOf::foo sub::ClientImpl::foo_Sync(
     ::fidl::BytePart _request_buffer, ::fidl::StringView s,
     ::fidl::BytePart _response_buffer) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    return UnownedResultOf::foo(_binding->channel(), std::move(_request_buffer),
-                                std::move(s), std::move(_response_buffer));
+    return UnownedResultOf::foo(
+        _binding->handle(), _request_buffer.data(), _request_buffer.capacity(),
+        s, _response_buffer.data(), _response_buffer.capacity());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return sub::UnownedResultOf::foo(
+      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
 ::fidl::StatusAndError sub::ClientImpl::foo(

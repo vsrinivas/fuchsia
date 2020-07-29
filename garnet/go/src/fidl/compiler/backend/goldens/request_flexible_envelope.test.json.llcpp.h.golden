@@ -481,65 +481,99 @@ class Protocol final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    template <typename ResponseType>
-    class RequestStrictResponseFlexible_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      RequestStrictResponseFlexible_Impl(::zx::unowned_channel _client_end,
-                                         ::fidl::BytePart _request_buffer,
-                                         ::llcpp::fidl::test::json::StrictFoo s,
-                                         ::fidl::BytePart _response_buffer);
-      ~RequestStrictResponseFlexible_Impl() = default;
-      RequestStrictResponseFlexible_Impl(
-          RequestStrictResponseFlexible_Impl&& other) = default;
-      RequestStrictResponseFlexible_Impl& operator=(
-          RequestStrictResponseFlexible_Impl&& other) = default;
-      RequestStrictResponseFlexible_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class RequestFlexibleResponseStrict_Impl final
-        : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-
-     public:
-      RequestFlexibleResponseStrict_Impl(
-          ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-          ::llcpp::fidl::test::json::FlexibleFoo s,
-          ::fidl::BytePart _response_buffer);
-      ~RequestFlexibleResponseStrict_Impl() = default;
-      RequestFlexibleResponseStrict_Impl(
-          RequestFlexibleResponseStrict_Impl&& other) = default;
-      RequestFlexibleResponseStrict_Impl& operator=(
-          RequestFlexibleResponseStrict_Impl&& other) = default;
-      RequestFlexibleResponseStrict_Impl(
-          ::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-
    public:
-    using RequestStrictResponseFlexible = RequestStrictResponseFlexible_Impl<
-        RequestStrictResponseFlexibleResponse>;
-    using RequestFlexibleResponseStrict = RequestFlexibleResponseStrict_Impl<
-        RequestFlexibleResponseStrictResponse>;
+    class RequestStrictResponseFlexible final : public ::fidl::Result {
+     public:
+      explicit RequestStrictResponseFlexible(
+          zx_handle_t _client, uint8_t* _request_bytes,
+          uint32_t _request_byte_capacity,
+          ::llcpp::fidl::test::json::StrictFoo& s, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
+      explicit RequestStrictResponseFlexible(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      RequestStrictResponseFlexible(RequestStrictResponseFlexible&&) = delete;
+      RequestStrictResponseFlexible(const RequestStrictResponseFlexible&) =
+          delete;
+      RequestStrictResponseFlexible* operator=(
+          RequestStrictResponseFlexible&&) = delete;
+      RequestStrictResponseFlexible* operator=(
+          const RequestStrictResponseFlexible&) = delete;
+      ~RequestStrictResponseFlexible() = default;
+
+      RequestStrictResponseFlexibleResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<RequestStrictResponseFlexibleResponse*>(bytes_);
+      }
+      const RequestStrictResponseFlexibleResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const RequestStrictResponseFlexibleResponse*>(
+            bytes_);
+      }
+
+      RequestStrictResponseFlexibleResponse& value() { return *Unwrap(); }
+      const RequestStrictResponseFlexibleResponse& value() const {
+        return *Unwrap();
+      }
+
+      RequestStrictResponseFlexibleResponse* operator->() { return &value(); }
+      const RequestStrictResponseFlexibleResponse* operator->() const {
+        return &value();
+      }
+
+      RequestStrictResponseFlexibleResponse& operator*() { return value(); }
+      const RequestStrictResponseFlexibleResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
+    class RequestFlexibleResponseStrict final : public ::fidl::Result {
+     public:
+      explicit RequestFlexibleResponseStrict(
+          zx_handle_t _client, uint8_t* _request_bytes,
+          uint32_t _request_byte_capacity,
+          ::llcpp::fidl::test::json::FlexibleFoo& s, uint8_t* _response_bytes,
+          uint32_t _response_byte_capacity);
+      explicit RequestFlexibleResponseStrict(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      RequestFlexibleResponseStrict(RequestFlexibleResponseStrict&&) = delete;
+      RequestFlexibleResponseStrict(const RequestFlexibleResponseStrict&) =
+          delete;
+      RequestFlexibleResponseStrict* operator=(
+          RequestFlexibleResponseStrict&&) = delete;
+      RequestFlexibleResponseStrict* operator=(
+          const RequestFlexibleResponseStrict&) = delete;
+      ~RequestFlexibleResponseStrict() = default;
+
+      RequestFlexibleResponseStrictResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<RequestFlexibleResponseStrictResponse*>(bytes_);
+      }
+      const RequestFlexibleResponseStrictResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const RequestFlexibleResponseStrictResponse*>(
+            bytes_);
+      }
+
+      RequestFlexibleResponseStrictResponse& value() { return *Unwrap(); }
+      const RequestFlexibleResponseStrictResponse& value() const {
+        return *Unwrap();
+      }
+
+      RequestFlexibleResponseStrictResponse* operator->() { return &value(); }
+      const RequestFlexibleResponseStrictResponse* operator->() const {
+        return &value();
+      }
+
+      RequestFlexibleResponseStrictResponse& operator*() { return value(); }
+      const RequestFlexibleResponseStrictResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
   };
 
   class RequestStrictResponseFlexibleUnownedRequest final {
@@ -725,38 +759,6 @@ class Protocol final {
                                   ::fidl::BytePart _request_buffer,
                                   ::llcpp::fidl::test::json::FlexibleFoo s,
                                   ::fidl::BytePart _response_buffer);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::DecodeResult<RequestStrictResponseFlexibleResponse>
-    RequestStrictResponseFlexible(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<RequestStrictResponseFlexibleRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<RequestStrictResponseFlexibleResponse>
-    RequestStrictResponseFlexible(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<RequestStrictResponseFlexibleRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<RequestFlexibleResponseStrictResponse>
-    RequestFlexibleResponseStrict(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<RequestFlexibleResponseStrictRequest> params,
-        ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<RequestFlexibleResponseStrictResponse>
-    RequestFlexibleResponseStrict(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<RequestFlexibleResponseStrictRequest> params,
-        ::fidl::BytePart response_buffer);
   };
 
   struct AsyncEventHandlers;

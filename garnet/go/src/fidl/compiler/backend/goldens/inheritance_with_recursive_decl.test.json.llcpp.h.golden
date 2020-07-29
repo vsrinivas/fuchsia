@@ -97,25 +97,18 @@ class Parent final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    class First_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      First_Impl(::zx::unowned_channel _client_end,
-                 ::fidl::BytePart _request_buffer, ::zx::channel request);
-      ~First_Impl() = default;
-      First_Impl(First_Impl&& other) = default;
-      First_Impl& operator=(First_Impl&& other) = default;
-      First_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using First = First_Impl;
+    class First final : public ::fidl::Result {
+     public:
+      explicit First(zx_handle_t _client, uint8_t* _request_bytes,
+                     uint32_t _request_byte_capacity, ::zx::channel& request);
+      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      First(First&&) = delete;
+      First(const First&) = delete;
+      First* operator=(First&&) = delete;
+      First* operator=(const First&) = delete;
+      ~First() = default;
+    };
   };
 
   class FirstUnownedRequest final {
@@ -216,22 +209,6 @@ class Parent final {
     static UnownedResultOf::First First(::zx::unowned_channel _client_end,
                                         ::fidl::BytePart _request_buffer,
                                         ::zx::channel request);
-  };
-
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::internal::StatusAndError First(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<FirstRequest> params);
-
-    static ::fidl::internal::StatusAndError First(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<FirstRequest> params);
   };
 
   struct AsyncEventHandlers;
@@ -376,41 +353,29 @@ class Child final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
 
-   private:
-    class First_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      First_Impl(::zx::unowned_channel _client_end,
-                 ::fidl::BytePart _request_buffer, ::zx::channel request);
-      ~First_Impl() = default;
-      First_Impl(First_Impl&& other) = default;
-      First_Impl& operator=(First_Impl&& other) = default;
-      First_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-    class Second_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
-
-     public:
-      Second_Impl(::zx::unowned_channel _client_end,
-                  ::fidl::BytePart _request_buffer, ::zx::channel request);
-      ~Second_Impl() = default;
-      Second_Impl(Second_Impl&& other) = default;
-      Second_Impl& operator=(Second_Impl&& other) = default;
-      Second_Impl(::fidl::internal::StatusAndError&& other)
-          : Super(std::move(other)) {}
-      using Super::error;
-      using Super::ok;
-      using Super::status;
-    };
-
    public:
-    using First = First_Impl;
-    using Second = Second_Impl;
+    class First final : public ::fidl::Result {
+     public:
+      explicit First(zx_handle_t _client, uint8_t* _request_bytes,
+                     uint32_t _request_byte_capacity, ::zx::channel& request);
+      explicit First(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      First(First&&) = delete;
+      First(const First&) = delete;
+      First* operator=(First&&) = delete;
+      First* operator=(const First&) = delete;
+      ~First() = default;
+    };
+    class Second final : public ::fidl::Result {
+     public:
+      explicit Second(zx_handle_t _client, uint8_t* _request_bytes,
+                      uint32_t _request_byte_capacity, ::zx::channel& request);
+      explicit Second(const ::fidl::Result& result) : ::fidl::Result(result) {}
+      Second(Second&&) = delete;
+      Second(const Second&) = delete;
+      Second* operator=(Second&&) = delete;
+      Second* operator=(const Second&) = delete;
+      ~Second() = default;
+    };
   };
 
   class FirstUnownedRequest final {
@@ -590,30 +555,6 @@ class Child final {
                                           ::zx::channel request);
   };
 
-  // Messages are encoded and decoded in-place when these methods are used.
-  // Additionally, requests must be already laid-out according to the FIDL
-  // wire-format.
-  class InPlace final {
-    InPlace() = delete;
-
-   public:
-    static ::fidl::internal::StatusAndError First(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<FirstRequest> params);
-
-    static ::fidl::internal::StatusAndError First(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<FirstRequest> params);
-
-    static ::fidl::internal::StatusAndError Second(
-        ::zx::unowned_channel _client_end,
-        ::fidl::DecodedMessage<SecondRequest> params);
-
-    static ::fidl::internal::StatusAndError Second(
-        ::zx::unowned_channel _client_end,
-        ::fidl::EncodedMessage<SecondRequest> params);
-  };
-
   struct AsyncEventHandlers;
   class ClientImpl;
 
@@ -720,8 +661,7 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError First(::fidl::BytePart _request_buffer,
-                               ::zx::channel request);
+  ::fidl::Result First(::fidl::BytePart _request_buffer, ::zx::channel request);
 
  private:
   friend class ::fidl::Client<Parent>;
@@ -760,8 +700,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError First(::fidl::BytePart _request_buffer,
-                               ::zx::channel request);
+  ::fidl::Result First(::fidl::BytePart _request_buffer, ::zx::channel request);
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -769,8 +708,8 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::StatusAndError Second(::fidl::BytePart _request_buffer,
-                                ::zx::channel request);
+  ::fidl::Result Second(::fidl::BytePart _request_buffer,
+                        ::zx::channel request);
 
  private:
   friend class ::fidl::Client<Child>;

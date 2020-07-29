@@ -34,67 +34,26 @@ ExampleProtocol::ResultOf::Method ExampleProtocol::Call::Method(
   return ResultOf::Method(_client_end->get(), arg);
 }
 
-ExampleProtocol::UnownedResultOf::Method_Impl::Method_Impl(
-    ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
-    ::llcpp::exampleusing::Empty arg) {
-  if (_request_buffer.capacity() < MethodRequest::PrimarySize) {
-    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
-    Super::error_ = ::fidl::kErrorRequestBufferTooSmall;
-    return;
-  }
-  new (_request_buffer.data()) MethodRequest(0, arg);
-  _request_buffer.set_actual(sizeof(MethodRequest));
-  ::fidl::DecodedMessage<MethodRequest> _msg(std::move(_request_buffer));
-  auto _encode_result = ::fidl::Encode<MethodRequest>(std::move(_msg));
-  if (_encode_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_encode_result));
-    return;
-  }
-  ::fidl::EncodedMessage<MethodRequest> _encoded_request =
-      std::move(_encode_result.message);
-  Super::operator=(ExampleProtocol::InPlace::Method(
-      std::move(_client_end), std::move(_encoded_request)));
+ExampleProtocol::UnownedResultOf::Method::Method(
+    zx_handle_t _client, uint8_t* _request_bytes,
+    uint32_t _request_byte_capacity, ::llcpp::exampleusing::Empty& arg) {
+  MethodUnownedRequest _request(_request_bytes, _request_byte_capacity, 0, arg);
+  _request.GetFidlMessage().Write(_client);
+  status_ = _request.status();
+  error_ = _request.error();
 }
 
 ExampleProtocol::UnownedResultOf::Method ExampleProtocol::SyncClient::Method(
     ::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg) {
-  return UnownedResultOf::Method(::zx::unowned_channel(this->channel_),
-                                 std::move(_request_buffer), std::move(arg));
+  return UnownedResultOf::Method(this->channel().get(), _request_buffer.data(),
+                                 _request_buffer.capacity(), arg);
 }
 
 ExampleProtocol::UnownedResultOf::Method ExampleProtocol::Call::Method(
     ::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer,
     ::llcpp::exampleusing::Empty arg) {
-  return UnownedResultOf::Method(std::move(_client_end),
-                                 std::move(_request_buffer), std::move(arg));
-}
-
-::fidl::internal::StatusAndError ExampleProtocol::InPlace::Method(
-    ::zx::unowned_channel _client_end,
-    ::fidl::DecodedMessage<MethodRequest> params) {
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::internal::StatusAndError::FromFailure(
-        std::move(_encode_request_result));
-  }
-  return Method(std::move(_client_end),
-                std::move(_encode_request_result.message));
-}
-
-::fidl::internal::StatusAndError ExampleProtocol::InPlace::Method(
-    ::zx::unowned_channel _client_end,
-    ::fidl::EncodedMessage<MethodRequest> params) {
-  MethodRequest* request =
-      reinterpret_cast<MethodRequest*>(params.bytes().data());
-  fidl_init_txn_header(&request->_hdr, 0, kExampleProtocol_Method_Ordinal);
-  zx_status_t _write_status =
-      ::fidl::Write(std::move(_client_end), std::move(params));
-  if (_write_status != ZX_OK) {
-    return ::fidl::internal::StatusAndError(_write_status,
-                                            ::fidl::kErrorWriteFailed);
-  } else {
-    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
-  }
+  return UnownedResultOf::Method(_client_end->get(), _request_buffer.data(),
+                                 _request_buffer.capacity(), arg);
 }
 
 ::fidl::Result ExampleProtocol::ClientImpl::Method(
@@ -106,14 +65,15 @@ ExampleProtocol::UnownedResultOf::Method ExampleProtocol::Call::Method(
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-::fidl::StatusAndError ExampleProtocol::ClientImpl::Method(
+::fidl::Result ExampleProtocol::ClientImpl::Method(
     ::fidl::BytePart _request_buffer, ::llcpp::exampleusing::Empty arg) {
   if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    auto _res = UnownedResultOf::Method(
-        _binding->channel(), std::move(_request_buffer), std::move(arg));
-    return ::fidl::StatusAndError(_res.status(), _res.error());
+    auto _res =
+        UnownedResultOf::Method(_binding->handle(), _request_buffer.data(),
+                                _request_buffer.capacity(), arg);
+    return ::fidl::Result(_res.status(), _res.error());
   }
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
 std::optional<::fidl::UnbindInfo> ExampleProtocol::ClientImpl::Dispatch(
