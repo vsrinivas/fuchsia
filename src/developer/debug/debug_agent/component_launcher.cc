@@ -68,8 +68,11 @@ zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
   // Prepare the launch info. The parameters to the component do not include
   // the component URL.
   launch_info_.url = argv.front();
-  for (size_t i = 1; i < argv.size(); i++)
-    launch_info_.arguments->push_back(std::move(argv[i]));
+  if (argv.size() > 1) {
+    launch_info_.arguments.emplace();
+    for (size_t i = 1; i < argv.size(); i++)
+      launch_info_.arguments->push_back(std::move(argv[i]));
+  }
 
   *description = {};
   description->component_id = kNextComponentId++;
