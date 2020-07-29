@@ -129,6 +129,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 				}
 
 				// keep copying until conn is closed
+				buf := make([]byte, 4096)
 				for {
 					// files on unix always return readable, even if select'd so
 					// there's no great strategy for "tailing". It's possible to relax
@@ -139,7 +140,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 					case <-ctx.Done():
 						return
 					case <-time.After(50 * time.Millisecond):
-						_, err := io.Copy(conn, f)
+						_, err := io.CopyBuffer(conn, f, buf)
 						// io.Copy returns nil on io.EOF, which is useful here, as that's the
 						// case where we read the end of the file
 						if err == nil {
@@ -154,8 +155,9 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 
 	errs := make(chan error)
 	go func() {
+		buf := make([]byte, 4096)
 		for {
-			_, err := io.Copy(s.AuxiliaryOutput, s.serial)
+			_, err := io.CopyBuffer(s.AuxiliaryOutput, s.serial, buf)
 			if err != nil {
 				errs <- err
 				return
