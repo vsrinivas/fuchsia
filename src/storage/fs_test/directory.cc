@@ -288,6 +288,31 @@ TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
   ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0);
 }
 
+TEST_P(DirectoryTest, TestDirectoryCreateAlternatingThenDeleteSucceeds) {
+  ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("b").c_str(), 0755), 0);
+
+  constexpr ssize_t kNumEntries = 200;
+  std::vector<fbl::unique_fd> fds;
+
+  for (ssize_t i = 0; i < kNumEntries; i++) {
+    // Create the files, leaving them open.
+    fbl::unique_fd fd(open(GetPath(fbl::StringPrintf("a/%zd", i)).c_str(), O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd) << "a/" << i << ": " << strerror(errno);
+    fds.push_back(std::move(fd));
+
+    fd = fbl::unique_fd(open(GetPath(fbl::StringPrintf("b/%zd", i)).c_str(), O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd) << "b/" << i << ": " << strerror(errno);
+    fds.push_back(std::move(fd));
+  }
+
+  for (ssize_t i = kNumEntries - 1; i >= 0; i--) {
+    // Delete the files from one directory.
+    ASSERT_EQ(unlink(GetPath(fbl::StringPrintf("a/%zd", i)).c_str()), 0)
+        << "unlink a/" << i << ": " << strerror(errno);
+  }
+}
+
 TEST_P(DirectoryTest, TestDirectoryRewind) {
   ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
   ExpectedDirectoryEntry empty_dir[] = {
