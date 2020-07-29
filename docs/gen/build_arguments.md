@@ -419,6 +419,12 @@ From //BUILD.gn:34
 
 From //src/camera/debug.gni:6
 
+### camera_gym_configuration_cycle_time_ms
+
+**Current value (from the default):** `10000`
+
+From //src/camera/bin/camera-gym/BUILD.gn:11
+
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
 If true, base_packages and cache_packages are checked against dependencies
@@ -1831,7 +1837,7 @@ Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `true`
 
-From //src/ui/scenic/BUILD.gn:114
+From //src/ui/scenic/BUILD.gn:115
 
 ### scenic_ignore_vsync
 
@@ -2492,7 +2498,7 @@ where `LEVEL` can be an integer or "max".
 
 **Current value (from the default):** `"zstd"`
 
-From //build/config/fuchsia/zbi.gni:11
+From //build/unification/zbi/migrated_zbi.gni:12
 
 ### zedboot_cmdline_args
 List of kernel command line arguments to bake into the Zedboot image.
