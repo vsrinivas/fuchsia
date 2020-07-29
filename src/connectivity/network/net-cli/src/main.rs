@@ -400,7 +400,10 @@ async fn do_stat(cmd: opts::StatEnum) -> Result<(), Error> {
                     println!("Stats from {}", path.display());
                 }
 
-                let object = cs::inspect::generate_inspect_object_tree(&path, &vec![])?;
+                let path = path
+                    .to_str()
+                    .ok_or_else(|| format_err!("failed to convert {} to str", path.display()))?;
+                let object = inspect_fidl_load::load_hierarchy_from_path(path).await?;
 
                 let mut t = Table::new();
                 t.set_format(format::FormatBuilder::new().padding(2, 2).build());
@@ -413,19 +416,29 @@ async fn do_stat(cmd: opts::StatEnum) -> Result<(), Error> {
     Ok(())
 }
 
-fn visit_inspect_object(t: &mut Table, prefix: &str, inspect_object: &cs::inspect::InspectObject) {
-    for metric in &inspect_object.inspect_object.metrics {
-        t.add_row(row![
-        r->match metric.value {
-                inspect::MetricValue::IntValue(v) => v.to_string(),
-                inspect::MetricValue::UintValue(v) => v.to_string(),
-                inspect::MetricValue::DoubleValue(v) => v.to_string(),
-            },
-            format!("{}{}", prefix, metric.key),
-            ]);
+fn visit_inspect_object(
+    t: &mut Table,
+    prefix: &str,
+    fuchsia_inspect::reader::NodeHierarchy { name: _, properties, children, missing: _ }: &fuchsia_inspect::reader::NodeHierarchy,
+) {
+    use fuchsia_inspect::reader::Property::*;
+
+    for property in properties {
+        let (key, value) = match property {
+            Int(key, value) => (key, value.to_string()),
+            Uint(key, value) => (key, value.to_string()),
+            Double(key, value) => (key, value.to_string()),
+            String(_, _)
+            | Bytes(_, _)
+            | Bool(_, _)
+            | DoubleArray(_, _)
+            | IntArray(_, _)
+            | UintArray(_, _) => continue,
+        };
+        t.add_row(row![r->value, format!("{}{}", prefix, key)]);
     }
-    for child in &inspect_object.child_inspect_objects {
-        let prefix = format!("{}{}/", prefix, child.inspect_object.name);
+    for child in children {
+        let prefix = format!("{}{}/", prefix, child.name);
         visit_inspect_object(t, &prefix, child);
     }
 }

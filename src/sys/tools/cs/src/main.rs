@@ -10,7 +10,6 @@ use {
     anyhow::Error,
     cs::{
         log_stats::{LogSeverity, LogStats},
-        v1::V1Realm,
         v2::V2Component,
     },
     fuchsia_async as fasync,
@@ -23,20 +22,6 @@ use {
     about = "Displays information about components on the system."
 )]
 struct Opt {
-    /// Recursively output the Inspect trees of the components in the provided
-    /// job Id.
-    #[structopt(short = "i", long = "inspect")]
-    job_id: Option<u32>,
-
-    /// Properties to exclude from display when presenting Inspect trees.
-    #[structopt(
-        short = "e",
-        long = "exclude-objects",
-        raw(use_delimiter = "true"),
-        default_value = "stack,all_thread_stacks"
-    )]
-    exclude_objects: Vec<String>,
-
     /// Output detailed information about all v1 and v2 components on the system.
     #[structopt(short = "d", long = "detailed")]
     detailed: bool,
@@ -63,26 +48,17 @@ async fn main() -> Result<(), Error> {
         return Ok(());
     }
 
-    match opt.job_id {
-        Some(job_id) => {
-            // Print out inspect objects for a particular job id
-            let root_realm = V1Realm::create("/hub")?;
-            root_realm.inspect(job_id, &opt.exclude_objects);
-        }
-        _ => {
-            // Print out the component tree (and maybe component details)
-            let component = V2Component::new_root_component("/hub-v2".to_string()).await;
-            let mut lines = component.generate_tree();
-            lines.push("".to_string());
+    // Print out the component tree (and maybe component details)
+    let component = V2Component::new_root_component("/hub-v2".to_string()).await;
+    let mut lines = component.generate_tree();
 
-            if opt.detailed {
-                lines.append(&mut component.generate_details());
-            }
+    if opt.detailed {
+        lines.push("".to_string());
+        lines.append(&mut component.generate_details());
+    }
 
-            let output = lines.join("\n");
-            println!("{}", output);
-        }
-    };
+    let output = lines.join("\n");
+    println!("{}", output);
 
     Ok(())
 }

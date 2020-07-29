@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::inspect::visit_system_objects,
     anyhow::{format_err, Error},
     std::{
         fs,
@@ -132,21 +131,11 @@ impl V1Realm {
             child.generate_details_recursive(&prefix, lines);
         }
     }
-
-    pub fn inspect(&self, job_id: u32, exclude_objects: &Vec<String>) {
-        for component in &self.child_components {
-            component.inspect(job_id, exclude_objects);
-        }
-        for child_realm in &self.child_realms {
-            child_realm.inspect(job_id, exclude_objects);
-        }
-    }
 }
 
 pub struct V1Component {
     job_id: u32,
     name: String,
-    path: PathBuf,
     url: String,
     merkleroot: Option<String>,
     child_components: Vec<V1Component>,
@@ -159,14 +148,7 @@ impl V1Component {
         let name = fs::read_to_string(&path.join("name"))?;
         let merkleroot = fs::read_to_string(&path.join("in/pkg/meta")).ok();
         let child_components = visit_child_components(&path)?;
-        Ok(V1Component {
-            job_id: job_id.parse::<u32>()?,
-            name,
-            path,
-            url,
-            merkleroot,
-            child_components,
-        })
+        Ok(V1Component { job_id: job_id.parse::<u32>()?, name, url, merkleroot, child_components })
     }
 
     fn generate_tree_recursive(&self, level: usize, lines: &mut Vec<String>) {
@@ -194,17 +176,6 @@ impl V1Component {
         for child in &self.child_components {
             lines.push("".to_string());
             child.generate_details_recursive(&prefix, lines);
-        }
-    }
-
-    fn inspect(&self, job_id: u32, exclude_objects: &Vec<String>) {
-        if self.job_id == job_id {
-            println!("{}[{}]: {}", self.name, self.job_id, self.url,);
-            visit_system_objects(&self.path, exclude_objects)
-                .expect("Failed to visit system objects");
-        }
-        for component in &self.child_components {
-            component.inspect(job_id, exclude_objects);
         }
     }
 }
