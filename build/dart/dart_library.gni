@@ -40,6 +40,10 @@ declare_args() {
 #     Name of the Dart package. This is used as an identifier in code that
 #     depends on this library.
 #
+#   language_version (optional)
+#     Specify the Dart language version to use for this package. Defaults to
+#     "2.8".
+#
 #   infer_package_name (optional)
 #     Infer the package name based on the path to the package.
 #
@@ -217,13 +221,16 @@ if (current_toolchain == dart_toolchain) {
              ] + rebase_path(package_files)
     }
 
+    language_version = "2.8"
+    if (defined(invoker.language_version)) {
+      language_version = invoker.language_version
+    }
+
     _metadata = {
       package_config_entries = [
         {
           name = package_name
-
-          # TODO(57004) For now just hardcode to version 2.8 until we plumb this in from the pubspec
-          language_version = "2.8"
+          language_version = language_version
           root_uri = rebase_path(package_root, root_build_dir)
           if (defined(invoker.source_dir)) {
             package_uri = invoker.source_dir

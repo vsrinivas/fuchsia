@@ -60,7 +60,7 @@ def main():
     output_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
                                'pub')
     flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
-                                'git', 'flutter');
+                                'git', 'flutter')
 
     # flutter --version has the side effect of creating a version file that pub
     # uses to find which package versions are compatible with the current version
@@ -87,7 +87,7 @@ def main():
             script_args.changelog,
         ])
 
-    subprocess.check_call(args, env={"FLUTTER_ROOT": flutter_root});
+    subprocess.check_call(args, env={"FLUTTER_ROOT": flutter_root})
 
 
 if __name__ == '__main__':
