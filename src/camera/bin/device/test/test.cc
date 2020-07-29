@@ -204,6 +204,7 @@ TEST_F(DeviceTest, GetFrames) {
   RunLoopUntil([&]() { return HasFailure() || buffers_allocated_returned; });
   ASSERT_FALSE(HasFailure());
 
+  RunLoopUntil([&] { return HasFailure() || legacy_stream_fake->IsStreaming(); });
   bool frame1_received = false;
   bool frame2_received = false;
   auto callback2 = [&](fuchsia::camera3::FrameInfo info) {
