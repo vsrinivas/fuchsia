@@ -73,6 +73,9 @@ bitflags! {
         const CHANNEL_WRITABLE    = ZX_CHANNEL_WRITABLE;
         const CHANNEL_PEER_CLOSED = ZX_CHANNEL_PEER_CLOSED;
 
+        // Clock
+        const CLOCK_STARTED       = ZX_CLOCK_STARTED;
+
         // Socket
         const SOCKET_READABLE            = ZX_SOCKET_READABLE;
         const SOCKET_WRITABLE            = ZX_SOCKET_WRITABLE;

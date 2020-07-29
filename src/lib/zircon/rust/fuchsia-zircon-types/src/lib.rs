@@ -248,6 +248,9 @@ multiconst!(zx_signals_t, [
     ZX_CHANNEL_WRITABLE         = ZX_OBJECT_SIGNAL_1;
     ZX_CHANNEL_PEER_CLOSED      = ZX_OBJECT_SIGNAL_2;
 
+    // Clock
+    ZX_CLOCK_STARTED            = ZX_OBJECT_SIGNAL_4;
+
     // Socket
     ZX_SOCKET_READABLE            = ZX_OBJECT_READABLE;
     ZX_SOCKET_WRITABLE            = ZX_OBJECT_WRITABLE;
