@@ -4,7 +4,7 @@
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
                 "fuchsia.factory.MiscFactoryStoreProvider": [
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/misc.cmx",
                     "--config=/config/data/fuchsia.factory.MiscFactoryStoreProvider.config"
@@ -40,7 +40,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.cobalt.test.LoggerQuerier",
-            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
             "fuchsia.feedback.ComponentDataRegister",
             "fuchsia.feedback.DataProvider",
             "fuchsia.feedback.DeviceIdProvider",

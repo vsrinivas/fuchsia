@@ -39,7 +39,7 @@ class CollectInspectDataTest : public UnitTestFixture {
   void SetUpInspectServer(std::unique_ptr<stubs::InspectArchiveBase> server) {
     inspect_server_ = std::move(server);
     if (inspect_server_) {
-      InjectServiceProvider(inspect_server_.get());
+      InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
     }
   }
 
