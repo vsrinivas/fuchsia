@@ -523,6 +523,10 @@ group("serde_json") {
   deps = [ ":serde_json-v1_0_38" ]
 }
 
+group("serde_json5") {
+  deps = [ ":serde_json5-v0_1_0" ]
+}
+
 if (is_fuchsia) {
   group("serde_repr") {
     deps = [ ":serde_repr-v0_1_3($host_toolchain)" ]
@@ -7141,6 +7145,30 @@ rust_library("serde_json-v1_0_38") {
     "-Cmetadata=e16cf83bbc279b95",
     "-Cextra-filename=-e16cf83bbc279b95",
     "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("serde_json5-v0_1_0") {
+  crate_name = "serde_json5"
+  crate_root = "//third_party/rust-mirrors/serde_json5/third_party/src/lib.rs"
+  output_name = "serde_json5-c6c8351d886fc9d3"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":pest-v2_1_0" ]
+  deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
+  deps += [ ":serde-v1_0_104" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=c6c8351d886fc9d3",
+    "-Cextra-filename=-c6c8351d886fc9d3",
   ]
 }
 

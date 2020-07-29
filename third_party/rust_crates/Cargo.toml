@@ -98,6 +98,7 @@ serde = { version = "1.0.104", features = ["derive"] }
 serde_cbor = "0.11.1"
 serde_derive = "1.0.104"
 serde_json = "1"
+serde_json5 = "0.1.0"
 slab = "0.4"
 socket2 = { version = "0.3.12", features = ["reuseport", "unix"] }
 splines = "2.2.0"
@@ -221,6 +222,7 @@ nom_locate = { path = "tiny_mirrors/nom_locate" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
 regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
+serde_json5 = { path = "../rust-mirrors/serde_json5" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
 tracing-core = { path = "tiny_mirrors/tracing-core" }
 wasm-bindgen-futures = { path = "tiny_mirrors/wasm-bindgen-futures" }
