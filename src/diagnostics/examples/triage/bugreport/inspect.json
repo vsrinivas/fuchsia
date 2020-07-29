@@ -4,6 +4,7 @@
       "metadata": {
         "errors": null,
         "filename": "fuchsia.inspect.Tree",
+        "component_url": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cm",
         "timestamp": 39085389926
       },
       "moniker": "core/archivist",
@@ -46,25 +47,10 @@
               },
               "archive_stats": {
                 "size": 0,
-                "2020-06-17": {
+                "2020-07-29": {
                   "size": 0,
-                  "00:10:21.688-event.log": {
+                  "17:23:13.667-event.log": {
                     "size": 0
-                  }
-                }
-              }
-            },
-            "global_data": {
-              "stats": {
-                "total_bytes": 100000,
-                "used_bytes": 98000
-              },
-              "global_data": {
-                "size": 43470,
-                "ssh": {
-                  "size": 387,
-                  "ssh_host_ed25519_key": {
-                    "size": 387
                   }
                 }
               }
@@ -112,5 +98,50 @@
         }
       },
       "version": 1
+    },
+    {
+      "data_source": "Inspect",
+      "metadata": {
+        "errors": null,
+        "filename": "fuchsia.inspect.Tree",
+        "component_url": "fuchsia-boot:///#meta/fshost.cm",
+        "timestamp": 13588622426
+      },
+      "moniker": "bootstrap/fshost",
+      "payload": {
+        "root": {
+          "data_stats": {
+            "stats": {
+              "total_bytes": 209715200,
+              "used_bytes": 507904
+            },
+            "data": {
+              "size": 19252,
+              "ssh": {
+                "size": 387,
+                "ssh_host_ed25519_key": {
+                  "size": 387
+                }
+              },
+              "archivist:0": {
+                "size": 0,
+                "data": {
+                  "size": 0,
+                  "archive": {
+                    "size": 0,
+                    "2020-07-29": {
+                      "size": 0,
+                      "17:23:13.667-event.log": {
+                        "size": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "version": 1
     }
-    ]
+]

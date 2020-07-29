@@ -146,9 +146,9 @@ string that tells where in the Inspect data to find the value you need.
 
 ```json5
 select: {
-    disk_total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
-    // "global_dat" is an intentional typo to fix later in the codelab.
-    disk_used: "INSPECT:archivist.cmx:root/data_stats/global_dat/stats:used_bytes",
+    disk_total: "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
+    // "data_stat" is an intentional typo to fix later in the codelab.
+    disk_used: "INSPECT:bootstrap/fshost:root/data_stat/stats:used_bytes",
 }
 ```
 
@@ -164,8 +164,9 @@ node names.
 
 The portion after the last colon is the property name.
 
-The above selector string indicates a component whose `moniker` contains the
-string `global_dat/storage`. It also indicates the `used_bytes` property from
+The above selector string indicates a component whose `moniker` matches the
+string `bootstrap/fshost` and whose inspect tree contains the path
+`root/data_stat/stats`. It also indicates the `used_bytes` property from
 the `stats` subnode of the `root` node of that component's Inspect Tree.
 
 Put the above selectors into the "select" section of the rules.triage file.
@@ -177,12 +178,12 @@ to output valid selectors.
 
 ```shell
 $ fx triage --data bugreport --select total_bytes
-INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes
+INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes
 ```
 
-Multiple --select parameters can be used. The program will generate all possible
-selectors for the bugreport's Diagnostic data, then filter (grep) through all
---select parameters.
+Multiple `--select` parameters can be used. The program will generate all
+possible selectors for the bugreport's Diagnostic data, then filter (grep)
+through all `--select` parameters.
 
 ### Add a computation
 
@@ -256,12 +257,13 @@ fx triage --config . --data bugreport
 You will get an error that looks like the following:
 
 ```none
-[ERROR] In config 'rules': No value found matching selector global_dat/storage:root/stats:used_bytes
+[ERROR] In config 'rules': No value found matching selector
+bootstrap/fshost:root/data_stat/stats:used_bytes
 ```
 
 There was a typo in the selector rules.
 Triage could not find values needed to evaluate a rule. In fact, the correct
-selector is "global_data" not "global_dat." Fix it in your selector rules
+selector is "data_stats" not "data_stat." Fix it in your selector rules
 and try again.
 
 ```shell
@@ -409,7 +411,7 @@ Add the following entries to the rules.triage file:
 ```json5
 select: {
     ...
-    actual_components: "INSPECT:archivist.cmx:root/event_stats:components_started",
+    actual_components: "INSPECT:core/archivist:root/event_stats:components_started",
 }
 ```
 
