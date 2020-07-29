@@ -295,7 +295,10 @@
             to: [ "#driver_manager" ],
         },
         {
-            protocol: [ "/svc/fuchsia.logger.LogSink" ],
+            protocol: [
+                "/svc/fuchsia.logger.Log",
+                "/svc/fuchsia.logger.LogSink",
+            ],
             from: "parent",
             to: [
                 "#driver_manager",
