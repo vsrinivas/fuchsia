@@ -1,0 +1,63 @@
+// The errors that pertain to the I18N system.
+// File issues at: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3AI18N
+{
+    select: {
+        close_status: "INSPECT:flutter_aot_product_runner.cmx:root/os:tz_data_close_status",
+        dst_status: "INSPECT:flutter_aot_product_runner.cmx:root/os:dst_status",
+        tz_data_status: "INSPECT:flutter_aot_product_runner.cmx:root/os:tz_data_status",
+    },
+    eval: {
+        close_error: "And(Not(Missing(close_status)), close_status != 0)",
+        dst_error: "And(Not(Missing(dst_status)), dst_status != 0)",
+        tz_data_error: "And(Not(Missing(tz_data_status)), tz_data_status != 0)",
+    },
+    act: {
+        has_error: {
+            type: "Warning",
+            trigger: "Or(close_error, dst_error, tz_data_error)",
+            print: "flutter_aot_product_runner has had issues loading the timezone data.",
+        },
+    },
+    test: {
+        test_0: {
+            no: [
+                "has_error",
+            ],
+            values: {
+                close_status: 0,
+                dst_status: 0,
+                tz_data_status: 0,
+            },
+        },
+        test_1: {
+            values: {
+                close_status: 1,
+                dst_status: 0,
+                tz_data_status: 0,
+            },
+            yes: [
+                "has_error",
+            ],
+        },
+        test_2: {
+            values: {
+                close_status: 0,
+                dst_status: 1,
+                tz_data_status: 0,
+            },
+            yes: [
+                "has_error",
+            ],
+        },
+        test_3: {
+            values: {
+                close_status: 0,
+                dst_status: 0,
+                tz_data_status: 1,
+            },
+            yes: [
+                "has_error",
+            ],
+        },
+    },
+}
