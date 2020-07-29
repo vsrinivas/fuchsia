@@ -10,7 +10,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
-executable("display-detect") {
+executable("display_detect") {
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -64,6 +64,24 @@ rustc_binary("display_png") {
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:thiserror",
+  ]
+}
+
+package("display-detect") {
+  deps = [ ":display_detect" ]
+
+  binaries = [
+    {
+      name = "display_detect"
+      source = "display_detect"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/display-detect.cmx")
+      dest = "display-detect.cmx"
+    },
   ]
 }
 

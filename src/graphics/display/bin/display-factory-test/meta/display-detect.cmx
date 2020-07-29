@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/display_detect"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysinfo.SysInfo"
+        ]
+    }
+}
