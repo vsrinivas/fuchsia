@@ -13,7 +13,7 @@
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.feedback.LastRebootInfoProvider",
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Product",

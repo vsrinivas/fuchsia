@@ -37,7 +37,7 @@ namespace feedback_data {
 }
 
 Inspect::Inspect(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
-    : archive_(dispatcher, services, kArchiveAccessorName) {}
+    : archive_(dispatcher, services) {}
 
 ::fit::promise<AttachmentValue> Inspect::Collect(fit::Timeout timeout) {
   // We set up the connection and all the error handlers.
