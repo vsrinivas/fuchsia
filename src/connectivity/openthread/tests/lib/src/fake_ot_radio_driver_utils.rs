@@ -5,8 +5,10 @@
 use {
     crate::{isolated_devmgr_utils::*, ot_radio_driver_utils::ot_radio_set_channel},
     anyhow::{format_err, Context as _, Error},
+    fidl_fuchsia_device::ControllerSynchronousProxy,
     fidl_fuchsia_lowpan_spinel::DeviceProxy,
     fuchsia_syslog::macros::*,
+    fuchsia_zircon as zx,
     std::fs::File,
     std::path::Path,
 };
@@ -39,6 +41,15 @@ pub async fn get_device_proxy_from_isolated_devmgr(
     let ot_device_client_ep = ot_radio_set_channel(&ot_device_file).await?;
     let ot_device_proxy = ot_device_client_ep.into_proxy()?;
     Ok(ot_device_proxy)
+}
+
+/// Schedule unbind of a device
+pub fn unbind_device_in_isolated_devmgr(device: &File) -> Result<(), Error> {
+    let channel = fdio::clone_channel(device)?;
+    let mut controller_proxy = ControllerSynchronousProxy::new(channel);
+    controller_proxy
+        .schedule_unbind(zx::Time::INFINITE)?
+        .map_err(|e| zx::Status::from_raw(e).into())
 }
 
 /// Validate 0 device is presented in path `dir_path_str` in isolated_devmgr

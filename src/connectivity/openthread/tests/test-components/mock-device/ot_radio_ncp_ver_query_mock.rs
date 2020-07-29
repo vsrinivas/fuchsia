@@ -23,5 +23,12 @@ async fn ot_radio_ncp_ver_query_mock() {
     // Run the test.
     spinel_device_ncp_ver_query(ot_device_proxy).await;
 
+    // Remove fake ot device
+    let device = get_ot_device_in_isolated_devmgr(OT_PROTOCOL_PATH).await.expect("getting device");
+    unbind_device_in_isolated_devmgr(&device).expect("schedule unbind");
+    validate_removal_of_device_in_isolated_devmgr(OT_PROTOCOL_PATH)
+        .await
+        .expect("validate removal of device");
+
     fx_log_info!("test end");
 }

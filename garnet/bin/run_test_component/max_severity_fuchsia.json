@@ -422,11 +422,11 @@
          "max_severity": "FATAL"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot_stack_ncp_ver_query_mock.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack-ncp-ver-query-mock-component.cmx",
          "max_severity": "ERROR"
       },
       {
-         "url": "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot_stack_soft_reset_mock.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack-soft-reset-mock-component.cmx",
          "max_severity": "ERROR"
       },
       {
