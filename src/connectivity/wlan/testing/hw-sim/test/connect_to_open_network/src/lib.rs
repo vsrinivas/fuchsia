@@ -11,6 +11,8 @@ use {
 /// hard coded authentication and association response frames.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn connect_to_open_network() {
+    init_syslog();
+
     const BSS: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
     const SSID: &[u8] = b"open";
 

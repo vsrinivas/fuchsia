@@ -8,6 +8,7 @@ use {
     fuchsia_async, fuchsia_zircon as zx,
     futures::{poll, StreamExt},
     isolated_devmgr::IsolatedDeviceEnv,
+    log::info,
     std::path::Path,
     wlan_common::{
         appendable::Appendable, big_endian::BigEndianU16, buffer_reader::BufferReader, mac,
@@ -37,12 +38,12 @@ pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>
         {
             if let Ok(info) = client.info().await {
                 if &info.mac.octets == mac {
-                    println!("ethernet client created: {:?}", client);
+                    info!("ethernet client created: {:?}", client);
                     client.start().await.expect("error starting ethernet device");
                     // must call get_status() after start() to clear zx::Signals::USER_0 otherwise
                     // there will be a stream of infinite StatusChanged events that blocks
                     // fasync::Interval
-                    println!(
+                    info!(
                         "info: {:?} status: {:?}",
                         client.info().await.expect("calling client.info()"),
                         client.get_status().await.expect("getting client status()")

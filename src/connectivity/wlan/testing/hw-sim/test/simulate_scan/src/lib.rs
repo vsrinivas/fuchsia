@@ -87,6 +87,8 @@ async fn scan(
 /// channel and verify all beacon frames are correctly reported as valid networks.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn simulate_scan() {
+    init_syslog();
+
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
 
     let wlan_service =

@@ -12,6 +12,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, poll, StreamExt},
+    log::info,
     pin_utils::pin_mut,
     std::collections::HashMap,
     std::task::Poll,
@@ -78,7 +79,7 @@ fn handle_rate_selection_event<F, G>(
                 let count = hm.entry(tx_vec_idx).or_insert(0);
                 *count += 1;
                 if *count == 1 {
-                    println!("new tx_vec_idx: {} at #{}", tx_vec_idx, hm.values().sum::<u64>());
+                    info!("new tx_vec_idx: {} at #{}", tx_vec_idx, hm.values().sum::<u64>());
                 }
                 sender.try_send(is_converged(hm)).expect("sending message to ethernet sender");
             }
@@ -120,7 +121,7 @@ async fn eth_and_beacon_sender<'a>(
 
         client.send(&buf);
         if let Poll::Ready(Some(Ok(ethernet::Event::StatusChanged))) = poll!(client_stream.next()) {
-            println!("status changed to: {:?}", client.get_status().await?);
+            info!("status changed to: {:?}", client.get_status().await?);
             // There was an event waiting, ethernet frames have NOT been sent on the previous poll.
             let _ = poll!(client_stream.next());
         }
@@ -137,6 +138,8 @@ async fn eth_and_beacon_sender<'a>(
 /// report created by the test.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn rate_selection() {
+    init_syslog();
+
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Error connecting to wlan service");
     let mut helper = test_utils::TestHelper::begin_test(WlantapPhyConfig {
@@ -207,7 +210,7 @@ async fn rate_selection() {
         // Take a snapshot every once in a while to reduce the effect of early fluctuations.
         // This makes determining convergence more reliable.
         if max_val % 100 == 0 {
-            println!("{:?}", hm);
+            info!("Snapshotting HashMap: {:?}", hm);
             max_key_prev = *max_key;
             second_max_key_prev = *second_max_key;
             max_val_prev = max_val;
@@ -236,10 +239,10 @@ async fn rate_selection() {
         .expect("running main future");
 
     let total = tx_vec_count_map.values().sum::<u64>();
-    println!("final tx vector counts:\n{:#?}\ntotal: {}", tx_vec_count_map, total);
+    info!("final tx vector counts:\n{:#?}\ntotal: {}", tx_vec_count_map, total);
     assert!(tx_vec_count_map.contains_key(&MAX_SUCCESSFUL_IDX));
     let others = total - tx_vec_count_map[&MAX_SUCCESSFUL_IDX];
-    println!("others: {}", others);
+    info!("others: {}", others);
     let mut tx_vec_idx_seen: Vec<_> = tx_vec_count_map.keys().cloned().collect();
     tx_vec_idx_seen.sort();
     if tx_vec_idx_seen.len() == MUST_USE_IDX.len() {
@@ -248,7 +251,7 @@ async fn rate_selection() {
     } else {
         assert_eq!(&tx_vec_idx_seen[..], ALL_SUPPORTED_IDX);
     }
-    println!(
+    info!(
         "If the test fails due to QEMU slowness outside of the scope of WLAN (See FLK-24, \
          DNO-389). Try increasing |DATA_FRAME_INTERVAL_NANOS| above."
     );

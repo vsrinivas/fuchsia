@@ -51,6 +51,8 @@ async fn connect(
 /// and ethernet frames can reach each other from both ends.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn multiple_clients_ap() {
+    init_syslog();
+
     let wlanstack_svc =
         connect_to_service::<DeviceServiceMarker>().expect("connecting to wlanstack service");
 

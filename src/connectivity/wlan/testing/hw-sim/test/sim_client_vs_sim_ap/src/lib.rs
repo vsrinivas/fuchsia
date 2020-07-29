@@ -9,6 +9,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     futures::{channel::oneshot, join, TryFutureExt},
+    log::info,
     pin_utils::pin_mut,
     std::panic,
     wlan_common::bss::Protection::Wpa2Personal,
@@ -137,7 +138,7 @@ async fn send_then_receive(
     // this function must not return unless peer receives our frame because packet_forwarder
     // will stop "transmitting" the packet after the future finishes.
     receiver_from_peer.await.expect(&format!("waiting for {} confirmation", peer.name));
-    println!("{} received packet from {}", me.name, peer.name);
+    info!("{} received packet from {}", me.name, peer.name);
 }
 
 /// At this stage the client communicates with an imaginary peer that is connected to the same AP.
@@ -215,6 +216,8 @@ async fn verify_ethernet_in_both_directions(
 /// and ethernet frames can reach each other from both ends.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn sim_client_vs_sim_ap() {
+    init_syslog();
+
     let network_config =
         NetworkConfigBuilder::protected(&PASS_PHRASE.as_bytes().to_vec()).ssid(&SSID.to_vec());
 

@@ -9,7 +9,9 @@ use {
     fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanMarker, WlanProxy, WlanStatus},
     fidl_fuchsia_wlan_tap::{WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
+    fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
+    log::{debug, error},
     wlan_common::{
         bss::Protection,
         data_writer,
@@ -275,7 +277,7 @@ fn handle_connect_events(
 ) {
     match event {
         WlantapPhyEvent::SetChannel { args } => {
-            println!("channel: {:?}", args.chan);
+            debug!("channel: {:?}", args.chan);
             if args.chan.primary == CHANNEL.primary {
                 send_beacon(&args.chan, bssid, ssid, protection, &phy, 0).unwrap();
             }
@@ -324,7 +326,7 @@ fn handle_connect_events(
                             if let Err(e) = authenticator
                                 .on_eapol_frame(&mut updates, eapol::Frame::Key(frame_rx))
                             {
-                                println!("error sending EAPOL frame to authenticator: {}", e);
+                                error!("error sending EAPOL frame to authenticator: {}", e);
                             }
                             process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
                                 .expect("processing authenticator updates after EAPOL frame");
@@ -428,4 +430,9 @@ pub async fn loop_until_iface_is_found() {
             return;
         }
     }
+}
+
+pub fn init_syslog() {
+    syslog::init().unwrap();
+    syslog::set_severity(syslog::levels::DEBUG);
 }

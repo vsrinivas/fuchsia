@@ -12,6 +12,8 @@ use {
 /// In this test, no data is being sent after the link becomes up.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn connect_to_wpa2_network() {
+    init_syslog();
+
     const BSS: Bssid = Bssid(*b"wpa2ok");
     const SSID: &[u8] = b"wpa2ssid";
 

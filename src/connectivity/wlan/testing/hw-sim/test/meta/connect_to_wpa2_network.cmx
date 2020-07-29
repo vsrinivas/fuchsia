@@ -21,6 +21,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",

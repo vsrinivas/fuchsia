@@ -17,6 +17,8 @@ use {
 /// association *response* frames, respectively.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn open_ap_connect() {
+    init_syslog();
+
     // --- start test data block
 
     // frame 1 and 3 from ios12.1-connect-open-ap.pcapng

@@ -92,6 +92,8 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
 /// frames are delivered without any change in both directions.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn ethernet_tx_rx() {
+    init_syslog();
+
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 

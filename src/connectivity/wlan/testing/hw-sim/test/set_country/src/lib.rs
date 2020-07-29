@@ -31,6 +31,8 @@ async fn set_country_helper<'a>(
 ///  - If the SetCountry() returned successfully (ZX_OK).
 #[fuchsia_async::run_singlethreaded(test)]
 async fn set_country() {
+    init_syslog();
+
     const ALPHA2: &[u8; 2] = b"RS";
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;

@@ -8,6 +8,8 @@ use {fuchsia_zircon::DurationNum, wlan_hw_sim::*};
 /// MAC address can be created succesfully.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn verify_ethernet() {
+    init_syslog();
+
     // Make sure there is no existing ethernet device.
     let client = create_eth_client(&CLIENT_MAC_ADDR)
         .await

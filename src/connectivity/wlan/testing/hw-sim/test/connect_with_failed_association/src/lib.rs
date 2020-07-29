@@ -51,6 +51,8 @@ fn build_event_handler(
 /// not success.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn connect_with_failed_association() {
+    init_syslog();
+
     const BSSID: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
     const SSID: &[u8] = b"open";
 

@@ -17,6 +17,8 @@ use {
 /// Verify both interfaces are created successfully.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn multiple_interfaces_per_phy() {
+    init_syslog();
+
     let client_helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
 
     let wlanstack_svc =
