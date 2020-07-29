@@ -64,7 +64,25 @@ template("dart_test") {
                              "deps",
                              "sources",
                            ])
-    source_dir = _source_dir
+
+    # We want to mimic the package_root being in place of the source_dir. Dart
+    # does not allow multiple packages to share the same package_root so we
+    # do this so our /test directories can live along side out /lib directories
+    # which is how most dart packages are structured in out tree.
+    package_root = rebase_path(_source_dir, ".")
+    source_dir = "."
+
+    # We include the pubspec and analysis options files which are at the
+    # original package root since we are effectively changing the package_root
+    # for this library.
+    pubspec = "pubspec.yaml"
+
+    if (!defined(disable_analysis) ||
+        (defined(disable_analysis) && !disable_analysis)) {
+      # analysis is not disabled so include the options file
+      options_file = "analysis_options.yaml"
+    }
+
     infer_package_name = true
     sources_required = false
   }
@@ -105,7 +123,8 @@ template("dart_test") {
   _snapshot = "$target_gen_dir/${target_name}.snapshot"
   _dart_target_gen_dir =
       get_label_info(":anything($dart_toolchain)", "target_gen_dir")
-  _packages_path = "$_dart_target_gen_dir/${_dart_library_target_name}.packages"
+  _packages_path =
+      "$_dart_target_gen_dir/${_dart_library_target_name}_package_config.json"
 
   action(_snapshot_target_name) {
     depfile = "${_snapshot}.d"

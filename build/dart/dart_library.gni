@@ -396,6 +396,8 @@ if (current_toolchain == dart_toolchain) {
                  ":$_dart_package_config_target_name",
                ]
       }
+    } else {
+      not_needed(invoker, [ "options_file" ])
     }
 
     group(target_name) {

@@ -190,7 +190,6 @@ template("dart_tool") {
                              "testonly",
                              "visibility",
                            ])
-
     deps = _dart_deps
   }
 
