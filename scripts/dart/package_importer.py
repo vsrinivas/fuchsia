@@ -77,15 +77,13 @@ def parse_min_sdk_version_and_full_dependencies(yaml_path):
         if not parsed:
             raise Exception('Could not parse yaml file: %s' % yaml_file)
         package_name = parsed['name']
-        # If sdk: '>=a.b.c' or sdk: 'a.b.c' is specified, we'll use a.b.c.
+        # If a format like sdk: '>=a.b' or sdk: 'a.b' is found, we'll use a.b.
         # If sdk is not specified (or 'any'), 2.8 is used.
         # In all other cases 2.0 is used.
         env_sdk = parsed.get('environment', {}).get('sdk', 'any')
-        geq_match = re.search(r"(?<=>=)\d+\.\d+(\.\d+)?", env_sdk)
-        if geq_match:
-          min_sdk_version = geq_match.group()
-        elif re.match(r"\d+\.\d+(\.d+)?", env_sdk):
-          min_sdk_version = env_sdk
+        match = re.search(r"^(>=)?((0|[1-9]\d*)\.(0|[1-9]\d*))", env_sdk)
+        if match:
+          min_sdk_version = match.group(2)
         elif env_sdk == 'any':
           min_sdk_version = '2.8'
         else:
