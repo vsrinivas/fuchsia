@@ -7,6 +7,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   # Selects the wlan configuration type to use. Choices:
@@ -98,22 +99,14 @@ rustc_binary("bin") {
   ]
 }
 
-package("wlancfg") {
+fuchsia_component("service") {
+  component_name = "wlancfg"
+  manifest = "meta/wlancfg.cmx"
   deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      path = "wlancfg"
-      name = "wlancfg"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/wlancfg.cmx")
-      dest = "wlancfg.cmx"
-    },
-  ]
+fuchsia_package("wlancfg") {
+  deps = [ ":service" ]
 }
 
 config_data("config") {
@@ -127,16 +120,7 @@ config_data("config") {
   }
 }
 
-test_package("wlancfg-tests") {
-  deps = [
-    ":bin_test",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-  ]
-  tests = [
-    {
-      name = "wlancfg_bin_test"
-      dest = "wlancfg_bin_test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("wlancfg-tests") {
+  manifest = "meta/wlancfg_bin_test.cmx"
+  deps = [ ":bin_test" ]
 }

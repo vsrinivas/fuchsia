@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/wlancfg_bin_test"
+        "binary": "bin/wlancfg_bin_test"
     },
     "sandbox": {
         "features": [
