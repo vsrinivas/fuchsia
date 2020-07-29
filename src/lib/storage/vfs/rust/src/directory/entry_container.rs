@@ -9,6 +9,7 @@ use crate::{
     directory::{dirents_sink, entry::DirectoryEntry, traversal_position::AlphabeticalTraversal},
     execution_scope::ExecutionScope,
     filesystem::Filesystem,
+    path::Path,
 };
 
 use {
@@ -102,7 +103,7 @@ pub trait MutableDirectory: Directory {
     fn set_attrs(&self, flags: u32, attributes: NodeAttributes) -> Result<(), Status>;
 
     /// Removes an entry from this directory.
-    fn unlink(&self, name: String) -> Result<(), Status>;
+    fn unlink(&self, name: Path) -> Result<(), Status>;
 
     /// Gets the filesystem this directory belongs to.
     fn get_filesystem(&self) -> Arc<dyn Filesystem>;

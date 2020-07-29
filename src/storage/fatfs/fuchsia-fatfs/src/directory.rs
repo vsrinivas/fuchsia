@@ -381,22 +381,38 @@ impl MutableDirectory for FatDirectory {
         Err(Status::NOT_SUPPORTED)
     }
 
-    fn unlink(&self, name: String) -> Result<(), Status> {
+    fn unlink(&self, path: Path) -> Result<(), Status> {
         // TODO(fxb/55465): To properly implement this, we need a way to keep the file while
         // it's still connected. For now, refuse to remove a file if anyone else is looking at it.
         // We could mark files as "hidden", and refuse to serve any new connections to them?
         let fs_lock = self.filesystem.lock().unwrap();
-        let dir = self.borrow_dir(&fs_lock)?;
+        let parent = self.borrow_dir(&fs_lock)?;
+        let name = path.peek().unwrap();
+        if let Some(FatNode::File(_)) = self.cache_get(&name) {
+            if path.is_dir() {
+                return Err(Status::NOT_DIR);
+            }
+        }
         match self.cache_remove(&fs_lock, &name) {
             Some(entry) => {
                 match entry {
-                    FatNode::File(file) => file.remove_from(&fs_lock, dir),
+                    FatNode::File(file) => file.remove_from(&fs_lock, parent),
                     // TODO(fxb/55465): support deleting directories which are still open.
                     _ => return Err(Status::UNAVAILABLE),
                 }
             }
             // The file is not currently open by anyone, so it's safe to remove directly.
-            None => self.borrow_dir(&fs_lock)?.remove(&name).map_err(fatfs_error_to_status),
+            None => {
+                let dir = self.borrow_dir(&fs_lock)?;
+                if path.is_dir() {
+                    // Make sure the on-disk thing is a dir too.
+                    let entry = self.find_child(&fs_lock, &name)?;
+                    if !entry.ok_or(Status::NOT_FOUND)?.is_dir() {
+                        return Err(Status::NOT_DIR);
+                    }
+                }
+                dir.remove(&name).map_err(fatfs_error_to_status)
+            }
         }
     }
 

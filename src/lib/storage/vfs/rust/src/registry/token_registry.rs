@@ -353,7 +353,7 @@ mod tests {
                 panic!("Not implemented!")
             }
 
-            fn unlink(&self, _name: String) -> Result<(), Status> {
+            fn unlink(&self, _name: Path) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 

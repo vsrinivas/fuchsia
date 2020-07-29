@@ -9,6 +9,7 @@ use {
             entry_container::{Directory, MutableDirectory},
         },
         filesystem::Filesystem,
+        path::Path,
     },
     fidl_fuchsia_io::NodeAttributes,
     fuchsia_zircon::Status,
@@ -119,8 +120,8 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         (self as &dyn DirectlyMutable).link(name, entry)
     }
 
-    fn unlink(&self, name: String) -> Result<(), Status> {
-        match self.remove_entry_impl(name) {
+    fn unlink(&self, mut name: Path) -> Result<(), Status> {
+        match self.remove_entry_impl(name.next().unwrap().into()) {
             Ok(Some(_)) => Ok(()),
             Ok(None) => Err(Status::NOT_FOUND),
             Err(e) => Err(e),

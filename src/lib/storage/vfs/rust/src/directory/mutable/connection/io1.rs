@@ -205,15 +205,14 @@ impl MutableConnection {
             return responder(Status::BAD_PATH);
         }
 
-        let mut path = match Path::validate_and_split(path) {
+        let path = match Path::validate_and_split(path) {
             Ok(path) => path,
             Err(status) => return responder(status),
         };
 
-        let entry_name = match path.next() {
-            None => return responder(Status::BAD_PATH),
-            Some(name) => name.to_string(),
-        };
+        if path.is_empty() {
+            return responder(Status::BAD_PATH);
+        }
 
         // We do not support traversal for the `Unlink` operation for now.  It is non-trivial, as
         // we need to go from node to node and we do not store their type information.  One
@@ -224,11 +223,11 @@ impl MutableConnection {
         //
         // Sean (smklein@) and Yifei (yifeit@) both agree that it should be removed from the
         // io.fidl spec.
-        if !path.is_empty() {
+        if !path.is_single_component() {
             return responder(Status::BAD_PATH);
         }
 
-        match self.base.directory.clone().unlink(entry_name) {
+        match self.base.directory.clone().unlink(path) {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
@@ -320,6 +319,7 @@ mod tests {
                 traversal_position::AlphabeticalTraversal,
             },
             filesystem::{Filesystem, FilesystemRename},
+            path::Path,
             registry::token_registry,
         },
         fidl::Channel,
@@ -335,7 +335,7 @@ mod tests {
     #[derive(Debug, PartialEq)]
     enum MutableDirectoryAction {
         Link { id: u32, path: String },
-        Unlink { id: u32, path: String },
+        Unlink { id: u32, path: Path },
         Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
         SetAttr { id: u32, flags: u32, attrs: NodeAttributes },
         Sync,
@@ -418,7 +418,7 @@ mod tests {
             self.env.handle_event(MutableDirectoryAction::Link { id: self.id, path })
         }
 
-        fn unlink(&self, path: String) -> Result<(), Status> {
+        fn unlink(&self, path: Path) -> Result<(), Status> {
             self.env.handle_event(MutableDirectoryAction::Unlink { id: self.id, path })
         }
 
@@ -592,7 +592,10 @@ mod tests {
         let events = env.events.lock().unwrap();
         assert_eq!(
             *events,
-            vec![MutableDirectoryAction::Unlink { id: 0, path: "test".to_owned() },]
+            vec![MutableDirectoryAction::Unlink {
+                id: 0,
+                path: Path::validate_and_split("test").unwrap()
+            },]
         );
     }
 
