@@ -16,6 +16,11 @@ declare_args() {
 #
 # Parameters
 #
+# This template has two outputs: the first is the ZBI in question, whose path
+# is a function of the `output_dir`, `output_name`, and `output_extension`
+# parameters in the usual way, and the second is a JSON representation of its
+# contents whose path is formed by adding a further ".json" to the ZBI's path.
+#
 #   cpu
 #     Optional: CPU architecture for a complete ZBI.
 #     If this is "", then this target may produce an incomplete ZBI.
@@ -90,6 +95,7 @@ template("migrated_zbi") {
   } else {
     output_file = "$target_out_dir/$output_file"
   }
+  json_output_file = "$output_file.json"
 
   zbi_tool = "$zircon_tools_dir/zbi"
 
@@ -115,7 +121,10 @@ template("migrated_zbi") {
       rsp_file,
       zbi_tool,
     ]
-    outputs = [ output_file ]
+    outputs = [
+      output_file,
+      json_output_file,
+    ]
     depfile = "$output_file.d"
 
     args = [
@@ -130,6 +139,9 @@ template("migrated_zbi") {
       # contents of the response file.
       "--output",
       rebase_path(outputs[0], root_build_dir),
+
+      "--json-output",
+      rebase_path(outputs[1], root_build_dir),
     ]
 
     # Require a complete ZBI for the specified $cpu (or $current_cpu).

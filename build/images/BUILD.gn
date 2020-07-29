@@ -648,7 +648,7 @@ if (!use_vboot && custom_signing_script == "") {
 # TODO(phosek): Try to come up with a more efficient solution that does not
 # require extract the ZBI.
 
-fuchsia_zbi_json = "$root_out_dir/fuchsia.zbi.json"
+fuchsia_zbi_json = "$target_out_dir/fuchsia.zbi.json"
 fuchsia_zbi_bootfs_dir = "$target_out_dir/fuchsia.zbi/bootfs"
 
 zircon_tool_action("extract_bootfs") {
@@ -721,7 +721,8 @@ if (custom_signing_script != "") {
     output_name = "fuchsia.zbi"
     testonly = true
     deps = [ ":fuchsia" ]
-    zbi = get_target_outputs(":fuchsia")
+    zbi_outputs = get_target_outputs(":fuchsia")
+    zbi = [ zbi_outputs[0] ]
     metadata = {
       images = [
         {
@@ -775,7 +776,8 @@ if (custom_signing_script != "") {
     output_name = "fuchsia_prime.zbi"
     testonly = true
     deps = [ ":fuchsia_prime" ]
-    zbi = get_target_outputs(":fuchsia_prime")
+    zbi_outputs = get_target_outputs(":fuchsia_prime")
+    zbi = [ zbi_outputs[0] ]
   }
   zbi_prime = {
     dep = ":fuchsia_prime_signed"
@@ -822,10 +824,12 @@ if (use_vbmeta) {
     testonly = true
     if (custom_signing_script != "") {
       deps = [ ":signed" ]
-      zbi = get_target_outputs(":signed")
+      zbi_outputs = get_target_outputs(":signed")
+      zbi = [ zbi_outputs[0] ]
     } else {
       deps = [ ":fuchsia" ]
-      zbi = get_target_outputs(":fuchsia")
+      zbi_outputs = get_target_outputs(":fuchsia")
+      zbi = [ zbi_outputs[0] ]
     }
     if (include_devmgr_config_in_vbmeta) {
       deps += [ ":devmgr_config.txt" ]
@@ -865,10 +869,12 @@ if (use_vbmeta) {
     testonly = true
     if (custom_signing_script != "") {
       deps = [ ":fuchsia_prime_signed" ]
-      zbi = get_target_outputs(":fuchsia_prime_signed")
+      zbi_outputs = get_target_outputs(":fuchsia_prime_signed")
+      zbi = [ zbi_outputs[0] ]
     } else {
       deps = [ ":fuchsia_prime" ]
-      zbi = get_target_outputs(":fuchsia_prime")
+      zbi_outputs = get_target_outputs(":fuchsia_prime")
+      zbi = [ zbi_outputs[0] ]
     }
     if (include_devmgr_config_in_vbmeta) {
       deps += [ ":devmgr_config_prime.txt" ]

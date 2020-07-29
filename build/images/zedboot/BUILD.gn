@@ -136,7 +136,9 @@ if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
     output_name = "zedboot.zbi"
     deps = [ ":zbi" ]
-    zbi = get_target_outputs(":zbi")
+
+    zbi_outputs = get_target_outputs(":zbi")
+    zbi = [ zbi_outputs[0] ]
 
     metadata = {
       images = [
@@ -185,10 +187,12 @@ if (use_vbmeta) {
     output_name = "zedboot"
     if (custom_signing_script != "") {
       deps = [ ":signed" ]
-      zbi = get_target_outputs(":signed")
+      zbi_outputs = get_target_outputs(":signed")
+      zbi = [ zbi_outputs[0] ]
     } else {
       deps = [ ":zbi" ]
-      zbi = get_target_outputs(":zbi")
+      zbi_outputs = get_target_outputs(":zbi")
+      zbi = [ zbi_outputs[0] ]
     }
     if (include_devmgr_config_in_vbmeta) {
       deps += [ ":devmgr_config.txt" ]

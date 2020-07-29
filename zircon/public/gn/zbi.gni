@@ -182,6 +182,11 @@ template("zbi_input") {
 # zbi_input() does.  It also takes any zbi_input() or equivalent targets
 # from the dependencies.  (The kernel acts as a zbi_input(), for example.)
 #
+# This template has two outputs: the first is the ZBI in question, whose path
+# is a function of the `output_dir`, `output_name`, and `output_extension`
+# parameters in the usual way, and the second is a JSON representation of its
+# contents whose path is formed by adding a further ".json" to the ZBI's path.
+#
 # Parameters
 #
 #   cpu
@@ -270,6 +275,7 @@ template("zbi") {
   }
 
   output_file = "$output_dir/$output_file"
+  json_output_file = "$output_file.json"
 
   # Generate a response file of input arguments collected from metadata.
   generated_file(rspfile_target) {
@@ -327,13 +333,17 @@ template("zbi") {
       ":$json_target",
       ":$rspfile_target",
     ]
-    outputs = [ output_file ]
+    outputs = [
+      output_file,
+      json_output_file,
+    ]
     depfile = "${output_file}.d"
     sources = [ rspfile ]
 
     tool = "$zx/tools/zbi"
     args = [
       "--output=" + rebase_path(output_file, root_build_dir),
+      "--json-output=" + rebase_path(json_output_file, root_build_dir),
       "--depfile=" + rebase_path(depfile, root_build_dir),
       "@" + rebase_path(rspfile, root_build_dir),
     ]

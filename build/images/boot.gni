@@ -55,7 +55,8 @@ template("vboot") {
     assert(defined(deps), "vboot() requires deps")
     zbi = []
     foreach(label, deps) {
-      zbi += get_target_outputs(label)
+      zbi_outputs = get_target_outputs(label)
+      zbi += [ zbi_outputs[0] ]
     }
     inputs += zbi
     assert(zbi == [ zbi[0] ], "vboot() requires exactly one zbi() in deps")

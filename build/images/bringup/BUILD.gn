@@ -127,6 +127,7 @@ if (custom_signing_script != "") {
     output_name = "bringup.zbi"
     testonly = true
     deps = [ ":bringup" ]
-    zbi = get_target_outputs(":bringup")
+    zbi_outputs = get_target_outputs(":bringup")
+    zbi = [ zbi_outputs[0] ]
   }
 }
