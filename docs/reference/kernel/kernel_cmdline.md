@@ -463,9 +463,9 @@ enabled at boot with the `kernel.page-scanner.start-at-boot` option.
 
 ## kernel.page-scanner.enable-user-pager-eviction=\<bool>
 
-This option, false by default, allows for the scanner to evict user pager backed
-pages. Eviction can reduce memory usage, but removes predictability from system
-behavior.
+This option, true by default, allows for the scanner to evict user pager backed
+pages. Eviction can reduce memory usage and prevent out of memory scenarios, but
+removes some timing predictability from system behavior.
 
 ## kernel.userpager.overtime_wait_seconds=\<num>
 

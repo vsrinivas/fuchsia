@@ -338,7 +338,7 @@ static void scanner_init_func(uint level) {
   Thread *thread =
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
-  eviction_enabled = gCmdline.GetBool(kEvictionCmdLineFlag, false);
+  eviction_enabled = gCmdline.GetBool(kEvictionCmdLineFlag, true);
   zero_page_scans_per_second = gCmdline.GetUInt64("kernel.page-scanner.zero-page-scans-per-second",
                                                   kDefaultZeroPageScansPerSecond);
   if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", true)) {
