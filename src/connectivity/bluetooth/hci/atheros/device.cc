@@ -74,6 +74,10 @@ zx_status_t Device::LoadNVM(const qca_version& version) {
 
   fw_filename = fbl::StringPrintf("nvm_usb_%08X.bin", version.rom_version);
   fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
+  if (!fw_vmo) {
+    errorf("failed to map firmware\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   infof("Loading nvm: %s\n", fw_filename.c_str());
 
   BufferView file(reinterpret_cast<void*>(fw_addr), fw_size);
@@ -134,6 +138,10 @@ zx_status_t Device::LoadRAM(const qca_version& version) {
 
   fw_filename = fbl::StringPrintf("rampatch_usb_%08X.bin", version.rom_version);
   fw_vmo.reset(MapFirmware(fw_filename.c_str(), &fw_addr, &fw_size));
+  if (!fw_vmo) {
+    errorf("failed to map firmware\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   infof("Loading rampatch: %s\n", fw_filename.c_str());
 
   size_t count = fw_size;
