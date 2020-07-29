@@ -17,11 +17,15 @@
 // Messages
 #define RNDIS_PACKET_MSG                0x00000001
 #define RNDIS_INITIALIZE_MSG            0x00000002
+#define RNDIS_HALT_MSG                  0x00000003
 #define RNDIS_QUERY_MSG                 0x00000004
 #define RNDIS_SET_MSG                   0x00000005
+#define RNDIS_RESET_MSG                 0x00000006
+#define RNDIS_INDICATE_STATUS_MSG       0x00000007
 #define RNDIS_INITIALIZE_CMPLT          0x80000002
 #define RNDIS_QUERY_CMPLT               0x80000004
 #define RNDIS_SET_CMPLT                 0x80000005
+#define RNDIS_RESET_CMPLT               0x80000006
 
 // Statuses
 #define RNDIS_STATUS_SUCCESS            0x00000000
@@ -59,6 +63,11 @@
 #define RNDIS_CONTROL_TIMEOUT ZX_SEC(5)
 #define RNDIS_CONTROL_BUFFER_SIZE 1024
 
+#define RNDIS_DF_CONNECTIONLESS           0x00000001
+#define RNDIS_DF_CONNECTION_ORIENTED      0x00000002
+
+#define RNDIS_MEDIUM_802_3                0x00000000
+
 // clang-format on
 
 typedef struct {
@@ -92,7 +101,7 @@ typedef struct {
   uint32_t minor_version;
   uint32_t device_flags;
   uint32_t medium;
-  uint32_t max_packers_per_xfer;
+  uint32_t max_packets_per_xfer;
   uint32_t max_xfer_size;
   uint32_t packet_alignment;
   uint32_t reserved0;
@@ -131,6 +140,19 @@ typedef struct {
 typedef struct {
   uint32_t msg_type;
   uint32_t msg_length;
+  uint32_t status;
+  uint32_t status_buffer_length;
+  uint32_t status_buffer_offset;
+} __PACKED rndis_indicate_status;
+
+typedef struct {
+  uint32_t diagnostic_status;
+  uint32_t error_offset;
+} __PACKED rndis_diagnostic_info;
+
+typedef struct {
+  uint32_t msg_type;
+  uint32_t msg_length;
   uint32_t request_id;
   uint32_t status;
 } __PACKED rndis_set_complete;
@@ -148,5 +170,10 @@ typedef struct {
   uint32_t reserved0;
   uint32_t reserved1;
 } __PACKED rndis_packet_header;
+
+typedef struct {
+  uint32_t notification;
+  uint32_t reserved;
+} __PACKED rndis_notification;
 
 #endif  // SRC_CONNECTIVITY_ETHERNET_LIB_RNDIS_RNDIS_H_

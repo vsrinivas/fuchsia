@@ -1,0 +1,76 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+bind_rules("bind") {
+  rules = "rndis_function.bind"
+  output = "rndis_function_bind.h"
+  deps = [ "//src/devices/bind/deprecated.usb" ]
+}
+
+source_set("rndis-function-lib") {
+  defines = [ "_ALL_SOURCE" ]
+  sources = [
+    "rndis_function.cc",
+    "rndis_function.h",
+  ]
+  public_deps = [
+    ":bind",
+    "//sdk/banjo/ddk.protocol.ethernet",
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.composite",
+    "//sdk/banjo/ddk.protocol.usb.function",
+    "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/connectivity/ethernet/lib/rndis",
+    "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
+driver_module("rndis-function") {
+  # visibility = [ ":*" ]
+  output_name = "rndis-function"
+
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  deps = [
+    ":rndis-function-lib",
+    "//src/devices/lib/driver",
+  ]
+}
+
+test("rndis-function-test") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    testonly = true
+  }
+  sources = [ "rndis_function_test.cc" ]
+  deps = [
+    ":rndis-function-lib",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("rndis-function-test-package") {
+  package_name = "rndis-function-test"
+  deps = [ ":rndis-function-test" ]
+
+  tests = [
+    {
+      name = "rndis-function-test"
+      dest = "rndis-function-test"
+    },
+  ]
+}

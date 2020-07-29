@@ -80,6 +80,7 @@ zedboot_deps += [
   "//src/connectivity/ethernet/drivers/ethernet",
   "//src/connectivity/ethernet/drivers/ethertap",
   "//src/connectivity/ethernet/drivers/realtek-8211f",
+  "//src/connectivity/ethernet/drivers/rndis-function",
   "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
   "//src/connectivity/ethernet/drivers/usb-cdc-ecm",
   "//src/connectivity/ethernet/drivers/usb-cdc-function",

@@ -63,6 +63,8 @@ __BEGIN_CDECLS
 #define USB_CLASS_APPLICATION_SPECIFIC      0xfe
 #define USB_CLASS_VENDOR                    0xFf
 
+#define USB_SUBCLASS_COMM_ACM               0x02
+
 #define USB_SUBCLASS_WIRELESS_MISC          0x01
 #define USB_PROTOCOL_WIRELESS_MISC_RNDIS    0x03
 

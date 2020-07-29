@@ -9,6 +9,7 @@ group("tests") {
     "asix-88179:tests",
     "ethernet:tests",
     "ethertap:tests",
+    "rndis-function:rndis-function-test-package",
     "usb-cdc-ecm:tests",
     "virtio:virtio-ethernet-test-package",
   ]
