@@ -96,6 +96,7 @@ TEST(vkSwapchainTest, CreateSwapchainWithSwapchainStaging)
 
   vk_swapchain_destroy(swapchain);
 
+  vk_device_surface_info_destroy(&surface_info);
   vk_surface_destroy(surface);
   vk_app_state_destroy(&app);
 }
