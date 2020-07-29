@@ -28,6 +28,13 @@ bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer);
 bool AddAttachment(const std::string& filename, const fuchsia::mem::Buffer& content,
                    crashpad::CrashReportDatabase::NewReport* crashpad_report);
 
+// Shorten |program_name| into a shortname by removing the "fuchsia-pkg://" prefix if present and
+// replacing all '/' with ':'.
+//
+// For example `fuchsia-pkg://fuchsia.com/crash-reports#meta/crash_reports.cmx` becomes
+// `fuchsia.com:crash-reports#meta:crash_reports.cmx`
+std::string Shorten(std::string program_name);
+
 // Builds the final set of annotations and attachments to attach to the Crashpad report.
 //
 // * Most annotations are shared across all crash reports, e.g., |bugreport|.annotations().

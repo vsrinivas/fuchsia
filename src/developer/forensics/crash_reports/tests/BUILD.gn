@@ -231,6 +231,19 @@ executable("queue_unittest_exe") {
   ]
 }
 
+executable("report_util_unittest_exe") {
+  testonly = true
+
+  sources = [ "report_util_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:report_util",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("store_unittest_exe") {
   testonly = true
 
@@ -392,6 +405,14 @@ fuchsia_component("queue_unittest") {
   deps = [ ":queue_unittest_exe" ]
 }
 
+fuchsia_component("report_util_unittest") {
+  testonly = true
+
+  manifest = "meta/report_util_unittest.cmx"
+
+  deps = [ ":report_util_unittest_exe" ]
+}
+
 fuchsia_component("store_unittest") {
   testonly = true
 
@@ -416,6 +437,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":main_service_unittest",
     ":privacy_settings_ptr_unittest",
     ":queue_unittest",
+    ":report_util_unittest",
     ":store_unittest",
   ]
 }

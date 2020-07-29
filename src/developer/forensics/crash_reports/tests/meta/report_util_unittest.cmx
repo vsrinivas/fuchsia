@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/report_util_unittest_exe"
+    }
+}

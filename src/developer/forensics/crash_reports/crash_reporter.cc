@@ -146,7 +146,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                     std::move(report), std::move(bugreport), utc_provider_.CurrentTime(), device_id,
                     build_version_, product.value(), &annotations, &attachments, &minidump);
 
-                if (!queue_->Add(program_name, std::move(attachments), std::move(minidump),
+                if (!queue_->Add(Shorten(program_name), std::move(attachments), std::move(minidump),
                                  annotations)) {
                   FX_LOGS(ERROR) << "Error adding new report to the queue";
                   info_.LogCrashState(cobalt::CrashState::kDropped);

@@ -38,6 +38,34 @@ bool AddAttachment(const std::string& filename, const fuchsia::mem::Buffer& cont
   return true;
 }
 
+std::string Shorten(std::string program_name) {
+  // Remove leading whitespace
+  const size_t first_non_whitespace = program_name.find_first_not_of(" ");
+  if (first_non_whitespace == std::string::npos) {
+    return "";
+  }
+  program_name = program_name.substr(first_non_whitespace);
+
+  // Remove the "fuchsia-pkg://" prefix if present.
+  const std::string fuchsia_pkg_prefix("fuchsia-pkg://");
+  if (program_name.find(fuchsia_pkg_prefix) == 0) {
+    program_name.erase(/*pos=*/0u, /*len=*/fuchsia_pkg_prefix.size());
+  }
+  std::replace(program_name.begin(), program_name.end(), '/', ':');
+
+  // Remove all repeating ':'.
+  for (size_t idx = program_name.find("::"); idx != std::string::npos;
+       idx = program_name.find("::")) {
+    program_name.erase(idx, 1);
+  }
+
+  // Remove trailing white space
+  const size_t last_non_whitespace = program_name.find_last_not_of(" ");
+  return (last_non_whitespace == std::string::npos)
+             ? ""
+             : program_name.substr(0, last_non_whitespace + 1);
+}
+
 namespace {
 
 // The crash server expects a specific key for client-provided program uptimes.
