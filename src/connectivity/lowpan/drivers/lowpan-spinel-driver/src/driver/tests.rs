@@ -137,6 +137,26 @@ async fn test_spinel_lowpan_driver() {
             traceln!("app_task: Leaving network...");
             assert_eq!(driver.leave_network().await, Ok(()));
             traceln!("app_task: Did leave!");
+
+            traceln!("app_task: Setting enabled...");
+            assert_eq!(driver.set_active(true).await, Ok(()));
+            traceln!("app_task: Did enable!");
+
+            traceln!("app_task: Checking device state...");
+            assert_eq!(
+                device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+                ConnectivityState::Offline
+            );
+
+            traceln!("app_task: Setting disabled...");
+            assert_eq!(driver.set_active(false).await, Ok(()));
+            traceln!("app_task: Did disable!");
+
+            traceln!("app_task: Checking device state...");
+            assert_eq!(
+                device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+                ConnectivityState::Inactive
+            );
         }
     };
 

@@ -144,8 +144,25 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
             .or(ret)
     }
 
-    async fn set_active(&self, _enabled: bool) -> ZxResult<()> {
-        Err(ZxStatus::NOT_SUPPORTED)
+    async fn set_active(&self, enabled: bool) -> ZxResult<()> {
+        fx_log_info!("Got set active command: {:?}", enabled);
+
+        let mut driver_state = self.driver_state.lock();
+
+        let new_state = if enabled {
+            driver_state.connectivity_state.activated()
+        } else {
+            driver_state.connectivity_state.deactivated()
+        };
+
+        if new_state != driver_state.connectivity_state {
+            let old_state = driver_state.connectivity_state;
+            driver_state.connectivity_state = new_state;
+            std::mem::drop(driver_state);
+            self.on_connectivity_state_change(new_state, old_state);
+        }
+
+        Ok(())
     }
 
     async fn get_supported_network_types(&self) -> ZxResult<Vec<String>> {
