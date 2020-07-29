@@ -35,7 +35,7 @@ fn extend(file: &mut File<'_>, mut current: u64, target: u64) -> Result<(), Stat
         let to_do = (std::cmp::min(target, (current + 8192) / 8192 * 8192) - current) as usize;
         let written = file.write(&zeros[..to_do]).map_err(fatfs_error_to_status)? as u64;
         if written == 0 {
-            return Err(Status::IO);
+            return Err(Status::NO_SPACE);
         }
         current += written;
     }

@@ -1,5 +1,3 @@
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-use alloc::string::String;
 use crate::core::cell::{Cell, RefCell};
 use crate::core::char;
 use crate::core::cmp;
@@ -9,17 +7,23 @@ use crate::core::u32;
 use crate::io;
 use crate::io::prelude::*;
 use crate::io::{Error, ErrorKind, SeekFrom};
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::string::String;
 
-use byteorder::LittleEndian;
 use crate::byteorder_ext::{ReadBytesExt, WriteBytesExt};
+use byteorder::LittleEndian;
 
 use crate::boot_sector::{format_boot_sector, BiosParameterBlock, BootSector};
 use crate::dir::{Dir, DirRawStream};
 use crate::dir_entry::{SFN_PADDING, SFN_SIZE};
 use crate::error::FatfsError;
 use crate::file::File;
-use crate::table::{alloc_cluster, count_free_clusters, format_fat, read_fat_flags, ClusterIterator, RESERVED_FAT_ENTRIES};
-use crate::time::{TimeProvider, DefaultTimeProvider};
+use crate::table::{
+    alloc_cluster, count_free_clusters, format_fat, read_fat_flags, ClusterIterator,
+    RESERVED_FAT_ENTRIES,
+};
+use crate::time::{DefaultTimeProvider, TimeProvider};
+use crate::transaction::TransactionManager;
 
 // FAT implementation based on:
 //   http://wiki.osdev.org/FAT
@@ -155,7 +159,7 @@ impl FsInfoSector {
             0 | 1 => {
                 warn!("invalid next_free_cluster in FsInfo sector (values 0 and 1 are reserved)");
                 None
-            },
+            }
             // Note: other values are validated in FileSystem::new function using values from BPB
             n => Some(n),
         };
@@ -185,7 +189,10 @@ impl FsInfoSector {
         let max_valid_cluster_number = total_clusters + RESERVED_FAT_ENTRIES;
         if let Some(n) = self.free_cluster_count {
             if n > total_clusters {
-                warn!("invalid free_cluster_count ({}) in fs_info exceeds total cluster count ({})", n, total_clusters);
+                warn!(
+                    "invalid free_cluster_count ({}) in fs_info exceeds total cluster count ({})",
+                    n, total_clusters
+                );
                 self.free_cluster_count = None;
             }
         }
@@ -247,7 +254,10 @@ impl<TP: TimeProvider, OCC: OemCpConverter> FsOptions<TP, OCC> {
     }
 
     /// Changes default OEM code page encoder-decoder.
-    pub fn oem_cp_converter<OCC2: OemCpConverter>(self, oem_cp_converter: OCC2) -> FsOptions<TP, OCC2> {
+    pub fn oem_cp_converter<OCC2: OemCpConverter>(
+        self,
+        oem_cp_converter: OCC2,
+    ) -> FsOptions<TP, OCC2> {
         FsOptions::<TP, OCC2> {
             update_accessed_date: self.update_accessed_date,
             oem_cp_converter,
@@ -294,7 +304,7 @@ impl FileSystemStats {
 ///
 /// `FileSystem` struct is representing a state of a mounted FAT volume.
 pub struct FileSystem<IO: ReadWriteSeek, TP, OCC> {
-    pub(crate) disk: RefCell<IO>,
+    pub(crate) disk: RefCell<TransactionManager<IO>>,
     pub(crate) options: FsOptions<TP, OCC>,
     fat_type: FatType,
     bpb: BiosParameterBlock,
@@ -351,7 +361,7 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         let status_flags = bpb.status_flags();
         trace!("FileSystem::new end");
         Ok(FileSystem {
-            disk: RefCell::new(disk),
+            disk: RefCell::new(TransactionManager::new(disk)),
             options,
             fat_type,
             bpb,
@@ -380,7 +390,8 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
     /// read label from the root directory.
     pub fn volume_label_as_bytes(&self) -> &[u8] {
         let full_label_slice = &self.bpb.volume_label;
-        let len = full_label_slice.iter().rposition(|b| *b != SFN_PADDING).map(|p| p + 1).unwrap_or(0);
+        let len =
+            full_label_slice.iter().rposition(|b| *b != SFN_PADDING).map(|p| p + 1).unwrap_or(0);
         &full_label_slice[..len]
     }
 
@@ -413,7 +424,10 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         fat_slice(io, &self.bpb)
     }
 
-    pub(crate) fn cluster_iter<'a>(&'a self, cluster: u32) -> ClusterIterator<DiskSlice<FsIoAdapter<'a, IO, TP, OCC>>> {
+    pub(crate) fn cluster_iter<'a>(
+        &'a self,
+        cluster: u32,
+    ) -> ClusterIterator<DiskSlice<FsIoAdapter<'a, IO, TP, OCC>>> {
         let disk_slice = self.fat_slice();
         ClusterIterator::new(disk_slice, self.fat_type, cluster)
     }
@@ -472,7 +486,11 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
             Some(n) => n,
             _ => self.recalc_free_clusters()?,
         };
-        Ok(FileSystemStats { cluster_size: self.cluster_size(), total_clusters: self.total_clusters, free_clusters })
+        Ok(FileSystemStats {
+            cluster_size: self.cluster_size(),
+            total_clusters: self.total_clusters,
+            free_clusters,
+        })
     }
 
     /// Forces free clusters recalculation.
@@ -528,13 +546,6 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         Ok(())
     }
 
-    pub(crate) fn get_root_cluster(&self) -> u32 {
-        match self.fat_type {
-            FatType::Fat12 | FatType::Fat16 => 0,
-            _ => self.bpb.root_dir_first_cluster,
-        }
-    }
-
     /// Returns a root directory object allowing for futher penetration of a filesystem structure.
     pub fn root_dir<'a>(&'a self) -> Dir<'a, IO, TP, OCC> {
         trace!("root_dir");
@@ -547,19 +558,31 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
                     &self.bpb,
                     FsIoAdapter { fs: self },
                 )),
-                _ => DirRawStream::File(File::new(Some(self.bpb.root_dir_first_cluster), None, self)),
+                _ => {
+                    DirRawStream::File(File::new(Some(self.bpb.root_dir_first_cluster), None, self))
+                }
             }
         };
         Dir::new(root_rdr, self, true)
+    }
+
+    pub(crate) fn begin_transaction(&self) -> Transaction<'_, IO, TP, OCC> {
+        self.disk.borrow_mut().begin_transaction();
+        Transaction::new(self)
+    }
+
+    pub(crate) fn commit(&self, mut transaction: Transaction<'_, IO, TP, OCC>) -> io::Result<()> {
+        transaction.active = false;
+        self.disk.borrow_mut().commit()
     }
 }
 
 impl<IO: ReadWriteSeek, TP, OCC: OemCpConverter> FileSystem<IO, TP, OCC> {
     /// Returns a volume label from BPB in the Boot Sector as `String`.
     ///
-    /// Non-ASCII characters are replaced by the replacement character (U+FFFD).
-    /// Note: This function returns label stored in the BPB block. Use `read_volume_label_from_root_dir` to read label
-    /// from the root directory.
+    /// Non-ASCII characters are replaced by the replacement character (U+FFFD).  Note: This
+    /// function returns label stored in the BPB block.  Use `read_volume_label_from_root_dir` to
+    /// read label from the root directory.
     #[cfg(feature = "alloc")]
     pub fn volume_label(&self) -> String {
         // Decode volume label from OEM codepage
@@ -581,7 +604,8 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> FileSystem<IO, TP
         let volume_label_opt = self.read_volume_label_from_root_dir_as_bytes()?;
         if let Some(volume_label) = volume_label_opt {
             // Strip label padding
-            let len = volume_label.iter().rposition(|b| *b != SFN_PADDING).map(|p| p + 1).unwrap_or(0);
+            let len =
+                volume_label.iter().rposition(|b| *b != SFN_PADDING).map(|p| p + 1).unwrap_or(0);
             let label_slice = &volume_label[..len];
             // Decode volume label from OEM codepage
             let volume_label_iter = label_slice.iter().cloned();
@@ -675,8 +699,19 @@ impl<IO> DiskSlice<IO> {
         DiskSlice { begin, size, mirrors, inner, offset: 0 }
     }
 
-    fn from_sectors(first_sector: u32, sector_count: u32, mirrors: u8, bpb: &BiosParameterBlock, inner: IO) -> Self {
-        Self::new(bpb.bytes_from_sectors(first_sector), bpb.bytes_from_sectors(sector_count), mirrors, inner)
+    fn from_sectors(
+        first_sector: u32,
+        sector_count: u32,
+        mirrors: u8,
+        bpb: &BiosParameterBlock,
+        inner: IO,
+    ) -> Self {
+        Self::new(
+            bpb.bytes_from_sectors(first_sector),
+            bpb.bytes_from_sectors(sector_count),
+            mirrors,
+            inner,
+        )
     }
 
     pub(crate) fn abs_pos(&self) -> u64 {
@@ -793,7 +828,10 @@ pub(crate) fn write_zeros<IO: ReadWriteSeek>(mut disk: IO, mut len: u64) -> io::
     Ok(())
 }
 
-fn write_zeros_until_end_of_sector<IO: ReadWriteSeek>(mut disk: IO, bytes_per_sector: u16) -> io::Result<()> {
+fn write_zeros_until_end_of_sector<IO: ReadWriteSeek>(
+    mut disk: IO,
+    bytes_per_sector: u16,
+) -> io::Result<()> {
     let pos = disk.seek(SeekFrom::Current(0))?;
     let total_bytes_to_write = bytes_per_sector as u64 - (pos % bytes_per_sector as u64);
     if total_bytes_to_write != bytes_per_sector as u64 {
@@ -837,7 +875,10 @@ impl FormatVolumeOptions {
     /// If option is not specified optimal cluster size is selected based on partition size and
     /// optionally FAT type override (if specified using `fat_type` method).
     pub fn bytes_per_cluster(mut self, bytes_per_cluster: u32) -> Self {
-        assert!(bytes_per_cluster.count_ones() == 1 && bytes_per_cluster >= 512, "Invalid bytes_per_cluster");
+        assert!(
+            bytes_per_cluster.count_ones() == 1 && bytes_per_cluster >= 512,
+            "Invalid bytes_per_cluster"
+        );
         self.bytes_per_cluster = Some(bytes_per_cluster);
         self
     }
@@ -858,7 +899,10 @@ impl FormatVolumeOptions {
     /// Sector size must be a power of two and be in range 512 - 4096.
     /// Default is `512`.
     pub fn bytes_per_sector(mut self, bytes_per_sector: u16) -> Self {
-        assert!(bytes_per_sector.count_ones() == 1 && bytes_per_sector >= 512, "Invalid bytes_per_sector");
+        assert!(
+            bytes_per_sector.count_ones() == 1 && bytes_per_sector >= 512,
+            "Invalid bytes_per_sector"
+        );
         self.bytes_per_sector = Some(bytes_per_sector);
         self
     }
@@ -949,7 +993,10 @@ impl FormatVolumeOptions {
 /// Supplied `disk` parameter cannot be seeked (internal pointer must be on position 0).
 /// To format a fragment of a disk image (e.g. partition) library user should wrap the file struct in a struct
 /// limiting access to partition bytes only e.g. `fscommon::StreamSlice`.
-pub fn format_volume<IO: ReadWriteSeek>(mut disk: IO, options: FormatVolumeOptions) -> io::Result<()> {
+pub fn format_volume<IO: ReadWriteSeek>(
+    mut disk: IO,
+    options: FormatVolumeOptions,
+) -> io::Result<()> {
     trace!("format_volume");
     debug_assert!(disk.seek(SeekFrom::Current(0))? == 0);
 
@@ -976,7 +1023,8 @@ pub fn format_volume<IO: ReadWriteSeek>(mut disk: IO, options: FormatVolumeOptio
 
     if boot.bpb.is_fat32() {
         // FSInfo sector
-        let fs_info_sector = FsInfoSector { free_cluster_count: None, next_free_cluster: None, dirty: false };
+        let fs_info_sector =
+            FsInfoSector { free_cluster_count: None, next_free_cluster: None, dirty: false };
         disk.seek(SeekFrom::Start(boot.bpb.bytes_from_sectors(boot.bpb.fs_info_sector())))?;
         fs_info_sector.serialize(&mut disk)?;
         write_zeros_until_end_of_sector(&mut disk, bytes_per_sector)?;
@@ -997,7 +1045,13 @@ pub fn format_volume<IO: ReadWriteSeek>(mut disk: IO, options: FormatVolumeOptio
         let mut fat_slice = fat_slice(&mut disk, &boot.bpb);
         let sectors_per_fat = boot.bpb.sectors_per_fat();
         let bytes_per_fat = boot.bpb.bytes_from_sectors(sectors_per_fat);
-        format_fat(&mut fat_slice, fat_type, boot.bpb.media, bytes_per_fat, boot.bpb.total_clusters())?;
+        format_fat(
+            &mut fat_slice,
+            fat_type,
+            boot.bpb.media,
+            bytes_per_fat,
+            boot.bpb.total_clusters(),
+        )?;
     }
 
     // init root directory - zero root directory region for FAT12/16 and alloc first root directory cluster for FAT32
@@ -1013,8 +1067,8 @@ pub fn format_volume<IO: ReadWriteSeek>(mut disk: IO, options: FormatVolumeOptio
         };
         assert!(root_dir_first_cluster == boot.bpb.root_dir_first_cluster);
         let first_data_sector = reserved_sectors + sectors_per_all_fats + root_dir_sectors;
-        let root_dir_first_sector =
-            first_data_sector + boot.bpb.sectors_from_clusters(root_dir_first_cluster - RESERVED_FAT_ENTRIES);
+        let root_dir_first_sector = first_data_sector
+            + boot.bpb.sectors_from_clusters(root_dir_first_cluster - RESERVED_FAT_ENTRIES);
         let root_dir_pos = boot.bpb.bytes_from_sectors(root_dir_first_sector);
         disk.seek(SeekFrom::Start(root_dir_pos))?;
         write_zeros(&mut disk, boot.bpb.cluster_size() as u64)?;
@@ -1025,4 +1079,26 @@ pub fn format_volume<IO: ReadWriteSeek>(mut disk: IO, options: FormatVolumeOptio
     disk.seek(SeekFrom::Start(0))?;
     trace!("format_volume end");
     Ok(())
+}
+
+pub(crate) struct Transaction<'a, IO: ReadWriteSeek, TP, OCC> {
+    fs: &'a FileSystem<IO, TP, OCC>,
+    original_fs_info: FsInfoSector,
+    active: bool,
+}
+
+impl<'a, IO: ReadWriteSeek, TP, OCC> Transaction<'a, IO, TP, OCC> {
+    fn new(fs: &'a FileSystem<IO, TP, OCC>) -> Self {
+        Transaction { fs, original_fs_info: fs.fs_info.borrow_mut().clone(), active: true }
+    }
+}
+
+impl<IO: ReadWriteSeek, TP, OCC> Drop for Transaction<'_, IO, TP, OCC> {
+    fn drop(&mut self) {
+        if self.active {
+            self.fs.disk.borrow_mut().revert();
+            *self.fs.fs_info.borrow_mut() = self.original_fs_info.clone();
+            self.active = false;
+        }
+    }
 }

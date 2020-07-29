@@ -162,6 +162,7 @@ const mount_options_t default_mount_options = {
 const mkfs_options_t default_mkfs_options = {
     .fvm_data_slices = 1,
     .verbose = false,
+    .sectors_per_cluster = 0,
 };
 
 const fsck_options_t default_fsck_options = {

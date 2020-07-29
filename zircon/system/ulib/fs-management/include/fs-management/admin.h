@@ -48,6 +48,8 @@ extern const init_options_t default_init_options;
 typedef struct mkfs_options {
   uint32_t fvm_data_slices;
   bool verbose;
+  // The number of sectors per cluster on a FAT file systems or zero for the default.
+  int sectors_per_cluster;
 } mkfs_options_t;
 
 __EXPORT

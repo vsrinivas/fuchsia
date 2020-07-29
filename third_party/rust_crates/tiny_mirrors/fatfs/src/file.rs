@@ -27,7 +27,11 @@ pub struct File<'a, IO: ReadWriteSeek, TP, OCC> {
 }
 
 impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
-    pub(crate) fn new(first_cluster: Option<u32>, entry: Option<DirEntryEditor>, fs: &'a FileSystem<IO, TP, OCC>) -> Self {
+    pub(crate) fn new(
+        first_cluster: Option<u32>,
+        entry: Option<DirEntryEditor>,
+        fs: &'a FileSystem<IO, TP, OCC>,
+    ) -> Self {
         File {
             first_cluster,
             entry,
@@ -71,7 +75,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
                 let offset_in_cluster = (self.offset - 1) % cluster_size + 1;
                 let offset_in_fs = self.fs.offset_from_cluster(n) + (offset_in_cluster as u64);
                 Some(offset_in_fs)
-            },
+            }
             None => None,
         }
     }
@@ -128,7 +132,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     pub fn accessed(&self) -> Date {
         match self.entry {
             Some(ref e) => e.inner().accessed(),
-            None => Date::decode(0)
+            None => Date::decode(0),
         }
     }
 
@@ -136,7 +140,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     pub fn created(&self) -> DateTime {
         match self.entry {
             Some(ref e) => e.inner().created(),
-            None => DateTime::decode(0, 0, 0)
+            None => DateTime::decode(0, 0, 0),
         }
     }
 
@@ -144,7 +148,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     pub fn modified(&self) -> DateTime {
         match self.entry {
             Some(ref e) => e.inner().modified(),
-            None => DateTime::decode(0, 0, 0)
+            None => DateTime::decode(0, 0, 0),
         }
     }
 
@@ -247,7 +251,8 @@ impl<IO: ReadWriteSeek, TP, OCC> Drop for File<'_, IO, TP, OCC> {
         if let Some(ref entry) = self.entry {
             if entry.inner().is_deleted() {
                 if let Some(cluster) = self.first_cluster.take() {
-                    self.fs
+                    let _ = self
+                        .fs
                         .free_cluster_chain(cluster)
                         .map_err(|e| error!("free_cluster_chain failed {}", e));
                 }
@@ -283,7 +288,7 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Read for File<'_, IO, TP, OCC> {
                         Some(Ok(n)) => Some(n),
                         None => None,
                     }
-                },
+                }
             }
         } else {
             self.current_cluster
@@ -300,7 +305,8 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Read for File<'_, IO, TP, OCC> {
             return Ok(0);
         }
         trace!("read {} bytes in cluster {}", read_size, current_cluster);
-        let offset_in_fs = self.fs.offset_from_cluster(current_cluster) + (offset_in_cluster as u64);
+        let offset_in_fs =
+            self.fs.offset_from_cluster(current_cluster) + (offset_in_cluster as u64);
         let read_bytes = {
             let mut disk = self.fs.disk.borrow_mut();
             disk.seek(SeekFrom::Start(offset_in_fs))?;
@@ -348,7 +354,7 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Write for File<'_, IO, TP, OCC> {
                         Some(Ok(n)) => Some(n),
                         None => None,
                     }
-                },
+                }
             };
             match next_cluster {
                 Some(n) => n,
@@ -360,7 +366,7 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Write for File<'_, IO, TP, OCC> {
                         self.set_first_cluster(new_cluster);
                     }
                     new_cluster
-                },
+                }
             }
         } else {
             // self.current_cluster should be a valid cluster
@@ -370,7 +376,8 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Write for File<'_, IO, TP, OCC> {
             }
         };
         trace!("write {} bytes in cluster {}", write_size, current_cluster);
-        let offset_in_fs = self.fs.offset_from_cluster(current_cluster) + (offset_in_cluster as u64);
+        let offset_in_fs =
+            self.fs.offset_from_cluster(current_cluster) + (offset_in_cluster as u64);
         let written_bytes = {
             let mut disk = self.fs.disk.borrow_mut();
             disk.seek(SeekFrom::Start(offset_in_fs))?;
@@ -399,7 +406,7 @@ impl<IO: ReadWriteSeek, TP, OCC> Seek for File<'_, IO, TP, OCC> {
             SeekFrom::End(x) => {
                 let size = self.size().expect("cannot seek from end if size is unknown") as i64;
                 size + x
-            },
+            }
         };
         if new_pos < 0 {
             return Err(io::Error::new(ErrorKind::InvalidInput, "Seek to a negative offset"));
@@ -418,7 +425,8 @@ impl<IO: ReadWriteSeek, TP, OCC> Seek for File<'_, IO, TP, OCC> {
         }
         // get number of clusters to seek (favoring previous cluster in corner case)
         let cluster_count = (self.fs.clusters_from_bytes(new_pos as u64) as i32 - 1) as isize;
-        let old_cluster_count = (self.fs.clusters_from_bytes(self.offset as u64) as i32 - 1) as isize;
+        let old_cluster_count =
+            (self.fs.clusters_from_bytes(self.offset as u64) as i32 - 1) as isize;
         let new_cluster = if new_pos == 0 {
             None
         } else if cluster_count == old_cluster_count {
@@ -435,16 +443,16 @@ impl<IO: ReadWriteSeek, TP, OCC> Seek for File<'_, IO, TP, OCC> {
                                 // chain ends before new position - seek to end of last cluster
                                 new_pos = self.fs.bytes_from_clusters((i + 1) as u32) as u32;
                                 break;
-                            },
+                            }
                         };
                     }
                     Some(cluster)
-                },
+                }
                 None => {
                     // empty file - always seek to 0
                     new_pos = 0;
                     None
-                },
+                }
             }
         };
         self.offset = new_pos as u32;

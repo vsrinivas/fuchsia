@@ -77,6 +77,7 @@ class Filesystem {
     bool in_memory = false;
     bool is_case_sensitive = true;
     bool supports_sparse_files = true;
+    bool is_fat = false;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
@@ -156,6 +157,7 @@ class FatFilesystem : public FilesystemImpl<FatFilesystem> {
         .in_memory = false,
         .is_case_sensitive = false,
         .supports_sparse_files = false,
+        .is_fat = true,
     };
     return traits;
   }

@@ -123,7 +123,7 @@ TestFilesystemOptions TestFilesystemOptions::DefaultFatfs() {
   return TestFilesystemOptions{.description = "Fatfs",
                                .use_fvm = false,
                                .device_block_size = 512,
-                               .device_block_count = 131'072,
+                               .device_block_count = 196'608,
                                .fvm_slice_size = 1'048'576,
                                .filesystem = &FatFilesystem::SharedInstance()};
 }
@@ -156,8 +156,9 @@ std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
 }
 
 zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t format) {
-  auto status =
-      zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &default_mkfs_options));
+  mkfs_options_t options = default_mkfs_options;
+  options.sectors_per_cluster = 2;  // 1 KiB cluster size
+  auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Could not format " << disk_format_string(format)
                    << " file system: " << status.status_string();

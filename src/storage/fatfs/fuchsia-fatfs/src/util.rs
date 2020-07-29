@@ -38,7 +38,7 @@ pub fn fatfs_error_to_status(error: io::Error) -> Status {
         ErrorKind::TimedOut => Status::TIMED_OUT,
         ErrorKind::UnexpectedEof => Status::BUFFER_TOO_SMALL,
         ErrorKind::WouldBlock => Status::BAD_STATE,
-        ErrorKind::WriteZero => Status::IO, // Never used in fatfs.
+        ErrorKind::WriteZero => Status::NO_SPACE,
         ErrorKind::Other => {
             error
                 .into_inner()

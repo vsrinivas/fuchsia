@@ -18,6 +18,7 @@
 
 #include <iterator>
 #include <new>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
@@ -66,8 +67,16 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
   const std::string tool_path = fs_management::GetBinaryPath("mkfs-msdosfs");
-  const char* argv[] = {tool_path.c_str(), device_path, nullptr};
-  return cb(std::size(argv) - 1, argv, NULL, NULL, 0);
+  std::string sectors_per_cluster;
+  std::vector<const char*> argv = {tool_path.c_str()};
+  if (options->sectors_per_cluster != 0) {
+    argv.push_back("-c");
+    sectors_per_cluster = std::to_string(options->sectors_per_cluster);
+    argv.push_back(sectors_per_cluster.c_str());
+  }
+  argv.push_back(device_path);
+  argv.push_back(nullptr);
+  return cb(argv.size() - 1, argv.data(), NULL, NULL, 0);
 }
 
 }  // namespace

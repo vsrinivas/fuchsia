@@ -58,13 +58,14 @@ TEST_P(DirectoryTest, DirectoryFilenameMax) {
 constexpr int kLargePathLength = 128;
 
 TEST_P(DirectoryTest, Large) {
-  // Write a bunch of files to a directory
-  const int num_files = 1024;
+  // Write a bunch of files to a directory.
+  // FAT is very slow (see fxb/56389), so limit the number of files for that filesystem.
+  const int num_files = fs().GetTraits().is_fat ? 100 : 1024;
   for (int i = 0; i < num_files; i++) {
     char path[kLargePathLength + 1];
     snprintf(path, sizeof(path), "%0*d", kLargePathLength - 2, i);
     fbl::unique_fd fd(open(GetPath(path).c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
-    ASSERT_TRUE(fd);
+    ASSERT_TRUE(fd) << path << ": " << strerror(errno);
   }
 
   // Unlink all those files
@@ -250,7 +251,8 @@ TEST_P(DirectoryTest, TestDirectoryReaddir) {
 }
 
 TEST_P(DirectoryTest, TestDirectoryReaddirRmAll) {
-  constexpr size_t kNumEntries = 1000;
+  // FAT is very slow (see fxb/56389), so limit the number of directories for that filesystem.
+  const size_t kNumEntries = fs().GetTraits().is_fat ? 100 : 1000;
 
   // Create a directory named GetPath("dir").c_str() with entries "00000", "00001" ... up to
   // kNumEntries.
