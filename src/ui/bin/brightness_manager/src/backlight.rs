@@ -62,14 +62,14 @@ impl Backlight {
             result.map_err(|e| anyhow::format_err!("Failed to get state: {:?}", e))?;
         assert!(backlight_info.brightness >= 0.0);
         assert!(backlight_info.brightness <= 1.0);
-        Ok(backlight_info.brightness)
+        Ok(if backlight_info.backlight_on { backlight_info.brightness } else { 0.0 })
     }
 
     fn set(&mut self, value: f64) -> Result<(), Error> {
         // TODO(fxb/36302): Handle error here as well, similar to get_brightness above. Might involve
         let regulated_value = num_traits::clamp(value, AUTO_MINIMUM_BRIGHTNESS, 1.0);
         let _result = self.proxy.set_state_normalized(&mut BacklightCommand {
-            backlight_on: value != 0.0,
+            backlight_on: value > 0.0,
             brightness: regulated_value,
         });
         Ok(())
@@ -101,6 +101,7 @@ mod tests {
     use super::*;
     use fidl_fuchsia_hardware_backlight::DeviceRequestStream as BacklightRequestStream;
     use fuchsia_async as fasync;
+    use futures::prelude::future;
     use futures_util::stream::StreamExt;
 
     fn mock_backlight() -> (Backlight, BacklightRequestStream) {
@@ -109,7 +110,7 @@ mod tests {
         (Backlight { proxy, max_brightness: 1000.0_f64 }, backlight_stream)
     }
 
-    async fn mock_device(mut reqs: BacklightRequestStream) -> BacklightCommand {
+    async fn mock_device_set(mut reqs: BacklightRequestStream) -> BacklightCommand {
         match reqs.next().await.unwrap() {
             Ok(fidl_fuchsia_hardware_backlight::DeviceRequest::SetStateNormalized {
                 state: command,
@@ -121,11 +122,61 @@ mod tests {
         }
     }
 
+    async fn mock_device_get(
+        mut reqs: BacklightRequestStream,
+        backlight_command: BacklightCommand,
+    ) {
+        match reqs.next().await.unwrap() {
+            Ok(fidl_fuchsia_hardware_backlight::DeviceRequest::GetStateNormalized {
+                responder,
+            }) => {
+                fx_log_info!("====== got GetStateNormalized");
+                let response = backlight_command;
+                let _ = responder.send(&mut Ok(response));
+            }
+            request => panic!("====== Unexpected request: {:?}", request),
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_returns_zero_if_screen_off() {
+        // Setup
+        let (mock, backlight_stream) = mock_backlight();
+        let backlight_fut = mock_device_get(
+            backlight_stream,
+            BacklightCommand { backlight_on: false, brightness: 0.04 },
+        );
+
+        // Act
+        let mock_fut = mock.get();
+        let (brightness, _) = future::join(mock_fut, backlight_fut).await;
+
+        // Assert
+        assert_eq!(brightness.unwrap(), 0.0);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brightness_returns_non_zero_if_screen_on() {
+        // Setup
+        let (mock, backlight_stream) = mock_backlight();
+        let backlight_fut = mock_device_get(
+            backlight_stream,
+            BacklightCommand { backlight_on: true, brightness: 0.04 },
+        );
+
+        // Act
+        let mock_fut = mock.get();
+        let (brightness, _) = future::join(mock_fut, backlight_fut).await;
+
+        // Assert
+        assert_eq!(brightness.unwrap(), 0.04);
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_zero_brightness_turns_screen_off() {
         // Setup
         let (mut mock, backlight_stream) = mock_backlight();
-        let backlight_fut = mock_device(backlight_stream);
+        let backlight_fut = mock_device_set(backlight_stream);
 
         // Act
         mock.set(0.0).expect("set failed");
@@ -136,10 +187,24 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_negative_brightness_turns_screen_off() {
+        // Setup
+        let (mut mock, backlight_stream) = mock_backlight();
+        let backlight_fut = mock_device_set(backlight_stream);
+
+        // Act
+        mock.set(-0.01).expect("set failed");
+        let backlight_command = backlight_fut.await;
+
+        // Assert
+        assert_eq!(backlight_command.backlight_on, false);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_brightness_turns_screen_on() {
         // Setup
         let (mut mock, backlight_stream) = mock_backlight();
-        let backlight_fut = mock_device(backlight_stream);
+        let backlight_fut = mock_device_set(backlight_stream);
 
         // Act
         mock.set(0.55).expect("set failed");
