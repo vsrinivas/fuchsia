@@ -136,6 +136,7 @@ void MemoryWatchdog::WorkerThread() {
   while (true) {
     // If we've hit OOM level perform some immediate synchronous eviction to attempt to avoid OOM.
     if (mem_event_idx_ == PressureLevel::kOutOfMemory) {
+      printf("memory-pressure: trying to prevent OOM by evicting pages...\n");
       list_node_t free_pages;
       list_initialize(&free_pages);
       // Keep trying to perform eviction for as long as we are evicting non-zero pages and we remain
@@ -162,21 +163,24 @@ void MemoryWatchdog::WorkerThread() {
         zx_time_sub_time(time_now, prev_mem_state_eval_time_) >= kHysteresisSeconds_) {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
 
-      // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
-      // with the callback and are free to update the targets.
-      eviction_trigger_.Cancel();
-      const uint64_t free_mem = pmm_count_free_pages() * PAGE_SIZE;
-      // Set the minimum amount to free as half the amount required to reach our desired free memory
-      // level. This minimum ensures that even if the user reduces memory in reaction to this signal
-      // we will always attempt to free a bit.
-      // TODO: measure and fine tune this over time as user space evolves.
-      min_free_target_ = free_mem < free_mem_target_ ? (free_mem_target_ - free_mem) / 2 : 0;
-      // Trigger the eviction for slightly in the future. Half the hysteresis time here is a balance
-      // between giving user space time to release memory and the eviction running before the end of
-      // the hysteresis period.
-      eviction_trigger_.Set(
-          Deadline::no_slack(zx_time_add_duration(time_now, kHysteresisSeconds_ / 2)),
-          EvictionTriggerCallback, this);
+      // Trigger eviction if the memory availability state is more critical than the previous one.
+      if (idx < prev_mem_event_idx_) {
+        // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
+        // with the callback and are free to update the targets.
+        eviction_trigger_.Cancel();
+        const uint64_t free_mem = pmm_count_free_pages() * PAGE_SIZE;
+        // Set the minimum amount to free as half the amount required to reach our desired free
+        // memory level. This minimum ensures that even if the user reduces memory in reaction to
+        // this signal we will always attempt to free a bit.
+        // TODO: measure and fine tune this over time as user space evolves.
+        min_free_target_ = free_mem < free_mem_target_ ? (free_mem_target_ - free_mem) / 2 : 0;
+        // Trigger the eviction for slightly in the future. Half the hysteresis time here is a
+        // balance between giving user space time to release memory and the eviction running before
+        // the end of the hysteresis period.
+        eviction_trigger_.Set(
+            Deadline::no_slack(zx_time_add_duration(time_now, kHysteresisSeconds_ / 2)),
+            EvictionTriggerCallback, this);
+      }
 
       // Unsignal the last event that was signaled.
       zx_status_t status =
