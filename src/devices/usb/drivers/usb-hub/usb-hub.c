@@ -394,6 +394,14 @@ static int usb_hub_thread(void* arg) {
   }
 
   int num_ports = hub_desc.bNbrPorts;
+
+  if (num_ports > 127) {
+    zxlogf(ERROR, "malformed descriptor: usb_hub_descriptor_t.bNbrPorts > 127");
+    result = ZX_ERR_BAD_STATE;
+    device_init_reply(hub->zxdev, result, NULL);
+    return result;
+  }
+
   hub->num_ports = num_ports;
   hub->port_status = calloc(num_ports + 1, sizeof(port_status_t));
   if (!hub->port_status) {
