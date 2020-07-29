@@ -25,8 +25,7 @@ func makeTest(id int, os string) Test {
 			Name: fmt.Sprintf("test%d", id),
 			OS:   os,
 		},
-		Runs:        1,
-		MaxAttempts: 1,
+		Runs: 1,
 	}
 	if os == "fuchsia" {
 		test.Name = fmt.Sprintf("fuchsia-pkg://fuchsia.com/test%d", id)
@@ -75,6 +74,7 @@ func TestMultiplyShards(t *testing.T) {
 	multShard := func(env build.Environment, os string, id int, runs int) *Shard {
 		test := makeTest(id, os)
 		test.Runs = runs
+		test.RunAlgorithm = KeepGoing
 		return &Shard{
 			Name:  "multiplied:" + environmentName(env) + "-" + normalizeTestName(test.Name),
 			Tests: []Test{test},
@@ -277,7 +277,12 @@ func TestShardAffected(t *testing.T) {
 	shardWithModify := func(s *Shard, md []modifyDetails) *Shard {
 		for _, m := range md {
 			i := m.index
-			s.Tests[i].MaxAttempts = m.maxAttempts
+			s.Tests[i].Runs = m.maxAttempts
+			if m.maxAttempts > 1 {
+				s.Tests[i].RunAlgorithm = StopOnSuccess
+			} else {
+				s.Tests[i].RunAlgorithm = ""
+			}
 		}
 		return s
 	}
@@ -414,7 +419,7 @@ func assertShardsContainTests(t *testing.T, shards []*Shard, expectedShards [][]
 	for _, shard := range shards {
 		actualTestNames := []string{}
 		for _, test := range shard.Tests {
-			for i := 0; i < test.Runs; i++ {
+			for i := 0; i < test.minRequiredRuns(); i++ {
 				actualTestNames = append(actualTestNames, test.Test.Name)
 			}
 		}
@@ -433,6 +438,56 @@ func assertShardsContainTests(t *testing.T, shards []*Shard, expectedShards [][]
 		}
 		if !foundMatch {
 			t.Fatalf("unexpected shard with tests %v", actualTestNames)
+		}
+	}
+}
+
+type runConfig struct {
+	runs         int
+	runAlgorithm RunAlgorithm
+}
+
+func runConfigSlicesEq(s []runConfig, t []runConfig) bool {
+	if len(s) != len(t) {
+		return false
+	}
+	seen := make(map[runConfig]int)
+	for i := range s {
+		seen[s[i]]++
+		seen[t[i]]--
+	}
+	for _, v := range seen {
+		if v != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func assertShardsContainRunConfigs(t *testing.T, shards []*Shard, expectedShards [][]runConfig) {
+	if len(shards) != len(expectedShards) {
+		t.Fatalf("shard count (%d) != expected shard count (%d)", len(shards), len(expectedShards))
+	}
+	for _, shard := range shards {
+		actual := []runConfig{}
+		for _, test := range shard.Tests {
+			actual = append(actual, runConfig{test.Runs, test.RunAlgorithm})
+		}
+
+		// Check that we're expecting a shard that contains this exact set of
+		// run configs.
+		foundMatch := false
+		for i, expected := range expectedShards {
+			if runConfigSlicesEq(actual, expected) {
+				// Remove this expected shard so other actual shards don't get
+				// matched with it.
+				expectedShards = append(expectedShards[:i], expectedShards[i+1:]...)
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			t.Fatalf("unexpected shard with run config %v, expected: %v", actual, expectedShards)
 		}
 	}
 }
@@ -618,7 +673,8 @@ func TestWithTargetDuration(t *testing.T) {
 					OS:         "fuchsia",
 					PackageURL: "test1",
 				},
-				Runs: 5,
+				Runs:         5,
+				RunAlgorithm: KeepGoing,
 			}},
 		}}
 		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
@@ -627,6 +683,60 @@ func TestWithTargetDuration(t *testing.T) {
 			{"test1", "test1"},
 			{"test1"},
 		}
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
+	t.Run("evenly distributes shards based on run algorithm", func(t *testing.T) {
+		input := []*Shard{{
+			Name: "env1",
+			Env:  env1,
+			Tests: []Test{
+				{
+					Test: build.Test{
+						Name:       "test1",
+						OS:         "fuchsia",
+						PackageURL: "test1",
+					},
+					Runs:         5,
+					RunAlgorithm: StopOnSuccess,
+				},
+				{
+					Test: build.Test{
+						Name:       "test2",
+						OS:         "fuchsia",
+						PackageURL: "test2",
+					},
+					Runs:         5,
+					RunAlgorithm: StopOnSuccess,
+				},
+			}}, {
+			Name: "mult",
+			Env:  env1,
+			Tests: []Test{
+				{
+					Test: build.Test{
+						Name:       "test1",
+						OS:         "fuchsia",
+						PackageURL: "test1",
+					},
+					Runs:         5,
+					RunAlgorithm: KeepGoing,
+				},
+			}},
+		}
+		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
+		expectedTests := [][]string{
+			{"test1", "test2"},
+			{"test1", "test1"},
+			{"test1", "test1"},
+			{"test1"},
+		}
+		expectedRuns := [][]runConfig{
+			{{5, StopOnSuccess}, {5, StopOnSuccess}},
+			{{2, KeepGoing}},
+			{{2, KeepGoing}},
+			{{1, KeepGoing}}}
+		assertShardsContainRunConfigs(t, actual, expectedRuns)
 		assertShardsContainTests(t, actual, expectedTests)
 	})
 }

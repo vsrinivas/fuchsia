@@ -72,8 +72,7 @@ func TestValidateTest(t *testing.T) {
 					OS:   "linux",
 					Path: "/foo/bar",
 				},
-				Runs:        1,
-				MaxAttempts: 1,
+				Runs: 1,
 			},
 			expectErr: true,
 		}, {
@@ -83,8 +82,7 @@ func TestValidateTest(t *testing.T) {
 					Name: "test1",
 					Path: "/foo/bar",
 				},
-				Runs:        1,
-				MaxAttempts: 1,
+				Runs: 1,
 			},
 			expectErr: true,
 		}, {
@@ -95,8 +93,7 @@ func TestValidateTest(t *testing.T) {
 					OS:         "linux",
 					PackageURL: "fuchsia-pkg://test1",
 				},
-				Runs:        1,
-				MaxAttempts: 1,
+				Runs: 1,
 			},
 			expectErr: true,
 		},
@@ -107,8 +104,7 @@ func TestValidateTest(t *testing.T) {
 					Name: "test1",
 					OS:   "linux",
 				},
-				Runs:        1,
-				MaxAttempts: 1,
+				Runs: 1,
 			},
 			expectErr: true,
 		},
@@ -119,8 +115,7 @@ func TestValidateTest(t *testing.T) {
 					Name: "test1",
 					OS:   "fuchsia",
 				},
-				Runs:        1,
-				MaxAttempts: 1,
+				Runs: 1,
 			},
 			expectErr: true,
 		}, {
@@ -131,18 +126,17 @@ func TestValidateTest(t *testing.T) {
 					OS:   "linux",
 					Path: "/foo/bar",
 				},
-				MaxAttempts: 1,
 			},
 			expectErr: true,
 		}, {
-			name: "missing max attempts",
+			name: "missing run algorithm",
 			test: testsharder.Test{
 				Test: build.Test{
 					Name: "test1",
 					OS:   "linux",
 					Path: "/foo/bar",
 				},
-				Runs: 1,
+				Runs: 2,
 			},
 			expectErr: true,
 		}, {
@@ -153,8 +147,7 @@ func TestValidateTest(t *testing.T) {
 					OS:   "linux",
 					Path: "/foo/bar",
 				},
-				Runs:        1,
-				MaxAttempts: 1,
+				Runs: 1,
 			},
 			expectErr: false,
 		}, {
@@ -165,8 +158,8 @@ func TestValidateTest(t *testing.T) {
 					OS:         "fuchsia",
 					PackageURL: "fuchsia-pkg://test1",
 				},
-				Runs:        5,
-				MaxAttempts: 1,
+				Runs:         5,
+				RunAlgorithm: testsharder.KeepGoing,
 			},
 			expectErr: false,
 		},
@@ -186,7 +179,7 @@ func TestRunTest(t *testing.T) {
 		name           string
 		test           build.Test
 		runs           int
-		maxAttempts    int
+		runAlgorithm   testsharder.RunAlgorithm
 		testErr        error
 		runTestFunc    func(testsharder.Test, io.Writer, io.Writer)
 		expectedErr    error
@@ -253,8 +246,9 @@ func TestRunTest(t *testing.T) {
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
 			},
-			runs:    2,
-			testErr: nil,
+			runs:         2,
+			runAlgorithm: testsharder.KeepGoing,
+			testErr:      nil,
 			expectedResult: []*testrunner.TestResult{{
 				Name:   "bar (2)",
 				Result: runtests.TestSuccess,
@@ -287,12 +281,40 @@ func TestRunTest(t *testing.T) {
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
 			},
-			maxAttempts: 3,
-			testErr:     fmt.Errorf("test failed"),
-			expectedResult: []*testrunner.TestResult{{
-				Name:   "fuchsia-pkg://foo/bar",
-				Result: runtests.TestFailure,
-			}},
+			runs:         6,
+			runAlgorithm: testsharder.StopOnSuccess,
+			testErr:      fmt.Errorf("test failed"),
+			expectedResult: []*testrunner.TestResult{
+				{
+					Name:   "fuchsia-pkg://foo/bar",
+					Result: runtests.TestFailure,
+				},
+				{
+					Name:     "fuchsia-pkg://foo/bar",
+					Result:   runtests.TestFailure,
+					RunIndex: 1,
+				},
+				{
+					Name:     "fuchsia-pkg://foo/bar",
+					Result:   runtests.TestFailure,
+					RunIndex: 2,
+				},
+				{
+					Name:     "fuchsia-pkg://foo/bar",
+					Result:   runtests.TestFailure,
+					RunIndex: 3,
+				},
+				{
+					Name:     "fuchsia-pkg://foo/bar",
+					Result:   runtests.TestFailure,
+					RunIndex: 4,
+				},
+				{
+					Name:     "fuchsia-pkg://foo/bar",
+					Result:   runtests.TestFailure,
+					RunIndex: 5,
+				},
+			},
 		},
 		{
 			name: "returns on first success even if max attempts > 1",
@@ -301,7 +323,8 @@ func TestRunTest(t *testing.T) {
 				OS:         "fuchsia",
 				PackageURL: "fuchsia-pkg://foo/bar",
 			},
-			maxAttempts: 5,
+			runs:         5,
+			runAlgorithm: testsharder.StopOnSuccess,
 			expectedResult: []*testrunner.TestResult{{
 				Name:   "fuchsia-pkg://foo/bar",
 				Result: runtests.TestSuccess,
@@ -317,30 +340,27 @@ func TestRunTest(t *testing.T) {
 			if c.runs == 0 {
 				c.runs = 1
 			}
-			if c.maxAttempts == 0 {
-				c.maxAttempts = 1
-			}
-			for i := 0; i < c.runs; i++ {
-				result, err := runTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, MaxAttempts: c.maxAttempts}, i, tester)
+			results, err := runTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester)
 
-				if err != c.expectedErr {
-					t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
-				}
-				if err == nil {
-					if !assertEqual(result, c.expectedResult[i]) {
-						t.Errorf("got result: %v, expected: %v", result, c.expectedResult[i])
+			if err != c.expectedErr {
+				t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
+			}
+			if err == nil {
+				for j, result := range results {
+					if !assertEqual(result, c.expectedResult[j]) {
+						t.Errorf("got result: %v, expected: %v", result, c.expectedResult[j])
 					}
 				}
-				if c.maxAttempts > 1 {
-					funcCalls := strings.Join(tester.funcCalls, ",")
-					testCount := strings.Count(funcCalls, testFunc)
-					expectedTries := 1
-					if c.testErr != nil {
-						expectedTries = c.maxAttempts
-					}
-					if testCount != expectedTries {
-						t.Errorf("ran test %d times, expected: %d", testCount, expectedTries)
-					}
+			}
+			if c.runs > 1 {
+				funcCalls := strings.Join(tester.funcCalls, ",")
+				testCount := strings.Count(funcCalls, testFunc)
+				expectedTries := 1
+				if c.testErr != nil || c.runAlgorithm == testsharder.KeepGoing {
+					expectedTries = c.runs
+				}
+				if testCount != expectedTries {
+					t.Errorf("ran test %d times, expected: %d", testCount, expectedTries)
 				}
 			}
 		})

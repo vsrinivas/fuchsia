@@ -76,7 +76,7 @@ func MakeShards(specs []build.TestSpec, opts *ShardOptions) []*Shard {
 		})
 		var tests []Test
 		for _, spec := range specs {
-			tests = append(tests, Test{Test: spec.Test, Runs: 1, MaxAttempts: 1})
+			tests = append(tests, Test{Test: spec.Test, Runs: 1})
 		}
 		shards = append(shards, &Shard{
 			Name:  environmentName(env),

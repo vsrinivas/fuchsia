@@ -24,7 +24,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
@@ -147,8 +146,10 @@ func validateTest(test testsharder.Test) error {
 	if test.Runs <= 0 {
 		return fmt.Errorf("one or more tests with invalid `runs` field")
 	}
-	if test.MaxAttempts <= 0 {
-		return fmt.Errorf("one or more tests with invalid `max_attempts` field")
+	if test.Runs > 1 {
+		if test.RunAlgorithm == "" {
+			return fmt.Errorf("one or more tests with invalid `run_algorithm` field")
+		}
 	}
 	if test.OS == "fuchsia" && test.PackageURL == "" && test.Path == "" {
 		return fmt.Errorf("one or more fuchsia tests missing the `path` and `package_url` fields")
@@ -236,15 +237,17 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			return fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
 
-		for i := 0; i < test.Runs; i++ {
-			result, err := runTest(ctx, test, i, t)
-			if sshutil.IsConnectionError(err) {
-				return err
+		results, err := runTest(ctx, test, t)
+		if err != nil {
+			return err
+		}
+		if len(results) > 0 {
+			for i, result := range results {
+				if err := outputs.record(*result); err != nil {
+					return err
+				}
+				sinks = append(sinks, results[i].DataSinks)
 			}
-			if err := outputs.record(*result); err != nil {
-				return err
-			}
-			sinks = append(sinks, result.DataSinks)
 		}
 	}
 
@@ -279,54 +282,57 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
-func runTest(ctx context.Context, test testsharder.Test, runIndex int, t tester) (*testrunner.TestResult, error) {
-	// The test case parser specifically uses stdout, so we need to have a
-	// dedicated stdout buffer.
-	stdout := new(bytes.Buffer)
-	stdio := new(stdioBuffer)
+func runTest(ctx context.Context, test testsharder.Test, t tester) ([]*testrunner.TestResult, error) {
+	var results []*testrunner.TestResult
+	for i := 0; i < test.Runs; i++ {
+		// The test case parser specifically uses stdout, so we need to have a
+		// dedicated stdout buffer.
+		stdout := new(bytes.Buffer)
+		stdio := new(stdioBuffer)
 
-	multistdout := io.MultiWriter(os.Stdout, stdio, stdout)
-	multistderr := io.MultiWriter(os.Stderr, stdio)
+		multistdout := io.MultiWriter(os.Stdout, stdio, stdout)
+		multistderr := io.MultiWriter(os.Stderr, stdio)
 
-	// In the case of running tests on QEMU over serial, we do not wish to
-	// forward test output to stdout, as QEMU is already redirecting serial
-	// output there: we do not want to double-print.
-	//
-	// This is a bit of a hack, but is a lesser evil than extending the
-	// testrunner CLI just to sidecar the information of 'is QEMU'.
-	againstQEMU := os.Getenv(nodenameEnvVar) == target.DefaultQEMUNodename
-	if _, ok := t.(*fuchsiaSerialTester); ok && againstQEMU {
-		multistdout = io.MultiWriter(stdio, stdout)
-	}
+		// In the case of running tests on QEMU over serial, we do not wish to
+		// forward test output to stdout, as QEMU is already redirecting serial
+		// output there: we do not want to double-print.
+		//
+		// This is a bit of a hack, but is a lesser evil than extending the
+		// testrunner CLI just to sidecar the information of 'is QEMU'.
+		againstQEMU := os.Getenv(nodenameEnvVar) == target.DefaultQEMUNodename
+		if _, ok := t.(*fuchsiaSerialTester); ok && againstQEMU {
+			multistdout = io.MultiWriter(stdio, stdout)
+		}
 
-	result := runtests.TestSuccess
-	startTime := time.Now()
-	var dataSinks runtests.DataSinkReference
-	var err error
-	retry.Retry(ctx, retry.WithMaxAttempts(&retry.ZeroBackoff{}, uint64(test.MaxAttempts)), func() error {
-		dataSinks, err = t.Test(ctx, test, multistdout, multistderr)
-		return err
-	}, nil)
-	if err != nil {
-		result = runtests.TestFailure
-		logger.Errorf(ctx, err.Error())
-		if sshutil.IsConnectionError(err) {
-			return nil, err
+		result := runtests.TestSuccess
+		startTime := time.Now()
+		dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
+		if err != nil {
+			result = runtests.TestFailure
+			logger.Errorf(ctx, err.Error())
+			if sshutil.IsConnectionError(err) {
+				return results, err
+			}
+		}
+
+		endTime := time.Now()
+
+		// Record the test details in the summary.
+		results = append(results, &testrunner.TestResult{
+			Name:      test.Name,
+			GNLabel:   test.Label,
+			Stdio:     stdio.buf.Bytes(),
+			Result:    result,
+			Cases:     testparser.Parse(stdout.Bytes()),
+			StartTime: startTime,
+			EndTime:   endTime,
+			DataSinks: dataSinks,
+			RunIndex:  i,
+		})
+
+		if test.RunAlgorithm == testsharder.StopOnSuccess && result == runtests.TestSuccess {
+			break
 		}
 	}
-
-	endTime := time.Now()
-
-	// Record the test details in the summary.
-	return &testrunner.TestResult{
-		Name:      test.Name,
-		GNLabel:   test.Label,
-		Stdio:     stdio.buf.Bytes(),
-		Result:    result,
-		Cases:     testparser.Parse(stdout.Bytes()),
-		StartTime: startTime,
-		EndTime:   endTime,
-		DataSinks: dataSinks,
-		RunIndex:  runIndex,
-	}, nil
+	return results, nil
 }

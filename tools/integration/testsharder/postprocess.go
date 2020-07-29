@@ -157,6 +157,7 @@ func MultiplyShards(
 				} else {
 					match.test.Runs = 1
 				}
+				match.test.RunAlgorithm = KeepGoing
 			}
 		}
 
@@ -281,7 +282,7 @@ func WithTargetDuration(
 				if duration > targetDuration {
 					targetDuration = duration
 				}
-				shardDuration += duration * time.Duration(t.Runs)
+				shardDuration += duration * time.Duration(t.minRequiredRuns())
 			}
 			// If any environment would exceed the maximum shard count, then its
 			// shard durations will exceed the specified target duration. So
@@ -300,13 +301,13 @@ func WithTargetDuration(
 		if targetDuration > 0 {
 			var total time.Duration
 			for _, t := range shard.Tests {
-				total += testDurations.Get(t).MedianDuration * time.Duration(t.Runs)
+				total += testDurations.Get(t).MedianDuration * time.Duration(t.minRequiredRuns())
 			}
 			numNewShards = divRoundUp(int(total), int(targetDuration))
 		} else {
 			var total int
 			for _, t := range shard.Tests {
-				total += t.Runs
+				total += t.minRequiredRuns()
 			}
 			numNewShards = divRoundUp(total, targetTestCount)
 		}
@@ -377,22 +378,28 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 	h := (subshardHeap)(make([]subshard, numNewShards))
 
 	for _, test := range shard.Tests {
-		runsPerShard := divRoundUp(test.Runs, numNewShards)
-		extra := runsPerShard*numNewShards - test.Runs
+		runsPerShard := divRoundUp(test.minRequiredRuns(), numNewShards)
+		extra := runsPerShard*numNewShards - test.minRequiredRuns()
 		for i := 0; i < numNewShards; i++ {
 			testCopy := test
+			var runs int
 			if i < numNewShards-extra {
-				testCopy.Runs = runsPerShard
+				runs = runsPerShard
 			} else {
-				testCopy.Runs = runsPerShard - 1
+				runs = runsPerShard - 1
 			}
-			if testCopy.Runs == 0 {
+			if runs == 0 {
 				break
+			}
+			// Only if the test must be run more than once should we split it
+			// across multiple shards.
+			if test.minRequiredRuns() > 1 {
+				testCopy.Runs = runs
 			}
 			// Assign this test to the subshard with the lowest total expected
 			// duration at this iteration of the for loop.
 			ss := heap.Pop(&h).(subshard)
-			ss.duration += testDurations.Get(test).MedianDuration * time.Duration(testCopy.Runs)
+			ss.duration += testDurations.Get(test).MedianDuration * time.Duration(testCopy.minRequiredRuns())
 			ss.tests = append(ss.tests, testCopy)
 			heap.Push(&h, ss)
 		}
