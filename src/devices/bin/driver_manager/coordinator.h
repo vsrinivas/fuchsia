@@ -78,9 +78,14 @@ class SuspendContext {
   Flags flags() const { return flags_; }
   void set_flags(Flags flags) { flags_ = flags; }
   uint32_t sflags() const { return sflags_; }
+  async::TaskClosure* watchdog_task() const { return suspend_watchdog_task_.get(); }
+  void set_suspend_watchdog_task(std::unique_ptr<async::TaskClosure> watchdog_task) {
+    suspend_watchdog_task_ = std::move(watchdog_task);
+  }
 
  private:
   fbl::RefPtr<SuspendTask> task_;
+  std::unique_ptr<async::TaskClosure> suspend_watchdog_task_;
 
   Flags flags_ = Flags::kRunning;
 

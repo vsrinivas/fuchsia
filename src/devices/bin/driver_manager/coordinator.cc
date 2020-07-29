@@ -1317,34 +1317,34 @@ void Coordinator::Suspend(SuspendContext ctx, fit::function<void(zx_status_t)> c
   LOGF(INFO, "Filesystem shutdown complete, creating a suspend timeout-watchdog");
 
   auto callback_info = fbl::MakeRefCounted<SuspendCallbackInfo>(std::move(callback));
-
-  auto status = async::PostDelayedTask(
-      dispatcher(),
-      [this, callback_info] {
-        if (!InSuspend()) {
-          return;  // Suspend failed to complete.
-        }
-        auto& ctx = suspend_context();
-        LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", ctx.sflags());
-        if (ctx.task() != nullptr) {
-          dump_suspend_task_dependencies(ctx.task());
-        }
-        if (suspend_fallback()) {
-          ::suspend_fallback(root_resource(), ctx.sflags());
-          // Unless in test env, we should not reach here.
-          if (callback_info->callback) {
-            callback_info->callback(ZX_ERR_TIMED_OUT);
-            callback_info->callback = nullptr;
-          }
-        }
-      },
-      config_.suspend_timeout);
+  auto watchdog_task = std::make_unique<async::TaskClosure>([this, callback_info] {
+    if (!InSuspend()) {
+      return;  // Suspend failed to complete.
+    }
+    auto& ctx = suspend_context();
+    LOGF(ERROR, "Device suspend timed out, suspend flags: %#08x", ctx.sflags());
+    if (ctx.task() != nullptr) {
+      dump_suspend_task_dependencies(ctx.task());
+    }
+    if (suspend_fallback()) {
+      ::suspend_fallback(root_resource(), ctx.sflags());
+      // Unless in test env, we should not reach here.
+      if (callback_info->callback) {
+        callback_info->callback(ZX_ERR_TIMED_OUT);
+        callback_info->callback = nullptr;
+      }
+    }
+  });
+  suspend_context().set_suspend_watchdog_task(std::move(watchdog_task));
+  zx_status_t status =
+      suspend_context().watchdog_task()->PostDelayed(dispatcher(), config_.suspend_timeout);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to create timeout watchdog for suspend: %s\n",
          zx_status_get_string(status));
   }
   auto completion = [this, callback_info = std::move(callback_info)](zx_status_t status) {
     auto& ctx = suspend_context();
+    ctx.watchdog_task()->Cancel();
     if (status != ZX_OK) {
       // TODO: unroll suspend
       // do not continue to suspend as this indicates a driver suspend
