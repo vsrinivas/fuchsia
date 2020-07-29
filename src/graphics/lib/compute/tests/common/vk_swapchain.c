@@ -790,6 +790,8 @@ vk_swapchain_destroy(vk_swapchain_t * swapchain)
       vkDestroySwapchainKHR(device, swapchain->swapchain_khr, allocator);
       swapchain->swapchain_khr = VK_NULL_HANDLE;
     }
+
+  free(swapchain);
 }
 
 void
