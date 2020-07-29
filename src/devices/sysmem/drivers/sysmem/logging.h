@@ -7,10 +7,15 @@
 
 #include <stdarg.h>
 
+#include <string>
+
 namespace sysmem_driver {
 
 void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* format,
           va_list args);
+
+// Creates a unique name by concatenating prefix and a 64-bit unique number.
+std::string CreateUniqueName(const char* prefix);
 
 }  // namespace sysmem_driver
 

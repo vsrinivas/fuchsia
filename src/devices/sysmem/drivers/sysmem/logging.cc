@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <ddk/debug.h>
+#include <fbl/string_printf.h>
 
 namespace sysmem_driver {
 
@@ -39,4 +40,10 @@ void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* f
   }
 }
 
+static std::atomic_uint64_t name_counter;
+
+std::string CreateUniqueName(const char* prefix) {
+  uint64_t new_value = name_counter++;
+  return std::string(fbl::StringPrintf("%s%ld", prefix, new_value).c_str());
+}
 }  // namespace sysmem_driver

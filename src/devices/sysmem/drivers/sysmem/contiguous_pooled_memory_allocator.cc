@@ -5,6 +5,7 @@
 #include "contiguous_pooled_memory_allocator.h"
 
 #include <ddk/trace/event.h>
+#include <fbl/string_printf.h>
 
 #include "macros.h"
 
@@ -200,12 +201,12 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
 
   RegionData data;
   data.name = std::move(*name);
-  data.node = node_.CreateChild(node_.UniqueName("vmo-"));
-  data.size_property = data.node.CreateUint("size", size);
   zx_info_handle_basic_t handle_info;
   status = result_parent_vmo.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
                                       nullptr, nullptr);
   ZX_ASSERT(status == ZX_OK);
+  data.node = node_.CreateChild(fbl::StringPrintf("vmo-%ld", handle_info.koid).c_str());
+  data.size_property = data.node.CreateUint("size", size);
   data.koid = handle_info.koid;
   data.koid_property = data.node.CreateUint("koid", handle_info.koid);
   data.ptr = std::move(region);

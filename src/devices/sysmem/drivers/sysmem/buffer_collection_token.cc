@@ -140,7 +140,7 @@ BufferCollectionToken::BufferCollectionToken(Device* parent_device,
                  parent_.get());
   ZX_DEBUG_ASSERT(parent_device_);
   ZX_DEBUG_ASSERT(parent_);
-  node_ = parent_->node().CreateChild(parent_->node().UniqueName("token-"));
+  node_ = parent_->node().CreateChild(CreateUniqueName("token-"));
 }
 
 }  // namespace sysmem_driver

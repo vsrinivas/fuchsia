@@ -523,7 +523,7 @@ BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
   TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this, "parent",
                  parent_.get());
   ZX_DEBUG_ASSERT(parent_);
-  node_ = parent_->node().CreateChild(parent_->node().UniqueName("collection-"));
+  node_ = parent_->node().CreateChild(CreateUniqueName("collection-"));
 }
 
 // This method is only meant to be called from GetClientVmoRights().

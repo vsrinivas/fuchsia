@@ -405,8 +405,7 @@ LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
   TRACE_DURATION("gfx", "LogicalBufferCollection::LogicalBufferCollection", "this", this);
   LogInfo("LogicalBufferCollection::LogicalBufferCollection()");
   parent_device_->AddLogicalBufferCollection(this);
-  node_ = parent_device_->collections_node().CreateChild(
-      parent_device_->collections_node().UniqueName("logical-collection-"));
+  node_ = parent_device_->collections_node().CreateChild(CreateUniqueName("logical-collection-"));
 
   zx_status_t status = creation_timer_.PostDelayed(parent_device_->dispatcher(), zx::sec(5));
   ZX_ASSERT(status == ZX_OK);
@@ -1909,7 +1908,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     return fit::error();
   }
 
-  auto node = node_.CreateChild(node_.UniqueName("vmo-"));
+  auto node = node_.CreateChild(fbl::StringPrintf("vmo-%ld", info.koid).c_str());
   node.CreateUint("koid", info.koid, &vmo_properties_);
   vmo_properties_.emplace(std::move(node));
 
