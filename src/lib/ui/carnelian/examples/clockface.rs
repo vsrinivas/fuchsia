@@ -49,37 +49,19 @@ impl AppAssistant for ClockfaceAppAssistant {
     }
 }
 
-fn line(path_builder: &mut PathBuilder, p0: Point, p1: Point) {
-    path_builder.move_to(p0);
-    path_builder.line_to(p1);
-}
-
-fn cubic(path_builder: &mut PathBuilder, p0: Point, p1: Point, p2: Point, p3: Point) {
-    path_builder.move_to(p0);
-    path_builder.cubic_to(p1, p2, p3);
-}
-
 struct RoundedLine {
     path: Path,
 }
 
 impl RoundedLine {
     fn new(mut path_builder: PathBuilder, pos: Point, length: f32, thickness: f32) -> Self {
-        let dist = 4.0 / 3.0 * (f32::consts::PI / 8.0).tan();
         let radius = thickness / 2.0;
-        let control_dist = dist * radius;
         let tl = pos.to_vector();
-        let tr = pos.to_vector() + Point::new(length, 0.0).to_vector();
-        let br = pos.to_vector() + Point::new(length, thickness).to_vector();
-        let bl = pos.to_vector() + Point::new(0.0, thickness).to_vector();
-        let rt = Point::new(0.0, radius).to_vector();
-        let rr = Point::new(-radius, 0.0).to_vector();
-        let rb = Point::new(0.0, -radius).to_vector();
-        let rl = Point::new(radius, 0.0).to_vector();
-        let ct = Point::new(0.0, -control_dist).to_vector();
-        let cr = Point::new(control_dist, 0.0).to_vector();
-        let cb = Point::new(0.0, control_dist).to_vector();
-        let cl = Point::new(-control_dist, 0.0).to_vector();
+        let tr = pos.to_vector() + Vector2D::new(length, 0.0);
+        let br = pos.to_vector() + Vector2D::new(length, thickness);
+        let bl = pos.to_vector() + Vector2D::new(0.0, thickness);
+        let radiush = Vector2D::new(radius, 0.0);
+        let radiusv = Vector2D::new(0.0, radius);
 
         let path = {
             macro_rules! c {
@@ -88,12 +70,13 @@ impl RoundedLine {
                 };
             }
 
-            line(&mut path_builder, c!(tl + rl), c!(tr + rr));
-            cubic(&mut path_builder, c!(tr + rr), c!(tr + rr + cr), c!(tr + rt + ct), c!(tr + rt));
-            cubic(&mut path_builder, c!(br + rb), c!(br + rb + cb), c!(br + rr + cr), c!(br + rr));
-            line(&mut path_builder, c!(br + rr), c!(bl + rl));
-            cubic(&mut path_builder, c!(bl + rl), c!(bl + rl + cl), c!(bl + rb + cb), c!(bl + rb));
-            cubic(&mut path_builder, c!(tl + rt), c!(tl + rt + ct), c!(tl + rl + cl), c!(tl + rl));
+            path_builder.move_to(c!(tl + radiush));
+            path_builder.line_to(c!(tr - radiush));
+            path_builder.rat_quad_to(c!(tr), c!(tr + radiusv), 0.7071);
+            path_builder.rat_quad_to(c!(br), c!(br - radiush), 0.7071);
+            path_builder.line_to(c!(bl + radiush));
+            path_builder.rat_quad_to(c!(bl), c!(bl - radiusv), 0.7071);
+            path_builder.rat_quad_to(c!(tl), c!(tl + radiush), 0.7071);
 
             path_builder.build()
         };

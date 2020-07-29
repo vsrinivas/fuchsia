@@ -358,6 +358,32 @@ impl PathBuilder {
         }
         self
     }
+    /// Create rational quadratic Bézier from end-point to `p2` with `p1` as control point
+    /// and `w` as its weight.
+    pub fn rat_quad_to(&mut self, p1: Point, p2: Point, w: f32) -> &mut Self {
+        match &mut self.inner {
+            PathBuilderInner::Mold(ref mut path_builder) => {
+                path_builder.rat_quad_to(p1, p2, w);
+            }
+            PathBuilderInner::Spinel(ref mut path_builder) => {
+                path_builder.rat_quad_to(p1, p2, w);
+            }
+        }
+        self
+    }
+    /// Create rational cubic Bézier from end-point to `p3` with `p1` and `p2` as control
+    /// points, and `w1` and `w2` their weights.
+    pub fn rat_cubic_to(&mut self, p1: Point, p2: Point, p3: Point, w1: f32, w2: f32) -> &mut Self {
+        match &mut self.inner {
+            PathBuilderInner::Mold(ref mut path_builder) => {
+                path_builder.rat_cubic_to(p1, p2, p3, w1, w2);
+            }
+            PathBuilderInner::Spinel(ref mut path_builder) => {
+                path_builder.rat_cubic_to(p1, p2, p3, w1, w2);
+            }
+        }
+        self
+    }
     /// Closes the path with a line if not yet closed and builds the path.
     ///
     /// Consumes the builder; another one can be requested from the `Context`.
