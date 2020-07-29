@@ -54,4 +54,5 @@ board_kernel_cmdline_args = [
   # benchmarks could cause noticable variation.
   "kernel.page-scanner.start-at-boot=false",
   "kernel.page-scanner.zero-page-scans-per-second=0",
+  "kernel.page-scanner.enable-user-pager-eviction=false",
 ]
