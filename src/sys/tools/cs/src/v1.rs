@@ -112,23 +112,31 @@ impl V1Realm {
         }
     }
 
-    pub fn generate_details_recursive(&self, prefix: &str, lines: &mut Vec<String>) {
+    pub fn generate_details_recursive(
+        &self,
+        prefix: &str,
+        lines: &mut Vec<String>,
+        url_filter: &str,
+    ) {
         let moniker = format!("{}{}", prefix, self.name);
 
-        lines.push(moniker.clone());
-        lines.push(format!("- Job ID: {}", self.job_id));
-        lines.push(format!("- Type: v1 realm"));
-
-        // Recurse on children
-        let prefix = format!("{}/", moniker);
-        for child in &self.child_components {
+        // Print information about realms if there is no URL filter
+        if url_filter.is_empty() {
+            lines.push(moniker.clone());
+            lines.push(format!("- Job ID: {}", self.job_id));
+            lines.push(format!("- Type: v1 realm"));
             lines.push("".to_string());
-            child.generate_details_recursive(&prefix, lines);
         }
 
+        // Recurse on child components
+        let prefix = format!("{}/", moniker);
+        for child in &self.child_components {
+            child.generate_details_recursive(&prefix, lines, url_filter);
+        }
+
+        // Recurse on child realms
         for child in &self.child_realms {
-            lines.push("".to_string());
-            child.generate_details_recursive(&prefix, lines);
+            child.generate_details_recursive(&prefix, lines, url_filter);
         }
     }
 }
@@ -160,22 +168,24 @@ impl V1Component {
         }
     }
 
-    fn generate_details_recursive(&self, prefix: &str, lines: &mut Vec<String>) {
+    fn generate_details_recursive(&self, prefix: &str, lines: &mut Vec<String>, url_filter: &str) {
         let moniker = format!("{}{}", prefix, self.name);
         let unknown_merkle = UNKNOWN.to_string();
         let merkle = self.merkleroot.as_ref().unwrap_or(&unknown_merkle);
 
-        lines.push(moniker.clone());
-        lines.push(format!("- URL: {}", self.url));
-        lines.push(format!("- Job ID: {}", self.job_id));
-        lines.push(format!("- Merkle Root: {}", merkle));
-        lines.push(format!("- Type: v1 component"));
+        if url_filter.is_empty() || self.url.contains(url_filter) {
+            lines.push(moniker.clone());
+            lines.push(format!("- URL: {}", self.url));
+            lines.push(format!("- Job ID: {}", self.job_id));
+            lines.push(format!("- Merkle Root: {}", merkle));
+            lines.push(format!("- Type: v1 component"));
+            lines.push("".to_string());
+        }
 
         // Recurse on children
         let prefix = format!("{}/", moniker);
         for child in &self.child_components {
-            lines.push("".to_string());
-            child.generate_details_recursive(&prefix, lines);
+            child.generate_details_recursive(&prefix, lines, url_filter);
         }
     }
 }

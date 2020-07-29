@@ -9,7 +9,7 @@ async fn launch_cs(hub_v2_path: String) -> Vec<String> {
     let root = V2Component::new_root_component(hub_v2_path).await;
     let mut lines = root.generate_tree();
     lines.push("".to_string());
-    lines.append(&mut root.generate_details());
+    lines.append(&mut root.generate_details(""));
     lines
 }
 
@@ -52,6 +52,7 @@ async fn empty_component() {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
+            "",
         ],
     );
 }
@@ -136,6 +137,7 @@ async fn tree() {
             "- Exposed Services (0)",
             "- Incoming Services (0)",
             "- Outgoing Services (0)",
+            "",
         ],
     );
 }
@@ -192,6 +194,7 @@ async fn echo_realm() {
             "  - fidl.examples.routing.echo.Echo",
             "  - fuchsia.logger.LogSink",
             "- Outgoing Services (0)",
+            "",
         ],
     );
 }

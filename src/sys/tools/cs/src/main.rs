@@ -21,18 +21,26 @@ use {
     name = "Component Statistics (cs) Reporting Tool",
     about = "Displays information about components on the system."
 )]
-struct Opt {
-    /// Output detailed information about all v1 and v2 components on the system.
-    #[structopt(short = "d", long = "detailed")]
-    detailed: bool,
+enum Opt {
+    /// Output the component tree.
+    #[structopt(name = "tree")]
+    Tree,
 
-    /// Show number of log messages for each component broken down by severity.
-    #[structopt(long = "log-stats")]
-    log_stats: bool,
+    /// Output detailed information about components on the system.
+    #[structopt(name = "info")]
+    Info {
+        /// Print information for any component whose URL matches this substring.
+        #[structopt(short = "f", long = "url-filter", default_value = "")]
+        url_filter: String,
+    },
 
-    /// The minimum severity to show in the log stats.
-    #[structopt(long = "min-severity", default_value = "info")]
-    min_severity: LogSeverity,
+    /// Display per-component statistics for syslogs.
+    #[structopt(name = "logs")]
+    Logs {
+        /// The minimum severity to show in the log stats.
+        #[structopt(long = "min-severity", default_value = "info")]
+        min_severity: LogSeverity,
+    },
 }
 
 #[fasync::run_singlethreaded]
@@ -42,23 +50,25 @@ async fn main() -> Result<(), Error> {
     // information on the Hub directory structure.
     let opt = Opt::from_args();
 
-    if opt.log_stats {
-        let log_stats = LogStats::new(opt.min_severity).await?;
-        println!("{}", log_stats);
-        return Ok(());
+    match opt {
+        Opt::Logs { min_severity } => {
+            let log_stats = LogStats::new(min_severity).await?;
+            println!("{}", log_stats);
+        }
+        Opt::Info { url_filter } => {
+            // Print out the component details
+            let component = V2Component::new_root_component("/hub-v2".to_string()).await;
+            let lines = component.generate_details(&url_filter);
+            let output = lines.join("\n");
+            println!("{}", output);
+        }
+        Opt::Tree => {
+            // Print out the component tree
+            let component = V2Component::new_root_component("/hub-v2".to_string()).await;
+            let lines = component.generate_tree();
+            let output = lines.join("\n");
+            println!("{}", output);
+        }
     }
-
-    // Print out the component tree (and maybe component details)
-    let component = V2Component::new_root_component("/hub-v2".to_string()).await;
-    let mut lines = component.generate_tree();
-
-    if opt.detailed {
-        lines.push("".to_string());
-        lines.append(&mut component.generate_details());
-    }
-
-    let output = lines.join("\n");
-    println!("{}", output);
-
     Ok(())
 }

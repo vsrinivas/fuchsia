@@ -129,33 +129,35 @@ impl V2Component {
         }
     }
 
-    pub fn generate_details(&self) -> Vec<String> {
+    pub fn generate_details(&self, url_filter: &str) -> Vec<String> {
         let mut lines: Vec<String> = vec![];
-        self.generate_details_recursive("", &mut lines);
+        self.generate_details_recursive("", &mut lines, url_filter);
         lines
     }
 
-    fn generate_details_recursive(&self, prefix: &str, lines: &mut Vec<String>) {
+    fn generate_details_recursive(&self, prefix: &str, lines: &mut Vec<String>, url_filter: &str) {
         let moniker = format!("{}{}:{}", prefix, self.name, self.id);
 
-        lines.push(moniker.clone());
-        lines.push(format!("- URL: {}", self.url));
-        lines.push(format!("- Type: v2 {} component", self.component_type));
-        generate_services("Exposed Services", &self.exposed_services, lines);
-        generate_services("Incoming Services", &self.in_services, lines);
-        generate_services("Outgoing Services", &self.out_services, lines);
+        // Print if the filter matches
+        if url_filter.is_empty() || self.url.contains(url_filter) {
+            lines.push(moniker.clone());
+            lines.push(format!("- URL: {}", self.url));
+            lines.push(format!("- Type: v2 {} component", self.component_type));
+            generate_services("Exposed Services", &self.exposed_services, lines);
+            generate_services("Incoming Services", &self.in_services, lines);
+            generate_services("Outgoing Services", &self.out_services, lines);
+            lines.push("".to_string());
+        }
 
         // Recurse on children
         let prefix = format!("{}/", moniker);
         for child in &self.children {
-            lines.push("".to_string());
-            child.generate_details_recursive(&prefix, lines);
+            child.generate_details_recursive(&prefix, lines, url_filter);
         }
 
         // If this component is appmgr, generate details for all v1 components
         if let Some(v1_realm) = &self.appmgr_root_v1_realm {
-            lines.push("".to_string());
-            v1_realm.generate_details_recursive(&prefix, lines);
+            v1_realm.generate_details_recursive(&prefix, lines, url_filter);
         }
     }
 }
