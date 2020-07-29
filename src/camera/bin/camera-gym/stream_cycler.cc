@@ -15,7 +15,7 @@
 
 namespace camera {
 
-constexpr zx::duration kDemoTime = zx::sec(10);
+constexpr zx::duration kDemoTime = zx::msec(CONFIGURATION_CYCLE_TIME_MS);
 
 // Ratio controls how often ROI is moved.
 // (1 = every frame, 2 = every other frame, etc)

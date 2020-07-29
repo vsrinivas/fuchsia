@@ -172,6 +172,7 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
   streams_.clear();
   streams_.resize(configurations_[index].streams.size());
   current_configuration_index_ = index;
+  FX_LOGS(DEBUG) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
     client.second->PostConfigurationUpdated(current_configuration_index_);
     client.second->PostMuteUpdated(mute_state_);

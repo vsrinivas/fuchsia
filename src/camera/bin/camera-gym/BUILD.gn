@@ -7,6 +7,10 @@ import("//build/package.gni")
 import("//src/camera/bin/camera-gym/assets/convert_image.gni")
 import("//src/camera/debug.gni")
 
+declare_args() {
+  camera_gym_configuration_cycle_time_ms = 10000
+}
+
 name = "camera-gym"
 
 executable("bin") {
@@ -45,7 +49,10 @@ executable("bin") {
     "//zircon/system/ulib/fzl",
   ]
 
-  defines = [ camera_debug_define ]
+  defines = [
+    camera_debug_define,
+    "CONFIGURATION_CYCLE_TIME_MS=(${camera_gym_configuration_cycle_time_ms})",
+  ]
 }
 
 convert_image("mute_icon") {
