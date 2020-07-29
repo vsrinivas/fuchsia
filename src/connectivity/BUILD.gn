@@ -21,11 +21,15 @@ group("connectivity") {
 group("tools") {
   testonly = true
   public_deps = [
-    "//src/connectivity/management/network-manager-cli",
-    "//src/connectivity/network/dhcpd-cli",
-    "//src/connectivity/network/netdump",
-    "//src/connectivity/network/netstack:tools",
-    "//src/connectivity/wlan:tools",
+    "management/network-manager-cli",
+    "network/dhcpd-cli",
+    "network/mdns/bundles:utils",
+    "network/net-cli",
+    "network/netdump",
+    "network/netstack:tools",
+    "overnet/overnetstack",
+    "overnet/tools",
+    "wlan:tools",
   ]
 }
 

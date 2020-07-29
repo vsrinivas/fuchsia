@@ -17,8 +17,6 @@ group("tools") {
     "//garnet/packages/tools:all",
     "//src/camera:tools",
     "//src/connectivity:tools",
-    "//src/connectivity/overnet/overnetstack",
-    "//src/connectivity/overnet/tools",
     "//src/developer/debug/zxdb:zxdb_host",
     "//src/developer/ffx:ffx_tool",
     "//src/developer/ffx:runtime",
