@@ -1,0 +1,42 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("tests_bin") {
+  name = "bt_a2dp_source_integration_tests"
+  edition = "2018"
+  source_root = "src/main.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//src/connectivity/bluetooth/lib/bt-profile-test-server",
+    "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
+    "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/trace/rust:trace",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
+  ]
+}
+
+fuchsia_component("bt_a2dp_source_integration_tests") {
+  testonly = true
+  manifest = "meta/bt-a2dp-source-integration-tests.cmx"
+  deps = [ ":tests_bin" ]
+}
+
+fuchsia_test_package("bt-a2dp-source-integration-tests") {
+  test_components = [ ":bt_a2dp_source_integration_tests" ]
+}

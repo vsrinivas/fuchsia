@@ -8,7 +8,7 @@
         }
     },
     "program": {
-        "binary": "test/bt-a2dp-source-integration-tests"
+        "binary": "test/bt-a2dp-source-encoding-tests"
     },
     "sandbox": {
         "services": [

@@ -16,5 +16,6 @@ group("profiles") {
     "bt-avrcp-target",
     "bt-avrcp-target:tests",
     "bt-hog",
+    "tests",
   ]
 }

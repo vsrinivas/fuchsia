@@ -86,7 +86,7 @@ config_data("startup_config") {
 group("tests") {
   testonly = true
   deps = [
-    ":bt-a2dp-source-integration-tests",
+    ":bt-a2dp-source-encoding-tests",
     ":bt-a2dp-source-tests",
   ]
 }
@@ -103,8 +103,8 @@ test_package("bt-a2dp-source-tests") {
   ]
 }
 
-rustc_test("integration_tests") {
-  name = "bt_a2dp_source_integration_tests"
+rustc_test("encoding_integration_bin") {
+  name = "bt_a2dp_source_encoding_tests"
   edition = "2018"
   source_root = "src/encoding_integration.rs"
 
@@ -132,13 +132,13 @@ rustc_test("integration_tests") {
   ]
 }
 
-test_package("bt-a2dp-source-integration-tests") {
-  deps = [ ":integration_tests" ]
+test_package("bt-a2dp-source-encoding-tests") {
+  deps = [ ":encoding_integration_bin" ]
 
   tests = [
     {
-      name = "bt_a2dp_source_integration_tests"
-      dest = "bt-a2dp-source-integration-tests"
+      name = "bt_a2dp_source_encoding_tests"
+      dest = "bt-a2dp-source-encoding-tests"
       environments = basic_envs
     },
   ]

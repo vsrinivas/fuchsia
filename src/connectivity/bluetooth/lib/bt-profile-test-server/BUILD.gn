@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+rustc_library("bt-profile-test-server") {
+  name = "bt_profile_test_server"
+  version = "0.1.0"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//src/connectivity/bluetooth/fidl:host-rustc",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
+}
