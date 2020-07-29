@@ -10,10 +10,10 @@ use anyhow::{bail, format_err, Error};
 use fidl::Channel;
 use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderProxyInterface};
 use futures::lock::Mutex;
-use std::collections::BTreeMap;
+use std::collections::{btree_map, BTreeMap};
 
 /// A type that can be converted into a fidl_fuchsia_overnet::Peer
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ListablePeer {
     node_id: NodeId,
     is_self: bool,
@@ -32,11 +32,28 @@ impl From<ListablePeer> for fidl_fuchsia_overnet::Peer {
     }
 }
 
+struct ListablePeerSet {
+    listable_peers: Vec<ListablePeer>,
+    peers_with_client_connection: BTreeMap<NodeId, usize>,
+}
+
+impl ListablePeerSet {
+    fn publish(&self) -> Vec<ListablePeer> {
+        let peers_with_client_connection = &self.peers_with_client_connection;
+        self.listable_peers
+            .iter()
+            .filter(move |p| p.is_self || peers_with_client_connection.contains_key(&p.node_id))
+            .cloned()
+            .collect()
+    }
+}
+
 pub struct ServiceMap {
     local_services: Mutex<BTreeMap<String, Box<dyn ServiceProviderProxyInterface>>>,
     local_node_id: NodeId,
     local_service_list: Observable<Vec<String>>,
     list_peers: Observable<Vec<ListablePeer>>,
+    listable_peer_set: Mutex<ListablePeerSet>,
 }
 
 impl ServiceMap {
@@ -46,6 +63,10 @@ impl ServiceMap {
             local_node_id,
             local_service_list: Observable::new_traced(Vec::new(), false),
             list_peers: Observable::new(Vec::new()),
+            listable_peer_set: Mutex::new(ListablePeerSet {
+                listable_peers: Vec::new(),
+                peers_with_client_connection: BTreeMap::new(),
+            }),
         }
     }
 
@@ -94,17 +115,46 @@ impl ServiceMap {
     }
 
     async fn update_list_peers(&self, update_peer: ListablePeer) {
-        self.list_peers
-            .edit(|peers| {
-                for existing_peer in peers.iter_mut() {
-                    if existing_peer.node_id == update_peer.node_id {
-                        *existing_peer = update_peer;
-                        return;
-                    }
+        let mut lsp = self.listable_peer_set.lock().await;
+        let peers = &mut lsp.listable_peers;
+        for existing_peer in peers.iter_mut() {
+            if existing_peer.node_id == update_peer.node_id {
+                if *existing_peer == update_peer {
+                    return;
                 }
-                peers.push(update_peer);
-            })
-            .await;
+                *existing_peer = update_peer;
+                self.list_peers.push(lsp.publish()).await;
+                return;
+            }
+        }
+        peers.push(update_peer);
+        self.list_peers.push(lsp.publish()).await;
+    }
+
+    pub async fn add_client_connection(&self, peer_id: NodeId) {
+        let mut lsp = self.listable_peer_set.lock().await;
+        match lsp.peers_with_client_connection.entry(peer_id) {
+            btree_map::Entry::Occupied(o) => *o.into_mut() += 1,
+            btree_map::Entry::Vacant(v) => {
+                v.insert(1);
+                self.list_peers.push(lsp.publish()).await;
+            }
+        }
+    }
+
+    pub async fn remove_client_connection(&self, peer_id: NodeId) {
+        let mut lsp = self.listable_peer_set.lock().await;
+        match lsp.peers_with_client_connection.entry(peer_id) {
+            btree_map::Entry::Occupied(mut o) => match *o.get() {
+                0 => unreachable!(),
+                1 => {
+                    o.remove();
+                    self.list_peers.push(lsp.publish()).await;
+                }
+                n => *o.get_mut() = n - 1,
+            },
+            btree_map::Entry::Vacant(_) => unreachable!(),
+        }
     }
 
     pub fn new_local_service_observer(&self) -> Observer<Vec<String>> {

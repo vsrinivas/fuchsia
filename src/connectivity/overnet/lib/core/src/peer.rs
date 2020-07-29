@@ -158,7 +158,7 @@ impl Peer {
                 conn_id,
                 futures::future::try_join(
                     client_conn_stream(
-                        router.node_id(),
+                        Arc::downgrade(router),
                         node_id,
                         conn_stream_writer,
                         conn_stream_reader,
@@ -381,8 +381,32 @@ async fn client_handshake(
     .await
 }
 
+struct TrackClientConnection {
+    router: Weak<Router>,
+    node_id: NodeId,
+}
+
+impl TrackClientConnection {
+    async fn new(router: &Arc<Router>, node_id: NodeId) -> TrackClientConnection {
+        router.service_map().add_client_connection(node_id).await;
+        TrackClientConnection { router: Arc::downgrade(router), node_id }
+    }
+}
+
+impl Drop for TrackClientConnection {
+    fn drop(&mut self) {
+        if let Some(router) = Weak::upgrade(&self.router) {
+            let node_id = self.node_id;
+            Task::spawn(
+                async move { router.service_map().remove_client_connection(node_id).await },
+            )
+            .detach();
+        }
+    }
+}
+
 async fn client_conn_stream(
-    my_node_id: NodeId,
+    router: Weak<Router>,
     peer_node_id: NodeId,
     conn_stream_writer: AsyncQuicStreamWriter,
     conn_stream_reader: AsyncQuicStreamReader,
@@ -391,6 +415,9 @@ async fn client_conn_stream(
     mut services: Observer<Vec<String>>,
     conn_stats: Arc<PeerConnStats>,
 ) -> Result<(), Error> {
+    let get_router = move || Weak::upgrade(&router).ok_or_else(|| format_err!("router gone"));
+    let my_node_id = get_router()?.node_id();
+
     let (conn_stream_writer, mut conn_stream_reader) = client_handshake(
         my_node_id,
         peer_node_id,
@@ -399,6 +426,8 @@ async fn client_conn_stream(
         conn_stats.clone(),
     )
     .await?;
+
+    let _track_connection = TrackClientConnection::new(&get_router()?, peer_node_id).await;
 
     let on_link_status_ack = &Mutex::new(None);
     let conn_stream_writer = &Mutex::new(conn_stream_writer);
