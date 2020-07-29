@@ -60,13 +60,11 @@ executable("main") {
   deps = [
     ":main_service",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/utils/component",
     "//src/lib/timekeeper:system",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 

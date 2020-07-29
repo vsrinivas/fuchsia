@@ -34,7 +34,10 @@ executable("exe") {
 
   sources = [ "main.cc" ]
 
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//src/developer/forensics/utils/component",
+  ]
 }
 
 ###############################################################################

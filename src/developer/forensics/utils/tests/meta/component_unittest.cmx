@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/component_unittest_exe"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

@@ -98,6 +98,19 @@ executable("cobalt_unittest_exe") {
   ]
 }
 
+executable("component_unittest_exe") {
+  testonly = true
+
+  sources = [ "component_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/utils/component",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("data_provider_ptr_unittest_exe") {
   testonly = true
 
@@ -294,6 +307,14 @@ fuchsia_component("cobalt_unittest") {
   deps = [ ":cobalt_unittest_exe" ]
 }
 
+fuchsia_component("component_unittest") {
+  testonly = true
+
+  manifest = "meta/component_unittest.cmx"
+
+  deps = [ ":component_unittest_exe" ]
+}
+
 fuchsia_component("data_provider_ptr_unittest") {
   testonly = true
 
@@ -376,6 +397,7 @@ fuchsia_test_package("feedback-utils-tests") {
     ":caching_ptr_unittest",
     ":channel_provider_ptr_unittest",
     ":cobalt_unittest",
+    ":component_unittest",
     ":data_provider_ptr_unittest",
     ":device_id_provider_ptr_unittest",
     ":inspect_node_manager_unittest",

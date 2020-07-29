@@ -1,0 +1,23 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("component") {
+  sources = [
+    "component.cc",
+    "component.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  deps = [ "//src/lib/files" ]
+}

@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/vmo/types.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/timekeeper/system_clock.h>
@@ -17,44 +13,40 @@
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/main_service.h"
+#include "src/developer/forensics/utils/component/component.h"
 
 int main(int argc, const char** argv) {
   using namespace ::forensics::crash_reports;
 
   syslog::SetTags({"forensics", "crash"});
 
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  forensics::component::Component component;
 
   const timekeeper::SystemClock clock;
 
-  auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
-  inspect::Node& root_node = inspector->root();
+  auto info_context = std::make_shared<InfoContext>(component.InspectRoot(), clock,
+                                                    component.Dispatcher(), component.Services());
 
-  auto info_context =
-      std::make_shared<InfoContext>(&root_node, clock, loop.dispatcher(), context->svc());
-
-  std::unique_ptr<MainService> main_service =
-      MainService::TryCreate(loop.dispatcher(), context->svc(), clock, std::move(info_context));
+  std::unique_ptr<MainService> main_service = MainService::TryCreate(
+      component.Dispatcher(), component.Services(), clock, std::move(info_context));
   if (!main_service) {
     return EXIT_FAILURE;
   }
 
   // fuchsia.feedback.CrashReporter
-  context->outgoing()->AddPublicService(
-      ::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter>(
-          [&main_service](::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
-            main_service->HandleCrashReporterRequest(std::move(request));
-          }));
+  component.AddPublicService(::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter>(
+      [&main_service](::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
+        main_service->HandleCrashReporterRequest(std::move(request));
+      }));
   // fuchsia.feedback.CrashReportingProductRegister
-  context->outgoing()->AddPublicService(
+  component.AddPublicService(
       ::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReportingProductRegister>(
           [&main_service](
               ::fidl::InterfaceRequest<fuchsia::feedback::CrashReportingProductRegister> request) {
             main_service->HandleCrashRegisterRequest(std::move(request));
           }));
 
-  loop.Run();
+  component.RunLoop();
 
   return EXIT_SUCCESS;
 }
