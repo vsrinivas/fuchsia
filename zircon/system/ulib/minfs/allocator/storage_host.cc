@@ -4,13 +4,18 @@
 
 #include <utility>
 
+#include <minfs/format.h>
+
 #include "storage.h"
 
 namespace minfs {
 
 PersistentStorage::PersistentStorage(SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
-                                     AllocatorMetadata metadata)
-    : sb_(sb), grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
+                                     AllocatorMetadata metadata, uint32_t block_size)
+    : sb_(sb),
+      grow_cb_(std::move(grow_cb)),
+      metadata_(std::move(metadata)),
+      block_size_(block_size) {}
 
 zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
                                       GrowMapCallback grow_map) {

@@ -4,7 +4,10 @@
 
 #include "storage.h"
 
+#include <cstdint>
 #include <utility>
+
+#include <minfs/format.h>
 
 #include "allocator.h"
 
@@ -12,12 +15,13 @@ namespace minfs {
 
 PersistentStorage::PersistentStorage(block_client::BlockDevice* device, SuperblockManager* sb,
                                      size_t unit_size, GrowHandler grow_cb,
-                                     AllocatorMetadata metadata)
+                                     AllocatorMetadata metadata, uint32_t block_size)
     : device_(device),
       unit_size_(unit_size),
       sb_(sb),
       grow_cb_(std::move(grow_cb)),
-      metadata_(std::move(metadata)) {}
+      metadata_(std::move(metadata)),
+      block_size_(block_size) {}
 
 zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* out) {
   return device_->BlockAttachVmo(vmo, &out->GetReference(device_));
@@ -37,7 +41,7 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
 
   // How large is the bitmap right now?
   uint32_t bitmap_slices = metadata_.Fvm().MetadataSlices();
-  uint32_t bitmap_blocks = metadata_.Fvm().UnitsPerSlices(bitmap_slices, kMinfsBlockSize);
+  uint32_t bitmap_blocks = metadata_.Fvm().UnitsPerSlices(bitmap_slices, BlockSize());
 
   // How large does the bitmap need to be?
   uint32_t data_slices = metadata_.Fvm().DataSlices();

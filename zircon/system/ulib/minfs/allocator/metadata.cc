@@ -18,9 +18,9 @@ uint32_t AllocatorFvmMetadata::UnitsPerSlices(uint32_t slices, uint32_t unit_siz
 // values of |blocks| which are known to be convertible to slices
 // without loss. This is checked by a runtime assertion.
 uint32_t AllocatorFvmMetadata::BlocksToSlices(uint32_t blocks) const {
-  const size_t kBlocksPerSlice = SliceSize() / kMinfsBlockSize;
+  const size_t kBlocksPerSlice = SliceSize() / superblock_->BlockSize();
   uint32_t slices = static_cast<uint32_t>(blocks / kBlocksPerSlice);
-  ZX_DEBUG_ASSERT(UnitsPerSlices(slices, kMinfsBlockSize) == blocks);
+  ZX_DEBUG_ASSERT(UnitsPerSlices(slices, superblock_->BlockSize()) == blocks);
   return slices;
 }
 

@@ -1039,10 +1039,10 @@ zx_status_t Minfs::ReadInitialBlocks(const Superblock& info, std::unique_ptr<Bca
   std::unique_ptr<PersistentStorage> storage(
 #ifdef __Fuchsia__
       new PersistentStorage(bc->device(), sb.get(), sb->Info().BlockSize(), nullptr,
-                            std::move(block_allocator_meta)));
+                            std::move(block_allocator_meta), sb->BlockSize()));
 #else
       new PersistentStorage(sb.get(), sb->Info().BlockSize(), nullptr,
-                            std::move(block_allocator_meta)));
+                            std::move(block_allocator_meta), sb->BlockSize()));
 #endif
 
   std::unique_ptr<Allocator> block_allocator;

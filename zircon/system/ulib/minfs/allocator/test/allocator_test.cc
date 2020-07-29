@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <fbl/array.h>
+#include <minfs/format.h>
 #include <zxtest/zxtest.h>
 
 namespace minfs {
@@ -292,7 +293,8 @@ TEST(AllocatorTest, PersistRange) {
   // Create PersistentStorage with bogus attributes - valid storage is unnecessary for this test.
   AllocatorFvmMetadata fvm_metadata;
   AllocatorMetadata metadata(0, 0, false, std::move(fvm_metadata), nullptr, {});
-  PersistentStorage storage(nullptr, nullptr, kMinfsBlockSize, nullptr, std::move(metadata));
+  PersistentStorage storage(nullptr, nullptr, kMinfsBlockSize, nullptr, std::move(metadata),
+                            kMinfsBlockSize);
   FakeTransaction transaction;
   ASSERT_EQ(transaction.BlockCount(), 0);
 

@@ -11,6 +11,7 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fs/transaction/buffered_operations_builder.h>
+#include <minfs/format.h>
 #include <minfs/superblock.h>
 #include <storage/operation/operation.h>
 
@@ -83,11 +84,11 @@ class PersistentStorage : public AllocatorStorage {
 #ifdef __Fuchsia__
   // |grow_cb| is an optional callback to increase the size of the allocator.
   PersistentStorage(block_client::BlockDevice* device, SuperblockManager* sb, size_t unit_size,
-                    GrowHandler grow_cb, AllocatorMetadata metadata);
+                    GrowHandler grow_cb, AllocatorMetadata metadata, uint32_t block_size);
 #else
   // |grow_cb| is an optional callback to increase the size of the allocator.
   PersistentStorage(SuperblockManager* sb, size_t unit_size, GrowHandler grow_cb,
-                    AllocatorMetadata metadata);
+                    AllocatorMetadata metadata, uint32_t block_size);
 #endif
   ~PersistentStorage() {}
 
@@ -112,6 +113,7 @@ class PersistentStorage : public AllocatorStorage {
  private:
   // Returns the number of blocks necessary to store a pool containing |size| bits.
   static blk_t BitmapBlocksForSize(size_t size);
+  uint32_t BlockSize() const { return block_size_; }
 
 #ifdef __Fuchsia__
   block_client::BlockDevice* device_;
@@ -120,6 +122,7 @@ class PersistentStorage : public AllocatorStorage {
   SuperblockManager* sb_;
   GrowHandler grow_cb_;
   AllocatorMetadata metadata_;
+  uint32_t block_size_ = {};
 };
 
 }  // namespace minfs
