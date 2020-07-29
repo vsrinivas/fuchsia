@@ -55,4 +55,15 @@ protocol Isp {
                        ddk.protocol.camera.FrameRate rate, StreamType type,
                        ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback)
                             -> (zx.status s, OutputStream st);
+
+    // Configures the ISP to provide the streams with frame rate
+    // within the given range.
+    // |min_frame_rate|  : Minimum allowed frame rate.
+    // |max_frame_rate|  : Maximum allowed frame rate.
+    // Returns:
+    //   ZX_ERR_NOT_SUPPORTED if sensor doesn't support a specific frame rate.
+    SetFrameRateRange(ddk.protocol.camera.FrameRate min_frame_rate,
+                      ddk.protocol.camera.FrameRate max_frame_rate)
+                        -> (zx.status s);
+
 };
