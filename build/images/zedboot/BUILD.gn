@@ -100,7 +100,7 @@ migrated_zbi("zbi") {
     ":ta",
     "//build/unification/future/images:zxcrypt",
     "//build/unification/zbi:kernel",
-    "//src/sys/installer:installer.manifest",
+    "//src/sys/installer:bin",
   ]
   deps += zedboot_deps
   deps += bootfs_manifest_additions

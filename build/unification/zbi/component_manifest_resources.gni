@@ -1,0 +1,42 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zbi/resource.gni")
+import("//src/sys/cmc/build/cml.gni")
+
+# Prepares some component manifest files for inclusion in a ZBI.
+#
+# Parameters
+#
+#   sources
+#     Required: List of paths to .cml meta files
+
+template("component_manifest_resources") {
+  assert(defined(invoker.sources), "Must set some sources")
+
+  compile_deps = []
+  compile_outputs = []
+
+  foreach(source, invoker.sources) {
+    extension = get_path_info(source, "extension")
+    assert(extension == "cml", "Only .cml files are supported: $source")
+
+    name = get_path_info(source, "name")
+    compile_target = "${name}_compile.cm"
+
+    cm(compile_target) {
+      manifest = source
+      output_name = "$name.cm"
+    }
+
+    compile_deps += [ ":$compile_target" ]
+    compile_outputs += get_target_outputs(":$compile_target")
+  }
+
+  resource(target_name) {
+    sources = compile_outputs
+    outputs = [ "meta/{{source_file_part}}" ]
+    deps = compile_deps
+  }
+}

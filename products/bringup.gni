@@ -20,7 +20,7 @@ kernel_cmdline_args = [
 ]
 
 product_bootfs_labels =
-    [ "//src/security/policy:component_manager_policy.manifest" ]
+    [ "//src/security/policy:component_manager_policy_bootfs" ]
 
 meta_package_labels = []
 

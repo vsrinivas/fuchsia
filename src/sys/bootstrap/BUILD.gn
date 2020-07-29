@@ -2,33 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/bootfs_manifest.gni")
+import("//build/unification/zbi/component_manifest_resources.gni")
 
-bootfs_manifest("root_manifests.manifest") {
-  meta = [
-    {
-      path = rebase_path("meta/root.cml")
-    },
-    {
-      path = rebase_path("meta/bootstrap.cml")
-    },
+component_manifest_resources("root_manifests") {
+  sources = [
+    "meta/bootstrap.cml",
+    "meta/root.cml",
+  ]
 
-    # TODO(BLD-448): These should move into their appropriate packages that are
-    # included in bootfs along with the binaries and other resources/libraries.
-    {
-      path = rebase_path("meta/console.cml")
-    },
-    {
-      path = rebase_path("meta/pwrbtn-monitor.cml")
-    },
-    {
-      path = rebase_path("meta/ptysvc.cml")
-    },
-    {
-      path = rebase_path("meta/sysinfo.cml")
-    },
-    {
-      path = rebase_path("meta/fshost.cml")
-    },
+  # TODO(BLD-448): These should move into their appropriate packages that are
+  # included in bootfs along with the binaries and other resources/libraries.
+  sources += [
+    "meta/console.cml",
+    "meta/fshost.cml",
+    "meta/ptysvc.cml",
+    "meta/pwrbtn-monitor.cml",
+    "meta/sysinfo.cml",
   ]
 }

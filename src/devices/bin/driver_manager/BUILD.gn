@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/bootfs_manifest.gni")
 import("//build/test.gni")
+import("//build/unification/zbi/component_manifest_resources.gni")
 import("//src/sys/build/components.gni")
 
 group("tests") {
@@ -159,16 +159,13 @@ fuchsia_test_package("driver-manager-tests") {
   test_components = [ ":driver-manager-test-component" ]
 }
 
-bootfs_manifest("driver_manager.manifest") {
-  deps = [ ":driver_manager" ]
-  binaries = [
-    {
-      name = "driver_manager"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/driver_manager.cml")
-    },
+component_manifest_resources("meta") {
+  sources = [ "meta/driver_manager.cml" ]
+}
+
+group("bootfs") {
+  deps = [
+    ":driver_manager",
+    ":meta",
   ]
 }

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/bootfs_manifest.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
@@ -263,17 +262,6 @@ rustc_binary("bin") {
   enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
-}
-
-# This manifest is consumed by the ZBI rule in //build/images to add component_manager to bootfs.
-bootfs_manifest("component_manager_bootfs.manifest") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "component_manager"
-    },
-  ]
 }
 
 # Note that this package and the component it contains wrap component_manager

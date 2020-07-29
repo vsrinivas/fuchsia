@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/images/bootfs_manifest.gni")
 import("//build/package.gni")
 
 group("devices") {
@@ -48,27 +47,10 @@ group("tests") {
   ]
 }
 
-bootfs_manifest("devices.manifest") {
+group("bootfs") {
   deps = [
     "bin",
     "//src/bringup/bin/virtcon:virtual-console",
     "//src/ui/input/drivers/hid-input-report",
-  ]
-
-  # TODO(bwb): match the file in the image to the respective build name
-  binaries = [
-    {
-      name = "driver_host"
-    },
-    {
-      name = "virtual-console"
-    },
-  ]
-
-  drivers = [
-    # Drivers for ZBI injection
-    {
-      name = "hid-input-report.so"
-    },
   ]
 }
