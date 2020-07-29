@@ -8,8 +8,8 @@ import 'dart:io';
 
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as path;
-import 'package:ports/ports.dart';
 import 'package:pkg/pkg.dart';
+import 'package:pm/pm.dart';
 import 'package:quiver/core.dart' show Optional;
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
@@ -24,59 +24,11 @@ Future<String> formattedHostAddress(sl4f.Sl4f sl4fDriver) async {
   return '[$hostAddress]';
 }
 
-Future<ProcessResult> initializeRepo(String pmPath, String repoPath) async =>
-    Process.run(pmPath, ['newrepo', '-repo=$repoPath']);
-
-Future<ProcessResult> publishPackage(
-        String pmPath, String repoPath, String archivePath) async =>
-    Process.run(
-        pmPath, ['publish', '-a', '-f=$archivePath', '-repo=$repoPath']);
-
-Future<ProcessResult> createArchive(
-    String pmPath, String packageManifestPath) async {
-  // Running the process from runtime_deps directory is needed since meta.far needs to be
-  // a relative path.
-  final workingDirectory = Platform.script.resolve('runtime_deps').toFilePath();
-  final manifestPath =
-      await createPkgManifestFile(packageManifestPath, workingDirectory);
-  return Process.run(pmPath, ['-m=$manifestPath', 'archive'],
-      workingDirectory: workingDirectory);
-}
-
-Future<List> setupServe(Logger log, String pmPath, String repoPath,
-    String componentName, List<String> extraServeArgs) async {
-  log.info('Initializing repo: $repoPath');
-  final initializeRepoResponse = await initializeRepo(pmPath, repoPath);
-  expect(initializeRepoResponse.exitCode, 0);
-
-  final manifestPath = Platform.script
-      .resolve('runtime_deps/package_manifest.json')
-      .toFilePath();
-  log.info('Creating archive from package_manifest');
-  final createArchiveResponse = await createArchive(pmPath, manifestPath);
-  expect(createArchiveResponse.exitCode, 0);
-
-  final archivePath =
-      Platform.script.resolve('runtime_deps/$componentName').toFilePath();
-  log.info('Publishing package from archive: $archivePath to repo: $repoPath');
-  final publishPackageResponse =
-      await publishPackage(pmPath, repoPath, archivePath);
-  expect(publishPackageResponse.exitCode, 0);
-
-  int port;
-  Process serveProcess = await getUnusedPort<Process>((unusedPort) {
-    port = unusedPort;
-    List<String> arguments = ['serve', '-repo=$repoPath', '-l', ':$unusedPort'];
-    log.info('Serve is starting on port: $unusedPort');
-    return Process.start(pmPath, arguments + extraServeArgs);
-  });
-
-  return [serveProcess, port];
-}
-
 void main() {
   final log = Logger('package_manager_test');
   final pmPath = Platform.script.resolve('runtime_deps/pm').toFilePath();
+  String hostAddress;
+  String manifestPath;
 
   sl4f.Sl4f sl4fDriver;
 
@@ -86,6 +38,11 @@ void main() {
       ..onRecord.listen((rec) => print('[${rec.level}]: ${rec.message}'));
     sl4fDriver = sl4f.Sl4f.fromEnvironment();
     await sl4fDriver.startServer();
+
+    hostAddress = await formattedHostAddress(sl4fDriver);
+    manifestPath = Platform.script
+        .resolve('runtime_deps/package_manifest.json')
+        .toFilePath();
   });
 
   tearDownAll(() async {
@@ -93,12 +50,12 @@ void main() {
     sl4fDriver.close();
   });
   group('Package Manager', () {
-    Process serveProcess;
-    Directory tempDir;
     Optional<String> originalRewriteRule;
     Set<String> originalRepos;
+    PackageManagerRepo repoServer;
+
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('repo');
+      repoServer = await PackageManagerRepo.initRepo(sl4fDriver, pmPath, log);
 
       // Gather the original package management settings before test begins.
       originalRepos = await getCurrentRepos(sl4fDriver);
@@ -111,10 +68,11 @@ void main() {
       if (!await resetPkgctl(sl4fDriver, originalRepos, originalRewriteRule)) {
         log.severe('Failed to reset pkgctl to default state');
       }
-      if (serveProcess != null) {
-        serveProcess.kill();
+      if (repoServer != null) {
+        repoServer
+          ..kill()
+          ..cleanup();
       }
-      tempDir.deleteSync(recursive: true);
     });
     test(
         'Test that creates a repository, deploys a package, and '
@@ -128,11 +86,11 @@ void main() {
       // amberctl rm_src -n <name>
       // pkgctl repo
       // pm serve -repo=<path> -l :<port>
-      final repoPath = tempDir.path;
-      final processInfo = await setupServe(
-          log, pmPath, repoPath, 'component_hello_world-0.far', []);
-      serveProcess = processInfo[0];
-      int port = processInfo[1];
+      await repoServer
+          .setupServe('component_hello_world-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
 
       log.info('Getting the available packages');
       final curlResponse =
@@ -142,76 +100,66 @@ void main() {
       final curlOutput = curlResponse.stdout.toString();
       expect(curlOutput.contains('component_hello_world/0'), isTrue);
 
-      log.info('Getting Host Address');
-      final hostAddress = await formattedHostAddress(sl4fDriver);
-
       // Typically, there is a pre-existing rule pointing to `devhost`, but it isn't
       // guaranteed. Record what the rule list is before we begin, and confirm that is
       // the rule list when we are finished.
-      log.info('Recording the current rule list');
-      var ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
-      expect(ruleListResponse.exitCode, 0);
-      final originalRuleList = ruleListResponse.stdout.toString();
+      final originalRuleList = (await repoServer.pkgctlRuleList(
+              'Recording the current rule list', 0))
+          .stdout
+          .toString();
 
-      log.info(
-          'Adding the new repository as an update source with http://$hostAddress:$port');
-      final addRepoCfgResponse = await sl4fDriver.ssh.run(
-          'amberctl add_src -n $repoPath -f http://$hostAddress:$port/config.json');
-      expect(addRepoCfgResponse.exitCode, 0);
+      await repoServer.amberctlAddSrcNF(
+          'Adding the new repository ${repoServer.getRepoPath()} as an update source with http://$hostAddress:$port/config.json',
+          repoServer.getRepoPath(),
+          'http://$hostAddress:$port/config.json',
+          0);
 
-      log.info('Running pkgctl repo to list sources');
-      var listSrcsResponse = await sl4fDriver.ssh.run('pkgctl repo');
-      expect(listSrcsResponse.exitCode, 0);
-
-      var listSrcsResponseOutput = listSrcsResponse.stdout.toString();
-      String repoName = repoPath.replaceAll('/', '_');
+      // Check that our new repo source is listed.
+      var listSrcsOutput = (await repoServer.pkgctlRepo(
+              'Running pkgctl repo to list sources', 0))
+          .stdout
+          .toString();
+      String repoName = repoServer.getRepoPath().replaceAll('/', '_');
       String repoUrl = 'fuchsia-pkg://$repoName';
+      expect(listSrcsOutput.contains(repoUrl), isTrue);
 
-      expect(listSrcsResponseOutput.contains(repoUrl), isTrue);
-
-      log.info('Confirm rule list points to $repoName');
-      ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
-      expect(ruleListResponse.exitCode, 0);
-
-      var ruleListResponseOutput = ruleListResponse.stdout.toString();
+      var ruleListOutput = (await repoServer.pkgctlRuleList(
+              'Confirm rule list points to $repoName', 0))
+          .stdout
+          .toString();
       expect(
-          hasExclusivelyOneItem(
-              ruleListResponseOutput, 'host_replacement', repoName),
+          hasExclusivelyOneItem(ruleListOutput, 'host_replacement', repoName),
           isTrue);
 
-      log.info('Cleaning up temp repo');
-      final rmSrcResponse =
-          await sl4fDriver.ssh.run('amberctl rm_src -n $repoName');
-      expect(rmSrcResponse.exitCode, 0);
+      await repoServer.amberctlRmsrcN('Cleaning up temp repo', repoName, 0);
 
       log.info('Checking that $repoUrl is gone');
-      listSrcsResponse = await sl4fDriver.ssh.run('pkgctl repo');
-      expect(listSrcsResponse.exitCode, 0);
-
-      listSrcsResponseOutput = listSrcsResponse.stdout.toString();
-      expect(listSrcsResponseOutput.contains(repoUrl), isFalse);
+      listSrcsOutput = (await repoServer.pkgctlRepo(
+              'Running pkgctl repo to list sources', 0))
+          .stdout
+          .toString();
+      expect(listSrcsOutput.contains(repoUrl), isFalse);
 
       if (originalRewriteRule.isPresent) {
-        log.info('Re-enabling original repo source');
-        final enableSrcResponse = await sl4fDriver.ssh
-            .run('amberctl enable_src -n ${originalRewriteRule.value}');
-        expect(enableSrcResponse.exitCode, 0);
+        await repoServer.amberctlEnablesrcN(
+            'Re-enabling original repo source', originalRewriteRule.value, 0);
       }
 
-      log.info('Confirm rule list is back to its original set.');
-      ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
-      expect(ruleListResponse.exitCode, 0);
-
-      ruleListResponseOutput = ruleListResponse.stdout.toString();
-      expect(ruleListResponseOutput, originalRuleList);
+      listSrcsOutput = (await repoServer.pkgctlRuleList(
+              'Confirm rule list is back to its original set.', 0))
+          .stdout
+          .toString();
+      expect(listSrcsOutput, originalRuleList);
 
       log.info(
           'Killing serve process and ensuring the output contains `[pm serve]`.');
-      final killStatus = serveProcess.kill();
+      final killStatus = repoServer.kill();
       expect(killStatus, isTrue);
 
       var serveOutputBuilder = StringBuffer();
-      await serveProcess.stdout.transform(utf8.decoder).listen((data) {
+      var serveProcess = repoServer.getServeProcess();
+      expect(serveProcess.isPresent, isTrue);
+      await serveProcess.value.stdout.transform(utf8.decoder).listen((data) {
         serveOutputBuilder.write(data);
       }).asFuture();
       final serveOutput = serveOutputBuilder.toString();
@@ -230,11 +178,11 @@ void main() {
       //
       // Previously covered:
       // amberctl add_src -n <path> -f http://<host>:<port>/config.json
-      final repoPath = tempDir.path;
-      final processInfo = await setupServe(
-          log, pmPath, repoPath, 'component_hello_world-0.far', ['-q']);
-      serveProcess = processInfo[0];
-      int port = processInfo[1];
+      await repoServer
+          .setupServe('component_hello_world-0.far', manifestPath, ['-q']);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
 
       log.info('Getting the available packages');
       final curlResponse =
@@ -244,22 +192,21 @@ void main() {
       final curlOutput = curlResponse.stdout.toString();
       expect(curlOutput.contains('component_hello_world/0'), isTrue);
 
-      log.info('Getting Host Address');
-      final hostAddress = await formattedHostAddress(sl4fDriver);
-
-      log.info(
-          'Adding the new repository as an update source with http://$hostAddress:$port');
-      final addRepoCfgResponse = await sl4fDriver.ssh.run(
-          'amberctl add_src -n $repoPath -f http://$hostAddress:$port/config.json');
-      expect(addRepoCfgResponse.exitCode, 0);
+      await repoServer.amberctlAddSrcNF(
+          'Adding the new repository as an update source with http://$hostAddress:$port',
+          repoServer.getRepoPath(),
+          'http://$hostAddress:$port/config.json',
+          0);
 
       log.info(
           'Killing serve process and ensuring the output does not contain `[pm serve]`.');
-      final killStatus = serveProcess.kill();
+      final killStatus = repoServer.kill();
       expect(killStatus, isTrue);
 
       var serveOutputBuilder = StringBuffer();
-      await serveProcess.stdout.transform(utf8.decoder).listen((data) {
+      var serveProcess = repoServer.getServeProcess();
+      expect(serveProcess.isPresent, isTrue);
+      await serveProcess.value.stdout.transform(utf8.decoder).listen((data) {
         serveOutputBuilder.write(data);
       }).asFuture();
       final serveOutput = serveOutputBuilder.toString();
@@ -276,24 +223,23 @@ void main() {
       // Previously covered:
       // pm serve -repo=<path> -l :<port>
       // pkgctl repo
-      final repoPath = tempDir.path;
-      final processInfo = await setupServe(
-          log, pmPath, repoPath, 'component_hello_world-0.far', []);
-      serveProcess = processInfo[0];
-      int port = processInfo[1];
+      await repoServer
+          .setupServe('component_hello_world-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
 
-      log.info('Getting Host Address');
-      final hostAddress = await formattedHostAddress(sl4fDriver);
+      await repoServer.amberctlAddSrcF(
+          'Adding the new repository as an update source with http://$hostAddress:$port',
+          'http://$hostAddress:$port/config.json',
+          0);
 
-      log.info(
-          'Adding the new repository as an update source with http://$hostAddress:$port');
-      final addRepoCfgResponse = await sl4fDriver.ssh
-          .run('amberctl add_src -f http://$hostAddress:$port/config.json');
-      expect(addRepoCfgResponse.exitCode, 0);
+      var listSrcsOutput = (await repoServer.pkgctlRepo(
+              'Running pkgctl repo to list sources', 0))
+          .stdout
+          .toString();
 
       log.info('Running pkgctl repo to list sources');
-      var listSrcsResponse = await sl4fDriver.ssh.run('pkgctl repo');
-      expect(listSrcsResponse.exitCode, 0);
       String repoName = 'http://$hostAddress:$port';
       // Remove the `%25ethp0003` from
       // http://[fe80::9813:f1ff:fe9b:c411%25ethp0003]:38729
@@ -310,8 +256,7 @@ void main() {
           .replaceAll(']', '_');
 
       log.info('Checking repo name is $repoName');
-      var listSrcsResponseOutput = listSrcsResponse.stdout.toString();
-      expect(listSrcsResponseOutput.contains(repoName), isTrue);
+      expect(listSrcsOutput.contains(repoName), isTrue);
     });
     test('Test `pm serve` writes its port number to a given file path.',
         () async {
@@ -319,18 +264,18 @@ void main() {
       //
       // Newly covered:
       // pm serve -repo=<path> -l :<port> -f <path to export port number>
-      final repoPath = tempDir.path;
-      final portFilePath = path.join(repoPath, 'port_file.txt');
-      final processInfo = await setupServe(log, pmPath, repoPath,
-          'component_hello_world-0.far', ['-f', '$portFilePath']);
-      serveProcess = processInfo[0];
-      int port = processInfo[1];
+      await repoServer.setupRepo('component_hello_world-0.far', manifestPath);
+      final portFilePath = path.join(repoServer.getRepoPath(), 'port_file.txt');
+
+      await repoServer.pmServeRepoLExtra(['-f', '$portFilePath']);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
 
       // Wait long enough for the serve process to come up.
       log.info('Getting the available packages');
       final curlResponse =
           await Process.run('curl', ['http://localhost:$port/targets.json']);
-
       expect(curlResponse.exitCode, 0);
 
       log.info('Checking that $portFilePath was generated with content: $port');
@@ -348,46 +293,37 @@ void main() {
       // Previously covered:
       // pkgctl repo
       // pm serve -repo=<path> -l :<port>
-      final repoPath = tempDir.path;
-      final processInfo = await setupServe(
-          log, pmPath, repoPath, 'component_hello_world-0.far', []);
-      serveProcess = processInfo[0];
-      int port = processInfo[1];
+      await repoServer
+          .setupServe('component_hello_world-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
 
-      log.info('Getting Host Address');
-      final hostAddress = await formattedHostAddress(sl4fDriver);
+      final originalRuleList = (await repoServer.pkgctlRuleList(
+              'Recording the current rule list', 0))
+          .stdout
+          .toString();
 
-      // Typically, there is a pre-existing rule pointing to `devhost`, but it isn't
-      // guaranteed. Record what the rule list is before we begin, and confirm that is
-      // the rule list when we are finished.
-      log.info('Recording the current rule list');
-      var ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
-      expect(ruleListResponse.exitCode, 0);
-      final originalRuleList = ruleListResponse.stdout.toString();
-
-      log.info(
-          'Adding the new repository as an update source with http://$hostAddress:$port');
-      final addRepoCfgResponse = await sl4fDriver.ssh.run(
-          'amberctl add_repo_cfg -n $repoPath -f http://$hostAddress:$port/config.json');
-      expect(addRepoCfgResponse.exitCode, 0);
-
-      log.info('Running pkgctl repo to list sources');
-      var listSrcsResponse = await sl4fDriver.ssh.run('pkgctl repo');
-      expect(listSrcsResponse.exitCode, 0);
-
-      var listSrcsResponseOutput = listSrcsResponse.stdout.toString();
-      String repoName = repoPath.replaceAll('/', '_');
+      await repoServer.amberctlAddrepocfgNF(
+          'Adding the new repository as an update source with http://$hostAddress:$port',
+          'http://$hostAddress:$port/config.json',
+          0);
+      String repoName = repoServer.getRepoPath().replaceAll('/', '_');
       String repoUrl = 'fuchsia-pkg://$repoName';
 
-      expect(listSrcsResponseOutput.contains(repoUrl), isTrue);
+      var listSrcsOutput = (await repoServer.pkgctlRepo(
+              'Running pkgctl repo to list sources', 0))
+          .stdout
+          .toString();
+      log.info('list sources: $listSrcsOutput, expect: $repoUrl');
+      expect(listSrcsOutput.contains(repoUrl), isTrue);
 
-      log.info('Confirm rule list is NOT updated to point to $repoName');
-      ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
-      expect(ruleListResponse.exitCode, 0);
-
-      var ruleListResponseOutput = ruleListResponse.stdout.toString();
-      expect(ruleListResponseOutput.contains(repoName), isFalse);
-      expect(ruleListResponseOutput, originalRuleList);
+      var listRulesOutput = (await repoServer.pkgctlRuleList(
+              'Confirm rule list is NOT updated to point to $repoName', 0))
+          .stdout
+          .toString();
+      expect(listRulesOutput.contains(repoName), isFalse);
+      expect(listRulesOutput, originalRuleList);
     });
   }, timeout: _timeout);
 }
