@@ -23,7 +23,8 @@ pub const GET_FLAGS_VISIBLE: u32 = OPEN_RIGHT_READABLE
     | OPEN_RIGHT_WRITABLE
     | OPEN_RIGHT_ADMIN
     | OPEN_RIGHT_EXECUTABLE
-    | OPEN_FLAG_APPEND;
+    | OPEN_FLAG_APPEND
+    | OPEN_FLAG_NODE_REFERENCE;
 
 /// Returns true if the rights flags in `flags` do not exceed those in `parent_flags`.
 pub fn stricter_or_same_rights(parent_flags: u32, flags: u32) -> bool {

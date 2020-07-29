@@ -38,7 +38,10 @@ use {
         WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
     fuchsia_async::Executor,
-    fuchsia_zircon::{sys::ZX_OK, Status},
+    fuchsia_zircon::{
+        sys::{self, ZX_OK},
+        Status,
+    },
     futures::future,
     libc::{S_IRUSR, S_IWUSR},
     proc_macro_hack::proc_macro_hack,
@@ -961,7 +964,7 @@ fn node_reference_ignores_read_access() {
             &root,
             OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
             "file",
-            Status::ACCESS_DENIED
+            Status::BAD_HANDLE
         );
 
         clone_as_directory_assert_err!(
@@ -985,7 +988,7 @@ fn node_reference_ignores_write_access() {
             &root,
             OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
             "file",
-            Status::ACCESS_DENIED
+            Status::BAD_HANDLE
         );
 
         clone_as_directory_assert_err!(
@@ -999,7 +1002,7 @@ fn node_reference_ignores_write_access() {
 }
 
 #[test]
-fn node_reference_allows_read_dirents() {
+fn node_reference_disallows_read_dirents() {
     let root = pseudo_directory! {
         "etc" => pseudo_directory! {
             "fstab" => read_only_static(b"/dev/fs /"),
@@ -1011,41 +1014,10 @@ fn node_reference_allows_read_dirents() {
     };
 
     run_server_client(OPEN_FLAG_NODE_REFERENCE, root, |root| async move {
-        {
-            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-            expected
-                .add(DIRENT_TYPE_DIRECTORY, b".")
-                .add(DIRENT_TYPE_DIRECTORY, b"etc")
-                .add(DIRENT_TYPE_FILE, b"files");
-
-            assert_read_dirents!(root, 1000, expected.into_vec());
-        }
-
-        {
-            let flags = OPEN_FLAG_DESCRIBE;
-            let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
-
-            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-            expected
-                .add(DIRENT_TYPE_DIRECTORY, b".")
-                .add(DIRENT_TYPE_FILE, b"fstab")
-                .add(DIRENT_TYPE_DIRECTORY, b"ssh");
-
-            assert_read_dirents!(etc_dir, 1000, expected.into_vec());
-            assert_close!(etc_dir);
-        }
-
-        {
-            let flags = OPEN_FLAG_DESCRIBE;
-            let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
-
-            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-            expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
-
-            assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
-            assert_close!(ssh_dir);
-        }
-
+        assert_eq!(
+            root.read_dirents(100).await.expect("read_dirents failed").0,
+            sys::ZX_ERR_BAD_HANDLE
+        );
         assert_close!(root);
     });
 }

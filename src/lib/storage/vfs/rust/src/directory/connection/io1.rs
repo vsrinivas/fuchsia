@@ -26,6 +26,7 @@ use {
         DirectoryRequestStream, DirectoryRewindResponder, DirectorySetAttrResponder,
         DirectorySyncResponder, DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes,
         NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
+        OPEN_FLAG_NODE_REFERENCE,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -388,6 +389,11 @@ where
         path: String,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+            send_on_open_with_error(flags, server_end, Status::BAD_HANDLE);
+            return;
+        }
+
         if path == "/" || path == "" {
             send_on_open_with_error(flags, server_end, Status::BAD_PATH);
             return;
@@ -438,6 +444,10 @@ where
     where
         R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
+        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
+            return responder(Status::BAD_HANDLE, &[]);
+        }
+
         let res = {
             let directory = self.directory.clone();
             match directory.read_dirents(
