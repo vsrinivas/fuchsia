@@ -19,5 +19,17 @@
             ],
             syslog: "1/30/2020, 2:31:13 PM [46274][46278][cast_agent_exe] ERROR: icu_util.cc(227) Could not open: '/config/data/tzdata/icu/44/le', proceeding without loading the timezone database: No such file or directory (2)",
         },
+        test_tzdata_config_absent: {
+            yes: [
+                "icu_config_absent",
+            ],
+            syslog: "1/30/2020, 2:31:19 PM [55718][55720][web_engine_exe] ERROR: icu_util.cc(227) Could not open: '/config/data/tzdata/icu/44/le', proceeding without loading the timezone database: No such file or directory (2)",
+        },
+        test_tzdata_config_absent: {
+            no: [
+                "icu_config_absent",
+            ],
+            syslog: "1/30/2020, 2:31:19 PM [55718][55720][web_engine_exe] ERROR: icu_util.cc(227) Could not open: '', proceeding without loading the timezone database: No such file or directory (2)",
+        },
     },
 }
