@@ -12,6 +12,7 @@ source_set("flatland") {
   sources = [
     "flatland.cc",
     "flatland.h",
+    "flatland_presenter.h",
     "global_image_data.cc",
     "global_image_data.h",
     "global_matrix_data.cc",
@@ -48,6 +49,7 @@ source_set("flatland") {
     "//sdk/lib/sys/cpp",
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/gfx:object_linker",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/system/ulib/trace",
   ]
 }

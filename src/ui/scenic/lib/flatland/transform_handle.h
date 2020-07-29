@@ -8,6 +8,8 @@
 #include <functional>
 #include <ostream>
 
+#include "src/ui/scenic/lib/scheduling/id.h"
+
 namespace flatland {
 class TransformHandle;
 }  // namespace flatland
@@ -24,7 +26,7 @@ class TransformHandle {
  public:
   TransformHandle() = default;
 
-  using InstanceId = uint64_t;
+  using InstanceId = scheduling::SessionId;
 
   TransformHandle(InstanceId instance_id, uint64_t transform_id)
       : instance_id_(instance_id), transform_id_(transform_id) {}

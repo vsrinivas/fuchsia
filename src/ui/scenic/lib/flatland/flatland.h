@@ -25,11 +25,13 @@
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
+#include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/lib/escher/flib/fence_queue.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace flatland {
 
@@ -44,7 +46,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // Passing the same LinkSystem and UberStructSystem to multiple Flatland instances will allow
   // them to link to each other through operations that involve tokens and parent/child
   // relationships (e.g., by calling LinkToParent() and CreateLink()).
-  explicit Flatland(const std::shared_ptr<Renderer>& renderer,
+  explicit Flatland(scheduling::SessionId session_id,
+                    const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+                    const std::shared_ptr<Renderer>& renderer,
                     const std::shared_ptr<LinkSystem>& link_system,
                     const std::shared_ptr<UberStructSystem>& uber_struct_system,
                     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
@@ -136,6 +140,14 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // TODO(36161): Tune this number once we have a non-synchronous present flow.
   static constexpr uint32_t kMaxPresents = 1;
 
+  // The unique SessionId for this Flatland instance. Used to schedule Presents and register
+  // UberStructs with the UberStructSystem.
+  const scheduling::SessionId session_id_;
+
+  // A FlatlandPresenter shared between Flatland instances. Flatland uses this interface to get
+  // PresentIds when publishing to the UberStructSystem.
+  std::shared_ptr<FlatlandPresenter> flatland_presenter_;
+
   // A Renderer shared between Flatland instances. Flatland registers buffer collections with the
   // Renderer and references them by ID when submitting data in an UberStruct.
   std::shared_ptr<Renderer> renderer_;
@@ -163,9 +175,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // can be referenced by the user through method calls. Keep in mind that additional transforms may
   // be kept alive through child references.
   std::unordered_map<TransformId, TransformHandle> transforms_;
-
-  // A unique ID from the UberStructSystem representing this Flatland instance.
-  const TransformHandle::InstanceId instance_id_;
 
   // A graph representing this flatland instance's local transforms and their relationships.
   TransformGraph transform_graph_;

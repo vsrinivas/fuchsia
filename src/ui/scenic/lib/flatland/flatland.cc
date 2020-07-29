@@ -27,16 +27,19 @@ using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 
-Flatland::Flatland(const std::shared_ptr<Renderer>& renderer,
+Flatland::Flatland(scheduling::SessionId session_id,
+                   const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+                   const std::shared_ptr<Renderer>& renderer,
                    const std::shared_ptr<LinkSystem>& link_system,
                    const std::shared_ptr<UberStructSystem>& uber_struct_system,
                    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-    : renderer_(renderer),
+    : session_id_(session_id),
+      flatland_presenter_(flatland_presenter),
+      renderer_(renderer),
       link_system_(link_system),
       uber_struct_system_(uber_struct_system),
       sysmem_allocator_(std::move(sysmem_allocator)),
-      instance_id_(uber_struct_system_->GetNextInstanceId()),
-      transform_graph_(instance_id_),
+      transform_graph_(session_id_),
       local_root_(transform_graph_.CreateTransform()) {
   zx_status_t status = zx::event::create(0, &buffer_collection_release_fence_);
   FX_DCHECK(status == ZX_OK);
@@ -45,7 +48,7 @@ Flatland::Flatland(const std::shared_ptr<Renderer>& renderer,
 Flatland::~Flatland() {
   // TODO(53330): remove this function call when FrameScheduler is integrated.
   SignalBufferReleaseFence();
-  uber_struct_system_->ClearUberStruct(instance_id_);
+  uber_struct_system_->ClearUberStruct(session_id_);
 
   // TODO(55374): consider if Link tokens should be returned or not.
 }
@@ -137,7 +140,9 @@ void Flatland::Present(std::vector<zx::event> acquire_fences, PresentCallback ca
     fence_queue_->QueueTask(
         [this, uber_struct = std::move(uber_struct),
          link_operations = std::move(pending_link_operations_)]() mutable {
-          uber_struct_system_->SetUberStruct(instance_id_, std::move(uber_struct));
+          // Register a present and allow the UberStructSystem to handle the actual session update.
+          auto present_id = flatland_presenter_->RegisterPresent(session_id_, {});
+          uber_struct_system_->QueueUberStruct({session_id_, present_id}, std::move(uber_struct));
 
           // Finalize Link destruction operations after publishing the new UberStruct. This
           // ensures that any local Transforms referenced by the to-be-deleted Links are already
@@ -878,6 +883,10 @@ TransformHandle Flatland::GetRoot() const {
 
 void Flatland::SignalBufferReleaseFence() {
   buffer_collection_release_fence_.signal(0, ZX_EVENT_SIGNALED);
+
+  // Recreate the release fence since an event cannot be unsignaled.
+  zx_status_t status = zx::event::create(0, &buffer_collection_release_fence_);
+  FX_DCHECK(status == ZX_OK);
 }
 
 void Flatland::ReportError() { failure_since_previous_present_ = true; }

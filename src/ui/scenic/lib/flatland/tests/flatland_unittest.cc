@@ -18,7 +18,10 @@
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
+#include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/tests/mock_renderer.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
@@ -32,12 +35,14 @@ using GlobalBufferCollectionId = flatland::GlobalBufferCollectionId;
 using TransformId = flatland::Flatland::TransformId;
 using flatland::BufferCollectionMetadata;
 using flatland::Flatland;
+using flatland::FlatlandPresenter;
 using flatland::GlobalImageVector;
 using flatland::GlobalMatrixVector;
 using flatland::GlobalRectangleVector;
 using flatland::GlobalTopologyData;
 using flatland::ImageMetadata;
 using flatland::LinkSystem;
+using flatland::MockFlatlandPresenter;
 using flatland::MockRenderer;
 using flatland::Renderer;
 using flatland::TransformGraph;
@@ -68,8 +73,15 @@ struct PresentArgs {
 // These macros works like functions that check a variety of conditions, but if those conditions
 // fail, the line number for the failure will appear in-line rather than in a function.
 
-// |flatland| is a Flatland object. |args| are the PresentArgs to Present(). |expect_success|
-// should be false if the call to Present() is expected to trigger an error.
+// This macro calls Present() on a Flatland object and immediately triggers the session update
+// for all sessions so that changes from that Present() are visible in global systems. This is
+// primarily useful for testing the user-facing Flatland API.
+//
+// This macro must be used within a test using the FlatlandTest harness.
+//
+// |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
+// FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
+// trigger an error.
 #define PRESENT_WITH_ARGS(flatland, args, expect_success)                                  \
   {                                                                                        \
     bool processed_callback = false;                                                       \
@@ -83,6 +95,9 @@ struct PresentArgs {
       processed_callback = true;                                                           \
     });                                                                                    \
     EXPECT_TRUE(processed_callback);                                                       \
+    /* Even with no acquire_fences, UberStructs updates queue on the dispatcher. */        \
+    RunLoopUntilIdle();                                                                    \
+    mock_flatland_presenter_->ApplySessionUpdates();                                       \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -142,22 +157,6 @@ zx::event CopyEvent(const zx::event& event) {
 const float kDefaultSize = 1.f;
 const glm::vec2 kDefaultPixelScale = {1.f, 1.f};
 
-void CreateLink(Flatland* parent, Flatland* child, ContentId id,
-                fidl::InterfacePtr<ContentLink>* content_link,
-                fidl::InterfacePtr<GraphLink>* graph_link) {
-  ContentLinkToken parent_token;
-  GraphLinkToken child_token;
-  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
-
-  LinkProperties properties;
-  properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent->CreateLink(id, std::move(parent_token), std::move(properties),
-                     content_link->NewRequest());
-  child->LinkToParent(std::move(child_token), graph_link->NewRequest());
-  PRESENT((*parent), true);
-  PRESENT((*child), true);
-}
-
 float GetOrientationAngle(fuchsia::ui::scenic::internal::Orientation orientation) {
   switch (orientation) {
     case Orientation::CCW_0_DEGREES:
@@ -178,13 +177,25 @@ class FlatlandTest : public gtest::TestLoopFixture {
         link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())) {}
 
   void SetUp() override {
+    mock_flatland_presenter_ = new MockFlatlandPresenter(uber_struct_system_.get());
+    flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
+
     mock_renderer_ = new MockRenderer();
     renderer_ = std::shared_ptr<Renderer>(mock_renderer_);
   }
 
   void TearDown() override {
+    RunLoopUntilIdle();
+
     auto snapshot = uber_struct_system_->Snapshot();
     EXPECT_TRUE(snapshot.empty());
+    EXPECT_EQ(uber_struct_system_->GetPendingSize(), 0u);
+
+    auto link_topologies = link_system_->GetResolvedTopologyLinks();
+    EXPECT_TRUE(link_topologies.empty());
+
+    renderer_.reset();
+    flatland_presenter_.reset();
   }
 
   Flatland CreateFlatland() {
@@ -192,7 +203,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
     zx_status_t status = fdio_service_connect(
         "/svc/fuchsia.sysmem.Allocator", sysmem_allocator.NewRequest().TakeChannel().release());
     FX_DCHECK(status == ZX_OK);
-    return Flatland(renderer_, link_system_, uber_struct_system_, std::move(sysmem_allocator));
+    return Flatland(scheduling::GetNextSessionId(), flatland_presenter_, renderer_, link_system_,
+                    uber_struct_system_, std::move(sysmem_allocator));
   }
 
   void SetDisplayPixelScale(const glm::vec2& pixel_scale) { display_pixel_scale_ = pixel_scale; }
@@ -248,6 +260,22 @@ class FlatlandTest : public gtest::TestLoopFixture {
             .image_vector = std::move(images)};
   }
 
+  void CreateLink(Flatland* parent, Flatland* child, ContentId id,
+                  fidl::InterfacePtr<ContentLink>* content_link,
+                  fidl::InterfacePtr<GraphLink>* graph_link) {
+    ContentLinkToken parent_token;
+    GraphLinkToken child_token;
+    ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+    LinkProperties properties;
+    properties.set_logical_size({kDefaultSize, kDefaultSize});
+    parent->CreateLink(id, std::move(parent_token), std::move(properties),
+                       content_link->NewRequest());
+    child->LinkToParent(std::move(child_token), graph_link->NewRequest());
+    PRESENT((*parent), true);
+    PRESENT((*child), true);
+  }
+
   // Creates an image in |flatland| with the specified |image_id| and backing properties, and
   // returns the Renderer-generated GlobalBufferCollectionId that will be in the ImageMetadata
   // struct for that Image.
@@ -284,10 +312,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
   }
 
  protected:
+  MockFlatlandPresenter* mock_flatland_presenter_;
   MockRenderer* mock_renderer_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
 
  private:
+  std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   std::shared_ptr<Renderer> renderer_;
   const std::shared_ptr<LinkSystem> link_system_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
@@ -325,6 +355,7 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   // matter.
   event2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
+  mock_flatland_presenter_->ApplySessionUpdates();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
@@ -333,6 +364,7 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   // instance.
   event1_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
+  mock_flatland_presenter_->ApplySessionUpdates();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -396,6 +428,7 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // be no UberStruct for the instance.
   event2_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
+  mock_flatland_presenter_->ApplySessionUpdates();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_TRUE(snapshot.empty());
@@ -404,6 +437,7 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // UberStruct with a 2-element topology: the local root, and kId.
   event1_copy.signal(0, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
+  mock_flatland_presenter_->ApplySessionUpdates();
 
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1ul);
@@ -2802,6 +2836,7 @@ TEST_F(FlatlandTest, DeregisteredBufferCollectionIdCanBeReused) {
   }
 
   // Deregister it, but don't signal the release fence yet.
+  EXPECT_CALL(*mock_renderer_, DeregisterCollection(kGlobalBufferCollectionId1)).Times(0);
   flatland.DeregisterBufferCollection(kBufferCollectionId);
   PRESENT(flatland, true);
 
