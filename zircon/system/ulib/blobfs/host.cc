@@ -198,9 +198,11 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
 
   if ((status = bs->WriteBitmap(inode->block_count, inode->extents[0].Start())) != ZX_OK) {
     return status;
-  } else if ((status = bs->WriteNode(std::move(inode_block))) != ZX_OK) {
+  }
+  if ((status = bs->WriteNode(std::move(inode_block))) != ZX_OK) {
     return status;
-  } else if ((status = bs->WriteInfo()) != ZX_OK) {
+  }
+  if ((status = bs->WriteInfo()) != ZX_OK) {
     return status;
   }
 
@@ -336,8 +338,8 @@ int Mkfs(int fd, uint64_t block_count) {
   }
 
   // Write node map to disk.
+  memset(block, 0, sizeof(block));
   for (uint64_t n = 0; n < node_map_blocks; n++) {
-    memset(block, 0, sizeof(block));
     if (WriteBlock(fd, NodeMapStartBlock(info) + n, block)) {
       FS_TRACE_ERROR("blobfs: failed writing inode map\n");
       return -1;
