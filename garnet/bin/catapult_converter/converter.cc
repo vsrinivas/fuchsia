@@ -308,7 +308,7 @@ void Convert(rapidjson::Document* input, rapidjson::Document* output, const Conv
   AddSharedDiagnostic("bots", helper.MakeString(args->bots));
   AddSharedDiagnostic("masters", helper.MakeString(args->masters));
   if (args->product_versions) {
-    AddSharedDiagnostic("productVersions", helper.MakeString(args->product_versions));
+    AddSharedDiagnostic("a_productVersions", helper.MakeString(args->product_versions));
   }
 
   // The "logUrls" diagnostic contains a list of [name, url] tuples.

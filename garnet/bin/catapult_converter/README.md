@@ -56,7 +56,7 @@ the dashboard:
 
 This is an optional parameter that the Catapult dashboard accepts:
 
-* productVersions: The system version, like '0.20200123.2.1'.
+* a_productVersions: The system version, like '0.20200123.2.1'.
 
 For more information on Catapult's format, see [How to Write
 Metrics](https://github.com/catapult-project/catapult/blob/master/docs/how-to-write-metrics.md).

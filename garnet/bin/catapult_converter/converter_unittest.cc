@@ -346,7 +346,7 @@ TEST(CatapultConverter, ConvertWithReleaseVersion) {
             "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
-            "productVersions": "dummy_guid_3",
+            "a_productVersions": "dummy_guid_3",
             "logUrls": "dummy_guid_4",
             "benchmarks": "dummy_guid_5"
         },
@@ -371,7 +371,7 @@ TEST(CatapultConverter, ConvertWithReleaseVersion) {
             "pointId": "dummy_guid_0",
             "bots": "dummy_guid_1",
             "masters": "dummy_guid_2",
-            "productVersions": "dummy_guid_3",
+            "a_productVersions": "dummy_guid_3",
             "logUrls": "dummy_guid_4",
             "benchmarks": "dummy_guid_5"
         },
