@@ -1,7 +1,7 @@
 {
     select: {
-        total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
-        used: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes",
+        total: "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
+        used: "INSPECT:bootstrap/fshost:root/data_stats/stats:used_bytes",
         foo_health: "INSPECT:foo.cmx:root/fuchsia.inspect.Health:status",
     },
     eval: {

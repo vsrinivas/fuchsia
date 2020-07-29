@@ -102,8 +102,8 @@ mod test {
         let configs = map! {
             "disk" => r#"{
                 select: {
-                  total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
-                  used: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes"
+                  total: "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
+                  used: "INSPECT:bootstrap/fshost:root/data_stats/stats:used_bytes"
                 },
                 eval: {
                   ratio: "used / (total + 0.0)",
@@ -120,15 +120,13 @@ mod test {
         };
         let content = r#"[
             {
-                "moniker": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
+                "moniker": "bootstrap/fshost",
                 "payload": {
                     "root": {
                         "data_stats": {
-                            "global_data": {
-                                "stats": {
-                                    "total_bytes": 120057757696,
-                                    "used_bytes": 704512
-                                }
+                            "stats": {
+                                "total_bytes": 120057757696,
+                                "used_bytes": 704512
                             }
                         }
                     }
@@ -154,15 +152,13 @@ mod test {
         };
         let content = r#"[
             {
-                "moniker": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
+                "moniker": "bootstrap/fshost",
                 "payload": {
                     "root": {
                         "data_stats": {
-                            "global_data": {
-                                "stats": {
-                                    "total_bytes": 120057757696,
-                                    "used_bytes": 704512
-                                }
+                            "stats": {
+                                "total_bytes": 120057757696,
+                                "used_bytes": 704512
                             }
                         }
                     }

@@ -6,7 +6,7 @@
         "filename": "fuchsia.inspect.Tree",
         "timestamp": 39085389926
       },
-      "moniker": "archivist.cmx",
+      "moniker": "core/archivist",
       "payload": {
         "root": {
           "all_archive_accessor_node": {

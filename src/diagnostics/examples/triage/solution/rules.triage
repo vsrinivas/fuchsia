@@ -1,8 +1,8 @@
 {
     select: {
-        disk_used: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes",
-        disk_total: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
-        actual_components: "INSPECT:archivist.cmx:root/event_stats:components_started",
+        disk_used: "INSPECT:bootstrap/fshost:root/data_stats/stats:used_bytes",
+        disk_total: "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
+        actual_components: "INSPECT:core/archivist:root/event_stats:components_started",
     },
     eval: {
         always_true: "0 == 0",
