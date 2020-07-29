@@ -4,11 +4,42 @@
 
 package tefmocheck
 
+import "net/url"
+
 // SwarmingTaskSummary is the summary of an individual task found in the output of
 // `swarming collect`.
 type SwarmingTaskSummary struct {
 	Outputs []string                `json:"outputs,omitempty"`
 	Results *SwarmingRpcsTaskResult `json:"results"`
+	Host    string
+}
+
+// TaskURL returns the Swarming UI URL for the task.
+func (sts *SwarmingTaskSummary) TaskURL() string {
+	if sts.Host == "" {
+		return "unknown"
+	}
+	u := url.URL{
+		Scheme:   "https",
+		Host:     sts.Host,
+		Path:     "task",
+		RawQuery: "id=" + sts.Results.TaskId,
+	}
+	return u.String()
+}
+
+// BotURL returns the Swarming UI URL for the bot the task ran on.
+func (sts *SwarmingTaskSummary) BotURL() string {
+	if sts.Host == "" {
+		return "unknown"
+	}
+	u := url.URL{
+		Scheme:   "https",
+		Host:     sts.Host,
+		Path:     "bot",
+		RawQuery: "id=" + sts.Results.BotId,
+	}
+	return u.String()
 }
 
 // SwarmingRpcsTaskResult is the result of a single task execution.

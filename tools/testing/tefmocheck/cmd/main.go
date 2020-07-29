@@ -57,6 +57,7 @@ func main() {
 	var help = flag.Bool("help", false, "Whether to show Usage and exit.")
 	flag.Usage = usage
 	var swarmingSummaryPath = flag.String("swarming-summary-json", "", "Path to the Swarming task summary file. Required.")
+	var swarmingHost = flag.String("swarming-host", "", "Swarming server host. Optional.")
 	var inputSummaryPath = flag.String("test-summary-json", "", "Path to test summary file. Optional.")
 	var swarmingOutputPath = flag.String("swarming-output", "", "Path to a file containing the stdout and stderr of the Swarming task. Optional.")
 	var syslogPath = flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
@@ -77,6 +78,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	swarmingSummary.Host = *swarmingHost
 
 	inputSummary, err := loadTestSummary(*inputSummaryPath)
 	if err != nil {

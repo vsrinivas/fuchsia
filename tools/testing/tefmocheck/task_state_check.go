@@ -74,9 +74,9 @@ func debugTextForSwarmingSummary(swarmingSummary *SwarmingTaskSummary) string {
 	}
 	return fmt.Sprintf(`%s
 The task's log is in %s.
-The task ID is %s.
+The task URL is %s.
 The task ran on bot %s.`,
-		ret, swarmingOutputType, swarmingSummary.Results.TaskId, swarmingSummary.Results.BotId)
+		ret, swarmingOutputType, swarmingSummary.TaskURL(), swarmingSummary.BotURL())
 }
 
 // TaskStateChecks contains checks to cover every possible state.
