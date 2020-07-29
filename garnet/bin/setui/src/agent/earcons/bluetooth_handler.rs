@@ -8,8 +8,9 @@ use crate::agent::earcons::sound_ids::{
 };
 use crate::agent::earcons::utils::connect_to_sound_player;
 use crate::agent::earcons::utils::play_sound;
+use crate::internal::event::Publisher;
 use anyhow::Context;
-use fidl_fuchsia_bluetooth_sys::{AccessMarker, Peer, TechnologyType};
+use fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy, Peer, TechnologyType};
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
@@ -41,11 +42,13 @@ enum BluetoothSoundType {
 
 /// Play a bluetooth earcons sound.
 async fn play_bluetooth_sound(
+    publisher: Publisher,
     common_earcons_params: CommonEarconsParams,
     sound_type: BluetoothSoundType,
 ) {
     // Connect to the SoundPlayer if not already connected.
     connect_to_sound_player(
+        publisher,
         common_earcons_params.service_context.clone(),
         common_earcons_params.sound_player_connection.clone(),
     )
@@ -81,6 +84,7 @@ async fn play_bluetooth_sound(
 
 /// Watch for peer changes on bluetoogh connection/disconnection.
 pub fn watch_bluetooth_connections(
+    publisher: Publisher,
     common_earcons_params: CommonEarconsParams,
     connection_active: Arc<AtomicBool>,
 ) {
@@ -93,7 +97,7 @@ pub fn watch_bluetooth_connections(
             .service_context
             .lock()
             .await
-            .connect::<AccessMarker>()
+            .connect_with_publisher::<AccessMarker>(publisher.clone())
             .await
             .context("[bluetooth_earcons_handler] Connecting to fuchsia.bluetooth.sys.Access")
         {
@@ -104,7 +108,7 @@ pub fn watch_bluetooth_connections(
             }
         };
         while connection_active.load(Ordering::SeqCst) {
-            match access_proxy.watch_peers().await {
+            match access_proxy.call_async(AccessProxy::watch_peers).await {
                 Ok((updated, removed)) => {
                     let mut bluetooth_handler = handler.lock().await;
                     if updated.len() > 0 {
@@ -151,8 +155,10 @@ pub fn watch_bluetooth_connections(
                             // TODO(fxb/50246): Add logging for connecting bluetooth peer.
                             let common_earcons_params_clone =
                                 bluetooth_handler.common_earcons_params.clone();
+                            let publisher = publisher.clone();
                             fasync::Task::spawn(async move {
                                 play_bluetooth_sound(
+                                    publisher,
                                     common_earcons_params_clone,
                                     BluetoothSoundType::CONNECTED,
                                 )
@@ -163,8 +169,10 @@ pub fn watch_bluetooth_connections(
                             // TODO(fxb/50246): Add logging for disconnecting bluetooth peer.
                             let common_earcons_params_clone =
                                 bluetooth_handler.common_earcons_params.clone();
+                            let publisher = publisher.clone();
                             fasync::Task::spawn(async move {
                                 play_bluetooth_sound(
+                                    publisher,
                                     common_earcons_params_clone,
                                     BluetoothSoundType::DISCONNECTED,
                                 )

@@ -124,19 +124,22 @@ impl IntlController {
                 .connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>()
                 .await;
 
-            if service_result.is_err() {
-                fx_log_err!("Failed to connect to fuchsia.timezone");
-                return;
-            }
+            let proxy = match service_result {
+                Ok(proxy) => proxy,
+                Err(_) => {
+                    fx_log_err!("Failed to connect to fuchsia.timezone");
+                    return;
+                }
+            };
 
             let time_zone_id = match info.time_zone_id {
                 Some(id) => id,
                 None => return,
             };
 
-            let proxy = service_result.unwrap();
-
-            if let Err(e) = proxy.set_timezone(time_zone_id.as_str()).await {
+            if let Err(e) =
+                proxy.call_async(|proxy| proxy.set_timezone(time_zone_id.as_str())).await
+            {
                 fx_log_err!("Failed to write timezone to fuchsia.timezone: {:?}", e);
             }
         })

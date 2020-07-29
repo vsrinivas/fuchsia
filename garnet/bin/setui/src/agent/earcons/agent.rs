@@ -9,8 +9,9 @@ use crate::agent::earcons::bluetooth_handler::watch_bluetooth_connections;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
+use crate::internal::event::Publisher;
 use crate::internal::switchboard;
-use crate::service_context::ServiceContextHandle;
+use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
 
 use fidl_fuchsia_media_sounds::PlayerProxy;
 use fuchsia_async as fasync;
@@ -24,7 +25,8 @@ blueprint_definition!(Descriptor::Component("earcons_agent"), Agent::create);
 /// The Earcons Agent is responsible for watching updates to relevant sources that need to play
 /// sounds.
 pub struct Agent {
-    sound_player_connection: Arc<Mutex<Option<PlayerProxy>>>,
+    publisher: Publisher,
+    sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
     switchboard_messenger: switchboard::message::Messenger,
 }
 
@@ -33,7 +35,7 @@ pub struct Agent {
 pub struct CommonEarconsParams {
     pub service_context: ServiceContextHandle,
     pub sound_player_added_files: Arc<Mutex<HashSet<&'static str>>>,
-    pub sound_player_connection: Arc<Mutex<Option<PlayerProxy>>>,
+    pub sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
 }
 
 impl Agent {
@@ -46,6 +48,7 @@ impl Agent {
         }
 
         let mut agent = Agent {
+            publisher: context.get_publisher(),
             sound_player_connection: Arc::new(Mutex::new(None)),
             switchboard_messenger: messenger_result.unwrap(),
         };
@@ -73,6 +76,7 @@ impl Agent {
         };
 
         if VolumeChangeHandler::create(
+            self.publisher.clone(),
             common_earcons_params.clone(),
             self.switchboard_messenger.clone(),
         )
@@ -84,10 +88,15 @@ impl Agent {
             fx_log_err!("Could not set up VolumeChangeHandler");
         }
 
+        let publisher = self.publisher.clone();
         fasync::Task::spawn(async move {
             // Watch for bluetooth connections and play sounds on change.
             let bluetooth_connection_active = Arc::new(AtomicBool::new(true));
-            watch_bluetooth_connections(common_earcons_params, bluetooth_connection_active);
+            watch_bluetooth_connections(
+                publisher,
+                common_earcons_params,
+                bluetooth_connection_active,
+            );
         })
         .detach();
 

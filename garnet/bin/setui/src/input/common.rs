@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::internal::event::Publisher,
     crate::registry::device_storage::DeviceStorageCompatible,
     crate::registry::setting_handler::persist::ClientProxy,
-    crate::service_context::ServiceContextHandle,
+    crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
     anyhow::{format_err, Error},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fidl_fuchsia_ui_policy::{
-        DeviceListenerRegistryMarker, MediaButtonsListenerMarker, MediaButtonsListenerRequest,
+        DeviceListenerRegistryMarker, DeviceListenerRegistryProxy, MediaButtonsListenerMarker,
+        MediaButtonsListenerRequest,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -52,7 +54,10 @@ pub enum InputType {
     VolumeButtons,
 }
 
-impl<T: Send + Sync + DeviceStorageCompatible + 'static> InputMonitor<T> {
+impl<T> InputMonitor<T>
+where
+    T: DeviceStorageCompatible + Send + Sync + 'static,
+{
     pub fn create(client: ClientProxy<T>, input_types: Vec<InputType>) -> InputMonitorHandle<T> {
         let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
         let monitor_handle = Arc::new(Mutex::new(Self {
@@ -115,25 +120,41 @@ impl<T: Send + Sync + DeviceStorageCompatible + 'static> InputMonitor<T> {
     }
 }
 
-/// Method for listening to media button changes. Changes will be reported back
-/// on the supplied sender.
 pub async fn monitor_media_buttons(
     service_context_handle: ServiceContextHandle,
     sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
 ) -> Result<(), Error> {
-    let service_result =
-        service_context_handle.lock().await.connect::<DeviceListenerRegistryMarker>().await;
+    let presenter_service =
+        service_context_handle.lock().await.connect::<DeviceListenerRegistryMarker>().await?;
 
-    let presenter_service = match service_result {
-        Ok(service) => service,
-        Err(err) => {
-            return Err(err);
-        }
-    };
+    monitor_media_buttons_internal(presenter_service, sender).await
+}
 
+pub async fn monitor_media_buttons_using_publisher(
+    publisher: Publisher,
+    service_context_handle: ServiceContextHandle,
+    sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
+) -> Result<(), Error> {
+    let presenter_service = service_context_handle
+        .lock()
+        .await
+        .connect_with_publisher::<DeviceListenerRegistryMarker>(publisher)
+        .await?;
+    monitor_media_buttons_internal(presenter_service, sender).await
+}
+
+/// Method for listening to media button changes. Changes will be reported back
+/// on the supplied sender.
+async fn monitor_media_buttons_internal(
+    presenter_service: ExternalServiceProxy<DeviceListenerRegistryProxy>,
+    sender: futures::channel::mpsc::UnboundedSender<MediaButtonsEvent>,
+) -> Result<(), Error> {
     let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>().unwrap();
 
-    if presenter_service.register_media_buttons_listener(client_end).is_err() {
+    if presenter_service
+        .call(move |proxy| proxy.register_media_buttons_listener(client_end))
+        .is_err()
+    {
         fx_log_err!("Registering media button listener with presenter service failed.");
         return Err(format_err!("presenter service not ready"));
     }

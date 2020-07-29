@@ -6,7 +6,8 @@ use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
 use crate::audio::{create_default_modified_timestamps, ModifiedTimestamps};
-use crate::input::monitor_media_buttons;
+use crate::input::monitor_media_buttons_using_publisher;
+use crate::internal::event;
 use crate::internal::switchboard;
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
@@ -29,6 +30,7 @@ pub struct VolumeChangeHandler {
     volume_button_event: i8,
     modified_timestamps: ModifiedTimestamps,
     switchboard_messenger: switchboard::message::Messenger,
+    publisher: event::Publisher,
 }
 
 /// The maximum volume level.
@@ -42,12 +44,18 @@ const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 
 impl VolumeChangeHandler {
     pub async fn create(
+        publisher: event::Publisher,
         params: CommonEarconsParams,
         switchboard_messenger: switchboard::message::Messenger,
     ) -> Result<(), Error> {
         // Listen to button presses.
         let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-        monitor_media_buttons(params.service_context.clone(), input_tx).await?;
+        monitor_media_buttons_using_publisher(
+            publisher.clone(),
+            params.service_context.clone(),
+            input_tx,
+        )
+        .await?;
 
         // Get initial user media volume level.
         let mut last_media_user_volume = None;
@@ -85,6 +93,7 @@ impl VolumeChangeHandler {
                 volume_button_event: 0,
                 modified_timestamps: create_default_modified_timestamps(),
                 switchboard_messenger: switchboard_messenger.clone(),
+                publisher,
             };
 
             let mut listen_receptor = switchboard_messenger
@@ -232,9 +241,11 @@ impl VolumeChangeHandler {
     fn play_media_volume_sound(&self, volume: Option<f32>) {
         let common_earcons_params = self.common_earcons_params.clone();
 
+        let publisher = self.publisher.clone();
         fasync::Task::spawn(async move {
             // Connect to the SoundPlayer if not already connected.
             connect_to_sound_player(
+                publisher,
                 common_earcons_params.service_context.clone(),
                 common_earcons_params.sound_player_connection.clone(),
             )
@@ -309,9 +320,12 @@ mod tests {
     async fn test_changed_streams() {
         let (fake_streams, old_timestamps, new_timestamps, expected_changed_streams) =
             fake_values();
+        let event_messenger_factory = event::message::create_hub();
         let switchboard_messenger_factory = switchboard::message::create_hub();
         let (messenger, _) =
             switchboard_messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let publisher =
+            event::Publisher::create(&event_messenger_factory, MessengerType::Unbound).await;
 
         let mut handler = VolumeChangeHandler {
             switchboard_messenger: messenger,
@@ -323,6 +337,7 @@ mod tests {
             last_media_user_volume: Some(1.0),
             volume_button_event: 0,
             modified_timestamps: old_timestamps,
+            publisher,
         };
         let changed_streams = handler.calculate_changed_streams(fake_streams, new_timestamps);
         assert_eq!(changed_streams, expected_changed_streams);

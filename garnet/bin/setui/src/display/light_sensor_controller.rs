@@ -4,6 +4,7 @@
 use crate::display::light_sensor::{open_sensor, read_sensor};
 use crate::registry::base::State;
 use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
+use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
     ControllerStateResult, LightData, SettingRequest, SettingResponse, SettingResponseResult,
 };
@@ -22,7 +23,7 @@ const SCAN_DURATION_MS: i64 = 1000;
 
 pub struct LightSensorController {
     client: ClientProxy,
-    proxy: SensorProxy,
+    proxy: ExternalServiceProxy<SensorProxy>,
     current_value: Arc<Mutex<LightData>>,
     notifier_abort: Option<AbortHandle>,
 }
@@ -38,17 +39,12 @@ impl controller::Create for LightSensorController {
             .await;
 
         if sensor_proxy_result.is_err() {
-            sensor_proxy_result = open_sensor().await;
+            sensor_proxy_result = open_sensor(service_context).await;
         }
 
         if let Ok(proxy) = sensor_proxy_result {
             let current_data = Arc::new(Mutex::new(get_sensor_data(&proxy).await));
-            Ok(Self {
-                client: client,
-                proxy: proxy,
-                current_value: current_data,
-                notifier_abort: None,
-            })
+            Ok(Self { client, proxy, current_value: current_data, notifier_abort: None })
         } else {
             Err(ControllerError::InitFailure {
                 description: "Could not connect to proxy".to_string(),
@@ -106,7 +102,7 @@ struct ClientNotifier {
 
 impl ClientNotifier {
     pub fn create(client: ClientProxy) -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self { client: client }))
+        Arc::new(Mutex::new(Self { client }))
     }
 }
 
@@ -148,7 +144,7 @@ async fn notify_on_change(
 /// Will not send any initial value if nothing changes.
 /// This terminates when the receiver closes without panicking.
 fn start_light_sensor_scanner(
-    sensor: SensorProxy,
+    sensor: ExternalServiceProxy<SensorProxy>,
     scan_duration_ms: i64,
 ) -> UnboundedReceiver<LightData> {
     let (sender, receiver) = unbounded::<LightData>();
@@ -173,7 +169,7 @@ fn start_light_sensor_scanner(
     receiver
 }
 
-async fn get_sensor_data(sensor: &SensorProxy) -> LightData {
+async fn get_sensor_data(sensor: &ExternalServiceProxy<SensorProxy>) -> LightData {
     let sensor_data = read_sensor(&sensor).await.expect("Could not read from the sensor");
     let lux: f32 = sensor_data.illuminance.into();
     let red: f32 = sensor_data.red.into();
@@ -185,6 +181,7 @@ async fn get_sensor_data(sensor: &SensorProxy) -> LightData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::service_context::ExternalServiceProxy;
     use crate::switchboard::base::SettingType;
     use fidl_fuchsia_hardware_input::DeviceRequest as SensorRequest;
     use futures::channel::mpsc::UnboundedSender;
@@ -202,7 +199,7 @@ mod tests {
 
     impl TestNotifier {
         pub fn create(notifier: Notifier) -> Arc<Mutex<Self>> {
-            Arc::new(Mutex::new(Self { notifier: notifier }))
+            Arc::new(Mutex::new(Self { notifier }))
         }
     }
 
@@ -217,6 +214,7 @@ mod tests {
     async fn test_start_auto_brightness_task() {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<SensorMarker>().unwrap();
+        let proxy = ExternalServiceProxy::new(proxy, None);
 
         let data: Arc<RwLock<[u8; 11]>> =
             Arc::new(RwLock::new([1, 1, 0, 25, 0, 10, 0, 9, 0, 6, 0]));
@@ -257,6 +255,7 @@ mod tests {
     async fn test_start_light_sensor_scanner_scope() {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<SensorMarker>().unwrap();
+        let proxy = ExternalServiceProxy::new(proxy, None);
         let mut receiver = start_light_sensor_scanner(proxy, 1);
 
         let completed = Arc::new(AtomicBool::new(false));

@@ -4,10 +4,11 @@
 
 use crate::internal::event::message::Factory as EventMessengerFactory;
 use crate::internal::event::{Event, Publisher};
+use crate::message::base::MessengerType;
 
 use anyhow::{format_err, Error};
 use fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker};
-use futures::future::BoxFuture;
+use futures::future::{BoxFuture, OptionFuture};
 
 use fuchsia_async as fasync;
 use fuchsia_component::client::{connect_to_service, connect_to_service_at_path};
@@ -27,7 +28,7 @@ pub type ServiceContextHandle = Arc<Mutex<ServiceContext>>;
 /// environment.
 pub struct ServiceContext {
     generate_service: Option<GenerateService>,
-    _event_messenger_factory: Option<EventMessengerFactory>,
+    event_messenger_factory: Option<EventMessengerFactory>,
 }
 
 impl ServiceContext {
@@ -45,21 +46,49 @@ impl ServiceContext {
         generate_service: Option<GenerateService>,
         event_messenger_factory: Option<EventMessengerFactory>,
     ) -> Self {
-        Self { generate_service, _event_messenger_factory: event_messenger_factory }
+        Self { generate_service, event_messenger_factory }
+    }
+
+    async fn make_publisher(&self) -> Option<Publisher> {
+        let maybe: OptionFuture<_> = self
+            .event_messenger_factory
+            .as_ref()
+            .map(|factory| Publisher::create(factory, MessengerType::Unbound))
+            .into();
+        maybe.await
     }
 
     /// Connect to a service with the given ServiceMarker.
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service.
-    pub async fn connect<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-        if let Some(generate_service) = &self.generate_service {
+    pub async fn connect<S: DiscoverableService>(
+        &self,
+    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+        let proxy = if let Some(generate_service) = &self.generate_service {
             let (client, server) = zx::Channel::create()?;
             ((generate_service)(S::SERVICE_NAME, server)).await?;
-            return Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client)?));
+            S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
         } else {
-            return connect_to_service::<S>();
-        }
+            connect_to_service::<S>()?
+        };
+
+        Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
+    }
+
+    pub async fn connect_with_publisher<S: DiscoverableService>(
+        &self,
+        publisher: Publisher,
+    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+        let proxy = if let Some(generate_service) = &self.generate_service {
+            let (client, server) = zx::Channel::create()?;
+            ((generate_service)(S::SERVICE_NAME, server)).await?;
+            S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
+        } else {
+            connect_to_service::<S>()?
+        };
+
+        Ok(ExternalServiceProxy { proxy, publisher: Some(publisher) })
     }
 
     /// Connect to a service with the given name and ServiceMarker.
@@ -69,34 +98,53 @@ impl ServiceContext {
     pub async fn connect_named<S: ServiceMarker>(
         &self,
         service_name: &str,
-    ) -> Result<S::Proxy, Error> {
+    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
         if let Some(generate_service) = &self.generate_service {
             let (client, server) = zx::Channel::create()?;
             if (generate_service)(service_name, server).await.is_err() {
                 return Err(format_err!("Could not handl service {:?}", service_name));
             }
 
-            Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client)?))
+            Ok(ExternalServiceProxy {
+                proxy: S::Proxy::from_channel(fasync::Channel::from_channel(client)?),
+                publisher: self.make_publisher().await,
+            })
         } else {
             Err(format_err!("No service generator"))
         }
+    }
+
+    /// Connect to a service at the given path and DiscoverableService.
+    ///
+    /// If a GenerateService was specified at creation, the name of the service marker will be used
+    /// to generate a service and the path will be ignored.
+    pub async fn connect_discoverable_path<S: DiscoverableService>(
+        &self,
+        path: &str,
+    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+        let proxy = if let Some(generate_service) = &self.generate_service {
+            let (client, server) = zx::Channel::create()?;
+            ((generate_service)(S::SERVICE_NAME, server)).await?;
+            S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
+        } else {
+            connect_to_service_at_path::<S>(path)?
+        };
+
+        Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
     }
 
     /// Connect to a service at the given path and ServiceMarker.
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service and the path will be ignored.
-    pub async fn connect_path<S: DiscoverableService>(
+    pub async fn connect_path<S: ServiceMarker>(
         &self,
         path: &str,
-    ) -> Result<S::Proxy, Error> {
-        if let Some(generate_service) = &self.generate_service {
-            let (client, server) = zx::Channel::create()?;
-            ((generate_service)(S::SERVICE_NAME, server)).await?;
-            Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client)?))
-        } else {
-            connect_to_service_at_path::<S>(path)
-        }
+    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+        let (proxy, server) = fidl::endpoints::create_proxy::<S>()?;
+        fdio::service_connect(path, server.into_channel())?;
+
+        Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
     }
 
     /// Connect to a service by discovering a hardware device at the given glob-style pattern.
@@ -108,21 +156,24 @@ impl ServiceContext {
     pub async fn connect_device_path<S: DiscoverableService>(
         &self,
         glob_pattern: &str,
-    ) -> Result<S::Proxy, Error> {
+    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
         if self.generate_service.is_some() {
             // If a generate_service is already specified, just connect through there
-            self.connect::<S>().await
-        } else {
-            let found_path = glob(glob_pattern)?
-                .filter_map(|entry| entry.ok())
-                .next()
-                .ok_or_else(|| format_err!("failed to enumerate devices"))?;
-
-            let path_str =
-                found_path.to_str().ok_or_else(|| format_err!("failed to convert path to str"))?;
-
-            connect_to_service_at_path::<S>(path_str)
+            return self.connect::<S>().await;
         }
+
+        let found_path = glob(glob_pattern)?
+            .filter_map(|entry| entry.ok())
+            .next()
+            .ok_or_else(|| format_err!("failed to enumerate devices"))?;
+
+        let path_str =
+            found_path.to_str().ok_or_else(|| format_err!("failed to convert path to str"))?;
+
+        Ok(ExternalServiceProxy {
+            proxy: connect_to_service_at_path::<S>(path_str)?,
+            publisher: self.make_publisher().await,
+        })
     }
 }
 

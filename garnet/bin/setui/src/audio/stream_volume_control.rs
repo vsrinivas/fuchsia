@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::service_context::ExternalServiceProxy,
     crate::switchboard::base::{AudioStream, AudioStreamType},
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
@@ -18,12 +19,15 @@ use {
 pub struct StreamVolumeControl {
     pub stored_stream: AudioStream,
     proxy: Option<VolumeControlProxy>,
-    audio_service: fidl_fuchsia_media::AudioCoreProxy,
+    audio_service: ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
 }
 
 // TODO(fxb/37777): Listen for volume changes from Volume Control.
 impl StreamVolumeControl {
-    pub fn create(audio_service: &fidl_fuchsia_media::AudioCoreProxy, stream: AudioStream) -> Self {
+    pub fn create(
+        audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
+        stream: AudioStream,
+    ) -> Self {
         StreamVolumeControl {
             stored_stream: stream,
             proxy: bind_volume_control(&audio_service, stream.stream_type, stream),
@@ -67,14 +71,16 @@ impl StreamVolumeControl {
 }
 
 fn bind_volume_control(
-    audio_service: &fidl_fuchsia_media::AudioCoreProxy,
+    audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
     stream_type: AudioStreamType,
     stored_stream: AudioStream,
 ) -> Option<VolumeControlProxy> {
     let (vol_control_proxy, server_end) = create_proxy().unwrap();
     let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
 
-    if let Err(err) = audio_service.bind_usage_volume_control(&mut usage, server_end) {
+    if let Err(err) =
+        audio_service.call(|proxy| proxy.bind_usage_volume_control(&mut usage, server_end))
+    {
         fx_log_err!("failed to bind volume control for usage, {}", err);
         return None;
     }

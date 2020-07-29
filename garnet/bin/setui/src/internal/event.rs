@@ -65,9 +65,12 @@ pub struct Publisher {
 }
 
 impl Publisher {
-    pub async fn create(factory: &message::Factory, address: Address) -> Publisher {
+    pub async fn create(
+        factory: &message::Factory,
+        messenger_type: MessengerType<Address>,
+    ) -> Publisher {
         let (messenger, _) = factory
-            .create(MessengerType::Addressable(address))
+            .create(messenger_type)
             .await
             .expect("should be able to retrieve messenger for publisher");
 

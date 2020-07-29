@@ -5,10 +5,12 @@
 // Copied from src/ui/bin/brightness_manager
 // TODO(fxb/36843) consolidate usages
 
+use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
+
 use std::path::Path;
 use std::{fs, io};
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{format_err, Error};
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_hardware_input::{
     DeviceMarker as SensorMarker, DeviceProxy as SensorProxy, ReportType,
@@ -31,14 +33,19 @@ pub struct AmbientLightInputRpt {
 
 /// Opens the sensor's device file.
 /// Tries all the input devices until the one with the correct signature is found.
-pub async fn open_sensor() -> Result<SensorProxy, Error> {
+pub async fn open_sensor(
+    service_context: ServiceContextHandle,
+) -> Result<ExternalServiceProxy<SensorProxy>, Error> {
     let input_devices_directory = "/dev/class/input";
     let path = Path::new(input_devices_directory);
     let entries = fs::read_dir(path)?;
     for entry in entries {
         let entry = entry?;
-        let device = open_input_device(entry.path().to_str().expect("Bad path"))?;
-        if let Ok(device_descriptor) = device.get_report_desc().await {
+        let path = entry.path();
+        let path = path.to_str().expect("Bad path");
+        fx_log_info!("Opening sensor at {:?}", path);
+        let device = service_context.lock().await.connect_path::<SensorMarker>(path).await?;
+        if let Ok(device_descriptor) = device.call_async(SensorProxy::get_report_desc).await {
             if device_descriptor.len() < 4 {
                 return Err(format_err!("Short HID header"));
             }
@@ -51,19 +58,13 @@ pub async fn open_sensor() -> Result<SensorProxy, Error> {
     Err(io::Error::new(io::ErrorKind::NotFound, "no sensor found").into())
 }
 
-fn open_input_device(path: &str) -> Result<SensorProxy, Error> {
-    fx_log_info!("Opening sensor at {:?}", path);
-    let (proxy, server) =
-        fidl::endpoints::create_proxy::<SensorMarker>().context("Failed to create sensor proxy")?;
-    fdio::service_connect(path, server.into_channel())
-        .context("Failed to connect built-in service")?;
-    Ok(proxy)
-}
-
 /// Reads the sensor's HID record and decodes it.
-pub async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error> {
+pub async fn read_sensor(
+    sensor: &ExternalServiceProxy<SensorProxy>,
+) -> Result<AmbientLightInputRpt, Error> {
     const LIGHT_SENSOR_HID_ID: u8 = 1;
-    let report = sensor.get_report(ReportType::Input, LIGHT_SENSOR_HID_ID).await?;
+    let report =
+        sensor.call_async(|proxy| proxy.get_report(ReportType::Input, LIGHT_SENSOR_HID_ID)).await?;
     let report = report.1;
     if report.len() < 11 {
         return Err(format_err!("Sensor HID report too short"));
@@ -127,6 +128,7 @@ mod tests {
         })
         .detach();
 
+        let proxy = ExternalServiceProxy::new(proxy, None);
         let result = read_sensor(&proxy).await;
         match result {
             Ok(input_rpt) => {

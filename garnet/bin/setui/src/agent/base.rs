@@ -54,8 +54,11 @@ impl Context {
     ) -> Self {
         Self {
             receptor,
-            publisher: event::Publisher::create(&event_factory, event::Address::Agent(descriptor))
-                .await,
+            publisher: event::Publisher::create(
+                &event_factory,
+                MessengerType::Addressable(event::Address::Agent(descriptor)),
+            )
+            .await,
             switchboard_messenger_factory,
             available_components,
         }

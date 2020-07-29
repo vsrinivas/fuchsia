@@ -10,6 +10,7 @@ use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
+use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
     ControllerStateResult, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
     SwitchboardError,
@@ -35,7 +36,7 @@ pub struct LightController {
     client: ClientProxy<LightInfo>,
 
     /// Proxy for interacting with light hardware.
-    light_proxy: LightProxy,
+    light_proxy: ExternalServiceProxy<LightProxy>,
 }
 
 #[async_trait]
@@ -147,27 +148,34 @@ impl LightController {
                 // stored value.
                 None => continue,
                 Some(LightValue::Brightness(brightness)) => (
-                    self.light_proxy.set_brightness_value(*hardware_index, brightness),
+                    self.light_proxy
+                        .call_async(|proxy| proxy.set_brightness_value(*hardware_index, brightness))
+                        .await,
                     "set_brightness_value",
                 ),
-                Some(LightValue::Rgb(rgb)) => (
-                    self.light_proxy.set_rgb_value(
-                        *hardware_index,
-                        &mut rgb.clone().try_into().or_else(|_| {
-                            Err(SwitchboardError::InvalidArgument {
-                                setting_type: SettingType::Light,
-                                argument: "value".into(),
-                                value: format!("{:?}", rgb),
-                            })
-                        })?,
-                    ),
-                    "set_rgb_value",
-                ),
-                Some(LightValue::Simple(on)) => {
-                    (self.light_proxy.set_simple_value(*hardware_index, on), "set_simple_value")
+                Some(LightValue::Rgb(rgb)) => {
+                    let mut value = rgb.clone().try_into().or_else(|_| {
+                        Err(SwitchboardError::InvalidArgument {
+                            setting_type: SettingType::Light,
+                            argument: "value".into(),
+                            value: format!("{:?}", rgb),
+                        })
+                    })?;
+                    (
+                        self.light_proxy
+                            .call_async(|proxy| proxy.set_rgb_value(*hardware_index, &mut value))
+                            .await,
+                        "set_rgb_value",
+                    )
                 }
+                Some(LightValue::Simple(on)) => (
+                    self.light_proxy
+                        .call_async(|proxy| proxy.set_simple_value(*hardware_index, on))
+                        .await,
+                    "set_simple_value",
+                ),
             };
-            set_result.await.map(|_| ()).or_else(|_| {
+            set_result.map(|_| ()).or_else(|_| {
                 Err(SwitchboardError::ExternalFailure {
                     setting_type: SettingType::Light,
                     dependency: "fuchsia.hardware.light".to_string(),
@@ -184,16 +192,17 @@ impl LightController {
     async fn restore(&self) -> SettingResponseResult {
         // Read light info from hardware.
         let mut current = self.client.read().await;
-        let num_lights = self.light_proxy.get_num_lights().await.or_else(|_| {
-            Err(SwitchboardError::ExternalFailure {
-                setting_type: SettingType::Light,
-                dependency: "fuchsia.hardware.light".to_string(),
-                request: "get_num_lights".to_string(),
-            })
-        })?;
+        let num_lights =
+            self.light_proxy.call_async(LightProxy::get_num_lights).await.or_else(|_| {
+                Err(SwitchboardError::ExternalFailure {
+                    setting_type: SettingType::Light,
+                    dependency: "fuchsia.hardware.light".to_string(),
+                    request: "get_num_lights".to_string(),
+                })
+            })?;
 
         for i in 0..num_lights {
-            let info = match self.light_proxy.get_info(i).await {
+            let info = match self.light_proxy.call_async(|proxy| proxy.get_info(i)).await {
                 Ok(Ok(info)) => info,
                 _ => {
                     return Err(SwitchboardError::ExternalFailure {
@@ -222,7 +231,11 @@ impl LightController {
         // Read the proper value depending on the light type.
         let value = match light_type {
             LightType::Brightness => LightValue::Brightness(
-                match self.light_proxy.get_current_brightness_value(index).await {
+                match self
+                    .light_proxy
+                    .call_async(|proxy| proxy.get_current_brightness_value(index))
+                    .await
+                {
                     Ok(Ok(brightness)) => brightness,
                     _ => {
                         return Err(SwitchboardError::ExternalFailure {
@@ -233,18 +246,25 @@ impl LightController {
                     }
                 },
             ),
-            LightType::Rgb => match self.light_proxy.get_current_rgb_value(index).await {
-                Ok(Ok(rgb)) => rgb.into(),
-                _ => {
-                    return Err(SwitchboardError::ExternalFailure {
-                        setting_type: SettingType::Light,
-                        dependency: "fuchsia.hardware.light".to_string(),
-                        request: format!("get_current_rgb_value for light {}", index),
-                    });
+            LightType::Rgb => {
+                match self.light_proxy.call_async(|proxy| proxy.get_current_rgb_value(index)).await
+                {
+                    Ok(Ok(rgb)) => rgb.into(),
+                    _ => {
+                        return Err(SwitchboardError::ExternalFailure {
+                            setting_type: SettingType::Light,
+                            dependency: "fuchsia.hardware.light".to_string(),
+                            request: format!("get_current_rgb_value for light {}", index),
+                        });
+                    }
                 }
-            },
-            LightType::Simple => {
-                LightValue::Simple(match self.light_proxy.get_current_simple_value(index).await {
+            }
+            LightType::Simple => LightValue::Simple(
+                match self
+                    .light_proxy
+                    .call_async(|proxy| proxy.get_current_simple_value(index))
+                    .await
+                {
                     Ok(Ok(on)) => on,
                     _ => {
                         return Err(SwitchboardError::ExternalFailure {
@@ -253,8 +273,8 @@ impl LightController {
                             request: format!("get_current_simple_value for light {}", index),
                         });
                     }
-                })
-            }
+                },
+            ),
         };
 
         Ok((

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::service_context::ServiceContextHandle,
+    crate::internal::event::Publisher,
+    crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon as zx,
     futures::lock::Mutex,
     std::collections::HashSet,
     std::fs::File,
@@ -35,15 +36,16 @@ fn resource_file(
 /// Establish a connection to the sound player and return the proxy representing the service.
 /// Will not do anything if the sound player connection is already established.
 pub async fn connect_to_sound_player(
+    publisher: Publisher,
     service_context_handle: ServiceContextHandle,
-    sound_player_connection: Arc<Mutex<Option<PlayerProxy>>>,
+    sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
 ) {
     let mut sound_player_connection_lock = sound_player_connection.lock().await;
     if sound_player_connection_lock.is_none() {
         *sound_player_connection_lock = service_context_handle
             .lock()
             .await
-            .connect::<PlayerMarker>()
+            .connect_with_publisher::<PlayerMarker>(publisher)
             .await
             .context("Connecting to fuchsia.media.sounds.Player")
             .map_err(|e| fx_log_err!("Failed to connect to fuchsia.media.sounds.Player: {}", e))
@@ -56,7 +58,7 @@ pub async fn connect_to_sound_player(
 /// The id and file_name are expected to be unique and mapped 1:1 to each other. This allows
 /// the sound file to be reused without having to load it again.
 pub async fn play_sound<'a>(
-    sound_player_proxy: &PlayerProxy,
+    sound_player_proxy: &ExternalServiceProxy<PlayerProxy>,
     file_name: &'a str,
     id: u32,
     added_files: Arc<Mutex<HashSet<&'a str>>>,
@@ -68,7 +70,10 @@ pub async fn play_sound<'a>(
             Err(e) => return Err(format_err!("[earcons] Failed to convert sound file: {}", e)),
         };
         if let Some(file_channel) = sound_file_channel {
-            match sound_player_proxy.add_sound_from_file(id, file_channel).await {
+            match sound_player_proxy
+                .call_async(|proxy| proxy.add_sound_from_file(id, file_channel))
+                .await
+            {
                 Ok(_) => fx_log_debug!("[earcons] Added sound to Player: {}", file_name),
                 Err(e) => {
                     return Err(format_err!("[earcons] Unable to add sound to Player: {}", e));
@@ -81,7 +86,10 @@ pub async fn play_sound<'a>(
     // This fasync thread is needed so that the earcons sounds can play rapidly and not wait
     // for the previous sound to finish to send another request.
     fasync::Task::spawn(async move {
-        match sound_player_proxy.play_sound(id, AudioRenderUsage::Background).await {
+        match sound_player_proxy
+            .call_async(|proxy| proxy.play_sound(id, AudioRenderUsage::Background))
+            .await
+        {
             Ok(_) => {
                 // TODO(fxb/50246): Add inspect logging.
             }

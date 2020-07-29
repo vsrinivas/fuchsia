@@ -34,7 +34,7 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Swi
     };
 
     hardware_power_statecontrol_admin
-        .reboot(RebootReason::UserRequest)
+        .call_async(|proxy| proxy.reboot(RebootReason::UserRequest))
         .await
         .map_err(|_| build_err())
         .and_then(|r| {
@@ -53,7 +53,7 @@ pub struct PowerController {
 impl controller::Create for PowerController {
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
         let service_context = client.get_service_context().await;
-        Ok(Self { service_context: service_context })
+        Ok(Self { service_context })
     }
 }
 

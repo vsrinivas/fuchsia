@@ -58,7 +58,9 @@ async fn schedule_clear_accounts(
 
     let device_settings_manager = connect_result.unwrap();
 
-    if let Err(_) = device_settings_manager.set_integer(FACTORY_RESET_FLAG, 1).await {
+    if let Err(_) =
+        device_settings_manager.call_async(|proxy| proxy.set_integer(FACTORY_RESET_FLAG, 1)).await
+    {
         return Err(SwitchboardError::ExternalFailure {
             setting_type: SettingType::Account,
             dependency: "device_settings_manager".to_string(),
