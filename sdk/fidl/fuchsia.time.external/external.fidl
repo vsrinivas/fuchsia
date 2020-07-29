@@ -1,0 +1,141 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// Defines the protocols used to sample UTC time using time synchronization
+/// protocols such as NTP.
+///
+/// New time protocols may be added to the system by implementing the server
+/// side of one or more of these protocols. The core timekeeper system acts as
+/// the client and uses produced samples to update the system time.
+///
+/// Implementing PushSource is preferred, as it allows the server to decide when
+/// to produce samples. The server has knowledge of the particular protocol it
+/// understands and is therefore better informed when to produce a timesample.
+///
+/// UTC time is distributed by the system. Clients that need to obtain UTC time
+/// should use the standard libraries provided by their runtime.
+library fuchsia.time.external;
+using zx;
+
+/// A protocol which defines common methods for all time sources. Should not be
+/// implemented directly.
+protocol TimeSource {
+    /// Notifies the time source of changes to global properties of the device
+    /// that it may use to increase accuracy of time measurements.
+    UpdateDeviceProperties(Properties properties);
+};
+
+/// A protocol for time sources that produce time samples on demand.
+[Discoverable]
+protocol PullSource {
+    compose TimeSource;
+    /// Produce a new time sample.
+    ///
+    /// Returns a RATE_LIMITED error if the client should wait before requesting
+    /// another sample. For example, this can occur if a server requests that the
+    /// source make less frequent requests. In this case, the client should call
+    /// `NextSampleTime` to retrieve the next time it may request a sample.
+    Sample() -> (TimeSample sample) error Error;
+
+    /// Returns the monotonic time at which the PullSource is willing to produce
+    /// another sample. If the PullSource is not rate limited it may return the
+    /// current monotonic time or earlier.
+    NextPossibleSampleTime() -> (zx.time next_possible_time);
+};
+
+/// A protocol for time sources that produce time samples on a schedule that it
+/// dictates. A PushSource does not report errors to clients as it is responsible
+/// for handling them internally. Instead, a PushSource reports a general health
+/// indication through the `WatchHealth` method to reflect whether or not it
+/// expects to successfully produce time samples.
+[Discoverable]
+protocol PushSource {
+    compose TimeSource;
+    /// Watch for new time samples from the time source. This method is a hanging
+    /// get and returns the latest time sample if one is available and has not
+    /// already been returned to the client. If no such sample is available, the
+    /// method will hang until one is produced and return it then.
+    ///
+    /// Note that it is entirely at the discretion of the PushSource
+    /// implementation when to produce a sample and a call to WatchSample does
+    /// not necessarily trigger sample collection.
+    ///
+    /// In the case a client sends a second WatchSample request while another
+    /// request is active, the channel is closed with a ZX_ERR_BAD_STATE
+    /// epitaph.
+    WatchSample() -> (TimeSample sample);
+
+    /// Watch for changes in the status of the time source.
+    ///
+    /// This method is a hanging get that returns when the status changes from
+    /// the last status reported to the client.
+    ///
+    /// In the case a client sends a second WatchStatus request while another
+    /// request is active, the channel is closed with a ZX_ERR_BAD_STATE
+    /// epitaph.
+    WatchStatus() -> (Status status);
+};
+
+/// A correspondence pair that describes a UTC time and the monotonic time at
+/// which the time was measured.
+table TimeSample {
+    /// The UTC time sample. Must always be provided.
+    1: zx.time utc;
+    /// The monotonic time at which the sample was most valid. Must always be provided.
+    2: zx.time monotonic;
+    // TODO: add definitions of uncertainty
+};
+
+/// Enum of states a PullSource may be in.
+enum Status {
+    /// The time source is performing setup steps or waiting for dependencies such
+    /// as network to become available.
+    INITIALIZING = 0;
+    /// The time source is healthy and expects to produce time samples.
+    OK = 1;
+    /// The time source does not expect to produce time samples for reasons that
+    /// cannot be classified as one of the more specific statuses.
+    UNKNOWN_UNHEALTHY = 2;
+    /// The time source is unable to produce time samples due to network availability
+    /// issues.
+    NETWORK = 3;
+    /// The time source is unable to produce time samples due to hardware issues.
+    HARDWARE = 4;
+    /// The time source is unable to produce time samples due to errors specific to
+    /// the implemented time protocol.
+    PROTOCOL = 5;
+    /// The time source is unable to produce time samples due to local resource errors
+    /// such as IO, FIDL, or memory allocation.
+    RESOURCE = 6;
+};
+
+/// Enum of reasons why producing a time sample failed.
+enum Error {
+    /// An error occurred that cannot be classified as one of the more specific
+    /// error statuses.
+    UNKNOWN = 1;
+    /// An internal error occurred. This usually indicates a bug in the
+    /// component implementation.
+    INTERNAL = 2;
+    /// A local resource error occurred such as IO, FIDL, or memory allocation
+    /// failure.
+    RESOURCE = 3;
+    /// A network error occurred.
+    NETWORK = 4;
+    /// Some hardware that the time source depends on failed.
+    HARDWARE = 5;
+    /// A retriable error specific to the implemented time protocol occurred, such
+    /// as a malformed response from a remote server.
+    PROTOCOL = 4;
+    /// Sampling failed in a nonretriable way. Examples include failed
+    /// authentication, or a missing configuration.
+    PROTOCOL_UNRECOVERABLE = 5;
+    /// The request was made too soon and the client should wait before making
+    /// another request.
+    RATE_LIMITED = 6;
+};
+
+/// Device global properties a time source may use to help it sample time.
+table Properties {
+};
