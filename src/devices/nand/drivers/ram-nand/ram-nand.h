@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
-#define SRC_STORAGE_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
+#define SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
 
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
@@ -15,9 +15,13 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include <optional>
+
+#include <ddk/metadata/nand.h>
 #include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/nand.h>
+#include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 
@@ -46,8 +50,8 @@ struct NandParams : public fuchsia_hardware_nand_Info {
 };
 
 class NandDevice;
-using DeviceType =
-    ddk::Device<NandDevice, ddk::GetSizable, ddk::UnbindableDeprecated, ddk::Messageable>;
+using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, ddk::UnbindableNew,
+                               ddk::Messageable>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
@@ -56,6 +60,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   ~NandDevice();
 
   zx_status_t Bind(const fuchsia_hardware_nand_RamNandInfo& info);
+  void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
 
   // Performs the object initialization, returning the required data to create
@@ -65,7 +70,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
   // Device protocol implementation.
   zx_off_t DdkGetSize() { return params_.GetSize(); }
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   // Fidl RamNand implementation.
@@ -104,7 +109,10 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   sync_completion_t wake_signal_;
   thrd_t worker_;
 
+  std::optional<nand_config_t> export_nand_config_;
+  fbl::Array<char> export_partition_map_;
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_

@@ -107,7 +107,7 @@ fbl::Array<char> ExtractPartitionMap(const fuchsia_hardware_nand_RamNandInfo& in
 }  // namespace
 
 NandDevice::NandDevice(const NandParams& params, zx_device_t* parent)
-    : DeviceType(parent), params_(params) {}
+    : DeviceType(parent), params_(params), export_nand_config_{} {}
 
 NandDevice::~NandDevice() {
   if (thread_created_) {
@@ -128,7 +128,6 @@ NandDevice::~NandDevice() {
   if (mapped_addr_) {
     zx_vmar_unmap(zx_vmar_root_self(), mapped_addr_, DdkGetSize());
   }
-  DdkRemoveDeprecated();
 }
 
 zx_status_t NandDevice::Bind(const fuchsia_hardware_nand_RamNandInfo& info) {
@@ -138,34 +137,38 @@ zx_status_t NandDevice::Bind(const fuchsia_hardware_nand_RamNandInfo& info) {
     return status;
   }
 
+  if (info.export_nand_config) {
+    export_nand_config_ = std::make_optional<nand_config_t>();
+    ExtractNandConfig(info, &*export_nand_config_);
+  }
+  if (info.export_partition_map) {
+    export_partition_map_ = ExtractPartitionMap(info);
+  }
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
       {BIND_NAND_CLASS, 0, params_.nand_class},
   };
 
-  status = DdkAdd(ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_INVISIBLE).set_props(props));
-  if (status != ZX_OK) {
-    return status;
-  }
+  return DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
+}
 
-  if (info.export_nand_config) {
-    nand_config_t config = {};
-    ExtractNandConfig(info, &config);
-    status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &config, sizeof(config));
+void NandDevice::DdkInit(ddk::InitTxn txn) {
+  if (export_nand_config_) {
+    zx_status_t status = DdkAddMetadata(DEVICE_METADATA_PRIVATE, &*export_nand_config_,
+                                        sizeof(*export_nand_config_));
     if (status != ZX_OK) {
-      return status;
+      return txn.Reply(status);
     }
   }
-  if (info.export_partition_map) {
-    fbl::Array<char> map = ExtractPartitionMap(info);
-    status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, map.data(), map.size());
+  if (export_partition_map_) {
+    zx_status_t status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, export_partition_map_.data(),
+                                        export_partition_map_.size());
     if (status != ZX_OK) {
-      return status;
+      return txn.Reply(status);
     }
   }
 
-  DdkMakeVisible();
-  return ZX_OK;
+  return txn.Reply(ZX_OK);
 }
 
 zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
@@ -211,10 +214,10 @@ zx_status_t NandDevice::Init(char name[NAME_MAX], zx::vmo vmo) {
   return ZX_OK;
 }
 
-void NandDevice::DdkUnbindDeprecated() {
+void NandDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   Kill();
   sync_completion_signal(&wake_signal_);
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 zx_status_t NandDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -228,7 +231,7 @@ zx_status_t NandDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t NandDevice::Unlink() {
-  DdkUnbindDeprecated();
+  DdkAsyncRemove();
   return ZX_OK;
 }
 

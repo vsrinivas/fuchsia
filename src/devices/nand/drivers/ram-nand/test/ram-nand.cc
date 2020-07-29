@@ -57,7 +57,7 @@ TEST(RamNandTest, DdkLifetime) {
 
   fake_ddk::Bind ddk;
   ASSERT_OK(device->Bind(BuildConfig()));
-  device->DdkUnbindDeprecated();
+  device->DdkAsyncRemove();
   EXPECT_TRUE(ddk.Ok());
 
   // This should delete the object, which means this test should not leak.
@@ -223,19 +223,28 @@ TEST(RamNandTest, BasicDeviceProtocol) {
 
   ASSERT_EQ(kPageSize * kNumPages, device.DdkGetSize());
 
-  device.DdkUnbindDeprecated();
+  // Since we have not called DdkAdd, calling DdkAsyncRemove will assert failure.
+  device.DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 
   ASSERT_EQ(ZX_ERR_BAD_STATE, device.DdkMessage(nullptr, nullptr));
 }
 
 TEST(RamNandTest, Unlink) {
-  std::unique_ptr<NandDevice> device = CreateDevice(nullptr);
-  ASSERT_TRUE(device);
+  NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
+  NandDevice* device(new NandDevice(params, fake_ddk::kFakeParent));
+
+  fake_ddk::Bind ddk;
+  // We need to DdkAdd the device, as Unlink will call DdkAsyncRemove.
+  ASSERT_OK(device->Bind(BuildConfig()));
 
   ASSERT_OK(device->Unlink());
+  ASSERT_OK(ddk.WaitUntilRemove());
 
   // The device is "dead" now.
   ASSERT_EQ(ZX_ERR_BAD_STATE, device->DdkMessage(nullptr, nullptr));
+
+  // This should delete the object, which means this test should not leak.
+  device->DdkRelease();
 }
 
 TEST(RamNandTest, Query) {

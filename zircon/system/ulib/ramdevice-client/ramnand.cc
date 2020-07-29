@@ -10,6 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fdio/watcher.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,36 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramnand.h>
+
+namespace {
+
+// Waits for |file| to appear in |dir|, and opens it when it does.  Times out if
+// the deadline passes.
+zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique_fd* out) {
+  auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
+    auto file = reinterpret_cast<const char*>(cookie);
+    if (event != WATCH_EVENT_ADD_FILE) {
+      return ZX_OK;
+    }
+    if (!strcmp(fn, file)) {
+      return ZX_ERR_STOP;
+    }
+    return ZX_OK;
+  };
+
+  zx_status_t status =
+      fdio_watch_directory(dir.get(), watch_func, ZX_TIME_INFINITE, const_cast<char*>(file));
+  if (status != ZX_ERR_STOP) {
+    return status;
+  }
+  out->reset(openat(dir.get(), file, O_RDWR));
+  if (!out->is_valid()) {
+    return ZX_ERR_IO;
+  }
+  return ZX_OK;
+}
+
+}  // namespace
 
 namespace ramdevice_client {
 
@@ -86,10 +117,17 @@ zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
   path.Append("/");
   path.Append(name);
 
-  fbl::unique_fd ram_nand(open(path.c_str(), O_RDWR));
-  if (!ram_nand) {
-    fprintf(stderr, "Could not open ram_nand\n");
+  fbl::unique_fd ram_nand_ctl(open(kBasePath, O_RDONLY | O_DIRECTORY));
+  if (!ram_nand_ctl) {
+    fprintf(stderr, "Could not open ram_nand_ctl");
     return ZX_ERR_INTERNAL;
+  }
+
+  fbl::unique_fd ram_nand;
+  st = WaitForFile(ram_nand_ctl, name, &ram_nand);
+  if (st != ZX_OK) {
+    fprintf(stderr, "Could not open ram_nand\n");
+    return st;
   }
 
   *out = RamNand(std::move(ram_nand), path.ToString(), fbl::String(name));
