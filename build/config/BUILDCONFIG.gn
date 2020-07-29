@@ -209,6 +209,7 @@ if (is_fuchsia) {
     "//build/config/fuchsia:thread_safety_annotations",
     "//build/config:icf",
     "//build/config:rust_panic_abort",
+    "//build/config:rust_v0_symbol_mangling",
 
     # TODO(mcgrathr): Perhaps restrict this to only affected code.
     # For now, safest to do it everywhere.

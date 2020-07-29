@@ -20,6 +20,13 @@ declare_args() {
     # remove this option when the issues are addressed.
     enable_frame_pointers = is_debug
   }
+
+  # Controls whether the rust compiler uses v0 symbol mangling scheme
+  # (see https://github.com/rust-lang/rfcs/blob/master/text/2603-rust-symbol-name-mangling-v0.md).
+  # The v0 symbol mangling scheme requires upstream LLVM support when demangling,
+  # so it is not on by default.
+  # TODO(fxbug.dev/57302): Enable v0 mangling by default.
+  rust_v0_symbol_mangling = false
 }
 
 # No frame pointers for host compiles.
@@ -68,6 +75,12 @@ config("rust_panic_abort") {
     "-Cforce-unwind-tables=yes",
     "-Zpanic_abort_tests",
   ]
+}
+
+config("rust_v0_symbol_mangling") {
+  if (rust_v0_symbol_mangling) {
+    rustflags = [ "-Zsymbol-mangling-version=v0" ]
+  }
 }
 
 config("language") {
