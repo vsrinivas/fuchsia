@@ -748,7 +748,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:690
+From //build/config/BUILDCONFIG.gn:691
 
 ### factory_mode
 factory_mode: enables/disables factory mode
@@ -1340,7 +1340,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:615
+From //build/config/BUILDCONFIG.gn:616
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1817,6 +1817,17 @@ Sets the fuchsia toolchain target triple suffix (after arch)
 
 From //build/rust/config.gni:30
 
+### rust_v0_symbol_mangling
+Controls whether the rust compiler uses v0 symbol mangling scheme
+(see https://github.com/rust-lang/rfcs/blob/master/text/2603-rust-symbol-name-mangling-v0.md).
+The v0 symbol mangling scheme requires upstream LLVM support when demangling,
+so it is not on by default.
+TODO(fxbug.dev/57302): Enable v0 mangling by default.
+
+**Current value (from the default):** `false`
+
+From //build/config/BUILD.gn:29
+
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
 This can be used to test custom Rust toolchains.
@@ -1942,7 +1953,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:912
+From //build/config/BUILDCONFIG.gn:913
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1951,7 +1962,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:917
+From //build/config/BUILDCONFIG.gn:918
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1982,7 +1993,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:736
+From //build/config/BUILDCONFIG.gn:737
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2246,7 +2257,7 @@ From //build/config/sanitizers/BUILD.gn:33
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:710
+From //build/config/BUILDCONFIG.gn:711
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
