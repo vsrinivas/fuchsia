@@ -181,7 +181,7 @@ TEST_F(DeviceInspectTestCase, DeviceProperties) {
   fbl::RefPtr<zx_device> device;
   ASSERT_OK(zx_device::Create(&(driver_host()), "test-device", driver(), &device));
   device->set_local_id(1);
-  device->set_flag(DEV_FLAG_BUSY | DEV_FLAG_ADDED);
+  device->set_flag(DEV_FLAG_UNBINDABLE | DEV_FLAG_INITIALIZING);
 
   ReadInspect(driver_host().inspect().inspector());
 
@@ -191,7 +191,10 @@ TEST_F(DeviceInspectTestCase, DeviceProperties) {
   ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
       test_device->node(), "local_id", inspect::UintPropertyValue(1)));
   ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
-      test_device->node(), "flags", inspect::StringPropertyValue("busy added ")));
+      test_device->node(), "flags", inspect::StringPropertyValue("initializing unbindable ")));
+
+  device->set_local_id(0);
+  device->vnode.reset();
 }
 
 TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
@@ -234,6 +237,7 @@ TEST_F(DeviceInspectTestCase, CallStats) {
   fbl::RefPtr<zx_device> device;
   ASSERT_OK(zx_device::Create(&(driver_host()), "test-device", driver(), &device));
   device->set_ops(&internal::kDeviceDefaultOps);
+  device->vnode.reset();
 
   // Make op calls
   device->ReadOp(nullptr, 0, 0, nullptr);
@@ -298,4 +302,9 @@ TEST_F(DeviceInspectTestCase, ParentChild) {
 
   ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
       child_data->node(), "parent", inspect::StringPropertyValue("test-parent (local-id:2)")));
+
+  child->set_local_id(0);
+  child->vnode.reset();
+  parent->set_local_id(0);
+  parent->vnode.reset();
 }

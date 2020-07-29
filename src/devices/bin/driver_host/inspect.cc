@@ -40,7 +40,8 @@ void DriverHostInspect::SetDeviceDefaultPowerStates(inspect::Node& parent) {
   auto power_states = parent.CreateChild("default_power_states");
   for (uint8_t i = 0; i < countof(internal::kDeviceDefaultPowerStates); i++) {
     const auto& info = internal::kDeviceDefaultPowerStates[i];
-    auto state = new DevicePowerStates(power_states, info.state_id);
+    auto& state = power_states_[i];
+    state.emplace(power_states, info.state_id);
     state->restore_latency.Set(info.restore_latency);
     state->wakeup_capable.Set(info.wakeup_capable);
     state->system_wake_state.Set(info.system_wake_state);
@@ -53,7 +54,8 @@ void DriverHostInspect::SetDeviceDefaultPerfStates(inspect::Node& parent) {
   auto perf_states = parent.CreateChild("default_performance_states");
   for (uint8_t i = 0; i < countof(internal::kDeviceDefaultPerfStates); i++) {
     const auto& info = internal::kDeviceDefaultPerfStates[i];
-    auto state = new DevicePerformanceStates(perf_states, info.state_id);
+    auto& state = performance_states_[i];
+    state.emplace(perf_states, info.state_id);
     state->restore_latency.Set(info.restore_latency);
     static_values_.emplace(std::move(state->performance_state));
   }
@@ -64,7 +66,8 @@ void DriverHostInspect::SetDeviceDefaultStateMapping(inspect::Node& parent) {
   auto state_mapping = parent.CreateChild("default_system_power_state_mapping");
   for (uint8_t i = 0; i < internal::kDeviceDefaultStateMapping.size(); i++) {
     auto info = &internal::kDeviceDefaultStateMapping[i];
-    auto state = new DeviceSystemPowerStateMapping(state_mapping, i);
+    auto& state = state_mappings_[i];
+    state.emplace(state_mapping, i);
     state->power_state.Set(static_cast<uint8_t>(info->dev_state));
     state->performance_state.Set(info->performance_state);
     state->wakeup_enable.Set(info->wakeup_enable);
@@ -441,10 +444,9 @@ void DeviceInspect::set_power_states(const device_power_state_info_t* power_stat
   }
   for (uint8_t i = 0; i < count; i++) {
     const auto& info = power_states[i];
-    auto state = power_states_[info.state_id];
+    auto& state = power_states_[info.state_id];
     if (!state) {
-      state = new DevicePowerStates(power_states_node_, info.state_id);
-      power_states_[info.state_id] = state;
+      state.emplace(power_states_node_, info.state_id);
     }
     state->restore_latency.Set(info.restore_latency);
     state->wakeup_capable.Set(info.wakeup_capable);
@@ -464,10 +466,9 @@ void DeviceInspect::set_performance_states(
   }
   for (uint8_t i = 0; i < count; i++) {
     const auto& info = performance_states[i];
-    auto state = performance_states_[info.state_id];
+    auto& state = performance_states_[info.state_id];
     if (!state) {
-      state = new DevicePerformanceStates(performance_states_node_, info.state_id);
-      performance_states_[info.state_id] = state;
+      state.emplace(performance_states_node_, info.state_id);
     }
     state->restore_latency.Set(info.restore_latency);
   }
@@ -484,15 +485,14 @@ void DeviceInspect::set_system_power_state_mapping(
     system_power_states_node_ = device_node_.CreateChild("system_power_states_mapping");
   }
   for (uint8_t i = 0; i < mapping.size(); i++) {
-    auto info = &mapping[i];
-    auto state = system_power_states_mapping_[i];
+    const auto& info = mapping[i];
+    auto& state = system_power_states_mapping_[i];
     if (!state) {
-      state = new DeviceSystemPowerStateMapping(system_power_states_node_, i);
-      system_power_states_mapping_[i] = state;
+      state.emplace(system_power_states_node_, i);
     }
-    state->power_state.Set(static_cast<uint8_t>(info->dev_state));
-    state->performance_state.Set(info->performance_state);
-    state->wakeup_enable.Set(info->wakeup_enable);
-    state->suspend_flag.Set(info->suspend_flag);
+    state->power_state.Set(static_cast<uint8_t>(info.dev_state));
+    state->performance_state.Set(info.performance_state);
+    state->wakeup_enable.Set(info.wakeup_enable);
+    state->suspend_flag.Set(info.suspend_flag);
   }
 }

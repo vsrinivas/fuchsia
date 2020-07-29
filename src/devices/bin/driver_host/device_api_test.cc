@@ -24,6 +24,7 @@ TEST(DeviceApiTest, OpsNotImplemented) {
 
   zx_protocol_device_t ops = {};
   dev->set_ops(&ops);
+  dev->vnode.reset();
 
   EXPECT_EQ(device_get_protocol(dev.get(), 0, nullptr), ZX_ERR_NOT_SUPPORTED);
   EXPECT_EQ(device_get_size(dev.get()), 0);
@@ -56,6 +57,7 @@ TEST(DeviceApiTest, GetProtocol) {
   ops.get_protocol = test_get_protocol;
   dev->set_ops(&ops);
   dev->ctx = &test_ctx;
+  dev->vnode.reset();
 
   uint8_t out = 0;
   ASSERT_OK(device_get_protocol(dev.get(), 42, &out));
@@ -74,6 +76,7 @@ TEST(DeviceApiTest, GetSize) {
   ops.get_size = test_get_size;
   dev->set_ops(&ops);
   dev->ctx = &test_ctx;
+  dev->vnode.reset();
 
   ASSERT_EQ(device_get_size(dev.get()), 42ul);
 }

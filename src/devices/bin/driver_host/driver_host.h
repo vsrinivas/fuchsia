@@ -29,6 +29,7 @@
 #include <fbl/string.h>
 
 #include "async_loop_owned_rpc_handler.h"
+#include "defaults.h"
 #include "driver_host_context.h"
 #include "lock.h"
 #include "zx_device.h"
@@ -74,11 +75,6 @@ class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostContr
   DriverHostContext* const driver_host_context_;
   fbl::RefPtr<zx_driver> proxy_driver_;
 };
-
-extern const zx_protocol_device_t kDeviceDefaultOps;
-extern const device_power_state_info_t kDeviceDefaultPowerStates[2];
-extern const device_performance_state_info_t kDeviceDefaultPerfStates[1];
-extern const zx_device::SystemPowerStateMapping kDeviceDefaultStateMapping;
 
 }  // namespace internal
 

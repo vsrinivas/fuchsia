@@ -40,6 +40,10 @@ class DeviceControllerConnection
 
   const fbl::RefPtr<zx_device>& dev() const { return dev_; }
 
+ protected:
+  DriverHostContext* const driver_host_context_;
+  const fbl::RefPtr<zx_device> dev_;
+
  private:
   // Fidl methods
   void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver,
@@ -75,9 +79,6 @@ class DeviceControllerConnection
             LinkCompleter::Sync _completer) override {}
   void Watch(uint32_t mask, uint32_t options, ::zx::channel watcher,
              WatchCompleter::Sync _completer) override {}
-
-  DriverHostContext* const driver_host_context_;
-  const fbl::RefPtr<zx_device> dev_;
 };
 
 struct DevhostRpcReadContext {

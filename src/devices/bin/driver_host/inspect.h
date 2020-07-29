@@ -15,6 +15,8 @@
 #include <fs/pseudo_dir.h>
 #include <fs/synchronous_vfs.h>
 
+#include "defaults.h"
+
 class InspectCallStats {
  public:
   InspectCallStats(inspect::Node& parent, std::string name) {
@@ -66,6 +68,46 @@ struct InspectNodeCollection {
   inspect::UintProperty count;
 };
 
+// Helper class for device inspect
+struct DeviceSystemPowerStateMapping {
+  explicit DeviceSystemPowerStateMapping(inspect::Node& parent, uint32_t state_id) {
+    system_power_state = parent.CreateChild(std::to_string(state_id));
+    power_state = system_power_state.CreateUint("power_state", 0);
+    performance_state = system_power_state.CreateUint("performance_state", 0);
+    suspend_flag = system_power_state.CreateUint("suspend_flag", 0);
+    wakeup_enable = system_power_state.CreateBool("wakeup_enable", false);
+  }
+  inspect::Node system_power_state;
+  inspect::UintProperty power_state;
+  inspect::UintProperty performance_state;
+  inspect::UintProperty suspend_flag;
+  inspect::BoolProperty wakeup_enable;
+};
+
+// Helper class for device inspect
+struct DevicePowerStates {
+  explicit DevicePowerStates(inspect::Node& parent, uint32_t state_id) {
+    power_state = parent.CreateChild(std::to_string(state_id));
+    restore_latency = power_state.CreateInt("restore_latency", 0);
+    wakeup_capable = power_state.CreateBool("wakeup_capable", false);
+    system_wake_state = power_state.CreateInt("system_wake_state", 0);
+  }
+  inspect::Node power_state;
+  inspect::IntProperty restore_latency;
+  inspect::BoolProperty wakeup_capable;
+  inspect::IntProperty system_wake_state;
+};
+
+// Helper class for device inspect
+struct DevicePerformanceStates {
+  explicit DevicePerformanceStates(inspect::Node& parent, uint32_t state_id) {
+    performance_state = parent.CreateChild(std::to_string(state_id));
+    restore_latency = performance_state.CreateInt("restore_latency", 0);
+  }
+  inspect::Node performance_state;
+  inspect::IntProperty restore_latency;
+};
+
 class DriverHostInspect {
  public:
   DriverHostInspect();
@@ -95,6 +137,15 @@ class DriverHostInspect {
   zx::vmo inspect_vmo_;
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
   std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
+
+  // Data for nodes stored in static_values_.
+  std::array<std::optional<DevicePowerStates>, std::size(internal::kDeviceDefaultPowerStates)>
+      power_states_;
+  std::array<std::optional<DevicePerformanceStates>, std::size(internal::kDeviceDefaultPerfStates)>
+      performance_states_;
+  std::array<std::optional<DeviceSystemPowerStateMapping>,
+             std::size(internal::kDeviceDefaultStateMapping)>
+      state_mappings_;
 
   // Reference to nodes with static properties
   inspect::ValueList static_values_;
@@ -151,46 +202,6 @@ class DriverInspect {
   inspect::ValueList static_values_;
 
   inspect::IntProperty status_;
-};
-
-// Helper class for device inspect
-struct DeviceSystemPowerStateMapping {
-  explicit DeviceSystemPowerStateMapping(inspect::Node& parent, uint32_t state_id) {
-    system_power_state = parent.CreateChild(std::to_string(state_id));
-    power_state = system_power_state.CreateUint("power_state", 0);
-    performance_state = system_power_state.CreateUint("performance_state", 0);
-    suspend_flag = system_power_state.CreateUint("suspend_flag", 0);
-    wakeup_enable = system_power_state.CreateBool("wakeup_enable", false);
-  }
-  inspect::Node system_power_state;
-  inspect::UintProperty power_state;
-  inspect::UintProperty performance_state;
-  inspect::UintProperty suspend_flag;
-  inspect::BoolProperty wakeup_enable;
-};
-
-// Helper class for device inspect
-struct DevicePowerStates {
-  explicit DevicePowerStates(inspect::Node& parent, uint32_t state_id) {
-    power_state = parent.CreateChild(std::to_string(state_id));
-    restore_latency = power_state.CreateInt("restore_latency", 0);
-    wakeup_capable = power_state.CreateBool("wakeup_capable", false);
-    system_wake_state = power_state.CreateInt("system_wake_state", 0);
-  }
-  inspect::Node power_state;
-  inspect::IntProperty restore_latency;
-  inspect::BoolProperty wakeup_capable;
-  inspect::IntProperty system_wake_state;
-};
-
-// Helper class for device inspect
-struct DevicePerformanceStates {
-  explicit DevicePerformanceStates(inspect::Node& parent, uint32_t state_id) {
-    performance_state = parent.CreateChild(std::to_string(state_id));
-    restore_latency = performance_state.CreateInt("restore_latency", 0);
-  }
-  inspect::Node performance_state;
-  inspect::IntProperty restore_latency;
 };
 
 class DeviceInspect {
@@ -267,15 +278,17 @@ class DeviceInspect {
 
   inspect::Node& GetCallStatsNode();
 
-  std::array<DevicePowerStates*, ::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES> power_states_{};
+  std::array<std::optional<DevicePowerStates>, ::llcpp::fuchsia::device::MAX_DEVICE_POWER_STATES>
+      power_states_{};
   inspect::Node power_states_node_;
 
-  std::array<DevicePerformanceStates*, ::llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>
+  std::array<std::optional<DevicePerformanceStates>,
+             ::llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>
       performance_states_{};
   inspect::Node performance_states_node_;
   inspect::UintProperty current_performance_state_;
 
-  std::array<DeviceSystemPowerStateMapping*,
+  std::array<std::optional<DeviceSystemPowerStateMapping>,
              ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>
       system_power_states_mapping_{};
   inspect::Node system_power_states_node_;

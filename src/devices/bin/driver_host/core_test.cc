@@ -181,7 +181,19 @@ TEST_F(CoreTest, RebindNoChildren) {
   EXPECT_EQ(device_rebind(dev.get()), ZX_OK);
   EXPECT_EQ(coordinator_.bind_count(), 1);
 
+  // Join the thread running in the background, then run the rest of the tasks locally.
+  ctx_.loop().Quit();
+  ctx_.loop().JoinThreads();
+  ctx_.loop().ResetQuit();
+  ctx_.loop().RunUntilIdle();
+
   dev->set_flag(DEV_FLAG_DEAD);
+  {
+    fbl::AutoLock lock(&ctx_.api_lock());
+    dev->removal_cb = [](zx_status_t) {};
+    ctx_.DriverManagerRemove(std::move(dev));
+  }
+  ASSERT_OK(ctx_.loop().RunUntilIdle());
 }
 
 TEST_F(CoreTest, RebindHasOneChild) {
@@ -211,6 +223,7 @@ TEST_F(CoreTest, RebindHasOneChild) {
       EXPECT_EQ(unbind_count, 1);
 
       child->set_flag(DEV_FLAG_DEAD);
+      child->vnode.reset();
     }
 
     ctx_.loop().Quit();
@@ -220,6 +233,12 @@ TEST_F(CoreTest, RebindHasOneChild) {
     EXPECT_EQ(coordinator_.bind_count(), 1);
 
     parent->set_flag(DEV_FLAG_DEAD);
+    {
+      fbl::AutoLock lock(&ctx_.api_lock());
+      parent->removal_cb = [](zx_status_t) {};
+      ctx_.DriverManagerRemove(std::move(parent));
+    }
+    ASSERT_OK(ctx_.loop().RunUntilIdle());
   }
   // Join the thread running in the background, then run the rest of the tasks locally.
 }
@@ -258,6 +277,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
 
       for (auto& child : children) {
         child->set_flag(DEV_FLAG_DEAD);
+        child->vnode.reset();
       }
     }
     // Join the thread running in the background, then run the rest of the tasks locally.
@@ -268,6 +288,12 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     EXPECT_EQ(coordinator_.bind_count(), 1);
 
     parent->set_flag(DEV_FLAG_DEAD);
+    {
+      fbl::AutoLock lock(&ctx_.api_lock());
+      parent->removal_cb = [](zx_status_t) {};
+      ctx_.DriverManagerRemove(std::move(parent));
+    }
+    ASSERT_OK(ctx_.loop().RunUntilIdle());
   }
 }
 

@@ -96,9 +96,6 @@ test("driver_host_test") {
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-
-  # TODO(46713): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 isolated_devmgr_unittest_package("driver-host-tests") {

@@ -36,7 +36,9 @@ TEST(ProxyIostateTestCase, Creation) {
     ASSERT_NOT_NULL(dev->proxy_ios);
   }
 
+  ctx.ProxyIosDestroy(dev);
   ASSERT_OK(ctx.loop().RunUntilIdle());
+  dev->vnode.reset();
 }
 
 // This test reproduces the bug from ZX-4060, in which we would double-free the
@@ -66,6 +68,7 @@ TEST(ProxyIostateTestCase, ChannelCloseThenCancel) {
   }
 
   ASSERT_OK(ctx.loop().RunUntilIdle());
+  dev->vnode.reset();
 }
 
 }  // namespace

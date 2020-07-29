@@ -22,6 +22,7 @@ TEST(DriverHostTest, MkDevpath) {
   constexpr char device_name[] = "device-name";
 
   ASSERT_OK(zx_device::Create(&ctx, device_name, drv.get(), &dev));
+  dev->vnode.reset();
 
   auto result = mkdevpath(*dev, nullptr, 0);
   EXPECT_STR_EQ("", result);
