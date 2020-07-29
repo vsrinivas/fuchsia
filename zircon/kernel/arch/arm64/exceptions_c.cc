@@ -487,6 +487,8 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 
 /* called from assembly */
 extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int which) {
+  platform_panic_start();
+
   printf("invalid exception, which %#x\n", which);
   dump_iframe(iframe);
 
