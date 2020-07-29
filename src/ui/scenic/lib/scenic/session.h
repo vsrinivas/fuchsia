@@ -24,6 +24,8 @@
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/scheduling/present1_helper.h"
+#include "src/ui/scenic/lib/scheduling/present2_helper.h"
 
 namespace scenic_impl {
 
@@ -56,6 +58,9 @@ class Session final : public fuchsia::ui::scenic::Session {
   void SetDebugName(std::string debug_name) override;
 
   void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
+
+  void OnPresented(const std::map<scheduling::PresentId, zx::time>& latched_times,
+                   scheduling::PresentTimestamps present_times);
 
   SessionId id() const { return id_; }
 
@@ -137,19 +142,10 @@ class Session final : public fuchsia::ui::scenic::Session {
     fxl::WeakPtrFactory<EventAndErrorReporter> weak_factory_;
   };
 
-  // TODO(44000): Remove when Present1 is removed.
-  enum PresentType { UNSET = 0, PRESENT1 = 1, PRESENT2 = 2 };
-
-  // Verifies the client is only using Present() or Present2(). It is an error for a client
-  // to use both calls in the same Session. If both are called, the session should be shut down.
-  // TODO(44000) remove check when Present() is deprecated and removed from the fidl.
-  bool VerifyPresentType(PresentType present_type);
-
   // Helper method to schedule Present1 and Present2 calls.
-  void SchedulePresentRequest(
-      zx::time requested_presentation_time, std::vector<zx::event> acquire_fences,
-      std::vector<zx::event> release_fences,
-      std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info> presentation_info);
+  void SchedulePresentRequest(scheduling::PresentId present_id,
+                              zx::time requested_presentation_time,
+                              std::vector<zx::event> acquire_fences);
 
   // Gets the future presentation times from the frame scheduler (indirectly),
   // and invokes |callback|.
@@ -165,13 +161,12 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   std::vector<fuchsia::ui::scenic::Command> commands_pending_present_;
 
+  std::variant<std::monostate, scheduling::Present1Helper, scheduling::Present2Helper>
+      present_helper_;
+
   zx::time last_scheduled_presentation_time_ = zx::time(0);
 
   int64_t num_presents_allowed_ = scheduling::FrameScheduler::kMaxPresentsInFlight;
-
-  // Tracks if the client is using Present1 or Present2 while the Present1 API is being deprecated.
-  // No client should use both Present commands in the same session.
-  PresentType present_type_ = PresentType::UNSET;
 
   // A flow event trace id for following |Session::Present| calls from client
   // to scenic.  This will be incremented each |Session::Present| call.  By

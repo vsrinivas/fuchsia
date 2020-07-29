@@ -51,7 +51,7 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
     } else if (auto present2_info = std::get_if<scheduling::Present2Info>(&present_information)) {
       last_present2_info_.emplace(std::move(*present2_info));
     }
-    return 0;
+    return present_id_++;
   }
 
   // |FrameScheduler|
@@ -68,18 +68,16 @@ class MockFrameScheduler : public scheduling::FrameScheduler {
   // |FrameScheduler|
   void SetOnFramePresentedCallbackForSession(
       scheduling::SessionId session,
-      scheduling::OnFramePresentedCallback frame_presented_callback) override {
-    on_frame_presented_callback_ = std::move(frame_presented_callback);
-  }
+      scheduling::OnFramePresentedCallback frame_presented_callback) override {}
 
   // |FrameScheduler|
   void RemoveSession(SessionId session_id) override {}
 
   std::vector<scheduling::OnPresentedCallback> present1_callbacks_;
-  scheduling::OnFramePresentedCallback on_frame_presented_callback_;
   std::optional<scheduling::Present2Info> last_present2_info_;
 
   int64_t schedule_called_count_ = 0;
+  int64_t present_id_ = 0;
 };
 
 class ScenicSessionTest : public ::gtest::TestLoopFixture {
@@ -311,7 +309,7 @@ TEST_F(ScenicSessionTest, Present2MoreThanAllowed_ShouldGiveErrorAndDestroySessi
   EXPECT_TRUE(session_destroyed);
 }
 
-TEST_F(ScenicSessionTest, TriggeringPresentCallback_ShouldIncrementPresentsAllowed) {
+TEST_F(ScenicSessionTest, TriggeringOnPresented_ShouldIncrementPresentsAllowed) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
@@ -328,10 +326,10 @@ TEST_F(ScenicSessionTest, TriggeringPresentCallback_ShouldIncrementPresentsAllow
   EXPECT_TRUE(last_error.empty());
   EXPECT_FALSE(session_destroyed);
 
-  // Presents in flight should be incremented by size of callback.
-  ASSERT_EQ(scheduler_->present1_callbacks_.size(),
-            static_cast<uint64_t>(scheduling::FrameScheduler::kMaxPresentsInFlight));
-  scheduler_->present1_callbacks_.front()({});
+  std::map<scheduling::PresentId, zx::time> latched_times{
+      {/*present_id*/ 1, /*latched_time*/ zx::time(0)}};
+  session.OnPresented(latched_times, /*present_times*/ {.presented_time = zx::time(111),
+                                                        .vsync_interval = zx::duration(222)});
 
   // Should be able to present one more time.
   session.Present(0, {}, {}, [](auto) {});
@@ -362,10 +360,10 @@ TEST_F(ScenicSessionTest, TriggeringPresent2Callback_ShouldIncrementPresentsAllo
   EXPECT_FALSE(session_destroyed);
 
   // Presents in flight should be incremented by size of callback.
-  ASSERT_TRUE(scheduler_->on_frame_presented_callback_);
-  fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info = {};
-  frame_presented_info.presentation_infos.push_back({});
-  scheduler_->on_frame_presented_callback_(std::move(frame_presented_info));
+  std::map<scheduling::PresentId, zx::time> latched_times{
+      {/*present_id*/ 1, /*latched_time*/ zx::time(0)}};
+  session.OnPresented(latched_times, /*present_times*/ {.presented_time = zx::time(111),
+                                                        .vsync_interval = zx::duration(222)});
 
   // Should be able to present one more time.
   session.Present2(utils::CreatePresent2Args(1, {}, {}, 0), [](auto) {});
@@ -381,18 +379,29 @@ TEST_F(ScenicSessionTest, TriggeringPresent2Callback_ShouldIncrementPresentsAllo
 
 TEST_F(ScenicSessionTest, Present2Update_ShouldHaveReasonablePresentReceivedTime) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
+  fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info;
+  session_ptr.events().OnFramePresented =
+      [&frame_presented_info](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+        frame_presented_info = std::move(info);
+      };
+
   scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
                                /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
   auto present_time = Now();
   session.Present2(utils::CreatePresent2Args(1, {}, {}, 0), [](auto) {});
+  std::map<scheduling::PresentId, zx::time> latched_times{
+      {/*present_id*/ 0, /*latched_time*/ zx::time(0)}};
+  session.OnPresented(latched_times, /*present_times*/ {.presented_time = zx::time(111),
+                                                        .vsync_interval = zx::duration(222)});
+  ASSERT_TRUE(RunLoopUntilIdle());
 
-  ASSERT_TRUE(scheduler_->last_present2_info_);
-  auto present_received_info = scheduler_->last_present2_info_->TakePresentReceivedInfo();
-  ASSERT_TRUE(present_received_info.has_present_received_time());
-  EXPECT_GE(present_received_info.present_received_time(), present_time.get());
-  EXPECT_LT(present_received_info.present_received_time(), (present_time + zx::msec(1)).get());
+  ASSERT_EQ(frame_presented_info.presentation_infos.size(), 1u);
+  auto last_present_received_info = std::move(frame_presented_info.presentation_infos[0]);
+  ASSERT_TRUE(last_present_received_info.has_present_received_time());
+  EXPECT_GE(last_present_received_info.present_received_time(), present_time.get());
+  EXPECT_LT(last_present_received_info.present_received_time(), (present_time + zx::msec(1)).get());
 }
 
 // Tests creating a session, and calling Present with two acquire fences. The call should not be

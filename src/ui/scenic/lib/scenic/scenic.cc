@@ -76,6 +76,18 @@ scheduling::SessionUpdater::UpdateResults Scenic::UpdateSessions(
   return results;
 }
 
+void Scenic::OnFramePresented(
+    const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&
+        latched_times,
+    scheduling::PresentTimestamps present_times) {
+  for (const auto& [session_id, latched_map] : latched_times) {
+    const auto session_it = sessions_.find(session_id);
+    if (session_it != sessions_.end()) {
+      session_it->second->OnPresented(latched_map, present_times);
+    }
+  }
+}
+
 void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
                            fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   RunAfterInitialized([this, session_request = std::move(session_request),
