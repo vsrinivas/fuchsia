@@ -124,6 +124,11 @@ void PipelineManager::ConfigureStreamPipeline(
     ProcessNode* graph_node_to_be_appended = nullptr;
     camera::InternalConfigNode internal_graph_node_to_be_appended;
     std::unique_ptr<camera::ProcessNode> graph_head;
+    fbl::AutoCall shutdown_graph_on_error([&] {
+      if (graph_head) {
+        graph_head->OnShutdown([] {});
+      }
+    });
 
     auto* input_node = FindStream(info.node.input_stream_type);
     if (input_node) {
@@ -203,6 +208,7 @@ void PipelineManager::ConfigureStreamPipeline(
         current_node = current_node->parent_node();
       }
     } else {
+      shutdown_graph_on_error.cancel();
       streams_[info.node.input_stream_type] = std::move(graph_head);
     }
   });

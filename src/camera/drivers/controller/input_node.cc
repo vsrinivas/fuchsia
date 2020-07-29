@@ -150,7 +150,13 @@ void InputNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
                 "Cannot shutdown a stream which supports multiple streams");
 
   // Forward the shutdown request to child node.
-  child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
+  if (child_nodes().empty()) {
+    // If an incomplete graph is shut down, invoke the completion directly.
+    child_shutdown_completion_callback();
+  } else {
+    // Otherwise, propagate the shutdown command and completion to the next child.
+    child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
+  }
 }
 
 }  // namespace camera

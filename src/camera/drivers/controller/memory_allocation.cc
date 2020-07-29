@@ -82,7 +82,7 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
   status = buffer_collections[0]->WaitForBuffersAllocated(&allocation_status,
                                                           out_buffer_collection_info);
   if (status != ZX_OK || allocation_status != ZX_OK) {
-    FX_LOG(ERROR, kTag, "Failed to  wait for buffer collection info.");
+    FX_LOG(ERROR, kTag, "Failed to wait for buffer collection info.");
     return status;
   }
 
