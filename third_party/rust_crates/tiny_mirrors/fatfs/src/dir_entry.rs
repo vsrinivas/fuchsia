@@ -593,7 +593,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC: OemCpConverter> DirEntry<'a, IO, TP, OCC> {
         self.data.first_cluster(self.fs.fat_type())
     }
 
-    fn editor(&self) -> DirEntryEditor {
+    pub(crate) fn editor(&self) -> DirEntryEditor {
         DirEntryEditor::new(self.data.clone(), self.entry_pos, self.offset_range)
     }
 

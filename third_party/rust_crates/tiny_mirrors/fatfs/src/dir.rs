@@ -327,9 +327,11 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
                 );
                 dir.write_entry(".", sfn_entry)?;
                 let dotdot_sfn = ShortNameGenerator::generate_dotdot();
-                let parent_cluster = if self.is_root { None } else { self.stream.first_cluster() };
-                let sfn_entry =
-                    self.create_sfn_entry(dotdot_sfn, FileAttributes::DIRECTORY, parent_cluster);
+                let sfn_entry = self.create_sfn_entry(
+                    dotdot_sfn,
+                    FileAttributes::DIRECTORY,
+                    self.cluster_for_child_dotdot_entry(),
+                );
                 dir.write_entry("..", sfn_entry)?;
                 Ok(dir)
             }
@@ -483,7 +485,24 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         }
         // save new directory entry
         let sfn_entry = e.data.renamed(short_name);
-        dst_dir.write_entry(dst_name, sfn_entry)?;
+        let dir_entry = dst_dir.write_entry(dst_name, sfn_entry)?;
+        // if renaming a directory, then we need to update the '..' entry
+        if dir_entry.is_dir()
+            && self.cluster_for_child_dotdot_entry() != dst_dir.cluster_for_child_dotdot_entry()
+        {
+            let dir = dir_entry.to_dir();
+            let mut iter = dir.iter();
+            let error = || io::Error::new(ErrorKind::Other, "Missing expected .. entry");
+            // The dotdot entry should be the second entry.
+            let _ = iter.next().ok_or_else(error)??;
+            let entry = iter.next().ok_or_else(error)??;
+            if entry.short_file_name_as_bytes() != b".." {
+                return Err(error());
+            }
+            let mut editor = entry.editor();
+            editor.set_first_cluster(dst_dir.cluster_for_child_dotdot_entry(), self.fs.fat_type());
+            editor.flush(self.fs)?;
+        }
         Ok(())
     }
 
@@ -571,15 +590,22 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
     ) -> io::Result<DirEntry<'a, IO, TP, OCC>> {
         trace!("write_entry {}", name);
         // check if name doesn't contain unsupported characters
-        validate_long_name(name)?;
-        // convert long name to UTF-16
-        let lfn_utf16 = Self::encode_lfn_utf16(name);
+        let long_name_required = validate_long_name(name, raw_entry.name())?;
         // start a transaction so that if things go wrong (e.g. we run out of space), we can easily
         // revert and leave the file system in a good state.
         let transaction = self.fs.begin_transaction();
-        // write LFN entries
-        let (mut stream, start_pos) =
-            self.alloc_and_write_lfn_entries(&lfn_utf16, raw_entry.name())?;
+        let (mut stream, start_pos, lfn_utf16) = if long_name_required {
+            // convert long name to UTF-16
+            let lfn_utf16 = Self::encode_lfn_utf16(name);
+            // write LFN entries
+            let (stream, start_pos) =
+                self.alloc_and_write_lfn_entries(&lfn_utf16, raw_entry.name())?;
+            (stream, start_pos, lfn_utf16)
+        } else {
+            let mut stream = self.find_free_entries(1)?;
+            let start_pos = stream.seek(io::SeekFrom::Current(0))?;
+            (stream, start_pos, LfnBuffer::new())
+        };
         // write short name entry
         raw_entry.serialize(&mut stream)?;
         self.fs.commit(transaction)?;
@@ -596,6 +622,14 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
             entry_pos: abs_pos.unwrap(), // SAFE: abs_pos is absent only for empty file
             offset_range: (start_pos, end_pos),
         })
+    }
+
+    fn cluster_for_child_dotdot_entry(&self) -> Option<u32> {
+        if self.is_root {
+            None
+        } else {
+            self.stream.first_cluster()
+        }
     }
 }
 
@@ -716,7 +750,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC> Iterator for DirIter<'a, IO, 
     }
 }
 
-fn validate_long_name(name: &str) -> io::Result<()> {
+fn validate_long_name(name: &str, short_name: &[u8; SFN_SIZE]) -> io::Result<bool> {
     // check if length is valid
     if name.is_empty() {
         return Err(io::Error::new(ErrorKind::Other, FatfsError::FileNameEmpty));
@@ -724,17 +758,45 @@ fn validate_long_name(name: &str) -> io::Result<()> {
     if name.len() > 255 {
         return Err(io::Error::new(ErrorKind::Other, FatfsError::FileNameTooLong));
     }
+    let mut long_name_required = name.len() > 12;
+    let mut short_name_index: usize = 0;
     // check if there are only valid characters
     for c in name.chars() {
         match c {
-            'a'..='z' | 'A'..='Z' | '0'..='9' => {}
-            '\u{80}'..='\u{FFFF}' => {}
-            '$' | '%' | '\'' | '-' | '_' | '@' | '~' | '`' | '!' | '(' | ')' | '{' | '}' | '.'
-            | ' ' | '+' | ',' | ';' | '=' | '[' | ']' | '^' | '#' | '&' => {}
+            'A'..='Z' | '0'..='9' => {}
+            '$' | '%' | '\'' | '-' | '_' | '@' | '~' | '`' | '!' | '(' | ')' | '{' | '}' | '^'
+            | '#' | '&' | '.' => {}
+            'a'..='z' | '\u{80}'..='\u{FFFF}' | ' ' | '+' | ',' | ';' | '=' | '[' | ']' => {
+                long_name_required = true
+            }
             _ => return Err(io::Error::new(ErrorKind::Other, FatfsError::FileNameBadCharacter)),
         }
+        if !long_name_required {
+            long_name_required = match short_name_index {
+                0..=7 => {
+                    if c as u8 == short_name[short_name_index] {
+                        short_name_index += 1;
+                        false
+                    } else if c == '.' {
+                        short_name_index = 9;
+                        false
+                    } else {
+                        true
+                    }
+                }
+                8 => {
+                    short_name_index = 9;
+                    c != '.'
+                }
+                9..=11 => {
+                    short_name_index += 1;
+                    c as u8 != short_name[short_name_index - 2]
+                }
+                _ => true,
+            };
+        }
     }
-    Ok(())
+    Ok(long_name_required)
 }
 
 fn lfn_checksum(short_name: &[u8; SFN_SIZE]) -> u8 {
@@ -832,6 +894,10 @@ pub(crate) struct LfnBuffer {}
 
 #[cfg(not(feature = "lfn"))]
 impl LfnBuffer {
+    fn new() -> Self {
+        LfnBuffer {}
+    }
+
     pub(crate) fn as_ucs2_units(&self) -> &[u16] {
         &[]
     }
@@ -1335,5 +1401,39 @@ mod tests {
         gen.add_existing(&buf);
         buf = gen.generate().unwrap();
         assert_eq!(&buf, b"X40DA~2 TXT");
+    }
+
+    #[test]
+    fn test_long_name_requires_long_name() {
+        assert_eq!(
+            validate_long_name("01234567.1234", b"01234567123").expect("should be valid"),
+            true
+        );
+    }
+
+    #[test]
+    fn test_dot_and_dotdot_does_not_require_long_name() {
+        assert_eq!(validate_long_name(".", b".          ").expect("should be valid"), false);
+        assert_eq!(validate_long_name("..", b"..         ").expect("should be valid"), false);
+    }
+
+    #[test]
+    fn test_lowercase_and_special_requires_long_name() {
+        assert_eq!(validate_long_name("abc", b"abc        ").expect("should be valid"), true);
+        assert_eq!(validate_long_name(",", b",          ").expect("should be valid"), true);
+        assert_eq!(
+            validate_long_name("FOO\u{100}", b"FOO        ").expect("should be valid"),
+            true
+        );
+    }
+
+    #[test]
+    fn test_name_with_extension_does_not_require_long_name() {
+        assert_eq!(validate_long_name("NAME.EXT", b"NAME    EXT").expect("should be valid"), false);
+    }
+
+    #[test]
+    fn test_name_with_long_extension_does_require_long_name() {
+        assert_eq!(validate_long_name("NAME.EXT1", b"NAME    EXT").expect("should be valid"), true);
     }
 }

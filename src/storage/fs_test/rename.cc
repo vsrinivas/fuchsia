@@ -384,6 +384,12 @@ TEST_P(RenameTest, Raw) {
   ASSERT_EQ(unlink(GetPath("alpha").c_str()), 0);
 }
 
+TEST_P(RenameTest, RenameDirIntoRootSuceeds) {
+  ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo").c_str(), 0755), 0);
+  EXPECT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("bravo").c_str()), 0);
+}
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RenameTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
