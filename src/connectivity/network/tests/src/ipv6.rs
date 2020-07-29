@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::convert::TryInto;
 use std::fmt::Debug;
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
+use fidl_fuchsia_netemul_environment::LaunchService;
 use fidl_fuchsia_netstack as netstack;
+use fidl_fuchsia_netstack_ext::RouteTable;
 use fidl_fuchsia_sys as sys;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_component::client::AppBuilder;
@@ -15,7 +16,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::{self, Context};
 use futures::future::{self, Future, FutureExt as _};
-use futures::stream::{self, StreamExt as _, TryStreamExt as _};
+use futures::stream::TryStreamExt as _;
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
@@ -36,7 +37,8 @@ use zerocopy::ByteSlice;
 use crate::constants::{eth as eth_consts, ipv6 as ipv6_consts};
 use crate::environments::{KnownServices, Netstack, Netstack2, TestSandboxExt as _};
 use crate::{
-    EthertapName, Result, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    sleep, EthertapName, Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 
 /// As per [RFC 4861] sections 4.1-4.5, NDP packets MUST have a hop limit of 255.
@@ -60,12 +62,13 @@ const EXPECTED_DUP_ADDR_DETECT_TRANSMITS: u8 = 1;
 /// performing Duplicate Address Detection.
 const EXPECTED_DAD_RETRANSMIT_TIMER: zx::Duration = zx::Duration::from_seconds(1);
 
-/// Sets up an environment with a network used for tests requiring manual packet
-/// inspection and transmission.
+/// As per [RFC 7217 section 6] Hosts SHOULD introduce a random delay between 0 and
+/// `IDGEN_DELAY` before trying a new tentative address.
 ///
-/// Returns the network, environment, netstack client, interface (added to the
-/// netstack) and a fake endpoint used to read and write raw ethernet packets.
-/// The interface will be up when `setup_network` returns successfully.
+/// [RFC 7217]: https://tools.ietf.org/html/rfc7217#section-6
+const DAD_IDGEN_DELAY: zx::Duration = zx::Duration::from_seconds(1);
+
+/// Sets up an environment with a network with no required services.
 async fn setup_network<E, S>(
     sandbox: &netemul::TestSandbox,
     name: S,
@@ -80,9 +83,35 @@ where
     E: netemul::Endpoint,
     S: Copy + Into<String> + EthertapName,
 {
+    setup_network_with::<E, S, _>(sandbox, name, &[]).await
+}
+
+/// Sets up an environment with required services and a network used for tests
+/// requiring manual packet inspection and transmission.
+///
+/// Returns the network, environment, netstack client, interface (added to the
+/// netstack) and a fake endpoint used to read and write raw ethernet packets.
+/// The interface will be up when `setup_network` returns successfully.
+async fn setup_network_with<E, S, I>(
+    sandbox: &netemul::TestSandbox,
+    name: S,
+    services: I,
+) -> Result<(
+    netemul::TestNetwork<'_>,
+    netemul::TestEnvironment<'_>,
+    netstack::NetstackProxy,
+    netemul::TestInterface<'_>,
+    netemul::TestFakeEndpoint<'_>,
+)>
+where
+    E: netemul::Endpoint,
+    S: Copy + Into<String> + EthertapName,
+    I: IntoIterator,
+    I::Item: Into<LaunchService>,
+{
     let network = sandbox.create_network(name).await.context("failed to create network")?;
     let environment = sandbox
-        .create_netstack_environment::<Netstack2, _>(name)
+        .create_netstack_environment_with::<Netstack2, _, _>(name, services)
         .context("failed to create netstack environment")?;
     // It is important that we create the fake endpoint before we join the
     // network so no frames transmitted by Netstack are lost.
@@ -660,6 +689,30 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) -> Result
         .await
     }
 
+    async fn check_route_table<P>(netstack: &netstack::NetstackProxy, pred: P) -> Result<()>
+    where
+        P: Fn(&Vec<netstack::RouteTableEntry>) -> bool,
+    {
+        let check_attempts = ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds()
+            / ASYNC_EVENT_CHECK_INTERVAL.into_seconds();
+        for attempt in 0..check_attempts {
+            let () = sleep(ASYNC_EVENT_CHECK_INTERVAL.into_seconds()).await;
+            let route_table =
+                netstack.get_route_table().await.context("failed to get route table")?;
+            if pred(&route_table) {
+                return Ok(());
+            } else {
+                let route_table =
+                    RouteTable::new(route_table).display().context("failed to format route table")?;
+                println!("route table at attempt={}:\n{}", attempt, route_table);
+            }
+        }
+        Err(anyhow::anyhow!(
+            "timed out on waiting for a route table entry after {} seconds",
+            ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds(),
+        ))
+    }
+
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let (_network, _environment, netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.context("failed to setup network")?;
@@ -678,73 +731,195 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) -> Result
         .context("failed to send router advertisement")?;
 
     // Test that the default router should be discovered after it is advertised.
-    assert!(stream::repeat(())
-        .take(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds().try_into().unwrap())
-        .then(|()| {
-            async {
-                let () = crate::sleep(1).await;
-                Ok::<bool, anyhow::Error>(
-                    netstack
-                        .get_route_table()
-                        .await
-                        .context("failed to get route table")?
-                        .into_iter()
-                        .any(|rentry| {
-                            if let net::IpAddress::Ipv6(gateway) = rentry.gateway {
-                                if let net::IpAddress::Ipv6(destination) = rentry.destination {
-                                    let gateway = net_types_ip::Ipv6Addr::new(gateway.addr);
-                                    let destination = net_types_ip::Ipv6Addr::new(destination.addr);
-                                    if gateway == ipv6_consts::LINK_LOCAL_ADDR
-                                        && destination == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
-                                    {
-                                        return true;
-                                    }
-                                }
-                            }
-                            false
-                        }),
-                )
+    let () = check_route_table(&netstack, |route_table| {
+        route_table.iter().any(|netstack::RouteTableEntry { destination, gateway, .. }| {
+            if let net::IpAddress::Ipv6(gateway) = gateway {
+                if let net::IpAddress::Ipv6(destination) = destination {
+                    let gateway = net_types_ip::Ipv6Addr::new(gateway.addr);
+                    let destination = net_types_ip::Ipv6Addr::new(destination.addr);
+                    if destination == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
+                        && gateway == ipv6_consts::LINK_LOCAL_ADDR
+                    {
+                        return true;
+                    }
+                }
             }
-            .boxed()
+            false
         })
-        .try_skip_while(|x| future::ok(!x))
-        .try_next()
-        .await
-        .context("waiting for default route")?
-        .unwrap_or(false));
+    })
+    .await
+    .context("failed when checking route table for default route")?;
 
     // Test that the prefix should be discovered after it is advertised.
-    assert!(stream::repeat(())
-        .take(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.into_seconds().try_into().unwrap())
-        .then(|()| {
-            async {
-                let () = crate::sleep(1).await;
-                Ok::<bool, anyhow::Error>(
-                    netstack
-                        .get_route_table()
-                        .await
-                        .context("failed to get route table")?
-                        .into_iter()
-                        .any(|rentry| {
-                            if let net::IpAddress::Ipv6(dest) = rentry.destination {
-                                let destination = net_types_ip::Ipv6Addr::new(dest.addr);
-                                if destination == ipv6_consts::PREFIX.network()
-                                    && (u64::from(rentry.nicid)) == iface.id()
-                                {
-                                    return true;
-                                }
-                            }
-                            false
-                        }),
-                )
+    let () = check_route_table(&netstack, |route_table| {
+        route_table.iter().any(|netstack::RouteTableEntry { destination, nicid, .. }| {
+            if let net::IpAddress::Ipv6(dest) = destination {
+                let destination = net_types_ip::Ipv6Addr::new(dest.addr);
+                if destination == ipv6_consts::PREFIX.network() && u64::from(*nicid) == iface.id() {
+                    return true;
+                }
             }
-            .boxed()
+            false
         })
-        .try_skip_while(|x| future::ok(!x))
-        .try_next()
-        .await
-        .context("waiting for on-link prefix")?
-        .unwrap_or(false));
+    })
+    .await
+    .context("failed when checking route table for the on-link route")?;
 
     Ok(())
+}
+
+#[variants_test]
+async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) -> Result {
+    // Expects an NS message for DAD within timeout and returns the target address of the message.
+    async fn expect_ns_message_in(
+        fake_ep: &netemul::TestFakeEndpoint<'_>,
+        timeout: zx::Duration,
+    ) -> Result<net_types_ip::Ipv6Addr> {
+        fake_ep
+            .frame_stream()
+            .try_filter_map(|(data, dropped)| {
+                assert_eq!(dropped, 0);
+                future::ok(
+                    parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
+                        net_types_ip::Ipv6,
+                        _,
+                        NeighborSolicitation,
+                        _,
+                    >(&data, |p| assert_eq!(p.body().iter().count(), 0))
+                    .map_or(None, |(_src_mac, _dst_mac, _src_ip, _dst_ip, _ttl, message, _code)| {
+                        // If the NS target_address does not have the prefix we have advertised,
+                        // this is for some other address. We ignore it as it is not relevant to
+                        // our test.
+                        if !ipv6_consts::PREFIX.contains(message.target_address()) {
+                            return None;
+                        }
+
+                        Some(*message.target_address())
+                    }),
+                )
+            })
+            .try_next()
+            .map(|r| r.context("error getting OnData event"))
+            .on_timeout(timeout.after_now(), || {
+                Err(anyhow::anyhow!(
+                    "timed out waiting for a neighbor solicitation targetting address of prefix: {}",
+                    ipv6_consts::PREFIX,
+                ))
+            })
+            .await?
+            .ok_or(anyhow::anyhow!("failed to get next OnData event"))
+    }
+
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let (_network, _environment, netstack, iface, fake_ep) =
+        setup_network_with::<E, _, _>(&sandbox, name, &[KnownServices::SecureStash]).await?;
+
+    // Send a Router Advertisement with information for a SLAAC prefix.
+    let ra = RouterAdvertisement::new(
+        0,     /* current_hop_limit */
+        false, /* managed_flag */
+        false, /* other_config_flag */
+        0,     /* router_lifetime */
+        0,     /* reachable_time */
+        0,     /* retransmit_timer */
+    );
+    let pi = PrefixInformation::new(
+        ipv6_consts::PREFIX.prefix(),  /* prefix_length */
+        false,                         /* on_link_flag */
+        true,                          /* autonomous_address_configuration_flag */
+        99999,                         /* valid_lifetime */
+        99999,                         /* preferred_lifetime */
+        ipv6_consts::PREFIX.network(), /* prefix */
+    );
+    let options = [NdpOption::PrefixInformation(&pi)];
+    let () = write_ndp_message::<&[u8], _>(
+        eth_consts::MAC_ADDR,
+        Mac::from(&net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
+        ipv6_consts::LINK_LOCAL_ADDR,
+        net_types_ip::Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+        ra,
+        &options,
+        &fake_ep,
+    )
+    .await
+    .context("failed to write RA message")?;
+
+    let tried_address = expect_ns_message_in(&fake_ep, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
+        .await
+        .context("failed to get a neighbour solicitation")?;
+
+    // We pretend there is a duplicate address situation.
+    let snmc = tried_address.to_solicited_node_address();
+    let () = write_ndp_message::<&[u8], _>(
+        eth_consts::MAC_ADDR,
+        Mac::from(&snmc),
+        net_types_ip::Ipv6::UNSPECIFIED_ADDRESS,
+        snmc.get(),
+        NeighborSolicitation::new(tried_address),
+        &[],
+        &fake_ep,
+    )
+    .await
+    .context("failed to write DAD message")?;
+
+    let target_address =
+        expect_ns_message_in(&fake_ep, DAD_IDGEN_DELAY + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
+            .await
+            .context("failed to get a neighbour solicitation")?;
+
+    // We expect two addresses for the SLAAC prefixes to be assigned to the NIC as the
+    // netstack should generate both a stable and temporary SLAAC address.
+    let expected_addrs = 2;
+    netstack
+        .take_event_stream()
+        .err_into()
+        .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
+            if let Some(netstack::NetInterface { ipv6addrs, .. }) =
+                interfaces.iter().find(|i| u64::from(i.id) == iface.id())
+            {
+                // We have to make sure 2 things:
+                // 1. We have `expected_addrs` addrs which have the advertised prefix for the
+                // interface.
+                let mut slaac_addrs = 0;
+                // 2. The last tried address should be among the addresses for the interface.
+                let mut has_target_addr = false;
+
+                for ip in ipv6addrs {
+                    if let net::IpAddress::Ipv6(a) = ip.addr {
+                        let configured_addr = net_types_ip::Ipv6Addr::new(a.addr);
+                        if configured_addr == tried_address {
+                            return future::err(anyhow::anyhow!(
+                                "unexpected address ({}) assigned to the interface which previously failed DAD", configured_addr
+                            ));
+                        }
+                        if ipv6_consts::PREFIX.contains(&configured_addr) {
+                            slaac_addrs += 1;
+                        }
+                        if configured_addr == target_address {
+                            has_target_addr = true;
+                        }
+                    }
+                }
+                if slaac_addrs > expected_addrs {
+                    return future::err(anyhow::anyhow!(
+                        "more addresses found than expected, found {}, expected {}",
+                        slaac_addrs, expected_addrs
+                    ));
+                }
+                if slaac_addrs == expected_addrs && has_target_addr {
+                    return future::ok(Some(()));
+                }
+            }
+            future::ok(None)
+        })
+        .try_next()
+        .map(|r| r.context("error getting OnInterfaceChanged event"))
+        .on_timeout(
+            (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
+                + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
+                .after_now(),
+            || Err(anyhow::anyhow!("timed out waiting for SLAAC addresses")),
+        )
+        .await?
+        .ok_or(anyhow::anyhow!("failed to get next OnInterfaceChanged event"))
 }

@@ -13,6 +13,7 @@ rustc_library("fidl_fuchsia_netstack_ext") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/lib/network/fidl_fuchsia_net_ext",
+    "//third_party/rust_crates:prettytable-rs",
   ]
 
   enforce_source_listing = true

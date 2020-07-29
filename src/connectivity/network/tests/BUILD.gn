@@ -58,6 +58,7 @@ rustc_test("netstack_integration_test_bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_stack_ext",
+    "//src/lib/network/fidl_fuchsia_netstack_ext",
     "//src/lib/network/packet",
     "//src/lib/network/packet-formats",
     "//src/lib/network/packet-formats-dhcp",

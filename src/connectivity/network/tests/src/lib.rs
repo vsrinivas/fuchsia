@@ -18,7 +18,7 @@ mod socket;
 use std::convert::TryFrom;
 
 use fidl_fuchsia_hardware_ethertap as ethertap;
-use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_async::{self as fasync, DurationExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
@@ -37,6 +37,9 @@ const ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seco
 /// smaller timeout compared to the positive case since execution stall in regards to the
 /// monotonic clock will not affect the expected outcome.
 const ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
+
+/// The time to wait between two consecutive checks of an event.
+const ASYNC_EVENT_CHECK_INTERVAL: zx::Duration = zx::Duration::from_seconds(1);
 
 /// The path to the default configuration file for DHCP server.
 const DHCP_SERVER_DEFAULT_CONFIG_PATH: &str = "/config/data/dhcpd-testing/default_config.json";
