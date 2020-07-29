@@ -53,6 +53,23 @@ static_assert((kHandleGenerationMask & kHandleIndexMask) == 0, "Handle Mask Over
 static_assert((kHandleReservedBitsMask | kHandleGenerationMask | kHandleIndexMask) == 0xffffffffu,
               "Handle masks do not cover all bits!");
 
+// |index| is the literal index into the table. |old_value| is the
+// |index mixed with the per-handle-lifetime state.
+uint32_t NewHandleValue(uint32_t index, uint32_t old_value) {
+  DEBUG_ASSERT((index & ~kHandleIndexMask) == 0);
+
+  uint32_t old_gen = 0;
+  if (old_value != 0) {
+    // This slot has been used before.
+    DEBUG_ASSERT((old_value & kHandleIndexMask) == index);
+    old_gen = (old_value & kHandleGenerationMask) >> kHandleGenerationShift;
+  }
+  uint32_t new_gen = (((old_gen + 1) << kHandleGenerationShift) & kHandleGenerationMask);
+  return (index | new_gen);
+}
+
+uint32_t HandleValueToIndex(uint32_t value) { return value & kHandleIndexMask; }
+
 }  // namespace
 
 HandleTableArena gHandleTableArena;
@@ -70,18 +87,11 @@ void Handle::set_process_id(zx_koid_t pid) {
 uint32_t HandleTableArena::GetNewBaseValue(void* addr) {
   // Get the index of this slot within the arena.
   uint32_t handle_index = HandleToIndex(reinterpret_cast<Handle*>(addr));
-  DEBUG_ASSERT((handle_index & ~kHandleIndexMask) == 0);
 
   // Check the free memory for a stashed base_value.
   uint32_t v = reinterpret_cast<Handle*>(addr)->base_value_;
-  uint32_t old_gen = 0;
-  if (v != 0) {
-    // This slot has been used before.
-    DEBUG_ASSERT((v & kHandleIndexMask) == handle_index);
-    old_gen = (v & kHandleGenerationMask) >> kHandleGenerationShift;
-  }
-  uint32_t new_gen = (((old_gen + 1) << kHandleGenerationShift) & kHandleGenerationMask);
-  return (handle_index | new_gen);
+
+  return NewHandleValue(handle_index, v);
 }
 
 // Allocate space for a Handle from the arena, but don't instantiate the
@@ -205,7 +215,8 @@ void HandleTableArena::Delete(Handle* handle) {
 }
 
 Handle* Handle::FromU32(uint32_t value) {
-  uintptr_t handle_addr = IndexToHandle(value & kHandleIndexMask);
+  uint32_t index = HandleValueToIndex(value);
+  uintptr_t handle_addr = IndexToHandle(index);
   if (unlikely(!gHandleTableArena.arena_.Committed(reinterpret_cast<void*>(handle_addr))))
     return nullptr;
   handle_addr = gHandleTableArena.arena_.Confine(handle_addr);
