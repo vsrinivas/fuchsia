@@ -58,10 +58,7 @@ TEST(MagmaSystemConnection, ContextManagement) {
 }
 
 TEST(MagmaSystemConnection, BufferManagement) {
-  auto msd_drv = msd_driver_create();
-  ASSERT_NE(msd_drv, nullptr);
-  auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-  ASSERT_NE(msd_dev, nullptr);
+  auto msd_dev = new MsdMockDevice();
   auto dev =
       std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
   auto msd_connection = msd_device_open(msd_dev, 0);
@@ -107,10 +104,7 @@ TEST(MagmaSystemConnection, BufferManagement) {
 }
 
 TEST(MagmaSystemConnection, Semaphores) {
-  auto msd_drv = msd_driver_create();
-  ASSERT_NE(msd_drv, nullptr);
-  auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-  ASSERT_NE(msd_dev, nullptr);
+  auto msd_dev = new MsdMockDevice();
   auto dev =
       std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
   auto msd_connection = msd_device_open(msd_dev, 0);
@@ -151,10 +145,7 @@ TEST(MagmaSystemConnection, Semaphores) {
 }
 
 TEST(MagmaSystemConnection, BufferSharing) {
-  auto msd_drv = msd_driver_create();
-  ASSERT_NE(msd_drv, nullptr);
-  auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-  ASSERT_NE(msd_dev, nullptr);
+  auto msd_dev = new MsdMockDevice();
   auto dev =
       std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
 
