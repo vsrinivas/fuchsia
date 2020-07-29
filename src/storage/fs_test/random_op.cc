@@ -267,7 +267,7 @@ class RandomOpTest : public FilesystemTest {
     w->fd = fbl::unique_fd(open(file_name.c_str(), O_RDWR + O_CREAT + O_EXCL, 0666));
     if (!w->fd) {
       if (errno == EEXIST) {
-        w->fd = fbl::unique_fd(open(file_name.c_str(), O_RDWR + O_EXCL));
+        w->fd = fbl::unique_fd(open(file_name.c_str(), O_RDWR));
         if (!w->fd) {
           TaskError(w, "t: open_private_a", "open-existing");
           return kFail;
