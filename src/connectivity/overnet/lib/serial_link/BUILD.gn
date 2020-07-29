@@ -23,6 +23,10 @@ rustc_library("serial_link") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
+
+  # TODO(56138): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   if (is_fuchsia) {
     deps += []
   } else {
