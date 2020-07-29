@@ -258,6 +258,8 @@ class DeviceTest : public zxtest::Test {
     return fidl_.value();
   }
 
+  auto& get_device() { return *device_; }
+
   void SetUp() override {
     auto device = fbl::MakeRefCounted<UsbDevice>(fake_ddk::kFakeParent,
                                                  ddk::UsbHciProtocolClient(hci_.proto()), kDeviceId,
@@ -645,6 +647,22 @@ TEST_F(DeviceTest, FidlGetStringDescriptor) {
     ASSERT_EQ(result->desc.size(), dest_len);
     ASSERT_EQ(memcmp(result->desc.data(), golden, dest_len), 0);
   }
+}
+
+TEST_F(DeviceTest, UsbGetStringDescriptor_BufferTooSmall) {
+  auto& device = get_device();
+  uint16_t lang_id[2];
+  uint8_t desc[128];
+  size_t actual;
+
+  // The value here is intentionally chosen to be undersized.
+  size_t small = 3;
+
+  zx_status_t status = device.UsbGetStringDescriptor(
+    1, 1, lang_id, &desc, small, &actual);
+
+  EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
+  EXPECT_GT(actual, small);
 }
 
 TEST_F(DeviceTest, FidlSetInterface) {

@@ -635,12 +635,22 @@ zx_status_t UsbDevice::UsbGetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
   } else {
     // Success! Convert this result from UTF16LE to UTF8 and store the
     // language ID we actually fetched (if it was not what the user
-    // requested).
-    *out_actual = buflen;
+    // requested).  Note that the conversion may take more buffer space
+    // than what was provided by the user.  This is a checked error, and
+    // in this situation, the minimum required buffersize will be
+    // communicated back via out_actual.
+    size_t utf8_actual = buflen;
     *out_actual_lang_id = lang_id;
-    utf16_to_utf8(string_desc.code_points, (string_desc.bLength >> 1) - 1,
-                  static_cast<uint8_t*>(buf), out_actual, UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN);
-    return ZX_OK;
+    result = utf16_to_utf8(string_desc.code_points, (string_desc.bLength >> 1) - 1,
+                           static_cast<uint8_t*>(buf), &utf8_actual,
+                           UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN);
+
+    *out_actual = utf8_actual;
+
+    if (utf8_actual > buflen) {
+      zxlogf(ERROR, "insufficient space for UTF8 conversion");
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
   }
 
   return result;
