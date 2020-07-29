@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <ddk/debug.h>
 
 #include "imx227.h"
@@ -147,39 +145,30 @@ void Imx227Device::CameraSensor2StopStreaming() {
 }
 
 zx_status_t Imx227Device::CameraSensor2GetAnalogGain(float* out_gain) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetAnalogGain(float gain, float* out_gain) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetDigitalGain(float* out_gain) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetDigitalGain(float gain, float* out_gain) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetIntegrationTime(float* out_int_time) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetIntegrationTime(float int_time, float* out_int_time) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Imx227Device::CameraSensor2Update() {
-  FX_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t Imx227Device::CameraSensor2Update() { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t Imx227Device::CameraSensor2GetOtpSize(uint32_t* out_size) {
   *out_size = OTP_TOTAL_SIZE;
@@ -212,32 +201,26 @@ zx_status_t Imx227Device::CameraSensor2GetOtpData(uint32_t byte_count, uint32_t 
 }
 
 zx_status_t Imx227Device::CameraSensor2GetTestPatternMode(uint16_t* out_value) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetTestPatternMode(uint16_t mode) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetTestPatternData(color_val_t* out_data) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetTestPatternData(const color_val_t* data) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetTestCursorData(rect_t* out_data) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetTestCursorData(const rect_t* data) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -254,8 +237,10 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
       if (hmax_result.is_error() || vmax_result.is_error()) {
         return ZX_ERR_INTERNAL;
       }
-      out_value->dimension_value = dimensions_t{.x = static_cast<float>(hmax_result.value()),
-                                                 .y = static_cast<float>(vmax_result.value())};
+      out_value->dimension_value = dimensions_t{
+          .x = static_cast<float>(hmax_result.value()),
+          .y = static_cast<float>(vmax_result.value()),
+      };
       break;
     }
     case ACTIVE_RESOLUTION:
@@ -323,7 +308,6 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
 zx_status_t Imx227Device::CameraSensor2SetExtensionValue(uint64_t id,
                                                          const extension_value_data_type_t* value,
                                                          extension_value_data_type_t* out_value) {
-  FX_NOTIMPLEMENTED();
   return ZX_ERR_NOT_SUPPORTED;
 }
 
