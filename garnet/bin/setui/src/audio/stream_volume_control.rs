@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::call,
     crate::service_context::ExternalServiceProxy,
     crate::switchboard::base::{AudioStream, AudioStreamType},
     fidl::{self, endpoints::create_proxy},
@@ -78,9 +79,7 @@ fn bind_volume_control(
     let (vol_control_proxy, server_end) = create_proxy().unwrap();
     let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
 
-    if let Err(err) =
-        audio_service.call(|proxy| proxy.bind_usage_volume_control(&mut usage, server_end))
-    {
+    if let Err(err) = call!(audio_service => bind_usage_volume_control(&mut usage, server_end)) {
         fx_log_err!("failed to bind volume control for usage, {}", err);
         return None;
     }

@@ -5,6 +5,7 @@
 // Copied from src/ui/bin/brightness_manager
 // TODO(fxb/36843) consolidate usages
 
+use crate::call_async;
 use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
 
 use std::path::Path;
@@ -63,8 +64,7 @@ pub async fn read_sensor(
     sensor: &ExternalServiceProxy<SensorProxy>,
 ) -> Result<AmbientLightInputRpt, Error> {
     const LIGHT_SENSOR_HID_ID: u8 = 1;
-    let report =
-        sensor.call_async(|proxy| proxy.get_report(ReportType::Input, LIGHT_SENSOR_HID_ID)).await?;
+    let report = call_async!(sensor => get_report(ReportType::Input, LIGHT_SENSOR_HID_ID)).await?;
     let report = report.1;
     if report.len() < 11 {
         return Err(format_err!("Sensor HID report too short"));

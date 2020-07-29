@@ -227,3 +227,19 @@ where
         result
     }
 }
+
+/// Helper macro to simplify calls to proxy objects
+#[macro_export]
+macro_rules! call {
+    ($proxy:expr => $($call:tt)+) => {
+        $proxy.call(|proxy| proxy.$($call)+)
+    }
+}
+
+/// Helper macro to simplify async calls to proxy objects
+#[macro_export]
+macro_rules! call_async {
+    ($proxy:expr => $($call:tt)+) => {
+        $proxy.call_async(|proxy| proxy.$($call)+)
+    }
+}

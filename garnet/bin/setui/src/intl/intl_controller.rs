@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::call_async;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -137,9 +138,7 @@ impl IntlController {
                 None => return,
             };
 
-            if let Err(e) =
-                proxy.call_async(|proxy| proxy.set_timezone(time_zone_id.as_str())).await
-            {
+            if let Err(e) = call_async!(proxy => set_timezone(time_zone_id.as_str())).await {
                 fx_log_err!("Failed to write timezone to fuchsia.timezone: {:?}", e);
             }
         })

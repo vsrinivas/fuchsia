@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::call,
     crate::internal::event::Publisher,
     crate::registry::device_storage::DeviceStorageCompatible,
     crate::registry::setting_handler::persist::ClientProxy,
@@ -151,10 +152,7 @@ async fn monitor_media_buttons_internal(
 ) -> Result<(), Error> {
     let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>().unwrap();
 
-    if presenter_service
-        .call(move |proxy| proxy.register_media_buttons_listener(client_end))
-        .is_err()
-    {
+    if call!(presenter_service => register_media_buttons_listener(client_end)).is_err() {
         fx_log_err!("Registering media button listener with presenter service failed.");
         return Err(format_err!("presenter service not ready"));
     }

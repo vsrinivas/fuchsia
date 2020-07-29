@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async_trait::async_trait;
 use {
+    crate::call_async,
     crate::registry::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::{
         SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
     },
+    async_trait::async_trait,
     fidl_fuchsia_hardware_power_statecontrol::RebootReason,
     fuchsia_syslog::fx_log_err,
 };
@@ -33,8 +34,7 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Swi
         request: "reboot".to_owned(),
     };
 
-    hardware_power_statecontrol_admin
-        .call_async(|proxy| proxy.reboot(RebootReason::UserRequest))
+    call_async!(hardware_power_statecontrol_admin => reboot(RebootReason::UserRequest))
         .await
         .map_err(|_| build_err())
         .and_then(|r| {

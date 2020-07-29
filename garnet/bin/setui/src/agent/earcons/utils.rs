@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::call_async,
     crate::internal::event::Publisher,
     crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
     anyhow::{format_err, Context as _, Error},
@@ -70,10 +71,7 @@ pub async fn play_sound<'a>(
             Err(e) => return Err(format_err!("[earcons] Failed to convert sound file: {}", e)),
         };
         if let Some(file_channel) = sound_file_channel {
-            match sound_player_proxy
-                .call_async(|proxy| proxy.add_sound_from_file(id, file_channel))
-                .await
-            {
+            match call_async!(sound_player_proxy => add_sound_from_file(id, file_channel)).await {
                 Ok(_) => fx_log_debug!("[earcons] Added sound to Player: {}", file_name),
                 Err(e) => {
                     return Err(format_err!("[earcons] Unable to add sound to Player: {}", e));
@@ -86,9 +84,7 @@ pub async fn play_sound<'a>(
     // This fasync thread is needed so that the earcons sounds can play rapidly and not wait
     // for the previous sound to finish to send another request.
     fasync::Task::spawn(async move {
-        match sound_player_proxy
-            .call_async(|proxy| proxy.play_sound(id, AudioRenderUsage::Background))
-            .await
+        match call_async!(sound_player_proxy => play_sound(id, AudioRenderUsage::Background)).await
         {
             Ok(_) => {
                 // TODO(fxb/50246): Add inspect logging.

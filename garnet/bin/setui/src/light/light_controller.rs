@@ -5,6 +5,7 @@
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
+use crate::call_async;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -148,9 +149,9 @@ impl LightController {
                 // stored value.
                 None => continue,
                 Some(LightValue::Brightness(brightness)) => (
-                    self.light_proxy
-                        .call_async(|proxy| proxy.set_brightness_value(*hardware_index, brightness))
-                        .await,
+                    call_async!(self.light_proxy =>
+                        set_brightness_value(*hardware_index, brightness))
+                    .await,
                     "set_brightness_value",
                 ),
                 Some(LightValue::Rgb(rgb)) => {
@@ -162,16 +163,14 @@ impl LightController {
                         })
                     })?;
                     (
-                        self.light_proxy
-                            .call_async(|proxy| proxy.set_rgb_value(*hardware_index, &mut value))
-                            .await,
+                        call_async!(self.light_proxy =>
+                            set_rgb_value(*hardware_index, &mut value))
+                        .await,
                         "set_rgb_value",
                     )
                 }
                 Some(LightValue::Simple(on)) => (
-                    self.light_proxy
-                        .call_async(|proxy| proxy.set_simple_value(*hardware_index, on))
-                        .await,
+                    call_async!(self.light_proxy => set_simple_value(*hardware_index, on)).await,
                     "set_simple_value",
                 ),
             };
@@ -202,7 +201,7 @@ impl LightController {
             })?;
 
         for i in 0..num_lights {
-            let info = match self.light_proxy.call_async(|proxy| proxy.get_info(i)).await {
+            let info = match call_async!(self.light_proxy => get_info(i)).await {
                 Ok(Ok(info)) => info,
                 _ => {
                     return Err(SwitchboardError::ExternalFailure {
@@ -231,11 +230,7 @@ impl LightController {
         // Read the proper value depending on the light type.
         let value = match light_type {
             LightType::Brightness => LightValue::Brightness(
-                match self
-                    .light_proxy
-                    .call_async(|proxy| proxy.get_current_brightness_value(index))
-                    .await
-                {
+                match call_async!(self.light_proxy => get_current_brightness_value(index)).await {
                     Ok(Ok(brightness)) => brightness,
                     _ => {
                         return Err(SwitchboardError::ExternalFailure {
@@ -247,8 +242,7 @@ impl LightController {
                 },
             ),
             LightType::Rgb => {
-                match self.light_proxy.call_async(|proxy| proxy.get_current_rgb_value(index)).await
-                {
+                match call_async!(self.light_proxy => get_current_rgb_value(index)).await {
                     Ok(Ok(rgb)) => rgb.into(),
                     _ => {
                         return Err(SwitchboardError::ExternalFailure {
@@ -260,11 +254,7 @@ impl LightController {
                 }
             }
             LightType::Simple => LightValue::Simple(
-                match self
-                    .light_proxy
-                    .call_async(|proxy| proxy.get_current_simple_value(index))
-                    .await
-                {
+                match call_async!(self.light_proxy => get_current_simple_value(index)).await {
                     Ok(Ok(on)) => on,
                     _ => {
                         return Err(SwitchboardError::ExternalFailure {
