@@ -6,13 +6,16 @@
 ## Overview
 
 An Agent is a component that runs without any direct user interaction. The lifetime of an Agent
-component instance is bounded by its session.  It can be shared by mods across many stories. In
-addition to the capabilities provided to all modular components via
-`fuchsia::modular::ComponentContext`, an Agent is given additional capabilities via
-`fuchsia::modular::AgentContext` as an incoming service.
+component instance is bounded by its session.  A single agent instance is shared by all components
+that ask for services from them.
 
-Agents must expose the `fuchsia::modular::Agent` service to receive new connections and provide
-services. An Agent component may implement the `fuchsia::modular::Lifecycle` service to receive termination signals and voluntarily exit.
+Agents provide services to other components via their outgoing directory.
+
+For legacy reasons, Agents can optionally expose the `fuchsia.modular.Agent`
+service to receive new connections and provide services.
+
+Agent components should implement the `fuchsia.modular.Lifecycle` service to
+receive graceful termination signals and voluntarily exit.
 
 ## SimpleAgent
 
@@ -27,31 +30,20 @@ class.
 int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  // modular::Agent provides an implementation of fuchsia.modular.Lifecycle.
+  // The agent can perform graceful teardown tasks in the callback.
   modular::Agent agent(context->outgoing(), [&loop] { loop.Quit(); });
   loop.Run();
   return 0;
 }
 ```
 
-The `modular::Agent` utility above implements and exposes `fuchsia::modular::Agent` and
-`fuchsia::modular::Lifecycle` services. Additionally,
-
-#### `fuchsia::modular::AgentContext`
-
-`fuchsia::modular::AgentContext` is a protocol that is exposed to all Agent components.
-For example, it allows agents to schedule `Task`s that will be executed at
-specific intervals.
-
-`fuchsia::modular::AgentContext` also gives `fuchsia::modular::Agent`s access to
-`fuchsia::modular::ComponentContext` which is a protocol that is exposed to all
-Peridot components (i.e. `fuchsia::modular::Agent` and `Module`).
-For example, `fuchsia::modular::ComponentContext` provides access to `Ledger`,
-Peridot's cross-device storage solution.
+The `modular::Agent` utility above implements and exposes `fuchsia.modular.Lifecycle`.
 
 ### Advertising the `Simple` Protocol
 
 In order for the `SimpleAgent` to advertise the `Simple` protocol to other modular components,
-it needs to expose it as an agent service. `modular::Agent::AddService<>()` provides a way to do
+it needs to expose it as an agent service. `sys::ComponentContext::outgoing()` provides a way to do
 this:
 
 ```c++
@@ -59,28 +51,27 @@ this:
     SimpleImpl();
     ~SimpleImpl();
 
-    std::string message_queue_token() const { return token_; }
-
   private:
-    // The current message queue token.
-    std::string token_;
+    void AMethod(AMethodResult reuslt) override{
+      // do stuff
+      result("all done");
+    }
   };
 
   int main(int /*argc*/, const char** /*argv*/) {
     ...
-    modular::Agent agent(context->outgoing(), [&loop] { loop.Quit(); });
+    auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
     SimpleImpl simple_impl;
     fidl::BindingSet<Simple> simple_bindings;
 
-    agent.AddService<Simple>(simple_bindings.GetHandler(&simple_impl));
+    context->outgoing()->AddPublicService(simple_bindings.GetHandler(&simple_impl));
     ...
   }
 ```
 
-In the code above, `SimpleAgent` adds the `Simple` service as an agent service. Now, when a
-component connects to the `SimpleAgent`, it will be able to connect to the `Simple` interface and
-call methods on it. Those method calls will be delegated to the `simple_impl` object.
+In the code above, `SimpleAgent` adds the `Simple` service as an outgoing service. Now, when a
+component asks for the `Simple` service (see below), it will be served by `SimpleAgent`.
 
 ## Connecting to SimpleAgent
 
