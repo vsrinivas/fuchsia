@@ -155,13 +155,13 @@ zx_status_t DebuggedProcess::Init() {
 
 void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
                               debug_ipc::PauseReply* reply) {
-  // This function should do a best effort to ensure the thread(s) are actually
-  // stopped before the reply is sent.
+  // This function should do a best effort to ensure the thread(s) are actually stopped before the
+  // reply is sent. This will ensure that other commands the client may have enqueued operate on a
+  // suspended thread as they may be expecting.
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
     if (thread) {
-      thread->Suspend(true);
-      thread->set_client_state(DebuggedThread::ClientState::kPaused);
+      thread->ClientSuspend(true);
 
       // The Suspend call could have failed though most failures should be rare (perhaps we raced
       // with the thread being destroyed). Either way, send our current knowledge of the thread's
@@ -173,16 +173,7 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
     // the client sending the request.
   } else {
     // 0 thread ID means pause all threads.
-    std::vector<zx_koid_t> suspended_koids;
-    SuspendAll(true, &suspended_koids);
-
-    // Change the state of those threads.
-    for (zx_koid_t thread_koid : suspended_koids) {
-      DebuggedThread* thread = GetThread(thread_koid);
-      FX_DCHECK(thread);
-      thread->set_client_state(DebuggedThread::ClientState::kPaused);
-    }
-
+    ClientSuspendAllThreads();
     reply->threads = GetThreadRecords();
   }
 }
@@ -190,19 +181,14 @@ void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request,
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
   if (request.thread_koids.empty()) {
     // Empty thread ID list means resume all threads.
-    for (auto& [thread_koid, thread] : threads_) {
-      thread->Resume(request);
-      thread->set_client_state(DebuggedThread::ClientState::kRunning);
-    }
+    for (auto& [thread_koid, thread] : threads_)
+      thread->ClientResume(request);
   } else {
     for (uint64_t thread_koid : request.thread_koids) {
-      DebuggedThread* thread = GetThread(thread_koid);
-      if (thread) {
-        thread->Resume(request);
-        thread->set_client_state(DebuggedThread::ClientState::kRunning);
-      }
-      // Could be not found if there is a race between the thread exiting and
-      // the client sending the request.
+      if (DebuggedThread* thread = GetThread(thread_koid))
+        thread->ClientResume(request);
+      // Might be not found if there is a race between the thread exiting and the client sending the
+      // request.
     }
   }
 }
@@ -322,18 +308,20 @@ void DebuggedProcess::SuspendAndSendModulesIfKnown() {
     // Suspend all threads while the module list is being sent. The client will resume the threads
     // once it's loaded symbols and processed breakpoints (this may take a while and we'd like to
     // get any breakpoints as early as possible).
-    std::vector<uint64_t> paused_thread_koids;
-    SuspendAll(false, &paused_thread_koids);
-    SendModuleNotification(std::move(paused_thread_koids));
+    ClientSuspendAllThreads();
+    SendModuleNotification();
   }
 }
 
-void DebuggedProcess::SendModuleNotification(std::vector<uint64_t> paused_thread_koids) {
+void DebuggedProcess::SendModuleNotification() {
   // Notify the client of any libraries.
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid();
   notify.modules = process_handle_->GetModules(dl_debug_addr_);
-  notify.stopped_thread_koids = std::move(paused_thread_koids);
+
+  // All threads are assumed to be stopped.
+  for (auto& [thread_koid, thread_ptr] : threads_)
+    notify.stopped_thread_koids.push_back(thread_koid);
 
   DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
 
@@ -613,22 +601,18 @@ void DebuggedProcess::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTable
   }
 }
 
-void DebuggedProcess::SuspendAll(bool synchronous, std::vector<zx_koid_t>* suspended_koids) {
+void DebuggedProcess::ClientSuspendAllThreads() {
   // Issue the suspension order for all the threads.
   for (auto& [thread_koid, thread] : threads_) {
-    bool was_suspended = thread->Suspend(synchronous);
-    if (was_suspended && suspended_koids)
-      suspended_koids->push_back(thread_koid);
+    // Do an asynchronous suspend. We'll wait for the suspension at the bottom. If there is more
+    // than one thread this allows waiting for each to complete in parallel instead of series.
+    thread->ClientSuspend(false);
   }
 
-  if (!synchronous)
-    return;
-
-  // If we want to block, we need to wait on the notification for each thread.
+  // Wait on the notification for each thread.
   zx::time deadline = DebuggedThread::DefaultSuspendDeadline();
-  for (auto& [thread_koid, thread] : threads_) {
-    thread->WaitForSuspension(deadline);
-  }
+  for (auto& [thread_koid, thread] : threads_)
+    thread->thread_handle().WaitForSuspension(deadline);
 }
 
 void DebuggedProcess::OnStdout(bool close) {

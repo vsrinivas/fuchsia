@@ -22,6 +22,8 @@ class MockThreadHandle final : public ThreadHandle {
 
   explicit MockThreadHandle(zx_koid_t thread_koid, std::string name = std::string());
 
+  // Note that this state is always returned. The thread could have been Suspend()-ed which will
+  // indiate is_suspended(), but the GetState will still report the value set here.
   void set_state(State s) { state_ = s; }
 
   // Sets the values to be returned for the given register category query.
@@ -51,6 +53,10 @@ class MockThreadHandle final : public ThreadHandle {
   size_t WatchpointUninstallCount(const debug_ipc::AddressRange&) const;
   size_t TotalWatchpointUninstallCalls() const;
 
+  // Returns the suspend count for implementing reference-counted suspension via MockSuspendHandle.
+  int suspend_count() const { return *suspend_count_; }
+  bool is_suspended() const { return suspend_count() > 0; }
+
   // ThreadHandle implementation.
   const zx::thread& GetNativeHandle() const override { return null_handle_; }
   zx::thread& GetNativeHandle() override { return null_handle_; }
@@ -59,7 +65,8 @@ class MockThreadHandle final : public ThreadHandle {
   State GetState() const override { return state_; }
   debug_ipc::ThreadRecord GetThreadRecord(zx_koid_t process_koid) const override;
   debug_ipc::ExceptionRecord GetExceptionRecord() const override;
-  zx::suspend_token Suspend() override;
+  std::unique_ptr<SuspendHandle> Suspend() override;
+  bool WaitForSuspension(zx::time deadline) const override;
   std::optional<GeneralRegisters> GetGeneralRegisters() const override;
   void SetGeneralRegisters(const GeneralRegisters& regs) override;
   std::optional<DebugRegisters> GetDebugRegisters() const override;
@@ -99,6 +106,9 @@ class MockThreadHandle final : public ThreadHandle {
   std::vector<WatchpointInstallation> watchpoint_installs_;
   std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeBeginCmp> wp_installs_;
   std::map<debug_ipc::AddressRange, size_t, debug_ipc::AddressRangeBeginCmp> wp_uninstalls_;
+
+  // Shared count modifies by the MockSuspendHandles. Positive indicates this thread is suspended.
+  std::shared_ptr<int> suspend_count_;
 };
 
 }  // namespace debug_agent

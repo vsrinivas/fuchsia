@@ -145,7 +145,7 @@ void SoftwareBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
   Uninstall(thread);
 
   // This thread now has to continue running.
-  thread->ResumeException();
+  thread->InternalResumeException();
 }
 
 void SoftwareBreakpoint::EndStepOver(DebuggedThread* thread) {
@@ -202,7 +202,7 @@ void SoftwareBreakpoint::StepOverCleanup(DebuggedThread* thread) {
   }
 
   // Remote the thread from the exception.
-  thread->ResumeException();
+  thread->InternalResumeException();
 }
 
 void SoftwareBreakpoint::SuspendAllOtherThreads(zx_koid_t stepping_over_koid) {
@@ -221,12 +221,13 @@ void SoftwareBreakpoint::SuspendAllOtherThreads(zx_koid_t stepping_over_koid) {
     // We keep every other thread suspended.
     // If this is a re-entrant breakpoint (two threads in a row are stepping over the same
     // breakpoint), we could have more than one token for each thread.
-    suspend_tokens_.insert({thread->koid(), thread->RefCountedSuspend(false)});
+    suspend_tokens_.insert({thread->koid(), thread->InternalSuspend(false)});
   }
 
   // We wait on all the suspend signals to trigger.
   for (DebuggedThread* thread : suspended_threads) {
-    bool suspended = thread->WaitForSuspension();
+    bool suspended =
+        thread->thread_handle().WaitForSuspension(DebuggedThread::DefaultSuspendDeadline());
     FX_DCHECK(suspended) << "Thread " << thread->koid();
   }
 }

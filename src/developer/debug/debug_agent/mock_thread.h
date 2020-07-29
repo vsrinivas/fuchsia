@@ -10,6 +10,11 @@
 
 namespace debug_agent {
 
+// Simple setup for a DebuggedThread that sets up a mocked thread handle and provides some
+// convenience wrappers for querying the state.
+//
+// Since DebuggedThread is not a abstract class designed for derivation, there should be no
+// overrides on this class. Overrides for behavior should go on the [Mock]ThreadHandle later.
 class MockThread : public DebuggedThread {
  public:
   MockThread(DebuggedProcess* process, zx_koid_t thread_koid);
@@ -20,26 +25,7 @@ class MockThread : public DebuggedThread {
     return static_cast<MockThreadHandle&>(thread_handle());
   }
 
-  void ResumeException() override;
-  void ResumeSuspension() override;
-
-  bool Suspend(bool synchronous = false) override;
-  bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline()) override;
-
-  bool IsSuspended() const override { return internal_suspension_ || suspend_count_ > 0; }
-  bool IsInException() const override { return in_exception_; }
-
-  bool internal_suspension() const { return internal_suspension_; }
-  int suspend_count() const { return suspend_count_; }
-
- protected:
-  void IncreaseSuspend() override;
-  void DecreaseSuspend() override;
-
- private:
-  bool internal_suspension_ = false;
-  int suspend_count_ = 0;
-  bool in_exception_ = false;
+  bool running() { return !mock_thread_handle().is_suspended() && !in_exception(); }
 };
 
 }  // namespace debug_agent

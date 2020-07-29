@@ -117,7 +117,7 @@ void HardwareBreakpoint::ExecuteStepOver(DebuggedThread* thread) {
   Uninstall(thread);
 
   // The thread now can continue with the step over.
-  thread->ResumeException();
+  thread->InternalResumeException();
 }
 
 void HardwareBreakpoint::EndStepOver(DebuggedThread* thread) {
@@ -190,7 +190,7 @@ zx_status_t HardwareBreakpoint::Install(DebuggedThread* thread) {
   DEBUG_LOG(Breakpoint) << "Installing HW breakpoint on thread " << thread->koid()
                         << " on address 0x" << std::hex << address();
 
-  auto suspend_token = thread->RefCountedSuspend(true);
+  auto suspend_token = thread->InternalSuspend(true);
 
   // Do the actual installation.
   if (!thread->thread_handle().InstallHWBreakpoint(address())) {
@@ -226,7 +226,7 @@ zx_status_t HardwareBreakpoint::Uninstall(DebuggedThread* thread) {
   DEBUG_LOG(Breakpoint) << "Removing HW breakpoint on thread " << thread->koid() << " on address 0x"
                         << std::hex << address();
 
-  auto suspend_token = thread->RefCountedSuspend(true);
+  auto suspend_token = thread->InternalSuspend(true);
   if (!thread->thread_handle().UninstallHWBreakpoint(address())) {
     Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), ZX_ERR_INTERNAL);
     return ZX_ERR_INTERNAL;

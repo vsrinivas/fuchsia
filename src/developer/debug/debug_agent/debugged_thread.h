@@ -38,30 +38,6 @@ enum class ThreadCreationOption {
 
 class DebuggedThread {
  public:
-  // Represents a ref-counted suspend token to the debugged thread.
-  // As long as one of these token is valid, the thread will maintain suspended.
-  class SuspendToken {
-   public:
-    ~SuspendToken();
-
-   private:
-    SuspendToken(DebuggedThread*);
-
-    fxl::WeakPtr<DebuggedThread> thread_;
-
-    FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(SuspendToken);
-    friend class ::debug_agent::DebuggedThread;
-  };
-
-  // Represents the state the client thinks this thread is in. Certain
-  // operations can suspend all the threads of a process and the debugger needs
-  // to know which threads should remain suspended after that operation is done.
-  enum class ClientState {
-    kRunning,
-    kPaused,
-  };
-  const char* ClientStateToString(ClientState);
-
   DebuggedThread(DebugAgent*, DebuggedProcess* process, std::unique_ptr<ThreadHandle> handle,
                  ThreadCreationOption creation_option = ThreadCreationOption::kRunningKeepRunning,
                  std::unique_ptr<ExceptionHandle> exception = nullptr);
@@ -89,33 +65,34 @@ class DebuggedThread {
 
   void OnException(std::unique_ptr<ExceptionHandle> exception_handle);
 
-  // Resumes execution of the thread. The thread should currently be in a
-  // stopped state. If it's not stopped, this will be ignored.
-  void Resume(const debug_ipc::ResumeRequest& request);
+  // Resumes execution of the thread from the perspective of the client. The thread should currently
+  // be in a stopped state. If it's not stopped from the client's perspective (client suspend or in
+  // an exception), this will be ignored.
+  void ClientResume(const debug_ipc::ResumeRequest& request);
 
-  // Resumes the thread according to the current run mode.
-  void ResumeForRunMode();
+  // Low-level resume the thread from an exception. Most callers will want ClientResume or
+  // ResumeFromException(). Calling this will bypass single step requests and stepping over
+  // breakpoint logic. Will be a no-op if the thread is not in an exception. This is public because
+  // it needs to be called by the breakpoint code when stepping over breakpoints.
+  void InternalResumeException();
 
-  // Resume the thread from an exception.
-  // If |exception_handle_| is not valid, this will no-op.
-  virtual void ResumeException();
-
-  // Resume the thread from a suspension.
-  // if |suspend_token_| is not valid, this will no-op.
-  virtual void ResumeSuspension();
-
-  // Pauses execution of the thread. Pausing happens asynchronously so the
-  // thread will not necessarily have stopped when this returns. Set the
-  // |synchronous| flag for blocking on the suspended signal and make this call
-  // block until the thread is suspended.
+  // Pauses execution of the thread.
   //
-  // |new_state| represents what the new state of the client should be. If no
-  // change is wanted, you can use the overload that doesn't receives that.
+  //  - ClientSuspend() pauses from the perspective of the client. This means that the client will
+  //    be in charge of resuming this thread. It does nothing if the thread is already suspended
+  //    from the perspective of the client.
   //
-  // Returns true if the thread was running at the moment of this call being
-  // made. Returns false if it was on a suspension condition (suspended or on an
-  // exception).
-  virtual bool Suspend(bool synchronous = false);
+  //  - InternalSuspend() pauses for internal users (like breakpoints being stepped over) and the
+  //    thread will remain suspended as long as the returned SuspendHandle is alive.
+  //
+  // For the thread to be running, there must be no client suspension nor any SuspendHandles
+  // live.
+  //
+  // Suspending happens asynchronously so the thread will not necessarily have stopped when this
+  // returns. Set the |synchronous| flag for blocking on the suspended signal and make this call
+  // block until the thread is suspended. See also ThreadHandle::WaitForSuspension().
+  void ClientSuspend(bool synchronous = false);
+  [[nodiscard]] std::unique_ptr<SuspendHandle> InternalSuspend(bool synchronous = false);
 
   // Pauses execution of the thread. Pausing happens asynchronously so the thread will not
   // necessarily have stopped when this returns. Set the |synchronous| flag for blocking on the
@@ -124,15 +101,9 @@ class DebuggedThread {
   // Suspension is ref-counted on the thread. This is done by returning a suspend token that will
   // keep track of how many suspensions this thread has. As long as there is a valid one, the
   // thread will remain suspended.
-  [[nodiscard]] virtual std::unique_ptr<SuspendToken> RefCountedSuspend(bool synchronous = false);
 
   // The typical suspend deadline users should use when suspending.
   static zx::time DefaultSuspendDeadline();
-
-  // Waits on a suspension token.
-  // Returns true if we could find a valid suspension condition (either
-  // suspended or on an exception). False if timeout or error.
-  virtual bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline());
 
   // Fills the thread status record. If full_stack is set, a full backtrace will be generated,
   // otherwise a minimal one will be generated.
@@ -156,24 +127,10 @@ class DebuggedThread {
   // Notification that a ProcessBreakpoint is about to be deleted.
   void WillDeleteProcessBreakpoint(ProcessBreakpoint* bp);
 
-  ClientState client_state() const { return client_state_; }
-  void set_client_state(ClientState cs) { client_state_ = cs; }
-
-  bool running() const { return !IsSuspended() && !IsInException(); }
-
-  virtual bool IsSuspended() const { return ref_counted_suspend_token_.is_valid(); }
-  virtual bool IsInException() const { return !!exception_handle_; }
-
-  int ref_counted_suspend_count() const { return suspend_count_; }
+  bool in_exception() const { return !!exception_handle_; }
 
   bool stepping_over_breakpoint() const { return stepping_over_breakpoint_; }
   void set_stepping_over_breakpoint(bool so) { stepping_over_breakpoint_ = so; }
-
- protected:
-  virtual void IncreaseSuspend();
-  virtual void DecreaseSuspend();
-
-  std::unique_ptr<ThreadHandle> thread_handle_;
 
  private:
   enum class OnStop {
@@ -181,6 +138,10 @@ class DebuggedThread {
     kNotify,  // Send client notification like normal.
     kResume,  // The thread should be resumed from this exception.
   };
+
+  // Resumes the thread according to the current run mode. This handles stepping over breakpoints
+  // and will resolve any exceptions.
+  void ResumeFromException();
 
   // Some of these need to update the general registers in response to handling the exception. These
   // ones take a non-const GeneralRegisters reference.
@@ -214,6 +175,8 @@ class DebuggedThread {
   // Returns true if there is a software breakpoint instruction at the given address.
   bool IsBreakpointInstructionAtAddress(uint64_t address) const;
 
+  std::unique_ptr<ThreadHandle> thread_handle_;
+
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
 
@@ -225,15 +188,10 @@ class DebuggedThread {
   uint64_t step_in_range_begin_ = 0;
   uint64_t step_in_range_end_ = 0;
 
-  // This is the state the client is considering this thread to be. This is used
-  // for internal suspension the agent can do.
-  ClientState client_state_ = ClientState::kRunning;
-
-  int suspend_count_ = 0;
-  // This permits users to simply call Suspend/Resume without having to worry about having to
-  // track a suspend token. They could if they so wanted.
-  std::unique_ptr<SuspendToken> local_suspend_token_;
-  zx::suspend_token ref_counted_suspend_token_;
+  // The client doesn't have reference-counted suspends, just the current state. This suspend handle
+  // is active when the thread should be suspended from the client's perspective. Debug agent code
+  // suspending for its own purpose should maintain its own suspend handle.
+  std::unique_ptr<SuspendHandle> client_suspend_handle_;
 
   // Active if the thread is currently on an exception.
   std::unique_ptr<ExceptionHandle> exception_handle_;
@@ -251,8 +209,6 @@ class DebuggedThread {
   fxl::WeakPtrFactory<DebuggedThread> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedThread);
-
-  friend class ::debug_agent::DebuggedThread::SuspendToken;
 };
 
 }  // namespace debug_agent

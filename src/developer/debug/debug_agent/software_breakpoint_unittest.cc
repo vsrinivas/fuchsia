@@ -191,7 +191,7 @@ TEST(ProcessBreakpoint, StepSingle) {
   // The step over strategy is as follows:
   //  - Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
   //  - Thread 4 will remain oblivious to the breakpoint, as will 5.
-  //  - Thread 5 is IsSuspended from the client, so it should not be resumed by the agent during
+  //  - Thread 5 is suspended from the client, so it should not be resumed by the agent during
   //    step over.
 
   constexpr zx_koid_t kThread1Koid = 1;
@@ -205,8 +205,7 @@ TEST(ProcessBreakpoint, StepSingle) {
   MockThread* mock_thread4 = process.AddThread(kThread4Koid);
   MockThread* mock_thread5 = process.AddThread(kThread5Koid);
 
-  mock_thread5->set_client_state(DebuggedThread::ClientState::kPaused);
-  mock_thread5->Suspend();
+  mock_thread5->ClientSuspend();
 
   SoftwareBreakpoint bp(&main_breakpoint, &process, kAddress);
   ASSERT_EQ(ZX_OK, bp.Init());
@@ -228,10 +227,10 @@ TEST(ProcessBreakpoint, StepSingle) {
 
   // Only thread 1 should be still running. The rest should be suspended.
   EXPECT_TRUE(mock_thread1->running());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 1 should be stepping over.
   EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
@@ -255,10 +254,10 @@ TEST(ProcessBreakpoint, StepSingle) {
 
   // Only thread 1 should be running.
   EXPECT_TRUE(mock_thread1->running());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 1 should be stepping over.
   EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
@@ -281,10 +280,10 @@ TEST(ProcessBreakpoint, StepSingle) {
 
   // Only thread 1 should be running.
   EXPECT_TRUE(mock_thread1->running());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 1 should be stepping over right now.
   EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
@@ -311,11 +310,11 @@ TEST(ProcessBreakpoint, StepSingle) {
   ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread3);
 
   // Only thread 2 should be running.
-  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread1->mock_thread_handle().is_suspended());
   EXPECT_TRUE(mock_thread2->running());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 2 should be stepping over right now.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
@@ -340,11 +339,11 @@ TEST(ProcessBreakpoint, StepSingle) {
   ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread3);
 
   // Only thread 3 should be running, as it's the only one stepping over.
-  EXPECT_TRUE(mock_thread1->IsSuspended());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread1->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
   EXPECT_TRUE(mock_thread3->running());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 3 should be stepping over right now.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
@@ -371,7 +370,7 @@ TEST(ProcessBreakpoint, StepSingle) {
   EXPECT_TRUE(mock_thread2->running());
   EXPECT_TRUE(mock_thread3->running());
   EXPECT_TRUE(mock_thread4->running());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // No thread should be stepping over.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
@@ -427,11 +426,11 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   constexpr zx_koid_t kThread3Koid = 3;
   constexpr zx_koid_t kThread4Koid = 4;
   constexpr zx_koid_t kThread5Koid = 5;
-  DebuggedThread* mock_thread1 = process.AddThread(kThread1Koid);
-  DebuggedThread* mock_thread2 = process.AddThread(kThread2Koid);
-  DebuggedThread* mock_thread3 = process.AddThread(kThread3Koid);
-  DebuggedThread* mock_thread4 = process.AddThread(kThread4Koid);
-  DebuggedThread* mock_thread5 = process.AddThread(kThread5Koid);
+  MockThread* mock_thread1 = process.AddThread(kThread1Koid);
+  MockThread* mock_thread2 = process.AddThread(kThread2Koid);
+  MockThread* mock_thread3 = process.AddThread(kThread3Koid);
+  MockThread* mock_thread4 = process.AddThread(kThread4Koid);
+  MockThread* mock_thread5 = process.AddThread(kThread5Koid);
 
   SoftwareBreakpoint breakpoint1(&main_breakpoint1, &process, kAddress1);
   SoftwareBreakpoint breakpoint2(&main_breakpoint2, &process, kAddress2);
@@ -457,10 +456,10 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
 
   // Only thread 1 should be still running. The rest should be suspended.
   EXPECT_TRUE(mock_thread1->running());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 1 should be stepping over.
   EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
@@ -493,10 +492,10 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
 
   // Only thread 1 should be running.
   EXPECT_TRUE(mock_thread1->running());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 1 should be stepping over.
   EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
@@ -530,10 +529,10 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
 
   // Only thread 1 should be running.
   EXPECT_TRUE(mock_thread1->running());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 1 should be stepping over right now.
   EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
@@ -564,11 +563,11 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread3);
 
   // Only thread 2 should be running.
-  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread1->mock_thread_handle().is_suspended());
   EXPECT_TRUE(mock_thread2->running());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 2 should be stepping over right now.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
@@ -601,11 +600,11 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   ASSERT_EQ(process.step_over_queue()[2].thread.get(), mock_thread4);
 
   // Only thread 2 should be running.
-  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread1->mock_thread_handle().is_suspended());
   EXPECT_TRUE(mock_thread2->running());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 2 should be stepping over right now.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
@@ -636,11 +635,11 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   ASSERT_EQ(process.step_over_queue()[1].thread.get(), mock_thread4);
 
   // Only thread 3 should be running, as it's the only one stepping over.
-  EXPECT_TRUE(mock_thread1->IsSuspended());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread1->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
   EXPECT_TRUE(mock_thread3->running());
-  EXPECT_TRUE(mock_thread4->IsSuspended());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread4->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 3 should be stepping over right now.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
@@ -668,11 +667,11 @@ TEST(ProcessBreakpoint, MultipleBreakpoints) {
   ASSERT_EQ(process.step_over_queue()[0].thread.get(), mock_thread4);
 
   // Only thread 4 should be running, as it's the only one stepping over.
-  EXPECT_TRUE(mock_thread1->IsSuspended());
-  EXPECT_TRUE(mock_thread2->IsSuspended());
-  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread1->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread2->mock_thread_handle().is_suspended());
+  EXPECT_TRUE(mock_thread3->mock_thread_handle().is_suspended());
   EXPECT_TRUE(mock_thread4->running());
-  EXPECT_TRUE(mock_thread5->IsSuspended());
+  EXPECT_TRUE(mock_thread5->mock_thread_handle().is_suspended());
 
   // Only thread 3 should be stepping over right now.
   EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());

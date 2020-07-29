@@ -4,8 +4,11 @@
 
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 
+#include <lib/zx/clock.h>
+
 #include <map>
 
+#include "src/developer/debug/debug_agent/zircon_suspend_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -88,10 +91,46 @@ debug_ipc::ExceptionRecord ZirconThreadHandle::GetExceptionRecord() const {
   return debug_ipc::ExceptionRecord();
 }
 
-zx::suspend_token ZirconThreadHandle::Suspend() {
-  zx::suspend_token result;
-  thread_.suspend(&result);
-  return result;
+std::unique_ptr<SuspendHandle> ZirconThreadHandle::Suspend() {
+  zx::suspend_token token;
+  thread_.suspend(&token);
+  return std::make_unique<ZirconSuspendHandle>(std::move(token));
+}
+
+bool ZirconThreadHandle::WaitForSuspension(zx::time deadline) const {
+  // The thread could already be suspended. This bypasses a wait cycle in that case.
+  if (GetState().state == debug_ipc::ThreadRecord::State::kSuspended)
+    return true;  // Already suspended, success.
+
+  // This function is complex because a thread in an exception state can't be suspended (bug 33562).
+  // Delivery of exceptions are queued on the exception port so our cached state may be stale, and
+  // exceptions can also race with our suspend call.
+  //
+  // To manually stress-test this code, write a one-line infinite loop:
+  //   volatile bool done = false;
+  //   while (!done) {}
+  // and step over it with "next". This will cause an infinite flood of single-step exceptions as
+  // fast as the debugger can process them. Pausing after doing the "next" will trigger a
+  // suspension and is more likely to race with an exception.
+
+  // If an exception happens before the suspend does, we'll never get the suspend signal and we'll
+  // end up waiting for the entire timeout just to be able to tell the difference between
+  // suspended and exception. To avoid waiting for a long timeout to tell the difference, wait for
+  // short timeouts multiple times.
+  auto poll_time = zx::msec(10);
+  zx_status_t status = ZX_OK;
+  do {
+    // Before waiting, check the thread state from the kernel because of queue described above.
+    if (GetState().is_blocked_on_exception())
+      return true;
+
+    zx_signals_t observed;
+    status = thread_.wait_one(ZX_THREAD_SUSPENDED, zx::deadline_after(poll_time), &observed);
+    if (status == ZX_OK && (observed & ZX_THREAD_SUSPENDED))
+      return true;
+
+  } while (status == ZX_ERR_TIMED_OUT && zx::clock::get_monotonic() < deadline);
+  return false;
 }
 
 debug_ipc::ThreadRecord ZirconThreadHandle::GetThreadRecord(zx_koid_t process_koid) const {

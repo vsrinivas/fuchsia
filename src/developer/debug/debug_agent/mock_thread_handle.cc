@@ -6,12 +6,14 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/debug/debug_agent/mock_suspend_handle.h"
+
 namespace debug_agent {
 
 zx::thread MockThreadHandle::null_handle_;
 
 MockThreadHandle::MockThreadHandle(zx_koid_t thread_koid, std::string name)
-    : thread_koid_(thread_koid), name_(std::move(name)) {
+    : thread_koid_(thread_koid), name_(std::move(name)), suspend_count_(std::make_shared<int>(0)) {
   // Tests could accidentally write to this handle since it's returned as a mutable value in some
   // cases. Catch accidents like that.
   FX_DCHECK(!null_handle_);
@@ -94,7 +96,11 @@ debug_ipc::ExceptionRecord MockThreadHandle::GetExceptionRecord() const {
   return debug_ipc::ExceptionRecord();
 }
 
-zx::suspend_token MockThreadHandle::Suspend() { return zx::suspend_token(); }
+std::unique_ptr<SuspendHandle> MockThreadHandle::Suspend() {
+  return std::make_unique<MockSuspendHandle>(suspend_count_);
+}
+
+bool MockThreadHandle::WaitForSuspension(zx::time deadline) const { return true; }
 
 std::optional<GeneralRegisters> MockThreadHandle::GetGeneralRegisters() const {
   return general_registers_;

@@ -390,7 +390,7 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
     }
 
     ASSERT_TRUE(exception_thread);
-    ASSERT_TRUE(exception_thread->IsInException());
+    ASSERT_TRUE(exception_thread->in_exception());
     EXPECT_EQ(exception_thread->exception_handle()->GetThreadHandle()->GetKoid(), kThreadKoid);
   }
 }

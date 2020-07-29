@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/debug_agent/debug_registers.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
+#include "src/developer/debug/debug_agent/suspend_handle.h"
 #include "src/developer/debug/debug_agent/watchpoint_info.h"
 #include "src/developer/debug/ipc/records.h"
 
@@ -61,8 +62,14 @@ class ThreadHandle {
   // ExceptionRecord.valid will be false on failure.
   virtual debug_ipc::ExceptionRecord GetExceptionRecord() const = 0;
 
-  // TODO(brettw) probably needs a suspension wait timeout.
-  virtual zx::suspend_token Suspend() = 0;
+  // Asynchronously suspends the thread. The thread will remain suspended as long as any suspend
+  // handle is alive. See also WaitForSuspension().
+  virtual std::unique_ptr<SuspendHandle> Suspend() = 0;
+
+  // Waits for a previous suspend call to take effect. Does nothing if the thread is already
+  // suspended. Returns true if we could find a valid suspension condition (either suspended or on
+  // an exception). False if timeout or error.
+  virtual bool WaitForSuspension(zx::time deadline) const = 0;
 
   // Registers -------------------------------------------------------------------------------------
 

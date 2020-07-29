@@ -64,9 +64,8 @@ void __attribute__((noinline)) ThreadFunc1(ThreadData* data) {
 }
 
 // Synchronously suspends the thread. Returns a valid suspend token on success.
-zx::suspend_token SyncSuspendThread(ThreadHandle& thread) {
-  // TODO(brettw) add a synchronous suspend to the ThreadHandle API.
-  zx::suspend_token token = thread.Suspend();
+std::unique_ptr<SuspendHandle> SyncSuspendThread(ThreadHandle& thread) {
+  auto suspend_handle = thread.Suspend();
 
   // Need long timeout when running on shared bots on QEMU.
   zx_signals_t observed = 0;
@@ -74,9 +73,9 @@ zx::suspend_token SyncSuspendThread(ThreadHandle& thread) {
       ZX_THREAD_SUSPENDED, zx::deadline_after(zx::sec(10)), &observed);
   EXPECT_TRUE(observed & ZX_THREAD_SUSPENDED);
   if (status != ZX_OK)
-    return zx::suspend_token();
+    return nullptr;
 
-  return token;
+  return suspend_handle;
 }
 
 void DoUnwindTest() {
@@ -95,7 +94,7 @@ void DoUnwindTest() {
       data.thread_ready_cv.wait(lock, [&data]() { return data.thread_ready; });
 
     // Thread query functions require it to be suspended.
-    zx::suspend_token suspend = SyncSuspendThread(*data.thread);
+    auto suspend = SyncSuspendThread(*data.thread);
 
     // Get the registers for the unwinder.
     std::optional<GeneralRegisters> regs = data.thread->GetGeneralRegisters();

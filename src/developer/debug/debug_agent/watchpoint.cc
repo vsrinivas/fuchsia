@@ -139,7 +139,7 @@ void Watchpoint::ExecuteStepOver(DebuggedThread* thread) {
   Uninstall(thread);
 
   // The thread now can continue with the step over.
-  thread->ResumeException();
+  thread->InternalResumeException();
 }
 
 void Watchpoint::EndStepOver(DebuggedThread* thread) {
@@ -210,7 +210,7 @@ bool Watchpoint::Install(DebuggedThread* thread) {
   DEBUG_LOG(Watchpoint) << "Installing watchpoint on thread " << thread->koid() << " on address 0x"
                         << std::hex << address();
 
-  auto suspend_token = thread->RefCountedSuspend(true);
+  auto suspend_token = thread->InternalSuspend(true);
 
   // Do the actual installation.
   auto result = thread->thread_handle().InstallWatchpoint(type_, range_);
@@ -255,7 +255,7 @@ zx_status_t Watchpoint::Uninstall(DebuggedThread* thread) {
   DEBUG_LOG(Watchpoint) << "Removing watchpoint on thread " << thread->koid() << " on address 0x"
                         << std::hex << address();
 
-  auto suspend_token = thread->RefCountedSuspend(true);
+  auto suspend_token = thread->InternalSuspend(true);
 
   if (!thread->thread_handle().UninstallWatchpoint(range_)) {
     Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address());

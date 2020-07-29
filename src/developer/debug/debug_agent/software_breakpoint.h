@@ -9,6 +9,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
+#include "src/developer/debug/debug_agent/suspend_handle.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_agent {
@@ -17,7 +18,7 @@ class ProcessMemoryAccessor;
 
 class SoftwareBreakpoint : public ProcessBreakpoint {
  public:
-  explicit SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address);
+  SoftwareBreakpoint(Breakpoint* breakpoint, DebuggedProcess* process, uint64_t address);
   virtual ~SoftwareBreakpoint();
 
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kSoftware; }
@@ -82,7 +83,7 @@ class SoftwareBreakpoint : public ProcessBreakpoint {
   // coincide with waiting for the resources of the first step over to be freed.
   //
   // See the implementation of |StepOverCleanup| for more details.
-  std::multimap<zx_koid_t, std::unique_ptr<DebuggedThread::SuspendToken>> suspend_tokens_;
+  std::multimap<zx_koid_t, std::unique_ptr<SuspendHandle>> suspend_tokens_;
 };
 
 }  // namespace debug_agent

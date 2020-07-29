@@ -87,13 +87,9 @@ class DebuggedProcess : public ProcessHandleObserver {
   void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
                              debug_ipc::LoadInfoHandleTableReply* reply);
 
-  // Pauses all threads in the process. If non-null, the paused_koids vector will be populated with
-  // the koids of all threads paused by this operation. It will not include threads that were
-  // already paused.
-  //
-  // If |synchronous| is false, this call will send the suspend commands to the kernel and return
-  // immediately. It will block on all the suspend signals otherwise.
-  void SuspendAll(bool synchronous = false, std::vector<zx_koid_t>* suspended_koids = nullptr);
+  // Synchronously pauses all threads in the process from the perspective of the client. This issues
+  // ClientSuspend() on all threads (see that for more on what "client" means).
+  void ClientSuspendAllThreads();
 
   // Returns the thread or null if there is no known thread for this koid.
   virtual DebuggedThread* GetThread(zx_koid_t thread_koid) const;
@@ -120,8 +116,9 @@ class DebuggedProcess : public ProcessHandleObserver {
   // breakpoints and resume them.
   virtual void SuspendAndSendModulesIfKnown();
 
-  // Sends the currently loaded modules to the client with the given list of paused threads.
-  void SendModuleNotification(std::vector<uint64_t> paused_thread_koids);
+  // Sends the currently loaded modules to the client with the current list of threads. All threads
+  // are assumed to be paused before this call.
+  void SendModuleNotification();
 
   // Looks for breakpoints at the given address. Null if no breakpoints are at that address.
   virtual SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
