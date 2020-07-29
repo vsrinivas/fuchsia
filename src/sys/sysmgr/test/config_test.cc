@@ -94,7 +94,6 @@ TEST_F(ConfigTest, ParseWithErrors) {
 
 TEST_F(ConfigTest, Parse) {
   constexpr char kServices[] = R"json({
-    "diagnostics": "the-archivist",
     "services": {
       "fuchsia.logger.Log": "logger",
       "fuchsia.Debug": ["debug", "arg1"]
@@ -133,9 +132,6 @@ TEST_F(ConfigTest, Parse) {
 
   auto optional_services = config.TakeOptionalServices();
   EXPECT_THAT(optional_services, ElementsAre("fuchsia.tracing.controller.Controller"));
-
-  auto diagnostics = config.diagnostics_url();
-  EXPECT_EQ(diagnostics, "the-archivist");
 }
 
 TEST_F(ConfigTest, FailWhenDuplicateDetected) {

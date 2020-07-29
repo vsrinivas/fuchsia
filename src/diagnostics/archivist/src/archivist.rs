@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_diagnostics_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_sys_internal::SourceIdentity,
     fuchsia_async as fasync,
-    fuchsia_component::server::{ServiceFs, ServiceObj},
+    fuchsia_component::server::{ServiceFs, ServiceObj, ServiceObjTrait},
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
@@ -25,9 +25,12 @@ use {
         prelude::*,
     },
     io_util,
-    log::error,
+    log::{error, warn},
     parking_lot::RwLock,
-    std::{path::Path, sync::Arc},
+    std::{
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
 };
 
 /// Spawns controller sends stop signal.
@@ -48,6 +51,22 @@ fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::
     )
     .detach();
 }
+
+fn maybe_create_archive<ServiceObjTy: ServiceObjTrait>(
+    fs: &mut ServiceFs<ServiceObjTy>,
+    archive_path: &PathBuf,
+) -> Result<archive::ArchiveWriter, Error> {
+    let writer = archive::ArchiveWriter::open(archive_path.clone())?;
+    fs.add_remote(
+        "archive",
+        io_util::open_directory_in_namespace(
+            &archive_path.to_string_lossy(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )?,
+    );
+    Ok(writer)
+}
+
 /// The `Archivist` is responsible for publishing all the services and monitoring component's health.
 /// # All resposibilities:
 ///  * Run and process Log Sink connections on main future.
@@ -167,19 +186,22 @@ impl Archivist {
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
 
-        let writer = if let Some(archive_path) = &archivist_configuration.archive_path {
-            let writer = archive::ArchiveWriter::open(archive_path)?;
-            fs.add_remote(
-                "archive",
-                io_util::open_directory_in_namespace(
-                    &archive_path.to_string_lossy(),
-                    io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-                )?,
-            );
-            Some(writer)
-        } else {
-            None
-        };
+        let writer = archivist_configuration.archive_path.as_ref().and_then(|archive_path| {
+            maybe_create_archive(&mut fs, archive_path)
+                .or_else(|e| {
+                    // TODO(57271): this is not expected in regular builds of the archivist. It's
+                    // happening when starting the zircon_guest (fx shell guest launch zircon_guest)
+                    // We'd normally fail if we couldn't create the archive, but for now we include
+                    // a warning.
+                    warn!(
+                        "Failed to create archive at {}: {:?}",
+                        archive_path.to_string_lossy(),
+                        e
+                    );
+                    Err(e)
+                })
+                .ok()
+        });
 
         // TODO(4601): Refactor this code.
         // Set up loading feedback pipeline configs.

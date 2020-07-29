@@ -13,7 +13,7 @@
 namespace cobalt {
 
 namespace {
-constexpr const char kAllSelector[] = "archivist.cmx:root/all_archive_accessor_node:*";
+constexpr const char kAllSelector[] = "core/archivist:root/all_archive_accessor_node:*";
 }
 
 ArchivistStatsFetcherImpl::ArchivistStatsFetcherImpl(async_dispatcher_t* dispatcher,

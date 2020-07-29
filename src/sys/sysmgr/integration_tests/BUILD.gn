@@ -88,7 +88,10 @@ executable("service_startup_test_bin") {
 fuchsia_component("service_startup_test") {
   testonly = true
   manifest = "meta/service_startup_test.cmx"
-  deps = [ ":service_startup_test_bin" ]
+  deps = [
+    ":service_startup_test_bin",
+    ":sysmgr_integration_test_observer_config",
+  ]
 }
 
 executable("package_updating_loader_test_bin") {
@@ -122,21 +125,6 @@ config_data("sysmgr_integration_test_observer_config") {
   sources = [ "config/service_startup_test.config" ]
 }
 
-resource("observer_config") {
-  sources = [ "//src/diagnostics/archivist/configs/observer_config.json" ]
-  outputs = [ "data/observer_config.json" ]
-}
-
-fuchsia_component("observer") {
-  testonly = true
-  manifest = "meta/observer.cmx"
-  deps = [
-    ":observer_config",
-    ":sysmgr_integration_test_observer_config",
-    "//src/diagnostics/archivist:bin",
-  ]
-}
-
 resource("echo_server_bin") {
   sources = [ "$root_out_dir/echo_server_rust" ]
   outputs = [ "bin/echo_server" ]
@@ -159,7 +147,6 @@ fuchsia_test_package("sysmgr-integration-tests") {
   deps = [
     ":echo_server_rust",
     ":mock_resolver",
-    ":observer",
     ":test_sysmgr_service",
     "//src/sys/sysmgr:sysmgr_component",
   ]

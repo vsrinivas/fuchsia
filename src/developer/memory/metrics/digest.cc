@@ -26,7 +26,7 @@ const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"Amber", "amber.cmx", ".*"},
     {"Pkgfs", "pkgfs", ".*"},
     {"Cast", "cast_agent.cmx", ".*"},
-    {"Archivist", "archivist.cmx", ".*"},
+    {"Archivist", "archivist.cm", ".*"},
     {"Cobalt", "cobalt.cmx", ".*"},
     {"Audio", "audio_core.cmx", ".*"},
     {"Context", "context_provider.cmx", ".*"},

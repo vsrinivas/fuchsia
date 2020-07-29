@@ -4,6 +4,7 @@
 
 #include "src/sys/appmgr/log_connector_impl.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 
@@ -79,8 +80,16 @@ fbl::RefPtr<LogConnectorImpl> LogConnectorImpl::NewChild(std::string child_realm
 void LogConnectorImpl::TakeLogConnectionListener(TakeLogConnectionListenerCallback callback) {
   FX_LOGS(INFO) << "taking log connector for " << realm_label_;
   callback(std::move(consumer_request_));
+  // This once-callback will be set only for the root "app" realm and it will be
+  // available because it is set before we run the event loop.
+  if (on_ready_) {
+    (*on_ready_)();
+    on_ready_.reset();
+  }
   SetUpSyslogOnce(consumer_);
 }
+
+void LogConnectorImpl::OnReady(fit::function<void()> on_ready) { on_ready_ = std::move(on_ready); }
 
 void LogConnectorImpl::AddConnectorClient(
     fidl::InterfaceRequest<fuchsia::sys::internal::LogConnector> request) {

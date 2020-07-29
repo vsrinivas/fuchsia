@@ -13,7 +13,6 @@ constexpr char kDeprecatedShellAllowList[] = "allowlist/deprecated_shell.txt";
 constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
 constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
-constexpr char kEventSourceAllowList[] = "allowlist/event_source.txt";
 constexpr char kHubAllowList[] = "allowlist/hub.txt";
 constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
 constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
@@ -53,11 +52,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "hub. go/no-hub";
-    return std::nullopt;
-  }
-  if (sandbox.HasService("fuchsia.sys2.EventSource") && !CheckEventSource(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "fuchsia.sys2.EventSource";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.pkg.PackageResolver") && !CheckPackageResolver(pkg_url)) {
@@ -101,11 +95,6 @@ bool PolicyChecker::CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUr
 bool PolicyChecker::CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url) {
   AllowList component_event_provider_allowlist(config_, kComponentEventProviderAllowList);
   return component_event_provider_allowlist.IsAllowed(pkg_url);
-}
-
-bool PolicyChecker::CheckEventSource(const FuchsiaPkgUrl& pkg_url) {
-  AllowList event_source_allowlist(config_, kEventSourceAllowList);
-  return event_source_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url) {

@@ -36,6 +36,8 @@ class LogConnectorImpl : public fuchsia::sys::internal::LogConnector,
   void AddLogConnection(std::string component_url, std::string instance_id,
                         fidl::InterfaceRequest<fuchsia::logger::LogSink> connection);
 
+  void OnReady(fit::function<void()> on_ready);
+
  private:
   // Construct a new connector for the provided realm label.
   LogConnectorImpl(fxl::WeakPtr<LogConnectorImpl> parent, std::string realm_label);
@@ -51,6 +53,8 @@ class LogConnectorImpl : public fuchsia::sys::internal::LogConnector,
 
   // weak_factory_ must be the last member variable.
   fxl::WeakPtrFactory<LogConnectorImpl> weak_factory_;
+
+  fit::optional<fit::function<void()>> on_ready_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogConnectorImpl);
 };

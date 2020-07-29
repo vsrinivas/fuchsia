@@ -106,7 +106,6 @@ single top-level JSON object, and the following keys are supported:
 * `apps`
 * `optional_services`
 * `update_dependencies`
-* `diagnostics`
 
 The contents of all sysmgr config files are read from sysmgr's /config/data
 directory and merged at runtime to form sysmgr's overall configuration.
@@ -250,20 +249,3 @@ The implementation details are subject to change, but as of 2020-04-29
 
 If the `auto_update_packages` GN arg is set to false, `update_dependencies` has
 no effect. It is only relevant for ephemeral package updates.
-
-### `diagnostics`
-
-Warning: Here be dragons. You should not modify this configuration unless you
-are working on the Component Diagnostics stack.
-
-The `diagnostics` key accepts a single component URL for the component that
-provides Component Diagnostics. This component is started before
-`startup_services` or `apps` entries to ensure that diagnostics are available
-before other components are started in the `sys` realm.
-
-```json
-{
-  "diagnostics: "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
-}
-```
-

@@ -8,10 +8,13 @@ use {
     anyhow::{format_err, Error},
     directory_broker, fdio,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
-    fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio,
+    fidl_fuchsia_sys_internal as fsys_internal, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::HandleBased,
-    io_util, scoped_task,
+    io_util,
+    matches::assert_matches,
+    scoped_task,
     std::{ffi::CString, path::Path},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -20,7 +23,8 @@ use {
 };
 
 /// This integration test creates a new appmgr process and confirms that it can connect to a sysmgr
-/// run echo service through appmgr's outgoing directory.
+/// run echo service through appmgr's outgoing directory once the log connection has been
+/// established.
 
 const APPMGR_BIN_PATH: &'static str = "/pkg/bin/appmgr";
 const SYSMGR_SERVICES_CONFIG: &'static str = r#"{
@@ -142,6 +146,17 @@ async fn main() -> Result<(), Error> {
         spawn_actions.as_mut_slice(),
     )
     .map_err(|(status, msg)| format_err!("failed to spawn appmgr ({}): {:?}", status, msg))?;
+
+    let log_connector_node = io_util::open_node(
+        &appmgr_out_dir_proxy,
+        &Path::new("appmgr_svc/fuchsia.sys.internal.LogConnector"),
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        fio::MODE_TYPE_SERVICE,
+    )?;
+    let log_connector_node_chan =
+        log_connector_node.into_channel().map_err(|e| format_err!("{:?}", e))?;
+    let log_connector = fsys_internal::LogConnectorProxy::from_channel(log_connector_node_chan);
+    assert_matches!(log_connector.take_log_connection_listener().await, Ok(Some(_)));
 
     let echo_service_node = io_util::open_node(
         &appmgr_out_dir_proxy,

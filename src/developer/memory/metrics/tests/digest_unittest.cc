@@ -188,7 +188,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 15, .name = "web_engine_exe:gpu", .vmos = {15}},
                       {.koid = 16, .name = "chromium.cmx", .vmos = {16}},
                       {.koid = 17, .name = "fshost.cm", .vmos = {17}},
-                      {.koid = 18, .name = "archivist.cmx", .vmos = {18}},
+                      {.koid = 18, .name = "archivist.cm", .vmos = {18}},
                       {.koid = 19, .name = "cobalt.cmx", .vmos = {19}},
                       {.koid = 20, .name = "audio_core.cmx", .vmos = {20}},
                       {.koid = 21, .name = "context_provider.cmx", .vmos = {21}},

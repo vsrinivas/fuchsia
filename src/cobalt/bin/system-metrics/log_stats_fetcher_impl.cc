@@ -32,8 +32,8 @@ LogStatsFetcherImpl::LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
     : executor_(dispatcher),
       archive_reader_(context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
-                      {"archivist.cmx:root/log_stats:*",
-                       "archivist.cmx:root/log_stats/by_component/*:error_logs"}) {
+                      {"core/archivist:root/log_stats:*",
+                       "core/archivist:root/log_stats/by_component/*:error_logs"}) {
   LoadAllowlist(kAllowlistFilePath, &component_code_map_);
   // This establishes a baseline for error counts so that the next call to FetchMetrics() only
   // includes logs since the daemon started as opposed to since the  boot time. This is especially

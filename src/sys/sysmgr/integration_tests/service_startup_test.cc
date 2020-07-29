@@ -139,9 +139,6 @@ TEST_F(TestSysmgr, ServiceStartup) {
   std::string response;
   ::test::sysmgr::InterfaceSyncPtr interface_ptr;
   ASSERT_EQ(ZX_OK, sysmgr_svc->Connect(interface_ptr.NewRequest()));
-
-  fuchsia::logger::LogPtr log_ptr;
-  ASSERT_EQ(ZX_OK, sysmgr_svc->Connect(log_ptr.NewRequest(dispatcher())));
   ASSERT_EQ(ZX_OK, interface_ptr->Ping(&response));
 
   EXPECT_EQ("test_sysmgr_service_startup", response);
@@ -156,12 +153,6 @@ TEST_F(TestSysmgr, ServiceStartup) {
     ASSERT_EQ(ZX_OK, echo_ptr->EchoString(echo_msg, &response));
     EXPECT_EQ(echo_msg, response);
   }
-
-  VerifyLogs(log_ptr, {"test_sysmgr_service"},
-             {
-                 "\\[test_sysmgr_service.cc\\([0-9]{1,4}\\)\\] Entering loop.",
-                 "\\[test_sysmgr_service.cc\\([0-9]{1,4}\\)\\] Received ping.",
-             });
 }
 
 }  // namespace

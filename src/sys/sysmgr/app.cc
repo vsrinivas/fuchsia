@@ -43,17 +43,6 @@ App::App(Config config, async::Loop* loop)
   const auto optional_services = config.TakeOptionalServices();
   std::unordered_set<std::string> update_dependency_urls;
 
-  // prepare this realm's diagnostics platform's service directory
-  fuchsia::sys::LaunchInfo launch_diagnostics;
-  launch_diagnostics.url = config.diagnostics_url();
-  if (!launch_diagnostics.url.empty()) {
-    auto diagnostics_services =
-        sys::ServiceDirectory::CreateWithRequest(&launch_diagnostics.directory_request);
-    services_.emplace(launch_diagnostics.url, std::move(diagnostics_services));
-  } else {
-    FX_LOGS(WARNING) << "Creating sys realm without a diagnostics service.";
-  }
-
   // Register services.
   for (auto& pair : config.TakeServices()) {
     if (std::find(update_dependencies.begin(), update_dependencies.end(), pair.first) !=
@@ -124,13 +113,6 @@ App::App(Config config, async::Loop* loop)
   fuchsia::sys::EnvironmentOptions options = {.inherit_parent_services = true};
   environment->CreateNestedEnvironment(std::move(env_request), env_controller_.NewRequest(),
                                        kDefaultLabel, std::move(service_list), std::move(options));
-
-  // before we start any configured services, make sure we start the Archivist. its sandbox includes
-  // fuchsia.sys.LogConnector, so appmgr will create the correct LogConnectionListener buffer before
-  // this ends
-  if (!launch_diagnostics.url.empty()) {
-    StartDiagnostics(std::move(launch_diagnostics), loop);
-  }
 
   // Connect to startup services
   for (auto& startup_service : config.TakeStartupServices()) {
@@ -210,29 +192,6 @@ void App::RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPt
 void App::LaunchApplication(fuchsia::sys::LaunchInfo launch_info) {
   FX_VLOGS(1) << "Launching application " << launch_info.url;
   env_launcher_->CreateComponent(std::move(launch_info), nullptr);
-}
-
-void App::StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop) {
-  FX_VLOGS(1) << "Launching diagnostics from " << launch_diagnostics.url;
-  bool diagnostics_ready = false;
-  env_launcher_->CreateComponent(std::move(launch_diagnostics),
-                                 diagnostics_controller_.NewRequest());
-  diagnostics_controller_.events().OnDirectoryReady = [&diagnostics_ready] {
-    diagnostics_ready = true;
-  };
-  diagnostics_controller_.set_error_handler(
-      [this, url = launch_diagnostics.url](zx_status_t error) {
-        FX_LOGS(ERROR) << "Singleton " << url << " died (diagnostics)";
-        diagnostics_controller_.Unbind();
-        services_.erase(url);
-      });
-
-  FX_LOGS(INFO) << "Waiting for diagnostics service dir";
-  while (!diagnostics_ready) {
-    // we're willing to wait an infinite time for a *single* turn of the loop, which we'll repeat
-    loop->Run(zx::time::infinite(), true /*once*/);
-  }
-  FX_LOGS(INFO) << "Diagnostics initialized.";
 }
 
 }  // namespace sysmgr

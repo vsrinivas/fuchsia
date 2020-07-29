@@ -1,6 +1,0 @@
-{
-  "diagnostics": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
-  "services": {
-    "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
-  }
-}

@@ -154,6 +154,10 @@ package("archivist") {
       dest = "archivist.cmx"
     },
     {
+      path = rebase_path("meta/archivist.cml")
+      dest = "archivist.cm"
+    },
+    {
       path = rebase_path("meta/observer.cmx")
       dest = "observer.cmx"
     },
@@ -198,18 +202,10 @@ config_data("observer_config") {
   sources = [ "configs/observer_config.json" ]
 }
 
-config_data("archivist_startup") {
-  for_pkg = "sysmgr"
-  outputs = [ "archivist.config" ]
-
-  sources = [ "configs/sysmgr_config.json" ]
-}
-
 group("with_default_config") {
   deps = [
     ":archivist",
     ":archivist_config",
-    ":archivist_startup",
     ":observer",
     ":observer_config",
   ]

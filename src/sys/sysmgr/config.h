@@ -39,8 +39,6 @@ class Config {
   bool HasError() const;
   std::string error_str() const;
 
-  std::string& diagnostics_url() { return diagnostics_url_; }
-
   ServiceMap TakeServices() { return std::move(services_); }
 
   StartupServices TakeStartupServices() { return std::move(startup_services_); }
@@ -66,7 +64,6 @@ class Config {
   OptionalServices optional_services_;
   AppVector apps_;
   json::JSONParser json_parser_;
-  std::string diagnostics_url_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

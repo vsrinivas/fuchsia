@@ -11,7 +11,6 @@ group("appmgr_policy_eng") {
     ":appmgr_deprecated_ambient_replace_as_executable_allowlist_eng",
     ":appmgr_deprecated_misc_storage_allowlist_eng",
     ":appmgr_deprecated_shell_allowlist_eng",
-    ":appmgr_event_source_allowlist_eng",
     ":appmgr_hub_allowlist_eng",
     ":appmgr_package_cache_allowlist_eng",
     ":appmgr_package_resolver_allowlist_eng",
@@ -44,12 +43,6 @@ config_data("appmgr_component_event_provider_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "component_event_provider_allowlist_eng.txt" ]
   outputs = [ "allowlist/component_event_provider.txt" ]
-}
-
-config_data("appmgr_event_source_allowlist_eng") {
-  for_pkg = "appmgr"
-  sources = [ "event_source_allowlist_eng.txt" ]
-  outputs = [ "allowlist/event_source.txt" ]
 }
 
 config_data("appmgr_deprecated_ambient_replace_as_executable_allowlist_eng") {

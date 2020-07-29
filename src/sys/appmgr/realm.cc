@@ -978,6 +978,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       return;
     }
 
+    // Add a component event provider for v1 archivists/observers.
     if (security_policy->enable_component_event_provider) {
       ns->MaybeAddComponentEventProvider();
     }
@@ -1251,8 +1252,7 @@ internal::EventNotificationInfo Realm::GetEventNotificationInfo(const std::strin
     auto realm = weak_ptr();
 
     // Stop traversing the path to the root once a child of the root realm "app" is found.
-    // "root" won't have a ComponentEventProvider.
-    while (realm && realm->parent_ && realm->parent_->label_ != internal::kRootLabel && !provider) {
+    while (realm && realm->parent_ && !provider) {
       realm = realm->parent_;
       if (realm->component_event_provider_) {
         provider = realm->component_event_provider_.get();
@@ -1261,6 +1261,17 @@ internal::EventNotificationInfo Realm::GetEventNotificationInfo(const std::strin
       }
     }
     std::reverse(relative_realm_path.begin(), relative_realm_path.end());
+
+    // NOTE: the archivist used to be in the sys realm of the v1 componments world. Now it's a
+    // v2 component who is a sibling of appmgr, therefore realm paths (which are relative to
+    // the archivist position) will be prefixed by `sys`. To avoid a soft migration of clients
+    // depending on the moniker not containing `sys` we strip it. To continue allowing tests using
+    // an observer to continue creating environments named "sys" we only strip this prefix if it's
+    // the actual sys realm, this is, we stopped at the root realm.
+    if (relative_realm_path.size() > 0 && (relative_realm_path[0].compare("sys") == 0) && realm &&
+        (realm->label_.compare(internal::kRootLabel) == 0)) {
+      relative_realm_path.erase(relative_realm_path.begin());
+    }
   }
 
   fuchsia::sys::internal::SourceIdentity identity;

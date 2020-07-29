@@ -1,0 +1,72 @@
+{
+    program: {
+        binary: "bin/archivist",
+        args: [
+            "--config-path",
+            "/config/data/archivist_config.json",
+        ],
+    },
+    use: [
+        { runner: "elf" },
+        { storage: "data" },
+        {
+            protocol: [
+                "/svc/fuchsia.boot.ReadOnlyLog",
+                "/svc/fuchsia.sys.internal.ComponentEventProvider",
+                "/svc/fuchsia.sys.internal.LogConnector",
+                "/svc/fuchsia.sys2.EventSource",
+            ],
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "parent",
+        },
+        {
+            event: "capability_ready",
+            from: "parent",
+            as: "diagnostics_ready",
+            filter: { path: "/diagnostics" },
+        },
+
+        // V2 components' connections will be attributed through here. The
+        // archivist exposes LogSink, components use it and when
+        // component_manager routes the protocol it'll defer the binding to the
+        // archivist through capabiltiy requested for attribution.
+        {
+            event: "capability_requested",
+            from: "framework",
+            filter: { path: "/svc/fuchsia.logger.LogSink" },
+        },
+        {
+            event_stream: [ "capability_requested" ],
+            as: "/svc/fuchsia.sys2.EventStream",
+        },
+        {
+            directory: "/config/data",
+            rights: [ "r*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "/svc/fuchsia.diagnostics.ArchiveAccessor",
+                "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "/svc/fuchsia.logger.Log",
+                "/svc/fuchsia.logger.LogSink",
+            ],
+            from: "self",
+        },
+
+        // Archivist's own diagnostics data.
+        {
+            directory: "/diagnostics",
+            from: "self",
+            to: "framework",
+            rights: [ "connect" ],
+        },
+    ],
+}

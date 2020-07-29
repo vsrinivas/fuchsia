@@ -19,7 +19,7 @@ const uint64_t kExpectedMetricCount = 11;
 
 const char kExpectedArchiveOutput[] = R"(
 {
-  "moniker": "archivist.cmx",
+  "moniker": "core/archivist",
   "payload": {
     "root": {
       "all_archive_accessor_node": {
@@ -169,7 +169,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MeasurementsRepeatFailed) {
 TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   std::vector<uint64_t> values;
   fake_archive_ = FakeArchive(R"(
-    {"moniker": "archivist.cmx",
+    {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 5
      }}}})");
@@ -183,7 +183,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = FakeArchive(R"(
-    {"moniker": "archivist.cmx",
+    {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 7
      }}}})");
@@ -197,9 +197,9 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = FakeArchive(R"(
-    {"moniker": "archivist.cmx",
+    {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
-       "inspect_batch_iterator_get_next_errors": 10 
+       "inspect_batch_iterator_get_next_errors": 10
      }}}})");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);
@@ -211,10 +211,10 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = FakeArchive(R"(
-    {"moniker": "archivist.cmx",
+    {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 8,
-       "inspect_batch_iterator_get_next_errors": 10 
+       "inspect_batch_iterator_get_next_errors": 10
      }}}})");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);
@@ -226,10 +226,10 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = FakeArchive(R"(
-    {"moniker": "archivist.cmx",
+    {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 9,
-       "inspect_batch_iterator_get_next_errors": 11 
+       "inspect_batch_iterator_get_next_errors": 11
      }}}})");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);

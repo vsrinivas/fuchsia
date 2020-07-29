@@ -25,8 +25,6 @@ same "services" key. For example, it catches invalid configuration like this::
     }
   }
 
-It also tests for conflicts in the 'diagnostics' key.
-
 The input provided to this tool is expected to be the config-data package
 manifest, formatted like this::
 
@@ -81,18 +79,7 @@ def main():
     # multiple conflicts.
     seen_services = {}
     service_conflicts = {}
-    seen_diag = None
-    diag_conflicts = []
     for config in configs:
-        diag = config.get('diagnostics')
-        if diag is not None:
-            if seen_diag is None:
-                seen_diag = config_file
-            else:
-                if not diag_conflicts:
-                    diag_conflicts.append(seen_diag)
-                diag_conflicts.append(config_file)
-
         services = config.get('services')
         if not services:
             continue
@@ -106,16 +93,12 @@ def main():
 
     # If any conflicts were detected, print a useful error message and then
     # exit.
-    if service_conflicts or diag_conflicts:
+    if service_conflicts:
         print('Error: conflicts detected in sysmgr configuration')
         for service, config_files in list(service_conflicts.items()):
             print(
                 'Duplicate configuration for service {} in files: {}'.format(
                     service, ', '.join(config_files)))
-        if diag_conflicts:
-            print(
-                'Duplicate diagnostics config in files: {}'.format(
-                    ', '.join(diag_conflicts)))
         return 1
 
     # Create a single merged configuration analogous to sysmgr's init itself.

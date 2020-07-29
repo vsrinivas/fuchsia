@@ -17,7 +17,6 @@ namespace {
 using fxl::StringPrintf;
 
 constexpr char kApps[] = "apps";
-constexpr char kDiagnostics[] = "diagnostics";
 constexpr char kServices[] = "services";
 constexpr char kStartupServices[] = "startup_services";
 constexpr char kOptionalServices[] = "optional_services";
@@ -55,20 +54,6 @@ void Config::ParseDocument(rapidjson::Document document) {
   if (!document.IsObject()) {
     json_parser_.ReportError("Config file is not a JSON object.");
     return;
-  }
-
-  auto diagnostics_it = document.FindMember(kDiagnostics);
-  if (diagnostics_it != document.MemberEnd()) {
-    auto& value = diagnostics_it->value;
-    if (value.IsString()) {
-      if (diagnostics_url_.length() == 0) {
-        diagnostics_url_ = value.GetString();
-      } else {
-        json_parser_.ReportError(StringPrintf("Duplicate definition of `%s`.", kDiagnostics));
-      }
-    } else {
-      json_parser_.ReportError(StringPrintf("`%s` must be a string.", kDiagnostics));
-    }
   }
 
   if (!ParseServiceMap(document, kServices, &services_)) {

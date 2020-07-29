@@ -43,7 +43,6 @@ class App {
   void RegisterLoader();
   void RegisterDefaultServiceConnector();
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
-  void StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop);
 
   std::unique_ptr<sys::ComponentContext> component_context_;
 
@@ -54,9 +53,6 @@ class App {
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr env_launcher_;
-
-  // controller for sys diagnostics
-  fuchsia::sys::ComponentControllerPtr diagnostics_controller_;
 
   vfs::PseudoDir svc_root_;
   std::vector<std::string> svc_names_;

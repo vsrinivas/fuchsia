@@ -92,7 +92,7 @@ class MetricsUnitTest : public gtest::RealLoopFixture {
                 {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
                 {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
                 {.koid = 16, .name = "fshost.cm", .vmos = {16}},
-                {.koid = 17, .name = "archivist.cmx", .vmos = {17}},
+                {.koid = 17, .name = "archivist.cm", .vmos = {17}},
                 {.koid = 18, .name = "cobalt.cmx", .vmos = {18}},
                 {.koid = 19, .name = "audio_core.cmx", .vmos = {19}},
                 {.koid = 20, .name = "context_provider.cmx", .vmos = {20}},
