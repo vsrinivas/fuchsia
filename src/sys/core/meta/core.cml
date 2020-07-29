@@ -116,6 +116,7 @@
         {
             protocol: [
                 "/svc/fuchsia.diagnostics.ArchiveAccessor",
+                "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "/svc/fuchsia.logger.Log",
             ],
             from: "#archivist",
