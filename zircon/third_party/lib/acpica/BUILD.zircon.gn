@@ -244,6 +244,9 @@ static_library("acpica") {
     if (enable_acpi_debug) {
       defines += [ "ACPI_DEBUG_OUTPUT" ]
     }
+    if (disable_kernel_pci) {
+      defines += [ "ENABLE_USER_PCI" ]
+    }
   }
 
   # TODO(41663): UBSan has found an instance of undefined behavior in this target.
