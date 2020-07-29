@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+
+test("synchronous-executor-test") {
+  output_name = "synchronous-executor-test"
+  sources = [ "executor-test.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/devices/lib/synchronous-executor",
+    "//src/devices/testing/fake-object",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("synchronous-executor-test-package") {
+  executable_path = "test/synchronous-executor-test"
+  deps = [ ":synchronous-executor-test" ]
+}

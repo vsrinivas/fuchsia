@@ -15,7 +15,6 @@ driver_module("xhci") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
   sources = [
-    "synchronous_executor.cc",
     "usb-xhci.cc",
     "xhci-enumeration.cc",
     "xhci-event-ring.cc",
@@ -36,6 +35,7 @@ driver_module("xhci") {
     "//src/devices/lib/dma-buffer",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/devices/lib/synchronous-executor",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
@@ -68,6 +68,7 @@ source_set("test-libs") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/dma-buffer",
     "//src/devices/lib/mmio",
+    "//src/devices/lib/synchronous-executor",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/testing/fake-dma-buffer",
     "//src/devices/testing/fake-mmio-reg",
@@ -98,8 +99,6 @@ test("xhci-unittest") {
   }
   output_name = "xhci-unittest"
   sources = [
-    "synchronous_executor.cc",
-    "synchronous_executor_test.cc",
     "xhci-enumeration-test.cc",
     "xhci-enumeration.cc",
   ]
@@ -126,7 +125,6 @@ test("xhci-core-unittest") {
   }
   output_name = "xhci-core-unittest"
   sources = [
-    "synchronous_executor.cc",
     "usb-xhci-test.cc",
     "usb-xhci.cc",
   ]
@@ -153,7 +151,6 @@ test("xhci-event-ring-unittest") {
   }
   output_name = "xhci-event-ring-unittest"
   sources = [
-    "synchronous_executor.cc",
     "xhci-event-ring-test.cc",
     "xhci-event-ring.cc",
   ]
@@ -183,7 +180,6 @@ test("xhci-transfer-ring-unittest") {
   }
   output_name = "xhci-transfer-ring-unittest"
   sources = [
-    "synchronous_executor.cc",
     "xhci-transfer-ring-test.cc",
     "xhci-transfer-ring.cc",
   ]

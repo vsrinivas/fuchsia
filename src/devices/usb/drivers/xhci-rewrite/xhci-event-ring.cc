@@ -444,7 +444,7 @@ void EventRing::ScheduleTask(fit::promise<TRB*, zx_status_t> promise) {
   }
 }
 
-void EventRing::RunUntilIdle() { executor_.run(); }
+void EventRing::RunUntilIdle() { executor_.run_until_idle(); }
 
 std::variant<bool, std::unique_ptr<TRBContext>> EventRing::StallWorkaroundForDefectiveHubs(
     std::unique_ptr<TRBContext> context) {

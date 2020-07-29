@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zx_library.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ "test:synchronous-executor-test-package" ]
+}
+
+zx_library("synchronous-executor") {
+  sdk = "source"
+  sdk_headers = [ "lib/synchronous-executor/executor.h" ]
+  shared = false
+  sources = [ "executor.cc" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}

@@ -13,6 +13,7 @@
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
+#include <lib/synchronous-executor/executor.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
 #include <unistd.h>
@@ -34,7 +35,6 @@
 
 #include "lib/dma-buffer/buffer.h"
 #include "registers.h"
-#include "synchronous_executor.h"
 #include "xhci-context.h"
 #include "xhci-device-state.h"
 #include "xhci-enumeration.h"

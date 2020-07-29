@@ -1,9 +1,9 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_SYNCHRONOUS_EXECUTOR_H_
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_SYNCHRONOUS_EXECUTOR_H_
+#ifndef SRC_DEVICES_LIB_SYNCHRONOUS_EXECUTOR_INCLUDE_LIB_SYNCHRONOUS_EXECUTOR_EXECUTOR_H_
+#define SRC_DEVICES_LIB_SYNCHRONOUS_EXECUTOR_INCLUDE_LIB_SYNCHRONOUS_EXECUTOR_EXECUTOR_H_
 
 #include <lib/fit/promise.h>
 #include <lib/fit/scheduler.h>
@@ -12,10 +12,12 @@
 #include <mutex>
 #include <utility>
 
-namespace usb_xhci {
+namespace synchronous_executor {
 
 // A simple synchronous executor that immediately executes all the tasks in its
-// run queue when invoked.
+// run queue when invoked. Rather than blocking for new tasks, it will stop
+// once its queue is empty. It is also re-entrant (may safely call run
+// from inside a task on the executor).
 //
 // See documentation of |fit::promise| for more information.
 class synchronous_executor final : public fit::executor {
@@ -36,7 +38,7 @@ class synchronous_executor final : public fit::executor {
   // reentrantly.
   //
   // This method is thread-safe.
-  void run();
+  void run_until_idle();
 
   synchronous_executor(synchronous_executor&&) = delete;
   synchronous_executor& operator=(synchronous_executor&&) = delete;
@@ -78,6 +80,6 @@ class synchronous_executor final : public fit::executor {
   std::mutex mutex_;
 };
 
-}  // namespace usb_xhci
+}  // namespace synchronous_executor
 
-#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_SYNCHRONOUS_EXECUTOR_H_
+#endif  // SRC_DEVICES_LIB_SYNCHRONOUS_EXECUTOR_INCLUDE_LIB_SYNCHRONOUS_EXECUTOR_EXECUTOR_H_

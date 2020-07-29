@@ -6,6 +6,7 @@
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
 #include <lib/dma-buffer/buffer.h>
 #include <lib/mmio/mmio.h>
+#include <lib/synchronous-executor/executor.h>
 #include <lib/zx/bti.h>
 #include <zircon/hw/usb.h>
 
@@ -16,7 +17,6 @@
 #include <fbl/mutex.h>
 
 #include "registers.h"
-#include "synchronous_executor.h"
 #include "xhci-context.h"
 #include "xhci-hub.h"
 
@@ -113,7 +113,7 @@ class EventRing {
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> enumeration_queue_;
   // Whether or not we're currently enumerating a device
   bool enumerating_ = false;
-  synchronous_executor executor_;
+  synchronous_executor::synchronous_executor executor_;
   void HandlePortStatusChangeEventInterrupt(uint8_t port_id, bool preempt = false);
   TRBPromise HandlePortStatusChangeEvent(uint8_t port_id);
   TRBPromise WaitForPortStatusChange(uint8_t port_id);

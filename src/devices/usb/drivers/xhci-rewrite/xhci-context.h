@@ -6,6 +6,7 @@
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
+#include <lib/synchronous-executor/executor.h>
 
 #include <memory>
 
@@ -15,7 +16,6 @@
 #include <usb/request-cpp.h>
 
 #include "registers.h"
-#include "synchronous_executor.h"
 #include "xhci-hub.h"
 
 namespace usb_xhci {

@@ -1,20 +1,20 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "synchronous_executor.h"
+#include <lib/synchronous-executor/executor.h>
 
 #include <condition_variable>
 #include <mutex>
 
-namespace usb_xhci {
+namespace synchronous_executor {
 
 void synchronous_executor::schedule_task(fit::pending_task task) {
   std::lock_guard<std::mutex> lock(mutex_);
   scheduler_.schedule_task(std::move(task));
 }
 
-void synchronous_executor::run() {
+void synchronous_executor::run_until_idle() {
   // Run until the queue is empty
   while (true) {
     fit::subtle::scheduler::task_queue queue;
@@ -69,4 +69,4 @@ fit::suspended_task synchronous_executor::context_impl::suspend_task() {
   return fit::suspended_task(&executor_->resolver_, ticket_.value());
 }
 
-}  // namespace usb_xhci
+}  // namespace synchronous_executor

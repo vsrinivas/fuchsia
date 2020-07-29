@@ -7,6 +7,7 @@ group("lib") {
     "dev-operation",
     "dma-buffer",
     "driver",
+    "synchronous-executor",
   ]
 }
 
@@ -16,6 +17,7 @@ group("tests") {
     "dev-operation:tests",
     "dma-buffer:tests",
     "driver:tests",
+    "synchronous-executor:tests",
     "//zircon/system/ulib/devmgr-integration-test:tests",
     "//zircon/system/ulib/driver-integration-test:tests",
   ]

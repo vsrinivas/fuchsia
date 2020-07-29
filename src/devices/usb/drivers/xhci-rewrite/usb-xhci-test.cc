@@ -485,7 +485,7 @@ void EventRing::ScheduleTask(fit::promise<TRB*, zx_status_t> promise) {
   executor_.schedule_task(std::move(continuation));
 }
 
-void EventRing::RunUntilIdle() { executor_.run(); }
+void EventRing::RunUntilIdle() { executor_.run_until_idle(); }
 
 zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
   fbl::AutoLock _(&mutex_);

@@ -93,7 +93,7 @@ void EventRing::ScheduleTask(fit::promise<TRB*, zx_status_t> promise) {
   }
 }
 
-void EventRing::RunUntilIdle() { executor_.run(); }
+void EventRing::RunUntilIdle() { executor_.run_until_idle(); }
 
 zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
                                ddk::MmioView mmio_view, UsbXhci* hci) {

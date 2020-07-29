@@ -1,11 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "synchronous_executor.h"
-
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
+#include <lib/synchronous-executor/executor.h>
 
 #include <atomic>
 #include <memory>
@@ -14,7 +13,7 @@
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
-namespace usb_xhci {
+namespace synchronous_executor {
 TEST(SynchronousExecutorTests, OnlyRunRunnableTasks) {
   synchronous_executor executor;
   int run_count = 0;
@@ -26,11 +25,11 @@ TEST(SynchronousExecutorTests, OnlyRunRunnableTasks) {
     return fit::pending();
   }));
 
-  executor.run();
-  executor.run();
+  executor.run_until_idle();
+  executor.run_until_idle();
   ASSERT_EQ(run_count, 1);
   task_handle.resume_task();
-  executor.run();
+  executor.run_until_idle();
   ASSERT_EQ(run_count, 2);
 }
 
@@ -45,10 +44,10 @@ TEST(SynchronousExecutorTests, SuspendResumeTest) {
     return fit::pending();
   }));
 
-  executor.run();
+  executor.run_until_idle();
   ASSERT_EQ(run_count, 1);
   task_handle.resume_task();
-  executor.run();
+  executor.run_until_idle();
   ASSERT_EQ(run_count, 2);
 }
 
@@ -64,12 +63,12 @@ TEST(SynchronousExecutorTests, ExecutorIsReentrantSafe) {
         bool set_var = false;
         executor.schedule_task(fit::make_promise([&set_var]() { set_var = true; }));
         EXPECT_FALSE(set_var);
-        executor.run();
+        executor.run_until_idle();
         reentered = set_var;
         return fit::ok();
       }));
 
-  executor.run();
+  executor.run_until_idle();
   ASSERT_EQ(run_count, 1);
   ASSERT_TRUE(reentered);
 }
@@ -83,7 +82,7 @@ TEST(SynchronousExecutorTests, ExecutorIsThreadSafe) {
         run_count++;
         return fit::ok();
       }));
-      executor.run();
+      executor.run_until_idle();
     }
   });
 
@@ -92,7 +91,7 @@ TEST(SynchronousExecutorTests, ExecutorIsThreadSafe) {
       run_count++;
       return fit::ok();
     }));
-    executor.run();
+    executor.run_until_idle();
   }
   thread.join();
 
@@ -120,7 +119,7 @@ TEST(SynchronousExecutorTests, AbandonedTasksGetProperlyCleanedUp) {
         return fit::pending();
       }));
 
-  executor.run();
+  executor.run_until_idle();
   ASSERT_EQ(cleanup_count, 0);
   ASSERT_EQ(run_count, 1);
   task_handle.reset();
@@ -128,4 +127,4 @@ TEST(SynchronousExecutorTests, AbandonedTasksGetProperlyCleanedUp) {
   ASSERT_EQ(cleanup_count, 1);
 }
 
-}  // namespace usb_xhci
+}  // namespace synchronous_executor
