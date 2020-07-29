@@ -11,6 +11,8 @@
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 
+#include <gtest/gtest_prod.h>
+
 #include "fuchsia/math/cpp/fidl.h"
 #include "src/camera/bin/camera-gym/moving_window.h"
 
@@ -89,12 +91,15 @@ class StreamCycler {
   struct StreamInfo {
     fuchsia::camera3::StreamPtr stream;
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
-    uint32_t add_collection_handler_returned_value;
+    std::optional<uint32_t> add_collection_handler_returned_value;
     std::optional<uint32_t>
         source_highlight;  // Stream on which to highlight this stream's crop region.
     std::optional<fuchsia::math::RectF> highlight;
   };
   std::map<uint32_t, StreamInfo> stream_infos_;
+
+  friend class CameraGymTest;
+  FRIEND_TEST(CameraGymTest, PendingCollectionId);
 };
 
 }  // namespace camera

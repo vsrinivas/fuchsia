@@ -43,6 +43,7 @@ group("tests") {
 
 test_package("camera_tests") {
   deps = [
+    "//src/camera/bin/camera-gym/test",
     "//src/camera/bin/device/test",
     "//src/camera/bin/device_watcher/test",
     "//src/camera/calibration/algorithms/test",
@@ -158,6 +159,11 @@ test_package("camera_tests") {
       name = "imx227_test"
       manifest = "drivers/sensors/imx227/test/meta/imx227_test.cmx"
       environments = [ sherlock_env ]
+    },
+    {
+      name = "camera_gym_test"
+      manifest = "//src/camera/bin/camera-gym/test/camera_gym_test.cmx"
+      environments = basic_envs
     },
 
     # Put additional camera tests here

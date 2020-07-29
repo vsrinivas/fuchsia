@@ -202,9 +202,10 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
 
 void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info) {
   auto& stream_info = stream_infos_[stream_index];
-  if (show_buffer_handler_) {
-    show_buffer_handler_(stream_info.add_collection_handler_returned_value, frame_info.buffer_index,
-                         std::move(frame_info.release_fence), stream_info.highlight);
+  if (show_buffer_handler_ && stream_info.add_collection_handler_returned_value) {
+    show_buffer_handler_(stream_info.add_collection_handler_returned_value.value(),
+                         frame_info.buffer_index, std::move(frame_info.release_fence),
+                         stream_info.highlight);
   } else {
     frame_info.release_fence.reset();
   }
@@ -237,7 +238,9 @@ void StreamCycler::OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInf
 void StreamCycler::DisconnectStream(uint32_t stream_index) {
   if (remove_collection_handler_) {
     auto& stream_info = stream_infos_[stream_index];
-    remove_collection_handler_(stream_info.add_collection_handler_returned_value);
+    if (stream_info.add_collection_handler_returned_value) {
+      remove_collection_handler_(stream_info.add_collection_handler_returned_value.value());
+    }
   }
 
   stream_infos_.erase(stream_index);

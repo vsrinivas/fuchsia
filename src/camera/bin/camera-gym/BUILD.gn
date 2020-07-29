@@ -13,24 +13,19 @@ declare_args() {
 
 name = "camera-gym"
 
-executable("bin") {
-  visibility = [ ":*" ]
-
-  output_name = name
-
+source_set("lib") {
   sources = [
     "buffer_collage.cc",
     "buffer_collage.h",
     "lifecycle_impl.cc",
     "lifecycle_impl.h",
-    "main.cc",
     "moving_window.cc",
     "moving_window.h",
     "stream_cycler.cc",
     "stream_cycler.h",
   ]
 
-  deps = [
+  public_deps = [
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.modular",
@@ -43,6 +38,7 @@ executable("bin") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
+    "//third_party/googletest:gtest_prod",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -53,6 +49,16 @@ executable("bin") {
     camera_debug_define,
     "CONFIGURATION_CYCLE_TIME_MS=(${camera_gym_configuration_cycle_time_ms})",
   ]
+}
+
+executable("bin") {
+  output_name = name
+
+  sources = [ "main.cc" ]
+
+  deps = [ ":lib" ]
+
+  defines = [ camera_debug_define ]
 }
 
 convert_image("mute_icon") {
