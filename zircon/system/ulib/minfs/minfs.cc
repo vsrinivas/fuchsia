@@ -189,7 +189,7 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
   extend_request_t request;
   request.length = 1;
   request.offset = kFVMBlockInodeBmStart / kBlocksPerSlice;
-  zx_status_t status = fvm::ResetAllSlices2(device);
+  zx_status_t status = fvm::ResetAllSlices(device);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs mkfs: Failed to reset FVM slices: %d\n", status);
     return status;

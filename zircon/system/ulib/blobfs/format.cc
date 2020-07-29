@@ -40,7 +40,7 @@ zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
     return ZX_ERR_IO_INVALID;
   }
 
-  status = fvm::ResetAllSlices2(device);
+  status = fvm::ResetAllSlices(device);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs mkfs: Failed to reset slices\n");
     return status;

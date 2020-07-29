@@ -17,17 +17,8 @@
 
 namespace fvm {
 
-// Walks through all slices on the partition backed by |channel|, attempting to free
-// everything except for the first slice.
-//
-// This method is deprecated: Prefer ResetAllSlices2.
-zx_status_t ResetAllSlices(const zx::unowned_channel& channel);
-
-// Identical to ResetAllSlices, but operating on the |BlockDevice| interface.
-//
-// TODO(smklein): Deprecate all uses of |ResetAllSlices|, rename this function
-// to |ResetAllSlices|. This should be possible as soon as blobfs and minfs both
-// use the BlockDevice interface.
-zx_status_t ResetAllSlices2(block_client::BlockDevice* device);
+// Walks through all slices on the partition backed by |device|, attempting to
+// free everything except for the first slice.
+zx_status_t ResetAllSlices(block_client::BlockDevice* device);
 
 }  // namespace fvm

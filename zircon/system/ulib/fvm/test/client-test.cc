@@ -45,7 +45,7 @@ class MockDeviceBase : public BlockDevice {
 
 TEST(FvmClientTest, ResetSlicesNotSupported) {
   MockDeviceBase device;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, ResetAllSlices2(&device));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, ResetAllSlices(&device));
 }
 
 class MockBadDevice : public MockDeviceBase {
@@ -61,7 +61,7 @@ class MockBadDevice : public MockDeviceBase {
 
 TEST(FvmClientTest, ResetSlicesBadDevice) {
   MockBadDevice device;
-  ASSERT_EQ(ZX_ERR_IO, ResetAllSlices2(&device));
+  ASSERT_EQ(ZX_ERR_IO, ResetAllSlices(&device));
 }
 
 //  [1, 10]: Allocated
@@ -94,7 +94,7 @@ class MockOneSliceRangeDevice : public MockDeviceBase {
 
 TEST(FvmClientTest, ResetSlicesOneSliceRange) {
   MockOneSliceRangeDevice device;
-  EXPECT_OK(ResetAllSlices2(&device));
+  EXPECT_OK(ResetAllSlices(&device));
   EXPECT_TRUE(device.shrink_called_);
 }
 
@@ -150,7 +150,7 @@ class MockManySliceRangesDevice : public MockDeviceBase {
 
 TEST(FvmClientTest, ResetSlicesManySliceRanges) {
   MockManySliceRangesDevice device;
-  EXPECT_OK(ResetAllSlices2(&device));
+  EXPECT_OK(ResetAllSlices(&device));
   EXPECT_TRUE(device.shrink_called_[0]);
   EXPECT_TRUE(device.shrink_called_[1]);
 }
