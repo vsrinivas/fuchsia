@@ -127,13 +127,13 @@ enum Error {
     HARDWARE = 5;
     /// A retriable error specific to the implemented time protocol occurred, such
     /// as a malformed response from a remote server.
-    PROTOCOL = 4;
+    PROTOCOL = 6;
     /// Sampling failed in a nonretriable way. Examples include failed
     /// authentication, or a missing configuration.
-    PROTOCOL_UNRECOVERABLE = 5;
+    PROTOCOL_UNRECOVERABLE = 7;
     /// The request was made too soon and the client should wait before making
     /// another request.
-    RATE_LIMITED = 6;
+    RATE_LIMITED = 8;
 };
 
 /// Device global properties a time source may use to help it sample time.
