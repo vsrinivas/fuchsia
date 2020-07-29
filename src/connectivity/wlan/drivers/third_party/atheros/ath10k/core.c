@@ -2249,12 +2249,8 @@ err_power_down:
 static void ath10k_core_mac_unbind(void* ctx) {
   // TODO(WLAN-641): for support multiple.
   struct ath10k* ar = ctx;
-  zx_status_t status;
 
-  status = device_remove_deprecated(ar->zxdev_mac);
-  if (status != ZX_OK) {
-    ath10k_err("Unbind MAC failed. Cannot remove device from list: %u\n", status);
-  }
+  device_unbind_reply(ar->zxdev_mac);
 }
 
 static void ath10k_core_mac_release(void* ctx) {
@@ -2275,14 +2271,20 @@ static zx_protocol_device_t device_mac_ops = {
     .release = ath10k_core_mac_release,
 };
 
+static void ath10k_core_phy_init(void* ctx) {
+  struct ath10k* ar = ctx;
+  zx_status_t ret = ath10k_core_register(ar);
+  if (ret != ZX_OK) {
+    ath10k_err("failed to register driver core: %s\n", zx_status_get_string(ret));
+    return device_init_reply(ar->zxdev, ret, NULL);  // This will schedule device unbinding.
+  }
+  // The register_work thread will call device_init_reply() once it is ready to make
+  // the device visible.
+}
+
 static void ath10k_core_phy_unbind(void* ctx) {
   struct ath10k* ar = ctx;
-  zx_status_t status;
-
-  status = device_remove_deprecated(ar->zxdev);
-  if (status != ZX_OK) {
-    ath10k_err("Unbind PHY failed. remove device from list: %u\n", status);
-  }
+  device_unbind_reply(ar->zxdev);
 }
 
 static void ath10k_core_phy_release(void* ctx) {
@@ -2291,6 +2293,7 @@ static void ath10k_core_phy_release(void* ctx) {
 
 static zx_protocol_device_t device_phy_ops = {
     .version = DEVICE_OPS_VERSION,
+    .init = ath10k_core_phy_init,
     .unbind = ath10k_core_phy_unbind,
     .release = ath10k_core_phy_release,
 };
@@ -2370,10 +2373,7 @@ static zx_status_t ath10k_core_destroy_iface(void* ctx, uint16_t id) {
     goto ret;
   }
 
-  status = device_remove_deprecated(ar->zxdev_mac);
-  if (status != ZX_OK) {
-    ath10k_err("Destroy interface failed. Cannot remove device from list: %u\n", status);
-  }
+  device_async_remove(ar->zxdev_mac);
 
 ret:
   mtx_unlock(&ar->iface_lock);
@@ -2415,7 +2415,6 @@ zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar, zx_device_t* dev) {
       .ops = &device_phy_ops,
       .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
       .proto_ops = &wlanphy_ops,
-      .flags = DEVICE_ADD_INVISIBLE,
   };
   return device_add(dev, &phy_args, &ar->zxdev);
 }
@@ -2463,8 +2462,8 @@ static zx_status_t ath10k_core_register_work(void* thrd_data) {
   BITARR_SET(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED);
 
   // After core is registered, expose wlanphy interface.
-  device_make_visible(ar->zxdev, NULL);
-
+  // This will make the device visible and able to be unbound.
+  device_init_reply(ar->zxdev, ZX_OK, NULL);
   return ZX_OK;
 
 #if 0   // NEEDS PORTING
@@ -2481,11 +2480,11 @@ err:
   /* TODO: It's probably a good idea to release device from the driver
    * but calling device_release_driver() here will cause a deadlock.
    */
+  device_init_reply(ar->zxdev, status, NULL);  // This will schedule device unbinding.
   return status;
 }
 
-zx_status_t ath10k_core_register(struct ath10k* ar, uint32_t chip_id) {
-  ar->chip_id = chip_id;
+zx_status_t ath10k_core_register(struct ath10k* ar) {
   thrd_create_with_name(&ar->register_work, ath10k_core_register_work, ar,
                         "ath10k_core_register_work");
   thrd_detach(ar->register_work);

@@ -3555,16 +3555,14 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
   thrd_detach(ar->monitor_thread);
 #endif
 
+  ar->chip_id = chip_id;
+
   ret = ath10k_core_add_phy_interface(ar, dev);
   if (ret != ZX_OK) {
     goto err_free_irq;
   }
 
-  ret = ath10k_core_register(ar, chip_id);
-  if (ret != ZX_OK) {
-    ath10k_err("failed to register driver core: %s\n", zx_status_get_string(ret));
-    goto err_free_irq;
-  }
+  // The phy device init hook will start the core register work thread.
 
   return ZX_OK;
 
