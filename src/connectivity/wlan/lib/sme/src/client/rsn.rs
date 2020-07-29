@@ -89,6 +89,36 @@ pub fn is_rsn_compatible(a_rsne: &Rsne) -> bool {
     group_data_supported && pairwise_supported && akm_supported && caps_supported
 }
 
+/// WFA WPA3 Specification 1.0 requires SAE and MFP.
+/// THe MFPR bit is required, except for Wpa2/Wpa3 compatibility mode.
+/// Group data and pairwise cipher are CCMP-128 -- we choose not to allow legacy TKIP is this case.
+pub fn is_wpa3_rsn_compatible(a_rsne: &Rsne) -> bool {
+    let group_data_supported = a_rsne
+        .group_data_cipher_suite
+        .as_ref()
+        .map_or(false, |c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
+    let pairwise_supported = a_rsne
+        .pairwise_cipher_suites
+        .iter()
+        .any(|c| c.has_known_usage() && c.suite_type == cipher::CCMP_128);
+    let akm_supported =
+        a_rsne.akm_suites.iter().any(|a| a.has_known_algorithm() && a.suite_type == akm::SAE);
+    let is_mixed =
+        a_rsne.akm_suites.iter().any(|a| a.has_known_algorithm() && a.suite_type == akm::PSK);
+    let caps_supported = a_rsne.rsn_capabilities.as_ref().map_or(true, |caps| {
+        caps.mgmt_frame_protection_cap()
+            && (caps.mgmt_frame_protection_req() || is_mixed)
+            && !(caps.no_pairwise()
+                || caps.joint_multiband()
+                || caps.peerkey_enabled()
+                || caps.ssp_amsdu_req()
+                || caps.pbac()
+                || caps.extended_key_id())
+    });
+
+    group_data_supported && pairwise_supported && akm_supported && caps_supported
+}
+
 pub fn get_rsna(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
@@ -201,6 +231,34 @@ mod tests {
     fn test_tkip_pairwise_cipher() {
         let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::TKIP], vec![akm::PSK]);
         assert_eq!(is_rsn_compatible(&a_rsne), false);
+    }
+
+    #[test]
+    fn test_compatible_wpa3_rsne() {
+        let mut a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::SAE]);
+        a_rsne.rsn_capabilities = Some(
+            RsnCapabilities(0)
+                .with_mgmt_frame_protection_cap(true)
+                .with_mgmt_frame_protection_req(true),
+        );
+        assert_eq!(is_rsn_compatible(&a_rsne), false);
+        assert_eq!(is_wpa3_rsn_compatible(&a_rsne), true);
+    }
+
+    #[test]
+    fn test_compatible_wpa3_mixed_rsne() {
+        let mut a_rsne =
+            make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::SAE, akm::PSK]);
+        a_rsne.rsn_capabilities = Some(RsnCapabilities(0).with_mgmt_frame_protection_cap(true));
+        assert_eq!(is_rsn_compatible(&a_rsne), true);
+        assert_eq!(is_wpa3_rsn_compatible(&a_rsne), true);
+    }
+
+    #[test]
+    fn test_invalid_wpa3_rsne_caps() {
+        let mut a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::SAE]);
+        a_rsne.rsn_capabilities = Some(RsnCapabilities(0).with_mgmt_frame_protection_cap(true));
+        assert_eq!(is_wpa3_rsn_compatible(&a_rsne), false);
     }
 
     #[test]

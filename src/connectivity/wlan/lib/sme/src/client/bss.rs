@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::rsn::is_rsn_compatible,
+    super::rsn::{is_rsn_compatible, is_wpa3_rsn_compatible},
     crate::{Config, Ssid},
     fidl_fuchsia_wlan_mlme::BssDescription,
     std::{cmp::Ordering, collections::HashSet},
@@ -14,11 +14,14 @@ use {
 };
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
-pub struct ClientConfig(Config);
+pub struct ClientConfig {
+    cfg: Config,
+    wpa3_supported: bool,
+}
 
 impl ClientConfig {
-    pub fn from_config(cfg: Config) -> Self {
-        Self(cfg)
+    pub fn from_config(cfg: Config, wpa3_supported: bool) -> Self {
+        Self { cfg, wpa3_supported }
     }
 
     /// Converts a given BssDescription into a BssInfo.
@@ -68,10 +71,20 @@ impl ClientConfig {
     /// Determines whether a given BSS is compatible with this client SME configuration.
     pub fn is_bss_compatible(&self, bss: &BssDescription) -> bool {
         let privacy = wlan_common::mac::CapabilityInfo(bss.cap).privacy();
-        match bss.get_protection() {
+        let protection = bss.get_protection();
+        match &protection {
             Protection::Open => true,
-            Protection::Wep => self.0.wep_supported,
-            Protection::Wpa1 => self.0.wpa1_supported,
+            Protection::Wep => self.cfg.wep_supported,
+            Protection::Wpa1 => self.cfg.wpa1_supported,
+            Protection::Wpa2Wpa3Personal | Protection::Wpa3Personal if self.wpa3_supported => {
+                match bss.rsne.as_ref() {
+                    Some(rsne) if privacy => match rsne::from_bytes(&rsne[..]) {
+                        Ok((_, a_rsne)) => is_wpa3_rsn_compatible(&a_rsne),
+                        _ => false,
+                    },
+                    _ => false,
+                }
+            }
             Protection::Wpa1Wpa2Personal
             | Protection::Wpa2Personal
             | Protection::Wpa2Wpa3Personal => match bss.rsne.as_ref() {
@@ -194,7 +207,7 @@ mod tests {
 
     #[test]
     fn compare_with_wep_supported() {
-        let cfg = ClientConfig::from_config(Config::default().with_wep());
+        let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         // WEP is supported while WPA1 is not, so we prefer it.
         assert_bss_cmp(
             &cfg,
@@ -210,7 +223,7 @@ mod tests {
 
     #[test]
     fn compare_with_wep_and_wpa1_supported() {
-        let cfg = ClientConfig::from_config(Config::default().with_wep().with_wpa1());
+        let cfg = ClientConfig::from_config(Config::default().with_wep().with_wpa1(), false);
         // WEP is worse than WPA1 when both are supported.
         assert_bss_cmp(
             &cfg,
@@ -251,8 +264,12 @@ mod tests {
         assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Eap)));
 
         // WEP support is configurable to be on or off:
-        let cfg = ClientConfig::from_config(Config::default().with_wep());
+        let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
+
+        // WPA3 support is configurable to be on or off:
+        let cfg = ClientConfig::from_config(Config::default(), true);
+        assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa3)));
     }
 
     #[test]
@@ -305,7 +322,7 @@ mod tests {
             }
         );
 
-        let cfg = ClientConfig::from_config(Config::default().with_wep());
+        let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         assert_eq!(
             cfg.convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep), None),
             BssInfo {
@@ -450,6 +467,7 @@ mod tests {
             0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
             1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
             1, 0, 0x00, 0x0F, 0xAC, 8, // 1 AKM: SAE
+            0xCC, 0x00, // RSN capabilities: MFP capable/required, 16 PTKSA replay counters
         ]
     }
 
