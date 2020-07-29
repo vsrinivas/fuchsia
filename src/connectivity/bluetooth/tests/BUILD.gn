@@ -10,7 +10,6 @@ test_package("tests") {
   package_name = "bluetooth-tests"
 
   deps = [
-    "bt-profile-test-server",
     "integration:bt-integration-tests",
     "//src/connectivity/bluetooth/core/bt-host:tests",
     "//src/connectivity/bluetooth/lib/fidl:tests",
