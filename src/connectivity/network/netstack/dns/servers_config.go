@@ -8,13 +8,19 @@ import (
 	"sync"
 	"time"
 
+	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
+
 	"fidl/fuchsia/net/name"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
-// DefaultDNSPort is the default port used by DNS servers.
-const DefaultDNSPort = 53
+const (
+	// DefaultDNSPort is the default port used by DNS servers.
+	DefaultDNSPort = 53
+
+	syslogTagName = "dns"
+)
 
 // expiringDNSServerState is the state for an expiring DNS server.
 type expiringDNSServerState struct {
@@ -249,6 +255,8 @@ func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 			if !ok {
 				changed = true
 
+				_ = syslog.InfoTf(syslogTagName, "adding new NDP learned DNS server %+v with initial lifetime %s", s, lifetime)
+
 				// We do not yet have the server and it has a non-zero lifetime.
 				s := s
 				state = expiringDNSServerState{
@@ -256,6 +264,7 @@ func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 						// Clear the cache of DNS servers.
 						d.mu.serversCache = nil
 						delete(d.mu.ndpServers, s)
+						_ = syslog.InfoTf(syslogTagName, "expired NDP learned DNS server %+v", s)
 					}),
 				}
 			}
@@ -274,6 +283,7 @@ func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 			// We have the server and it is no longer to be used.
 			state.timer.StopLocked()
 			delete(d.mu.ndpServers, s)
+			_ = syslog.InfoTf(syslogTagName, "immediately expired NDP learned DNS server %+v", s)
 		}
 	}
 	var cb OnServersConfigChangedCallback

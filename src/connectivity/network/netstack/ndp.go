@@ -35,6 +35,8 @@ const (
 	// TODO(fxb/43503): Instead of adding routes as static, support a type
 	// of dynamic route specifically for NDP.
 	staticRouteAvoidingLifeCycleHooks = false
+
+	ndpSyslogTagName = "ndp"
 )
 
 // ndpEvent is a marker interface used to improve type safety in ndpDispatcher.
@@ -162,7 +164,7 @@ type ndpDispatcher struct {
 // OnDuplicateAddressDetectionStatus implements
 // stack.NDPDispatcher.OnDuplicateAddressDetectionStatus.
 func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err *tcpip.Error) {
-	syslog.Infof("ndp: OnDuplicateAddressDetectionStatus(%d, %s, %t, %v)", nicID, addr, resolved, err)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDuplicateAddressDetectionStatus(%d, %s, %t, %v)", nicID, addr, resolved, err)
 	n.addEvent(&ndpDuplicateAddressDetectionEvent{
 		ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{
 			nicID: nicID,
@@ -178,14 +180,14 @@ func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, add
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered default router.
 func (n *ndpDispatcher) OnDefaultRouterDiscovered(nicID tcpip.NICID, addr tcpip.Address) bool {
-	syslog.Infof("ndp: OnDefaultRouterDiscovered(%d, %s)", nicID, addr)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDefaultRouterDiscovered(%d, %s)", nicID, addr)
 	n.addEvent(&ndpDiscoveredRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
 	return true
 }
 
 // OnDefaultRouterInvalidated implements stack.NDPDispatcher.OnDefaultRouterInvalidated.
 func (n *ndpDispatcher) OnDefaultRouterInvalidated(nicID tcpip.NICID, addr tcpip.Address) {
-	syslog.Infof("ndp: OnDefaultRouterInvalidated(%d, %s)", nicID, addr)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDefaultRouterInvalidated(%d, %s)", nicID, addr)
 	n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
 }
 
@@ -194,14 +196,14 @@ func (n *ndpDispatcher) OnDefaultRouterInvalidated(nicID tcpip.NICID, addr tcpip
 // Adds the event to the event queue and returns true so Stack remembers the
 // discovered on-link prefix.
 func (n *ndpDispatcher) OnOnLinkPrefixDiscovered(nicID tcpip.NICID, prefix tcpip.Subnet) bool {
-	syslog.Infof("ndp: OnOnLinkPrefixDiscovered(%d, %s)", nicID, prefix)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOnLinkPrefixDiscovered(%d, %s)", nicID, prefix)
 	n.addEvent(&ndpDiscoveredPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
 	return true
 }
 
 // OnOnLinkPrefixInvalidated implements stack.NDPDispatcher.OnOnLinkPrefixInvalidated.
 func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpip.Subnet) {
-	syslog.Infof("ndp: OnOnLinkPrefixInvalidated(%d, %s)", nicID, prefix)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnOnLinkPrefixInvalidated(%d, %s)", nicID, prefix)
 	n.addEvent(&ndpInvalidatedPrefixEvent{ndpPrefixEventCommon: ndpPrefixEventCommon{nicID: nicID, prefix: prefix}})
 }
 
@@ -210,7 +212,7 @@ func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpi
 // Adds the event to the event queue and returns true so Stack adds the
 // auto-generated address.
 func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) bool {
-	syslog.Infof("ndp: OnAutoGenAddress(%d, %s)", nicID, addrWithPrefix)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddress(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpGeneratedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
 	return true
 }
@@ -225,19 +227,19 @@ func (*ndpDispatcher) OnAutoGenAddressDeprecated(tcpip.NICID, tcpip.AddressWithP
 
 // OnAutoGenAddressInvalidated implements stack.NDPDispatcher.OnAutoGenAddressInvalidated.
 func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
-	syslog.Infof("ndp: OnAutoGenAddressInvalidated(%d, %s)", nicID, addrWithPrefix)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddressInvalidated(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpInvalidatedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
 }
 
 // OnRecursiveDNSServerOption implements stack.NDPDispatcher.OnRecursiveDNSServerOption.
 func (n *ndpDispatcher) OnRecursiveDNSServerOption(nicID tcpip.NICID, addrs []tcpip.Address, lifetime time.Duration) {
-	syslog.Infof("ndp: OnRecursiveDNSServerOption(%d, %s, %s)", nicID, addrs, lifetime)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnRecursiveDNSServerOption(%d, %s, %s)", nicID, addrs, lifetime)
 	n.addEvent(&ndpRecursiveDNSServerEvent{nicID: nicID, addrs: addrs, lifetime: lifetime})
 }
 
 // OnDNSSearchListOption implements stack.NDPDispatcher.OnDNSSearchListOption.
 func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []string, lifetime time.Duration) {
-	syslog.Infof("ndp: OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
 }
 
 type dhcpV6Observation struct {
@@ -268,7 +270,7 @@ func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 		case stack.DHCPv6OtherConfigurations:
 			code = networking_metrics.OtherConfigurations
 		default:
-			syslog.Warnf("ndp: unknown stack.DHCPv6ConfigurationFromNDPRA: %s", c)
+			_ = syslog.Warnf("ndp: unknown stack.DHCPv6ConfigurationFromNDPRA: %s", c)
 		}
 		for i := 0; i < count; i++ {
 			res = append(res, cobalt.CobaltEvent{
@@ -284,6 +286,8 @@ func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
 
 // OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
 func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration stack.DHCPv6ConfigurationFromNDPRA) {
+	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDHCPv6Configuration(%d, %s)", nicID, configuration)
+
 	n.obs.mu.Lock()
 	if n.obs.mu.seen == nil {
 		n.obs.mu.seen = make(map[stack.DHCPv6ConfigurationFromNDPRA]int)
@@ -295,7 +299,6 @@ func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration s
 		panic("ndp dispatcher: dhcpV6Observation: hasEvents callback unspecified (ensure setHasEvents has been called)")
 	}
 	hasEvents()
-	syslog.Infof("ndp: OnDHCPv6Configuration(%d, %s)", nicID, configuration)
 }
 
 // addEvent adds an event to be handled by the ndpDispatcher goroutine.
@@ -318,7 +321,7 @@ func (n *ndpDispatcher) addEvent(e ndpEvent) {
 //
 // Panics if n does not have an associated Netstack.
 func (n *ndpDispatcher) start(ctx context.Context) {
-	syslog.Infof("ndp: starting worker goroutine...")
+	_ = syslog.InfoTf(ndpSyslogTagName, "starting worker goroutine...")
 
 	if n.ns == nil {
 		panic(fmt.Sprintf("ndp: ndpDispatcher (%p) does not have an associated Netstack", n))
@@ -329,14 +332,14 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 		defer func() { <-n.sem }()
 		done := ctx.Done()
 
-		syslog.Infof("ndp: started worker goroutine")
+		_ = syslog.InfoTf(ndpSyslogTagName, "started worker goroutine")
 
 		for {
 			var event ndpEvent
 			for {
 				// Has ctx been cancelled?
 				if err := ctx.Err(); err != nil {
-					syslog.Infof("ndp: stopping worker goroutine; ctx.Err(): %s", err)
+					_ = syslog.InfoTf(ndpSyslogTagName, "stopping worker goroutine; ctx.Err(): %s", err)
 					return
 				}
 
@@ -363,7 +366,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				// handle.
 				select {
 				case <-done:
-					syslog.Infof("ndp: stopping worker goroutine; ctx.Err(): %s", ctx.Err())
+					_ = syslog.InfoTf(ndpSyslogTagName, "stopping worker goroutine; ctx.Err(): %s", ctx.Err())
 					return
 				case <-n.notifyCh:
 					continue
@@ -374,11 +377,11 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			switch event := event.(type) {
 			case *ndpDuplicateAddressDetectionEvent:
 				if event.resolved {
-					syslog.Infof("ndp: DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+					_ = syslog.InfoTf(ndpSyslogTagName, "DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
 				} else if err := event.err; err != nil {
-					syslog.Errorf("ndp: DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, err)
+					_ = syslog.ErrorTf(ndpSyslogTagName, "DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, err)
 				} else {
-					syslog.Warnf("ndp: duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+					_ = syslog.WarnTf(ndpSyslogTagName, "duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
 				}
 
 				n.ns.onInterfacesChanged()
@@ -386,57 +389,57 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			case *ndpDiscoveredRouterEvent:
 				nicID, addr := event.nicID, event.addr
 				rt := defaultV6Route(nicID, addr)
-				syslog.Infof("ndp: discovered a default router (%s) on nicID (%d), adding a default route to it: [%s]", addr, nicID, rt)
+				_ = syslog.InfoTf(ndpSyslogTagName, "discovered a default router (%s) on nicID (%d), adding a default route to it: [%s]", addr, nicID, rt)
 				// rt is added as a 'static' route because Netstack will remove dynamic
 				// routes on DHCPv4 changes. See
 				// staticRouteAvoidingLifeCycleHooks for more details.
 				if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
-					syslog.Errorf("ndp: failed to add the default route [%s] for the discovered router (%s) on nicID (%d): %s", rt, addr, nicID, err)
+					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the default route [%s] for the discovered router (%s) on nicID (%d): %s", rt, addr, nicID, err)
 				}
 
 			case *ndpInvalidatedRouterEvent:
 				nicID, addr := event.nicID, event.addr
 				rt := defaultV6Route(nicID, addr)
-				syslog.Infof("ndp: invalidating a default router (%s) from nicID (%d), removing the default route to it: [%s]", addr, nicID, rt)
+				_ = syslog.InfoTf(ndpSyslogTagName, "invalidating a default router (%s) from nicID (%d), removing the default route to it: [%s]", addr, nicID, rt)
 				// If the route does not exist, we do not consider that an error as it
 				// may have been removed by the user.
 				if err := n.ns.DelRoute(rt); err != nil && !errors.Is(err, routes.ErrNoSuchRoute) {
-					syslog.Errorf("ndp: failed to remove the default route [%s] for the invalidated router (%s) on nicID (%d): %s", rt, addr, nicID, err)
+					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to remove the default route [%s] for the invalidated router (%s) on nicID (%d): %s", rt, addr, nicID, err)
 				}
 
 			case *ndpDiscoveredPrefixEvent:
 				nicID, prefix := event.nicID, event.prefix
 				rt := onLinkV6Route(nicID, prefix)
-				syslog.Infof("ndp: discovered an on-link prefix (%s) on nicID (%d), adding an on-link route to it: [%s]", prefix, nicID, rt)
+				_ = syslog.InfoTf(ndpSyslogTagName, "discovered an on-link prefix (%s) on nicID (%d), adding an on-link route to it: [%s]", prefix, nicID, rt)
 				// rt is added as a 'static' route because Netstack will remove dynamic
 				// routes on DHCPv4 changes. See
 				// staticRouteAvoidingLifeCycleHooks for more details.
 				if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
-					syslog.Errorf("ndp: failed to add the on-link route [%s] for the discovered on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
+					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to add the on-link route [%s] for the discovered on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
 				}
 
 			case *ndpInvalidatedPrefixEvent:
 				nicID, prefix := event.nicID, event.prefix
 				rt := onLinkV6Route(nicID, prefix)
-				syslog.Infof("ndp: invalidating an on-link prefix (%s) from nicID (%d), removing the on-link route to it: [%s]", prefix, nicID, rt)
+				_ = syslog.InfoTf(ndpSyslogTagName, "invalidating an on-link prefix (%s) from nicID (%d), removing the on-link route to it: [%s]", prefix, nicID, rt)
 				// If the route does not exist, we do not consider that an error as it
 				// may have been removed by the user.
 				if err := n.ns.DelRoute(rt); err != nil && !errors.Is(err, routes.ErrNoSuchRoute) {
-					syslog.Errorf("ndp: failed to remove the on-link route [%s] for the invalidated on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
+					_ = syslog.ErrorTf(ndpSyslogTagName, "failed to remove the on-link route [%s] for the invalidated on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
 				}
 
 			case *ndpGeneratedAutoGenAddrEvent:
 				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-				syslog.Infof("ndp: added an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
+				_ = syslog.InfoTf(ndpSyslogTagName, "added an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
 
 			case *ndpInvalidatedAutoGenAddrEvent:
 				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-				syslog.Infof("ndp: invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
+				_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
 				n.ns.onInterfacesChanged()
 
 			case *ndpRecursiveDNSServerEvent:
 				nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime
-				syslog.Infof("ndp: updating expiring DNS servers (%s) on nicID (%d) with lifetime (%s)...", addrs, nicID, lifetime)
+				_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "updating expiring DNS servers (%s) on nicID (%d) with lifetime (%s)...", addrs, nicID, lifetime)
 				servers := make([]tcpip.FullAddress, 0, len(addrs))
 				for _, a := range addrs {
 					// The default DNS port will be used since the Port field is
