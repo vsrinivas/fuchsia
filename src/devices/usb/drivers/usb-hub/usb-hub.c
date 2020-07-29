@@ -315,7 +315,13 @@ static int usb_hub_thread(void* arg) {
     zxlogf(ERROR, "get hub descriptor failed: %d", result);
     device_init_reply(hub->zxdev, result, NULL);
     return result;
+  } else if (hub_desc.bDescLength != out_length) {
+    zxlogf(ERROR, "usb_hub_descriptor_t.bDescLength != out_length");
+    result = ZX_ERR_BAD_STATE;
+    device_init_reply(hub->zxdev, result, NULL);
+    return result;
   }
+
   // The length of the descriptor varies depending on whether it is USB 2.0 or 3.0,
   // and how many ports it has.
   size_t min_length = 7;
@@ -341,6 +347,11 @@ static int usb_hub_thread(void* arg) {
       zxlogf(ERROR, "get device_qualifier descriptor failed: %d", result);
       device_init_reply(hub->zxdev, result, NULL);
       return result;
+    } else if (qual_desc.bLength != out_length) {
+      zxlogf(ERROR, "usb_device_qualifier_descriptor_t.bLength != out_length");
+      result = ZX_ERR_BAD_STATE;
+      device_init_reply(hub->zxdev, result, NULL);
+      return result;
     } else if (out_length != sizeof(qual_desc)) {
       zxlogf(ERROR, "get device_qualifier descriptor returned %ld bytes, want %ld", out_length,
              sizeof(qual_desc));
@@ -355,6 +366,11 @@ static int usb_hub_thread(void* arg) {
                                 sizeof(dev_desc), ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
       zxlogf(ERROR, "get device descriptor failed: %d", result);
+      device_init_reply(hub->zxdev, result, NULL);
+      return result;
+    } else if(dev_desc.bLength != out_length) {
+      zxlogf(ERROR, "usb_device_descriptor_t.bLength != out_length");
+      result = ZX_ERR_BAD_STATE;
       device_init_reply(hub->zxdev, result, NULL);
       return result;
     } else if (out_length != sizeof(dev_desc)) {
