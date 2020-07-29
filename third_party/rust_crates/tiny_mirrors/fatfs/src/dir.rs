@@ -20,36 +20,43 @@ use crate::fs::{DiskSlice, FileSystem, FsIoAdapter, OemCpConverter, ReadWriteSee
 use crate::time::{Date, DateTime, TimeProvider};
 
 pub(crate) enum DirRawStream<'a, IO: ReadWriteSeek, TP, OCC> {
-    File(File<'a, IO, TP, OCC>),
+    File(Option<File<'a, IO, TP, OCC>>),
     Root(DiskSlice<FsIoAdapter<'a, IO, TP, OCC>>),
 }
 
 impl<IO: ReadWriteSeek, TP, OCC> DirRawStream<'_, IO, TP, OCC> {
     fn abs_pos(&self) -> Option<u64> {
         match self {
-            DirRawStream::File(file) => file.abs_pos(),
+            DirRawStream::File(file) => file.as_ref().and_then(|f| f.abs_pos()),
             DirRawStream::Root(slice) => Some(slice.abs_pos()),
         }
     }
 
     fn first_cluster(&self) -> Option<u32> {
         match self {
-            DirRawStream::File(file) => file.first_cluster(),
+            DirRawStream::File(file) => file.as_ref().and_then(|f| f.first_cluster()),
             DirRawStream::Root(_) => None,
         }
     }
 
     fn entry_mut(&mut self) -> Option<&mut DirEntryEditor> {
         match self {
-            DirRawStream::File(file) => file.editor_mut(),
+            DirRawStream::File(file) => file.as_mut().and_then(|f| f.editor_mut()),
             DirRawStream::Root(_) => None,
         }
     }
 
     fn entry(&self) -> Option<&DirEntryEditor> {
         match self {
-            DirRawStream::File(file) => file.editor(),
+            DirRawStream::File(file) => file.as_ref().and_then(|f| f.editor()),
             DirRawStream::Root(_) => None,
+        }
+    }
+
+    fn is_deleted(&self) -> bool {
+        match self {
+            DirRawStream::File(file) => file.as_ref().map_or(true, |f| f.is_deleted()),
+            DirRawStream::Root(_) => false,
         }
     }
 }
@@ -67,7 +74,10 @@ impl<IO: ReadWriteSeek, TP, OCC> Clone for DirRawStream<'_, IO, TP, OCC> {
 impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Read for DirRawStream<'_, IO, TP, OCC> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self {
-            DirRawStream::File(file) => file.read(buf),
+            DirRawStream::File(Some(file)) => file.read(buf),
+            DirRawStream::File(None) => {
+                Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"))
+            }
             DirRawStream::Root(raw) => raw.read(buf),
         }
     }
@@ -76,13 +86,19 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Read for DirRawStream<'_, IO, TP,
 impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Write for DirRawStream<'_, IO, TP, OCC> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
-            DirRawStream::File(file) => file.write(buf),
+            DirRawStream::File(Some(file)) => file.write(buf),
+            DirRawStream::File(None) => {
+                Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"))
+            }
             DirRawStream::Root(raw) => raw.write(buf),
         }
     }
     fn flush(&mut self) -> io::Result<()> {
         match self {
-            DirRawStream::File(file) => file.flush(),
+            DirRawStream::File(Some(file)) => file.flush(),
+            DirRawStream::File(None) => {
+                Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"))
+            }
             DirRawStream::Root(raw) => raw.flush(),
         }
     }
@@ -91,7 +107,10 @@ impl<IO: ReadWriteSeek, TP: TimeProvider, OCC> Write for DirRawStream<'_, IO, TP
 impl<IO: ReadWriteSeek, TP, OCC> Seek for DirRawStream<'_, IO, TP, OCC> {
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
         match self {
-            DirRawStream::File(file) => file.seek(pos),
+            DirRawStream::File(Some(file)) => file.seek(pos),
+            DirRawStream::File(None) => {
+                Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"))
+            }
             DirRawStream::Root(raw) => raw.seek(pos),
         }
     }
@@ -282,6 +301,9 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         if let Some(rest) = rest_opt {
             return self.find_entry(name, Some(true), None)?.to_dir().create_file(rest);
         }
+        if self.stream.is_deleted() {
+            return Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"));
+        }
         // this is final filename in the path
         let r = self.check_for_existence(name, Some(false))?;
         match r {
@@ -305,6 +327,9 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         let (name, rest_opt) = split_path(path);
         if let Some(rest) = rest_opt {
             return self.find_entry(name, Some(true), None)?.to_dir().create_dir(rest);
+        }
+        if self.stream.is_deleted() {
+            return Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"));
         }
         // this is final filename in the path
         let r = self.check_for_existence(name, Some(true))?;
@@ -418,6 +443,31 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         Ok(())
     }
 
+    /// Unlink the given Dir from this directory. Returns an error if the Dir is not empty.
+    ///
+    /// Will cause filesystem corruption if the file is not actually in this directory.
+    /// The directory's clusters will be removed from the disk.
+    pub fn unlink_dir(&self, dir: &mut Dir<IO, TP, OCC>) -> io::Result<()> {
+        if !dir.is_empty()? {
+            return Err(io::Error::new(ErrorKind::Other, FatfsError::DirectoryNotEmpty));
+        }
+        match dir.stream {
+            DirRawStream::File(ref mut option) => {
+                if let Some(mut file) = option.take() {
+                    self.unlink_file(&mut file)?;
+                    file.purge()
+                } else {
+                    // Directory has already been deleted.
+                    return Err(io::Error::new(ErrorKind::NotFound, "Not found"));
+                }
+            }
+            DirRawStream::Root(_) => Err(io::Error::new(
+                ErrorKind::InvalidInput,
+                "Root directory is not child of any directory",
+            )),
+        }
+    }
+
     /// Renames or moves existing file or directory.
     ///
     /// `src_path` is a '/' separated source file path relative to self directory.
@@ -455,6 +505,12 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         dst_name: &str,
     ) -> io::Result<()> {
         trace!("rename_internal {} {}", src_name, dst_name);
+        if dst_dir.stream.is_deleted() {
+            return Err(io::Error::new(
+                ErrorKind::NotFound,
+                "Destination directory has been deleted",
+            ));
+        }
         // find existing file
         let e = self.find_entry(src_name, None, None)?;
         // check if destionation filename is unused

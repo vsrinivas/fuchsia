@@ -617,7 +617,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC: OemCpConverter> DirEntry<'a, IO, TP, OCC> {
         match self.first_cluster() {
             Some(n) => {
                 let file = File::new(Some(n), Some(self.editor()), self.fs);
-                Dir::new(DirRawStream::File(file), self.fs, false)
+                Dir::new(DirRawStream::File(Some(file)), self.fs, false)
             }
             None => self.fs.root_dir(),
         }

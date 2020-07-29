@@ -558,9 +558,11 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
                     &self.bpb,
                     FsIoAdapter { fs: self },
                 )),
-                _ => {
-                    DirRawStream::File(File::new(Some(self.bpb.root_dir_first_cluster), None, self))
-                }
+                _ => DirRawStream::File(Some(File::new(
+                    Some(self.bpb.root_dir_first_cluster),
+                    None,
+                    self,
+                ))),
             }
         };
         Dir::new(root_rdr, self, true)

@@ -52,12 +52,15 @@ fn check_open_flags_for_existing_entry(flags: u32) -> Result<(), Status> {
 }
 
 struct FatDirectoryData {
-    /// The parent directory of this entry. Might be None if this is the root directory.
+    /// The parent directory of this entry. Might be None if this is the root directory,
+    /// or if this directory has been deleted.
     parent: Option<Arc<FatDirectory>>,
     /// We keep a cache of `FatDirectory`/`FatFile`s to ensure
     /// there is only ever one canonical version of each. This means
     /// we can use the reference count in the Arc<> to make sure rename, etc. operations are safe.
     children: HashMap<InsensitiveString, WeakFatNode>,
+    /// True if this directory has been deleted.
+    deleted: bool,
 }
 
 // Whilst it's tempting to use the unicase crate, at time of writing, it had its own case tables,
@@ -158,7 +161,11 @@ impl FatDirectory {
         Arc::new(FatDirectory {
             dir: UnsafeCell::new(dir),
             filesystem,
-            data: RwLock::new(FatDirectoryData { parent, children: HashMap::new() }),
+            data: RwLock::new(FatDirectoryData {
+                parent,
+                children: HashMap::new(),
+                deleted: false,
+            }),
         })
     }
 
@@ -277,6 +284,16 @@ impl FatDirectory {
         Ok(())
     }
 
+    pub fn remove_from(&self, fs: &FatFilesystemInner, parent: &Dir<'_>) -> Result<(), Status> {
+        let dir = self.borrow_dir_mut(fs)?;
+        parent.unlink_dir(dir).map_err(fatfs_error_to_status)?;
+
+        let mut data = self.data.write().unwrap();
+        data.parent.take();
+        data.deleted = true;
+        Ok(())
+    }
+
     /// Open a child entry with the given name.
     /// Flags can be any of the following, matching their fuchsia.io definitions:
     /// * OPEN_FLAG_CREATE
@@ -358,6 +375,11 @@ impl FatDirectory {
             .insert(InsensitiveString(name.to_owned()), node.downgrade());
         Ok(node)
     }
+
+    /// True if this directory has been deleted.
+    pub(crate) fn is_deleted(&self) -> bool {
+        self.data.read().unwrap().deleted
+    }
 }
 
 impl Debug for FatDirectory {
@@ -382,9 +404,6 @@ impl MutableDirectory for FatDirectory {
     }
 
     fn unlink(&self, path: Path) -> Result<(), Status> {
-        // TODO(fxb/55465): To properly implement this, we need a way to keep the file while
-        // it's still connected. For now, refuse to remove a file if anyone else is looking at it.
-        // We could mark files as "hidden", and refuse to serve any new connections to them?
         let fs_lock = self.filesystem.lock().unwrap();
         let parent = self.borrow_dir(&fs_lock)?;
         let name = path.peek().unwrap();
@@ -395,10 +414,11 @@ impl MutableDirectory for FatDirectory {
         }
         match self.cache_remove(&fs_lock, &name) {
             Some(entry) => {
+                // The file or directory is already open elsewhere, so we remove the direntry but
+                // don't delete the cluster chain that it actually occupies.
                 match entry {
                     FatNode::File(file) => file.remove_from(&fs_lock, parent),
-                    // TODO(fxb/55465): support deleting directories which are still open.
-                    _ => return Err(Status::UNAVAILABLE),
+                    FatNode::Dir(dir) => dir.remove_from(&fs_lock, parent),
                 }
             }
             // The file is not currently open by anyone, so it's safe to remove directly.
@@ -522,6 +542,10 @@ impl Directory for FatDirectory {
         pos: AlphabeticalTraversal,
         sink: Box<dyn Sink>,
     ) -> AsyncReadDirents {
+        if self.is_deleted() {
+            return AsyncReadDirents::Immediate(Ok(sink.seal(AlphabeticalTraversal::End)));
+        }
+
         let fs_lock = self.filesystem.lock().unwrap();
         let dir = match self.borrow_dir(&fs_lock) {
             Ok(dir) => dir,

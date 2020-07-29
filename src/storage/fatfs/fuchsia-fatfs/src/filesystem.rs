@@ -108,6 +108,10 @@ impl FilesystemRename for FatFilesystem {
     ) -> Result<(), Status> {
         let src_dir = src_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
         let dst_dir = dst_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
+        if dst_dir.is_deleted() {
+            // Can't rename into a deleted folder.
+            return Err(Status::NOT_FOUND);
+        }
 
         let src_name = src_path.peek().unwrap();
         let dst_name = dst_path.peek().unwrap();

@@ -160,6 +160,15 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
         }
     }
 
+    /// True if mark_deleted() has been called on this file.
+    pub(crate) fn is_deleted(&self) -> bool {
+        if let Some(ref e) = self.entry {
+            e.inner().is_deleted()
+        } else {
+            false
+        }
+    }
+
     /// Delete the file if it has been removed from its parent directory using `Dir::remove_dirent`.
     pub fn purge(mut self) -> io::Result<()> {
         let entry = match self.entry {
