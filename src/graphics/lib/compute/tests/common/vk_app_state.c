@@ -782,7 +782,7 @@ fuchsia_state_destroy(FuchsiaState * state)
   if (state->trace_provider)
     trace_provider_destroy(state->trace_provider);
 
-  async_loop_shutdown(state->async_loop);
+  async_loop_destroy(state->async_loop);
 }
 #endif  // VK_USE_PLATFORM_FUCHSIA
 
