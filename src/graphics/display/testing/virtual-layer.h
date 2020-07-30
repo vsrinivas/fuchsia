@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_TESTING_VIRTUAL_LAYER_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
@@ -137,7 +138,7 @@ class PrimaryLayer : public VirtualLayer {
   }
   void SetScaling(bool enable) { scaling_ = enable; }
   void SetImageFormat(uint32_t image_format) { image_format_ = image_format; }
-  void SetIntelYTiling(bool enable) { intel_y_tiling_ = enable; }
+  void SetFormatModifier(uint64_t modifier) { modifier_ = modifier; }
 
   bool Init(Controller::SyncClient* dc) override;
   void StepLayout(int32_t frame_num) override;
@@ -181,7 +182,7 @@ class PrimaryLayer : public VirtualLayer {
   bool alpha_enable_ = false;
   float alpha_val_ = 0.f;
   bool scaling_ = false;
-  bool intel_y_tiling_ = false;
+  uint64_t modifier_ = ::llcpp::fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
   bool mirrors_ = false;
 
   bool alt_image_ = false;

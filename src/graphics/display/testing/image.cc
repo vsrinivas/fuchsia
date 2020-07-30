@@ -31,6 +31,15 @@
 
 static constexpr uint32_t kRenderPeriod = 120;
 
+// TODO(reveman): Add sysmem helper functions instead of duplicating these constants.
+static constexpr uint32_t kIntelTilePixelWidth = 32u;
+static constexpr uint32_t kIntelTilePixelHeight = 32u;
+
+static constexpr uint32_t kAfbcBodyAlignment = 1024u;
+static constexpr uint32_t kAfbcBytesPerBlockHeader = 16u;
+static constexpr uint32_t kAfbcTilePixelWidth = 16u;
+static constexpr uint32_t kAfbcTilePixelHeight = 16u;
+
 namespace sysmem = ::llcpp::fuchsia::sysmem;
 namespace fhd = ::llcpp::fuchsia::hardware::display;
 
@@ -39,7 +48,7 @@ namespace display {
 
 Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
              uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
-             bool use_intel_y_tiling)
+             uint64_t modifier)
     : width_(width),
       height_(height),
       stride_(stride),
@@ -48,11 +57,11 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t 
       buf_(buf),
       fg_color_(fg_color),
       bg_color_(bg_color),
-      use_intel_y_tiling_(use_intel_y_tiling) {}
+      modifier_(modifier) {}
 
 Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t height,
                      zx_pixel_format_t format, uint32_t fg_color, uint32_t bg_color,
-                     bool use_intel_y_tiling) {
+                     uint64_t modifier) {
   std::unique_ptr<sysmem::Allocator::SyncClient> allocator;
   {
     zx::channel client, server;
@@ -148,12 +157,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
     };
   }
   image_constraints.pixel_format.has_format_modifier = true;
-  if (use_intel_y_tiling) {
-    image_constraints.pixel_format.format_modifier.value =
-        sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
-  } else {
-    image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
-  }
+  image_constraints.pixel_format.format_modifier.value = modifier;
 
   image_constraints.min_coded_width = width;
   image_constraints.max_coded_width = width;
@@ -191,7 +195,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   zx::vmo vmo(std::move(buffer_collection_info.buffers[0].vmo));
 
   uint32_t minimum_row_bytes;
-  if (!use_intel_y_tiling) {
+  if (modifier == sysmem::FORMAT_MODIFIER_LINEAR) {
     bool result = image_format::GetMinimumRowBytes(
         buffer_collection_info.settings.image_format_constraints, width, &minimum_row_bytes);
     if (!result) {
@@ -217,10 +221,24 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   for (unsigned i = 0; i < buffer_size / sizeof(uint32_t); i++) {
     ptr[i] = bg_color;
   }
+  if (modifier == sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+    uint32_t width_in_tiles = (width + kAfbcTilePixelWidth - 1) / kAfbcTilePixelWidth;
+    uint32_t height_in_tiles = (height + kAfbcTilePixelHeight - 1) / kAfbcTilePixelHeight;
+    uint32_t tile_count = width_in_tiles * height_in_tiles;
+    // Initialize all block headers to |bg_color|.
+    for (unsigned i = 0; i < tile_count; ++i) {
+      unsigned offset = i * kAfbcBytesPerBlockHeader / sizeof(uint32_t);
+      ptr[offset + 0] = 0;
+      ptr[offset + 1] = 0;
+      // Solid colors are stored as R8G8B8A8 starting at offset 8 in block header.
+      ptr[offset + 2] = bg_color;
+      ptr[offset + 3] = 0;
+    }
+  }
   zx_cache_flush(ptr, buffer_size, ZX_CACHE_FLUSH_DATA);
 
   return new Image(width, height, stride_pixels, format, collection_id, ptr, fg_color, bg_color,
-                   use_intel_y_tiling);
+                   modifier);
 }
 
 #define STRIPE_SIZE 37  // prime to make movement more interesting
@@ -264,43 +282,115 @@ void Image::Render(int32_t prev_step, int32_t step_num) {
       draw_stripe = cur > prev;
     }
 
-    for (unsigned y = start; y < end; y++) {
-      for (unsigned x = 0; x < width_; x++) {
-        int32_t in_stripe = draw_stripe && ((x / STRIPE_SIZE % 2) != (y / STRIPE_SIZE % 2));
-        int32_t color = in_stripe ? fg_color_ : bg_color_;
+    if (modifier_ == sysmem::FORMAT_MODIFIER_LINEAR) {
+      for (unsigned y = start; y < end; y++) {
+        for (unsigned x = 0; x < width_; x++) {
+          int32_t in_stripe = draw_stripe && ((x / STRIPE_SIZE % 2) != (y / STRIPE_SIZE % 2));
+          int32_t color = in_stripe ? fg_color_ : bg_color_;
 
-        uint32_t* ptr = static_cast<uint32_t*>(buf_);
-        if (!use_intel_y_tiling_) {
-          ptr += (y * stride_) + x;
-        } else {
-          // Add the offset to the pixel's tile
-          uint32_t width_in_tiles = (width_ + TILE_PIXEL_WIDTH - 1) / TILE_PIXEL_WIDTH;
-          uint32_t tile_idx = (y / TILE_PIXEL_HEIGHT) * width_in_tiles + (x / TILE_PIXEL_WIDTH);
-          ptr += (TILE_NUM_PIXELS * tile_idx);
-          // Add the offset within the pixel's tile
-          uint32_t subtile_column_offset =
-              ((x % TILE_PIXEL_WIDTH) / SUBTILE_COLUMN_WIDTH) * TILE_PIXEL_HEIGHT;
-          uint32_t subtile_line_offset =
-              (subtile_column_offset + (y % TILE_PIXEL_HEIGHT)) * SUBTILE_COLUMN_WIDTH;
-          ptr += subtile_line_offset + (x % SUBTILE_COLUMN_WIDTH);
+          uint32_t* ptr = static_cast<uint32_t*>(buf_) + (y * stride_) + x;
+          *ptr = color;
         }
-        *ptr = color;
       }
-    }
-
-    if (!use_intel_y_tiling_) {
       uint32_t byte_stride = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
       zx_cache_flush(reinterpret_cast<uint8_t*>(buf_) + (byte_stride * start),
                      byte_stride * (end - start), ZX_CACHE_FLUSH_DATA);
     } else {
-      uint8_t* buf = static_cast<uint8_t*>(buf_);
-      uint32_t width_in_tiles = (width_ + TILE_PIXEL_WIDTH - 1) / TILE_PIXEL_WIDTH;
-      uint32_t y_start_tile = start / TILE_PIXEL_HEIGHT;
-      uint32_t y_end_tile = (end + TILE_PIXEL_HEIGHT - 1) / TILE_PIXEL_HEIGHT;
+      constexpr uint32_t kTileBytesPerPixel = 4u;
+
+      uint32_t tile_pixel_width = 0u;
+      uint32_t tile_pixel_height = 0u;
+      uint8_t* body = nullptr;
+      switch (modifier_) {
+        case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
+          tile_pixel_width = kIntelTilePixelWidth;
+          tile_pixel_height = kIntelTilePixelHeight;
+          body = static_cast<uint8_t*>(buf_);
+        } break;
+        case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+          tile_pixel_width = kAfbcTilePixelWidth;
+          tile_pixel_height = kAfbcTilePixelHeight;
+          uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
+          uint32_t height_in_tiles = (height_ + tile_pixel_height - 1) / tile_pixel_height;
+          uint32_t tile_count = width_in_tiles * height_in_tiles;
+          uint32_t body_offset = ((tile_count * kAfbcBytesPerBlockHeader + kAfbcBodyAlignment - 1) /
+                                  kAfbcBodyAlignment) *
+                                 kAfbcBodyAlignment;
+          body = static_cast<uint8_t*>(buf_) + body_offset;
+        } break;
+        default:
+          // Not reached.
+          assert(0);
+      }
+
+      uint32_t tile_num_bytes = tile_pixel_width * tile_pixel_height * kTileBytesPerPixel;
+      uint32_t tile_num_pixels = tile_num_bytes / kTileBytesPerPixel;
+      uint32_t width_in_tiles = (width_ + tile_pixel_width - 1) / tile_pixel_width;
+
+      for (unsigned y = start; y < end; y++) {
+        for (unsigned x = 0; x < width_; x++) {
+          int32_t in_stripe = draw_stripe && ((x / STRIPE_SIZE % 2) != (y / STRIPE_SIZE % 2));
+          int32_t color = in_stripe ? fg_color_ : bg_color_;
+
+          uint32_t* ptr = reinterpret_cast<uint32_t*>(body);
+          {
+            // Add the offset to the pixel's tile
+            uint32_t tile_idx = (y / tile_pixel_height) * width_in_tiles + (x / tile_pixel_width);
+            ptr += (tile_num_pixels * tile_idx);
+            switch (modifier_) {
+              case sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED: {
+                constexpr uint32_t kSubtileColumnWidth = 4u;
+                // Add the offset within the pixel's tile
+                uint32_t subtile_column_offset =
+                    ((x % tile_pixel_width) / kSubtileColumnWidth) * tile_pixel_height;
+                uint32_t subtile_line_offset =
+                    (subtile_column_offset + (y % tile_pixel_height)) * kSubtileColumnWidth;
+                ptr += subtile_line_offset + (x % kSubtileColumnWidth);
+              } break;
+              case sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16: {
+                constexpr uint32_t kAfbcSubtileOffset[4][4] = {
+                    {2u, 1u, 14u, 13u},
+                    {3u, 0u, 15u, 12u},
+                    {4u, 7u, 8u, 11u},
+                    {5u, 6u, 9u, 10u},
+                };
+                constexpr uint32_t kAfbcSubtileWidth = 4u;
+                constexpr uint32_t kAfbcSubtileHeight = 4u;
+                uint32_t subtile_num_pixels = kAfbcSubtileWidth * kAfbcSubtileHeight;
+                uint32_t subtile_x = (x % tile_pixel_width) / kAfbcSubtileWidth;
+                uint32_t subtile_y = (y % tile_pixel_height) / kAfbcSubtileHeight;
+                ptr += kAfbcSubtileOffset[subtile_x][subtile_y] * subtile_num_pixels +
+                       (y % kAfbcSubtileHeight) * kAfbcSubtileWidth + (x % kAfbcSubtileWidth);
+              } break;
+              default:
+                // Not reached.
+                assert(0);
+            }
+          }
+          *ptr = color;
+        }
+      }
+
+      uint32_t y_start_tile = start / tile_pixel_height;
+      uint32_t y_end_tile = (end + tile_pixel_height - 1) / tile_pixel_height;
       for (unsigned i = 0; i < width_in_tiles; i++) {
         for (unsigned j = y_start_tile; j < y_end_tile; j++) {
-          unsigned offset = (TILE_NUM_BYTES * (j * width_in_tiles + i));
-          zx_cache_flush(buf + offset, TILE_NUM_BYTES, ZX_CACHE_FLUSH_DATA);
+          unsigned offset = (tile_num_bytes * (j * width_in_tiles + i));
+          zx_cache_flush(body + offset, tile_num_bytes, ZX_CACHE_FLUSH_DATA);
+
+          // We also need to update block header when using AFBC.
+          if (modifier_ == sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16) {
+            unsigned hdr_offset = kAfbcBytesPerBlockHeader * (j * width_in_tiles + i);
+            uint8_t* hdr_ptr = reinterpret_cast<uint8_t*>(buf_) + hdr_offset;
+            // Store offset of uncompressed tile memory in byte 0-3.
+            uint32_t body_offset = body - reinterpret_cast<uint8_t*>(buf_);
+            *(reinterpret_cast<uint32_t*>(hdr_ptr)) = body_offset + offset;
+            // Set byte 4-15 to disable compression for tile memory.
+            hdr_ptr[4] = hdr_ptr[7] = hdr_ptr[10] = hdr_ptr[13] = 0x41;
+            hdr_ptr[5] = hdr_ptr[8] = hdr_ptr[11] = hdr_ptr[14] = 0x10;
+            hdr_ptr[6] = hdr_ptr[9] = hdr_ptr[12] = hdr_ptr[15] = 0x04;
+            zx_cache_flush(hdr_ptr, kAfbcBytesPerBlockHeader, ZX_CACHE_FLUSH_DATA);
+          }
         }
       }
     }
@@ -311,7 +401,7 @@ void Image::GetConfig(fhd::ImageConfig* config_out) {
   config_out->height = height_;
   config_out->width = width_;
   config_out->pixel_format = format_;
-  if (!use_intel_y_tiling_) {
+  if (modifier_ != sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED) {
     config_out->type = IMAGE_TYPE_SIMPLE;
   } else {
     config_out->type = 2;  // IMAGE_TYPE_Y_LEGACY

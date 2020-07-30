@@ -602,6 +602,8 @@ void usage(void) {
       "--enable-alpha           : Enable per-pixel alpha blending.\n"
       "--opacity o              : Set the opacity of the screen\n"
       "                           <o> is a value between [0 1] inclusive\n"
+      "--enable-compression     : Enable framebuffer compression.\n"
+      "--apply-config-once      : Apply configuration once in single buffer mode.\n"
       "--gamma g                : Enable Gamma Correction.\n"
       "                           <g> is the gamma correction value\n"
       "                           Valid values between [1.0 3.0]"
@@ -730,6 +732,8 @@ int main(int argc, const char* argv[]) {
 
   float alpha_val = std::nanf("");
   bool enable_alpha = false;
+  bool enable_compression = false;
+  bool apply_config_once = false;
 
   while (argc) {
     if (strcmp(argv[0], "--dump") == 0) {
@@ -848,6 +852,14 @@ int main(int argc, const char* argv[]) {
       }
       argv += 2;
       argc -= 2;
+    } else if (strcmp(argv[0], "--enable-compression") == 0) {
+      enable_compression = true;
+      argv += 1;
+      argc -= 1;
+    } else if (strcmp(argv[0], "--apply-config-once") == 0) {
+      apply_config_once = true;
+      argv += 1;
+      argc -= 1;
     } else if (strcmp(argv[0], "--help") == 0) {
       usage();
       return 0;
@@ -883,10 +895,14 @@ int main(int argc, const char* argv[]) {
     }
   }
 
+  // Call apply_config for each frame by default.
+  int32_t max_apply_configs = num_frames;
+
   fbl::AllocChecker ac;
   if (testbundle == INTEL) {
     // Intel only supports 90/270 rotation for Y-tiled images, so enable it for testing.
-    constexpr bool kIntelYTiling = true;
+    constexpr uint64_t kIntelYTilingModifier =
+        ::llcpp::fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
 
     // Color layer which covers all displays
     std::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
@@ -902,7 +918,7 @@ int main(int argc, const char* argv[]) {
     }
     layer1->SetLayerFlipping(true);
     layer1->SetAlpha(true, .75);
-    layer1->SetIntelYTiling(kIntelYTiling);
+    layer1->SetFormatModifier(kIntelYTilingModifier);
     layers.push_back(std::move(layer1));
 
     // Layer which covers the left half of the of the first display
@@ -916,7 +932,7 @@ int main(int argc, const char* argv[]) {
                            displays[0].mode().vertical_resolution);
     layer2->SetLayerToggle(true);
     layer2->SetScaling(true);
-    layer2->SetIntelYTiling(kIntelYTiling);
+    layer2->SetFormatModifier(kIntelYTilingModifier);
     layers.push_back(std::move(layer2));
 
     // Intel only supports 3 layers, so add ifdef for quick toggling of the 3rd layer
@@ -942,7 +958,7 @@ int main(int argc, const char* argv[]) {
     layer3->SetPanDest(true);
     layer3->SetPanSrc(true);
     layer3->SetRotates(true);
-    layer3->SetIntelYTiling(kIntelYTiling);
+    layer3->SetFormatModifier(kIntelYTilingModifier);
     layers.push_back(std::move(layer3));
 #else
     CursorLayer* layer4 = new CursorLayer(displays);
@@ -1000,6 +1016,9 @@ int main(int argc, const char* argv[]) {
       layer1->SetAlpha(true, alpha_val);
     }
     layer1->SetLayerFlipping(true);
+    if (enable_compression) {
+      layer1->SetFormatModifier(::llcpp::fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16);
+    }
     layers.push_back(std::move(layer1));
   } else if (testbundle == SIMPLE) {
     // Simple display test
@@ -1010,6 +1029,12 @@ int main(int argc, const char* argv[]) {
       return ZX_ERR_NO_MEMORY;
     }
 
+    if (enable_compression) {
+      layer1->SetFormatModifier(::llcpp::fuchsia::sysmem::FORMAT_MODIFIER_ARM_AFBC_16X16);
+    }
+    if (apply_config_once) {
+      max_apply_configs = 1;
+    }
     layers.push_back(std::move(layer1));
   }
 
@@ -1067,8 +1092,10 @@ int main(int argc, const char* argv[]) {
         return -1;
       }
     }
-    if (!apply_config()) {
-      return -1;
+    if (i < max_apply_configs) {
+      if (!apply_config()) {
+        return -1;
+      }
     }
 
     for (auto& layer : layers) {

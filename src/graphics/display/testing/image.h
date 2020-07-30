@@ -11,13 +11,6 @@
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
-#define TILE_PIXEL_WIDTH 32u
-#define TILE_PIXEL_HEIGHT 32u
-#define TILE_BYTES_PER_PIXEL 4u
-#define TILE_NUM_BYTES 4096u
-#define TILE_NUM_PIXELS (TILE_NUM_BYTES / TILE_BYTES_PER_PIXEL)
-#define SUBTILE_COLUMN_WIDTH 4u
-
 // Indicies into event and event_ids
 #define WAIT_EVENT 0
 #define SIGNAL_EVENT 1
@@ -35,7 +28,7 @@ class Image {
  public:
   static Image* Create(::llcpp::fuchsia::hardware::display::Controller::SyncClient* dc,
                        uint32_t width, uint32_t height, zx_pixel_format_t format, uint32_t fg_color,
-                       uint32_t bg_color, bool use_intel_y_tiling);
+                       uint32_t bg_color, uint64_t modifier);
 
   void Render(int32_t prev_step, int32_t step_num);
 
@@ -51,8 +44,7 @@ class Image {
 
  private:
   Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,
-        uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color,
-        bool use_intel_y_tiling);
+        uint32_t collection_id, void* buf, uint32_t fg_color, uint32_t bg_color, uint64_t modifier);
 
   uint32_t width_;
   uint32_t height_;
@@ -64,7 +56,7 @@ class Image {
 
   uint32_t fg_color_;
   uint32_t bg_color_;
-  bool use_intel_y_tiling_;
+  uint64_t modifier_;
 };
 
 }  // namespace display

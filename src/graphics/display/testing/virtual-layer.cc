@@ -126,11 +126,11 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
     bg_color = bgcolor_;
   }
 
-  images_[0] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,
-                             intel_y_tiling_);
+  images_[0] =
+      Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color, modifier_);
   if (layer_flipping_) {
     images_[1] = Image::Create(dc, image_width_, image_height_, image_format_, fg_color, bg_color,
-                               intel_y_tiling_);
+                               modifier_);
   }
   if (!images_[0] || (layer_flipping_ && !images_[1])) {
     return false;
