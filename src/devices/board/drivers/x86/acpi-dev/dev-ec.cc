@@ -9,8 +9,10 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <fbl/auto_call.h>
 #include <hw/inout.h>
 
+#include "acpi-private.h"
 #include "dev.h"
 #include "errors.h"
 
@@ -308,47 +310,48 @@ static ACPI_STATUS get_ec_handle(ACPI_HANDLE object, UINT32 nesting_level, void*
 }
 
 static ACPI_STATUS get_ec_gpe_info(ACPI_HANDLE ec_handle, ACPI_HANDLE* gpe_block, UINT32* gpe) {
-  ACPI_BUFFER buffer = {
-      .Length = ACPI_ALLOCATE_BUFFER,
-      .Pointer = NULL,
-  };
-  ACPI_STATUS status = AcpiEvaluateObject(ec_handle, (char*)"_GPE", NULL, &buffer);
-  if (status != AE_OK) {
-    return status;
+  acpi::UniquePtr<ACPI_OBJECT> gpe_obj;
+  {
+    ACPI_BUFFER buffer = {
+        .Length = ACPI_ALLOCATE_BUFFER,
+        .Pointer = NULL,
+    };
+    ACPI_STATUS status = AcpiEvaluateObject(ec_handle, (char*)"_GPE", NULL, &buffer);
+    gpe_obj.reset(static_cast<ACPI_OBJECT*>(buffer.Pointer));
+    if (status != AE_OK) {
+      return status;
+    }
   }
+
+  auto cleanup = fbl::MakeAutoCall([]() { xprintf("Failed to intepret EC GPE number"); });
 
   /* According to section 12.11 of ACPI v6.1, a _GPE object on this device
    * evaluates to either an integer specifying bit in the GPEx_STS blocks
    * to use, or a package specifying which GPE block and which bit inside
    * that block to use. */
-  ACPI_OBJECT* gpe_obj = static_cast<ACPI_OBJECT*>(buffer.Pointer);
   if (gpe_obj->Type == ACPI_TYPE_INTEGER) {
     *gpe_block = NULL;
     *gpe = static_cast<uint32_t>(gpe_obj->Integer.Value);
   } else if (gpe_obj->Type == ACPI_TYPE_PACKAGE) {
     if (gpe_obj->Package.Count != 2) {
-      goto bailout;
+      return AE_BAD_DATA;
     }
     ACPI_OBJECT* block_obj = &gpe_obj->Package.Elements[0];
     ACPI_OBJECT* gpe_num_obj = &gpe_obj->Package.Elements[1];
     if (block_obj->Type != ACPI_TYPE_LOCAL_REFERENCE) {
-      goto bailout;
+      return AE_BAD_DATA;
     }
     if (gpe_num_obj->Type != ACPI_TYPE_INTEGER) {
-      goto bailout;
+      return AE_BAD_DATA;
     }
     *gpe_block = block_obj->Reference.Handle;
     *gpe = static_cast<uint32_t>(gpe_num_obj->Integer.Value);
   } else {
-    goto bailout;
+    return AE_BAD_DATA;
   }
-  ACPI_FREE(buffer.Pointer);
-  return AE_OK;
 
-bailout:
-  xprintf("Failed to intepret EC GPE number");
-  ACPI_FREE(buffer.Pointer);
-  return AE_BAD_DATA;
+  cleanup.cancel();
+  return AE_OK;
 }
 
 struct ec_ports_callback_ctx {

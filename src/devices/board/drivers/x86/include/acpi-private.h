@@ -15,6 +15,19 @@
 
 #define MAX_NAMESPACE_DEPTH 100
 
+namespace acpi {
+
+// An RAII unique pointer type for resources allocated from the ACPICA library.
+template <typename T>
+struct UniquePtrDeleter {
+  void operator()(T* mem) { ACPI_FREE(mem); }
+};
+
+template <typename T>
+using UniquePtr = std::unique_ptr<T, UniquePtrDeleter<T>>;
+
+}  // namespace acpi
+
 struct AcpiDevicePioResource {
   explicit AcpiDevicePioResource(const resource_io& io)
       : base_address{io.minimum}, alignment{io.alignment}, address_length{io.address_length} {}

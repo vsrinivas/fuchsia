@@ -12,8 +12,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <fbl/auto_call.h>
 
+#include "acpi-private.h"
 #include "errors.h"
 
 /**
@@ -67,30 +67,31 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
       .Pointer = objs,
   };
 
-  // output buffer
-  ACPI_BUFFER out = {
-      .Length = ACPI_ALLOCATE_BUFFER,
-      .Pointer = NULL,
-  };
+  acpi::UniquePtr<ACPI_OBJECT> out_obj;
+  {
+    // output buffer
+    ACPI_BUFFER out = {
+        .Length = ACPI_ALLOCATE_BUFFER,
+        .Pointer = nullptr,
+    };
 
-  // Fetch the NHLT resource
-  ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_DSM", &params, &out);
-  if (acpi_status != AE_OK) {
-    zxlogf(ERROR, "acpi: failed to fetch NHLT blob (acpi_status 0x%x)", acpi_status);
-    return acpi_to_zx_status(acpi_status);
+    // Fetch the NHLT resource
+    ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_DSM", &params, &out);
+    out_obj.reset(static_cast<ACPI_OBJECT*>(out.Pointer));
+    if (acpi_status != AE_OK) {
+      zxlogf(ERROR, "acpi: failed to fetch NHLT blob (acpi_status 0x%x)", acpi_status);
+      return acpi_to_zx_status(acpi_status);
+    }
   }
 
-  auto release_object = fbl::MakeAutoCall([&out] { ACPI_FREE(out.Pointer); });
-
-  ACPI_OBJECT* out_obj = static_cast<ACPI_OBJECT*>(out.Pointer);
   if (out_obj->Type != ACPI_TYPE_BUFFER) {
     zxlogf(ERROR, "acpi: unexpected object type (%u) for NHLT blob", out_obj->Type);
     return ZX_ERR_INTERNAL;
   }
 
   ACPI_RESOURCE* res = NULL;
-  acpi_status = AcpiBufferToResource(out_obj->Buffer.Pointer,
-                                     static_cast<uint16_t>(out_obj->Buffer.Length), &res);
+  ACPI_STATUS acpi_status = AcpiBufferToResource(
+      out_obj->Buffer.Pointer, static_cast<uint16_t>(out_obj->Buffer.Length), &res);
   if (acpi_status != AE_OK) {
     zxlogf(ERROR, "acpi: failed to parse NHLT resource (acpi_status 0x%x)", acpi_status);
     return acpi_to_zx_status(acpi_status);

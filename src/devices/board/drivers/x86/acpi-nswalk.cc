@@ -429,8 +429,7 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
 ACPI_STATUS AcpiWalker::OnDescent(ACPI_HANDLE object) {
   ACPI_DEVICE_INFO* info_rawptr = nullptr;
   ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info_rawptr);
-  auto acpi_free = [](auto mem) { ACPI_FREE(mem); };
-  std::unique_ptr<ACPI_DEVICE_INFO, decltype(acpi_free)> info{info_rawptr, acpi_free};
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info{info_rawptr};
   if (acpi_status != AE_OK) {
     return acpi_status;
   }
