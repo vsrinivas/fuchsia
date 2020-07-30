@@ -583,7 +583,7 @@ mod tests {
         cm_rust::{
             self, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
-            UseProtocolDecl, UseSource,
+            UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseSource,
         },
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
@@ -867,6 +867,42 @@ mod tests {
             vec!["expose", "in", "out", "resolved_url", "runtime"],
             list_directory(&scoped_hub_dir_proxy).await
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn hub_no_event_stream_in_incoming_directory() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .use_(UseDecl::Event(UseEventDecl {
+                        source: UseSource::Framework,
+                        source_name: "started".into(),
+                        target_name: "started".into(),
+                        filter: None,
+                    }))
+                    .use_(UseDecl::EventStream(UseEventStreamDecl {
+                        target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.EventStream")
+                            .unwrap(),
+                        events: vec!["started".to_string()],
+                    }))
+                    .build(),
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+
+        let in_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("exec/in"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(0, list_directory(&in_dir).await.len());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

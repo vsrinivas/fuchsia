@@ -75,6 +75,15 @@ impl DirTree {
         realm: WeakRealm,
         use_: &UseDecl,
     ) {
+        // Event, EventStream and Runner capabilities are used by the framework
+        // itself and not given to components directly.
+        match use_ {
+            cm_rust::UseDecl::Runner(_)
+            | cm_rust::UseDecl::Event(_)
+            | cm_rust::UseDecl::EventStream(_) => return,
+            _ => {}
+        }
+
         let path = match use_.path() {
             Some(path) => path,
             None => return,
