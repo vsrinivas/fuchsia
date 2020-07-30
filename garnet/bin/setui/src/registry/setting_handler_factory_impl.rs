@@ -4,7 +4,8 @@
 use crate::internal::handler::{message, Payload};
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::registry::base::{
-    Command, Context, Environment, GenerateHandler, SettingHandlerFactory, State,
+    Command, Context, Environment, GenerateHandler, SettingHandlerFactory,
+    SettingHandlerFactoryError, State,
 };
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
@@ -33,57 +34,51 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
         setting_type: SettingType,
         messenger_factory: message::Factory,
         controller_messenger_client: message::Messenger,
-    ) -> Option<message::Signature> {
+    ) -> Result<message::Signature, SettingHandlerFactoryError> {
         if !self.environment.settings.contains(&setting_type) {
-            return None;
+            return Err(SettingHandlerFactoryError::SettingNotFound(setting_type));
         }
 
-        let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
-
-        if messenger_result.is_err() {
-            return None;
-        }
-
-        let (messenger, receptor) = messenger_result.unwrap();
+        let (messenger, receptor) = messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .map_err(|_| SettingHandlerFactoryError::HandlerMessengerError)?;
         let signature = messenger.get_signature();
 
-        if let Some(generate_function) = self.generators.get(&setting_type) {
-            if (generate_function)(Context::new(
-                setting_type,
-                messenger,
-                receptor,
-                self.environment.clone(),
-                self.next_context_id,
-            ))
-            .await
-            .is_ok()
-            {
-                self.next_context_id += 1;
-                // At this point, we know the controller was constructed successfully.
-                // Tell the controller to run the Startup phase to initialize its state.
-                let mut controller_receptor = controller_messenger_client
-                    .message(
-                        Payload::Command(Command::ChangeState(State::Startup)),
-                        Audience::Messenger(signature),
-                    )
-                    .send();
+        let generate_function = self
+            .generators
+            .get(&setting_type)
+            .ok_or(SettingHandlerFactoryError::GeneratorNotFound(setting_type))?;
 
-                // Wait for the startup phase to be over before continuing.
-                if let Some(MessageEvent::Status(Status::Received)) =
-                    controller_receptor.next().await
-                {
-                    // Startup phase is complete and had no errors. The registry can assume it
-                    // has an active controller with create() and startup() already run on it
-                    // before handling its request.
-                    return Some(signature);
-                } else {
-                    // Invalid response from Startup phase, don't return a signature.
-                    return None;
-                }
-            }
+        (generate_function)(Context::new(
+            setting_type,
+            messenger,
+            receptor,
+            self.environment.clone(),
+            self.next_context_id,
+        ))
+        .await
+        .map_err(|_| SettingHandlerFactoryError::HandlerStartupError(setting_type))?;
+
+        self.next_context_id += 1;
+        // At this point, we know the controller was constructed successfully.
+        // Tell the controller to run the Startup phase to initialize its state.
+        let mut controller_receptor = controller_messenger_client
+            .message(
+                Payload::Command(Command::ChangeState(State::Startup)),
+                Audience::Messenger(signature),
+            )
+            .send();
+
+        // Wait for the startup phase to be over before continuing.
+        if let Some(MessageEvent::Status(Status::Received)) = controller_receptor.next().await {
+            // Startup phase is complete and had no errors. The registry can assume it
+            // has an active controller with create() and startup() already run on it
+            // before handling its request.
+            return Ok(signature);
+        } else {
+            return Err(SettingHandlerFactoryError::HandlerStartupError(setting_type));
         }
-
-        None
     }
 }
 

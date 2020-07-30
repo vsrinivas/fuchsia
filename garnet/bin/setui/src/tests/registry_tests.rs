@@ -5,7 +5,7 @@ use crate::internal::core::{message::create_hub, Address, Payload};
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor as BaseReceptor;
-use crate::registry::base::{Command, SettingHandlerFactory, State};
+use crate::registry::base::{Command, SettingHandlerFactory, SettingHandlerFactoryError, State};
 use crate::registry::registry_impl::RegistryImpl;
 use crate::switchboard::base::{
     SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponseResult,
@@ -143,13 +143,18 @@ impl SettingHandlerFactory for FakeFactory {
         setting_type: SettingType,
         _: handler::message::Factory,
         _: handler::message::Messenger,
-    ) -> Option<handler::message::Signature> {
+    ) -> Result<handler::message::Signature, SettingHandlerFactoryError> {
         let existing_count = self.get_request_count(setting_type);
 
-        self.handlers.get(&setting_type).copied().map(|signature| {
-            self.request_counts.insert(setting_type, existing_count + 1);
-            signature
-        })
+        Ok(self
+            .handlers
+            .get(&setting_type)
+            .copied()
+            .map(|signature| {
+                self.request_counts.insert(setting_type, existing_count + 1);
+                signature
+            })
+            .unwrap())
     }
 }
 

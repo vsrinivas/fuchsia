@@ -12,6 +12,7 @@ use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::collections::HashSet;
 use std::sync::Arc;
+use thiserror;
 #[cfg(test)]
 use {
     crate::internal::event::message::Factory as EventMessengerFactory,
@@ -51,6 +52,24 @@ pub enum State {
     Teardown,
 }
 
+#[derive(thiserror::Error, Debug, Clone, PartialEq)]
+pub enum SettingHandlerFactoryError {
+    #[error("Setting type {0:?} not registered in environment")]
+    SettingNotFound(SettingType),
+
+    #[error("Cannot find setting handler generator for {0:?}")]
+    GeneratorNotFound(SettingType),
+
+    #[error("MessageHub Messenger for setting handler could not be created")]
+    HandlerMessengerError,
+
+    #[error("MessageHub Messenger for lifecycle messenger could not be created")]
+    LifecycleMessengerError,
+
+    #[error("Setting handler for {0:?} failed to startup")]
+    HandlerStartupError(SettingType),
+}
+
 /// A factory capable of creating a handler for a given setting on-demand. If no
 /// viable handler can be created, None will be returned.
 #[async_trait]
@@ -60,7 +79,7 @@ pub trait SettingHandlerFactory {
         setting_type: SettingType,
         messenger_factory: message::Factory,
         messenger_client: message::Messenger,
-    ) -> Option<message::Signature>;
+    ) -> Result<message::Signature, SettingHandlerFactoryError>;
 }
 
 pub struct Environment<T: DeviceStorageFactory> {

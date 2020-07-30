@@ -183,7 +183,8 @@ impl RegistryImpl {
         setting_type: SettingType,
     ) -> Option<handler::message::Signature> {
         if !self.active_controllers.contains_key(&setting_type) {
-            if let Some(signature) = self
+            // TODO(57374): Propagate error to event publisher.
+            if let Ok(signature) = self
                 .handler_factory
                 .lock()
                 .await
