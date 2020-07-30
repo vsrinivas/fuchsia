@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//cts/build/cts_element.gni")
+import("//cts/build/cts_vars.gni")
+
+# An executable that can be used in CTS.
+#
+# An equivalent to the built-in executable, but ensures dependencies are allowed
+# in CTS.
+#
+# Example:
+# ```
+# cts_executable("my-test") {
+#   deps = [ "//zircon/public/lib/zxtest" ]
+#   sources = [ "//cts/tests/my_test/my_test.cc" ]
+#   testonly = true
+# }
+# ```
+#
+# Parameters
+#   sources (required)
+#     List of files to create an executable from.
+#     Type: list(labels)
+template("cts_executable") {
+  assert(defined(invoker.sources), "Sources must be defined.")
+
+  if (defined(invoker.deps)) {
+    cts_element("unused") {
+      deps = invoker.deps
+    }
+  }
+
+  executable(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+
+  # Creates a file to enable other CTS targets to depend on this test package.
+  write_file("${root_gen_dir}/cts/${target_name}.${cts_extension}", "true")
+}

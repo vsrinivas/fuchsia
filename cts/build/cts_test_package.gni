@@ -1,0 +1,38 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//cts/build/cts_element.gni")
+import("//cts/build/cts_vars.gni")
+import("//src/sys/build/components.gni")
+
+# Defines a Compatibility Test Suite package.
+#
+# An equivalent to fuchsia_test_package, but ensures dependencies and
+# test_components are allowed in CTS.
+#
+# Example:
+# ```
+# cts_test_package("my-test-package") {
+#   test_components = [ ":my-test-component" ]
+# }
+# ```
+template("cts_test_package") {
+  # Ensure that deps and test_components are CTS targets.
+  if (defined(invoker.deps)) {
+    cts_element("unused") {
+      deps = invoker.deps
+    }
+  }
+  if (defined(invoker.test_components)) {
+    cts_element("unused") {
+      deps = invoker.test_components
+    }
+  }
+
+  fuchsia_test_package(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+
+  # Creates a file to enable other CTS targets to depend on this test package.
+  write_file("${root_gen_dir}/cts/${target_name}.${cts_extension}", "true")
+}
