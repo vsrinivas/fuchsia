@@ -203,6 +203,10 @@ class MediaApp {
   std::optional<float> pts_continuity_threshold_secs_ = std::nullopt;
 
   bool online_;
+  // In online mode, we preload the payload buffer half-full then send additional packets per timer.
+  // For convenience of calculations later, we extrapolate backwards to calculate and store this
+  // value: the hypothetical reference time when we would have sent the first packet.
+  zx::time target_online_send_first_packet_ref_time_;
 
   std::optional<std::string> file_name_ = std::nullopt;
   media::audio::WavWriter<> wav_writer_;

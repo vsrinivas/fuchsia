@@ -574,8 +574,14 @@ void MediaApp::Play() {
   status = reference_clock_.read(ref_now.get_address());
   CLI_CHECK(status == ZX_OK || Shutdown(), "zx::clock::read failed during Play(): " << status);
 
-  reference_start_time_ = set_ref_start_time_ ? ref_now + kPlayStartupDelay + min_lead_time_
-                                              : zx::time(fuchsia::media::NO_TIMESTAMP);
+  // Extrapolating backwards (to make future calculations easier), this represents when we would
+  // have sent our first packet. This is our first approximation, we will update this when we
+  // receive the actual start time.
+  target_online_send_first_packet_ref_time_ = ref_now - target_duration_outstanding;
+
+  reference_start_time_ = ref_now + kPlayStartupDelay + min_lead_time_;
+  zx::time requested_ref_start_time =
+      set_ref_start_time_ ? reference_start_time_ : zx::time(fuchsia::media::NO_TIMESTAMP);
   auto media_start_pts = media_start_pts_.value_or(fuchsia::media::NO_TIMESTAMP);
 
   if (verbose_) {
@@ -583,7 +589,7 @@ void MediaApp::Play() {
     CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
     auto mono_now = mono_time_result.take_value();
 
-    auto requested_ref_str = RefTimeStrFromZxTime(reference_start_time_);
+    auto requested_ref_str = RefTimeStrFromZxTime(requested_ref_start_time);
     auto requested_media_str = RefTimeStrFromZxTime(zx::time{media_start_pts});
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
     auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
@@ -613,19 +619,19 @@ void MediaApp::Play() {
       printf("Play callback(ref %s, media %s) at ref_now %s : mono_now %s\n\n",
              actual_ref_str.c_str(), actual_media_str.c_str(), ref_now_str.c_str(),
              mono_now_str.c_str());
-
-      reference_start_time_ = zx::time(actual_ref_start);
     }
+
+    // Now that we have the real start time, update our online "start" value.
+    target_online_send_first_packet_ref_time_ =
+        target_online_send_first_packet_ref_time_ +
+        (zx::time(actual_ref_start) - reference_start_time_);
+    reference_start_time_ = zx::time(actual_ref_start);
   };
 
-  audio_renderer_->Play(reference_start_time_.get(), media_start_pts, play_completion_func);
+  audio_renderer_->Play(requested_ref_start_time.get(), media_start_pts, play_completion_func);
   set_playing();
-  // Online mode uses this when determining when to send each packet. To keep packets flowing until
-  // we receive the callback with the exact start time, set a sooner one here.
-  reference_start_time_ = ref_now;
 
   if (online_) {
-    target_online_send_packet_ref_time_ = ref_now;
     ScheduleNextSendPacket();
   }
 }
@@ -863,8 +869,8 @@ void MediaApp::ScheduleNextSendPacket() {
     return;
   }
 
-  target_online_send_packet_ref_time_ =
-      reference_start_time_ + (online_send_packet_ref_period_ * num_packets_sent_) - min_lead_time_;
+  target_online_send_packet_ref_time_ = target_online_send_first_packet_ref_time_ +
+                                        (online_send_packet_ref_period_ * num_packets_sent_);
   auto mono_time_result = audio::clock::MonotonicTimeFromReferenceTime(
       reference_clock_, target_online_send_packet_ref_time_);
   CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
@@ -972,7 +978,7 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
 
   if (num_packets_completed_ >= num_packets_to_send_) {
     Shutdown();
-  } else if (!online_ && num_packets_sent_ < num_packets_to_send_) {
+  } else if (num_packets_sent_ < num_packets_to_send_ && !online_) {
     SendPacket();
   }
 }
