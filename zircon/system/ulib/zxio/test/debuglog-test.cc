@@ -9,40 +9,78 @@
 
 #include <array>
 #include <thread>
+#include <utility>
 
 #include <zxtest/zxtest.h>
 
-TEST(DebugLogTest, ThreadSafety) {
-  // Sets up multiple threads that write to debuglog concurrently, ASAN or TSAN builders will
-  // be responsible for catching bugs.
-  constexpr size_t kNumThreads = 256;
+namespace {
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-  constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
-  ASSERT_OK(fdio_service_connect(kWriteOnlyLogPath, remote.release()));
-  zx::debuglog handle;
-  ASSERT_OK(fuchsia_boot_WriteOnlyLogGet(local.get(), handle.reset_and_get_address()));
+class DebugLogTest : public zxtest::Test {
+ protected:
+  void SetUp() override final {
+    ASSERT_OK(zx::channel::create(0, &local_, &remote_));
+    constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
+    ASSERT_OK(fdio_service_connect(kWriteOnlyLogPath, remote_.release()));
+    zx::debuglog handle;
+    ASSERT_OK(fuchsia_boot_WriteOnlyLogGet(local_.get(), handle.reset_and_get_address()));
 
-  auto storage = std::make_unique<zxio_storage_t>();
-  ASSERT_EQ(ZX_OK, zxio_debuglog_init(storage.get(), std::move(handle)));
-  zxio_t* logger = &storage->io;
-  ASSERT_NE(logger, nullptr);
+    storage_ = std::make_unique<zxio_storage_t>();
+    ASSERT_OK(zxio_debuglog_init(storage_.get(), std::move(handle)));
+    logger_ = &storage_->io;
+    ASSERT_NE(logger_, nullptr);
+  }
 
+  void TearDown() override final {
+    if (logger_)
+      ASSERT_OK(zxio_destroy(logger_));
+  }
+
+  zx::channel local_;
+  zx::channel remote_;
+  std::unique_ptr<zxio_storage_t> storage_;
+  zxio_t* logger_;
+};
+
+constexpr size_t kNumThreads = 256;
+
+// Sets up multiple threads that write to debuglog concurrently; ASAN or TSAN builders will
+// be responsible for catching bugs.
+std::array<std::thread, kNumThreads> StartStressingThreads(zxio_t* logger,
+                                                           bool allow_handle_closed_error) {
   std::array<std::thread, kNumThreads> threads;
 
   for (size_t i = 0; i < kNumThreads; ++i) {
-    threads[i] = std::thread([i, logger]() {
+    threads[i] = std::thread([i, logger, allow_handle_closed_error]() {
       std::string log_str = "output from " + std::to_string(i) + "\n";
       size_t actual;
-      ASSERT_OK(zxio_write(logger, log_str.c_str(), log_str.size(), 0, &actual));
-      ASSERT_EQ(actual, log_str.size());
+      zx_status_t status = zxio_write(logger, log_str.c_str(), log_str.size(), 0, &actual);
+      // We would get |ZX_ERR_BAD_HANDLE| if the debuglog was closed.
+      if (!allow_handle_closed_error || status != ZX_ERR_BAD_HANDLE) {
+        ASSERT_OK(status);
+        ASSERT_EQ(actual, log_str.size());
+      }
     });
   }
 
-  for (auto t = threads.rbegin(); t != threads.rend(); ++t) {
-    t->join();
-  }
-  ASSERT_OK(zxio_close(logger));
-  ASSERT_OK(zxio_destroy(logger));
+  return threads;
 }
+
+TEST_F(DebugLogTest, ThreadSafety) {
+  auto threads = StartStressingThreads(logger_, /* allow_handle_closed_error */ false);
+
+  for (auto& t : threads) {
+    t.join();
+  }
+  ASSERT_OK(zxio_close(logger_));
+}
+
+TEST_F(DebugLogTest, ThreadSafety_CloseDuringWrite) {
+  auto threads = StartStressingThreads(logger_, /* allow_handle_closed_error */ true);
+
+  ASSERT_OK(zxio_close(logger_));
+  for (auto& t : threads) {
+    t.join();
+  }
+}
+
+}  // namespace
