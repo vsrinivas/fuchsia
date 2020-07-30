@@ -111,6 +111,25 @@ void AudioTunerImpl::DeleteAudioDeviceProfile(std::string device_id,
       }));
 }
 
+void AudioTunerImpl::SetAudioEffectConfig(std::string device_id,
+                                          fuchsia::media::tuning::AudioEffectConfig effect,
+                                          SetAudioEffectConfigCallback callback) {
+  auto promise = context_.device_manager().UpdateDeviceEffect(device_id, effect.instance_name(),
+                                                              effect.configuration());
+  context_.threading_model().FidlDomain().executor()->schedule_task(
+      promise.then([this, device_id, effect = std::move(effect), callback = std::move(callback)](
+                       fit::result<void, fuchsia::media::audio::UpdateEffectError>& result) {
+        if (result.is_ok()) {
+          UpdateTunedDeviceSpecification(device_id, effect) ? callback(ZX_OK)
+                                                            : callback(ZX_ERR_NOT_FOUND);
+        } else if (result.error() == fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG) {
+          callback(ZX_ERR_BAD_STATE);
+        } else {
+          callback(ZX_ERR_NOT_FOUND);
+        }
+      }));
+}
+
 AudioTunerImpl::OutputDeviceSpecification AudioTunerImpl::GetDefaultDeviceSpecification(
     const std::string& device_id) {
   auto unique_id = AudioDevice::UniqueIdFromString(device_id).take_value();
@@ -118,6 +137,35 @@ AudioTunerImpl::OutputDeviceSpecification AudioTunerImpl::GetDefaultDeviceSpecif
       context_.process_config().device_config().output_device_profile(unique_id).pipeline_config();
   VolumeCurve volume_curve = context_.process_config().default_volume_curve();
   return OutputDeviceSpecification{.pipeline_config = device_profile, .volume_curve = volume_curve};
+}
+
+bool AudioTunerImpl::UpdateTunedDeviceSpecification(
+    const std::string& device_id, const fuchsia::media::tuning::AudioEffectConfig& effect) {
+  auto tuned_device_it = tuned_device_specifications_.find(device_id);
+  if (tuned_device_it == tuned_device_specifications_.end()) {
+    tuned_device_it =
+        tuned_device_specifications_.emplace(device_id, GetDefaultDeviceSpecification(device_id))
+            .first;
+  }
+  PipelineConfig::MixGroup& root = tuned_device_it->second.pipeline_config.mutable_root();
+  return UpdateTunedEffectConfig(root, effect.instance_name(), effect.configuration());
+}
+
+bool AudioTunerImpl::UpdateTunedEffectConfig(PipelineConfig::MixGroup& root,
+                                             const std::string& instance_name,
+                                             const std::string& config) {
+  for (PipelineConfig::Effect& effect : root.effects) {
+    if (instance_name == effect.instance_name) {
+      effect.effect_config = config;
+      return true;
+    }
+  }
+  for (PipelineConfig::MixGroup& mix_group : root.inputs) {
+    if (UpdateTunedEffectConfig(mix_group, instance_name, config)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace media::audio

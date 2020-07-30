@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_TUNER_IMPL_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_TUNER_IMPL_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/tuning/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
@@ -172,7 +173,7 @@ class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
   void DeleteAudioDeviceProfile(std::string device_id,
                                 DeleteAudioDeviceProfileCallback callback) final;
   void SetAudioEffectConfig(std::string device_id, fuchsia::media::tuning::AudioEffectConfig effect,
-                            SetAudioEffectConfigCallback callback) final{};
+                            SetAudioEffectConfigCallback callback) final;
 
  private:
   struct OutputDeviceSpecification {
@@ -180,6 +181,10 @@ class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
     VolumeCurve volume_curve;
   };
   OutputDeviceSpecification GetDefaultDeviceSpecification(const std::string& device_id);
+  bool UpdateTunedDeviceSpecification(const std::string& device_id,
+                                      const fuchsia::media::tuning::AudioEffectConfig& effect);
+  bool UpdateTunedEffectConfig(PipelineConfig::MixGroup& root, const std::string& instance_name,
+                               const std::string& config);
 
   Context& context_;
   fidl::BindingSet<fuchsia::media::tuning::AudioTuner, AudioTunerImpl*> bindings_;

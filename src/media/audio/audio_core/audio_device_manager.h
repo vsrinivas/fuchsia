@@ -71,6 +71,14 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
       const std::string& instance_name, const std::string& message);
 
+  // Sends an update message to the effect specified by 'instance_name' for the device specified by
+  // 'device_id'.
+  //
+  // Return values match those of 'UpdateEffect' above, with the addition of an
+  // UpdateEffectError::NOT_FOUND if the device specified by 'device_id' is not found.
+  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateDeviceEffect(
+      const std::string device_id, const std::string& instance_name, const std::string& message);
+
   fit::promise<void, zx_status_t> UpdatePipelineConfig(const std::string device_id,
                                                        const PipelineConfig& config,
                                                        const VolumeCurve& volume_curve);

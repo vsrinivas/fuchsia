@@ -103,6 +103,32 @@ fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager:
           });
 }
 
+fit::promise<void, fuchsia::media::audio::UpdateEffectError> AudioDeviceManager::UpdateDeviceEffect(
+    const std::string device_id, const std::string& instance_name, const std::string& message) {
+  auto devices = GetDeviceInfos();
+  const auto dev = std::find_if(devices.begin(), devices.end(), [&device_id](auto candidate) {
+    return candidate.unique_id == device_id;
+  });
+  if (dev == devices.end()) {
+    return fit::make_error_promise(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+  }
+  auto device = devices_[dev->token_id];
+  FX_DCHECK(device);
+
+  return device->UpdateEffect(instance_name, message)
+      .then([](fit::result<void, fuchsia::media::audio::UpdateEffectError>& result)
+                -> fit::result<void, fuchsia::media::audio::UpdateEffectError> {
+        if (result.is_ok()) {
+          return fit::ok();
+        }
+        if (result.error() == fuchsia::media::audio::UpdateEffectError::INVALID_CONFIG) {
+          return result;
+        } else {
+          return fit::error(fuchsia::media::audio::UpdateEffectError::NOT_FOUND);
+        }
+      });
+}
+
 fit::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
     const std::string device_id, const PipelineConfig& config, const VolumeCurve& volume_curve) {
   auto devices = GetDeviceInfos();

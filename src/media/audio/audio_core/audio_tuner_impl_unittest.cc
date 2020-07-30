@@ -84,17 +84,27 @@ class TestDevice : public AudioOutput {
 
   void UpdatePlugState(bool plugged) { AudioDevice::UpdatePlugState(plugged, plug_time()); }
   void CompleteUpdates() {
-    for (auto& bridge : bridges_) {
+    for (auto& bridge : pipeline_update_bridges_) {
       bridge.completer.complete_ok();
     }
-    bridges_.clear();
+    pipeline_update_bridges_.clear();
+
+    for (auto& bridge : effect_update_bridges_) {
+      bridge.completer.complete_ok();
+    }
+    effect_update_bridges_.clear();
   }
 
   // AudioDevice
+  fit::promise<void, fuchsia::media::audio::UpdateEffectError> UpdateEffect(
+      const std::string& instance_name, const std::string& config) override {
+    effect_update_bridges_.emplace_back();
+    return effect_update_bridges_.back().consumer.promise();
+  }
   fit::promise<void, zx_status_t> UpdatePipelineConfig(const PipelineConfig& config,
                                                        const VolumeCurve& volume_curve) override {
-    bridges_.emplace_back();
-    return bridges_.back().consumer.promise();
+    pipeline_update_bridges_.emplace_back();
+    return pipeline_update_bridges_.back().consumer.promise();
   }
   fuchsia::media::AudioDeviceInfo GetDeviceInfo() const override {
     return {
@@ -125,7 +135,8 @@ class TestDevice : public AudioOutput {
   void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {}
 
  private:
-  std::vector<fit::bridge<void, zx_status_t>> bridges_;
+  std::vector<fit::bridge<void, zx_status_t>> pipeline_update_bridges_;
+  std::vector<fit::bridge<void, fuchsia::media::audio::UpdateEffectError>> effect_update_bridges_;
   std::unique_ptr<testing::FakeAudioDriverV1> fake_driver_;
 };
 
@@ -426,6 +437,101 @@ TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
                .pipeline_config()
                .root(),
            tuning_profile.pipeline());
+}
+
+TEST_F(AudioTunerTest, SetAudioEffectConfig) {
+  std::string instance_name = "eq1";
+  std::string initial_effect_config = "";
+  auto initial_process_config =
+      ProcessConfigBuilder()
+          .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(-60.0))
+          .AddDeviceProfile(
+              {std::vector<audio_stream_unique_id_t>{kDeviceIdUnique},
+               DeviceConfig::OutputDeviceProfile(
+                   /*eligible_for_loopback=*/true, /*supported_usages=*/{},
+                   /*independent_volume_control=*/false,
+                   PipelineConfig(PipelineConfig::MixGroup{
+                       .name = "linearize",
+                       .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
+                       .effects = {PipelineConfig::Effect{.lib_name = "my_effects.so",
+                                                          .effect_name = "equalizer",
+                                                          .instance_name = instance_name,
+                                                          .effect_config = initial_effect_config,
+                                                          .output_channels = 2}},
+                       .inputs = {PipelineConfig::MixGroup{
+                           .name = "mix",
+                           .input_streams = {},
+                           .effects = {},
+                           .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
+                                                               .input_streams = {},
+                                                               .effects = {},
+                                                               .inputs = {},
+                                                               .loopback = false,
+                                                               .output_rate = 48000,
+                                                               .output_channels = 2}},
+                           .loopback = false,
+                           .output_rate = 48000,
+                           .output_channels = 2}},
+                       .loopback = true,
+                       .output_rate = 48000,
+                       .output_channels = 2}))})
+          .Build();
+  auto context = CreateContext(initial_process_config);
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
+  auto device = std::make_shared<TestDevice>(context);
+  context->device_manager().AddDevice(device);
+  RunLoopUntilIdle();
+  context->device_manager().ActivateDevice(device);
+
+  // Update device with new effect configuration.
+  std::string updated_effect_config = "new configuration";
+  fuchsia::media::tuning::AudioEffectConfig effect;
+  effect.set_instance_name(instance_name);
+  effect.set_configuration(updated_effect_config);
+  bool completed_update = false;
+  under_test.SetAudioEffectConfig(kDeviceIdString, std::move(effect),
+                                  [&completed_update](zx_status_t result) {
+                                    completed_update = true;
+                                    EXPECT_EQ(ZX_OK, result);
+                                  });
+  device->CompleteUpdates();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(completed_update);
+
+  // Verify device configuration was successfully updated.
+  auto expected_pipeline_config = PipelineConfig(PipelineConfig::MixGroup{
+      .name = "linearize",
+      .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
+      .effects = {PipelineConfig::Effect{.lib_name = "my_effects.so",
+                                         .effect_name = "equalizer",
+                                         .instance_name = instance_name,
+                                         .effect_config = updated_effect_config,
+                                         .output_channels = 2}},
+      .inputs = {PipelineConfig::MixGroup{
+          .name = "mix",
+          .input_streams = {},
+          .effects = {},
+          .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
+                                              .input_streams = {},
+                                              .effects = {},
+                                              .inputs = {},
+                                              .loopback = false,
+                                              .output_rate = 48000,
+                                              .output_channels = 2}},
+          .loopback = false,
+          .output_rate = 48000,
+          .output_channels = 2}},
+      .loopback = true,
+      .output_rate = 48000,
+      .output_channels = 2});
+  fuchsia::media::tuning::AudioDeviceTuningProfile tuning_profile;
+  under_test.GetAudioDeviceProfile(
+      kDeviceIdString, [&tuning_profile](fuchsia::media::tuning::AudioDeviceTuningProfile profile) {
+        tuning_profile = std::move(profile);
+      });
+  ExpectEq(expected_pipeline_config.root(), tuning_profile.pipeline());
 }
 
 }  // namespace
