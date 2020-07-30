@@ -352,7 +352,7 @@ impl TestEnvironment {
                 let output = output.context("app future terminated with error")?;
                 return Err(anyhow::anyhow!("netdump exited before we saw an directory request close: {:?}", output.exit_status))
             },
-            r  = ready => { let _signals = r.context("failed to wait on directory request close"); }
+            r = ready => { let _: zx::Signals = r.context("failed to wait on directory request close")?; }
         }
         let ((), output) = futures::future::try_join(f(), app).await?;
 
@@ -736,18 +736,17 @@ async fn timeout_test() -> Result {
     let _net = env.create_endpoint().await.context("failed to prepare endpoint")?;
 
     let args = Args::new().insert_timeout(0);
-    let (output, _dumpfile) = env
-        .run_netdump(args.into(), || futures::future::ok(()))
-        .await
-        .context("run netdump failed")?;
+    let (app, _dir_request) =
+        env.launch_netdump(args.into(), None).context("failed to launch netdump")?;
+    let output = app.await.context("run netdump failed")?;
     let () = output.ok().context("netdump finished with error")?;
 
     let args = Args::new().insert_timeout(1);
-    let (output, _dumpfile) = env
-        .run_netdump(args.into(), || futures::future::ok(()))
-        .await
-        .context("run netdump failed")?;
+    let (app, _dir_request) =
+        env.launch_netdump(args.into(), None).context("failed to launch netdump")?;
+    let output = app.await.context("run netdump failed")?;
     let () = output.ok().context("netdump finished with error")?;
+
     Ok(())
 }
 
