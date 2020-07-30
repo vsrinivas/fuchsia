@@ -109,6 +109,9 @@ std::string SortLog(const std::string& log) {
 
 bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder* decoder,
                  const std::string& output_file_path, float* compression_ratio) {
+  // Set the default compression to NAN in case Concatenate() fails.
+  *compression_ratio = NAN;
+
   uint64_t total_compressed_log_size{0};
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
     uint64_t size;
@@ -123,6 +126,7 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
     return false;
   }
 
+  // Decode logs.
   std::string uncompressed_log;
   for (auto path = input_file_paths.crbegin(); path != input_file_paths.crend(); ++path) {
     std::string block;
@@ -133,14 +137,22 @@ bool Concatenate(const std::vector<const std::string>& input_file_paths, Decoder
     uncompressed_log += decoder->Decode(block);
   }
 
+  // Sort logs.
+  uncompressed_log = SortLog(uncompressed_log);
+
   if (uncompressed_log.empty()) {
-    *compression_ratio = NAN;
     return false;
   }
 
-  *compression_ratio = ((float)uncompressed_log.size()) / (float)total_compressed_log_size;
+  if (!files::WriteFile(output_file_path, uncompressed_log)) {
+    return false;
+  }
 
-  return files::WriteFile(output_file_path, SortLog(uncompressed_log));
+  // Compression ratio rounded up to the next decimal, e.g., 2.54x compression -> 2.6x.
+  int decimal_ratio = (uncompressed_log.size() * 10 - 1) / total_compressed_log_size + 1;
+  *compression_ratio = ((float)decimal_ratio) / 10.0f;
+
+  return true;
 }
 
 }  // namespace system_log_recorder
