@@ -38,6 +38,12 @@ class ZirconPlatformDeviceWithoutProtocol : public PlatformDevice {
     return DRETP(nullptr, "No protocol");
   }
 
+  uint32_t GetMmioCount() const override { return 0; }
+
+  std::unique_ptr<PlatformBuffer> GetMmioBuffer(unsigned int index) override {
+    return DRETP(nullptr, "No protocol");
+  }
+
   std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index) override {
     return DRETP(nullptr, "No protocol");
   }
@@ -51,18 +57,23 @@ class ZirconPlatformDeviceWithoutProtocol : public PlatformDevice {
 
 class ZirconPlatformDevice : public ZirconPlatformDeviceWithoutProtocol {
  public:
-  ZirconPlatformDevice(zx_device_t* zx_device, pdev_protocol_t pdev)
-      : ZirconPlatformDeviceWithoutProtocol(zx_device), pdev_(pdev) {}
+  ZirconPlatformDevice(zx_device_t* zx_device, pdev_protocol_t pdev, uint32_t mmio_count)
+      : ZirconPlatformDeviceWithoutProtocol(zx_device), pdev_(pdev), mmio_count_(mmio_count) {}
 
   std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const override;
 
+  uint32_t GetMmioCount() const override { return mmio_count_; }
+
   std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
                                            PlatformMmio::CachePolicy cache_policy) override;
+
+  std::unique_ptr<PlatformBuffer> GetMmioBuffer(unsigned int index) override;
 
   std::unique_ptr<PlatformInterrupt> RegisterInterrupt(unsigned int index) override;
 
  private:
   pdev_protocol_t pdev_;
+  uint32_t mmio_count_;
 };
 
 }  // namespace magma

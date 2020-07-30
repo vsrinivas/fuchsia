@@ -155,3 +155,28 @@ TEST(PlatformDevice, BusMapperContiguous) {
 
   TestPlatformBusMapper::Contiguous(mapper.get());
 }
+
+TEST(PlatformDevice, BusMapperPhysical) {
+  magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+  ASSERT_TRUE(platform_device);
+
+  uint32_t mmio_count = platform_device->GetMmioCount();
+  EXPECT_GT(mmio_count, 0u);
+
+  for (uint32_t i = 0; i < mmio_count; i++) {
+    auto buffer = platform_device->GetMmioBuffer(i);
+    ASSERT_TRUE(buffer);
+
+    auto mapper = magma::PlatformBusMapper::Create(platform_device->GetBusTransactionInitiator());
+    ASSERT_TRUE(mapper);
+
+    uint32_t page_count = buffer->size() / magma::page_size();
+
+    auto bus_mapping = mapper->MapPageRangeBus(buffer.get(), 0, page_count);
+    ASSERT_TRUE(bus_mapping);
+
+    for (uint32_t i = 1; i < page_count; ++i) {
+      EXPECT_EQ(bus_mapping->Get()[i - 1] + magma::page_size(), bus_mapping->Get()[i]);
+    }
+  }
+}

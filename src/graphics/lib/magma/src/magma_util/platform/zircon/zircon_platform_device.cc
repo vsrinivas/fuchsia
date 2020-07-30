@@ -83,6 +83,16 @@ std::unique_ptr<PlatformMmio> ZirconPlatformDevice::CpuMapMmio(
   return mmio;
 }
 
+std::unique_ptr<PlatformBuffer> ZirconPlatformDevice::GetMmioBuffer(unsigned int index) {
+  pdev_mmio_t mmio;
+
+  zx_status_t status = pdev_get_mmio(&pdev_, index, &mmio);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "pdev_get_mmio failed: %d", status);
+
+  return magma::PlatformBuffer::Import(mmio.vmo);
+}
+
 std::unique_ptr<PlatformInterrupt> ZirconPlatformDevice::RegisterInterrupt(unsigned int index) {
   zx_handle_t interrupt_handle;
   zx_status_t status = pdev_get_interrupt(&pdev_, index, 0, &interrupt_handle);
@@ -121,14 +131,21 @@ std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle) {
       }
     }
   }
-  switch (status) {
-    case ZX_OK:
-      return std::unique_ptr<PlatformDevice>(new ZirconPlatformDevice(zx_device, pdev));
-    case ZX_ERR_NOT_SUPPORTED:
-      return std::unique_ptr<PlatformDevice>(new ZirconPlatformDeviceWithoutProtocol(zx_device));
-    default:
-      return DRETP(nullptr, "Error requesting protocol: %d", status);
+
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    return std::make_unique<ZirconPlatformDeviceWithoutProtocol>(zx_device);
   }
+
+  if (status == ZX_OK) {
+    pdev_device_info_t device_info;
+    zx_status_t status = pdev_get_device_info(&pdev, &device_info);
+    if (status != ZX_OK)
+      return DRETP(nullptr, "pdev_get_device_info failed: %d", status);
+
+    return std::make_unique<ZirconPlatformDevice>(zx_device, pdev, device_info.mmio_count);
+  }
+
+  return DRETP(nullptr, "Error requesting protocol: %d", status);
 }
 
 }  // namespace magma

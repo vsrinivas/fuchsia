@@ -33,6 +33,8 @@ class PlatformDevice {
 
   virtual void* GetDeviceHandle() = 0;
 
+  virtual uint32_t GetMmioCount() const = 0;
+
   virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() const = 0;
 
   virtual std::unique_ptr<PlatformHandle> GetSchedulerProfile(Priority priority,
@@ -53,6 +55,11 @@ class PlatformDevice {
   virtual std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
                                                    PlatformMmio::CachePolicy cache_policy) {
     DLOG("CpuMapMmio unimplemented");
+    return nullptr;
+  }
+
+  virtual std::unique_ptr<PlatformBuffer> GetMmioBuffer(unsigned int index) {
+    DLOG("GetMmioBuffer unimplemented");
     return nullptr;
   }
 
