@@ -50,18 +50,25 @@ impl ElementEventHandler {
     ) -> Result<ViewControllerProxy, Error> {
         let view_provider = element.connect_to_service::<ViewProviderMarker>()?;
         let token_pair = scenic::ViewTokenPair::new()?;
+        let scenic::ViewRefPair { mut control_ref, mut view_ref } = scenic::ViewRefPair::new()?;
+        let view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
 
         // note: this call will never fail since connecting to a service is
         // always successful and create_view doesn't have a return value.
         // If there is no view provider, the view_holder_token will be invalidated
         // and the presenter can choose to close the view controller if it
         // only wants to allow graphical views.
-        view_provider.create_view(token_pair.view_token.value, None, None)?;
+        view_provider.create_view_with_view_ref(
+            token_pair.view_token.value,
+            &mut control_ref,
+            &mut view_ref,
+        )?;
 
         let annotations = element.get_annotations()?;
 
         let view_spec = ViewSpec {
             view_holder_token: Some(token_pair.view_holder_token),
+            view_ref: Some(view_ref_dup),
             annotations: Some(annotations),
             ..ViewSpec::empty()
         };
