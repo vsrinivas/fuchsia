@@ -33,6 +33,7 @@ test("fbl") {
     "bit_tests.cc",
     "conditional_select_nospec_tests.cc",
     "confine_array_index_tests.cc",
+    "enum_bits.cc",
     "forward_tests.cc",
     "function_tests.cc",
     "hard_int_tests.cc",
