@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
 
 	systemTestConfig "go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/config"
 )
@@ -120,7 +121,7 @@ func (c *config) getDowngradeBuildID(ctx context.Context) (string, error) {
 	return c.downgradeBuildID, nil
 }
 
-func (c *config) getDowngradeBuild(ctx context.Context, dir string) (artifacts.Build, error) {
+func (c *config) getDowngradeBuild(ctx context.Context, device *device.Client, dir string) (artifacts.Build, error) {
 	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ssh key: %w", err)
@@ -145,7 +146,7 @@ func (c *config) getDowngradeBuild(ctx context.Context, dir string) (artifacts.B
 		// The downgrade build isn't required, so don't err if we can't create one.
 		return nil, nil
 	}
-	return c.installerConfig.ConfigureBuild(ctx, build)
+	return c.installerConfig.ConfigureBuild(ctx, device, build)
 }
 
 func (c *config) getUpgradeBuilder() (*artifacts.Builder, error) {
@@ -172,7 +173,7 @@ func (c *config) getUpgradeBuildID(ctx context.Context) (string, error) {
 	return c.upgradeBuildID, nil
 }
 
-func (c *config) getUpgradeBuild(ctx context.Context, dir string) (artifacts.Build, error) {
+func (c *config) getUpgradeBuild(ctx context.Context, device *device.Client, dir string) (artifacts.Build, error) {
 	buildID, err := c.getUpgradeBuildID(ctx)
 	if err != nil {
 		return nil, err
@@ -192,5 +193,5 @@ func (c *config) getUpgradeBuild(ctx context.Context, dir string) (artifacts.Bui
 		// The upgrade build isn't required, so don't err if we can't create one.
 		return nil, nil
 	}
-	return c.installerConfig.ConfigureBuild(ctx, build)
+	return c.installerConfig.ConfigureBuild(ctx, device, build)
 }

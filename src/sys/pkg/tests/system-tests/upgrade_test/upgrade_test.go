@@ -95,12 +95,12 @@ func doTest(ctx context.Context) error {
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
-	downgradeBuild, err := c.getDowngradeBuild(ctx, outputDir)
+	downgradeBuild, err := c.getDowngradeBuild(ctx, deviceClient, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get downgrade build: %w", err)
 	}
 
-	upgradeBuild, err := c.getUpgradeBuild(ctx, outputDir)
+	upgradeBuild, err := c.getUpgradeBuild(ctx, deviceClient, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get upgrade build: %w", err)
 	}

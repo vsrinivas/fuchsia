@@ -13,6 +13,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/avb"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/device"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/omaha"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/updater"
@@ -80,11 +81,16 @@ func (c *InstallerConfig) ZBITool() (*zbi.ZBITool, error) {
 	return c.zbiTool, nil
 }
 
-func (c *InstallerConfig) ConfigureBuild(ctx context.Context, build artifacts.Build) (artifacts.Build, error) {
+func (c *InstallerConfig) ConfigureBuild(ctx context.Context, device *device.Client, build artifacts.Build) (artifacts.Build, error) {
 	switch c.installerMode {
 	case Omaha:
 		if c.omahaServer == nil {
-			omahaServer, err := omaha.NewOmahaServer(ctx, c.omahaAddress, "localhost")
+			localHostname, err := device.GetSSHConnection(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			omahaServer, err := omaha.NewOmahaServer(ctx, c.omahaAddress, localHostname)
 			if err != nil {
 				return nil, err
 			}
