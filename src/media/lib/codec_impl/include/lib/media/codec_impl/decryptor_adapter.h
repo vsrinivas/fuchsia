@@ -70,8 +70,6 @@ class DecryptorAdapter : public CodecAdapter {
 
  protected:
   struct EncryptionParams {
-    // TODO(38438): Remove mode once implementations use scheme
-    std::string mode;
     std::string scheme;
     std::vector<uint8_t> key_id;
     std::vector<uint8_t> init_vector;
