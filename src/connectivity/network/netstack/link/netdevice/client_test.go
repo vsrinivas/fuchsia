@@ -50,6 +50,9 @@ func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.Li
 	}
 }
 
+func (*dispatcherChan) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
+}
+
 func vectorizedViewComparer(x, y buffer.VectorisedView) bool {
 	return bytes.Equal(x.ToView(), y.ToView())
 }

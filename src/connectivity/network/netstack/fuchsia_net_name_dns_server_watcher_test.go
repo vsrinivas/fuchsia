@@ -60,7 +60,7 @@ func makeDnsServer(address net.SocketAddress, source name.DnsServerSource) name.
 }
 
 func createCollection() (*dnsServerWatcherCollection, *dns.ServersConfig) {
-	serverConfig := dns.MakeServersConfig()
+	serverConfig := dns.MakeServersConfig(&tcpip.StdClock{})
 	watcherCollection := newDnsServerWatcherCollection(serverConfig.GetServersCache)
 	serverConfig.SetOnServersChanged(watcherCollection.NotifyServersChanged)
 	return watcherCollection, &serverConfig

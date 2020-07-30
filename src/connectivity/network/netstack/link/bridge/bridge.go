@@ -40,6 +40,7 @@ type Endpoint struct {
 // header lengths, and minimum set of the capabilities. This function takes
 // ownership of `links`.
 func New(links []*BridgeableEndpoint) *Endpoint {
+	// TODO(57022): Make sure links are all using the same kind of link.
 	sort.Slice(links, func(i, j int) bool {
 		return strings.Compare(string(links[i].LinkAddress()), string(links[j].LinkAddress())) > 0
 	})
@@ -254,5 +255,27 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 func (ep *Endpoint) Wait() {
 	for _, e := range ep.links {
 		e.Wait()
+	}
+}
+
+// ARPHardwareType implements stack.LinkEndpoint.
+func (e *Endpoint) ARPHardwareType() header.ARPHardwareType {
+	// Use the first bridged endpoint.
+	for _, link := range e.links {
+		return link.ARPHardwareType()
+	}
+
+	return header.ARPHardwareNone
+}
+
+// AddHeader implements stack.LinkEndpoint.
+func (e *Endpoint) AddHeader(local, remote tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+	// Use the first bridged endpoint.
+	for _, link := range e.links {
+		if len(local) == 0 {
+			local = e.LinkAddress()
+		}
+		link.AddHeader(local, remote, protocol, pkt)
+		return
 	}
 }

@@ -144,6 +144,9 @@ func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ t
 	t.pkt = pkt
 }
 
+func (*testNetworkDispatcher) DeliverOutboundPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
+}
+
 type channelEndpoint struct {
 	stack.LinkEndpoint
 	linkAddr tcpip.LinkAddress
@@ -797,6 +800,13 @@ func (*endpoint) MaxHeaderLength() uint16 {
 
 func (e *endpoint) LinkAddress() tcpip.LinkAddress {
 	return e.linkAddr
+}
+
+func (*endpoint) ARPHardwareType() header.ARPHardwareType {
+	return header.ARPHardwareEther
+}
+
+func (*endpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
 func makeStackWithEndpoint(ep stack.LinkEndpoint, protocol stack.NetworkProtocol, addr tcpip.Address) (*stack.Stack, error) {

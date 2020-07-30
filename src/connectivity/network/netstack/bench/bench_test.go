@@ -48,6 +48,9 @@ func (*nullEndpoint) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
 func (*nullEndpoint) Attach(dispatcher stack.NetworkDispatcher) {}
 func (*nullEndpoint) IsAttached() bool                          { return false }
 func (*nullEndpoint) Wait()                                     {}
+func (*nullEndpoint) ARPHardwareType() header.ARPHardwareType   { return header.ARPHardwareNone }
+func (*nullEndpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
+}
 
 type nullChecksumOffloadEndpoint struct {
 	nullEndpoint

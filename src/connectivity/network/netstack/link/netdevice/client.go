@@ -286,6 +286,13 @@ func (c *Client) Wait() {
 	c.dispatcherWg.Wait()
 }
 
+func (*Client) ARPHardwareType() header.ARPHardwareType {
+	return header.ARPHardwareNone
+}
+
+func (*Client) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
+}
+
 func (c *Client) GSOMaxSize() uint32 {
 	// There's no limit on how much data we can take in a single software GSO
 	// write.

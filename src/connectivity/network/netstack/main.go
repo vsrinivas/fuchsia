@@ -287,7 +287,7 @@ func Main() {
 	appCtx.ConnectToEnvService(req)
 
 	ns := &Netstack{
-		dnsConfig:    dns.MakeServersConfig(),
+		dnsConfig:    dns.MakeServersConfig(stk.Clock()),
 		nameProvider: np,
 		stack:        stk,
 	}

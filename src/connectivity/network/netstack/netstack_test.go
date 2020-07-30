@@ -785,6 +785,7 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispatcher) *Netstack {
 	t.Helper()
 
+	// TODO(57075): Use a fake clock
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocol{
 			arp.NewProtocol(),
@@ -801,7 +802,7 @@ func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispa
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with
 		// DNS configuration.
-		dnsConfig: dns.MakeServersConfig(),
+		dnsConfig: dns.MakeServersConfig(stk.Clock()),
 	}
 	t.Cleanup(func() {
 		for _, nic := range ns.stack.NICInfo() {

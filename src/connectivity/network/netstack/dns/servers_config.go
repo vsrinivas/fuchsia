@@ -24,10 +24,10 @@ const (
 
 // expiringDNSServerState is the state for an expiring DNS server.
 type expiringDNSServerState struct {
-	// Timer to invalidate a DNS server.
+	// Invalidates a DNS server.
 	//
 	// May not be nil.
-	timer *tcpip.CancellableTimer
+	job *tcpip.Job
 }
 
 /// Server is a DNS server with an address and configuration source.
@@ -40,6 +40,8 @@ type OnServersConfigChangedCallback func()
 
 // ServersConfig holds DNS resolvers' DNS servers configuration.
 type ServersConfig struct {
+	clock tcpip.Clock
+
 	mu struct {
 		sync.RWMutex
 
@@ -72,8 +74,10 @@ type ServersConfig struct {
 	}
 }
 
-func MakeServersConfig() ServersConfig {
-	var d ServersConfig
+func MakeServersConfig(clock tcpip.Clock) ServersConfig {
+	d := ServersConfig{
+		clock: clock,
+	}
 	d.mu.ndpServers = make(map[tcpip.FullAddress]expiringDNSServerState)
 	d.mu.dhcpServers = make(map[tcpip.NICID]*[]tcpip.Address)
 	return d
@@ -260,7 +264,7 @@ func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 				// We do not yet have the server and it has a non-zero lifetime.
 				s := s
 				state = expiringDNSServerState{
-					timer: tcpip.NewCancellableTimer(&d.mu, func() {
+					job: tcpip.NewJob(d.clock, &d.mu, func() {
 						// Clear the cache of DNS servers.
 						d.mu.serversCache = nil
 						delete(d.mu.ndpServers, s)
@@ -270,10 +274,10 @@ func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 			}
 
 			// Refresh s's lifetime.
-			state.timer.StopLocked()
+			state.job.Cancel()
 			if lifetime > 0 {
 				// s is valid for a finite lifetime.
-				state.timer.Reset(lifetime)
+				state.job.Schedule(lifetime)
 			}
 
 			d.mu.ndpServers[s] = state
@@ -281,7 +285,7 @@ func (d *ServersConfig) UpdateNdpServers(servers []tcpip.FullAddress, lifetime t
 			changed = true
 
 			// We have the server and it is no longer to be used.
-			state.timer.StopLocked()
+			state.job.Cancel()
 			delete(d.mu.ndpServers, s)
 			_ = syslog.InfoTf(syslogTagName, "immediately expired NDP learned DNS server %+v", s)
 		}

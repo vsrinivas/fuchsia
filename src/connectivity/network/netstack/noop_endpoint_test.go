@@ -9,6 +9,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -66,6 +67,13 @@ func (ep *noopEndpoint) Wait() {
 	if ch := ep.attached; ch != nil {
 		<-ch
 	}
+}
+
+func (ep *noopEndpoint) ARPHardwareType() header.ARPHardwareType {
+	return header.ARPHardwareNone
+}
+
+func (*noopEndpoint) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
 var _ link.Controller = (*noopController)(nil)

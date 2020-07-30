@@ -23,6 +23,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
@@ -309,6 +310,15 @@ func (c *Client) IsAttached() bool {
 // goroutine(s) spawned in Attach occurs.
 func (c *Client) Wait() {
 	c.wg.Wait()
+}
+
+// ARPHardwareType implements stack.LinkEndpoint.
+func (*Client) ARPHardwareType() header.ARPHardwareType {
+	return header.ARPHardwareNone
+}
+
+// AddHeader implements stack.LinkEndpoint.
+func (*Client) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
 func (c *Client) GSOMaxSize() uint32 {

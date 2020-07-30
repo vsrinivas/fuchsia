@@ -101,6 +101,8 @@ func (e *endpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
+func (*endpoint) ARPHardwareType() header.ARPHardwareType { return header.ARPHardwareNone }
+
 func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
 	if fn := e.onWritePacket; fn != nil {
 		p := fn(pkt)

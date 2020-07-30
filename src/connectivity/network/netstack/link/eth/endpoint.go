@@ -5,6 +5,8 @@
 package eth
 
 import (
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth/utils"
+
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/nested"
@@ -27,29 +29,13 @@ func (e *endpoint) MaxHeaderLength() uint16 {
 	return header.EthernetMinimumSize
 }
 
-func (e *endpoint) makeEthernetFields(r *stack.Route, protocol tcpip.NetworkProtocolNumber) header.EthernetFields {
-	hdr := header.EthernetFields{
-		SrcAddr: r.LocalLinkAddress,
-		DstAddr: r.RemoteLinkAddress,
-		Type:    protocol,
-	}
-	// Preserve the src address if it's set in the route.
-	if len(hdr.SrcAddr) == 0 {
-		hdr.SrcAddr = e.LinkAddress()
-	}
-	return hdr
-}
-
 func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) *tcpip.Error {
-	fields := e.makeEthernetFields(r, protocol)
-	h := pkt.Header.Prepend(header.EthernetMinimumSize)
-	header.Ethernet(h).Encode(&fields)
-	pkt.LinkHeader = h
+	e.AddHeader(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, pkt)
 	return e.Endpoint.WritePacket(r, gso, protocol, pkt)
 }
 
 func (e *endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
-	fields := e.makeEthernetFields(r, protocol)
+	fields := utils.MakeEthernetFields(e.LinkAddress(), r.LocalLinkAddress, r.RemoteLinkAddress, protocol)
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
 		h := pkt.Header.Prepend(header.EthernetMinimumSize)
 		header.Ethernet(h).Encode(&fields)
@@ -77,6 +63,14 @@ func (e *endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 		protocol = eth.Type()
 	}
 	e.Endpoint.DeliverNetworkPacket(dstLinkAddr, srcLinkAddr, protocol, pkt)
+}
+
+func (*endpoint) ARPHardwareType() header.ARPHardwareType {
+	return header.ARPHardwareEther
+}
+
+func (e *endpoint) AddHeader(local, remote tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+	utils.AddEthernetHeader(e.LinkAddress(), local, remote, protocol, pkt)
 }
 
 func NewLinkEndpoint(ep stack.LinkEndpoint) *endpoint {
