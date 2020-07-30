@@ -81,20 +81,20 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
     usb_request_t* current_req __TA_GUARDED(lock) = nullptr;
 
     // Values for current USB request
-    uint32_t req_offset;
-    uint32_t req_xfersize;
-    uint32_t req_length;
-    uint32_t phys;
+    uint32_t req_offset = 0;
+    uint32_t req_xfersize = 0;
+    uint32_t req_length = 0;
+    uint32_t phys = 0;
 
     // Used for synchronizing endpoint state and ep specific hardware registers.
     // This should be acquired before Dwc2.lock_ if acquiring both locks.
     fbl::Mutex lock;
 
-    uint16_t max_packet_size;
-    uint8_t ep_num;
-    bool enabled;
+    uint16_t max_packet_size = 0;
+    uint8_t ep_num = 0;
+    bool enabled = false;
     // Endpoint type: control, bulk, interrupt or isochronous
-    uint8_t type;
+    uint8_t type = 0;
   };
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Dwc2);
