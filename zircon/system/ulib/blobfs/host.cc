@@ -84,7 +84,7 @@ zx_status_t buffer_create_merkle(const FileMapping& mapping, MerkleInfo* out_inf
                                           &merkle_size, &out_info->digest)) != ZX_OK) {
     return status;
   }
-  out_info->merkle.reset(merkle_tree.release(), merkle_size);
+  out_info->merkle = std::move(merkle_tree);
   out_info->length = mapping.length();
   return ZX_OK;
 }
@@ -192,7 +192,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
                           kBlobfsBlockSize * inode->block_count);
   }
 
-  if ((status = bs->WriteData(inode, info.merkle.data(), data)) != ZX_OK) {
+  if ((status = bs->WriteData(inode, info.merkle.get(), data)) != ZX_OK) {
     return status;
   }
 

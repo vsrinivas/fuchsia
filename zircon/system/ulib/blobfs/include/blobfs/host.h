@@ -45,7 +45,7 @@ namespace blobfs {
 struct MerkleInfo {
   // Merkle-Tree related information.
   digest::Digest digest;
-  fbl::Array<uint8_t> merkle;
+  std::unique_ptr<uint8_t[]> merkle;
 
   // The path which generated this file, and a cached file length.
   fbl::String path;
