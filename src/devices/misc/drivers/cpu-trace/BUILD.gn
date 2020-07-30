@@ -61,7 +61,7 @@ driver_module("cpu-trace") {
 
 group("tests") {
   testonly = true
-  deps = [ ":perf-mon-tests" ]
+  deps = [ ":perf-mon-tests-package" ]
 }
 
 test("perf-mon-tests") {

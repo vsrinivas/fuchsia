@@ -12,7 +12,6 @@ group("tests") {
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",
     "//src/devices/block/drivers/ftl/test:ftl-package",
     "//src/devices/block/lib/scsi/test:scsilib-disk-test-package",
-    "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-package",
     "//src/devices/nand/drivers/broker/test:nand-broker-package",
     "//src/devices/rtc/lib/rtc/test:rtc-lib-package",
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
