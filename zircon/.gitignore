@@ -1,3 +1,6 @@
 /prebuilt/downloads/
 /prebuilt/config.gni
 /public/tool/
+/third_party/lz4
+/third_party/zstd
+/third_party/rapidjson
