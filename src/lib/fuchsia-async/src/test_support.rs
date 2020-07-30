@@ -2,9 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::TimeoutExt;
 use futures::{prelude::*, stream};
 #[cfg(target_os = "fuchsia")]
 use std::task::Poll;
+use std::time::Duration;
+
+// Apply the timeout from config to test
+// Ideally this would be a function like Config::with_timeout, but we need to handle Send and !Send
+// and it's likely better not to have to duplicate this code.
+macro_rules! apply_timeout {
+    ($config:ident, $test:ident) => {{
+        let timeout = $config.timeout;
+        let test = $test;
+        move |run| {
+            let test = test(run);
+            async move {
+                if let Some(timeout) = timeout {
+                    test.on_timeout(timeout, || panic!("timeout on run {}", run)).await
+                } else {
+                    test.await
+                }
+            }
+        }
+    }};
+}
 
 /// Defines how to compose multiple test runs for a kind of test result.
 pub trait TestResult: Sized {
@@ -44,7 +66,7 @@ impl<E: 'static> TestResult for Result<(), E> {
         executor.run_singlethreaded(
             stream::iter(0..cfg.repeat_count)
                 .map(Ok)
-                .try_for_each_concurrent(cfg.max_concurrency, test),
+                .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
         )
     }
 
@@ -57,7 +79,7 @@ impl<E: 'static> TestResult for Result<(), E> {
         executor.run_until_stalled(
             &mut stream::iter(0..cfg.repeat_count)
                 .map(Ok)
-                .try_for_each_concurrent(cfg.max_concurrency, test),
+                .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
         )
     }
 }
@@ -72,7 +94,7 @@ impl<E: 'static + Send> MultithreadedTestResult for Result<(), E> {
         executor.run(
             stream::iter(0..cfg.repeat_count)
                 .map(Ok)
-                .try_for_each_concurrent(cfg.max_concurrency, test),
+                .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
             threads,
         )
     }
@@ -85,7 +107,8 @@ impl TestResult for () {
         cfg: Config,
     ) -> Self {
         executor.run_singlethreaded(
-            stream::iter(0..cfg.repeat_count).for_each_concurrent(cfg.max_concurrency, test),
+            stream::iter(0..cfg.repeat_count)
+                .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
         )
     }
 
@@ -103,7 +126,7 @@ impl TestResult for () {
         } else {
             executor.run_until_stalled(
                 &mut stream::iter(0..cfg.repeat_count)
-                    .for_each_concurrent(cfg.max_concurrency, test),
+                    .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
             )
         }
     }
@@ -117,7 +140,8 @@ impl MultithreadedTestResult for () {
         cfg: Config,
     ) -> Self {
         executor.run(
-            stream::iter(0..cfg.repeat_count).for_each_concurrent(cfg.max_concurrency, test),
+            stream::iter(0..cfg.repeat_count)
+                .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
             threads,
         )
     }
@@ -127,15 +151,21 @@ impl MultithreadedTestResult for () {
 pub struct Config {
     repeat_count: usize,
     max_concurrency: usize,
+    timeout: Option<Duration>,
+}
+
+fn env_var<T: std::str::FromStr>(name: &str, default: T) -> T {
+    std::env::var(name).unwrap_or_default().parse().unwrap_or(default)
 }
 
 impl Config {
     fn get() -> Self {
-        let repeat_count =
-            std::env::var("FASYNC_TEST_REPEAT_COUNT").unwrap_or_default().parse().unwrap_or(1);
-        let max_concurrency =
-            std::env::var("FASYNC_TEST_MAX_CONCURRENCY").unwrap_or_default().parse().unwrap_or(0);
-        Self { repeat_count, max_concurrency }
+        let repeat_count = env_var("FASYNC_TEST_REPEAT_COUNT", 1);
+        let max_concurrency = env_var("FASYNC_TEST_MAX_CONCURRENCY", 0);
+        let timeout_seconds = env_var("FASYNC_TEST_TIMEOUT_SECONDS", 0);
+        let timeout =
+            if timeout_seconds == 0 { None } else { Some(Duration::from_secs(timeout_seconds)) };
+        Self { repeat_count, max_concurrency, timeout }
     }
 }
 
@@ -182,6 +212,7 @@ mod tests {
     use std::collections::HashSet;
     use std::rc::Rc;
     use std::sync::Arc;
+    use std::time::Duration;
 
     #[test]
     fn run_singlethreaded() {
@@ -196,9 +227,21 @@ mod tests {
                     assert!(pending_runs_child.lock().await.remove(&i));
                 }
             },
-            Config { repeat_count: REPEAT_COUNT, max_concurrency: 0 },
+            Config { repeat_count: REPEAT_COUNT, max_concurrency: 0, timeout: None },
         );
         assert!(pending_runs.try_lock().unwrap().is_empty());
+    }
+
+    #[test]
+    #[should_panic]
+    fn run_singlethreaded_with_timeout() {
+        TestResult::run_singlethreaded(
+            &mut crate::Executor::new().unwrap(),
+            move |_| async move {
+                futures::future::pending::<()>().await;
+            },
+            Config { repeat_count: 1, max_concurrency: 0, timeout: Some(Duration::from_millis(1)) },
+        );
     }
 
     #[test]
@@ -215,7 +258,7 @@ mod tests {
                     assert!(pending_runs_child.lock().await.remove(&i));
                 }
             },
-            Config { repeat_count: REPEAT_COUNT, max_concurrency: 1 },
+            Config { repeat_count: REPEAT_COUNT, max_concurrency: 1, timeout: None },
         ) {
             std::task::Poll::Ready(()) => (),
             _ => panic!("Expected everything stalled"),
@@ -239,8 +282,22 @@ mod tests {
                 }
             },
             THREADS,
-            Config { repeat_count: REPEAT_COUNT, max_concurrency: 0 },
+            Config { repeat_count: REPEAT_COUNT, max_concurrency: 0, timeout: None },
         );
         assert!(pending_runs.try_lock().unwrap().is_empty());
+    }
+
+    #[test]
+    #[should_panic]
+    fn run_with_timeout() {
+        const THREADS: usize = 4;
+        MultithreadedTestResult::run(
+            &mut crate::Executor::new().unwrap(),
+            move |_| async move {
+                futures::future::pending::<()>().await;
+            },
+            THREADS,
+            Config { repeat_count: 1, max_concurrency: 0, timeout: Some(Duration::from_millis(1)) },
+        );
     }
 }

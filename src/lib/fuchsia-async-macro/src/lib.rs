@@ -219,8 +219,10 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Tests written using this macro can be run repeatedly.
 /// The environment variable `FASYNC_TEST_REPEAT_COUNT` sets the number of repetitions each test
 /// will be run for, while the environment variable `FASYNC_TEST_MAX_CONCURRENCY` bounds the
-/// maximum concurrent invocations of each test. If `FASYNC_TEST_MAX_CONCURRENCY` is set to 0 (the default)
-/// no bounds to concurrency are applied.
+/// maximum concurrent invocations of each test. If `FASYNC_TEST_MAX_CONCURRENCY` is set to 0 (the
+/// default) no bounds to concurrency are applied.
+/// If FASYNC_TEST_TIMEOUT_SECONDS is set, it specifies the maximum duration for one repetition of
+/// a test.
 ///
 /// ```
 /// #[fuchsia_async::run_singlethreaded(test)]
@@ -274,8 +276,10 @@ impl Parse for RunAttributes {
 /// Tests written using this macro can be run repeatedly.
 /// The environment variable `FASYNC_TEST_REPEAT_COUNT` sets the number of repetitions each test
 /// will be run for, while the environment variable `FASYNC_TEST_MAX_CONCURRENCY` bounds the
-/// maximum concurrent invocations of each test. If `FASYNC_TEST_MAX_CONCURRENCY` is set to 0 (the default)
-/// no bounds to concurrency are applied.
+/// maximum concurrent invocations of each test. If `FASYNC_TEST_MAX_CONCURRENCY` is set to 0 (the
+/// default) no bounds to concurrency are applied.
+/// If FASYNC_TEST_TIMEOUT_SECONDS is set, it specifies the maximum duration for one repetition of
+/// a test.
 ///
 /// ```
 /// #[fuchsia_async::run(4, test)]
