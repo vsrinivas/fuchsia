@@ -85,7 +85,13 @@ std::string SortLog(const std::string& log) {
       messages.begin(), messages.end(), [](const std::string_view lhs, const std::string_view rhs) {
         const std::string_view lhs_timestamp = lhs.substr(lhs.find('['), lhs.find(']'));
         const std::string_view rhs_timestamp = rhs.substr(rhs.find('['), rhs.find(']'));
-        // TODO(57241): sort correctly timestamps beyond 99999.
+
+        // The timestamp format is "%05d.%03d" so longer strings mean larger timestamps and then we
+        // only need to compare the strings if the length is the same.
+        if (lhs_timestamp.size() != rhs_timestamp.size()) {
+          return lhs_timestamp.size() < rhs_timestamp.size();
+        }
+
         return lhs_timestamp < rhs_timestamp;
       });
 

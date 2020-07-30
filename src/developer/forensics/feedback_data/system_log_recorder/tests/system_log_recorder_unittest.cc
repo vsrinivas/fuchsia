@@ -637,6 +637,38 @@ message
 )");
 }
 
+TEST(ReaderTest, SortsMessagesDifferentTimestampLength) {
+  // Sort correctly when the timestamp has different length.
+  files::ScopedTempDir temp_dir;
+  const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/1);
+
+  const std::string msg_0 = "[100000000.000][07559][07687][] INFO: line 0";
+  const std::string msg_1 = "[20000000.000][07559][07687][] INFO: line 1";
+  const std::string msg_2 = "[3000000.000][07559][07687][] INFO: line 2";
+  const std::string msg_3 = "[400000.000][07559][07687][] INFO: line 3";
+  const std::string msg_4 = "[50000.000][07559][07687][] INFO: line 4";
+
+  using logs = std::vector<std::string>;
+  // The logs expect end-of-line at the end of file.
+  const std::string input_message =
+      fxl::JoinStrings((logs){msg_0, msg_1, msg_2, msg_3, msg_4}, "\n") + "\n";
+  const std::string output_message =
+      fxl::JoinStrings((logs){msg_4, msg_3, msg_2, msg_1, msg_0}, "\n") + "\n";
+
+  EXPECT_TRUE(files::WriteFile(file_paths.front(), input_message));
+
+  const std::string output_path = files::JoinPath(temp_dir.path(), "output.txt");
+  float compression_ratio;
+  IdentityDecoder decoder;
+
+  ASSERT_TRUE(Concatenate(file_paths, &decoder, output_path, &compression_ratio));
+
+  std::string contents;
+  ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
+
+  EXPECT_EQ(contents, output_message);
+}
+
 TEST(ReaderTest, SortsMessagesMultipleFiles) {
   files::ScopedTempDir temp_dir;
   const std::vector<const std::string> file_paths = MakeLogFilePaths(temp_dir, /*num_files=*/8);
