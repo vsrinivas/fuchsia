@@ -66,8 +66,8 @@ zx::thread GetThread(const zx::exception& exception) {
 
 }  // namespace
 
-::fit::promise<zx::vmo> GenerateMinidumpVMO(const zx::exception& exception) {
-  return ::fit::make_promise([&exception]() -> ::fit::result<zx::vmo> {
+::fit::promise<zx::vmo> GenerateMinidumpVMO(zx::exception exception) {
+  return ::fit::make_promise([exception = std::move(exception)]() -> ::fit::result<zx::vmo> {
     zx::process process = GetProcess(exception);
     if (!process.is_valid())
       return ::fit::error();

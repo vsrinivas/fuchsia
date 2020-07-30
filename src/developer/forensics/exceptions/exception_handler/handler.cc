@@ -34,18 +34,13 @@ using fuchsia::sys::internal::SourceIdentity;
     FX_LOGS(ERROR) << "Failed to get process koid";
   }
 
-  // Put the exception on the heap so it can be used by the promises.
-  auto exception_ptr = std::make_shared<zx::exception>(std::move(exception));
-
   return ::fit::join_promises(
              GetComponentSourceIdentity(dispatcher, services,
                                         fit::Timeout(component_lookup_timeout), process_koid),
-             GenerateMinidumpVMO(*exception_ptr))
-      .and_then([process_name, exception_ptr](
+             // We only need the exception to generate the minidump – after that we can release it.
+             GenerateMinidumpVMO(std::move(exception)))
+      .and_then([process_name](
                     std::tuple<::fit::result<SourceIdentity>, ::fit::result<zx::vmo>>& results) {
-        // Reset the exception after having generated the minidump.
-        exception_ptr->reset();
-
         SourceIdentity component_info;
         if (std::get<0>(results).is_ok()) {
           component_info = std::get<0>(results).take_value();

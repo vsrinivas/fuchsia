@@ -18,7 +18,7 @@ namespace exceptions {
 // Mostly exposed for testing purposes, but valid as a standalone function.
 zx::vmo GenerateVMOFromStringFile(const crashpad::StringFile& string_file);
 
-::fit::promise<zx::vmo> GenerateMinidumpVMO(const zx::exception& exception);
+::fit::promise<zx::vmo> GenerateMinidumpVMO(zx::exception exception);
 
 }  // namespace exceptions
 }  // namespace forensics

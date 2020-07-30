@@ -21,10 +21,10 @@ class MinidumpTest : public UnitTestFixture {
  public:
   MinidumpTest() : executor_(dispatcher()) {}
 
-  zx::vmo GenerateMinidump(const zx::exception& exception) {
+  zx::vmo GenerateMinidump(zx::exception exception) {
     zx::vmo minidump;
     executor_.schedule_task(
-        GenerateMinidumpVMO(exception).then([&minidump](::fit::result<zx::vmo>& result) {
+        GenerateMinidumpVMO(std::move(exception)).then([&minidump](::fit::result<zx::vmo>& result) {
           if (result.is_ok()) {
             minidump = result.take_value();
           }
@@ -67,7 +67,7 @@ TEST_F(MinidumpTest, GenerateMinidump) {
     return;
   }
 
-  zx::vmo minidump_vmo = GenerateMinidump(ec.exception);
+  zx::vmo minidump_vmo = GenerateMinidump(std::move(ec.exception));
   ASSERT_TRUE(minidump_vmo.is_valid());
 
   uint64_t vmo_size;
