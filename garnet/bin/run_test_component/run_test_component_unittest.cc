@@ -34,7 +34,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(0u, result.matching_urls.size());
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -48,7 +48,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[3], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -62,7 +62,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -77,7 +77,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[5], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(30, result.timeout);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
     EXPECT_FALSE(result.restrict_logs);
   }
 
@@ -183,7 +183,7 @@ TEST(RunTest, ParseArgs) {
 
   {
     const char* argv[] = {kBinName,
-                          "--min-severity-logs=WARN",
+                          "--min-severity-logs=INFO",
                           "--restrict-logs=true",
                           "--realm-label=kittens",
                           component_url,
@@ -197,7 +197,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[5], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[6], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
-    EXPECT_EQ(FX_LOG_WARNING, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
     EXPECT_TRUE(result.restrict_logs);
   }
 
@@ -239,7 +239,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[3], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[4], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
     EXPECT_EQ(FX_LOG_ERROR, result.max_log_severity);
     EXPECT_FALSE(result.restrict_logs);
   }
@@ -270,7 +270,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(expected_urls.size(), result.matching_urls.size());
     EXPECT_THAT(result.matching_urls, ::testing::UnorderedElementsAreArray(expected_urls));
     EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
     EXPECT_FALSE(result.restrict_logs);
   }
 
@@ -286,7 +286,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(result.matching_urls[0], expected_url);
     EXPECT_EQ(expected_url, result.launch_info.url);
     EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
     EXPECT_FALSE(result.restrict_logs);
   }
 }

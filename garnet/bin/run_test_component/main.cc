@@ -90,9 +90,8 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
        This is right now a placeholder and would be enabled in future. Allowed values:
        TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
 
-       By default when installing log listener, all logs more than severity INFO are collected.
-       To enable verbose logs or to filter by higher severity please pass severity:
-       TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
+       By default when installing log listener, all logs are collected. To filter 
+       by higher severity please pass severity: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
        example: run-test-component --min-severity-logs=WARN <url>
 )");
 }
