@@ -4,6 +4,7 @@
 
 use {
     crate::diagnostics::types::SnapshotInspectArgs, anyhow::Error,
+    fidl_fuchsia_diagnostics::ArchiveAccessorMarker, fuchsia_component::client,
     fuchsia_inspect_contrib::reader::ArchiveReader, serde_json::Value,
 };
 
@@ -17,8 +18,12 @@ impl DiagnosticsFacade {
     }
 
     pub async fn snapshot_inspect(&self, args: SnapshotInspectArgs) -> Result<Value, Error> {
+        let service_path = format!("/svc/{}", args.service_name);
+        let proxy =
+            client::connect_to_service_at_path::<ArchiveAccessorMarker>(&service_path).unwrap();
         ArchiveReader::new()
             .retry_if_empty(false)
+            .with_archive(proxy)
             .add_selectors(args.selectors.into_iter())
             .get_raw_json()
             .await

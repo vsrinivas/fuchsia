@@ -15,6 +15,7 @@ pub enum DiagnosticsMethod {
 #[derive(Serialize, Deserialize)]
 pub struct SnapshotInspectArgs {
     pub selectors: Vec<String>,
+    pub service_name: String,
 }
 
 impl std::str::FromStr for DiagnosticsMethod {

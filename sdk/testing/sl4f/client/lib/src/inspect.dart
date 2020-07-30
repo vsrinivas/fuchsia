@@ -8,6 +8,23 @@ import 'package:logging/logging.dart';
 
 import 'sl4f_client.dart';
 
+enum InspectPipeline {
+  none,
+  feedback,
+}
+
+extension ServiceNameExtension on InspectPipeline {
+  String get serviceName {
+    switch (this) {
+      case InspectPipeline.none:
+        return 'fuchsia.diagnostics.ArchiveAccessor';
+      case InspectPipeline.feedback:
+        return 'fuchsia.diagnostics.FeedbackArchiveAccessor';
+    }
+    return '';
+  }
+}
+
 class Inspect {
   final Sl4f sl4f;
 
@@ -27,10 +44,14 @@ class Inspect {
   /// See: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/fidl/fuchsia.diagnostics/selector.fidl
   ///
   /// Returns an empty list if nothing is found.
-  Future<List<Map<String, dynamic>>> snapshot(List<String> selectors) async {
+  Future<List<Map<String, dynamic>>> snapshot(
+    List<String> selectors, {
+    InspectPipeline pipeline = InspectPipeline.none,
+  }) async {
     final hierarchyList =
         await sl4f.request('diagnostics_facade.SnapshotInspect', {
               'selectors': selectors,
+              'service_name': pipeline.serviceName,
             }) ??
             [];
     return hierarchyList.cast<Map<String, dynamic>>();
@@ -39,16 +60,24 @@ class Inspect {
   /// Gets the inspect data for all components currently running in the system.
   ///
   /// Returns an empty list if nothing is found.
-  Future<List<Map<String, dynamic>>> snapshotAll() async {
-    return await snapshot([]);
+  Future<List<Map<String, dynamic>>> snapshotAll({
+    InspectPipeline pipeline = InspectPipeline.none,
+  }) async {
+    return await snapshot([], pipeline: pipeline);
   }
 
   /// Gets the payload of the first found hierarchy matching the given selectors
   /// under root.
   ///
   /// Returns null if no hierarchy was found.
-  Future<Map<String, dynamic>> snapshotRoot(String componentSelector) async {
-    final hierarchies = await snapshot(['$componentSelector:root']);
+  Future<Map<String, dynamic>> snapshotRoot(
+    String componentSelector, {
+    InspectPipeline pipeline = InspectPipeline.none,
+  }) async {
+    final hierarchies = await snapshot(
+      ['$componentSelector:root'],
+      pipeline: pipeline,
+    );
     if (hierarchies.isEmpty) {
       return null;
     }

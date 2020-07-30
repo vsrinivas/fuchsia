@@ -31,6 +31,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal-rustc",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera-rustc",

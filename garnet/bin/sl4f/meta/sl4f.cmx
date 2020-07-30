@@ -31,6 +31,7 @@
             "fuchsia.developer.tiles.Controller",
             "fuchsia.device.NameProvider",
             "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
             "fuchsia.factory.AlphaFactoryStoreProvider",
             "fuchsia.factory.CastCredentialsFactoryStoreProvider",
             "fuchsia.factory.MiscFactoryStoreProvider",
