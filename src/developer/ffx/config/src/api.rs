@@ -4,12 +4,9 @@
 
 use {anyhow::Result, ffx_config_plugin_args::ConfigLevel, serde_json::Value, std::fmt};
 
-pub trait ReadConfig {
-    fn get(&self, key: &str) -> Option<Value>;
+pub trait ReadConfig: fmt::Display {
+    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value>;
 }
-
-// Work around because you cannot use multiple non-auto traits as trait objects.
-pub trait ReadDisplayConfig: ReadConfig + fmt::Display {}
 
 pub trait WriteConfig {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()>;

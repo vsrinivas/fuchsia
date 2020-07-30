@@ -4,9 +4,9 @@
 #[cfg(target_os = "linux")]
 pub(crate) mod imp {
     use {
-        crate::constants::{LOG_DIR, LOG_ENABLED, PACKAGE_REPO, SSH_PORT, SSH_PRIV, SSH_PUB},
+        crate::constants::{SSH_PRIV, SSH_PUB},
         crate::heuristic_config::HeuristicFn,
-        crate::heuristic_fns::{find_package_repo, find_ssh_keys},
+        crate::heuristic_fns::find_ssh_keys,
         std::collections::HashMap,
     };
 
@@ -14,15 +14,6 @@ pub(crate) mod imp {
         let mut heuristics = HashMap::<&str, HeuristicFn>::new();
         heuristics.insert(SSH_PUB, find_ssh_keys);
         heuristics.insert(SSH_PRIV, find_ssh_keys);
-        heuristics.insert(PACKAGE_REPO, find_package_repo);
         heuristics
-    }
-
-    pub(crate) fn env_vars() -> HashMap<&'static str, Vec<&'static str>> {
-        let mut environment_variables = HashMap::new();
-        environment_variables.insert(SSH_PORT, vec!["FUCHSIA_SSH_PORT"]);
-        environment_variables.insert(LOG_DIR, vec!["FFX_LOG_DIR", "HOME", "HOMEPATH"]);
-        environment_variables.insert(LOG_ENABLED, vec!["FFX_LOG_ENABLED"]);
-        environment_variables
     }
 }

@@ -8,20 +8,22 @@ use {
     crate::config::Config,
     crate::constants::ENV_FILE,
     crate::environment::Environment,
+    crate::flatten_env_var::flatten_env_var,
     anyhow::{bail, Context, Result},
     ffx_config_plugin_args::ConfigLevel,
     ffx_lib_args::Ffx,
     serde_json::Value,
-    std::{env, fs::File, io::Write, path::PathBuf},
+    std::{convert::identity, env, fs::File, io::Write, path::PathBuf},
 };
 
 mod api;
 mod cache;
 mod config;
 pub mod constants;
-mod env_var_config;
+mod env_var;
 pub mod environment;
 mod file_backed_config;
+mod flatten_env_var;
 mod heuristic_config;
 mod heuristic_fns;
 mod persistent_config;
@@ -37,7 +39,7 @@ mod linux;
 mod not_linux;
 
 pub async fn get_config(name: &str, ffx: Ffx, env: Result<String>) -> Result<Option<Value>> {
-    get_config_with_build_dir(name, &None, ffx, env).await
+    get_config_with_build_dir(name, &None, ffx, env, identity).await
 }
 
 pub async fn get_config_with_build_dir(
@@ -45,26 +47,41 @@ pub async fn get_config_with_build_dir(
     build_dir: &Option<String>,
     ffx: Ffx,
     env: Result<String>,
+    mapper: fn(Option<Value>) -> Option<Value>,
 ) -> Result<Option<Value>> {
     let config = load_config(build_dir, ffx, &env).await?;
     let read_guard = config.read().await;
-    Ok((*read_guard).get(name))
+    Ok((*read_guard).get(name, mapper))
 }
 
 pub async fn get_config_str(name: &str, default: &str, ffx: Ffx, env: Result<String>) -> String {
-    get_config(name, ffx, env)
+    get_config_with_build_dir(name, &None, ffx, env, flatten_env_var)
         .await
         .unwrap_or(Some(Value::String(default.to_string())))
         .map_or(default.to_string(), |v| v.as_str().unwrap_or(default).to_string())
 }
 
+pub async fn try_get_config_str(
+    name: &str,
+    ffx: Ffx,
+    env: Result<String>,
+) -> Result<Option<String>> {
+    Ok(get_config_with_build_dir(name, &None, ffx, env, flatten_env_var)
+        .await?
+        .map(|v| v.as_str().map(|s| s.to_string()))
+        .flatten())
+}
+
 pub async fn get_config_bool(name: &str, default: bool, ffx: Ffx, env: Result<String>) -> bool {
-    get_config(name, ffx, env).await.unwrap_or(Some(Value::Bool(default))).map_or(default, |v| {
-        v.as_bool().unwrap_or(match v {
-            Value::String(s) => s.parse().unwrap_or(default),
-            _ => default,
+    get_config_with_build_dir(name, &None, ffx, env, flatten_env_var)
+        .await
+        .unwrap_or(Some(Value::Bool(default)))
+        .map_or(default, |v| {
+            v.as_bool().unwrap_or(match v {
+                Value::String(s) => s.parse().unwrap_or(default),
+                _ => default,
+            })
         })
-    })
 }
 
 pub async fn set_config(

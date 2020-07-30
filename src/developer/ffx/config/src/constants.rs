@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use std::time::Duration;
 
+pub const HOME: &str = "HOME";
 // Config keys
 pub const LOG_DIR: &str = "log-dir";
 pub const LOG_ENABLED: &str = "log-enabled";

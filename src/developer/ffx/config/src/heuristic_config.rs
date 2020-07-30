@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, ReadDisplayConfig},
+    crate::api::ReadConfig,
     serde_json::Value,
     std::{collections::HashMap, fmt},
 };
@@ -21,7 +21,7 @@ impl<'a> Heuristic<'a> {
 }
 
 impl ReadConfig for Heuristic<'_> {
-    fn get(&self, key: &str) -> Option<Value> {
+    fn get(&self, key: &str, _mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
         self.heuristics.get(key).map(|r| r(key)).flatten()
     }
 }
@@ -44,8 +44,6 @@ impl fmt::Display for Heuristic<'_> {
     }
 }
 
-impl ReadDisplayConfig for Heuristic<'_> {}
-
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 
@@ -53,6 +51,7 @@ impl ReadDisplayConfig for Heuristic<'_> {}
 mod test {
     use super::*;
     use regex::Regex;
+    use std::convert::identity;
 
     fn test_heuristic(key: &str) -> Option<Value> {
         Some(Value::String(key.to_string()))
@@ -68,10 +67,15 @@ mod test {
         let config = Heuristic::new(&heuristics);
 
         let missing_key = "whatever";
-
-        assert_eq!(None, config.get(missing_key));
-        assert_eq!(Some(Value::String(heuristic_key.to_string())), config.get(heuristic_key));
-        assert_eq!(Some(Value::String(heuristic_key_2.to_string())), config.get(heuristic_key_2));
+        assert_eq!(None, config.get(missing_key, identity));
+        assert_eq!(
+            Some(Value::String(heuristic_key.to_string())),
+            config.get(heuristic_key, identity)
+        );
+        assert_eq!(
+            Some(Value::String(heuristic_key_2.to_string())),
+            config.get(heuristic_key_2, identity)
+        );
     }
 
     #[test]

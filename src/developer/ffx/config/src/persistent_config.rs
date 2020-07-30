@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
+    crate::api::{ReadConfig, WriteConfig},
     crate::priority_config::Priority,
     anyhow::{bail, Result},
     ffx_config_plugin_args::ConfigLevel,
@@ -76,8 +76,8 @@ impl Persistent {
 }
 
 impl ReadConfig for Persistent {
-    fn get(&self, key: &str) -> Option<Value> {
-        self.data.get(key)
+    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
+        self.data.get(key, mapper)
     }
 }
 
@@ -86,8 +86,6 @@ impl fmt::Display for Persistent {
         write!(f, "{}", self.data)
     }
 }
-
-impl ReadDisplayConfig for Persistent {}
 
 impl WriteConfig for Persistent {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
@@ -111,6 +109,7 @@ impl WriteConfig for Persistent {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::convert::identity;
     use std::io::{BufReader, BufWriter};
 
     const USER: &'static str = r#"
@@ -140,7 +139,7 @@ mod test {
             Some(BufReader::new(user_file.as_bytes())),
         )?;
 
-        let value = persistent_config.get("name");
+        let value = persistent_config.get("name", identity);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("User")));
 

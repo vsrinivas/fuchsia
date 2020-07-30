@@ -41,6 +41,9 @@ macro_rules! get {
     (str, $key:expr, $default:expr) => {{
         ffx_config::get_config_str($key, $default, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};
+    (str, $key:expr) => {{
+        ffx_config::try_get_config_str($key, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
+    }};
     (bool, $key:expr, $default:expr) => {{
         ffx_config::get_config_bool($key, $default, ffx_config::ffx_cmd!(), ffx_config::ffx_env!())
     }};

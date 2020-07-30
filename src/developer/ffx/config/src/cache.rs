@@ -15,10 +15,10 @@ use {
 };
 
 #[cfg(target_os = "linux")]
-use crate::linux::imp::{env_vars, heuristics};
+use crate::linux::imp::heuristics;
 
 #[cfg(not(target_os = "linux"))]
-use crate::not_linux::imp::{env_vars, heuristics};
+use crate::not_linux::imp::heuristics;
 
 struct CacheItem<'a> {
     created: Instant,
@@ -28,7 +28,6 @@ struct CacheItem<'a> {
 type Cache = RwLock<HashMap<Option<String>, CacheItem<'static>>>;
 
 lazy_static::lazy_static! {
-    static ref ENV_VARS: HashMap<&'static str, Vec<&'static str>> = env_vars();
     static ref HEURISTICS: HashMap<&'static str, HeuristicFn> = heuristics();
     static ref CACHE: Cache = RwLock::new(HashMap::new());
 }
@@ -82,7 +81,6 @@ async fn load_config_with_instant(
                             config: Arc::new(RwLock::new(Config::new(
                                 &Environment::try_load(env.as_ref().ok()),
                                 build_dir,
-                                &ENV_VARS,
                                 &HEURISTICS,
                                 ffx,
                             )?)),
@@ -201,7 +199,6 @@ mod test {
             config: Arc::new(RwLock::new(Config::new(
                 &Environment::try_load(env().as_ref().ok()),
                 &build_dirs[0],
-                &ENV_VARS,
                 &HEURISTICS,
                 Default::default(),
             )?)),

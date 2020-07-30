@@ -1,3 +1,6 @@
 {
-  "log-enabled": false
+  "log-dir": ["$FFX_LOG_DIR", "$HOME"],
+  "log-enabled": "$FFX_LOG_ENABLED",
+  "ssh-port": "$FUCHSIA_SSH_PORT",
+  "package-repo": "$HOME/.local/share/ffx"
 }

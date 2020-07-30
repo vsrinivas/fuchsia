@@ -28,10 +28,19 @@ pub async fn exec_config(config: ConfigCommand) -> Result<(), Error> {
 
 async fn exec_get<W: Write + Sync>(get: &GetCommand, mut writer: W) -> Result<(), Error> {
     match get.name.as_ref() {
-        Some(name) => match get!(name).await? {
-            Some(v) => writeln!(writer, "{}: {}", name, v)?,
-            None => writeln!(writer, "{}: none", name)?,
-        },
+        Some(name) => {
+            if get.substitute {
+                match get!(str, name).await? {
+                    Some(v) => writeln!(writer, "{}: {}", name, v)?,
+                    None => writeln!(writer, "{}: none", name)?,
+                }
+            } else {
+                match get!(name).await? {
+                    Some(v) => writeln!(writer, "{}: {}", name, v)?,
+                    None => writeln!(writer, "{}: none", name)?,
+                }
+            }
+        }
         None => {
             print!(writer, &get.build_dir).await?;
         }

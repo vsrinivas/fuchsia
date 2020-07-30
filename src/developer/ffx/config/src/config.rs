@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{PersistentConfig, ReadConfig, ReadDisplayConfig, WriteConfig},
-    crate::env_var_config::EnvironmentVariable,
+    crate::api::{PersistentConfig, ReadConfig, WriteConfig},
     crate::environment::Environment,
     crate::file_backed_config::FileBacked,
     crate::heuristic_config::{Heuristic, HeuristicFn},
@@ -18,14 +17,12 @@ use {
 
 pub struct Config<'a> {
     data: Option<FileBacked>,
-    environment_variables: EnvironmentVariable<'a>,
     heuristics: Heuristic<'a>,
     runtime: Runtime,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum ConfigOrder {
-    EnvironmentVariables,
     Heuristics,
     Persistent,
     Runtime,
@@ -37,7 +34,7 @@ struct ReadConfigIterator<'a> {
 }
 
 impl<'a> Iterator for ReadConfigIterator<'a> {
-    type Item = Box<&'a (dyn ReadDisplayConfig + 'a)>;
+    type Item = Box<&'a (dyn ReadConfig + 'a)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Check for configuration in this order:
@@ -51,11 +48,7 @@ impl<'a> Iterator for ReadConfigIterator<'a> {
                 Some(Box::new(&self.config.runtime))
             }
             Some(level) => match level {
-                ConfigOrder::Runtime => {
-                    self.curr = Some(ConfigOrder::EnvironmentVariables);
-                    Some(Box::new(&self.config.environment_variables))
-                }
-                ConfigOrder::EnvironmentVariables => match &self.config.data {
+                ConfigOrder::Runtime => match &self.config.data {
                     Some(c) => {
                         self.curr = Some(ConfigOrder::Persistent);
                         Some(Box::new(c))
@@ -79,13 +72,11 @@ impl<'a> Config<'a> {
     pub fn new(
         env: &Environment,
         build_dir: &Option<String>,
-        environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
         heuristics: &'a HashMap<&'static str, HeuristicFn>,
         runtime: Ffx,
     ) -> Result<Self> {
         Ok(Self {
             data: Some(Config::load_persistent_config(env, build_dir)?),
-            environment_variables: EnvironmentVariable::new(environment_variables),
             heuristics: Heuristic::new(heuristics),
             runtime: Runtime::new(runtime),
         })
@@ -93,13 +84,11 @@ impl<'a> Config<'a> {
 
     #[cfg(test)]
     fn new_without_perisist_config(
-        environment_variables: &'a HashMap<&'static str, Vec<&'static str>>,
         heuristics: &'a HashMap<&'static str, HeuristicFn>,
         runtime: Ffx,
     ) -> Result<Self> {
         Ok(Self {
             data: None,
-            environment_variables: EnvironmentVariable::new(environment_variables),
             heuristics: Heuristic::new(heuristics),
             runtime: Runtime::new(runtime),
         })
@@ -151,8 +140,8 @@ impl<'a> PersistentConfig for Config<'a> {
 }
 
 impl<'a> ReadConfig for Config<'a> {
-    fn get(&self, key: &str) -> Option<Value> {
-        self.iter().find_map(|c| c.get(key))
+    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
+        self.iter().find_map(|c| c.get(key, mapper))
     }
 }
 
@@ -179,6 +168,7 @@ impl<'a> WriteConfig for Config<'a> {
 mod test {
     use super::*;
     use regex::Regex;
+    use std::convert::identity;
     use std::default::Default;
 
     fn test_heuristic(key: &str) -> Option<Value> {
@@ -196,56 +186,18 @@ mod test {
         heuristics.insert(heuristic_key, test_heuristic);
         heuristics.insert(heuristic_key_2, test_heuristic);
 
-        let environment_variables = HashMap::new();
-        let config = Config::new_without_perisist_config(
-            &environment_variables,
-            &heuristics,
-            test_cli_params(""),
-        )?;
+        let config = Config::new_without_perisist_config(&heuristics, test_cli_params(""))?;
 
         let missing_key = "whatever";
-
-        assert_eq!(None, config.get(missing_key));
-        assert_eq!(Some(Value::String(heuristic_key.to_string())), config.get(heuristic_key));
-        assert_eq!(Some(Value::String(heuristic_key_2.to_string())), config.get(heuristic_key_2));
-        Ok(())
-    }
-
-    #[test]
-    fn test_config_environment_variables() -> Result<()> {
-        let (env_key, env_key_2) = ("test", "test_2");
-        let (env_var_1, env_var_1_value) = ("FFX_TEST_1", "test 1");
-        let (env_var_2, env_var_2_value) = ("FFX_TEST_2", "test 2");
-        let (env_var_3, env_var_3_value) = ("FFX_TEST_3", "test 3");
-        let (env_var_4, env_var_4_value) = ("FFX_TEST_4", "test 4");
-        vec![env_var_1, env_var_2, env_var_3, env_var_4].iter().for_each(std::env::remove_var);
-
-        let mut environment_variables = HashMap::<&str, Vec<&str>>::new();
-        environment_variables.insert(env_key, vec![env_var_1, env_var_2, env_var_3]);
-        environment_variables.insert(env_key_2, vec![env_var_4]);
-
-        let heuristics = HashMap::new();
-
-        let config = Config::new_without_perisist_config(
-            &environment_variables,
-            &heuristics,
-            test_cli_params(""),
-        )?;
-
-        let missing_key = "whatever";
-        assert_eq!(None, config.get(missing_key));
-        assert_eq!(None, config.get(env_key));
-        assert_eq!(None, config.get(env_key_2));
-
-        std::env::set_var(env_var_4, env_var_4_value);
-        assert_eq!(Some(Value::String(env_var_4_value.to_string())), config.get(env_key_2));
-
-        std::env::set_var(env_var_3, env_var_3_value);
-        assert_eq!(Some(Value::String(env_var_3_value.to_string())), config.get(env_key));
-        std::env::set_var(env_var_2, env_var_2_value);
-        assert_eq!(Some(Value::String(env_var_2_value.to_string())), config.get(env_key));
-        std::env::set_var(env_var_1, env_var_1_value);
-        assert_eq!(Some(Value::String(env_var_1_value.to_string())), config.get(env_key));
+        assert_eq!(None, config.get(missing_key, identity));
+        assert_eq!(
+            Some(Value::String(heuristic_key.to_string())),
+            config.get(heuristic_key, identity)
+        );
+        assert_eq!(
+            Some(Value::String(heuristic_key_2.to_string())),
+            config.get(heuristic_key_2, identity)
+        );
         Ok(())
     }
 
@@ -254,19 +206,17 @@ mod test {
         let (key_1, value_1) = ("test 1", "test 2");
         let (key_2, value_2) = ("test 3", "test 4");
 
-        let environment_variables = HashMap::new();
         let heuristics = HashMap::new();
 
         let config = Config::new_without_perisist_config(
-            &environment_variables,
             &heuristics,
             test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
         )?;
 
         let missing_key = "whatever";
-        assert_eq!(None, config.get(missing_key));
-        assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1));
-        assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2));
+        assert_eq!(None, config.get(missing_key, identity));
+        assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1, identity));
+        assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2, identity));
         Ok(())
     }
 
@@ -277,43 +227,22 @@ mod test {
         heuristics.insert(heuristic_key, test_heuristic);
         heuristics.insert(heuristic_key_2, test_heuristic);
 
-        let (env_key, env_key_2) = ("test", "test_2");
-        let (env_var_1, env_var_1_value) = ("FFX_ALL_TEST_1", "test 1");
-        let (env_var_2, env_var_2_value) = ("FFX_ALL_TEST_2", "test 2");
-        let (env_var_3, env_var_3_value) = ("FFX_ALL_TEST_3", "test 3");
-        let (env_var_4, env_var_4_value) = ("FFX_ALL_TEST_4", "test 4");
-        vec![env_var_1, env_var_2, env_var_3, env_var_4].iter().for_each(std::env::remove_var);
-
-        let mut environment_variables = HashMap::<&str, Vec<&str>>::new();
-        environment_variables.insert(env_key, vec![env_var_1, env_var_2, env_var_3]);
-        environment_variables.insert(env_key_2, vec![env_var_4]);
-
         let (key_1, value_1) = ("test_1", "test_1_runtime");
         let (key_2, value_2) = ("test_2", "test_2_runtime");
         let config = Config::new_without_perisist_config(
-            &environment_variables,
             &heuristics,
             test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
         )?;
 
         let missing_key = "whatever";
-        assert_eq!(None, config.get(missing_key));
-        assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1));
-        assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2));
-        assert_eq!(Some(Value::String(heuristic_key.to_string())), config.get(heuristic_key));
-        assert_eq!(Some(Value::String(value_2.to_string())), config.get(heuristic_key_2));
-
-        std::env::set_var(env_var_4, env_var_4_value);
-        assert_eq!(Some(Value::String(value_2.to_string())), config.get(env_key_2));
-        std::env::set_var(env_var_3, env_var_3_value);
-        assert_eq!(Some(Value::String(env_var_3_value.to_string())), config.get(env_key));
-        std::env::set_var(env_var_2, env_var_2_value);
-        assert_eq!(Some(Value::String(env_var_2_value.to_string())), config.get(env_key));
-        std::env::set_var(env_var_1, env_var_1_value);
-        assert_eq!(Some(Value::String(env_var_1_value.to_string())), config.get(env_key));
-
-        // Cleanup
-        vec![env_var_1, env_var_2, env_var_3, env_var_4].iter().for_each(std::env::remove_var);
+        assert_eq!(None, config.get(missing_key, identity));
+        assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1, identity));
+        assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2, identity));
+        assert_eq!(
+            Some(Value::String(heuristic_key.to_string())),
+            config.get(heuristic_key, identity)
+        );
+        assert_eq!(Some(Value::String(value_2.to_string())), config.get(heuristic_key_2, identity));
 
         Ok(())
     }
@@ -325,31 +254,9 @@ mod test {
         heuristics.insert(heuristic_key, test_heuristic);
         heuristics.insert(heuristic_key_2, test_heuristic);
 
-        let (env_key, env_key_2) = ("env_test", "env_test_2");
-        let (env_var_1, env_var_1_value) = ("FFX_DISPLAY_TEST_1", "env test 1");
-        let (env_var_2, env_var_2_value) = ("FFX_DISPLAY_TEST_2", "env test 2");
-        let (env_var_3, env_var_3_value) = ("FFX_DISPLAY_TEST_3", "env test 3");
-        let (env_var_4, env_var_4_value) = ("FFX_DISPLAY_TEST_4", "env test 4");
-        vec![env_var_1, env_var_2, env_var_3, env_var_4].iter().for_each(std::env::remove_var);
-        vec![
-            (env_var_1, env_var_1_value),
-            (env_var_2, env_var_2_value),
-            (env_var_3, env_var_3_value),
-            (env_var_4, env_var_4_value),
-        ]
-        .iter()
-        .for_each(|(key, value)| {
-            std::env::set_var(key, value);
-        });
-
-        let mut environment_variables = HashMap::<&str, Vec<&str>>::new();
-        environment_variables.insert(env_key, vec![env_var_1, env_var_2, env_var_3]);
-        environment_variables.insert(env_key_2, vec![env_var_4]);
-
         let (key_1, value_1) = ("run_test_1", "test_1_runtime");
         let (key_2, value_2) = ("run_test_2", "test_2_runtime");
         let config = Config::new_without_perisist_config(
-            &environment_variables,
             &heuristics,
             test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
         )?;
@@ -362,23 +269,6 @@ mod test {
         let h_reg_2 = Regex::new(&h_test_2).expect("test regex");
         assert_eq!(1, h_reg_2.find_iter(&output).count());
 
-        let env_test_1 = format!("\"{}\" = \"{}\"", env_key, env_var_1_value);
-        let env_key_1_reg = Regex::new(&env_test_1).expect("test regex");
-        assert_eq!(1, env_key_1_reg.find_iter(&output).count(), "{}", output);
-        let env_test_2 = format!("\"{}\" = \"{}\"", env_key_2, env_var_4_value);
-        let env_key_2_reg = Regex::new(&env_test_2).expect("test regex");
-        assert_eq!(1, env_key_2_reg.find_iter(&output).count());
-
-        // Test environment variables explained.
-        let env_var_1_reg = Regex::new(&env_var_1).expect("test regex");
-        assert_eq!(1, env_var_1_reg.find_iter(&output).count());
-        let env_var_2_reg = Regex::new(&env_var_2).expect("test regex");
-        assert_eq!(1, env_var_2_reg.find_iter(&output).count());
-        let env_var_3_reg = Regex::new(&env_var_3).expect("test regex");
-        assert_eq!(1, env_var_3_reg.find_iter(&output).count());
-        let env_var_4_reg = Regex::new(&env_var_4).expect("test regex");
-        assert_eq!(1, env_var_4_reg.find_iter(&output).count());
-
         // Test runtime params
         let run_key_1 = Regex::new(&key_1).expect("test regex");
         assert_eq!(1, run_key_1.find_iter(&output).count());
@@ -389,9 +279,6 @@ mod test {
         assert_eq!(1, run_value_1.find_iter(&output).count());
         let run_value_2 = Regex::new(&value_2).expect("test regex");
         assert_eq!(1, run_value_2.find_iter(&output).count());
-
-        // Cleanup
-        vec![env_var_1, env_var_2, env_var_3, env_var_4].iter().for_each(std::env::remove_var);
 
         Ok(())
     }

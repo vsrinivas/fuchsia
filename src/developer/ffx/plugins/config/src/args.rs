@@ -59,6 +59,10 @@ pub struct GetCommand {
     /// name of the config property
     pub name: Option<String>,
 
+    #[argh(switch)]
+    /// subsitute in environment variables from the system
+    pub substitute: bool,
+
     // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
     // from which ffx is called? This will probably go away.
     #[argh(option)]
@@ -214,6 +218,7 @@ mod tests {
                 ConfigCommand::from_args(CMD_NAME, args),
                 Ok(ConfigCommand {
                     sub: SubCommand::Get(GetCommand {
+                        substitute: false,
                         name: Some(expected_key.to_string()),
                         build_dir: expected_build_dir,
                     })

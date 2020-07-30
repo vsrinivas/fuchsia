@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
+    crate::api::{ReadConfig, WriteConfig},
     crate::persistent_config::Persistent,
     anyhow::{Context, Result},
     ffx_config_plugin_args::ConfigLevel,
@@ -93,8 +93,8 @@ impl FileBacked {
 }
 
 impl ReadConfig for FileBacked {
-    fn get(&self, key: &str) -> Option<Value> {
-        self.data.get(key)
+    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
+        self.data.get(key, mapper)
     }
 }
 
@@ -103,8 +103,6 @@ impl fmt::Display for FileBacked {
         write!(f, "{}", self.data)
     }
 }
-
-impl ReadDisplayConfig for FileBacked {}
 
 impl WriteConfig for FileBacked {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {

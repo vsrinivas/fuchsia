@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, ReadDisplayConfig, WriteConfig},
+    crate::api::{ReadConfig, WriteConfig},
     anyhow::{anyhow, bail, Result},
     config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
@@ -62,11 +62,12 @@ impl Priority {
 }
 
 impl ReadConfig for Priority {
-    fn get(&self, key: &str) -> Option<Value> {
+    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
         self.iter()
             .filter(|c| c.is_some())
             .filter_map(|c| c.as_ref().unwrap().as_object())
-            .find_map(|c| c.get(key).cloned())
+            .map(|c| c.get(key).cloned())
+            .find_map(mapper)
     }
 }
 
@@ -102,8 +103,6 @@ impl fmt::Display for Priority {
         Ok(())
     }
 }
-
-impl ReadDisplayConfig for Priority {}
 
 impl WriteConfig for Priority {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
@@ -165,6 +164,7 @@ impl WriteConfig for Priority {
 mod test {
     use super::*;
     use regex::Regex;
+    use std::convert::identity;
 
     const ERROR: &'static str = "0";
 
@@ -186,6 +186,10 @@ mod test {
     const DEFAULTS: &'static str = r#"
         {
             "name": "Defaults"
+        }"#;
+    const MAPPED: &'static str = r#"
+        {
+            "name": "TEST_MAP"
         }"#;
 
     #[test]
@@ -233,7 +237,7 @@ mod test {
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
 
-        let value = test.get("name");
+        let value = test.get("name", identity);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("User")));
 
@@ -244,7 +248,7 @@ mod test {
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
 
-        let value_build = test_build.get("name");
+        let value_build = test_build.get("name", identity);
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("Build")));
 
@@ -255,7 +259,7 @@ mod test {
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
 
-        let value_global = test_global.get("name");
+        let value_global = test_global.get("name", identity);
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("Global")));
 
@@ -266,13 +270,13 @@ mod test {
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
 
-        let value_defaults = test_defaults.get("name");
+        let value_defaults = test_defaults.get("name", identity);
         assert!(value_defaults.is_some());
         assert_eq!(value_defaults.unwrap(), Value::String(String::from("Defaults")));
 
         let test_none = Priority { user: None, build: None, global: None, defaults: None };
 
-        let value_none = test_none.get("name");
+        let value_none = test_none.get("name", identity);
         assert!(value_none.is_none());
         Ok(())
     }
@@ -298,7 +302,7 @@ mod test {
             global: Some(serde_json::from_str(GLOBAL)?),
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
-        let value = test.get("field that does not exist");
+        let value = test.get("field that does not exist", identity);
         assert!(value.is_none());
         Ok(())
     }
@@ -312,7 +316,7 @@ mod test {
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
         test.set(&ConfigLevel::User, "name", Value::String(String::from("user-test")))?;
-        let value = test.get("name");
+        let value = test.get("name", identity);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("user-test")));
         Ok(())
@@ -321,22 +325,22 @@ mod test {
     #[test]
     fn test_set_build_from_none() -> Result<()> {
         let mut test = Priority { user: None, build: None, global: None, defaults: None };
-        let value_none = test.get("name");
+        let value_none = test.get("name", identity);
         assert!(value_none.is_none());
         test.set(&ConfigLevel::Defaults, "name", Value::String(String::from("defaults")))?;
-        let value_defaults = test.get("name");
+        let value_defaults = test.get("name", identity);
         assert!(value_defaults.is_some());
         assert_eq!(value_defaults.unwrap(), Value::String(String::from("defaults")));
         test.set(&ConfigLevel::Global, "name", Value::String(String::from("global")))?;
-        let value_global = test.get("name");
+        let value_global = test.get("name", identity);
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("global")));
         test.set(&ConfigLevel::Build, "name", Value::String(String::from("build")))?;
-        let value_build = test.get("name");
+        let value_build = test.get("name", identity);
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("build")));
         test.set(&ConfigLevel::User, "name", Value::String(String::from("user")))?;
-        let value_user = test.get("name");
+        let value_user = test.get("name", identity);
         assert!(value_user.is_some());
         assert_eq!(value_user.unwrap(), Value::String(String::from("user")));
         Ok(())
@@ -351,19 +355,19 @@ mod test {
             defaults: Some(serde_json::from_str(DEFAULTS)?),
         };
         test.remove(&ConfigLevel::User, "name")?;
-        let user_value = test.get("name");
+        let user_value = test.get("name", identity);
         assert!(user_value.is_some());
         assert_eq!(user_value.unwrap(), Value::String(String::from("Build")));
         test.remove(&ConfigLevel::Build, "name")?;
-        let global_value = test.get("name");
+        let global_value = test.get("name", identity);
         assert!(global_value.is_some());
         assert_eq!(global_value.unwrap(), Value::String(String::from("Global")));
         test.remove(&ConfigLevel::Global, "name")?;
-        let default_value = test.get("name");
+        let default_value = test.get("name", identity);
         assert!(default_value.is_some());
         assert_eq!(default_value.unwrap(), Value::String(String::from("Defaults")));
         test.remove(&ConfigLevel::Defaults, "name")?;
-        let none_value = test.get("name");
+        let none_value = test.get("name", identity);
         assert!(none_value.is_none());
         Ok(())
     }
@@ -371,8 +375,8 @@ mod test {
     #[test]
     fn test_defaults() {
         let test = Priority::new(None, None, None);
-        let default_value = test.get("log-enabled");
-        assert_eq!(default_value.unwrap(), Value::Bool(false));
+        let default_value = test.get("log-enabled", identity);
+        assert_eq!(default_value.unwrap(), Value::String("$FFX_LOG_ENABLED".to_string()));
     }
 
     #[test]
@@ -393,6 +397,33 @@ mod test {
         assert_eq!(1, global_reg.find_iter(&output).count());
         let defaults_reg = Regex::new("\"name\": \"Defaults\"").expect("test regex");
         assert_eq!(1, defaults_reg.find_iter(&output).count());
+        Ok(())
+    }
+
+    fn test_map(value: Option<Value>) -> Option<Value> {
+        value.map(|v| {
+            if v == "TEST_MAP" {
+                Value::String("passed".to_string())
+            } else {
+                Value::String("failed".to_string())
+            }
+        })
+    }
+
+    #[test]
+    fn test_mapping() -> Result<()> {
+        let test = Priority {
+            user: Some(serde_json::from_str(MAPPED)?),
+            build: None,
+            global: None,
+            defaults: None,
+        };
+        let test_mapping = "TEST_MAP".to_string();
+        let test_passed = "passed".to_string();
+        let mapped_value = test.get("name", test_map);
+        assert_eq!(mapped_value, Some(Value::String(test_passed)));
+        let identity_value = test.get("name", identity);
+        assert_eq!(identity_value, Some(Value::String(test_mapping)));
         Ok(())
     }
 }

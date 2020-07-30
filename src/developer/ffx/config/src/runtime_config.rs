@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, ReadDisplayConfig},
+    crate::api::ReadConfig,
     ffx_lib_args::Ffx,
     serde_json::Value,
     std::{collections::HashMap, fmt},
@@ -30,7 +30,7 @@ impl Runtime {
 }
 
 impl ReadConfig for Runtime {
-    fn get(&self, key: &str) -> Option<Value> {
+    fn get(&self, key: &str, _mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
         self.runtime_config.get(key).map(|s| Value::String(s.to_string()))
     }
 }
@@ -49,14 +49,13 @@ impl fmt::Display for Runtime {
     }
 }
 
-impl ReadDisplayConfig for Runtime {}
-
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::convert::identity;
     use std::default::Default;
 
     fn test_cli_params(test: &str) -> Ffx {
@@ -71,8 +70,8 @@ mod test {
             Runtime::new(test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)));
 
         let missing_key = "whatever";
-        assert_eq!(None, config.get(missing_key));
-        assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1));
-        assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2));
+        assert_eq!(None, config.get(missing_key, identity));
+        assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1, identity));
+        assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2, identity));
     }
 }
