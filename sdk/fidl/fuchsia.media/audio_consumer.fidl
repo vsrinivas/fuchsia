@@ -19,8 +19,7 @@ protocol SessionAudioConsumerFactory {
         request<AudioConsumer> audio_consumer_request);
 };
 
-/// Interface for playing and controlling audio. Service side should emit epitaphs with 
-/// `AudioError` when it disconnects the channel due to an error.
+/// Interface for playing and controlling audio
 protocol AudioConsumer {
     /// Creates a `StreamSink` for the consumer with the indicated properties.
     ///
