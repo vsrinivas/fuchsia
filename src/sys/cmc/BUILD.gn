@@ -8,83 +8,81 @@ import("//build/rust/rustc_macro.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/test/test_package.gni")
 
-if (host_toolchain == current_toolchain) {
-  rustc_binary("cmc") {
-    name = "cmc"
-    with_unit_tests = true
-    edition = "2018"
+rustc_binary("cmc") {
+  name = "cmc"
+  with_unit_tests = true
+  edition = "2018"
 
-    deps = [
-      ":cmc_macro",
-      "//src/lib/directed_graph",
-      "//src/sys/lib/cm_json",
-      "//src/sys/lib/cm_types",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:clap",
-      "//third_party/rust_crates:json5",
-      "//third_party/rust_crates:json5format",
-      "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:maplit",
-      "//third_party/rust_crates:regex",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:structopt",
-      "//third_party/rust_crates:tempfile",
-      "//third_party/rust_crates:thiserror",
-      "//third_party/rust_crates:valico",
-    ]
+  deps = [
+    ":cmc_macro",
+    "//src/lib/directed_graph",
+    "//src/sys/lib/cm_json",
+    "//src/sys/lib/cm_types",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:json5",
+    "//third_party/rust_crates:json5format",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:valico",
+  ]
 
-    non_rust_deps = [ ":cmc_test_schemas" ]
+  non_rust_deps = [ ":cmc_test_schemas" ]
 
-    test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
-    enforce_source_listing = true
+  enforce_source_listing = true
 
-    sources = [
-      "src/cml.rs",
-      "src/compile.rs",
-      "src/format.rs",
-      "src/main.rs",
-      "src/merge.rs",
-      "src/one_or_many.rs",
-      "src/opts.rs",
-      "src/validate.rs",
-    ]
+  sources = [
+    "src/cml.rs",
+    "src/compile.rs",
+    "src/format.rs",
+    "src/main.rs",
+    "src/merge.rs",
+    "src/one_or_many.rs",
+    "src/opts.rs",
+    "src/validate.rs",
+  ]
 
-    inputs = [
-      "test_block_dev.json",
-      "test_block_shell_feature.json",
-    ]
-  }
+  inputs = [
+    "test_block_dev.json",
+    "test_block_shell_feature.json",
+  ]
+}
 
-  sdk_host_tool("cmc_sdk") {
-    category = "partner"
-    output_name = "cmc"
-    deps = [ ":cmc" ]
-  }
+sdk_host_tool("cmc_sdk") {
+  category = "partner"
+  output_name = "cmc"
+  deps = [ ":cmc" ]
+}
 
-  rustc_macro("cmc_macro") {
-    edition = "2018"
-    source_root = "macro/src/lib.rs"
+rustc_macro("cmc_macro") {
+  edition = "2018"
+  source_root = "macro/src/lib.rs"
 
-    deps = [
-      "//third_party/rust_crates:maplit",
-      "//third_party/rust_crates:proc-macro2",
-      "//third_party/rust_crates:quote",
-      "//third_party/rust_crates:syn",
-    ]
+  deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:proc-macro2",
+    "//third_party/rust_crates:quote",
+    "//third_party/rust_crates:syn",
+  ]
 
-    enforce_source_listing = true
+  enforce_source_listing = true
 
-    sources = [ "macro/src/lib.rs" ]
-  }
+  sources = [ "macro/src/lib.rs" ]
+}
 
-  source_set("cmc_test_schemas") {
-    inputs = [
-      "test_block_dev.json",
-      "test_block_shell_feature.json",
-    ]
-  }
+source_set("cmc_test_schemas") {
+  inputs = [
+    "test_block_dev.json",
+    "test_block_shell_feature.json",
+  ]
 }
 
 rustc_binary("cmc_integration_test_bin") {

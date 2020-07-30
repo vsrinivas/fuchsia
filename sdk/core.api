@@ -153,6 +153,7 @@ sdk://pkg/vulkan
 sdk://pkg/vulkan_layers
 sdk://pkg/zx
 sdk://tools/arm64/bootserver
+sdk://tools/arm64/cmc
 sdk://tools/arm64/device-finder
 sdk://tools/arm64/far
 sdk://tools/arm64/fidl-format
