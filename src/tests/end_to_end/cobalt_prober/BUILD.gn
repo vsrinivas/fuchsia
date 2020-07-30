@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+
+dart_test("cobalt_prober") {
+  sources = [ "cobalt_prober_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  # We don't want to run this version of cobalt_testapp in the Fuchsia
+  # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
+  # instead. This version is run in the Cobalt Prober.
+  # It should not be run outside of CI, since it populates a test pipeline
+  # whose output is inspected.
+  environments = [
+    {
+      dimensions = {
+        device_type = "Astro"
+      }
+      tags = [ "cobalt-e2e-prober" ]
+    },
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "cobalt-e2e-prober" ]
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":cobalt_prober($host_toolchain)",
+    "//garnet/bin/sl4f",
+    "//src/cobalt/bin:cobalt-prober-do-not-run-manually",
+  ]
+}

@@ -145,6 +145,24 @@ test_package("cobalt_tests_do_not_run_manually") {
   ]
 }
 
+package("cobalt-prober-do-not-run-manually") {
+  deps = [ "testapp:cobalt_testapp" ]
+
+  binaries = [
+    # Referred to by cobalt_testapp_for_prober_do_not_run_manually.cmx
+    {
+      name = "cobalt_testapp"
+    },
+  ]
+  meta = [
+    {
+      path =
+          rebase_path("meta/cobalt_testapp_for_prober_do_not_run_manually.cmx")
+      dest = "cobalt_testapp_for_prober_do_not_run_manually.cmx"
+    },
+  ]
+}
+
 fuzzers_package("cobalt_fuzzers") {
   fuzzers = [
     "app/fuzzer:logger_factory_fuzzer",
