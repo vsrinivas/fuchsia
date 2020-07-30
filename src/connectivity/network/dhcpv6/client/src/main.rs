@@ -14,7 +14,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{future, StreamExt, TryStreamExt},
-    log::info,
 };
 
 enum IncomingService {
@@ -29,16 +28,16 @@ async fn main() -> Result<()> {
 
     fuchsia_syslog::init_with_tags(&["dhcpv6_client"])?;
 
-    info!("starting DHCPv6 client provider");
+    let () = log::info!("starting DHCPv6 client provider");
     fs.then(future::ok::<_, Error>)
         .try_for_each_concurrent(None, |request| async {
             match request {
                 IncomingService::ClientProvider(client_provider_request_stream) => {
-                    provider::run_client_provider(
+                    Ok(provider::run_client_provider(
                         client_provider_request_stream,
-                        client::start_client,
+                        client::serve_client,
                     )
-                    .await
+                    .await)
                 }
             }
         })

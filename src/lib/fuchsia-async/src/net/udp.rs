@@ -43,6 +43,10 @@ impl UdpSocket {
         Ok(UdpSocket(socket))
     }
 
+    pub fn local_addr(&self) -> io::Result<SocketAddr> {
+        self.0.as_ref().local_addr()
+    }
+
     pub fn recv_from<'a>(&'a self, buf: &'a mut [u8]) -> RecvFrom<'a> {
         RecvFrom { socket: self, buf }
     }
@@ -142,7 +146,7 @@ mod tests {
     fn send_recv() {
         let mut exec = Executor::new().expect("could not create executor");
 
-        let addr = "127.0.0.1:29995".parse().unwrap();
+        let addr = "127.0.0.1:29995".parse().expect("could not parse test address");
         let buf = b"hello world";
         let socket = UdpSocket::bind(&addr).expect("could not create socket");
         let fut = async move {
@@ -162,12 +166,20 @@ mod tests {
     fn broadcast() {
         let mut _exec = Executor::new().expect("could not create executor");
 
-        let addr = "127.0.0.1:12345".parse().unwrap();
+        let addr = "127.0.0.1:12345".parse().expect("could not parse test address");
         let socket = UdpSocket::bind(&addr).expect("could not create socket");
         let initial = socket.broadcast().expect("could not get broadcast");
         assert!(!initial);
         socket.set_broadcast(true).expect("could not set broadcast");
         let set = socket.broadcast().expect("could not get broadcast");
         assert!(set);
+    }
+
+    #[test]
+    fn test_local_addr() {
+        let mut _exec = Executor::new().expect("could not create executor");
+        let addr = "127.0.0.1:5432".parse().expect("could not parse test address");
+        let socket = UdpSocket::bind(&addr).expect("could not create socket");
+        assert_eq!(socket.local_addr().expect("could not get local address"), addr);
     }
 }

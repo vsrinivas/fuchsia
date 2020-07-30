@@ -46,10 +46,6 @@ pub enum ClientError {
     MissingTimer(dhcpv6_core::client::ClientTimerType),
     #[error("a timer is already scheduled for {:?}", _0)]
     TimerAlreadyExist(dhcpv6_core::client::ClientTimerType),
-    #[error("got overflow while applying timeout {:?}", _0)]
-    TimerOverflow(Duration),
-    #[error("IO error: {}", _0)]
-    Io(std::io::Error),
     #[error("fidl error: {}", _0)]
     Fidl(fidl::Error),
     #[error("got watch request while the previous one is pending")]
@@ -198,7 +194,16 @@ impl Client {
             .try_fold(self, |client, action| async move {
                 match action {
                     dhcpv6_core::client::Action::SendMessage(buf) => {
-                        let () = client.send_message(&buf).await?;
+                        let () = match client.socket.send_to(&buf, client.server_addr).await {
+                            Ok(_size) => (),
+                            Err(e) => {
+                                let () = log::warn!(
+                                    "failed to send message to {}: {}; will retransmit later",
+                                    client.server_addr,
+                                    e
+                                );
+                            }
+                        };
                     }
                     dhcpv6_core::client::Action::ScheduleTimer(timer_type, timeout) => {
                         let () = client.schedule_timer(timer_type, timeout)?;
@@ -240,7 +245,7 @@ impl Client {
         servers: Vec<Ipv6Addr>,
         hash: u64,
     ) -> Result<(), ClientError> {
-        responder
+        let () = responder
             .send(&mut servers.iter().map(|addr| {
                 let address = fnet::Ipv6Address { addr: addr.octets() };
                 let zone_index =
@@ -259,14 +264,10 @@ impl Client {
                     )),
                 }
             }))
+            // The channel will be closed on error, so return an error to stop the client.
             .map_err(ClientError::Fidl)?;
         self.last_observed_dns_hash = hash;
         Ok(())
-    }
-
-    /// Multicasts a message to neighboring relay agents and servers.
-    async fn send_message(&self, buf: &[u8]) -> Result<(), ClientError> {
-        self.socket.send_to(buf, self.server_addr).await.map(|_: usize| ()).map_err(ClientError::Io)
     }
 
     /// Schedules a timer for `timer_type` to fire after `timeout`.
@@ -282,11 +283,15 @@ impl Client {
                 let () = self.timer_futs.push(Abortable::new(
                     TimerFut::new(
                         timer_type,
-                        fasync::Time::after(zx::Duration::from_nanos(
-                            i64::try_from(timeout.as_nanos()).map_err(|_: TryFromIntError| {
-                                ClientError::TimerOverflow(timeout)
-                            })?,
-                        )),
+                        fasync::Time::after(
+                            i64::try_from(timeout.as_nanos())
+                            .map(zx::Duration::from_nanos)
+                            .unwrap_or_else(|_: TryFromIntError| {
+                                let duration = zx::Duration::from_nanos(i64::MAX);
+                                let () = log::warn!("time duration {:?} overflows zx::Duration, truncating to {:?}", timeout, duration);
+                                duration
+                            }),
+                        ),
                     ),
                     reg,
                 ));
@@ -325,7 +330,7 @@ impl Client {
                 // Discard invalid messages.
                 //
                 // https://tools.ietf.org/html/rfc8415#section-16.
-                log::warn!("failed to parse received message: {}", e);
+                let () = log::warn!("failed to parse received message: {}", e);
                 return Ok(());
             }
         };
@@ -340,6 +345,7 @@ impl Client {
                 Some(_) => {
                     // Drop the previous responder to close the channel.
                     self.dns_responder = None;
+                    // Return an error to stop the client because the channel is closed.
                     Err(ClientError::DoubleWatch())
                 }
                 None => {
@@ -377,17 +383,37 @@ impl Client {
                 }
             },
             recv_from_res = self.socket.recv_from(buf).fuse() => {
-                let (size, _): (usize, SocketAddr) = recv_from_res.map_err(ClientError::Io)?;
-                let () = self.handle_message_recv(&buf[..size]).await?;
+                let () = match recv_from_res {
+                    Ok((size, _addr)) => {
+                        self.handle_message_recv(&buf[..size]).await?
+                    }
+                    Err(recv_err) => {
+                        match self.socket.local_addr() {
+                            Ok(addr) => {
+                                let () = log::warn!(
+                                    "failed to receive message from socket bound to {}: {}; will retransmit request if server response is missed",
+                                    addr,
+                                    recv_err);
+                            }
+                            Err(addr_err) => {
+                                let () = log::warn!(
+                                    "failed to receive message from socket: {}; also failed to fetch address the socket is bound to: {}; will retransmit request if server response is missed",
+                                    recv_err,
+                                    addr_err);
+                            }
+                        }
+                    },
+                };
                 Ok(Some(()))
             },
-            request = self.request_stream.next() => {
+            request = self.request_stream.try_next() => {
                 match request {
-                    Some(request_res) => {
-                        let () = self.handle_client_request(request_res.map_err(ClientError::Fidl)?)?;
-                        Ok(Some(()))
+                    Ok(request) => {
+                        request.map(|request| self.handle_client_request(request)).transpose()
                     }
-                    None => Ok(None),
+                    Err(e) => {
+                        Ok(Some(log::warn!("FIDL client request error: {}", e)))
+                    }
                 }
             }
         }
@@ -426,8 +452,8 @@ fn is_unicast_link_local_strict(addr: &fnet::Ipv6Address) -> bool {
 
 /// Starts a client based on `params`.
 ///
-/// `request_stream` will be serviced by the client.
-pub(crate) async fn start_client(
+/// `request` will be serviced by the client.
+pub(crate) async fn serve_client(
     params: NewClientParams,
     request: ServerEnd<ClientMarker>,
 ) -> Result<()> {
@@ -534,7 +560,7 @@ mod tests {
 
         let ((), client_res) = join!(
             async { drop(client_proxy) },
-            start_client(
+            serve_client(
                 NewClientParams {
                     interface_id: Some(1),
                     address: Some(fidl_socket_addr_v6!([::1]:546)),
@@ -557,7 +583,7 @@ mod tests {
         let (caller1_res, caller2_res, client_res) = join!(
             client_proxy.watch_servers(),
             client_proxy.watch_servers(),
-            start_client(
+            serve_client(
                 NewClientParams {
                     interface_id: Some(1),
                     address: Some(fidl_socket_addr_v6!([::1]:546)),
@@ -594,7 +620,7 @@ mod tests {
         let test_fut = async {
             join!(
                 client_proxy.watch_servers(),
-                start_client(
+                serve_client(
                     NewClientParams {
                         interface_id: Some(1),
                         address: Some(fidl_socket_addr_v6!([::1]:546)),
@@ -649,7 +675,7 @@ mod tests {
             let (client_end, server_end) =
                 create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
             let () =
-                start_client(params, server_end).await.expect("start server failed unexpectedly");
+                serve_client(params, server_end).await.expect("start server failed unexpectedly");
             // Calling any function on the client proxy should fail due to channel closed with
             // `INVALID_ARGS`.
             assert_matches!(

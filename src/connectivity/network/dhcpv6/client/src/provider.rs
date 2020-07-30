@@ -3,30 +3,36 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Result},
+    anyhow::Result,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_net_dhcpv6::{
         ClientMarker, ClientProviderRequest, ClientProviderRequestStream, NewClientParams,
     },
-    futures::{Future, StreamExt as _, TryStreamExt as _},
+    futures::{Future, StreamExt as _},
 };
 
 /// Handles client provider requests from the input stream.
 pub(crate) async fn run_client_provider<Fut, F>(
     stream: ClientProviderRequestStream,
-    start_client: F,
-) -> Result<()>
-where
+    serve_client: F,
+) where
     Fut: Future<Output = Result<()>>,
     F: Fn(NewClientParams, ServerEnd<ClientMarker>) -> Fut,
 {
     stream
-        .map(|res| res.context("reading client provider request from stream"))
-        .try_for_each_concurrent(None, |request| async {
+        .for_each_concurrent(None, |request| async {
             match request {
-                ClientProviderRequest::NewClient { params, request, control_handle: _ } => {
-                    start_client(params, request).await
+                Ok(ClientProviderRequest::NewClient { params, request, control_handle: _ }) => {
+                    // `NewClientParams` does not implement `Clone`. It is also non-trivial to pass
+                    // a reference of `params` to `serve_client` because that would require adding
+                    // lifetimes in quite a few places.
+                    let params_str = format!("{:?}", params);
+                    let () =
+                        serve_client(params, request).await.unwrap_or_else(|e: anyhow::Error| {
+                            log::error!("error running client with params {}: {}", params_str, e)
+                        });
                 }
+                Err(e) => log::warn!("client provider request FIDL error: {}", e),
             }
         })
         .await
@@ -40,11 +46,12 @@ mod tests {
         fidl::endpoints::create_endpoints,
         fidl_fuchsia_net_dhcpv6::{ClientProviderMarker, OperationalModels},
         fuchsia_async as fasync,
-        futures::{join, try_join},
+        futures::join,
+        matches::assert_matches,
         net_declare::fidl_socket_addr_v6,
     };
 
-    async fn start_client(
+    async fn serve_client(
         _param: NewClientParams,
         _request: ServerEnd<ClientMarker>,
     ) -> Result<()> {
@@ -58,8 +65,11 @@ mod tests {
         Err(anyhow!("fake test error"))
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_client_provider() {
+    async fn test_client_provider<Fut, F>(serve_client: F)
+    where
+        Fut: Future<Output = Result<()>>,
+        F: Fn(NewClientParams, ServerEnd<ClientMarker>) -> Fut,
+    {
         let (client_end, server_end) =
             create_endpoints::<ClientProviderMarker>().expect("failed to create test fidl channel");
         let client_provider_proxy =
@@ -85,42 +95,19 @@ mod tests {
             drop(client_provider_proxy);
             Ok(())
         };
-        let provider_fut = run_client_provider(client_provider_stream, start_client);
+        let provider_fut = run_client_provider(client_provider_stream, serve_client);
 
-        try_join!(test_fut, provider_fut).expect("client provider failed unexpectly");
+        let (test_res, ()): (Result<_, Error>, ()) = join!(test_fut, provider_fut);
+        assert_matches!(test_res, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_client_provider_error_propagation() {
-        let (client_end, server_end) =
-            create_endpoints::<ClientProviderMarker>().expect("failed to create test fidl channel");
-        let client_provider_proxy =
-            client_end.into_proxy().expect("failed to create test client proxy");
-        let client_provider_stream =
-            server_end.into_stream().expect("failed to create test request stream");
+    async fn test_client_provider_serve_client_success() {
+        let () = test_client_provider(serve_client).await;
+    }
 
-        let test_fut = async {
-            let (_client_end, server_end) = create_endpoints::<ClientMarker>()?;
-            client_provider_proxy.new_client(
-                NewClientParams {
-                    interface_id: Some(1),
-                    address: Some(fidl_socket_addr_v6!([fe01::1:2]:546)),
-                    models: Some(OperationalModels { stateless: None }),
-                },
-                server_end,
-            )?;
-            drop(client_provider_proxy);
-            Ok::<_, Error>(())
-        };
-        let provider_fut = run_client_provider(client_provider_stream, start_err_client);
-
-        let (test_fut_res, provider_fut_res) = join!(test_fut, provider_fut);
-        test_fut_res.expect("test future should succeed");
-        assert_eq!(
-            provider_fut_res
-                .expect_err("provider should propagate error from DHCPv6 client")
-                .to_string(),
-            "fake test error"
-        );
+    #[fasync::run_singlethreaded(test)]
+    async fn test_client_provider_should_keep_running_on_client_err() {
+        let () = test_client_provider(start_err_client).await;
     }
 }
