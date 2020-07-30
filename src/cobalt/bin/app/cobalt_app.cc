@@ -28,7 +28,7 @@ constexpr char kMetricsRegistryPath[] = "/config/data/global_metrics_registry.pb
 
 constexpr char kObservationStorePath[] = "/data/observation_store";
 constexpr char kLocalAggregateProtoStorePath[] = "/data/local_aggregate_store";
-constexpr char kLocalAggregationPath[] = "/data/local_aggregation";
+constexpr char kLocalAggregationPath[] = "/data/local_aggregate_storage";
 constexpr char kObsHistoryProtoStorePath[] = "/data/obs_history_store";
 constexpr char kSystemDataCachePrefix[] = "/data/system_data_";
 constexpr char kLocalLogFilePath[] = "/data/cobalt_observations.pb";
@@ -91,6 +91,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
 
       .local_aggregate_proto_store_path = kLocalAggregateProtoStorePath,
       .local_aggregate_store_dir = kLocalAggregationPath,
+      .local_aggregate_store_strategy = StorageStrategy::Delayed,
       .obs_history_proto_store_path = kObsHistoryProtoStorePath,
 
       .target_interval = target_interval,
