@@ -79,9 +79,6 @@ func TestOOM(t *testing.T) {
 // be terminated (e.g. because a page fault cannot commit).  As a result, the reboot sequence may be
 // less orderly and predictable.
 func TestOOMHard(t *testing.T) {
-	// TODO(fxbug.dev/57253): Fix bug in kernel thread cleanup and re-enable this test.
-	t.Skip("Test disabled, see fxbug.dev/57253.")
-
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)

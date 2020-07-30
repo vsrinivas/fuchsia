@@ -261,7 +261,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // The thread as understood by the lower kernel. This is set to nullptr when
   // `state_` transitions to DEAD.
-  Thread* core_thread_ TA_GUARDED(get_lock());
+  Thread* core_thread_ TA_GUARDED(get_lock()) = nullptr;
 
   // User thread starting register values.
   EntryState user_entry_;
