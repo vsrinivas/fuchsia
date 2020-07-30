@@ -310,6 +310,7 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   auto iobuf = tree_.find(request->vmoid);
   if (!iobuf.IsValid()) {
     // Operation which is not accessing a valid vmo.
+    FX_LOGS(WARNING) << "vmoid " << request->vmoid << " is not valid. Failing read/write request";
     return ZX_ERR_IO;
   }
 
@@ -387,6 +388,7 @@ zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
   auto iobuf = tree_.find(request->vmoid);
   if (!iobuf.IsValid()) {
     // Operation which is not accessing a valid vmo
+    FX_LOGS(WARNING) << "vmoid " << request->vmoid << " is not valid. Failing close request";
     return ZX_ERR_IO;
   }
 
@@ -476,6 +478,7 @@ zx_status_t Server::Serve() {
         groupid_t group = requests[i].group;
         if (group >= MAX_TXN_GROUP_COUNT) {
           // Operation which is not accessing a valid group.
+          FX_LOGS(WARNING) << "group " << group << " is not valid, failing request";
           if (wants_reply) {
             OutOfBandRespond(fifo_, ZX_ERR_IO, reqid, group);
           }
@@ -485,6 +488,8 @@ zx_status_t Server::Serve() {
         // Enqueue the message against the transaction group.
         status = groups_[group].Enqueue(wants_reply, reqid);
         if (status != ZX_OK) {
+          FX_LOGS(WARNING) << "Enqueue for group " << group
+                           << "failed: " << zx_status_get_string(status);
           TxnComplete(status, reqid, group);
           continue;
         }
