@@ -5,8 +5,11 @@
 #ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_BROKER_H_
 #define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_BROKER_H_
 
+#include <lib/async/dispatcher.h>
+#include <lib/zx/time.h>
+
+#include "src/developer/forensics/exceptions/handler_manager.h"
 #include "src/developer/forensics/exceptions/process_limbo_manager.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace forensics {
 namespace exceptions {
@@ -20,7 +23,10 @@ class ExceptionBroker : public fuchsia::exception::Handler {
  public:
   // If |override_filepath| is defined, it will attempt to locate that file instead of the default
   // config one. See exception_broker.cc for the prod filepath.
-  static std::unique_ptr<ExceptionBroker> Create(const char* override_filepath = nullptr);
+  static std::unique_ptr<ExceptionBroker> Create(async_dispatcher_t* dispatcher,
+                                                 size_t max_num_handlers,
+                                                 zx::duration exception_ttl,
+                                                 const char* override_filepath = nullptr);
 
   // fuchsia.exception.Handler implementation.
 
@@ -31,6 +37,11 @@ class ExceptionBroker : public fuchsia::exception::Handler {
   const ProcessLimboManager& limbo_manager() const { return limbo_manager_; }
 
  private:
+  ExceptionBroker(async_dispatcher_t* dispatcher, size_t max_num_handlers,
+                  zx::duration exception_ttl);
+  void AddToLimbo(zx::exception exception, fuchsia::exception::ExceptionInfo info);
+
+  HandlerManager handler_manager_;
   ProcessLimboManager limbo_manager_;
 };
 

@@ -36,6 +36,7 @@ executable("exe") {
 
   deps = [
     ":lib",
+    "//src/developer/forensics/exceptions:constants",
     "//src/developer/forensics/utils/component",
   ]
 }
@@ -43,10 +44,16 @@ executable("exe") {
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("constants") {
+  sources = [ "constants.h" ]
+}
+
 source_set("lib") {
   sources = [
     "exception_broker.cc",
     "exception_broker.h",
+    "handler_manager.cc",
+    "handler_manager.h",
     "json_utils.cc",
     "json_utils.h",
     "process_limbo_manager.cc",
@@ -61,6 +68,8 @@ source_set("lib") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/rapidjson",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

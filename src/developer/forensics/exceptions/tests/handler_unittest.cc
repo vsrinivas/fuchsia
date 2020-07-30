@@ -124,10 +124,23 @@ class HandlerTest : public UnitTestFixture {
     RunLoopUntilIdle();
   }
 
+  void HandleException(
+      const std::string& process_name, const zx_koid_t process_koid,
+      zx::duration component_lookup_timeout, zx::duration crash_reporter_timeout,
+      ::fit::closure callback = [] {}) {
+    executor_.schedule_task(
+        Handle(process_name, process_koid, dispatcher(), services(), component_lookup_timeout,
+               crash_reporter_timeout)
+            .then([callback = std::move(callback)](const ::fit::result<>& result) { callback(); }));
+    RunLoopUntilIdle();
+  }
+
   void SetUpCrashReporter() { InjectServiceProvider(&crash_reporter_); }
   void SetUpCrashIntrospect() { InjectServiceProvider(&introspect_); }
 
   const StubCrashReporter& crash_reporter() const { return crash_reporter_; }
+
+  StubCrashIntrospect& introspect() { return introspect_; }
   const StubCrashIntrospect& introspect() const { return introspect_; }
 
  private:
@@ -299,6 +312,39 @@ TEST_F(HandlerTest, GettingInvalidVMO) {
   auto& report = crash_reporter().reports().front();
 
   ValidateReport(report, "crasher", false);
+}
+
+TEST_F(HandlerTest, NoException) {
+  SetUpCrashReporter();
+  SetUpCrashIntrospect();
+
+  // Create the exception.
+  ExceptionContext exception;
+  ASSERT_TRUE(RetrieveExceptionContext(&exception));
+
+  zx::process process;
+  ASSERT_EQ(exception.exception.get_process(&process), ZX_OK);
+
+  const std::string process_name = fsl::GetObjectName(process.get());
+  const zx_koid_t process_koid = fsl::GetKoid(process.get());
+
+  const std::string kComponentUrl = "component_url";
+  introspect().AddProcessKoidToComponentInfo(process_koid, StubCrashIntrospect::ComponentInfo{
+                                                               .component_url = kComponentUrl,
+                                                               .realm_path = std::nullopt,
+                                                           });
+  exception.exception.reset();
+
+  bool called = false;
+  HandleException(process_name, process_koid, zx::duration::infinite(), zx::duration::infinite(),
+                  [&called] { called = true; });
+
+  ASSERT_TRUE(called);
+
+  ASSERT_EQ(crash_reporter().reports().size(), 1u);
+  auto& report = crash_reporter().reports().front();
+
+  ValidateReport(report, kComponentUrl, false);
 }
 
 }  // namespace

@@ -1,6 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/exceptions/exception_broker.h"
@@ -15,13 +20,17 @@ constexpr char kTestConfigFile[] = "/pkg/data/enable_jitd_on_startup.json";
 }  // namespace
 
 TEST(ExceptionBrokerConfig, NonExistanceShouldNotActivate) {
-  auto broker = ExceptionBroker::Create();
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/1u,
+                                        /*exception_ttl=*/zx::hour(1));
 
   ASSERT_FALSE(broker->limbo_manager().active());
 }
 
 TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
-  auto broker = ExceptionBroker::Create(kTestConfigFile);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/
+                                        1u, /*exception_ttl=*/zx::hour(1), kTestConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 
@@ -34,7 +43,9 @@ TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
 constexpr char kFilterConfigFile[] = "/pkg/data/filter_jitd_config.json";
 
 TEST(ExceptionBrokerConfig, FilterArray) {
-  auto broker = ExceptionBroker::Create(kFilterConfigFile);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/1u,
+                                        /*exception_ttl=*/zx::hour(1), kFilterConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 

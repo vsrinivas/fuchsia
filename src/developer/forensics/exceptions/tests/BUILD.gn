@@ -56,6 +56,9 @@ test_package("exception-broker-tests") {
     {
       name = "exception_broker_crasher"
     },
+    {
+      name = "exception_handler"
+    },
   ]
 
   deps = [
@@ -63,6 +66,7 @@ test_package("exception-broker-tests") {
     ":exception_broker_config_test",
     ":exception_broker_integration_test",
     ":exception_broker_unittest",
+    "//src/developer/forensics/exceptions/exception_handler:exe",
     "//src/developer/forensics/exceptions/limbo_client:tests",
   ]
 
@@ -101,6 +105,7 @@ executable("exception_broker_unittest") {
   testonly = true
 
   sources = [
+    "exception_broker_unittest.cc",
     "handler_unittest.cc",
     "minidump_unittest.cc",
     "process_limbo_manager_unittest.cc",

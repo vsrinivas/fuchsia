@@ -11,7 +11,6 @@
 #include "src/developer/forensics/exceptions/exception_handler/report_builder.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/strings/join_strings.h"
 
 namespace forensics {
 namespace exceptions {
@@ -59,22 +58,38 @@ using fuchsia::sys::internal::SourceIdentity;
 
         CrashReportBuilder builder;
 
-        builder.SetProcessName(process_name);
+        builder.SetProcessName(process_name).SetComponentInfo(component_info);
         if (minidump_vmo.is_valid()) {
           builder.SetMinidump(std::move(minidump_vmo));
         }
 
-        if (!component_info.has_component_url()) {
-          FX_LOGS(ERROR) << "Did not receive a component url";
-        } else {
-          builder.SetComponentUrl(component_info.component_url());
+        return ::fit::ok(builder.Consume());
+      })
+      .then(
+          [dispatcher, services, crash_reporter_timeout](::fit::result<CrashReport>& crash_report) {
+            return FileCrashReport(dispatcher, services, fit::Timeout(crash_reporter_timeout),
+                                   crash_report.take_value());
+          });
+}
+
+// Handles asynchronously filing a crash report for a given program.
+::fit::promise<> Handle(const std::string& process_name, zx_koid_t process_koid,
+                        async_dispatcher_t* dispatcher,
+                        std::shared_ptr<sys::ServiceDirectory> services,
+                        zx::duration component_lookup_timeout,
+                        zx::duration crash_reporter_timeout) {
+  return GetComponentSourceIdentity(dispatcher, services, fit::Timeout(component_lookup_timeout),
+                                    process_koid)
+      .then([process_name](::fit::result<SourceIdentity>& result) {
+        SourceIdentity component_info;
+        if (result.is_ok()) {
+          component_info = result.take_value();
         }
 
-        if (!component_info.has_realm_path()) {
-          FX_LOGS(ERROR) << "Did not receive a realm path";
-        } else {
-          builder.SetRealmPath("/" + fxl::JoinStrings(component_info.realm_path(), "/"));
-        }
+        CrashReportBuilder builder;
+
+        builder.SetProcessName(process_name).SetComponentInfo(component_info);
+        builder.SetExceptionExpired();
 
         return ::fit::ok(builder.Consume());
       })

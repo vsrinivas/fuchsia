@@ -11,6 +11,9 @@
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>
 
+#include <string>
+
+#include "src/developer/forensics/exceptions/constants.h"
 #include "src/developer/forensics/exceptions/exception_handler/handler.h"
 
 int main(int argc, char** argv) {
@@ -21,24 +24,32 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Executor executor(loop.dispatcher());
 
-  zx::exception exception(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
-  if (!exception.is_valid()) {
-    FX_LOGS(FATAL) << "Received invalid exception";
+  fit::promise<> handle_exception;
+
+  // Besides the process name, we are expecting either (1) no argument and the exception on the
+  // startup handle or (2) the crashed process name as argument, indicating an expired exception.
+  if (argc == 1) {
+    zx::exception exception(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+    if (!exception.is_valid()) {
+      FX_LOGS(FATAL) << "Received invalid exception";
+      return EXIT_FAILURE;
+    }
+
+    handle_exception = forensics::exceptions::Handle(
+        std::move(exception), loop.dispatcher(), sys::ServiceDirectory::CreateFromNamespace(),
+        kComponentLookupTimeout, kCrashReporterTimeout);
+  } else if (argc == 3) {
+    handle_exception = forensics::exceptions::Handle(
+        /*process_name=*/argv[1], /*process_koid=*/std::stoul(argv[2]), loop.dispatcher(),
+        sys::ServiceDirectory::CreateFromNamespace(), kComponentLookupTimeout,
+        kCrashReporterTimeout);
+  } else {
+    FX_LOGS(FATAL) << "Wrong number of arguments";
     return EXIT_FAILURE;
   }
 
-  // The handler waits on responses from the component lookup service and crash reporting services
-  // for 30 seconds each. Note, 60 seconds is not the upper bound on how long crash reporting takes
-  // in total because minidump generation happens in parallel with component lookup, but may take 
-  // longer than 30 seconds.
-  constexpr zx::duration kComponentLookupTimeout{zx::sec(30)};
-  constexpr zx::duration kCrashReporterTimeout{zx::sec(30)};
-
-  executor.schedule_task(forensics::exceptions::Handle(std::move(exception), loop.dispatcher(),
-                                                       sys::ServiceDirectory::CreateFromNamespace(),
-                                                       kComponentLookupTimeout,
-                                                       kCrashReporterTimeout)
-                             .then([&loop](const ::fit::result<>& result) { loop.Shutdown(); }));
+  executor.schedule_task(
+      handle_exception.then([&loop](const ::fit::result<>& result) { loop.Shutdown(); }));
 
   loop.Run();
 

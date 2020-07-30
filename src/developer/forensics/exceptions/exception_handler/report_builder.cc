@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/fxl/strings/join_strings.h"
+
 namespace forensics {
 namespace exceptions {
 
@@ -19,13 +21,25 @@ CrashReportBuilder& CrashReportBuilder::SetMinidump(zx::vmo minidump) {
   return *this;
 }
 
-CrashReportBuilder& CrashReportBuilder::SetComponentUrl(const std::string& component_url) {
-  component_url_ = component_url;
+CrashReportBuilder& CrashReportBuilder::SetComponentInfo(
+    const fuchsia::sys::internal::SourceIdentity& component_info) {
+  if (!component_info.has_component_url()) {
+    FX_LOGS(ERROR) << "Did not receive a component url";
+  } else {
+    component_url_ = component_info.component_url();
+  }
+
+  if (!component_info.has_realm_path()) {
+    FX_LOGS(ERROR) << "Did not receive a realm path";
+  } else {
+    realm_path_ = "/" + fxl::JoinStrings(component_info.realm_path(), "/");
+  }
+
   return *this;
 }
 
-CrashReportBuilder& CrashReportBuilder::SetRealmPath(const std::string& realm_path) {
-  realm_path_ = realm_path;
+CrashReportBuilder& CrashReportBuilder::SetExceptionExpired() {
+  exception_expired_ = true;
   return *this;
 }
 
@@ -57,6 +71,13 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
     crash_report.mutable_annotations()->push_back(Annotation{
         .key = "crash.realm-path",
         .value = realm_path_.value(),
+    });
+  }
+
+  if (exception_expired_) {
+    crash_report.mutable_annotations()->push_back(Annotation{
+        .key = "debug.crash.exception.expired",
+        .value = "true",
     });
   }
 

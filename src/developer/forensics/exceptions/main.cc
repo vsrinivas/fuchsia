@@ -5,6 +5,7 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/forensics/exceptions/constants.h"
 #include "src/developer/forensics/exceptions/exception_broker.h"
 #include "src/developer/forensics/utils/component/component.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -30,7 +31,8 @@ int main() {
 
   forensics::component::Component component;
 
-  auto broker = ExceptionBroker::Create();
+  auto broker =
+      ExceptionBroker::Create(component.Dispatcher(), kMaxNumExceptionHandlers, kExceptionTtl);
   if (!broker)
     return EXIT_FAILURE;
 

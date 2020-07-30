@@ -3,6 +3,8 @@
 
 #include "src/developer/forensics/exceptions/process_limbo_manager.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -321,7 +323,10 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
 }
 
 TEST(ProcessLimboManager, FromExceptionBroker) {
-  auto broker = ExceptionBroker::Create();
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/1u,
+                                        /*exception_ttl=*/zx::hour(1));
   ASSERT_TRUE(broker);
   ASSERT_TRUE(broker->limbo_manager().SetActive(true));
 

@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_REPORT_BUILDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/sys/internal/cpp/fidl.h>
 #include <lib/zx/vmo.h>
 
 #include <optional>
@@ -18,8 +19,9 @@ class CrashReportBuilder {
  public:
   CrashReportBuilder& SetProcessName(const std::string& process_name);
   CrashReportBuilder& SetMinidump(zx::vmo minidump);
-  CrashReportBuilder& SetComponentUrl(const std::string& component_url);
-  CrashReportBuilder& SetRealmPath(const std::string& realm_path);
+  CrashReportBuilder& SetComponentInfo(
+      const fuchsia::sys::internal::SourceIdentity& component_info);
+  CrashReportBuilder& SetExceptionExpired();
 
   fuchsia::feedback::CrashReport Consume();
 
@@ -28,6 +30,7 @@ class CrashReportBuilder {
   std::optional<zx::vmo> minidump_{std::nullopt};
   std::optional<std::string> component_url_{std::nullopt};
   std::optional<std::string> realm_path_{std::nullopt};
+  bool exception_expired_{false};
 
   bool is_valid_{true};
 };
