@@ -252,40 +252,6 @@ fail:
   return status;
 }
 
-static zx_status_t intel_serialio_i2c_remove_subordinate(intel_serialio_i2c_device_t* device,
-                                                         uint8_t width, uint16_t address) {
-  zx_status_t status;
-
-  if ((width != I2C_7BIT_ADDRESS && width != I2C_10BIT_ADDRESS) ||
-      (address & ~chip_addr_mask(width)) != 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  intel_serialio_i2c_subordinate_device_t* subordinate;
-
-  mtx_lock(&device->mutex);
-
-  // Find the subordinate we're trying to remove.
-  status = intel_serialio_i2c_find_subordinate(&subordinate, device, address);
-  if (status < 0)
-    goto remove_subordinate_finish;
-  if (subordinate->chip_address_width != width) {
-    zxlogf(ERROR, "Chip address width mismatch.");
-    status = ZX_ERR_NOT_FOUND;
-    goto remove_subordinate_finish;
-  }
-
-  status = device_remove_deprecated(subordinate->zxdev);
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-
-  list_delete(&subordinate->subordinate_list_node);
-  free(subordinate);
-
-remove_subordinate_finish:
-  mtx_unlock(&device->mutex);
-  return status;
-}
-
 static uint32_t intel_serialio_compute_scl_hcnt(uint32_t controller_freq, uint32_t t_high_nanos,
                                                 uint32_t t_r_nanos) {
   uint32_t clock_freq_kilohz = controller_freq / 1000;
@@ -577,7 +543,7 @@ static void intel_serialio_i2c_unbind(void* ctx) {
       thrd_join(dev->irq_thread, NULL);
     }
     if (dev->zxdev) {
-      device_remove_deprecated(dev->zxdev);
+      device_unbind_reply(dev->zxdev);
     }
   }
 }
