@@ -63,6 +63,9 @@ pub enum SettingHandlerFactoryError {
     #[error("MessageHub Messenger for setting handler could not be created")]
     HandlerMessengerError,
 
+    #[error("MessageHub Messenger for controller messenger could not be created")]
+    ControllerMessengerError,
+
     #[error("MessageHub Messenger for lifecycle messenger could not be created")]
     LifecycleMessengerError,
 
@@ -78,7 +81,6 @@ pub trait SettingHandlerFactory {
         &mut self,
         setting_type: SettingType,
         messenger_factory: message::Factory,
-        messenger_client: message::Messenger,
     ) -> Result<message::Signature, SettingHandlerFactoryError>;
 }
 

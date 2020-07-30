@@ -33,7 +33,6 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
         &mut self,
         setting_type: SettingType,
         messenger_factory: message::Factory,
-        controller_messenger_client: message::Messenger,
     ) -> Result<message::Signature, SettingHandlerFactoryError> {
         if !self.environment.settings.contains(&setting_type) {
             return Err(SettingHandlerFactoryError::SettingNotFound(setting_type));
@@ -61,9 +60,15 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
         .map_err(|_| SettingHandlerFactoryError::HandlerStartupError(setting_type))?;
 
         self.next_context_id += 1;
+
+        let (controller_messenger, _) = messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .map_err(|_| SettingHandlerFactoryError::ControllerMessengerError)?;
+
         // At this point, we know the controller was constructed successfully.
         // Tell the controller to run the Startup phase to initialize its state.
-        let mut controller_receptor = controller_messenger_client
+        let mut controller_receptor = controller_messenger
             .message(
                 Payload::Command(Command::ChangeState(State::Startup)),
                 Audience::Messenger(signature),
