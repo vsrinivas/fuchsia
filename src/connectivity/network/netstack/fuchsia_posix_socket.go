@@ -309,6 +309,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	eps.entry.Callback = callback(func(*waiter.Entry) {
 		// Run this in a separate goroutine to return sooner and
 		// avoid deadlock.
+		//
 		// The waiter.Queue lock is held by the caller of this callback.
 		// close() blocks on completions of loop{read,Write}, which
 		// depends on acquiring waiter.Queue lock to unregister events.
@@ -630,11 +631,8 @@ func (eps *endpointWithSocket) loopWrite() {
 					panic(err)
 				}
 				return
-			case tcpip.ErrConnectionReset:
-				// We got a TCP RST. This condition is more reliably observed by
-				// loopRead, so we clean up from there. Attempting to clean up here
-				// *and* there will deadlock the two close functions as each waits
-				// for the other loop to exit.
+			case tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
+				closeFn()
 				return
 			case tcpip.ErrTimeout:
 				// The maximum duration of missing ACKs was reached, or the maximum
@@ -792,8 +790,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 					panic(err)
 				}
 				return
-			case tcpip.ErrConnectionReset:
-				// We got a TCP RST.
+			case tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
 				closeFn()
 				return
 			default:
