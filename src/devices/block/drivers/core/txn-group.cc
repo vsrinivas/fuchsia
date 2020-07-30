@@ -4,10 +4,12 @@
 
 #include "txn-group.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <fbl/auto_lock.h>
@@ -29,10 +31,13 @@ zx_status_t TransactionGroup::Enqueue(bool do_respond, reqid_t reqid) {
   fbl::AutoLock lock(&lock_);
   if (flags_ & kTxnFlagRespond) {
     // Shouldn't get more than one response for a txn.
+    FX_LOGS(WARNING) << "Attempted to request second responses for transaction group";
     response_.status = ZX_ERR_IO;
     status = ZX_ERR_IO;
   } else if (response_.status != ZX_OK) {
     // This operation already failed; don't bother processing it.
+    FX_LOGS(WARNING) << "Attempted to enqueue already failed transaction group: "
+                     << zx_status_get_string(response_.status);
     status = ZX_ERR_IO;
   }
   ctr_++;
@@ -51,6 +56,7 @@ void TransactionGroup::CtrAdd(uint32_t n) {
 void TransactionGroup::Complete(zx_status_t status) {
   fbl::AutoLock lock(&lock_);
   if ((status != ZX_OK) && (response_.status == ZX_OK)) {
+    FX_LOGS(WARNING) << "Transaction completed with error status: " << status;
     response_.status = status;
   }
 
