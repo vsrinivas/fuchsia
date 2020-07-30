@@ -45,6 +45,7 @@ class MixStage : public ReadableStream {
 
   struct MixJob {
     // Job state set up once by an output implementation, used by all renderers.
+    // TODO(13415): Integrate it into the Mixer class itself.
     float* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
@@ -57,37 +58,6 @@ class MixStage : public ReadableStream {
     uint32_t frames_produced;
   };
 
-  class MixerInput {
-   public:
-    MixerInput(std::shared_ptr<ReadableStream> stream, std::shared_ptr<Mixer> mixer,
-               zx::time ref_time)
-        : stream_(std::move(stream)), mixer_(std::move(mixer)), ref_time_(ref_time) {}
-
-    const zx::time ref_time() const { return ref_time_; }
-    Mixer* mixer() const { return mixer_.get(); }
-
-    // TODO(55851): Don't expose the streams reference_clock directly here.
-    std::optional<ReadableStream::Buffer> ReadLock(zx::time ref_time, int64_t frame,
-                                                   uint32_t frame_count) const {
-      return stream_->ReadLock(ref_time, frame, frame_count);
-    }
-    void Trim() const { stream_->Trim(ref_time_); }
-    void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
-                         FractionalFrames<int64_t> frac_source_mix_point,
-                         zx::duration underflow_duration) const {
-      stream_->ReportUnderflow(frac_source_start, frac_source_mix_point, underflow_duration);
-    }
-    void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
-                                int64_t dest_mix_offset) const {
-      stream_->ReportPartialUnderflow(frac_source_offset, dest_mix_offset);
-    }
-
-   private:
-    std::shared_ptr<ReadableStream> stream_;
-    std::shared_ptr<Mixer> mixer_;
-    zx::time ref_time_;
-  };
-
   struct StreamHolder {
     std::shared_ptr<ReadableStream> stream;
     std::shared_ptr<Mixer> mixer;
@@ -96,16 +66,10 @@ class MixStage : public ReadableStream {
   enum class TaskType { Mix, Trim };
 
   void ForEachSource(TaskType task_type, zx::time dest_ref_time);
-  void ReconcileClocksAndSetStepSize(StreamHolder holder)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(stream_lock_);
-  // TODO(13415): Integrate it into the Mixer class itself.
-  // TODO(55851): Don't require |stream_lock_|.
-  void UpdateSourceTrans(ReadableStream& stream, Mixer::Bookkeeping* bk)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(stream_lock_);
-  void UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk);
+  void ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& stream);
 
-  bool ProcessMix(const MixerInput& input, const ReadableStream::Buffer& buffer);
-  void MixStream(const MixerInput& input);
+  void MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_ref_time);
+  bool ProcessMix(Mixer& mixer, ReadableStream& stream, const ReadableStream::Buffer& buffer);
 
   std::mutex stream_lock_;
   std::vector<StreamHolder> streams_ FXL_GUARDED_BY(stream_lock_);

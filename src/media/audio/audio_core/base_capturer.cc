@@ -867,7 +867,7 @@ void BaseCapturer::UpdateFormat(Format format) {
 // When we switch optimal clock to device clock, the default must still be a clone of MONOTONIC.
 // In long-term, use the optimal clock by default.
 void BaseCapturer::SetOptimalReferenceClock() {
-  TRACE_DURATION("audio", "BaseCapturer::EstablishDefaultReferenceClock");
+  TRACE_DURATION("audio", "BaseCapturer::SetOptimalReferenceClock");
 
   SetClock(AudioClock::CreateAsOptimal(audio::clock::AdjustableCloneOfMonotonic()));
 

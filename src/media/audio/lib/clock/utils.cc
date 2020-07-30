@@ -5,6 +5,7 @@
 #include "src/media/audio/lib/clock/utils.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/syscalls.h>
 
 #include <cmath>
 
@@ -28,6 +29,7 @@ zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock) {
   return ZX_OK;
 }
 
+// Only called by custom code when debugging, so can remain at INFO severity.
 void DisplayClockDetails(const zx_clock_details_v1_t& clock_details) {
   FX_LOGS(INFO) << "******************************************";
   FX_LOGS(INFO) << "Clock details -";
@@ -50,6 +52,25 @@ void DisplayClockDetails(const zx_clock_details_v1_t& clock_details) {
   FX_LOGS(INFO) << "      reference_ticks:\t\t"
                 << clock_details.mono_to_synthetic.rate.reference_ticks;
   FX_LOGS(INFO) << "******************************************";
+}
+
+// Only called by custom code when debugging, so can remain at INFO severity.
+void DisplayTimelineFunction(const TimelineFunction& func, std::string tag) {
+  FX_LOGS(INFO) << tag << ": sub_off " << func.subject_time() << ", ref_off "
+                << func.reference_time() << ", sub_delta " << func.subject_delta() << ", ref_delta "
+                << func.reference_delta();
+}
+
+zx_koid_t GetKoid(const zx::clock& clock) {
+  zx_info_handle_basic_t basic_info;
+  // size_t actual, avail;
+  auto status =
+      clock.get_info(ZX_INFO_HANDLE_BASIC, &basic_info, sizeof(basic_info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return ZX_HANDLE_INVALID;
+  }
+
+  return basic_info.koid;
 }
 
 fit::result<zx::clock, zx_status_t> DuplicateClock(const zx::clock& original_clock) {

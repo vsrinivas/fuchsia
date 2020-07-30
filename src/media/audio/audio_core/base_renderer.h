@@ -95,9 +95,6 @@ class BaseRenderer : public AudioObject,
   zx_status_t SetOptimalReferenceClock();
   zx_status_t SetCustomReferenceClock(zx::clock ref_clock);
 
-  // If custom, audio_core treats this as not-rate-adjustable. If optimal, it will be tuned.
-  void SetClock(AudioClock audio_clock) { audio_clock_ = std::move(audio_clock); }
-
  private:
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
@@ -138,7 +135,6 @@ class BaseRenderer : public AudioObject,
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
 
-  AudioClock audio_clock_;
   zx::clock raw_clock_;
   bool client_allows_clock_adjustment_ = true;
   bool adjustable_clock_is_allocated_ = false;

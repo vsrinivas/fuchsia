@@ -951,12 +951,14 @@ zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t&
   // does not destroy the clock for the domain, so the second time that the
   // driver starts, it is very likely that the driver reference clock is no
   // longer clock monotonic.
-  start_time_ = zx::time(resp.start_time);
+  //
+  mono_start_time_ = zx::time(resp.start_time);
+  // Need to convert the start time to reference time?
+  ref_start_time_ = reference_clock().ReferenceTimeFromMonotonicTime(zx::time(resp.start_time));
 
-  // We are almost Started.  Compute various useful timeline functions.
-  // See the comments for the accessors in audio_device.h for detailed
-  // descriptions.
-  zx::time first_ptscts_time = start_time_ + external_delay_;
+  // We are almost Started. Compute various useful timeline functions. See the comments for the
+  // accessors in audio_device.h for detailed descriptions.
+  zx::time first_ptscts_time = mono_start_time() + external_delay_;
   uint32_t frames_per_sec = format->frames_per_second();
   uint32_t frac_frames_per_sec = FractionalFrames<int64_t>(frames_per_sec).raw_value();
 
@@ -968,10 +970,10 @@ zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t&
   };
 
   safe_read_or_write_ref_clock_to_frames_ = TimelineFunction{
-      fifo_depth_frames_,  // the first safe frame at startup is a FIFO's distance away.
-      start_time_.get(),   // the TX/RX start time.
-      frames_per_sec,      // the number of frames per second
-      zx::sec(1).get()     // the number of clock ticks per second
+      fifo_depth_frames_,       // the first safe frame at startup is a FIFO's distance away.
+      mono_start_time().get(),  // the TX/RX start time.
+      frames_per_sec,           // the number of frames per second
+      zx::sec(1).get()          // the number of clock ticks per second
   };
 
   ref_clock_to_fractional_frames_->Update(ptscts_ref_clock_to_fractional_frames_);

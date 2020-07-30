@@ -201,7 +201,6 @@ source_set("audio_core_lib") {
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/clock:clone_mono",
-    "//src/media/audio/lib/clock:pid",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/logging",

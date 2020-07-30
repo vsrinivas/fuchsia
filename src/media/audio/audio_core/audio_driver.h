@@ -79,7 +79,8 @@ class AudioDriver {
   // use the static lock analysis to ensure this, I would do so, but unfortunately the compiler is
   // unable to figure out that the owner calling these methods is always the same as owner_.
   virtual State state() const = 0;
-  virtual zx::time start_time() const = 0;
+  virtual zx::time mono_start_time() const = 0;
+  virtual zx::time ref_start_time() const = 0;
   virtual zx::duration external_delay() const = 0;
   virtual uint32_t fifo_depth_frames() const = 0;
   virtual zx::duration fifo_depth_duration() const = 0;
@@ -137,7 +138,8 @@ class AudioDriverV1 : public AudioDriver {
   }
 
   State state() const override { return state_; }
-  zx::time start_time() const override { return start_time_; }
+  zx::time mono_start_time() const override { return mono_start_time_; }
+  zx::time ref_start_time() const override { return ref_start_time_; }
   zx::duration external_delay() const override { return external_delay_; }
   uint32_t fifo_depth_frames() const override { return fifo_depth_frames_; }
   zx::duration fifo_depth_duration() const override { return fifo_depth_duration_; }
@@ -297,7 +299,8 @@ class AudioDriverV1 : public AudioDriver {
   std::vector<audio_stream_format_range_t> format_ranges_;
 
   // Configuration state.
-  zx::time start_time_;
+  zx::time mono_start_time_;
+  zx::time ref_start_time_;
   zx::duration external_delay_;
   zx::duration min_ring_buffer_duration_;
   uint32_t fifo_depth_frames_;
@@ -370,7 +373,8 @@ class AudioDriverV2 : public AudioDriver {
   }
 
   State state() const override { return state_; }
-  zx::time start_time() const override { return start_time_; }
+  zx::time mono_start_time() const override { return mono_start_time_; }
+  zx::time ref_start_time() const override { return ref_start_time_; }
   zx::duration external_delay() const override { return external_delay_; }
   uint32_t fifo_depth_frames() const override { return fifo_depth_frames_; }
   zx::duration fifo_depth_duration() const override { return fifo_depth_duration_; }
@@ -485,7 +489,8 @@ class AudioDriverV2 : public AudioDriver {
   std::vector<audio_stream_format_range_t> format_ranges_;
 
   // Configuration state.
-  zx::time start_time_;
+  zx::time mono_start_time_;
+  zx::time ref_start_time_;
   zx::duration external_delay_;
   zx::duration min_ring_buffer_duration_;
   uint32_t fifo_depth_frames_;

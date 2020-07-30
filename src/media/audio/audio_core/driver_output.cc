@@ -214,7 +214,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
 
   uint32_t rb_space = rb.frames() - static_cast<uint32_t>(frames_in_flight);
   if (desired_frames > rb.frames()) {
-    FX_LOGS(ERROR) << "OUTPUT UNDERFLOW: want to produce " << desired_frames
+    FX_LOGS(ERROR) << "OUTPUT OVERFLOW: want to produce " << desired_frames
                    << " but the ring buffer is only " << rb.frames() << " frames long.";
     return std::nullopt;
   }

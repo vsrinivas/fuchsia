@@ -11,7 +11,6 @@
 
 #include <limits>
 
-#include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/clock/utils.h"
 
 namespace media::audio {
@@ -109,13 +108,12 @@ class AudioClock {
   bool is_valid() const { return (type_ != Type::Invalid); }
   bool is_adjustable() const { return (type_ == Type::Adjustable); }
   bool is_device_clock() const { return (source_ == Source::Device); }
+  bool is_client_clock() const { return !is_device_clock(); }
   bool controls_hardware_clock() const { return controls_hardware_clock_; }
   uint32_t domain() const {
     FX_CHECK(is_device_clock());
     return domain_;
   }
-
-  TimelineRate rate_adjustment() const { return rate_adjustment_; }
 
   const TimelineFunction& ref_clock_to_clock_mono();
   const TimelineFunction& quick_ref_clock_to_clock_mono() const { return ref_clock_to_clock_mono_; }
@@ -124,7 +122,11 @@ class AudioClock {
   // provided to it, and 3) handle values are unique across the system, and 4) even duplicate
   // handles have different values, this all means that the clock handle is essentially the unique
   // ID for this AudioClock object.
-  bool operator==(const AudioClock& comparable) const { return (clock_ == comparable.clock_); }
+  bool operator==(const AudioClock& comparable) const {
+    return (audio::clock::GetKoid(clock_) == audio::clock::GetKoid(comparable.clock_));
+  }
+  // bool operator==(const AudioClock& comparable) const { return (clock_ == comparable.clock_); }
+  bool operator!=(const AudioClock& comparable) const { return !(*this == comparable); }
 
   zx::clock DuplicateClock() const;
   zx::time Read() const;
@@ -132,8 +134,7 @@ class AudioClock {
   zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
   zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
 
-  void RateAdjust(int64_t error_factor, int64_t curr_time);
-  void ResetAdjustments(int64_t curr_time);
+  const zx::clock& clock() { return clock_; }
 
  private:
   enum class Source { Device, Client };
@@ -152,9 +153,6 @@ class AudioClock {
   bool controls_hardware_clock_ = false;
 
   TimelineFunction ref_clock_to_clock_mono_;
-  TimelineRate rate_adjustment_{1u};
-
-  clock::PidControl rate_adjuster_;
 };
 
 }  // namespace media::audio

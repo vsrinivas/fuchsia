@@ -69,8 +69,7 @@ class MixStageTest : public testing::ThreadingModelFixture {
   void TestMixStageTrim(ClockMode clock_mode);
   void TestMixStageUniformFormats(ClockMode clock_mode);
   void TestMixStageSingleInput(ClockMode clock_mode);
-  void TestMixPosition(ClockMode clock_mode);
-
+  void TestMixPosition(ClockMode clock_mode, int32_t rate_adjust = 0);
   std::shared_ptr<MixStage> mix_stage_;
 
   AudioClock device_clock_;
@@ -430,6 +429,96 @@ TEST_F(MixStageTest, MixMultipleInputs) {
     EXPECT_FLOAT_EQ(buf->gain_db(), -15);
   }
 }
+
+void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust) {
+  constexpr auto kTotalMixDuration = zx::msec(50);
+
+  auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+
+  clock::testing::ClockProperties clock_props;
+  if (clock_mode == ClockMode::WITH_OFFSET) {
+    clock_props = {.start_val = zx::clock::get_monotonic() - zx::sec(2)};
+  } else if (clock_mode == ClockMode::RATE_ADJUST) {
+    clock_props = {.start_val = zx::time(0), .rate_adjust_ppm = rate_adjust};
+  }
+  auto custom_clock_result = clock::testing::CreateCustomClock(clock_props);
+  EXPECT_TRUE(custom_clock_result.is_ok());
+
+  zx::clock raw_clock = custom_clock_result.take_value();
+  EXPECT_TRUE(raw_clock.is_valid());
+  auto offset_result = clock::testing::GetOffsetFromMonotonic(raw_clock);
+  EXPECT_TRUE(offset_result.is_ok());
+
+  AudioClock audio_clock = AudioClock::CreateAsCustom(std::move(raw_clock));
+  EXPECT_TRUE(audio_clock.is_valid());
+
+  auto clock_offset = offset_result.take_value();
+  auto seek_frac_frame = FractionalFrames<int64_t>::FromRaw(
+      round(static_cast<double>(clock_offset.get()) * FractionalFrames<int64_t>(1).raw_value() *
+            kDefaultFormat.frames_per_second() / ZX_SEC(1)));
+
+  testing::PacketFactory packet_factory(
+      dispatcher(), kDefaultFormat,
+      kDefaultFormat.frames_per_second() * kDefaultFormat.bytes_per_frame());
+  packet_factory.SeekToFrame(seek_frac_frame.Round());
+
+  std::shared_ptr<PacketQueue> packet_queue =
+      std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_src, std::move(audio_clock));
+  packet_queue->PushPacket(packet_factory.CreatePacket(1.0, kTotalMixDuration));
+
+  auto mixer = mix_stage_->AddInput(packet_queue);
+  auto bk = &(mixer->bookkeeping());
+
+  int64_t dest_frame_start = 0;
+  uint32_t dest_frame_count = kBlockSizeFrames;
+  auto buf = mix_stage_->ReadLock(time_until(zx::msec(5)), dest_frame_start, dest_frame_count);
+
+  int64_t expected_frac_error = -seek_frac_frame.raw_value();
+  FractionalFrames<int64_t> expected_frac_source =
+      seek_frac_frame + FractionalFrames<int64_t>(bk->next_dest_frame);
+
+  EXPECT_EQ(bk->next_dest_frame, dest_frame_start + dest_frame_count);
+  EXPECT_NEAR(bk->next_frac_source_frame.raw_value(), expected_frac_source.raw_value(), 1);
+  EXPECT_EQ(bk->next_src_pos_modulo, 0u);
+  EXPECT_NEAR(bk->frac_source_error.raw_value(), expected_frac_error, 1);
+
+  for (auto mix_time = zx::msec(10); mix_time <= kTotalMixDuration; mix_time += zx::msec(5)) {
+    dest_frame_start += dest_frame_count;
+    buf = mix_stage_->ReadLock(time_until(mix_time), dest_frame_start, dest_frame_count);
+
+    expected_frac_source += FractionalFrames<int64_t>(dest_frame_count);
+    expected_frac_error =
+        FractionalFrames<int64_t>(dest_frame_start).raw_value() * -rate_adjust / 1'000'000;
+
+    EXPECT_EQ(bk->next_dest_frame, dest_frame_start + dest_frame_count);
+    EXPECT_NEAR(bk->next_frac_source_frame.raw_value(), expected_frac_source.raw_value(), 1);
+    EXPECT_EQ(bk->next_src_pos_modulo, 0u);
+    EXPECT_NEAR(bk->frac_source_error.raw_value(), expected_frac_error, 1);
+  }
+
+  // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
+  mix_stage_->Trim(zx::time::infinite());
+}
+
+TEST_F(MixStageTest, Position) { TestMixPosition(ClockMode::SAME); }
+TEST_F(MixStageTest, Position_Offset) { TestMixPosition(ClockMode::WITH_OFFSET); }
+
+TEST_F(MixStageTest, Position_AdjustUp1) { TestMixPosition(ClockMode::RATE_ADJUST, 1); }
+TEST_F(MixStageTest, Position_AdjustDown1) { TestMixPosition(ClockMode::RATE_ADJUST, -1); }
+
+TEST_F(MixStageTest, Position_AdjustUp5) { TestMixPosition(ClockMode::RATE_ADJUST, 5); }
+TEST_F(MixStageTest, Position_AdjustDown5) { TestMixPosition(ClockMode::RATE_ADJUST, -5); }
+
+TEST_F(MixStageTest, Position_AdjustUp10) { TestMixPosition(ClockMode::RATE_ADJUST, 10); }
+TEST_F(MixStageTest, Position_AdjustDown10) { TestMixPosition(ClockMode::RATE_ADJUST, -10); }
+
+TEST_F(MixStageTest, Position_AdjustUp100) { TestMixPosition(ClockMode::RATE_ADJUST, 100); }
+TEST_F(MixStageTest, Position_AdjustDown100) { TestMixPosition(ClockMode::RATE_ADJUST, -100); }
+
+TEST_F(MixStageTest, Position_AdjustUp1000) { TestMixPosition(ClockMode::RATE_ADJUST, 1000); }
+TEST_F(MixStageTest, Position_AdjustDown1000) { TestMixPosition(ClockMode::RATE_ADJUST, -1000); }
 
 }  // namespace
 }  // namespace media::audio

@@ -169,18 +169,18 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
 
   // At startup, the tx/rx position should be 0, and the safe read/write position
   // should be fifo_depth_frames ahead of this.
-  zx::time now = this->driver_->start_time();
-  EXPECT_EQ(fifo_depth_frames, safe_read_or_write_ref_clock_to_frames.Apply(now.get()));
+  zx::time ref_now = this->driver_->ref_start_time();
+  EXPECT_EQ(fifo_depth_frames, safe_read_or_write_ref_clock_to_frames.Apply(ref_now.get()));
 
   // After |external_delay| has passed, we should be at frame zero in the
   // pts/cts timeline.
-  now += external_delay;
-  EXPECT_EQ(0, ptscts_ref_clock_to_fractional_frames.Apply(now.get()));
+  ref_now += external_delay;
+  EXPECT_EQ(0, ptscts_ref_clock_to_fractional_frames.Apply(ref_now.get()));
 
   // Advance time by an arbitrary amount and sanity check the results of the
   // various transformations against each other.
   constexpr zx::duration kSomeTime = zx::usec(87654321);
-  now += kSomeTime;
+  ref_now += kSomeTime;
 
   // The safe_read_write_pos should still be fifo_depth_frames ahead of whatever
   // the tx/rx position is, so the tx/rx position should be the safe read/write
@@ -190,11 +190,11 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   // the pts/ctx position.  Note, we need convert the fractional frames result
   // of the pts/cts position to integer frames, rounding down in the process, in
   // order to compare the two.
-  int64_t safe_read_write_pos = safe_read_or_write_ref_clock_to_frames.Apply(now.get());
+  int64_t safe_read_write_pos = safe_read_or_write_ref_clock_to_frames.Apply(ref_now.get());
   int64_t txrx_pos = safe_read_write_pos - fifo_depth_frames;
 
-  now += external_delay;
-  int64_t ptscts_pos_frames = ptscts_ref_clock_to_fractional_frames.Apply(now.get()) /
+  ref_now += external_delay;
+  int64_t ptscts_pos_frames = ptscts_ref_clock_to_fractional_frames.Apply(ref_now.get()) /
                               FractionalFrames<uint32_t>(1).raw_value();
   EXPECT_EQ(txrx_pos, ptscts_pos_frames);
 }

@@ -9,17 +9,23 @@
 #include <lib/fit/result.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/clock.h>
+#include <zircon/types.h>
+
+#include <string>
 
 namespace media::audio::clock {
 
 zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock);
 void DisplayClockDetails(const zx_clock_details_v1_t& clock_details);
+void DisplayTimelineFunction(const TimelineFunction& func, std::string tag = "");
 
 constexpr uint32_t kInvalidClockGeneration = 0xFFFFFFFF;
 struct ClockSnapshot {
   TimelineFunction reference_to_monotonic;
   uint32_t generation = kInvalidClockGeneration;
 };
+
+zx_koid_t GetKoid(const zx::clock& clock);
 
 fit::result<zx::clock, zx_status_t> DuplicateClock(const zx::clock& original_clock);
 fit::result<ClockSnapshot, zx_status_t> SnapshotClock(const zx::clock& ref_clock);

@@ -201,14 +201,14 @@ void PacketQueue::ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
 
     } else if ((kUnderflowInfoInterval > 0) && (underflow_count % kUnderflowInfoInterval == 0)) {
       FX_LOGS(INFO) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                    << kUnderflowErrorInterval << "): source-start 0x" << std::hex
+                    << kUnderflowInfoInterval << "): source-start 0x" << std::hex
                     << frac_source_start.raw_value() << " missed mix-point 0x"
                     << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
                     << underflow_msec << " ms";
 
     } else if ((kUnderflowTraceInterval > 0) && (underflow_count % kUnderflowTraceInterval == 0)) {
       FX_LOGS(TRACE) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                     << kUnderflowErrorInterval << "): source-start 0x" << std::hex
+                     << kUnderflowTraceInterval << "): source-start 0x" << std::hex
                      << frac_source_start.raw_value() << " missed mix-point 0x"
                      << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
                      << underflow_msec << " ms";

@@ -12,7 +12,7 @@ namespace media::audio {
 AudioClock AudioClock::CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain) {
   auto audio_clock = AudioClock(std::move(clock), Source::Device, Type::Adjustable, domain);
 
-  // Set HW-response PID coefficients approprately for a tuned hardware clock
+  // Next: set HW-response PID coefficients approprately for a tuned hardware clock.
   return audio_clock;
 }
 
@@ -25,14 +25,16 @@ AudioClock AudioClock::CreateAsDeviceStatic(zx::clock clock, uint32_t domain) {
 AudioClock AudioClock::CreateAsOptimal(zx::clock clock) {
   auto audio_clock = AudioClock(std::move(clock), Source::Client, Type::Adjustable);
 
-  // Set HW-chaser PID coefficients approprately for an optimal clock
+  // Next: set HW-chaser PID coefficients approprately for an optimal clock.
+
   return audio_clock;
 }
 
 AudioClock AudioClock::CreateAsCustom(zx::clock clock) {
   auto audio_clock = AudioClock(std::move(clock), Source::Client, Type::NonAdjustable);
 
-  // Set micro-SRC PID coefficients approprately for a software-tuned clock
+  // Next: set micro-SRC PID coefficients approprately for a software-tuned clock.
+
   return audio_clock;
 }
 

@@ -51,6 +51,8 @@ class Mixer {
     // stage, and/or the ability to ramp one or more of these gains over time. Gain accepts level in
     // dB, and provides gainscale as float multiplier.
     Gain gain;
+    //
+    // Related to gain, the Bookkeeping struct should contain: the rechannel matrix (eventually).
 
     // This 19.13 fixed-point value represents how much to increment our sampling position in the
     // source (src) stream, for each output (dest) frame produced.
@@ -86,9 +88,84 @@ class Mixer {
     // dest reference clocks. The output values of this function are in 19.13 source subframes.
     TimelineFunction dest_frames_to_frac_source_frames;
 
+    // The Bookkeeping struct also tracks values related to long-running positions for this stream,
+    // used in the clock synchronization process.
+    //
+    // This tracks the upcoming destination frame number, for this stream. This should match the
+    // frame value passed to callers of Mix(), via ReadLock. If this is not the case, then there has
+    // been a discontinuity in the destination stream and our running positions should be reset.
+    int64_t next_dest_frame = 0;
+
+    // This tracks the upcoming source fractional frame value for this stream. This value will be
+    // incremented by the amount of source consumed by each Mix() call, an amount is determined by
+    // step_size and rate_modulo/denominator. If next_dest_frame does not match the requested dest
+    // frame value, this stream's running position is reset by recalculating next_frac_source_frame
+    // from the dest_frames_to_frac_source_frames TimelineFunction.
+    FractionalFrames<int64_t> next_frac_source_frame{0};
+
+    // This field is similar to src_pos_modulo and relates to the same rate_modulo and denominator.
+    // It expresses the stream's long-running position modulo (whereas src_pos_modulo is per-Mix).
+    uint32_t next_src_pos_modulo = 0;
+
+    // This field represents the difference between next_frac_souce_frame (maintained on a relative
+    // basis after each Mix() call), and the clock-derived absolute source position (calculated from
+    // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
+    // next_frac_source_frame is reset to that clock-derived value, and this field is set to zero.
+    // This field sets the direction and magnitude of any steps taken for clock reconciliation.
+    FractionalFrames<int64_t> frac_source_error{0};
+
+    // This method resets the local position accounting (including gain ramping), but not the
+    // long-running positions. This is called upon a source discontinuity.
     void Reset() {
       src_pos_modulo = 0;
       gain.ClearSourceRamp();
+    }
+
+    // Reset the long-running and per-Mix position counters. This is generally called upon a
+    // destination discontinuity. If a next_dest_frame value is provided, set next_frac_source_frame
+    // based on the dest_frames_to_frac_source_frames transform. Pre-setting next_src_pos_modulo
+    // here is only helpful for very high resolution scenarios (and is speculative at best); we base
+    // it on rate_modulo and denominator, not the dest-to-source transform.
+    void ResetPositions(int64_t target_dest_frames = 0) {
+      Reset();
+
+      next_dest_frame = target_dest_frames;
+      next_frac_source_frame = FractionalFrames<int64_t>::FromRaw(
+          dest_frames_to_frac_source_frames.Apply(target_dest_frames));
+      if (denominator) {
+        next_src_pos_modulo = (target_dest_frames * rate_modulo) % denominator;
+      }
+      frac_source_error = FractionalFrames<int64_t>::FromRaw(0);
+    }
+
+    // Only called by custom code when debugging, so can remain at INFO severity.
+    void DisplayPositions(std::string tag = "") {
+      FX_LOGS(INFO) << "0x" << std::hex << this << std::dec << " " << tag << ": next_dest_frame "
+                    << next_dest_frame << ", next_frac_source_frame "
+                    << next_frac_source_frame.raw_value() << ", next_src_pos_modulo "
+                    << next_src_pos_modulo << ", frac_source_error "
+                    << frac_source_error.raw_value();
+    }
+
+    // From their current values, advance the long-running positions by a number of dest frames.
+    void AdvanceRunningPositionsBy(int32_t dest_frames) {
+      FX_CHECK(dest_frames >= 0);
+
+      next_dest_frame += dest_frames;
+      auto frac_src_increment = (dest_frames * step_size);
+      if (denominator) {
+        next_src_pos_modulo += (dest_frames * rate_modulo);
+        frac_src_increment += (next_src_pos_modulo / denominator);
+        next_src_pos_modulo %= denominator;
+      }
+      next_frac_source_frame += FractionalFrames<int64_t>::FromRaw(frac_src_increment);
+    }
+
+    // From current values, advance long-running positions to the specified absolute dest frame num.
+    void AdvanceRunningPositionsTo(int32_t dest_target_frame) {
+      FX_CHECK(dest_target_frame >= next_dest_frame);
+
+      AdvanceRunningPositionsBy(dest_target_frame - next_dest_frame);
     }
 
     static constexpr uint32_t kScaleArrLen = 960;
@@ -100,10 +177,9 @@ class Mixer {
   //
   // Resampler enum
   //
-  // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select
-  // optionally use this enum to specify a resampler type. Default allows an
-  // algorithm to select a resampler based on the ratio of incoming and outgoing
-  // rates (currently we use WindowedSinc for all resampling ratios except 1:1).
+  // This enum lists Fuchsia's available resamplers. Callers of Mixer::Select optionally use this
+  // to specify a resampler type. Default allows an algorithm to select a resampler based on the
+  // ratio of incoming-to-outgoing rates (currently we use WindowedSinc for all ratios except 1:1).
   enum class Resampler {
     Default = 0,
     SampleAndHold,
@@ -114,20 +190,16 @@ class Mixer {
   //
   // Select
   //
-  // Select an appropriate mixer instance, based on an optionally-specified
-  // resampler type, or else by the properties of source/destination formats.
+  // Select an appropriate mixer instance, based on an optionally-specified resampler type, or else
+  // by the properties of source/destination formats.
   //
-  // When calling Mixer::Select, resampler_type is optional. If caller specifies
-  // a particular resampler, Mixer::Select will either instantiate exactly what
-  // was requested, or return nullptr -- even if otherwise it could successfully
-  // instantiate a different one. Setting this param to non-Default says "I know
-  // exactly what I need: I want you to fail rather than give me anything else."
+  // When calling Mixer::Select, resampler_type is optional. If a caller specifies a particular
+  // resampler, Mixer::Select will either instantiate what was requested or return nullptr, even if
+  // it otherwise could have successfully instantiated a different one. Setting this to non-Default
+  // says "I know exactly what I need: I want you to fail rather than give me anything else."
   //
-  // If resampler_type is absent or indicates Default, the resampler type is
-  // determined by algorithm (as has been the case before this CL).
-  // For optimum system performance across changing conditions, callers should
-  // take care when directly specifying a resampler type, if they do so at all.
-  // The default should be allowed whenever possible.
+  // If resampler_type is absent or Default, this is determined by algorithm. For optimum system
+  // performance across changing conditions, callers should use Default whenever possible.
   static std::unique_ptr<Mixer> Select(const fuchsia::media::AudioStreamType& src_format,
                                        const fuchsia::media::AudioStreamType& dest_format,
                                        Resampler resampler_type = Resampler::Default);

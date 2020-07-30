@@ -14,6 +14,26 @@
 namespace media::audio {
 namespace {
 
+// Verify default values
+TEST(AudioClockTest, Defaults) {
+  AudioClock audio_clock;
+  EXPECT_FALSE(audio_clock);
+  EXPECT_FALSE(audio_clock.is_valid());
+  EXPECT_FALSE(audio_clock.is_adjustable());
+  EXPECT_FALSE(audio_clock.is_device_clock());
+  EXPECT_TRUE(audio_clock.is_client_clock());
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
+}
+
+TEST(AudioClockTest, ComparisonOperator) {
+  auto clock1 = AudioClock::CreateAsOptimal(clock::AdjustableCloneOfMonotonic());
+  auto clock2 = AudioClock::CreateAsOptimal(clock::AdjustableCloneOfMonotonic());
+  EXPECT_FALSE(clock1 == clock2);
+
+  auto clock3 = AudioClock::CreateAsCustom(clock1.DuplicateClock());
+  EXPECT_TRUE(clock1 == clock3);
+}
+
 // Verify operator bool and is_valid(), and being subsequently set
 TEST(AudioClockTest, Basic) {
   AudioClock default_audio_clock;
@@ -28,6 +48,46 @@ TEST(AudioClockTest, Basic) {
   auto time2 = audio_clock.Read().get();
 
   EXPECT_LT(time1, time2);
+}
+
+// Clock type (and domain, for Device clocks) can be set after construction, and chained.
+TEST(AudioClockTest, CreateAs) {
+  AudioClock audio_clock;
+  audio_clock = AudioClock::CreateAsOptimal(clock::AdjustableCloneOfMonotonic());
+  EXPECT_TRUE(audio_clock.is_adjustable());
+  EXPECT_FALSE(audio_clock.is_device_clock());
+  EXPECT_TRUE(audio_clock.is_client_clock());
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
+  EXPECT_FALSE(audio_clock.SetAsHardwareControlling(true));
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
+
+  audio_clock = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
+  EXPECT_FALSE(audio_clock.is_adjustable());
+  EXPECT_FALSE(audio_clock.is_device_clock());
+  EXPECT_TRUE(audio_clock.is_client_clock());
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
+  EXPECT_TRUE(audio_clock.SetAsHardwareControlling(true));
+  EXPECT_TRUE(audio_clock.controls_hardware_clock());
+
+  constexpr uint32_t kCustomDomain = 42;
+  audio_clock = AudioClock::CreateAsDeviceAdjustable(clock::CloneOfMonotonic(), kCustomDomain);
+  EXPECT_TRUE(audio_clock.is_adjustable());
+  EXPECT_TRUE(audio_clock.is_device_clock());
+  EXPECT_FALSE(audio_clock.is_client_clock());
+  EXPECT_EQ(audio_clock.domain(), kCustomDomain);
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
+  EXPECT_FALSE(audio_clock.SetAsHardwareControlling(true));
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
+
+  constexpr uint32_t kCustomDomain2 = 68;
+  audio_clock = AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), kCustomDomain2);
+  EXPECT_FALSE(audio_clock.is_adjustable());
+  EXPECT_TRUE(audio_clock.is_device_clock());
+  EXPECT_FALSE(audio_clock.is_client_clock());
+  EXPECT_EQ(audio_clock.domain(), kCustomDomain2);
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
+  EXPECT_FALSE(audio_clock.SetAsHardwareControlling(true));
+  EXPECT_FALSE(audio_clock.controls_hardware_clock());
 }
 
 TEST(AudioClockTest, ClockMonoToRefClock) {
