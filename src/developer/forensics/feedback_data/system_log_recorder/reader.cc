@@ -40,12 +40,25 @@ std::string SortLog(const std::string& log) {
   //   3) Stable sorting the messages by timestamp.
   //   4) Combining the messages into a sorted log.
 
+  // All the operations are on std::string_view because it has shown to be expensive otherwise in
+  // practice.
+
+  // Extract the header and the body. The header are the initial log lines that have no timestamps
+  // thus do not need sorting, e.g., decoding error messages in the first files - there may be no
+  // such lines.
+  const size_t header_end = log.find('[');
+  const size_t header_size = (header_end == std::string_view::npos) ? log.size() : header_end;
+
+  const std::string_view header(log.data(), header_size);
+  const std::string_view body(log.data() + header_size, log.size() - header_size);
+
   std::vector<std::string_view> lines = fxl::SplitString(
-      log, "\n", fxl::WhiteSpaceHandling::kKeepWhitespace, fxl::SplitResult::kSplitWantAll);
+      body, "\n", fxl::WhiteSpaceHandling::kKeepWhitespace, fxl::SplitResult::kSplitWantAll);
 
   std::vector<std::string_view> messages;
 
   // Update the end pointer of the last message in |messages|.
+  // Note: This also adds the delimeter back if the new_end is the start of the next message.
   auto GrowTailMessage = [&messages](const char* new_end) mutable {
     if (messages.empty()) {
       return;
@@ -54,12 +67,16 @@ std::string SortLog(const std::string& log) {
     messages.back() = std::string_view(messages.back().data(), new_end - messages.back().data());
   };
 
-  for (const std::string_view& line : lines) {
+  auto line = lines.begin();
+
+  // group messages to enable sorting by timestamp.
+  while (line != lines.end()) {
     // If a new log message is found, update the last log message to span up until the new message.
-    if (MatchesLogMessage(line)) {
-      GrowTailMessage(line.data());
-      messages.push_back(line);
+    if (MatchesLogMessage(*line)) {
+      GrowTailMessage(line->data());
+      messages.push_back(*line);
     }
+    line++;
   }
   // The last log message needs to span until the end of the log.
   GrowTailMessage(log.data() + log.size());
@@ -68,11 +85,13 @@ std::string SortLog(const std::string& log) {
       messages.begin(), messages.end(), [](const std::string_view lhs, const std::string_view rhs) {
         const std::string_view lhs_timestamp = lhs.substr(lhs.find('['), lhs.find(']'));
         const std::string_view rhs_timestamp = rhs.substr(rhs.find('['), rhs.find(']'));
+        // TODO(57241): sort correctly timestamps beyond 99999.
         return lhs_timestamp < rhs_timestamp;
       });
 
   std::string sorted_log;
-  sorted_log.reserve(log.size());
+  sorted_log.reserve(header.size() + log.size());
+  sorted_log.append(header);
   for (const auto& message : messages) {
     sorted_log.append(message);
   }
