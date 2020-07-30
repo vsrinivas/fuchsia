@@ -89,6 +89,7 @@ source_set("magma_util_tests") {
 source_set("magma_platform_tests") {
   testonly = true
   sources = [
+    "test_platform_buffer.cc",
     "test_platform_connection.cc",
     "test_platform_event.cc",
     "test_platform_handle.cc",
@@ -145,7 +146,6 @@ source_set("magma_platform_hardware_tests") {
   testonly = true
 
   sources = [
-    "test_platform_buffer.cc",
     "test_platform_bus_mapper.cc",
     "test_platform_interrupt.cc",
   ]

@@ -10,6 +10,13 @@
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 
+// Some tests don't support ASAN
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define HAS_FEATURE_ASAN
+#endif
+#endif
+
 #if defined(__Fuchsia__)
 
 #include <lib/zx/vmar.h>
@@ -308,86 +315,6 @@ class TestPlatformBuffer {
     test_buffer_passing(buffer[0].get(), buffer[1].get());
   }
 
-  // TODO(MA-427) - adapt test to new bus page mappings; AND enable this test
-  // static void PinRanges(uint32_t num_pages)
-  // {
-  //     std::unique_ptr<magma::PlatformBuffer> buffer =
-  //         magma::PlatformBuffer::Create(num_pages * magma::page_size(), "test");
-
-  //     for (uint32_t i = 0; i < num_pages; i++) {
-  //         uint64_t phys_addr = 0;
-  //         EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //     }
-
-  //     EXPECT_FALSE(buffer->UnpinPages(0, num_pages));
-
-  //     EXPECT_TRUE(buffer->PinPages(0, num_pages));
-
-  //     for (uint32_t i = 0; i < num_pages; i++) {
-  //         uint64_t phys_addr = 0;
-  //         EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //         EXPECT_NE(phys_addr, 0u);
-  //     }
-
-  //     // Map first page again
-  //     EXPECT_TRUE(buffer->PinPages(0, 1));
-
-  //     // Unpin full range
-  //     EXPECT_TRUE(buffer->UnpinPages(0, num_pages));
-
-  //     for (uint32_t i = 0; i < num_pages; i++) {
-  //         uint64_t phys_addr = 0;
-  //         if (i == 0) {
-  //             EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //             EXPECT_TRUE(buffer->UnmapPageRangeBus(i, 1));
-  //         } else
-  //             EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //     }
-
-  //     EXPECT_FALSE(buffer->UnpinPages(0, num_pages));
-  //     EXPECT_TRUE(buffer->UnpinPages(0, 1));
-
-  //     // Map the middle page.
-  //     EXPECT_TRUE(buffer->PinPages(num_pages / 2, 1));
-
-  //     // Map a middle range.
-  //     uint32_t range_start = num_pages / 2 - 1;
-  //     uint32_t range_pages = 3;
-  //     ASSERT_GE(num_pages, range_pages);
-
-  //     EXPECT_TRUE(buffer->PinPages(range_start, range_pages));
-
-  //     // Verify middle range is mapped.
-  //     for (uint32_t i = 0; i < num_pages; i++) {
-  //         uint64_t phys_addr = 0;
-  //         if (i >= range_start && i < range_start + range_pages) {
-  //             EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //             EXPECT_TRUE(buffer->UnmapPageRangeBus(i, 1));
-  //         } else
-  //             EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //     }
-
-  //     // Unpin middle page.
-  //     EXPECT_TRUE(buffer->UnpinPages(num_pages / 2, 1));
-
-  //     // Same result.
-  //     for (uint32_t i = 0; i < num_pages; i++) {
-  //         uint64_t phys_addr = 0;
-  //         if (i >= range_start && i < range_start + range_pages) {
-  //             EXPECT_TRUE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //             EXPECT_TRUE(buffer->UnmapPageRangeBus(i, 1));
-  //         } else
-  //             EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //     }
-
-  //     EXPECT_TRUE(buffer->UnpinPages(range_start, range_pages));
-
-  //     for (uint32_t i = 0; i < num_pages; i++) {
-  //         uint64_t phys_addr = 0;
-  //         EXPECT_FALSE(buffer->MapPageRangeBus(i, 1, &phys_addr));
-  //     }
-  // }
-
   static void CommitPages(uint32_t num_pages) {
     {
       std::unique_ptr<magma::PlatformBuffer> buffer =
@@ -649,15 +576,19 @@ TEST(PlatformBuffer_ParentVmar, ImportAndMapWithFlags) {
                                    TestPlatformBuffer::ParentVmarConfig::kWithParentVmar);
 }
 
-TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
-
-TEST(PlatformBuffer, MapConstrained) { TestPlatformBuffer::MapConstrained(); }
-
 TEST(PlatformBuffer, NotMappable) { TestPlatformBuffer::NotMappable(); }
 
 TEST(PlatformBuffer, AddressRegionSize) { TestPlatformBuffer::CheckAddressRegionSize(); }
 
 TEST(PlatformBuffer, MappingAddressRange) { TestPlatformBuffer::MappingAddressRange(); }
 
+// TODO(fxb/57091)
+#if !defined(HAS_FEATURE_ASAN)
+TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
+
+TEST(PlatformBuffer, MapConstrained) { TestPlatformBuffer::MapConstrained(); }
+
 TEST(PlatformBuffer, Padding) { TestPlatformBuffer::Padding(); }
+#endif
+
 #endif
