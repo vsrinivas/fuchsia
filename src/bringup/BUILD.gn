@@ -8,5 +8,5 @@ group("bringup") {
 
 group("tests") {
   testonly = true
-  deps = [ "bin/virtcon:test" ]
+  deps = [ "bin:tests" ]
 }

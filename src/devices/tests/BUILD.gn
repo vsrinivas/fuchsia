@@ -17,6 +17,5 @@ group("tests") {
     "driver-inspect-test",
     "isolateddevmgr:tests",
     "libdriver-integration-test",
-    "pwrbtn-monitor-integration-test",
   ]
 }

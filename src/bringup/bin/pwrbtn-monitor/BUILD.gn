@@ -31,3 +31,8 @@ executable("pwrbtn-monitor") {
 component_manifest_resources("bootfs") {
   sources = [ "meta/pwrbtn-monitor.cml" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "test:pwrbtn-monitor-integration-test" ]
+}
