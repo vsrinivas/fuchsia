@@ -137,6 +137,7 @@ executable("data_register_unittest_exe") {
     "//src/developer/forensics/feedback_data:data_register",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

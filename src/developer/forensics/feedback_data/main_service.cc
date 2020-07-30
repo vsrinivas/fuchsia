@@ -18,6 +18,7 @@ namespace feedback_data {
 namespace {
 
 const char kConfigPath[] = "/pkg/data/feedback_data/config.json";
+const char kDataRegisterPath[] = "/tmp/data_register.json";
 
 }  // namespace
 
@@ -47,7 +48,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       data_provider_(dispatcher_, services,
                      IntegrityReporter(config.annotation_allowlist, config.attachment_allowlist),
                      &cobalt_, &datastore_),
-      data_register_(&datastore_) {}
+      data_register_(&datastore_, kDataRegisterPath) {}
 
 void MainService::SpawnSystemLogRecorder() {
   zx_handle_t process;
