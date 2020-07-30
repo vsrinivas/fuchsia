@@ -1026,8 +1026,9 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
           // Use the first one by default.
           device_config.physical_device = gpus.devices[0];
         }
-      gpu_list_destroy(&gpus);
     }
+
+  gpu_list_destroy(&gpus);
 
   //
   // get the physical device's memory props
