@@ -166,6 +166,9 @@ protocol Netstack {
     /// table.  Returns true if a transaction can be started.
     StartRouteTableTransaction(request<RouteTableTransaction> route_table_transaction) -> (zx.status status);
 
+    /// Emitted when an interface is added or removed, or when an interface's properties changed.
+    ///
+    /// Synthetically emitted when the protocol request is bound.
     -> OnInterfacesChanged(vector<NetInterface>:MAX interfaces);
 };
 
