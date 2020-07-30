@@ -73,6 +73,9 @@ def main():
         help='List of files describing library dependencies',
         nargs='*',
         default=[])
+    parser.add_argument(
+        '--root-build-dir',
+        help='Root build directory. Required if --go-dep-files is used.')
     parser.add_argument('--binname', help='Output file', required=True)
     parser.add_argument(
         '--output-path',
@@ -132,7 +135,14 @@ def main():
         shutil.rmtree(gopath_src)
     os.makedirs(gopath_src)
 
+    link_to_source_list = []
     if args.go_dep_files:
+        assert args.root_build_dir, (
+            '--root-build-dir is required with --go-dep-files')
+
+        root_build_dir = os.path.abspath(args.root_build_dir)
+        link_to_source = {}
+
         # Create a GOPATH for the packages dependency tree.
         for dst, src in sorted(get_sources(args.go_dep_files).items()):
             # Determine if the package should be mapped recursively or only the
@@ -153,7 +163,7 @@ def main():
                 dst = dst[:-4]
                 recurse = True
                 if src.endswith('/...'):
-                  src = src[:-4]
+                    src = src[:-4]
             dstdir = os.path.join(gopath_src, dst)
 
             if recurse:
@@ -163,6 +173,7 @@ def main():
                 if not os.path.exists(parent):
                     os.makedirs(parent)
                 os.symlink(src, dstdir)
+                link_to_source[os.path.join(root_build_dir, dstdir)] = src
             else:
                 # Map individual files since the dependency is only on the
                 # package itself, not Go subpackages. The only exception is
@@ -172,6 +183,13 @@ def main():
                     src_file = os.path.join(src, filename)
                     if filename == 'testdata' or os.path.isfile(src_file):
                         os.symlink(src_file, os.path.join(dstdir, filename))
+                        link_to_source[os.path.join(
+                            root_build_dir, dstdir, filename)] = src
+
+        # Create a sorted list of (link, src) pairs, with longest paths before
+        # short one. This ensures that 'foobar' will appear before 'foo'.
+        link_to_source_list = sorted(
+            link_to_source.items(), key=lambda x: x[0], reverse=True)
 
     cflags = []
     if args.sysroot:
@@ -192,7 +210,7 @@ def main():
     env = {
         # /usr/bin:/bin are required for basic things like bash(1) and env(1). Note
         # that on Mac, ld is also found from /usr/bin.
-        'PATH': os.path.join(build_goroot, 'bin') + ":/usr/bin:/bin",
+        'PATH': os.path.join(build_goroot, 'bin') + ':/usr/bin:/bin',
         # Disable modules to ensure Go doesn't try to download dependencies.
         'GO111MODULE': 'off',
         'GOARCH': goarch,
@@ -247,7 +265,10 @@ def main():
         cmd += ['-ldflags=' + ' '.join(args.ldflag)]
     cmd += [
         '-pkgdir',
-        os.path.join(project_path, 'pkg'), '-o', args.output_path, args.package, 
+        os.path.join(project_path, 'pkg'),
+        '-o',
+        args.output_path,
+        args.package,
     ]
     retcode = subprocess.call(cmd, env=env)
 
@@ -272,7 +293,7 @@ def main():
     supports_build_id = args.current_os == 'fuchsia'
     if retcode == 0 and args.dump_syms and supports_build_id:
         if args.current_os == 'fuchsia':
-            with open(dist + ".sym", "w") as f:
+            with open(dist + '.sym', 'w') as f:
                 retcode = subprocess.call(
                     [args.dump_syms, '-r', '-o', 'Fuchsia', args.output_path],
                     stdout=f)
@@ -283,24 +304,26 @@ def main():
         retcode = subprocess.call(
             [
                 args.buildidtool,
-                "-build-id-dir",
+                '-build-id-dir',
                 args.build_id_dir,
-                "-stamp",
-                dist + ".build-id.stamp",
-                "-entry",
-                ".debug=" + args.output_path,
-                "-entry",
-                "=" + dist,
+                '-stamp',
+                dist + '.build-id.stamp',
+                '-entry',
+                '.debug=' + args.output_path,
+                '-entry',
+                '=' + dist,
             ])
 
     if retcode == 0:
         if args.depfile is not None:
-            with open(args.depfile, "wb") as out:
-                godepfile_args = [args.godepfile, '-o', dist]
-                if args.is_test:
-                    godepfile_args += ['-test']
-                godepfile_args += [args.package]
-                subprocess.Popen(godepfile_args, stdout=out, env=env)
+            godepfile_args = [args.godepfile, '-o', dist]
+            for f, t in link_to_source_list:
+                godepfile_args += ['-prefixmap', '%s=%s' % (f, t)]
+            if args.is_test:
+                godepfile_args += ['-test']
+            godepfile_args += [args.package]
+            with open(args.depfile, 'wb') as into:
+                subprocess.check_call(godepfile_args, env=env, stdout=into)
 
     return retcode
 
