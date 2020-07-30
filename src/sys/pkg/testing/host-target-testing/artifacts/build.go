@@ -6,6 +6,7 @@ package artifacts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -176,7 +177,29 @@ func (b *FuchsiaDirBuild) GetSshPublicKey() ssh.PublicKey {
 }
 
 func (b *FuchsiaDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
-	return filepath.Join(b.dir, "fuchsia.vbmeta"), nil
+	imagesJSON := filepath.Join(b.dir, "images.json")
+	f, err := os.Open(imagesJSON)
+	if err != nil {
+		return "", fmt.Errorf("failed to open %q: %w", imagesJSON, err)
+	}
+	defer f.Close()
+
+	var items []struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+		Type string `json:"type"`
+	}
+	if err := json.NewDecoder(f).Decode(&items); err != nil {
+		return "", fmt.Errorf("failed to parse %q: %w", imagesJSON, err)
+	}
+
+	for _, item := range items {
+		if item.Name == "zircon-a" && item.Type == "vbmeta" {
+			return filepath.Join(b.dir, item.Path), nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to file zircon-a vbmeta in %q", imagesJSON)
 }
 
 type OmahaBuild struct {
