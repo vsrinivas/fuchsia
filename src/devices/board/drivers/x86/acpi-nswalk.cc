@@ -35,6 +35,22 @@
 #include "resources.h"
 #include "sysmem.h"
 
+namespace acpi {
+
+fitx::result<ACPI_STATUS, UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj) {
+  ACPI_DEVICE_INFO* raw = nullptr;
+  ACPI_STATUS acpi_status = AcpiGetObjectInfo(obj, &raw);
+  UniquePtr<ACPI_DEVICE_INFO> ret{raw};
+
+  if (ACPI_SUCCESS(acpi_status)) {
+    return fitx::ok(std::move(ret));
+  }
+
+  return fitx::error(acpi_status);
+}
+
+}  // namespace acpi
+
 ACPI_STATUS AcpiDevice::AddResource(ACPI_RESOURCE* res) {
   if (resource_is_memory(res)) {
     resource_memory_t mem;
@@ -427,11 +443,11 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
 }
 
 ACPI_STATUS AcpiWalker::OnDescent(ACPI_HANDLE object) {
-  ACPI_DEVICE_INFO* info_rawptr = nullptr;
-  ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info_rawptr);
-  acpi::UniquePtr<ACPI_DEVICE_INFO> info{info_rawptr};
-  if (acpi_status != AE_OK) {
-    return acpi_status;
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+    return res.error_value();
+  } else {
+    info = std::move(res.value());
   }
 
   acpi_apply_workarounds(object, info.get());

@@ -27,13 +27,14 @@
 
 static ACPI_STATUS find_pci_child_callback(ACPI_HANDLE object, uint32_t /* nesting_level */,
                                            void* context, void** out_value) {
-  ACPI_DEVICE_INFO* info;
-  ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
-  if (acpi_status != AE_OK) {
-    zxlogf(DEBUG, "bus-acpi: AcpiGetObjectInfo failed %d", acpi_status);
-    return acpi_status;
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+    zxlogf(DEBUG, "bus-acpi: acpi::GetObjectInfo failed %d", res.error_value());
+    return res.error_value();
+  } else {
+    info = std::move(res.value());
   }
-  ACPI_FREE(info);
+
   ACPI_OBJECT obj = {
       .Type = ACPI_TYPE_INTEGER,
   };
@@ -41,7 +42,7 @@ static ACPI_STATUS find_pci_child_callback(ACPI_HANDLE object, uint32_t /* nesti
       .Length = sizeof(obj),
       .Pointer = &obj,
   };
-  acpi_status = AcpiEvaluateObject(object, const_cast<char*>("_ADR"), nullptr, &buffer);
+  ACPI_STATUS acpi_status = AcpiEvaluateObject(object, const_cast<char*>("_ADR"), nullptr, &buffer);
   if (acpi_status != AE_OK) {
     return AE_OK;
   }
@@ -84,11 +85,10 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object, uint32_t /*nestin
   auxdata_i2c_device_t* data = ctx->data + ctx->i;
   data->protocol_id = ZX_PROTOCOL_I2C;
 
-  ACPI_DEVICE_INFO* info = nullptr;
-  ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
-  if (acpi_status == AE_OK) {
+  if (auto res = acpi::GetObjectInfo(object); res.is_ok()) {
     // These length fields count the trailing NUL.
     // Publish HID
+    auto& info = res.value();
     if ((info->Valid & ACPI_VALID_HID) && info->HardwareId.Length <= HID_LENGTH + 1) {
       const char* hid = info->HardwareId.String;
       data->props[data->propcount].id = BIND_ACPI_HID_0_3;
@@ -110,12 +110,12 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object, uint32_t /*nestin
         data->props[data->propcount++].value = htobe32(*((uint32_t*)(cid->String + 4)));
       }
     }
-    ACPI_FREE(info);
   }
   ZX_ASSERT(data->propcount <= AUXDATA_MAX_DEVPROPS);
 
   // call _CRS to get i2c info
-  acpi_status = AcpiWalkResources(object, (char*)"_CRS", pci_child_data_resources_callback, ctx);
+  ACPI_STATUS acpi_status =
+      AcpiWalkResources(object, (char*)"_CRS", pci_child_data_resources_callback, ctx);
   if ((acpi_status == AE_OK) || (acpi_status == AE_CTRL_TERMINATE)) {
     ctx->i++;
   }

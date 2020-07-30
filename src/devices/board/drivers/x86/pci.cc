@@ -159,18 +159,19 @@ static ACPI_STATUS resource_report_callback(ACPI_RESOURCE* res, void* _ctx) {
 // tree off of the PCI root.
 static ACPI_STATUS walk_devices_callback(ACPI_HANDLE object, uint32_t /*nesting_level*/, void* _ctx,
                                          void** /*ret*/) {
-  ACPI_DEVICE_INFO* info = nullptr;
-  ACPI_STATUS status = AcpiGetObjectInfo(object, &info);
-  if (status != AE_OK) {
-    return status;
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+    zxlogf(DEBUG, "bus-acpi: acpi::GetObjectInfo failed %d", res.error_value());
+    return res.error_value();
+  } else {
+    info = std::move(res.value());
   }
 
   auto* ctx = static_cast<ResourceContext*>(_ctx);
   ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
 
-  ACPI_FREE(info);
-
-  status = AcpiWalkResources(object, const_cast<char*>("_CRS"), resource_report_callback, ctx);
+  ACPI_STATUS status =
+      AcpiWalkResources(object, const_cast<char*>("_CRS"), resource_report_callback, ctx);
   if (status == AE_NOT_FOUND || status == AE_OK) {
     return AE_OK;
   }

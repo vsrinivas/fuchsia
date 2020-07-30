@@ -9,6 +9,8 @@
 
 #include <acpica/acpi.h>
 
+#include "acpi-private.h"
+
 static inline void do_indent(unsigned int level) {
   while (level) {
     printf("  ");
@@ -295,19 +297,16 @@ static void acpi_debug_pcie_irq_routing(void) {
 
 static ACPI_STATUS acpi_debug_print_device_name(ACPI_HANDLE object, UINT32 nesting_level,
                                                 void* context, void** ret) {
-  ACPI_DEVICE_INFO* info = NULL;
-  ACPI_STATUS status = AcpiGetObjectInfo(object, &info);
-  if (status != AE_OK) {
-    if (info) {
-      ACPI_FREE(info);
-    }
-    return status;
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+    return res.error_value();
+  } else {
+    info = std::move(res.value());
   }
 
   unsigned int level = nesting_level;
   INDENT_PRINTF("%4s\n", (char*)&info->Name);
 
-  ACPI_FREE(info);
   return AE_OK;
 }
 

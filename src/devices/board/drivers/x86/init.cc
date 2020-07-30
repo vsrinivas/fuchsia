@@ -7,6 +7,7 @@
 #include <acpica/acpi.h>
 #include <ddk/debug.h>
 
+#include "acpi-private.h"
 #include "dev.h"
 #include "errors.h"
 #include "iommu.h"
@@ -30,23 +31,26 @@ ACPI_STATUS set_apic_irq_mode(void) {
 }
 
 int is_gpe_device(ACPI_HANDLE object) {
-  ACPI_DEVICE_INFO* info = NULL;
-  ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
-  if (acpi_status == AE_OK) {
-    // These length fields count the trailing NUL.
-    if ((info->Valid & ACPI_VALID_HID) && info->HardwareId.Length <= HID_LENGTH + 1) {
-      if (!strncmp(info->HardwareId.String, GPE_HID_STRING, HID_LENGTH)) {
-        return 1;
-      }
-    }
-    if ((info->Valid & ACPI_VALID_CID) && info->CompatibleIdList.Count > 0) {
-      ACPI_PNP_DEVICE_ID* id = &info->CompatibleIdList.Ids[0];
-      if (!strncmp(id->String, GPE_CID_STRING, CID_LENGTH)) {
-        return 1;
-      }
-    }
-    ACPI_FREE(info);
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+    return 0;
+  } else {
+    info = std::move(res.value());
   }
+
+  // These length fields count the trailing NUL.
+  if ((info->Valid & ACPI_VALID_HID) && info->HardwareId.Length <= HID_LENGTH + 1) {
+    if (!strncmp(info->HardwareId.String, GPE_HID_STRING, HID_LENGTH)) {
+      return 1;
+    }
+  }
+  if ((info->Valid & ACPI_VALID_CID) && info->CompatibleIdList.Count > 0) {
+    ACPI_PNP_DEVICE_ID* id = &info->CompatibleIdList.Ids[0];
+    if (!strncmp(id->String, GPE_CID_STRING, CID_LENGTH)) {
+      return 1;
+    }
+  }
+
   return 0;
 }
 

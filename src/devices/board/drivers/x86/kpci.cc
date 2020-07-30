@@ -292,8 +292,6 @@ static zx_status_t find_pci_legacy_irq_mapping(zx_pci_init_arg_t* arg) {
 
 static ACPI_STATUS find_pci_configs_cb(ACPI_HANDLE object, uint32_t nesting_level, void* _ctx,
                                        void** ret) {
-  ACPI_DEVICE_INFO* info;
-
   size_t size_per_bus =
       PCI_BASE_CONFIG_SIZE * PCI_MAX_DEVICES_PER_BUS * PCI_MAX_FUNCTIONS_PER_DEVICE;
   zx_pci_init_arg_t* arg = (zx_pci_init_arg_t*)_ctx;
@@ -302,7 +300,7 @@ static ACPI_STATUS find_pci_configs_cb(ACPI_HANDLE object, uint32_t nesting_leve
   // legacy PCI on Virtualbox and GCE. When the ACPI bus driver
   // is enabled we'll be using proper binding and not need this
   // anymore.
-  if (AcpiGetObjectInfo(object, &info) == AE_OK) {
+  if (auto res = acpi::GetObjectInfo(object); res.is_ok()) {
     arg->addr_windows[0].cfg_space_type = PCI_CFG_SPACE_TYPE_PIO;
     arg->addr_windows[0].has_ecam = false;
     arg->addr_windows[0].base = 0;
@@ -477,18 +475,18 @@ static ACPI_STATUS report_current_resources_resource_cb(ACPI_RESOURCE* res, void
 static ACPI_STATUS pci_report_current_resources_device_cb(ACPI_HANDLE object,
                                                           uint32_t nesting_level, void* _ctx,
                                                           void** ret) {
-  ACPI_DEVICE_INFO* info = NULL;
-  ACPI_STATUS status = AcpiGetObjectInfo(object, &info);
-  if (status != AE_OK) {
-    return status;
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+    return res.error_value();
+  } else {
+    info = std::move(res.value());
   }
 
   auto* ctx = static_cast<report_current_resources_ctx*>(_ctx);
   ctx->device_is_root_bridge = (info->Flags & ACPI_PCI_ROOT_BRIDGE) != 0;
 
-  ACPI_FREE(info);
-
-  status = AcpiWalkResources(object, (char*)"_CRS", report_current_resources_resource_cb, ctx);
+  ACPI_STATUS status =
+      AcpiWalkResources(object, (char*)"_CRS", report_current_resources_resource_cb, ctx);
   if (status == AE_NOT_FOUND || status == AE_OK) {
     return AE_OK;
   }
@@ -591,8 +589,8 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     args.proto_ops = get_pciroot_ops();
 
     if (zx_status_t status = device_add(sysdev, &args, device->mutable_zxdev()); status != ZX_OK) {
-      zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status,
-             device_get_name(sysdev), sysdev);
+      zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status, device_get_name(sysdev),
+             sysdev);
     } else {
       zxlogf(ERROR, "acpi: published device %s(%p), parent=%s(%p), handle=%p", args.name,
              device.get(), device_get_name(sysdev), sysdev, device->acpi_handle());

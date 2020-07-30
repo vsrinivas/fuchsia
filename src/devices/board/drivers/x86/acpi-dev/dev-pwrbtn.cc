@@ -20,6 +20,7 @@
 #include <fbl/mutex.h>
 #include <hid/descriptor.h>
 
+#include "acpi-private.h"
 #include "dev.h"
 #include "errors.h"
 
@@ -119,15 +120,14 @@ uint32_t AcpiPwrbtnDevice::FixedEventHandler(void* ctx) {
 
 void AcpiPwrbtnDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx) {
   auto dev = reinterpret_cast<AcpiPwrbtnDevice*>(ctx);
+  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
 
-  ACPI_DEVICE_INFO* info = NULL;
-  ACPI_STATUS status = AcpiGetObjectInfo(handle, &info);
-  if (status != AE_OK) {
-    if (info) {
-      ACPI_FREE(info);
-    }
+  if (auto res = acpi::GetObjectInfo(handle); res.is_error()) {
     return;
+  } else {
+    info = std::move(res.value());
   }
+
   // Handle powerbutton events via the notify interface
   bool power_btn = false;
   if (info->Valid & ACPI_VALID_HID) {
@@ -143,8 +143,6 @@ void AcpiPwrbtnDevice::NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx
   if (power_btn) {
     dev->HandlePress();
   }
-
-  ACPI_FREE(info);
 }
 
 void AcpiPwrbtnDevice::QueueHidReportLocked() {

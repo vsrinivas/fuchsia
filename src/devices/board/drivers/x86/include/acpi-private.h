@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
+#include <lib/fitx/result.h>
+
 #include <vector>
 
 #include <ddk/protocol/auxdata.h>
@@ -25,6 +27,11 @@ struct UniquePtrDeleter {
 
 template <typename T>
 using UniquePtr = std::unique_ptr<T, UniquePtrDeleter<T>>;
+
+// A free standing function which can be used to fetch the Info structure of an
+// ACPI device.  It returns a fitx::result which either holds a managed pointer
+// to the info object, or an ACPI error code in the case of failure.
+fitx::result<ACPI_STATUS, UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj);
 
 }  // namespace acpi
 
