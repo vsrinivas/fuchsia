@@ -242,6 +242,14 @@ mod test {
     }
 
     proptest! {
+        // TODO(fxbug.dev/57345) Remove custom proptest configuration. By default, proptest tries
+        // 256 cases, so the test component should be calling bind 3 + (4*256) = 1,027 times. The
+        // test component is given its own netstack, so it should not be possible for the test
+        // component to exhaust all of its available ports, but bind is sometimes returning
+        // AddrInUse.
+        #![proptest_config(ProptestConfig {
+            cases: 5, .. ProptestConfig::default()
+        })]
         #[test]
         fn keepalive_roundtrip
             (seconds in 1..=MAX_TCP_KEEPALIVE_IDLE)
