@@ -1,0 +1,11 @@
+{
+    "program": {
+        "data": "data/dart-component"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService"
+        ]
+    }
+}

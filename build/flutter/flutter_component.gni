@@ -1,0 +1,207 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia || is_fuchsia_host)
+
+import("//build/dart/config.gni")  # For dart_force_product
+import("//build/dart/dart.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/internal/flutter_dart_component.gni")
+
+# Defines a Flutter component which can be used in a fuchsia package
+#
+# Flutter components require at least one library which contains a main
+# entry point. The library should be defined using the dart_library.gni.
+#
+# ```
+# dart_library("lib") {
+#   package_name = "my_library"
+#   sources = [ "main.dart" ]
+#   deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+# }
+# ```
+#
+# Once a library is defined a flutter component can be created which
+# depends on this package. If the component needs any other resources they may
+# be defined using the resource target and added to the components deps.
+#
+# ```
+# resource("text-file") {
+#   sources = [ "text_file.txt" ]
+#   outputs = [ "data/text_file.txt" ]
+# }
+#
+# flutter_component("my-component") {
+#   manifest = "meta/my-component.cmx"
+#   main_package = "my_library"
+#   deps = [
+#     ":lib",
+#     ":text-file",
+#   ]
+# }
+# ```
+#
+# Once a component is defined it can be added as a dep of a fuchsia_package
+# ```
+# fuchsia_package("my-package") {
+#   deps = [
+#     ":my-component",
+#   ]
+# }
+# ```
+#
+# Parameters
+#
+#   manifest (required)
+#     The component manifest
+#     Type: path
+#
+#   main_package (required)
+#     The name of the package containing main_dart
+#     Type: string
+#
+#   component_name (optional)
+#     The name of the component.
+#     Type: string
+#     Default: target_name
+#
+#   main_dart (optional)
+#     File containing the main function of the component.
+#     Type: string
+#     Default: main.dart
+#
+#   package_root (optional)
+#     The root of the package generated for this component. Each component must
+#     have a unique package_root. For each component, there must be a
+#     pubspec.yaml and an analysis_options.yaml at the package root.
+#     Type: path
+#     Default: "."
+#
+#   flutter_driver_extendable (optional)
+#     Determines if, in a debug build, this component will be built with a
+#     wrapper that auto-enables flutter driver extensions when running the
+#     component in a an environment that includes TestRunner. Does not
+#     affect AOT or release builds.
+#     Type: boolean
+#     Default: false
+#
+#  deps
+#  testonly
+#  visibility
+template("flutter_component") {
+  assert(defined(invoker.manifest), "Must define manifest")
+  assert(defined(invoker.main_package), "Must define main_package")
+
+  _component_deps = []
+  if (defined(invoker.deps)) {
+    _component_deps += invoker.deps
+  }
+
+  _product_suffix = ""
+  if (dart_force_product) {
+    _product_suffix = "_product"
+  }
+
+  _runtime_meta =
+      "//build/flutter/meta/${dart_compilation_mode}${_product_suffix}_runtime"
+  _component_deps += [ "//topaz/runtime/flutter_runner:flutter_${dart_compilation_mode}${_product_suffix}_runner" ]
+
+  _main_package = invoker.main_package
+
+  if (defined(invoker.main_dart)) {
+    _main_dart = invoker.main_dart
+  } else {
+    _main_dart = "main.dart"
+  }
+
+  _flutter_driver_extendable = false
+  if (dart_compilation_mode == "aot") {
+    not_needed(invoker, [ "flutter_driver_extendable" ])
+  } else if (defined(invoker.flutter_driver_extendable)) {
+    # flutter driver is only available to JIT builds
+    _flutter_driver_extendable = invoker.flutter_driver_extendable && is_debug
+  }
+
+  if (_flutter_driver_extendable) {
+    # Need to generate package in the dart toolchain's target_gen_dir
+    _dart_target_gen_dir =
+        get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+    _generated_package_name = "${_main_package}_generated"
+    _generated_main = "generated_main.dart"
+
+    _generated_package_root = "$_dart_target_gen_dir/${_generated_package_name}"
+    _generated_extension_wrapper =
+        "${_generated_package_root}/lib/${_generated_main}"
+
+    #TODO: need to examine the dart language version of the provided main and
+    #match it in our generated code.
+    _generate_debug_wrapper_target_name = "${target_name}_gen_debug_wrapper"
+    action(_generate_debug_wrapper_target_name) {
+      script = "//build/flutter/gen_debug_wrapper_main.py"
+      args = [
+        "--main-package=" + _main_package,
+        "--main=" + _main_dart,
+        "--out=" + rebase_path(_generated_extension_wrapper, root_build_dir),
+      ]
+      outputs = [ _generated_extension_wrapper ]
+    }
+
+    _generated_dart_library_target_name =
+        "${_generated_package_name}_dart_library"
+    dart_library(_generated_dart_library_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter_driver" ]
+
+      package_root = _generated_package_root
+
+      package_name = _generated_package_name
+
+      sources = [ _generated_main ]
+      source_dir = "lib/"
+
+      disable_analysis = true
+      if (defined(invoker.package_root)) {
+        _package_root = invoker.package_root
+      } else {
+        _package_root = "."
+      }
+      pubspec = rebase_path("pubspec.yaml", _package_root)
+    }
+
+    # Depending on this target ensures that the package ends up in the
+    # package_config.json file
+    _component_deps += [
+      ":$_generate_debug_wrapper_target_name($target_toolchain)",
+      ":$_generated_dart_library_target_name",
+    ]
+
+    # The main_dart and main_packages become our new entry points.
+    _main_dart = _generated_main
+    _main_package = _generated_package_name
+  }
+
+  flutter_dart_component(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "deps",
+                             "main_dart",
+                             "main_package",
+                           ])
+    deps = _component_deps
+
+    main_dart = _main_dart
+    main_package = _main_package
+
+    runtime_meta = _runtime_meta
+    platform_name = flutter_platform_name
+
+    generate_asset_manifest = true
+  }
+}

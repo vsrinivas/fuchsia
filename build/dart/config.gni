@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Temporary import to allow for soft transition
+import("//topaz/runtime/dart/config.gni")
+declare_args() {
+  # Forces all Dart and Flutter apps to build in product mode which is a
+  # stripped down version of the VM running in AOT mode.
+  # TODO uncomment this once references to //topaz/runtime/dart/config.gni are converted
+  #dart_force_product = false
+
+  # dart_compilation_mode is one of either 'jit' or 'aot'. We build in 'jit'
+  # mode when in debug mode and 'aot' when in release or product mode.
+  if (is_debug) {
+    dart_compilation_mode = "jit"
+  } else {
+    dart_compilation_mode = "aot"
+  }
+
+  if (dart_force_product) {
+    dart_compilation_mode = "aot"
+  }
+}
