@@ -107,8 +107,6 @@ func NewSystemUpdater(repo *packages.Repository, updatePackageUrl string) *Syste
 }
 
 func (u *SystemUpdater) Update(ctx context.Context, c client) error {
-	logger.Infof(ctx, "Downloading OTA")
-
 	startTime := time.Now()
 	server, err := c.ServePackageRepository(ctx, u.repo, "download-ota", true)
 	if err != nil {
@@ -116,7 +114,7 @@ func (u *SystemUpdater) Update(ctx context.Context, c client) error {
 	}
 	defer server.Shutdown(ctx)
 
-	logger.Infof(ctx, "Downloading system OTA")
+	logger.Infof(ctx, "Downloading OTA %q", u.updatePackageUrl)
 
 	cmd := []string{
 		"update",
@@ -223,11 +221,12 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	}
 	defer pkgBuilder.Close()
 
-	if err := pkgBuilder.Publish(u.repo); err != nil {
+	pkgPath, pkgMerkle, err := pkgBuilder.Publish(ctx, u.repo)
+	if err != nil {
 		return fmt.Errorf("Failed to publish update package: %w", err)
 	}
 
-	omahaPackageURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s/0", pkgBuilder.Name)
+	omahaPackageURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", pkgPath, pkgMerkle)
 
 	// Have the omaha server serve the package.
 	if err := u.omahaServer.SetUpdatePkgURL(ctx, omahaPackageURL); err != nil {

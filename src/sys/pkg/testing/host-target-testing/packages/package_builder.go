@@ -5,6 +5,7 @@
 package packages
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type PackageBuilder struct {
@@ -128,33 +130,35 @@ func tempConfig(dir string, name string, version string) (*build.Config, error) 
 	return cfg, nil
 }
 
-// Publish the package to the repository.
-func (p *PackageBuilder) Publish(pkgRepo *Repository) error {
+// Publish the package to the repository. Returns the TUF package path and
+// merkle on success, or a error on failure.
+func (p *PackageBuilder) Publish(ctx context.Context, pkgRepo *Repository) (string, string, error) {
 	// Open repository
 	// Repository.Dir contains a trailing `repository` in the path that we don't want.
 	repoDir := path.Dir(pkgRepo.Dir)
 	pmRepo, err := repo.New(repoDir)
 	if err != nil {
-		return fmt.Errorf("failed to open repository at %q. %w", pkgRepo.Dir, err)
+		return "", "", fmt.Errorf("failed to open repository at %q. %w", pkgRepo.Dir, err)
 	}
 	// Create Config.
 	dir, err := ioutil.TempDir("", "pm-temp-config")
 	if err != nil {
-		return fmt.Errorf("failed to create temp directory for the config: %w", err)
+		return "", "", fmt.Errorf("failed to create temp directory for the config: %w", err)
 	}
 	defer os.RemoveAll(dir)
 
 	cfg, err := tempConfig(dir, p.Name, p.Version)
 	if err != nil {
-		return fmt.Errorf("failed to create temp config to fill with our data: %w", err)
+		return "", "", fmt.Errorf("failed to create temp config to fill with our data: %w", err)
 	}
-	pkgPath := filepath.Join(filepath.Dir(cfg.ManifestPath), "package")
-	if err := os.MkdirAll(filepath.Join(pkgPath, "meta"), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to make parent dirs for meta/package: %w", err)
+
+	pkgManifestPath := filepath.Join(filepath.Dir(cfg.ManifestPath), "package")
+	if err := os.MkdirAll(filepath.Join(pkgManifestPath, "meta"), os.ModePerm); err != nil {
+		return "", "", fmt.Errorf("failed to make parent dirs for meta/package: %w", err)
 	}
 	mfst, err := os.Create(cfg.ManifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to create package manifest path: %w", err)
+		return "", "", fmt.Errorf("failed to create package manifest path: %w", err)
 	}
 	defer mfst.Close()
 
@@ -164,41 +168,64 @@ func (p *PackageBuilder) Publish(pkgRepo *Repository) error {
 			continue
 		}
 		if _, err := fmt.Fprintf(mfst, "%s=%s\n", relativePath, sourcePath); err != nil {
-			return fmt.Errorf("failed to record entry %q as %q into manifest: %w", p.Name, sourcePath, err)
+			return "", "", fmt.Errorf("failed to record entry %q as %q into manifest: %w", p.Name, sourcePath, err)
 		}
 	}
 
 	// Save changes to config.
 	if err := build.Update(cfg); err != nil {
-		return fmt.Errorf("failed to update config: %w", err)
+		return "", "", fmt.Errorf("failed to update config: %w", err)
 	}
 	if _, err := build.Seal(cfg); err != nil {
-		return fmt.Errorf("failed to seal config: %w", err)
+		return "", "", fmt.Errorf("failed to seal config: %w", err)
 	}
+
+	pkgPath := fmt.Sprintf("%s/%s", p.Name, p.Version)
+	blobs, err := cfg.BlobInfo()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to extract blobs: %w", err)
+	}
+
+	pkgMerkle := ""
+	for _, blob := range blobs {
+		if blob.Path == "meta/" {
+			pkgMerkle = blob.Merkle.String()
+			break
+		}
+	}
+
+	if pkgMerkle == "" {
+		return "", "", fmt.Errorf("could not find meta.far merkle")
+	}
+
+	logger.Infof(ctx, "publishing %q to merkle %q", pkgPath, pkgMerkle)
 
 	outputManifest, err := cfg.OutputManifest()
 	if err != nil {
-		return fmt.Errorf("failed to output manifest: %w", err)
+		return "", "", fmt.Errorf("failed to output manifest: %w", err)
 	}
-
-	outputManifestPath := path.Join(cfg.OutputDir, "package_manifest.json")
 
 	content, err := json.Marshal(outputManifest)
 	if err != nil {
-		return fmt.Errorf("failed to convert manifest to JSON: %w", err)
+		return "", "", fmt.Errorf("failed to convert manifest to JSON: %w", err)
 	}
+
+	outputManifestPath := path.Join(cfg.OutputDir, "package_manifest.json")
 	if err := ioutil.WriteFile(outputManifestPath, content, os.ModePerm); err != nil {
-		return fmt.Errorf("failed to write manifest JSON to %q: %w", outputManifestPath, err)
+		return "", "", fmt.Errorf("failed to write manifest JSON to %q: %w", outputManifestPath, err)
 	}
-	defer os.RemoveAll(filepath.Dir(cfg.OutputDir))
 
 	// Publish new config to repo.
 	_, err = pmRepo.PublishManifest(outputManifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to publish manifest: %w", err)
+		return "", "", fmt.Errorf("failed to publish manifest: %w", err)
 	}
+
 	if err = pmRepo.CommitUpdates(true); err != nil {
-		return fmt.Errorf("failed to commit updates to repo: %w", err)
+		return "", "", fmt.Errorf("failed to commit updates to repo: %w", err)
 	}
-	return nil
+
+	logger.Infof(ctx, "package %q as %q published and committed", pkgPath, pkgMerkle)
+
+	return pkgPath, pkgMerkle, nil
 }

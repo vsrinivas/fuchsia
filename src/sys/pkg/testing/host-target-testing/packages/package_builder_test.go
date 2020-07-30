@@ -208,9 +208,14 @@ func TestPublish(t *testing.T) {
 	// Add resource to package.
 	pkgBuilder.AddResource(newResource, bytes.NewReader([]byte(newResource)))
 
-	// Update repo with updated package.
-	if err := pkgBuilder.Publish(pkgRepo); err != nil {
+	// Update repo with updated package. We don't check the merkle since the package includes randomly generated files.
+	actualPkgName, _, err := pkgBuilder.Publish(ctx, pkgRepo)
+	if err != nil {
 		t.Fatalf("Publishing package failed. %s", err)
+	}
+
+	if actualPkgName != fullPkgName {
+		t.Fatalf("package path should be %q, not %q", fullPkgName, actualPkgName)
 	}
 
 	pkgRepo, err = NewRepository(ctx, path.Dir(pkgRepo.Dir))
