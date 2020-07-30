@@ -118,9 +118,13 @@ func tempConfig(dir string, name string, version string) (*build.Config, error) 
 		PkgName:      name,
 		PkgVersion:   version,
 	}
+
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
-		os.MkdirAll(d, os.ModePerm)
+		if err := os.MkdirAll(d, os.ModePerm); err != nil {
+			return nil, err
+		}
 	}
+
 	return cfg, nil
 }
 
