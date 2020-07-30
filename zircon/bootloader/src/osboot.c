@@ -670,8 +670,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     // TODO(47049) Commented out to use the ABR choice. Refactor to use a simple boot selection
     // code.
     // swap_to_head('m', valid_keys, key_idx);
-  } else if (!memcmp(defboot, "local", 5)) {
-    swap_to_head('m', valid_keys, key_idx);
   } else if (!memcmp(defboot, "zedboot", 7)) {
     swap_to_head('z', valid_keys, key_idx);
   } else if (!memcmp(defboot, "local", 5)) {
