@@ -62,10 +62,7 @@ void MemoryWatchdog::EvictionTrigger() {
   // This runs from a timer interrupt context, as such we do not want to be performing synchronous
   // eviction and blocking some random thread. Therefore we use the asynchronous eviction trigger
   // that will cause the scanner thread to perform the actual eviction work.
-  scanner_trigger_evict(min_free_target_, free_mem_target_,
-                        mem_event_idx_ <= PressureLevel::kCritical
-                            ? scanner::EvictionLevel::IncludeNewest
-                            : scanner::EvictionLevel::OnlyOldest);
+  scanner_trigger_evict(min_free_target_, free_mem_target_, scanner::EvictionLevel::OnlyOldest);
 }
 
 // Helper called by the memory pressure thread when OOM state is entered.
@@ -164,7 +161,8 @@ void MemoryWatchdog::WorkerThread() {
       printf("memory-pressure: memory availability state - %s\n", PressureLevelToString(idx));
 
       // Trigger eviction if the memory availability state is more critical than the previous one.
-      if (idx < prev_mem_event_idx_) {
+      // Currently we do not do any eviction at the kWarning level, only kCritical and below.
+      if (idx < prev_mem_event_idx_ && idx <= PressureLevel::kCritical) {
         // Clear any previous eviction trigger. Once Cancel completes we know that we will not race
         // with the callback and are free to update the targets.
         eviction_trigger_.Cancel();
@@ -250,9 +248,9 @@ void MemoryWatchdog::Init(Executor* executor) {
     mem_watermarks[PressureLevel::kWarning] = gCmdline.GetUInt64("kernel.oom.warning-mb", 300) * MB;
     uint64_t watermark_debounce = gCmdline.GetUInt64("kernel.oom.debounce-mb", 1) * MB;
 
-    // Set our eviction target to be such that we try to get completely out of the warning level,
+    // Set our eviction target to be such that we try to get completely out of the critical level,
     // taking into account the debounce.
-    free_mem_target_ = mem_watermarks[PressureLevel::kWarning] + watermark_debounce;
+    free_mem_target_ = mem_watermarks[PressureLevel::kCritical] + watermark_debounce;
 
     zx_status_t status =
         pmm_init_reclamation(&mem_watermarks[PressureLevel::kOutOfMemory], kNumWatermarks,
