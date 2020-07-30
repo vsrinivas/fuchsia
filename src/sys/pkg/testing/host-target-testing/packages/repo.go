@@ -17,8 +17,7 @@ import (
 )
 
 type Repository struct {
-	Dir     string
-	targets targets
+	Dir string
 }
 
 type signed struct {
@@ -59,23 +58,8 @@ func NewRepository(ctx context.Context, dir string) (*Repository, error) {
 		return nil, err
 	}
 
-	repoDir := filepath.Join(dir, "repository")
-
-	// Parse the targets file so we can access packages locally.
-	f, err := os.Open(filepath.Join(repoDir, "targets.json"))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	var s signed
-	if err = json.NewDecoder(f).Decode(&s); err != nil {
-		return nil, err
-	}
-
 	return &Repository{
-		Dir:     repoDir,
-		targets: s.Signed,
+		Dir: filepath.Join(dir, "repository"),
 	}, nil
 }
 
@@ -90,11 +74,24 @@ func NewRepositoryFromTar(ctx context.Context, dst string, src string) (*Reposit
 	return NewRepository(ctx, filepath.Join(dst, "amber-files"))
 }
 
-// Open a package from the p
+// OpenPackage opens a package from the repository.
 func (r *Repository) OpenPackage(path string) (Package, error) {
-	if target, ok := r.targets.Targets[path]; ok {
+	// Parse the targets file so we can access packages locally.
+	f, err := os.Open(filepath.Join(r.Dir, "targets.json"))
+	if err != nil {
+		return Package{}, err
+	}
+	defer f.Close()
+
+	var s signed
+	if err = json.NewDecoder(f).Decode(&s); err != nil {
+		return Package{}, err
+	}
+
+	if target, ok := s.Signed.Targets[path]; ok {
 		return newPackage(r, target.Custom.Merkle)
 	}
+
 	return Package{}, fmt.Errorf("could not find package: %q", path)
 
 }
