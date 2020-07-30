@@ -37,7 +37,7 @@ class Datetime extends UiSpec {
     _timer?.cancel();
   }
 
-  static Spec _specForDateTime([int action = 0]) {
+  static Spec _specForDateTime() {
     String dateTime = DateFormat.E().add_yMd().add_jm().format(DateTime.now());
     return Spec(title: _title, groups: [
       Group(title: _title, values: [Value.withText(TextValue(text: dateTime))]),

@@ -153,6 +153,7 @@ class _InheritedModel<T extends Model> extends InheritedWidget {
         super(key: key, child: child);
 
   /// Used to return the runtime type.
+  //ignore: unused_element
   const _InheritedModel.forRuntimeType()
       : model = null,
         version = 0;
