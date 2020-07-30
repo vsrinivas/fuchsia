@@ -9,14 +9,4 @@ component_manifest_resources("root_manifests") {
     "meta/bootstrap.cml",
     "meta/root.cml",
   ]
-
-  # TODO(BLD-448): These should move into their appropriate packages that are
-  # included in bootfs along with the binaries and other resources/libraries.
-  sources += [
-    "meta/console.cml",
-    "meta/fshost.cml",
-    "meta/ptysvc.cml",
-    "meta/pwrbtn-monitor.cml",
-    "meta/sysinfo.cml",
-  ]
 }

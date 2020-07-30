@@ -72,7 +72,7 @@ test_package("pwrbtn-monitor-integration-test") {
 
   meta = [
     {
-      path = rebase_path("//src/sys/bootstrap/meta/pwrbtn-monitor.cml")
+      path = rebase_path("//src/bringup/bin/pwrbtn-monitor/meta/pwrbtn-monitor.cml")
       dest = "pwrbtn-monitor.cm"
     },
     {

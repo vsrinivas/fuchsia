@@ -8,6 +8,11 @@ import("//build/product.gni")
 # The labels in this list are targets that describe files from the GN build that
 # are to be included in the ZBI on every build.
 default_bootfs_labels = [
+  "//src/storage/fshost:bootfs",
+  "//src/bringup/bin/console:bootfs",
+  "//src/bringup/bin/ptysvc:bootfs",
+  "//src/bringup/bin/pwrbtn-monitor:bootfs",
+  "//src/bringup/bin/sysinfo:bootfs",
   "//src/devices/bin/driver_manager:bootfs",
   "//src/devices:bootfs",
   "//src/power/shutdown-shim:bootfs",
