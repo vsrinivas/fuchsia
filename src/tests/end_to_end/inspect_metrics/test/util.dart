@@ -7,13 +7,16 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 
 // Return all matched inspect properties as a list.
 Future<List<dynamic>> getInspectValues(
-    sl4f.Inspect inspect, String selector) async {
+  sl4f.Inspect inspect,
+  String selector, {
+  sl4f.InspectPipeline pipeline = sl4f.InspectPipeline.none,
+}) async {
   final list = selector.split(':');
   if (list.length != 3) {
     fail('selector format should contain 2 colons');
   }
 
-  final top = await inspect.snapshot(['$selector']);
+  final top = await inspect.snapshot(['$selector'], pipeline: pipeline);
   if (top == null || top.isEmpty) {
     print('inspect selector $selector does not exist');
     return [];
