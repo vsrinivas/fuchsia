@@ -385,6 +385,7 @@ async fn validate_display(
                 brightness_value: Some(0.5),
                 user_brightness_offset: Some(0.5),
                 low_light_mode: Some(LowLightMode::Disable),
+                screen_enabled: Some(true),
             })?;
         }
     );

@@ -67,6 +67,8 @@ table DisplaySettings {
     3: float32 user_brightness_offset;
     /// The low light mode state of the device.
     4: LowLightMode low_light_mode;
+    /// Whether the screen is enabled.
+    5: bool screen_enabled;
 };
 
 table LightSensorData {
