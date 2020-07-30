@@ -275,6 +275,13 @@ func unpack(ctx context.Context, br *runner.BatchRunner) ([]binaryRef, error) {
 		}
 		buildID := matches[1] + matches[2]
 		unpackFilePath := filepath.Join(buildIDDirOut, hdr.Name)
+
+		ok, err := osmisc.FileExists(unpackFilePath)
+		if err != nil {
+			return nil, err
+		} else if ok {
+			continue
+		}
 		outFile, err := osmisc.CreateFile(unpackFilePath, os.O_WRONLY)
 		if err != nil {
 			return nil, fmt.Errorf("while attempting to write %s from %s to %s: %w", hdr.Name, debugArchive, unpackFilePath, err)
