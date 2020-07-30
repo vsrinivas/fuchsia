@@ -31,6 +31,22 @@ use fidl::{
 	fidl_xunion,
 };
 
+{{/*
+	For FIDL tracing, the Rust bindings are assigned a bindings enum of 6. See
+	fidl-trace/trace_impl.cc, enum LogContext for more context.
+
+	This constant will be unused in a build that has FIDL tracing disabled,
+	since this constant is used only within trace_duration! macros that will
+	expand to no-ops. However, the constant needs to be present, since the
+	constant is evaluated before the macro expansion.
+
+	The constant starts with an underscore to avoid clashing with FIDL
+	declarations, which are not allowed to start with underscores.
+*/ -}}
+{{ if .Protocols -}}
+const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+{{ end -}}
+
 {{ range $bits := .Bits -}}
 {{ template "BitsDeclaration" $bits }}
 {{ end -}}

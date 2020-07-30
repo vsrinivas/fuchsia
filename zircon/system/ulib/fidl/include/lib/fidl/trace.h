@@ -134,7 +134,12 @@ static inline void fidl_trace_impl(const fidl_trace_t trace_info) {
   // version that may record the trace (e.g. via the Fuchsia Tracing System).
 }
 #elif FIDL_TRACE_LEVEL == 1
-#error Userspace FIDL tracing is not implemented yet. See <https://fuchsia-review.googlesource.com/c/fuchsia/+/408449> for more context.
+static inline void fidl_trace_impl(const fidl_trace_t trace_info) {
+  // We define this no-op implementation of fidl_trace_impl when
+  // FIDL_TRACE_LEVEL == 1, so that we can compile the Rust bindings with `fx
+  // set ... --args fidl_trace_level=1`. This no-op implementation will be
+  // replaced with a call to the Fuchsia Tracing System in the future.
+}
 #else
 #error Unknown FIDL_TRACE_LEVEL.
 #endif  // FIDL_TRACE_LEVEL

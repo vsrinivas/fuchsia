@@ -5,7 +5,7 @@
 //! An implementation of a server for a fidl interface.
 
 use {
-    crate::{epitaph, AsyncChannel},
+    crate::{create_trace_provider, epitaph, AsyncChannel},
     fuchsia_zircon_status as zx_status,
     futures::task::{AtomicWaker, Context},
     std::sync::atomic::{self, AtomicBool},
@@ -22,6 +22,9 @@ pub struct ServeInner {
 impl ServeInner {
     /// Create a new set of server innards.
     pub fn new(channel: AsyncChannel) -> Self {
+        // Initialize tracing. This is a no-op if FIDL userspace tracing is
+        // disabled or if the function was already called.
+        create_trace_provider();
         let waker = AtomicWaker::new();
         let shutdown = AtomicBool::new(false);
         ServeInner { waker, shutdown, channel }

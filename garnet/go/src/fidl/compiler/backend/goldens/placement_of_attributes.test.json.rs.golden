@@ -17,6 +17,8 @@ use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
 
+const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+
 fidl_bits! {
   ExampleBits(u32) {
     Member = 1,
@@ -319,7 +321,10 @@ impl futures::Stream for ExampleProtocolRequestStream {
                 0x1b489f95492fd90e => {
                     let mut req: (fidl_exampleusing::Empty) =
                         fidl::encoding::Decodable::new_empty();
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "example/ExampleProtocolMethodRequest");
+                    fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+                    fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = ExampleProtocolControlHandle { inner: this.inner.clone() };
 
                     Ok(ExampleProtocolRequest::Method { arg: req, control_handle })
@@ -355,12 +360,15 @@ impl ExampleProtocolRequestMessage {
             0x1b489f95492fd90e => {
                 let mut out_tuple: (fidl_exampleusing::Empty) =
                     fidl::encoding::Decodable::new_empty();
+                fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "example/ExampleProtocolMethodRequest");
+                fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
                     &header,
                     _body_bytes,
                     _handles,
                     &mut out_tuple,
                 )?;
+                fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
                 Ok(ExampleProtocolRequestMessage::Method { arg: out_tuple })
             }
@@ -405,7 +413,10 @@ impl ExampleProtocolEncoder {
         let header = fidl::encoding::TransactionHeader::new(0, 0x1b489f95492fd90e);
         let mut body = (in_arg,);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "example/ExampleProtocolMethodRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+        fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+        fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
         Ok(())
     }
 }

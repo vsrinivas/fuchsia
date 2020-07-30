@@ -461,6 +461,38 @@ duration_event!(
     sys::trace_context_write_duration_end_event_record,
 );
 
+#[macro_export]
+macro_rules! blob {
+    ($category:expr, $name:expr, $bytes:expr $(, $key:expr => $val:expr)*) => {
+        $crate::blob_fn($crate::cstr!($category), $crate::cstr!($name), $bytes, &[$($crate::ArgValue::of($key, $val)),*])
+    }
+}
+pub fn blob_fn(category: &'static CStr, name: &'static CStr, bytes: &[u8], args: &[Arg<'_>]) {
+    // trace_context_write_xxx functions require that:
+    // - category and name are static null-terminated strings (&'static CStr).
+    // - the refs must be valid for the given call
+    unsafe {
+        let mut category_ref = mem::MaybeUninit::<sys::trace_string_ref_t>::uninit();
+        let context =
+            sys::trace_acquire_context_for_category(category.as_ptr(), category_ref.as_mut_ptr());
+        if context != ptr::null() {
+            let helper = EventHelper::new(context, name);
+            sys::trace_context_write_blob_event_record(
+                context,
+                helper.ticks,
+                &helper.thread_ref,
+                category_ref.as_ptr(),
+                &helper.name_ref,
+                bytes.as_ptr() as *const core::ffi::c_void,
+                bytes.len(),
+                args.as_ptr() as *const sys::trace_arg_t,
+                args.len(),
+            );
+            sys::trace_release_context(context);
+        }
+    }
+}
+
 /// Convenience macro for the `flow_begin` function.
 ///
 /// Example:
@@ -727,6 +759,10 @@ mod sys {
     pub const TRACE_SCOPE_PROCESS: trace_scope_t = 1;
     pub const TRACE_SCOPE_GLOBAL: trace_scope_t = 2;
 
+    pub type trace_blob_type_t = libc::c_int;
+    pub const TRACE_BLOB_TYPE_DATA: trace_blob_type_t = 1;
+    pub const TRACE_BLOB_TYPE_LAST_BRANCH: trace_blob_type_t = 2;
+
     #[repr(C)]
     #[derive(Copy, Clone)]
     pub struct trace_string_ref_t {
@@ -927,6 +963,18 @@ mod sys {
             thread_ref: *const trace_thread_ref_t,
             category_ref: *const trace_string_ref_t,
             name_ref: *const trace_string_ref_t,
+            args: *const trace_arg_t,
+            num_args: libc::size_t,
+        );
+
+        pub fn trace_context_write_blob_event_record(
+            context: *const trace_context_t,
+            event_time: trace_ticks_t,
+            thread_ref: *const trace_thread_ref_t,
+            category_ref: *const trace_string_ref_t,
+            name_ref: *const trace_string_ref_t,
+            blob: *const libc::c_void,
+            blob_size: libc::size_t,
             args: *const trace_arg_t,
             num_args: libc::size_t,
         );

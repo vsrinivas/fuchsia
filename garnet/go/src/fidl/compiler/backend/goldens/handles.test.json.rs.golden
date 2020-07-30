@@ -17,6 +17,8 @@ use fuchsia_zircon as zx;
 #[allow(unused_imports)]
 use fuchsia_zircon_status as zx_status;
 
+const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+
 fidl_enum! {
   ObjType(u32) {
     None = 0,

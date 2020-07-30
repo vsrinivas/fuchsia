@@ -267,7 +267,10 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 					{{- end -}}
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Event");
+				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 				Ok((
 					{{ $protocol.Name }}Event::{{ $method.CamelName }} {
 						{{- range $index, $param := $method.Response -}}
@@ -479,7 +482,10 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 							{{- end -}}
 						{{- end -}}
 					) = fidl::encoding::Decodable::new_empty();
+					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Request");
+					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
+					fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
 					let control_handle = {{ $protocol.Name }}ControlHandle {
 						inner: this.inner.clone(),
 					};
@@ -553,7 +559,10 @@ impl {{ $protocol.Name }}RequestMessage {
 						{{- end -}}
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Request");
+				fidl::trace_blob!("fidl:blob", "decode", bytes);
 				fidl::encoding::Decoder::decode_into(&header, _body_bytes, _handles, &mut out_tuple)?;
+				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
 				Ok({{ $protocol.Name }}RequestMessage::{{ $method.CamelName }} {
 					{{- range $index, $param := $method.Request -}}
@@ -685,7 +694,10 @@ impl {{ $protocol.Name }}Encoder {
 			{{- end -}}
 		);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Request");
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+		fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
 		Ok(())
 	}
 	{{- end }}
@@ -713,7 +725,12 @@ impl {{ $protocol.Name }}Encoder {
 			{{- end -}}
 		);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+
+		fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Response");
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
+		fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
+
 		Ok(())
 	}
 	{{- end }}
@@ -871,7 +888,11 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 		};
 
 		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Response");
 			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
+			fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
+
 			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
 				.map_err(fidl::Error::ServerResponseWrite)?;
 			Ok(())

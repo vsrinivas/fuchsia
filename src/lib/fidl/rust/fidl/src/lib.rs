@@ -26,6 +26,40 @@ pub use handle::*;
 
 pub mod epitaph;
 
+#[cfg(feature = "fidl_trace")]
+pub use {
+    fuchsia_trace::blob as trace_blob, fuchsia_trace::duration_begin, fuchsia_trace::duration_end,
+};
+
+#[cfg(not(feature = "fidl_trace"))]
+#[macro_export]
+/// No-op implementation of duration_begin, when FIDL tracing is disabled.
+macro_rules! duration_begin {
+    ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {};
+}
+
+#[cfg(not(feature = "fidl_trace"))]
+#[macro_export]
+/// No-op implementation of duration_end, when FIDL tracing is disabled.
+macro_rules! duration_end {
+    ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {};
+}
+
+#[cfg(not(feature = "fidl_trace"))]
+#[macro_export]
+/// No-op implementation of trace_blob, when FIDL tracing is disabled.
+macro_rules! trace_blob {
+    ($category:expr, $name:expr, $bytes:expr $(, $key:expr => $val:expr)*) => {};
+}
+
+#[cfg(feature = "fidl_trace")]
+fn create_trace_provider() {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
+}
+
+#[cfg(not(feature = "fidl_trace"))]
+fn create_trace_provider() {}
+
 /// invoke_for_handle_types!{mmm} calls the macro `mmm!` with two arguments: one is the name of a
 /// Zircon handle, the second is one of:
 ///   * Everywhere for handle types that are supported everywhere FIDL is

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/args.gni")
+
 declare_args() {
   # Selects the SoftMAC client implementation to use. Choices:
   #   false (default) - C++ Client MLME implementation
@@ -94,6 +96,13 @@ source_set("mlme") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/syslog",
   ]
+
+  if (fidl_trace_level != 0) {
+    public_deps += [
+      "//src/lib/trace/rust:trace-provider",
+      "//zircon/system/ulib/trace-engine",
+    ]
+  }
 
   public_configs = [
     ":wlan_mlme_config",

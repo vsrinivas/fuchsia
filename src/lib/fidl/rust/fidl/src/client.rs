@@ -6,6 +6,7 @@
 
 use {
     crate::{
+        create_trace_provider,
         encoding::{
             decode_transaction_header, Decodable, Decoder, Encodable, Encoder, EpitaphBody,
             TransactionHeader, TransactionMessage,
@@ -96,6 +97,9 @@ impl Client {
     /// `channel` is the asynchronous channel over which data is sent and received.
     /// `event_ordinals` are the ordinals on which events will be received.
     pub fn new(channel: AsyncChannel, service_name: &'static str) -> Client {
+        // Initialize tracing. This is a no-op if FIDL userspace tracing is
+        // disabled or if the function was already called.
+        create_trace_provider();
         Client {
             inner: Arc::new(ClientInner {
                 channel,
@@ -656,6 +660,9 @@ pub mod sync {
     impl Client {
         /// Create a new synchronous FIDL client.
         pub fn new(channel: zx::Channel) -> Self {
+            // Initialize tracing. This is a no-op if FIDL userspace tracing is
+            // disabled or if the function was already called.
+            create_trace_provider();
             Client { channel, buf: zx::MessageBuf::new() }
         }
 
