@@ -27,7 +27,7 @@ const auto kDefaultProcessConfig =
 const auto kDefaultPipelineConfig = PipelineConfig::Default();
 
 void ExpectEq(const VolumeCurve& expected,
-              const std::vector<fuchsia::media::tuning::Volume> result) {
+              const std::vector<fuchsia::media::tuning::Volume>& result) {
   std::vector<VolumeCurve::VolumeMapping> expected_mappings = expected.mappings();
   EXPECT_EQ(expected_mappings.size(), result.size());
   for (size_t i = 0; i < expected_mappings.size(); ++i) {
@@ -61,7 +61,7 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
   }
   EXPECT_EQ(expected.inputs.size(), result.inputs.size());
   for (size_t i = 0; i < expected.inputs.size(); ++i) {
-    ExpectEq(expected.inputs[i], std::move(*result.inputs[i]));
+    ExpectEq(expected.inputs[i], *result.inputs[i].get());
   }
   EXPECT_EQ(expected.output_rate, result.output_rate);
   EXPECT_EQ(expected.output_channels, result.output_channels);
@@ -83,12 +83,18 @@ class TestDevice : public AudioOutput {
   };
 
   void UpdatePlugState(bool plugged) { AudioDevice::UpdatePlugState(plugged, plug_time()); }
-  void CompleteUpdate() { bridge_.completer.complete_ok(); }
+  void CompleteUpdates() {
+    for (auto& bridge : bridges_) {
+      bridge.completer.complete_ok();
+    }
+    bridges_.clear();
+  }
 
   // AudioDevice
   fit::promise<void, zx_status_t> UpdatePipelineConfig(const PipelineConfig& config,
                                                        const VolumeCurve& volume_curve) override {
-    return bridge_.consumer.promise();
+    bridges_.emplace_back();
+    return bridges_.back().consumer.promise();
   }
   fuchsia::media::AudioDeviceInfo GetDeviceInfo() const override {
     return {
@@ -119,7 +125,7 @@ class TestDevice : public AudioOutput {
   void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {}
 
  private:
-  fit::bridge<void, zx_status_t> bridge_;
+  std::vector<fit::bridge<void, zx_status_t>> bridges_;
   std::unique_ptr<testing::FakeAudioDriverV1> fake_driver_;
 };
 
@@ -150,6 +156,9 @@ class AudioTunerTest : public gtest::TestLoopFixture {
 
 TEST_F(AudioTunerTest, PlugDuringPipelineConfigUpdate) {
   auto context = CreateContext();
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
   auto device = std::make_shared<TestDevice>(context);
   context->device_manager().AddDevice(device);
   RunLoopUntilIdle();
@@ -158,13 +167,12 @@ TEST_F(AudioTunerTest, PlugDuringPipelineConfigUpdate) {
   // Ensure device is unplugged, then begin update.
   EXPECT_FALSE(device->plugged());
   bool completed_update = false;
-  context->threading_model().FidlDomain().executor()->schedule_task(
-      context->device_manager()
-          .UpdatePipelineConfig(kDeviceIdString, kDefaultPipelineConfig, kVolumeCurve)
-          .then([&completed_update](fit::result<void, zx_status_t>& result) {
-            completed_update = true;
-            EXPECT_TRUE(result.is_ok());
-          }));
+  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kVolumeCurve);
+  under_test.SetAudioDeviceProfile(kDeviceIdString, std::move(new_profile),
+                                   [&completed_update](zx_status_t result) {
+                                     completed_update = true;
+                                     EXPECT_EQ(ZX_OK, result);
+                                   });
 
   // Plug in device during update, and verify device is not yet added to RouteGraph.
   context->device_manager().OnPlugStateChanged(device, true, device->plug_time());
@@ -172,7 +180,7 @@ TEST_F(AudioTunerTest, PlugDuringPipelineConfigUpdate) {
   EXPECT_FALSE(context->route_graph().ContainsDevice(device.get()));
 
   // Complete update, and verify device is then added to RouteGraph upon update.
-  device->CompleteUpdate();
+  device->CompleteUpdates();
   RunLoopUntilIdle();
   EXPECT_TRUE(completed_update);
   EXPECT_TRUE(context->route_graph().ContainsDevice(device.get()));
@@ -180,6 +188,9 @@ TEST_F(AudioTunerTest, PlugDuringPipelineConfigUpdate) {
 
 TEST_F(AudioTunerTest, UnplugDuringPipelineConfigUpdate) {
   auto context = CreateContext();
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
   auto device = std::make_shared<TestDevice>(context);
   context->device_manager().AddDevice(device);
   RunLoopUntilIdle();
@@ -189,13 +200,12 @@ TEST_F(AudioTunerTest, UnplugDuringPipelineConfigUpdate) {
   // Ensure device is plugged, then begin update.
   EXPECT_TRUE(device->plugged());
   bool completed_update = false;
-  context->threading_model().FidlDomain().executor()->schedule_task(
-      context->device_manager()
-          .UpdatePipelineConfig(kDeviceIdString, kDefaultPipelineConfig, kVolumeCurve)
-          .then([&completed_update](fit::result<void, zx_status_t>& result) {
-            completed_update = true;
-            EXPECT_TRUE(result.is_ok());
-          }));
+  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kVolumeCurve);
+  under_test.SetAudioDeviceProfile(kDeviceIdString, std::move(new_profile),
+                                   [&completed_update](zx_status_t result) {
+                                     completed_update = true;
+                                     EXPECT_EQ(ZX_OK, result);
+                                   });
 
   // Verify device has already been removed from RouteGraph in an effort to remove any links
   // during update. Then, unplug device.
@@ -204,7 +214,7 @@ TEST_F(AudioTunerTest, UnplugDuringPipelineConfigUpdate) {
   EXPECT_FALSE(device->plugged());
 
   // Complete update, and verify device is not added to RouteGraph, since it was unplugged.
-  device->CompleteUpdate();
+  device->CompleteUpdates();
   RunLoopUntilIdle();
   EXPECT_TRUE(completed_update);
   EXPECT_FALSE(context->route_graph().ContainsDevice(device.get()));
@@ -212,30 +222,31 @@ TEST_F(AudioTunerTest, UnplugDuringPipelineConfigUpdate) {
 
 TEST_F(AudioTunerTest, FailSimultaneousPipelineConfigUpdates) {
   auto context = CreateContext();
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
   auto device = std::make_shared<TestDevice>(context);
   context->device_manager().AddDevice(device);
   RunLoopUntilIdle();
   context->device_manager().ActivateDevice(device);
 
-  std::vector<fit::promise<void, zx_status_t>> promises;
-  promises.push_back(context->device_manager().UpdatePipelineConfig(
-      kDeviceIdString, kDefaultPipelineConfig, kVolumeCurve));
-  promises.push_back(context->device_manager().UpdatePipelineConfig(
-      kDeviceIdString, kDefaultPipelineConfig, kVolumeCurve));
-
-  bool attempted_updates = false;
-  context->threading_model().FidlDomain().executor()->schedule_task(
-      fit::join_promise_vector(std::move(promises))
-          .and_then([&attempted_updates](std::vector<fit::result<void, zx_status_t>>& results) {
-            attempted_updates = true;
-            EXPECT_TRUE(results[0].is_ok());
-            EXPECT_TRUE(results[1].is_error());
-            EXPECT_EQ(results[1].take_error(), ZX_ERR_BAD_STATE);
-          }));
-
-  device->CompleteUpdate();
+  bool completed_update1 = false;
+  bool completed_update2 = false;
+  auto new_profile = ToAudioDeviceTuningProfile(kDefaultPipelineConfig, kVolumeCurve);
+  under_test.SetAudioDeviceProfile(kDeviceIdString, fidl::Clone(new_profile),
+                                   [&completed_update1](zx_status_t result) {
+                                     completed_update1 = true;
+                                     EXPECT_EQ(ZX_OK, result);
+                                   });
+  under_test.SetAudioDeviceProfile(kDeviceIdString, fidl::Clone(new_profile),
+                                   [&completed_update2](zx_status_t result) {
+                                     completed_update2 = true;
+                                     EXPECT_EQ(ZX_ERR_BAD_STATE, result);
+                                   });
+  device->CompleteUpdates();
   RunLoopUntilIdle();
-  EXPECT_TRUE(attempted_updates);
+  EXPECT_TRUE(completed_update1);
+  EXPECT_TRUE(completed_update2);
 }
 
 TEST_F(AudioTunerTest, GetAvailableAudioEffects) {
@@ -258,7 +269,7 @@ TEST_F(AudioTunerTest, GetAvailableAudioEffects) {
   EXPECT_TRUE(received_test_effect);
 }
 
-TEST_F(AudioTunerTest, GetAudioDeviceTuningProfile) {
+TEST_F(AudioTunerTest, InitialGetAudioDeviceProfile) {
   auto expected_process_config =
       ProcessConfigBuilder()
           .SetDefaultVolumeCurve(VolumeCurve::DefaultForMinGain(-60.0))
@@ -296,6 +307,10 @@ TEST_F(AudioTunerTest, GetAudioDeviceTuningProfile) {
 
   auto context = CreateContext(expected_process_config);
   AudioTunerImpl under_test(*context);
+  auto device = std::make_shared<TestDevice>(context);
+  context->device_manager().AddDevice(device);
+  RunLoopUntilIdle();
+  context->device_manager().ActivateDevice(device);
 
   fuchsia::media::tuning::AudioDeviceTuningProfile tuning_profile;
   under_test.GetAudioDeviceProfile(
@@ -311,7 +326,7 @@ TEST_F(AudioTunerTest, GetAudioDeviceTuningProfile) {
                                                    .output_device_profile(kDeviceIdUnique)
                                                    .pipeline_config()
                                                    .root();
-  ExpectEq(expected_pipeline, std::move(tuning_profile.pipeline()));
+  ExpectEq(expected_pipeline, tuning_profile.pipeline());
 }
 
 TEST_F(AudioTunerTest, GetDefaultAudioDeviceProfile) {
@@ -332,7 +347,85 @@ TEST_F(AudioTunerTest, GetDefaultAudioDeviceProfile) {
                                                    .output_device_profile(kDeviceIdUnique)
                                                    .pipeline_config()
                                                    .root();
-  ExpectEq(expected_pipeline, std::move(tuning_profile.pipeline()));
+  ExpectEq(expected_pipeline, tuning_profile.pipeline());
+}
+
+TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
+  auto context = CreateContext(kDefaultProcessConfig);
+  AudioTunerImpl under_test(*context);
+
+  // Prepare device to be updated.
+  auto device = std::make_shared<TestDevice>(context);
+  context->device_manager().AddDevice(device);
+  RunLoopUntilIdle();
+  context->device_manager().ActivateDevice(device);
+
+  // Update device with new configuration.
+  auto new_pipeline_config = PipelineConfig(
+      PipelineConfig::MixGroup{.name = "linearize",
+                               .input_streams = {RenderUsage::BACKGROUND, RenderUsage::MEDIA},
+                               .effects = {},
+                               .inputs = {PipelineConfig::MixGroup{
+                                   .name = "mix",
+                                   .input_streams = {},
+                                   .effects = {},
+                                   .inputs = {PipelineConfig::MixGroup{.name = "output_streams",
+                                                                       .input_streams = {},
+                                                                       .effects = {},
+                                                                       .inputs = {},
+                                                                       .loopback = false,
+                                                                       .output_rate = 48000,
+                                                                       .output_channels = 2}},
+                                   .loopback = false,
+                                   .output_rate = 48000,
+                                   .output_channels = 2}},
+                               .loopback = true,
+                               .output_rate = 48000,
+                               .output_channels = 2});
+  auto new_profile = ToAudioDeviceTuningProfile(new_pipeline_config, kVolumeCurve);
+  bool completed_update = false;
+  under_test.SetAudioDeviceProfile(kDeviceIdString, std::move(new_profile),
+                                   [&completed_update](zx_status_t result) {
+                                     completed_update = true;
+                                     EXPECT_EQ(ZX_OK, result);
+                                   });
+  device->CompleteUpdates();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(completed_update);
+
+  // Verify device configuration was successfully updated.
+  fuchsia::media::tuning::AudioDeviceTuningProfile tuning_profile;
+  under_test.GetAudioDeviceProfile(
+      kDeviceIdString, [&tuning_profile](fuchsia::media::tuning::AudioDeviceTuningProfile profile) {
+        tuning_profile = std::move(profile);
+      });
+
+  std::vector<fuchsia::media::tuning::Volume> result_curve = tuning_profile.volume_curve();
+  ExpectEq(kVolumeCurve, result_curve);
+  ExpectEq(new_pipeline_config.root(), tuning_profile.pipeline());
+
+  // Delete tuned device configuration.
+  bool completed_delete = false;
+  under_test.DeleteAudioDeviceProfile(kDeviceIdString, [&completed_delete](zx_status_t status) {
+    completed_delete = true;
+    EXPECT_EQ(ZX_OK, status);
+  });
+  device->CompleteUpdates();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(completed_delete);
+
+  // Verify device configuration was successfully deleted and reset to the default configuration.
+  under_test.GetAudioDeviceProfile(
+      kDeviceIdString, [&tuning_profile](fuchsia::media::tuning::AudioDeviceTuningProfile profile) {
+        tuning_profile = std::move(profile);
+      });
+  result_curve = tuning_profile.volume_curve();
+  ExpectEq(kVolumeCurve, result_curve);
+  ExpectEq(kDefaultProcessConfig.device_config()
+               .output_device_profile(kDeviceIdUnique)
+               .pipeline_config()
+               .root(),
+           tuning_profile.pipeline());
 }
 
 }  // namespace

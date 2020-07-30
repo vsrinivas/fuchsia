@@ -52,20 +52,17 @@ void AudioTunerImpl::GetAvailableAudioEffects(GetAvailableAudioEffectsCallback c
 
 void AudioTunerImpl::GetAudioDeviceProfile(std::string device_id,
                                            GetAudioDeviceProfileCallback callback) {
-  auto unique_id = AudioDevice::UniqueIdFromString(device_id).take_value();
-  DeviceConfig::OutputDeviceProfile tuning_profile =
-      context_.process_config().device_config().output_device_profile(unique_id);
-  VolumeCurve volume_curve = context_.process_config().default_volume_curve();
-  callback(ToAudioDeviceTuningProfile(tuning_profile.pipeline_config(), volume_curve));
+  auto tuned_specification_it = tuned_device_specifications_.find(device_id);
+  auto device = tuned_specification_it != tuned_device_specifications_.end()
+                    ? tuned_specification_it->second
+                    : GetDefaultDeviceSpecification(device_id);
+  callback(ToAudioDeviceTuningProfile(device.pipeline_config, device.volume_curve));
 }
 
 void AudioTunerImpl::GetDefaultAudioDeviceProfile(std::string device_id,
                                                   GetDefaultAudioDeviceProfileCallback callback) {
-  auto unique_id = AudioDevice::UniqueIdFromString(device_id).take_value();
-  DeviceConfig::OutputDeviceProfile default_profile =
-      context_.process_config().device_config().output_device_profile(unique_id);
-  VolumeCurve default_volume_curve = context_.process_config().default_volume_curve();
-  callback(ToAudioDeviceTuningProfile(default_profile.pipeline_config(), default_volume_curve));
+  auto default_device = GetDefaultDeviceSpecification(device_id);
+  callback(ToAudioDeviceTuningProfile(default_device.pipeline_config, default_device.volume_curve));
 }
 
 void AudioTunerImpl::SetAudioDeviceProfile(std::string device_id,
@@ -76,13 +73,51 @@ void AudioTunerImpl::SetAudioDeviceProfile(std::string device_id,
   auto promise = context_.device_manager().UpdatePipelineConfig(device_id, config, volume_curve);
 
   context_.threading_model().FidlDomain().executor()->schedule_task(
-      promise.then([callback = std::move(callback)](fit::result<void, zx_status_t>& result) {
+      promise.then([this, device_id, config, volume_curve,
+                    callback = std::move(callback)](fit::result<void, zx_status_t>& result) {
         if (result.is_ok()) {
+          auto tuned_device_it = tuned_device_specifications_.find(device_id);
+          if (tuned_device_it != tuned_device_specifications_.end()) {
+            tuned_device_it->second =
+                OutputDeviceSpecification{.pipeline_config = config, .volume_curve = volume_curve};
+          } else {
+            tuned_device_specifications_.emplace(
+                device_id,
+                OutputDeviceSpecification{.pipeline_config = config, .volume_curve = volume_curve});
+          }
           callback(ZX_OK);
         } else {
           callback(result.take_error());
         }
       }));
+}
+
+void AudioTunerImpl::DeleteAudioDeviceProfile(std::string device_id,
+                                              DeleteAudioDeviceProfileCallback callback) {
+  if (tuned_device_specifications_.find(device_id) == tuned_device_specifications_.end()) {
+    callback(ZX_OK);
+    return;
+  }
+
+  auto default_device = GetDefaultDeviceSpecification(device_id);
+  auto promise = context_.device_manager().UpdatePipelineConfig(
+      device_id, default_device.pipeline_config, default_device.volume_curve);
+
+  context_.threading_model().FidlDomain().executor()->schedule_task(promise.then(
+      [this, device_id, callback = std::move(callback)](fit::result<void, zx_status_t>& result) {
+        FX_CHECK(result.is_ok());
+        tuned_device_specifications_.erase(device_id);
+        callback(ZX_OK);
+      }));
+}
+
+AudioTunerImpl::OutputDeviceSpecification AudioTunerImpl::GetDefaultDeviceSpecification(
+    const std::string& device_id) {
+  auto unique_id = AudioDevice::UniqueIdFromString(device_id).take_value();
+  PipelineConfig device_profile =
+      context_.process_config().device_config().output_device_profile(unique_id).pipeline_config();
+  VolumeCurve volume_curve = context_.process_config().default_volume_curve();
+  return OutputDeviceSpecification{.pipeline_config = device_profile, .volume_curve = volume_curve};
 }
 
 }  // namespace media::audio

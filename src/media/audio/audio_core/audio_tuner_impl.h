@@ -133,7 +133,7 @@ inline PipelineConfig::MixGroup ToPipelineConfigMixGroup(
     }
   }
   std::vector<PipelineConfig::MixGroup> inputs;
-  for (size_t i = 0; i < inputs.size(); ++i) {
+  for (size_t i = 0; i < mix_group.inputs.size(); ++i) {
     inputs.push_back(ToPipelineConfigMixGroup(std::move(*mix_group.inputs[i])));
   }
   bool loopback = mix_group.loopback;
@@ -170,13 +170,20 @@ class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
                              fuchsia::media::tuning::AudioDeviceTuningProfile profile,
                              SetAudioDeviceProfileCallback callback) final;
   void DeleteAudioDeviceProfile(std::string device_id,
-                                DeleteAudioDeviceProfileCallback callback) final{};
+                                DeleteAudioDeviceProfileCallback callback) final;
   void SetAudioEffectConfig(std::string device_id, fuchsia::media::tuning::AudioEffectConfig effect,
                             SetAudioEffectConfigCallback callback) final{};
 
  private:
+  struct OutputDeviceSpecification {
+    PipelineConfig pipeline_config;
+    VolumeCurve volume_curve;
+  };
+  OutputDeviceSpecification GetDefaultDeviceSpecification(const std::string& device_id);
+
   Context& context_;
   fidl::BindingSet<fuchsia::media::tuning::AudioTuner, AudioTunerImpl*> bindings_;
+  std::unordered_map<std::string, OutputDeviceSpecification> tuned_device_specifications_;
 };
 
 }  // namespace media::audio
