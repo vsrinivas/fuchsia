@@ -161,13 +161,13 @@ class AmlogicDisplay
 
   // TODO(stevensd): This can race if this is changed right after
   // vsync but before the interrupt is handled.
-  uint64_t current_image_ TA_GUARDED(display_lock_);
-  bool current_image_valid_ TA_GUARDED(display_lock_);
+  uint64_t current_image_ TA_GUARDED(display_lock_) = 0;
+  bool current_image_valid_ TA_GUARDED(display_lock_) = false;
 
   // display dimensions and format
-  uint32_t width_;
-  uint32_t height_;
-  zx_pixel_format_t format_;
+  uint32_t width_ = 0;
+  uint32_t height_ = 0;
+  zx_pixel_format_t format_ = 0;
 
   const display_setting_t* init_disp_table_ = nullptr;
 
