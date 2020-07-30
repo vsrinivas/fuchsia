@@ -72,7 +72,7 @@ func (c *config) validate() error {
 		c.downgradeFuchsiaBuildDir,
 	} {
 		if s != "" {
-			defined += 1
+			defined++
 		}
 	}
 	if defined > 1 {
@@ -82,7 +82,7 @@ func (c *config) validate() error {
 	defined = 0
 	for _, s := range []string{c.upgradeBuilderName, c.upgradeBuildID, c.upgradeFuchsiaBuildDir} {
 		if s != "" {
-			defined += 1
+			defined++
 		}
 	}
 	if defined != 1 {

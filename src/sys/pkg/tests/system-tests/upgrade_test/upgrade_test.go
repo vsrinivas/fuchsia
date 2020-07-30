@@ -405,7 +405,7 @@ func otaToPackage(
 	rpcClient **sl4f.Client,
 	repo *packages.Repository,
 	expectedSystemImageMerkle string,
-	updatePackageUrl string,
+	updatePackageURL string,
 	checkABR bool,
 ) error {
 	expectedConfig, err := check.DetermineTargetABRConfig(ctx, *rpcClient)
@@ -421,7 +421,7 @@ func otaToPackage(
 		return fmt.Errorf("device already updated to the expected version %q", expectedSystemImageMerkle)
 	}
 
-	u := updater.NewSystemUpdater(repo, updatePackageUrl)
+	u := updater.NewSystemUpdater(repo, updatePackageURL)
 	if err := u.Update(ctx, device); err != nil {
 		return fmt.Errorf("failed to download OTA: %w", err)
 	}
