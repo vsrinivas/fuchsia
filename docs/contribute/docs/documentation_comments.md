@@ -6,7 +6,7 @@ the purpose of protocols, structures, methods, data types, and other elements of
 program code.
 
 Documentation comments should be applied consistently to all public APIs since they are
-a valuable asset for SDK consumers.
+a valuable asset for IDK consumers.
 
 Tips for writing effective documentation comments:
 

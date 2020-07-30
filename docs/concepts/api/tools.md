@@ -12,9 +12,9 @@ tools.
     - [CLI --help requirements](cli_help.md)
 - GUI Tool requirements (needs writing)
 
-## Packaging a tool with the core SDK
+## Packaging a tool for inclusion in the Integrator Development Kit (IDK)
 
-The core SDK will contain:
+The Integrator Development Kit (IDK) will contain:
 
   * The tool binary itself.
 

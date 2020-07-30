@@ -25,21 +25,21 @@ another) creates a poor developer experience.
 
 This guide provides a rubric that Fuchsia tools must follow.
 
-> **SDK**
+> **IDK**
 >
-> Some sections have an "SDK" call-out, like this one. These detail specific
-> rules that apply to tools included with the SDK distribution.
+> Some sections have an "IDK" call-out, like this one. These detail specific
+> rules that apply to tools included with the Fuchsia Integrator Development Kit distribution.
 
 ## Considerations
 
 Before embarking on the creation of a new tool, consider these factors to
 determine if the tool is a good fit for Fuchsia or the Fuchsia SDK.
 
-> **SDK**
+> **IDK**
 >
-> SDK tools are specific to Fuchsia in some way. Generic tools or tools that are
+> IDK tools are specific to Fuchsia in some way. Generic tools or tools that are
 > widely available should not be part of Fuchsia and will not be included in the
-> Fuchsia SDK. For example, a tool that verifies generic JSON files would not be
+> Fuchsia IDK. For example, a tool that verifies generic JSON files would not be
 > a good addition. However a tool that verifies Fuchsia `.cmx` files, which
 > happen to use the JSON format, would be okay.
 
@@ -101,10 +101,11 @@ Lean toward a tool that will accomplish all the steps needed by default, but
 allow for an advanced user to do a partial step (for example, passing an
 argument to ask the C++ compiler to only run the preprocessor).
 
-> **SDK**
+> **IDK**
 >
-> For SDK build integrators, separate tools. The build integrators will learn
-> each and piece them together to make a working system.
+> For development environment integrators and EngProd teams, separate tools.
+> The build integrators will learn each and piece them together to make a
+> working system.
 
 #### Sharing common functionality
 
@@ -165,18 +166,19 @@ not approved: Bash, Python, Perl, JavaScript, and Dart (see exceptions below).
 No language is preferred between C++, Rust, and Go. The choice between these
 languages is up to the author of the tool.
 
-> **SDK**
+> **IDK**
 >
-> If a given flavor of SDK includes a specific language (e.g. Dart), that
-> language may be used for tools that are distributed with that SDK. I.e. do not
-> include a Dart tool in an SDK that wouldn't otherwise include the Dart
-> runtime, but if it's already there, that's okay.
+> If a SDK that is an intergation of the Fuchsia IDK includes a specific language
+> (e.g. Dart), that language may be used for tools that are distributed with
+> that SDK. In other words, do not include a Dart tool in a SDK that
+> wouldn't otherwise include the Dart runtime, but if it's already there,
+> that's okay.
 
 ### Style Guides
 
 Follow the corresponding [style guide](../README.md#languages) for the language
-and area of Fuchsia being developed.
-E.g. if the tool is included with Zircon and written
+and area of Fuchsia being developed. For example,
+if the tool is included with Zircon and written
 in C++, use the style guide for C++ in Zircon. Specifically, avoid creating a
 separate style guide for tools.
 
@@ -191,7 +193,6 @@ libraries (libm, etc.); other runtime link dependencies are not allowed.
 Keep in mind that some developers will want to build the tools from source. Use
 the same build and dependency structure as the code in the Platform Source Tree.
 Do not make a separate system to build tools.
-
 
 ## Host Platforms
 
@@ -518,7 +519,7 @@ look at how that context should be gathered or stored.
 Tools should not attempt to gather or intuit settings or other state directly
 from the environment. Information such as an attached target's IP address, the
 out directory for build products, or a directory for writing temporary files
-will be gathered from a platform agnostic source. Separating out the code that
+will be gathered from a platform independent source. Separating out the code that
 performs platform-specific work will allow tools to remain portable between
 disparate platforms.
 
@@ -528,8 +529,8 @@ gather information from SDK files or platform-specific tools that encapsulate
 the work of reading from the Windows registry, Linux environment, or Mac
 settings.
 
-Tools will be build-system agnostic as well. Accessing a common file such as
-build input dependency file is okay.
+Tools will be unbiased towards any build system or environment as well.
+Accessing a common file such as build input dependency file is okay.
 
 #### Writing Information
 
@@ -578,13 +579,13 @@ comprehensible and actionable.
 If the error came from bad inputs
 
 1. If the user gave the tool bad data, give context about the error and guide
-   the user toward fixing the input, e.g. print which input file (and line
-   number if that's appropriate for the input) where the input error occurred.
+   the user toward fixing the input, for example, by printing which input file
+   (and line number if that's appropriate for the input) where the input error occurred.
    - Prefer output that follows this format (for easy regex use):
      `file_name:line:column:description`. This is a common format used by many
      tools. Other formats are acceptable, but try to use something that is easy
      for both humans and tools to parse.
-2. Provide a reference to further information. E.g. if documentation is
+2. Provide a reference to further information. If documentation is
    available, provide a link to documentation about the tool in general or to
    documentation regarding the specific error. If the tool has the capacity to
    provide more details, describe that (like how `gn` can explain how to run the
@@ -592,11 +593,11 @@ If the error came from bad inputs
 
 If the error came from missing dependencies
 
-1. Be clear that the error is from missing dependencies, i.e. don't leave the
+1. Be clear that the error is from missing dependencies. Don't leave the
    user trying to debug their input data if that is not the issue.
 2. Provide instruction on how to satisfy the dependencies. This can be an
-   example command to run (e.g. `apt-get install foo`) or a link to further
-   instructions (e.g. "`see: http:example.com/how-to-install-foo`").
+   example command to run (`apt-get install foo`) or a link to further
+   instructions (`see: http:example.com/how-to-install-foo`).
 
 If the error came from an unexpected state (i.e. a bug) in the tool
 
@@ -605,8 +606,8 @@ If the error came from an unexpected state (i.e. a bug) in the tool
    missing dependencies.
 2. Suggest a mailing list or forum to get help. Help the user find out if the
    bug is fixed in the next tool version; or someone has found a workaround.
-3. Invite the user to enter a bug report and make that as easy as possible. E.g.
-   provide a link that goes to the bug database with the tool and platform
+3. Invite the user to enter a bug report and make that as easy as possible.
+   Provide a link that goes to the bug database with the tool and platform
    information prepopulated.
 
 
@@ -616,10 +617,10 @@ Tools must include tests that guarantee its correct behavior. Include both unit
 tests and integration tests with each tool. Tests will run in Fuchsia continuous
 integration.
 
-> **SDK**
+> **IDK**
 >
-> It's especially important that SDK tools imported from the Fuchsia build (pm,
-> etc.) have tests that run in Fuchsia continuous integration because the SDK
+> It's especially important that IDK tools imported from the Fuchsia build (pm,
+> etc.) have tests that run in Fuchsia continuous integration because the IDK
 > bot does not currently prevent breaking changes.
 
 ## Documentation
@@ -627,9 +628,9 @@ integration.
 The Markdown documentation is the right place to put more verbose usage examples
 and explanations.
 
-> **SDK**
+> **IDK**
 >
-> All tools included in the SDK and intended to be executed directly by an end
+> All tools included in the IDK and intended to be executed directly by an end
 > user must have a corresponding Markdown documentation file.
 
 ## User vs. Programmatic Interaction
@@ -645,7 +646,7 @@ they are running in an interactive shell).
 ### Stdin
 
 For tools that are not normally interactive, avoid requesting user input
-e.g. readline or linenoise). I.e. Don't suddenly put up an unexpected prompt to
+e.g. readline or linenoise). Don't suddenly put up an unexpected prompt to
 ask the user a question.
 
 For interactive tools (e.g. `zxdb`) prompting the user for input is expected.
@@ -654,7 +655,7 @@ For interactive tools (e.g. `zxdb`) prompting the user for input is expected.
 
 When sending output to the user on stdout use proper spelling, grammar, and
 avoid unusual abbreviations. If an unusual abbreviation is used, be sure it has
-an entry in the [glossary.md](../../glossary.md).
+an entry in the [glossary.md](/docs/glossary.md).
 
 Try to check for output to terminal, i.e. see if a user is there or whether the
 receiver is a program.

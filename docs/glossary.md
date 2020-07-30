@@ -262,7 +262,7 @@ See also: [fuchsia-pkg URL](#fuchsia-pkg-url)
 A shorthand for the [Component](#component) Architecture as first implemented on
 Fuchsia. Includes a runtime as implemented by [appmgr](#appmgr) and
 [sysmgr](#sysmgr), protocols and types as defined in [fuchsia.sys], build-time
-tools such as [cmc], and SDK libraries such as [libsys] and [libsvc].
+tools such as [cmc], and IDK libraries such as [libsys] and [libsvc].
 
 See also: [Components v2](#components-v2)
 
@@ -438,7 +438,7 @@ not require you to use any particular language or user interface framework.
 
 The Fuchsia API Surface is the combination of the
 [Fuchsia System Interface](#fuchsia-system-interface) and the client libraries
-included in the [Fuchsia SDK](#fuchsia-sdk).
+included in the [Fuchsia IDK](#fuchsia-idk).
 
 ### **Fuchsia Package** {#fuchsia-package}
 
@@ -456,12 +456,14 @@ to a repository, a package, or a package resource. The syntax is
 directory, from the `fuchsia.com` repository, its URL is
 `fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx`.
 
-### **Fuchsia SDK** {#fuchsia-sdk}
+### **Fuchsia Integrator Development Kit (IDK)** {#fuchsia-idk}
 
-The Fuchsia SDK is a collection of libraries and tools that the Fuchsia project
-provides to Fuchsia developers. Among other things, the Fuchsia SDK contains a
+The Fuchsia IDK is a collection of libraries and tools that the Fuchsia project
+provides to Fuchsia developers. Among other things, the Fuchsia IDK contains a
 definition of the [Fuchsia System Interface](#fuchsia-system-interface) as well
-as a number of client libraries.
+as a number of client libraries. The IDK is targeted at development environment
+integrators that add environment specific tooling specific to the build
+environment to form a full SDK.
 
 ### **Fuchsia System Interface** {#fuchsia-system-interface}
 
@@ -862,7 +864,7 @@ second process, [bootsvc](#bootsvc), from the [bootfs](#bootfs).
 The Virtual Dynamic Shared Object (vDSO) is a Virtual Shared Library -- it is
 provided by the [Zircon](#zircon) kernel and does not appear in the filesystem
 or a package. It provides the Zircon System Call API/ABI to userspace processes
-in the form of an ELF library that's "always there." In the Fuchsia SDK and
+in the form of an ELF library that's "always there." In the Fuchsia IDK and
 [Zircon DDK](#ddk) it exists as `libzircon.so` for the purpose of having
 something to pass to the linker representing the vDSO.
 

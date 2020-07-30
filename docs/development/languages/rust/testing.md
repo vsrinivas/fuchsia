@@ -5,7 +5,7 @@ paired with ["Running tests as components"][component_tests] describes how to
 component-ize, package, and run these tests.
 
 This document is targeted towards developers working inside of `fuchsia.git`,
-and the workflow described is unlikely to work for SDK consumers.
+and the workflow described is unlikely to work for IDK consumers.
 
 The source code for this tutorial is available at
 [`//examples/hello_world/rust`][example-src].

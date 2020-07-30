@@ -9,6 +9,7 @@ Author(s) | abarth@google.com
 Submitted | 2020-03-30
 Reviewed  | 2020-04-23
 
+
 [TOC]
 
 ## Summary
@@ -64,9 +65,12 @@ that identifies the set of software artifacts contained in the release.
 *Backwards compatibility* refers to the ability of a newer release of Fuchsia to
 run binaries intended to run on older release of Fuchsia.
 
-The *Fuchsia SDK* is an artifact used by developers to build applications that
-run on Fuchsia. The Fuchsia SDK is published by the Fuchsia project and defines
+The *Fuchsia IDK* is an artifact used by development environment integrators to
+expose the Fuchsia platform to developers to build applications that
+run on Fuchsia. The Fuchsia IDK is published by the Fuchsia project and defines
 the contract between the Fuchsia platform and applications that run on Fuchsia.
+The IDK tools define the contract between the Fuchsia IDK tools and the
+development environment integrators' environments.
 
 A *soft transition* is a technique for breaking down a backwards-incompatible
 change into a sequence of smaller changes to the platform and a set of known
@@ -98,13 +102,13 @@ might implicate the same ABI revision.
 #### API level
 
 A Fuchsia *API level* denotes a set of APIs available when building an
-application. A given release of the [Fuchsia SDK] typically supports multiple
+application. A given release of the [Fuchsia IDK] typically supports multiple
 API levels. The APIs available at a given supported API level should be
-consistent across SDK releases.
+consistent across IDK releases.
 
 > *Example.* Consider `pkg/fit`, which is a C++ library in the SDK. The `fit`
 library declares a number of functions, each of which is an API exposed by the
-library. The API defines that set of functions, which means two SDK releases
+library. The API defines that set of functions, which means two IDK releases
 should expose the same set of functions in the `fit` library at the same API
 level.
 
@@ -142,7 +146,7 @@ interpreted by human beings.
 #### Evolution
 
 The platform increases the API level whenever the platform adds or removes an
-API from the [Fuchsia SDK] or when the ABI revision changes. In practice, the
+API from the [Fuchsia IDK] or when the ABI revision changes. In practice, the
 project might batch changes by increasing the API level on some defined cadence
 (e.g., once a day or once a week).
 
@@ -166,7 +170,7 @@ applications in practice.
 ### Applications
 
 End-developers select a single *target API level* when building a component.
-The target API level controls which declarations in the [Fuchsia SDK]
+The target API level controls which declarations in the [Fuchsia IDK]
 are available when building the component. For example, a FIDL message
 introduced in API level 7 is not available when building a component that
 targets API level 6 but is available when building a component that targets API
@@ -469,7 +473,7 @@ Apple has used these mechanisms successfully to migrate applications for these
 operating systems from older APIs to newer APIs.
 
 [Fuchsia System Interface]: /docs/concepts/system/abi/system.md
-[Fuchsia SDK]: /docs/development/sdk/README.md
+[Fuchsia IDK]: /docs/development/sdk/README.md
 [`uses-sdk`]: https://developer.android.com/guide/topics/manifest/uses-sdk-element
 [`SupportedOS`]: https://docs.microsoft.com/en-us/windows/win32/win7appqual/compatibility---application-manifest#leveraging-feature-capabilities
 [`API_AVAILABLE`]: https://developer.apple.com/documentation/swift/objective-c_and_c_code_customization/marking_api_availability_in_objective-c

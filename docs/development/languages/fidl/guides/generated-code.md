@@ -81,7 +81,7 @@ For ad hoc examples or existing FIDL files, another option is to use the
 `fidlbolt` tool. By pasting the desired FIDL content into fidlbolt, it is
 possible to view the output for each binding, as well as for the JSON IR.
 `fidlbolt` also supports importing libraries defined in the sdk, so that
-the FIDL code can use e.g. `using fuchsia.io;` to refer to sdk libraries.
+the FIDL code can use e.g. `using fuchsia.io;` to refer to IDK libraries.
 
 ## Viewing generated documentation
 

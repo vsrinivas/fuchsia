@@ -27,7 +27,7 @@ Fuchsia Platform Source Tree. Changes that impact end-developers require more
 coordination and take longer to execute than changes that impact only the
 Fuchsia Platform Source Tree.
 
-*Supported for end-developers* means that the Fuchsia SDK contains tools and
+*Supported for end-developers* means that the Fuchsia IDK contains tools and
 libraries that help people use the language to develop software for Fuchsia,
 including a language-specific backend (and supporting libraries) for FIDL.
 Support also implies some level of documentation, including tutorials and
@@ -52,7 +52,7 @@ objects of that class.
     well-understood, have been stable over a long period of time, and have been
     used to build similar systems in the past. The language has a mature
     toolchain and associated developer tools.
-*   Pro: C has a stable ABI, which lets the Fuchsia SDK contain prebuilt
+*   Pro: C has a stable ABI, which lets the Fuchsia IDK contain prebuilt
     binaries that end-developers can re-use.
 *   Pro: Many languages can interoperate with C using a foreign function
     interface. Supporting C makes it easier for end-developers to integrate

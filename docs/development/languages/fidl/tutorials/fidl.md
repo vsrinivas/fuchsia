@@ -22,7 +22,7 @@ The example code for this tutorial is in
 [//examples/fidl/fuchsia.examples](/examples/fidl/fuchsia.examples).
 
 We've chosen the directory name to match the library name, which is the
-convention taken by the libraries defined in the Fuchsia SDK in
+convention taken by the libraries defined in the Fuchsia IDK in
 [`//sdk/fidl][sdk].
 
 We can define some examples of the various FIDL language features in

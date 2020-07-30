@@ -1,6 +1,6 @@
-# SDK documentation
+# Integrator Development Kit (IDK) documentation
 
-The present directory contains documentation that is included in the Core SDK.
+The present directory contains documentation that is included in the IDK.
 As such, its contents should be self-sufficient and consumable outside of the
 context of the Fuchsia source repository.
 

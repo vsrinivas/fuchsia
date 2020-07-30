@@ -75,7 +75,7 @@ code. For instance, GCC has a `-m96bit-long-double` flag which alters
 the size of a long double. We assume that such flags are not used.
 
 Finally, some libraries (such as Fuchsia's C standard library) in our
-SDK are a mix of externally defined interfaces and Fuchsia specific
+IDK are a mix of externally defined interfaces and Fuchsia specific
 extensions. In these cases, we allow some pragmatism. For instance,
 libc defines functions like `thrd_get_zx_handle` and
 `dlopen_vmo`. These names are not strictly in accordance with the

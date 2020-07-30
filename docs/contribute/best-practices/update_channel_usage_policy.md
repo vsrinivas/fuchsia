@@ -26,7 +26,7 @@ following requirements:
 
 ## Update Channel Use within Fuchsia Platform
 
-Within the Fuchsia “stem,” the use of channels MUST conform to the defined
+Within the Fuchsia “stem” the use of channels MUST conform to the defined
 policy. Also, the following properties MUST apply:
 
 *   There should be a single component responsible for the writing of channel
@@ -36,9 +36,9 @@ policy. Also, the following properties MUST apply:
     authoritative component and should not use this information to alter runtime
     behavior.
 
-## Update Channel Use within the SDK
+## Update Channel Use within the IDK
 
-Users of channel information in the SDK for Fuchsia components MUST follow the
+Users of channel information in the IDK for Fuchsia components MUST follow the
 defined policy. The following properties MUST apply:
 
 *   Clients MUST only read the channel for the purposes of reporting (via a

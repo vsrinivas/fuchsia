@@ -1,16 +1,17 @@
-# Understanding SDK metadata
+# Understanding Integrator Development Kit (IDK) metadata
 
-The manifest of the Core SDK is a JSON file that is described using
+The manifest of the Fuchsia IDK is a JSON file that is described using
 a [JSON schema](https://json-schema.org/latest/json-schema-core.html).
-The goal of having a metadata based description of the SDK is to allow
-automated processing of the SDK to integrate it into build environments.
+The goal of having a metadata based description of the IDK is to allow
+automated processing of the IDK to integrate it into build environments
+and SDKs usable by developers.
 
-It is expected that the contents and structure of the SDK will change over time
+It is expected that the contents and structure of the IDK will change over time
 so care should be taken when interpreting the metadata during any transformations.
 The source of truth for the structure of the metadata is always the files contains in
-the `meta/schemas` directory of the SDK.
+the `meta/schemas` directory of the IDK.
 
-The source for the schema is found in [`build/sdk/meta`](/build/sdk/meta).
+The source for the schema is found in [`//build/sdk/meta`](/build/sdk/meta).
 
 ## Manifest structure
 

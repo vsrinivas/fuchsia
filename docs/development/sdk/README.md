@@ -1,60 +1,58 @@
-# SDK
+# Integrator Development Kit (IDK)
 
-This folder contains information about developing the Core Fuchsia SDK.
+This folder contains information about developing the Fuchsia Integrator Development Kit (IDK).
 For information on the GN C++ Frontend SDK see [this getting started guide](/docs/development/sdk/gn).
 
-> [Download the Fuchsia Core SDK](download.md)
+> [Download the Fuchsia IDK](download.md)
 
 
 ## Strategy {#strategy}
 
-Fuchsia is taking a modular approach to building an SDK, just as it took one to
-building a new operating system.
+Fuchsia is taking a modular approach to exposing the Fuchsia platform to developers.
 
-At the center of this strategy is the Fuchsia Core SDK, distilled out of the
+At the center of this strategy is the Integrator Development Kit (IDK), distilled out of the
 present Git repository.
-This SDK contains a small set of libraries and tools required to start building
+This IDK contains a small set of libraries and tools required to start building
 and running programs that target Fuchsia.
-The contents of that SDK represent the most basic contract that the Fuchsia
+The contents of that IDK represent the most basic contract that the Fuchsia
 platform developers offer to prospective developers.
 
-The Fuchsia Core SDK is not suitable for immediate consumption.
+The Fuchsia IDK is not suitable for immediate consumption.
 It does not contain any reference to toolchains or build systems, and in fact
 does not require any specific instance of these.
 While this might be viewed as a drawback, this is actually a feature, an
 integral part of a layered approach to building a fully-functional SDK.
-Even though it is not tied to a particular build system, the Core SDK contains
+Even though it is not tied to a particular build system, the IDK contains
 metadata that may be used to produce support for a large variety of build
 systems, thereby producing various SDK distributions.
-Having the Core SDK cleanly separated from these various distributions allows
+Having the IDK cleanly separated from these various distributions allows
 for very flexible release schemes and iteration cycles.
 
 The present documentation focuses on the details of the creation process of the
-Core SDK.
-The documentation included in the Core SDK, hosted under `//sdk/docs`, contains
-information regarding how to work with the Core SDK.
+IDK.
+The documentation included in the IDK, hosted under `//sdk/docs`, contains
+information regarding how to work with the IDK.
 Lastly, some examples of SDK distributions can be found under `//scripts/sdk`;
 most notably it contains a [frontend](#frontend) generating a workspace
 enabling Fuchsia development using [Bazel][bazel] - this distribution is
-currently used to test versions of the Core SDK before they are published.
+currently used to test versions of the IDK before they are published.
 
+## What belongs in the IDK? {#what-belongs-in-an-idk}
 
-## What belongs in an SDK? {#what-belongs-in-an-sdk}
-
-By default, a piece of code in the Fuchsia tree cannot be added to any SDK:
+By default, a piece of code in the Fuchsia tree cannot be added to any IDK:
 participation is a strictly opt-in decision. Additionally, this decision is
 encoded locally within the code's build file. This was done for multiple
 reasons:
 
-1. developers modifying the code need to be aware of the potential impact on
+1. Developers modifying the code need to be aware of the potential impact on
    external customers as early as possible;
-1. publishing that code to an SDK may require extra input from the developers to
+1. Publishing that code to the IDK may require extra input from the developers to
    inform the build system about how to properly include that code in an SDK;
-1. knowing whether the code may be included in an SDK or not allows the build
-   system to perform extra checks on that code to ensure conformity with SDK
+1. Knowing whether the code may be included in an IDK or not allows the build
+   system to perform extra checks on that code to ensure conformity with IDK
    standards.
 
-In order to be made available in SDKs, a piece of code must follow a set of
+In order to be made available in the IDK, a piece of code must follow a set of
 [standards and guidelines](standards.md).
 
 
@@ -62,9 +60,9 @@ In order to be made available in SDKs, a piece of code must follow a set of
 
 The SDK creation pipeline consists of two pieces:
 
-1. the backend, which uses the build system to generate a tarball containing
+1. The backend, which uses the build system to generate a tarball containing
    compiled artifacts, source files, and metadata;
-1. the frontend, which applies transformations to that tarball and turn into
+1. The frontend, which applies transformations to that tarball and turn into
    e.g. an SDK distribution.
 
 ### Backend {#backend}
@@ -75,33 +73,33 @@ the Fuchsia build system, which in turn produces an archive with a
 [set layout](layout.md).
 The inner workings of the backend are described [here][backend].
 
-The backend does not just produce an SDK: it is also used as a control mechanism
-for API evolution. The API surface exposed by an SDK is captured in a set of
+The backend does not just produce an IDK: it is also used as a control mechanism
+for API evolution. The API surface exposed by the IDK is captured in a set of
 reference files representing its elements: modifications to this surface need to
 be explicitly acknowledged by developers by updating the relevant reference
 files, whose latest version is also generated by the backend. The purpose of
-this mechanism is to detect and prevent accidental changes to the SDK as early
+this mechanism is to detect and prevent accidental changes to the IDK as early
 as possible in the release cycle, as well as give us tools to observe and review
 the evolution of the API surface.
 
 ### Frontend {#frontend}
 
-The term frontend is used to describe any process that ingests a Fuchsia SDK
+The term frontend is used to describe any process that ingests the Fuchsia IDK
 archive and applies transformations to it.
 
 [In the Fuchsia tree][frontends], frontends are used to generate SDK
 distributions, e.g. a Bazel-ready workspace.
 
-Frontends may also be used to adapt a Fuchsia SDK archive for consumption in a
+Frontends may also be used to adapt a Fuchsia IDK archive for consumption in a
 particular development environment by for example generating build files for a
 given build system. The presence of extensive metadata in the archive itself
 allows for this kind of processing.
 
 
-## Core SDK and SDK add-ons {#core-sdk-and-sdk-add-ons}
+## IDK and IDK add-ons {#core-idk-and-idk-add-ons}
 
-The Core SDK is represented by the `//sdk:core` target.
-That SDK is complemented by multiple SDK add-ons:
+The Core IDK is represented by the `//sdk:core` target.
+That IDK is complemented by multiple IDK add-ons:
 
 - `//sdk:e2e_testing`: an end-to-end testing framework for Fuchsia;
 - `//sdk:modular_testing`: an hermetic testing framework for the app framework;
@@ -112,38 +110,38 @@ Internally these targets are all instances of the `sdk` GN template.
 
 ## Recipes {#recipes}
 
-### Generating an SDK archive {#generating-an-sdk-archive}
+### Generating an IDK archive {#generating-an-idk-archive}
 
 The various targets representing SDKs are always included in the build graph.
 In order to build the contents of an SDK, [build][fx-build-target] one of the
 targets above.
 
-Note that this will generate and verify SDK contents, but won't actually build
+Note that this will generate and verify IDK contents, but won't actually build
 an archive with these contents.
 To build the archive, add the GN argument `build_sdk_archives=true` [to your
 build configuration][fx-config] and run the build command again.
 The resulting archive will be located under
 `<outdir>/sdk/archive/<name>.tar.gz`.
 
-### Adding content to an SDK {#adding-content-to-an-sdk}
+### Adding content to an IDK {#adding-content-to-an-idk}
 
 The first step is to make that content available to SDKs. This is done by using
 a set of templates listed in the [backend documentation][backend].
-The next step is to add that content to an existing SDK definition. For a target
+The next step is to add that content to an existing IDK definition. For a target
 `//path/to/my:super_target`, this is accomplished by making the implicit
 `//path/to/my:super_target_sdk` target a dependency of the `sdk` target.
 
 Note that some content types require a `.api` source file describing the state
-of the SDK element's API.
+of the IDK element's API.
 These files are produced by the build system.
 In order to seed the first version of such a file, let the build system tell you
 where it expects to find the file, then create this file and leave it empty,
 and finally run the build again: it will again tell you where to get the initial
 version from.
 
-### Turning SDK-related errors into warnings {#turning-sdk-related-errors}
+### Turning IDK-related errors into warnings {#turning-idk-related-errors}
 
-There exist some build steps to verify that the contents of an SDK don't get
+There exist some build steps to verify that the contents of an IDK don't get
 modified by accident. An unacknowledged modification results in a build failure
 until the relevant reference files are updated in the source tree.
 While locally iterating on some public API, having to repeatedly update

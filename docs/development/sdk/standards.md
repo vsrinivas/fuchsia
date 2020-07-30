@@ -1,18 +1,18 @@
-SDK Standards
+Integrator Development Kit (IDK) Standards
 =============
 
-This document describes the standards for how we develop the Fuchsia SDK within
+This document describes the standards for how we develop the Fuchsia IDK within
 the Platform Source Tree. Some of the information in this document might be of
 interest to clients of the Fuchsia SDK, but the primary focus of the document is
 how the Fuchsia project develops the SDK.
 
 ## Governance
 
-The contents of the Fuchsia SDK are governed by the [Fuchsia API Council]. The
-SDK does not contain libraries developed outside the Fuchsia project because
+The contents of the Fuchsia IDK are governed by the [Fuchsia API Council]. The
+IDK does not contain libraries developed outside the Fuchsia project because
 those libraries are not subject to the governance of the Fuchsia API Council.
 
-Client libraries in the SDK do not depend on libraries outside the SDK unless
+Client libraries in the IDK do not depend on libraries outside the IDK unless
 the external library has been approved by the Fuchsia API Council. Typically,
 the council will not approve a dependency unless the dependency has strict
 evolution criteria (e.g., the standard libraries for the various supported
@@ -20,14 +20,14 @@ languages).
 
 ### Example: Google Test
 
-The Fuchsia SDK does not include the _Google Test_ library because the
+The Fuchsia IDK does not include the _Google Test_ library because the
 governance for the _Google Test_ library is provided by Google, not by the
 Fuchsia API Council.
 
-The Fuchsia SDK does not depend on the _Google Test_ library because the
+The Fuchsia IDK does not depend on the _Google Test_ library because the
 [promises made by the governing body](https://abseil.io/about/philosophy#upgrade-support)
 for the _Google Test_ library are not compatible with the model used by the
-Fuchsia SDK.
+Fuchsia IDK.
 
 ## Fuchsia System Interface
 
@@ -41,15 +41,15 @@ in `libzircon`.
 ### Binary stability
 
 FIDL protocols are defined in `.fidl` files, which are contained in the SDK.
-All the FIDL definitions that have been published in an SDK should be considered
+All the FIDL definitions that have been published in an IDK should be considered
 public ABI for the system. The system might also contain additional FIDL
-definitions that have not been published in an SDK. Those definitions are
+definitions that have not been published in an IDK. Those definitions are
 subject to change without notice and programs that rely upon their ABI might not
 work properly in future versions of the system.
 
 ### Source stability
 
-FIDL definitions in the SDK might evolve in source-incompatible ways. For
+FIDL definitions in the IDK might evolve in source-incompatible ways. For
 example, we might rename a method in a protocol while maintaining its ordinal
 and semantics (the ordinal can be maintained by adding a `Selector` attribute
 that is set to the original name). Such a change preserves the ABI but breaks
@@ -66,19 +66,20 @@ The target name should be the name of the library.
 
 ### Style
 
-FIDL definitions in the SDK should follow the [FIDL API style rubric].
+FIDL definitions in the IDK should follow the [FIDL API style rubric].
 
 ## Client Libraries
 
-The Fuchsia SDK contains a number of "client libraries" (libraries that clients of the SDK can link
-into their programs). All of these client libraries are optional and provided for the convenience of
-clients, not for the convenience of the system. The system must not rely upon programs using any
-specific client libraries. Note that `libc` is a client library (not a system library).
+The Fuchsia IDK contains a number of "client libraries" (libraries that clients of an SDK integrating
+the IDK can link into their programs). All of these client libraries are optional
+and provided for the convenience ofclients, not for the convenience of the system.
+The system must not rely upon programs using any specific client libraries.
+Note that `libc` is a client library (not a system library).
 
 ### Stability and Packaging
 
 Only the [Fuchsia System Interface](#fuchsia_system_interface) is ABI stable. Client libraries are
-neither API nor ABI stable. Binaries and libraries must be built against the same SDK version as the
+neither API nor ABI stable. Binaries and libraries must be built against the same IDK version as the
 client libraries they are linked with.
 
 All libraries a program links beyond the [Fuchsia System Interface](#fuchsia_system_interface),
@@ -91,10 +92,9 @@ the libraries from its own package, preventing the different libraries used by d
 from conflicting in the same program.
 
 
-
 ### Precompiled libraries
 
-The Fuchsia SDK does not require clients to use a specific toolchain. For this reason, precompiled
+The Fuchsia IDK does not require clients to use a specific toolchain. For this reason, precompiled
 client libraries must have C linkage. For example, a precompiled client library cannot export C++
 symbols because C++ does not have a standard ABI across toolchains (or even toolchain versions).
 
@@ -149,14 +149,14 @@ in `<zircon/assert.h>`, to assert invariants. Client libraries may also use the
 
 The Fuchsia System Interface uses symbols with the `zx_` and `fuchsia_` prefixes and
 preprocessor macros with the `ZX_` and `FUCHSIA_` prefixes. To avoid collisions, these
-prefixes are reserved for use by the Fuchsia SDK. Clients of the Fuchsia SDK should not
+prefixes are reserved for use by the Fuchsia IDK. Clients of the Fuchsia IDK should not
 declare symbols or preprocessor macros with these prefixes.
 
 ### C++
 
 The FIDL protocols included in the Fuchsia System Interface resides in the top-level
 `fuchsia` namespace. To avoid collisions, this namespace is reserved for use by the
-Fuchsia SDK. Clients of the Fuchsia SDK should not declare names in the top-level
+Fuchsia IDK. Clients of the Fuchsia IDK should not declare names in the top-level
 `fuchsia` namespace.
 
 [Fuchsia API Council]: /docs/concepts/api/council.md

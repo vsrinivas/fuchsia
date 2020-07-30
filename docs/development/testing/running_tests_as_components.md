@@ -13,7 +13,7 @@ environment.
 This document aims to outline the idiomatic way for a developer to configure
 their test artifacts to be run as components. This document is targeted towards
 developers working inside of `fuchsia.git`, and the workflow described is
-unlikely to work for SDK consumers.
+unlikely to work for SDK-based developers.
 
 An example setup of a test component is available at
 `//examples/hello_world/rust`.

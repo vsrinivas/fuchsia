@@ -1,4 +1,4 @@
-# "Core" SDK Documentation
+# Integrator Development Kit (IDK) Documentation
 
 These are some of the tools included in the IDK. See [fuchsia.dev](https://fuchsia.dev) for
 complete information on how to use the IDK to create a development environment.

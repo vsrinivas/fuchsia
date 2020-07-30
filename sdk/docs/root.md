@@ -1,44 +1,45 @@
-# Fuchsia Core SDK
+# Fuchsia Integrator Development Kit (IDK)
 
-This archive contains the Fuchsia Core SDK, which is a small set of
-Fuchsia-specific libraries and tools required to start building and running
-programs for Fuchsia.
+This archive contains the Fuchsia Integrator Development Kit (IDK),
+which is a small set of Fuchsia-specific libraries and tools required to start
+building and running programs for Fuchsia.
 
-This SDK differs from traditional SDKs in that it is not readily usable out of
-the box.
-For example, it does not contain any build system, favor any
-toolchain, or provide standard non-Fuchsia libraries (e.g. for crypto or
-graphics).
-Instead, it provides metadata accurately describing its various
-parts, so that this SDK can be post-processed and augmented with all the pieces
-necessary for a satisfactory end-to-end development experience.
+The Fuchsia IDK is not suitable for immediate consumption.
+It does not contain any reference to toolchains or build systems, and in fact
+does not require any specific instance of these.
+While this might be viewed as a drawback, this is actually a feature, an
+integral part of a layered approach to building a fully-functional SDK.
+Even though it is not tied to a particular build system, the IDK contains
+metadata that may be used to produce support for a large variety of build
+systems, thereby producing various SDK distributions.
+Having the IDK cleanly separated from these various distributions allows
+for very flexible release schemes and iteration cycles.
 
 Most developers who wish to build something for Fuchsia should not need to
-deal directly with this particular SDK.
+deal directly with the IDK.
 They will instead consume a transformed version of it, for instance within the
 development environment and ecosystem supporting a given language runtime.
 Maintainers of development environments who wish to add support for Fuchsia are
-the main audience for this SDK.
+the main audience for the IDK.
 See [the section below](#ingestion) for a description of how to process this
 SDK.
 
-As such, the Core SDK is the representation of the Fuchsia platform developers'
+As such, the Fuchsia IDK is the representation of the Fuchsia platform developers'
 contract with other developers who work with Fuchsia.
-While that contract is absolutely necessary, as this SDK contains the very bits
+While that contract is absolutely necessary, as this IDK contains the very bits
 that are unique to Fuchsia, it is not sufficient and will be complemented by
 other "contracts".
-The Fuchsia Core SDK is mirroring the Fuchsia platform in that respect: highly
+The Fuchsia IDK is mirroring the Fuchsia platform in that respect: highly
 composable and extensible, with a clear separation of concerns.
-
 
 ## Structure
 
-From this point on, the root of the SDK archive will be referred to as `//`.
+From this point on, the root of the IDK archive will be referred to as `//`.
 
 ### Metadata
 
-Metadata is present throughout this SDK in the form of JSON files.
-Every element in this SDK has its own metadata file: for example, a FIDL library
+Metadata is present throughout this IDK in the form of JSON files.
+Every element in this IDK has its own metadata file: for example, a FIDL library
 `//fidl/fuchsia.foobar` has its metadata encoded in
 `//fidl/fuchsia.foobar/meta.json`.
 
@@ -46,12 +47,12 @@ Every metadata file follows a JSON schema available under `//meta/schemas`: for
 example, a FIDL library's metadata file conforms to
 `//meta/schemas/fidl_library.json`.
 Schemas act as the documentation for the metadata and may be used to facilitate
-the SDK ingestion process.
+the IDK ingestion process.
 
 ### Documentation
 
 General documentation is available under [`//docs`](docs/README.md).
-Some individual SDK elements will also provide documentation directly under the
+Some individual IDK elements will also provide documentation directly under the
 path where they are hosted in the SDK.
 
 ### Target prebuilts
@@ -61,7 +62,7 @@ This includes a full-fledged sysroot for each available architecture.
 
 ### Source libraries
 
-The SDK contains sources for a large number of FIDL libraries (under
+The IDK contains sources for a large number of FIDL libraries (under
 `//fidl`) as well as a few C/C++ libraries (under `//pkg`).
 
 ### Host tools
@@ -74,21 +75,22 @@ Some information about how to use these tools can be found under `//docs`.
 ### Images
 
 `//device` contains metadata describing device configurations matching a given
-version of the SDK.
+version of the IDK.
 This metadata contains pointers to images that can be flashed onto said devices.
 
 
 ## Ingestion
 
-This section describes the basic process of consuming the Core SDK and turning
-it into something usable.
+This section describes the process of consuming the IDK and turning
+it into a SDK that is specific to a development environment so it can be used
+directly by developers.
 
 The main entry point for the ingestion process is a file at
 `//meta/manifest.json`.
 As with every metadata file in the SDK, the manifest follows a JSON schema which
 is included under `//meta/schemas/manifest.json`.
 
-This file contains a list of all the elements included in this SDK, represented
+This file contains a list of all the elements included in this IDK, represented
 by the path to their respective metadata file.
 Each element file is guaranteed to contain a top-level `type` attribute, which
 may be used to apply different treatments to different element types, e.g.
@@ -108,6 +110,6 @@ main metadata file contains a property named `schema_version` which is an opaque
 version identifier for these schemas.
 This version identifier will be modified every time the metadata schemas evolve
 in a way that requires the attention of a developer.
-SDK consumers may record the version identifier of the metadata they used to last
-ingest an SDK and compare that version identifier to next SDK's version
+IDK consumers may record the version identifier of the metadata they used to last
+ingest an IDK and compare that version identifier to next SDK's version
 identifier in order to detect when developer action may be required.

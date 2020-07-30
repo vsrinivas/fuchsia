@@ -46,20 +46,20 @@ submodules which means you can use the standard Git workflow:
 git clone https://github.com/llvm/llvm-project ${LLVM_SRCDIR}
 ```
 
-### Fuchsia SDK
+### Fuchsia IDK
 
 Before building the runtime libraries that are built along with the
-toolchain, you need a Fuchsia SDK. The SDK must be located in
-the directory pointed to by the `${SDK_DIR}` variable:
+toolchain, you need a Fuchsia IDK. The IDK must be located in
+the directory pointed to by the `${IDK_DIR}` variable:
 
 ```bash
-SDK_DIR=${HOME}/fuchsia-sdk
+IDK_DIR=${HOME}/fuchsia-sdk
 ```
 
-To download the latest SDK, you can use the following:
+To download the latest IDK, you can use the following:
 
 ```bash
-cipd install fuchsia/sdk/core/linux-amd64 latest -root ${SDK_DIR}
+cipd install fuchsia/sdk/core/linux-amd64 latest -root ${IDK_DIR}
 ```
 
 ### Sysroot for Linux
@@ -104,7 +104,7 @@ to an absolute or relative directory path from the build directory.
 cmake -GNinja \
   -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
-  -DSTAGE2_FUCHSIA_SDK=${SDK_DIR} \
+  -DSTAGE2_FUCHSIA_SDK=${IDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia.cmake \
   ${LLVM_SRCDIR}/llvm
 ninja stage2-distribution
