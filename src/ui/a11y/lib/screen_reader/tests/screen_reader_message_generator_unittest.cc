@@ -110,5 +110,14 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeSlider) {
   ASSERT_EQ(result[1].utterance.message(), "slider");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, GenerateByMessageId) {
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_SLIDER),
+                                               "slider");
+  auto result =
+      screen_reader_message_generator_->GenerateUtteranceByMessageId(MessageIds::ROLE_SLIDER);
+  ASSERT_TRUE(result.utterance.has_message());
+  ASSERT_EQ(result.utterance.message(), "slider");
+}
+
 }  // namespace
 }  // namespace accessibility_test

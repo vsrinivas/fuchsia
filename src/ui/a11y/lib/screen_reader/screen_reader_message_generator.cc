@@ -18,50 +18,6 @@ using fuchsia::intl::l10n::MessageIds;
 
 static constexpr zx::duration kDefaultDelay = zx::msec(40);
 
-// Returns a message that describes a node where Role == BUTTON.
-ScreenReaderMessageGenerator::UtteranceAndContext DescribeButton(
-    a11y::i18n::MessageFormatter* formatter) {
-  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
-  auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_BUTTON));
-  FX_DCHECK(message);
-  utterance.utterance.set_message(std::move(*message));
-  utterance.delay = kDefaultDelay;
-  return utterance;
-}
-
-// Returns a message that describes a node where Role == HEADER.
-ScreenReaderMessageGenerator::UtteranceAndContext DescribeHeader(
-    a11y::i18n::MessageFormatter* formatter) {
-  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
-  auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_HEADER));
-  FX_DCHECK(message);
-  utterance.utterance.set_message(std::move(*message));
-  utterance.delay = kDefaultDelay;
-  return utterance;
-}
-
-// Returns a message that describes a node where Role == IMAGE.
-ScreenReaderMessageGenerator::UtteranceAndContext DescribeImage(
-    a11y::i18n::MessageFormatter* formatter) {
-  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
-  auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_IMAGE));
-  FX_DCHECK(message);
-  utterance.utterance.set_message(std::move(*message));
-  utterance.delay = kDefaultDelay;
-  return utterance;
-}
-
-// Returns a message that describes a node where Role == SLIDER.
-ScreenReaderMessageGenerator::UtteranceAndContext DescribeSlider(
-    a11y::i18n::MessageFormatter* formatter) {
-  ScreenReaderMessageGenerator::UtteranceAndContext utterance;
-  auto message = formatter->FormatStringById(static_cast<uint64_t>(MessageIds::ROLE_SLIDER));
-  FX_DCHECK(message);
-  utterance.utterance.set_message(std::move(*message));
-  utterance.delay = kDefaultDelay;
-  return utterance;
-}
-
 // Returns a message that describes the label and range value of a slider.
 std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantics::Node* node) {
   std::string message;
@@ -100,22 +56,33 @@ ScreenReaderMessageGenerator::DescribeNode(const fuchsia::accessibility::semanti
     Utterance utterance;
     if (node->has_role()) {
       if (node->role() == Role::BUTTON) {
-        description.emplace_back(DescribeButton(message_formatter_.get()));
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_BUTTON));
       } else if (node->role() == Role::HEADER) {
-        description.emplace_back(DescribeHeader(message_formatter_.get()));
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_HEADER));
       } else if (node->role() == Role::IMAGE) {
-        description.emplace_back(DescribeImage(message_formatter_.get()));
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_IMAGE));
       } else if (node->role() == Role::SLIDER) {
         // Add the slider's range value to the label utterance, if specified.
         auto& label_utterance = description.back().utterance;
         label_utterance.set_message(GetSliderLabelAndRangeMessage(node));
 
         // Add a role description for the slider.
-        description.emplace_back(DescribeSlider(message_formatter_.get()));
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SLIDER));
       }
     }
   }
   return description;
+}
+
+ScreenReaderMessageGenerator::UtteranceAndContext
+ScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
+    fuchsia::intl::l10n::MessageIds message_id, zx::duration delay) {
+  UtteranceAndContext utterance;
+  auto message = message_formatter_->FormatStringById(static_cast<uint64_t>(message_id));
+  FX_DCHECK(message);
+  utterance.utterance.set_message(std::move(*message));
+  utterance.delay = delay;
+  return utterance;
 }
 
 }  // namespace a11y

@@ -38,6 +38,8 @@ class Speaker {
     // If true, this task will interrupt any playing tts and cancels pending utterances to be
     // spoken. It starts right away.
     bool interrupt = true;
+    // Delay before utterance is vocalized.
+    zx::duration delay = zx::msec(0);
   };
 
   explicit Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
@@ -51,6 +53,11 @@ class Speaker {
   // Returns a speech task that speaks the provided |message|.
   virtual fit::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
                                              Options options);
+
+  // Returns a speech task that speaks the canonical message specified by
+  // |message_id|.
+  virtual fit::promise<> SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
+                                                 Options options);
 
   // Returns a promise that cancels pending or in progress tts utterances.
   virtual fit::promise<> CancelTts();

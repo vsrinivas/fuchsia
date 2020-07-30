@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include "fuchsia/intl/l10n/cpp/fidl.h"
 #include "src/ui/a11y/lib/screen_reader/i18n/message_formatter.h"
 
 namespace a11y {
@@ -39,6 +40,10 @@ class ScreenReaderMessageGenerator {
   // Returns a description of the semantic node.
   virtual std::vector<UtteranceAndContext> DescribeNode(
       const fuchsia::accessibility::semantics::Node* node);
+
+  // Returns an utterance for a message retrieved by message ID.
+  virtual UtteranceAndContext GenerateUtteranceByMessageId(
+      fuchsia::intl::l10n::MessageIds message_id, zx::duration delay = zx::msec(0));
 
  protected:
   // Constructor for mock only.

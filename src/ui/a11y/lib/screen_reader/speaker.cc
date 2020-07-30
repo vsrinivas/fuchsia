@@ -51,6 +51,17 @@ fit::promise<> Speaker::SpeakMessagePromise(Utterance utterance, Options options
   return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
 }
 
+fit::promise<> Speaker::SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
+                                                Options options) {
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> utterances;
+  utterances.emplace_back(
+      screen_reader_message_generator_->GenerateUtteranceByMessageId(message_id));
+  FX_DCHECK(!utterances.empty());
+  auto task = std::make_shared<SpeechTask>(std::move(utterances));
+
+  return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
+}
+
 fit::promise<> Speaker::PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt) {
   return fit::make_promise([this, task, interrupt]() mutable -> fit::promise<> {
     if (interrupt) {

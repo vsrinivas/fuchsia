@@ -13,6 +13,11 @@ void MockScreenReaderMessageGenerator::set_description(
   description_ = std::move(description);
 }
 
+void MockScreenReaderMessageGenerator::set_message(fuchsia::intl::l10n::MessageIds id,
+                                                   UtteranceAndContext message) {
+  messages_[id] = std::move(message);
+}
+
 std::vector<a11y::ScreenReaderMessageGenerator::UtteranceAndContext>
 MockScreenReaderMessageGenerator::DescribeNode(
     const fuchsia::accessibility::semantics::Node* node) {
@@ -28,6 +33,18 @@ MockScreenReaderMessageGenerator::DescribeNode(
   }
   description.push_back(std::move(utterance));
   return description;
+}
+
+a11y::ScreenReaderMessageGenerator::UtteranceAndContext
+MockScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
+    fuchsia::intl::l10n::MessageIds message_id, zx::duration delay) {
+  UtteranceAndContext utterance;
+  if (messages_.find(message_id) != messages_.end()) {
+    utterance = std::move(messages_[message_id]);
+    messages_.erase(message_id);
+  }
+
+  return utterance;
 }
 
 }  // namespace accessibility_test

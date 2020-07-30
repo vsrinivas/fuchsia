@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 
+#include <map>
 #include <vector>
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader_message_generator.h"
@@ -23,12 +24,24 @@ class MockScreenReaderMessageGenerator : public a11y::ScreenReaderMessageGenerat
   // invoked after each call to DescribeNode().
   void set_description(std::vector<UtteranceAndContext> description);
 
+  // Sets the message that will be returned when calling
+  // GenerateUtteranceByMessageId()
+  // with |message_id|. This value is erased after each call to
+  // GenerateUtteranceByMessageId(), so this function must be invoked between
+  // successive calls.
+  void set_message(fuchsia::intl::l10n::MessageIds id, UtteranceAndContext message);
+
   // |ScreenReaderMessageGenerator|
   std::vector<UtteranceAndContext> DescribeNode(
       const fuchsia::accessibility::semantics::Node* node) override;
 
+  // |ScreenReaderMessageGenerator|
+  UtteranceAndContext GenerateUtteranceByMessageId(fuchsia::intl::l10n::MessageIds message_id,
+                                                   zx::duration delay = zx::msec(0)) override;
+
  private:
   std::optional<std::vector<UtteranceAndContext>> description_;
+  std::map<fuchsia::intl::l10n::MessageIds, UtteranceAndContext> messages_;
 };
 
 }  // namespace accessibility_test

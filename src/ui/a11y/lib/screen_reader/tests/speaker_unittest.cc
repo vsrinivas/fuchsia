@@ -68,6 +68,20 @@ TEST_F(SpeakerTest, SpeaksAMessage) {
   EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "foo");
 }
 
+TEST_F(SpeakerTest, SpeaksAMessageById) {
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance;
+  utterance.utterance.set_message("button");
+  mock_screen_reader_message_generator_ptr_->set_message(
+      fuchsia::intl::l10n::MessageIds::ROLE_BUTTON, std::move(utterance));
+  auto task = speaker_->SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds::ROLE_BUTTON,
+                                                {.interrupt = true});
+  executor_.schedule_task(std::move(task));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
+  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
+  EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "button");
+}
+
 TEST_F(SpeakerTest, SpeaksANode) {
   Node node;
   node.mutable_attributes()->set_label("foo");
