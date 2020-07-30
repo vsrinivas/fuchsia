@@ -8,27 +8,19 @@ import (
 	"flag"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
 	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
-
-	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 )
 
-var testDataFlag = flag.String("test_data_dir", "", "Path to testdata/")
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-	os.Exit(m.Run())
-}
+var testDataFlag = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
 
 func TestGetLUCICtx(t *testing.T) {
-	testDataDir := path.Join(filepath.Dir(os.Args[0]), *testDataFlag)
-	luciCtx := path.Join(testDataDir, "lucictx.json")
-	os.Setenv("LUCI_CONTEXT", luciCtx)
+	old := os.Getenv("LUCI_CONTEXT")
+	defer os.Setenv("LUCI_CONTEXT", old)
+	os.Setenv("LUCI_CONTEXT", filepath.Join(*testDataFlag, "lucictx.json"))
 	ctx, err := resultSinkCtx()
 	if err != nil {
 		t.Errorf("Cannot parse LUCI_CONTEXT: %v", err)
@@ -36,23 +28,18 @@ func TestGetLUCICtx(t *testing.T) {
 	if ctx.ResultSinkAddr != "result.sink" {
 		t.Errorf("Incorrect value parsed for result_sink address. Got %s", ctx.ResultSinkAddr)
 	}
-
 	if ctx.AuthToken != "token" {
 		t.Errorf("Incorrect value parsed for result_sink auth_token field. Got %s", ctx.AuthToken)
 	}
 }
 
 func TestParse2Summary(t *testing.T) {
-	testDataDir := path.Join(filepath.Dir(os.Args[0]), *testDataFlag)
-	summaries = flagmisc.StringsValue{}
-	summaries.Set(path.Join(testDataDir, "summary.json"))
-	summaries.Set(path.Join(testDataDir, "summary2.json"))
+	t.Parallel()
+	const chunkSize = 5
 	var requests []*sinkpb.ReportTestResultsRequest
-	var expectRequests = 0
-	var chunkSize = 5
-	for _, summaryFile := range summaries {
-		summary, err := ParseSummary(summaryFile)
-
+	expectRequests := 0
+	for _, name := range []string{"summary.json", "summary2.json"} {
+		summary, err := ParseSummary(filepath.Join(*testDataFlag, name))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -74,16 +61,12 @@ func TestParse2Summary(t *testing.T) {
 }
 
 func TestParse2SummaryNoTags(t *testing.T) {
-	testDataDir := path.Join(filepath.Dir(os.Args[0]), *testDataFlag)
-	summaries = flagmisc.StringsValue{}
-	summaries.Set(path.Join(testDataDir, "summary.json"))
-	summaries.Set(path.Join(testDataDir, "summary2.json"))
+	t.Parallel()
+	const chunkSize = 5
 	var requests []*sinkpb.ReportTestResultsRequest
-	var expectRequests = 0
-	var chunkSize = 5
-	for _, summaryFile := range summaries {
-		summary, err := ParseSummary(summaryFile)
-
+	expectRequests := 0
+	for _, name := range []string{"summary.json", "summary2.json"} {
+		summary, err := ParseSummary(filepath.Join(*testDataFlag, name))
 		if err != nil {
 			log.Fatal(err)
 		}

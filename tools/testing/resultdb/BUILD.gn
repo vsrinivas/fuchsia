@@ -38,7 +38,7 @@ if (is_host) {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/resultdb" ]
     args = [
       "--test_data_dir",
-      rebase_path(_testdata_path, root_out_dir),
+      rebase_path(_testdata_path, root_build_dir),
     ]
     deps = [ ":main" ]
     non_go_deps = [ ":testdata" ]

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -48,7 +49,7 @@ func TestDumpfile(t *testing.T) {
 		"[123.456] 01234.05678> {{{dumpfile:llvm-cov:test}}}\n"
 
 	symbo := newMockSymbolizer([]mockModule{})
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 	tap := NewTriggerTap()
 	tHandler := &triggerTester{t: t}
 	tap.AddHandler(tHandler.HandleDump)
@@ -107,7 +108,7 @@ func TestDumpfile(t *testing.T) {
 func TestSyslog(t *testing.T) {
 	msg := "[123.456][1234][05678][klog] INFO: Blarg\n"
 	symbo := newMockSymbolizer([]mockModule{})
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 	ctx := context.Background()
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
@@ -127,7 +128,7 @@ func TestColor(t *testing.T) {
 		"[0.0] 1234:5678> \033[1m\033[31m this line tests adjacent state changes\n" +
 		"[0.0] 01234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\n"
 	symbo := newMockSymbolizer([]mockModule{})
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 	ctx := context.Background()
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
@@ -147,7 +148,7 @@ func TestKeepLeadingSpace(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{})
 	// make a demuxer
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[0.000] 00000.00000>      \tkeep\n"
@@ -167,13 +168,16 @@ func TestKeepLeadingSpace(t *testing.T) {
 func ExampleDummyProcess() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x429c0: {{NewOptStr("atan2.c"), 33, NewOptStr("atan2")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x429c0: {{NewOptStr("atan2.c"), 33, NewOptStr("atan2")}},
+			},
+		},
 	})
 
 	// make a demuxer
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 
 	// define a little message that will need to be parsed
 	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -199,20 +203,26 @@ func ExampleDummyProcess() {
 func ExampleDemux() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
-			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
-			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
-		}},
-		{getTestdataPath("libcrypto.elf"), map[uint64][]SourceLocation{
-			0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
-			0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
-			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
+				0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+				0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			},
+		},
+		{
+			filepath.Join(*testDataFlag, "libcrypto.elf"),
+			map[uint64][]SourceLocation{
+				0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
+				0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
+				0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
+			},
+		},
 	})
 
 	// make a demuxer
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> keep {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -242,7 +252,7 @@ func ExampleDemux() {
 func TestMsgSimpleBacktrace(t *testing.T) {
 	msg := "{{{bt:0:0xdeadbeef:this is a message}}}\n"
 	symbo := newMockSymbolizer([]mockModule{})
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 	ctx := context.Background()
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
@@ -259,13 +269,16 @@ func TestMsgSimpleBacktrace(t *testing.T) {
 func ExampleMsgBacktrace() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+			},
+		},
 	})
 
 	// make a demuxer
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 
 	// define a little message that will need to be parsed
 	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -290,15 +303,18 @@ func ExampleMsgBacktrace() {
 func ExampleNoHeaderBacktrace() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x429c0: {{NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}, {NewOptStr("atan2.c"), 49, NewOptStr("atan2")}},
-			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
-			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x429c0: {{NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}, {NewOptStr("atan2.c"), 49, NewOptStr("atan2")}},
+				0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+				0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			},
+		},
 	})
 
 	// make a demuxer
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 
 	// define a little message that will need to be parsed
 	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -328,20 +344,26 @@ func ExampleNoHeaderBacktrace() {
 func ExampleNewBacktracePresenter() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x429c0: {{NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}, {NewOptStr("atan2.c"), 49, NewOptStr("atan2")}},
-			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
-			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
-		}},
-		{getTestdataPath("libcrypto.elf"), map[uint64][]SourceLocation{
-			0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
-			0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
-			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x429c0: {{NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}, {NewOptStr("atan2.c"), 49, NewOptStr("atan2")}},
+				0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+				0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			},
+		},
+		{
+			filepath.Join(*testDataFlag, "libcrypto.elf"),
+			map[uint64][]SourceLocation{
+				0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
+				0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
+				0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
+			},
+		},
 	})
 
 	// make a demuxer
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -381,15 +403,18 @@ func ExampleNewBacktracePresenter() {
 func ExampleBadAddr() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x429c0: {{EmptyOptStr(), 0, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
-			0x43680: {{NewOptStr("pow.c"), 67, EmptyOptStr()}},
-			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x429c0: {{EmptyOptStr(), 0, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
+				0x43680: {{NewOptStr("pow.c"), 67, EmptyOptStr()}},
+				0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			},
+		},
 	})
 
 	// make a demuxer
-	demuxer := NewDemuxer(testBinaries, symbo)
+	demuxer := NewDemuxer(getTestBinaries(), symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +

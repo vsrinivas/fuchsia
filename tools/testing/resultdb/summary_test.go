@@ -14,7 +14,7 @@ import (
 )
 
 func TestParseSummary(t *testing.T) {
-	var testCount = 10
+	const testCount = 10
 	summary := createTestSummary(testCount)
 	testResults := SummaryToResultSink(summary, []*resultpb.StringPair{
 		{Key: "builder", Value: "fuchsia.x64"},

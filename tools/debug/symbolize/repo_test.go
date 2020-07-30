@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
@@ -21,10 +22,11 @@ func hexEqual(a []byte, b string) bool {
 type gobugMockSource struct{}
 
 func (g *gobugMockSource) GetBinaries() ([]elflib.BinaryFileRef, error) {
+	p := filepath.Join(*testDataFlag, "gobug.elf")
 	out := []elflib.BinaryFileRef{
-		{BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149", Filepath: getTestdataPath("gobug.elf")},
-		{BuildID: "4FCB712AA6387724A9F465A3DEADBEEF", Filepath: getTestdataPath("gobug.elf")},
-		{BuildID: "DEADBEEFA6387724A9F465A32CD8C14B", Filepath: getTestdataPath("gobug.elf")},
+		{BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149", Filepath: p},
+		{BuildID: "4FCB712AA6387724A9F465A3DEADBEEF", Filepath: p},
+		{BuildID: "DEADBEEFA6387724A9F465A32CD8C14B", Filepath: p},
 	}
 	for _, bin := range out {
 		if err := bin.Verify(); err != nil {
@@ -39,12 +41,13 @@ func (g *gobugMockSource) GetBinaries() ([]elflib.BinaryFileRef, error) {
 // still ensure that our mentioned build id matches any of the build ids in the file.
 func TestGoBug(t *testing.T) {
 	source := &gobugMockSource{}
-	data, err := os.Open(getTestdataPath("gobug.elf"))
+	p := filepath.Join(*testDataFlag, "gobug.elf")
+	data, err := os.Open(p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer data.Close()
-	buildids, err := elflib.GetBuildIDs(getTestdataPath("gobug.elf"), data)
+	buildids, err := elflib.GetBuildIDs(p, data)
 	if err != nil {
 		t.Fatal(err)
 	}

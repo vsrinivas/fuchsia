@@ -7,14 +7,12 @@ package elflib
 import (
 	"encoding/hex"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
 func testPeBuildIDFile(t *testing.T, filename string, expected string) {
-	testfile, err := getTestdataPath(filename)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testfile := filepath.Join(*testDataFlag, filename)
 	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)

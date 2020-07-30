@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -51,22 +52,28 @@ type symbolizerRepo struct {
 func TestBasic(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
-			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
-			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
-		}},
-		{getTestdataPath("libcrypto.elf"), map[uint64][]SourceLocation{
-			0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
-			0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
-			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
+				0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+				0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			},
+		},
+		{
+			filepath.Join(*testDataFlag, "libcrypto.elf"),
+			map[uint64][]SourceLocation{
+				0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
+				0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
+				0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
+			},
+		},
 	})
 	// Get a line parser
 	parseLine := GetLineParser()
 
 	// make an actual filter using those two mock objects
-	filter := NewFilter(testBinaries, symbo)
+	filter := NewFilter(getTestBinaries(), symbo)
 
 	// parse some example lines
 	err := filter.addModule(Module{"libc.elf", "4fcb712aa6387724a9f465a32cd8c14b", 1})
@@ -135,13 +142,16 @@ func TestBacktrace(t *testing.T) {
 
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x44988: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x44988: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			},
+		},
 	})
 
 	// make an actual filter using those two mock objects
-	filter := NewFilter(testBinaries, symbo)
+	filter := NewFilter(getTestBinaries(), symbo)
 
 	// add some context
 	err := filter.addModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
@@ -187,13 +197,16 @@ func TestReset(t *testing.T) {
 
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
-		{getTestdataPath("libc.elf"), map[uint64][]SourceLocation{
-			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
-		}},
+		{
+			filepath.Join(*testDataFlag, "libc.elf"),
+			map[uint64][]SourceLocation{
+				0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
+			},
+		},
 	})
 
 	// make an actual filter using those two mock objects
-	filter := NewFilter(testBinaries, symbo)
+	filter := NewFilter(getTestBinaries(), symbo)
 
 	// add some context
 	mod := Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1}

@@ -6,26 +6,16 @@ package elflib
 
 import (
 	"encoding/hex"
+	"flag"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 )
 
-func getTestdataPath(filename string) (string, error) {
-	testPath, err := filepath.Abs(os.Args[0])
-	if err != nil {
-		return "", err
-	}
-	outDir := filepath.Dir(testPath)
-	return path.Join(outDir, "testdata", "elflib", filename), nil
-}
+var testDataFlag = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
 
 func TestBuildIDs(t *testing.T) {
-	testfile, err := getTestdataPath("libc.elf.section-only")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testfile := filepath.Join(*testDataFlag, "libc.elf.section-only")
 	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)
@@ -44,10 +34,7 @@ func TestBuildIDs(t *testing.T) {
 }
 
 func TestStrippedBuildIDs(t *testing.T) {
-	testfile, err := getTestdataPath("libc.elf.stripped")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testfile := filepath.Join(*testDataFlag, "libc.elf.stripped")
 	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)
