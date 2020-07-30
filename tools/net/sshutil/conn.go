@@ -118,6 +118,22 @@ func connectToSSH(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) 
 	d := net.Dialer{}
 	conn, err := d.DialContext(ctx, "tcp", addr.String())
 	if err != nil {
+		// DialContext wraps maps context errors to custom non-exported error
+		// types, so even if the operation failed due to a context error it
+		// might not return a context error. See
+		// https://github.com/golang/go/blob/b4652028d48f42506cfd10c1763c6d7e8b22cb7b/src/net/net.go#L420
+		// So we convert back to a context error to provide a more consistent
+		// interface for callers of this method.
+		//
+		// There is a potential race condition where the context might be
+		// canceled after DialContext exits but before we hit this line, in
+		// which case we would actually return the wrong error. But that's
+		// probably not a big deal because the fact that the context was
+		// canceled implies that we should be giving up on, and ignoring the
+		// results of, ongoing operations anyway.
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		}
 		return nil, err
 	}
 
@@ -148,26 +164,9 @@ func connectToSSH(ctx context.Context, addr net.Addr, config *ssh.ClientConfig) 
 
 	select {
 	case r := <-ch:
-		err := r.err
-		// DialContext wraps maps context errors to custom non-exported error
-		// types, so even if the operation failed due to a context error it
-		// might not return a context error. See
-		// https://github.com/golang/go/blob/b4652028d48f42506cfd10c1763c6d7e8b22cb7b/src/net/net.go#L420
-		// So we convert back to a context error to provide a more consistent
-		// interface for callers of this method.
-		//
-		// There is a potential race condition where the context might be
-		// canceled after DialContext exits but before we hit this line, in
-		// which case we would actually return the wrong error. But that's
-		// probably not a big deal because the fact that the context was
-		// canceled implies that we should be giving up on, and ignoring the
-		// results of, ongoing operations anyway.
-		if err != nil && ctx.Err() != nil {
-			err = ctx.Err()
-		}
-		return r.client, err
+		return r.client, r.err
 	case <-ctx.Done():
-		err = fmt.Errorf("canceled connecting to %s: %w", addr, ctx.Err())
+		err = ctx.Err()
 
 		if closeErr := conn.Close(); closeErr != nil {
 			err = fmt.Errorf("error closing connection: %v; original error: %w", closeErr, err)

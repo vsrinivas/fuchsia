@@ -261,6 +261,7 @@ func TestRun(t *testing.T) {
 		// it's picky to pick the right deadline values in a test,
 		// we'll use a context.WithCancel.
 		connectCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
 		// Spawn an ssh client goroutine, that will connect to the server, and err
 		// out when the connection is canceled.
