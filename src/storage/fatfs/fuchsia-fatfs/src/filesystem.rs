@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        directory::FatDirectory,
+        directory::{FatDirectory, InsensitiveStringRef},
         refs::FatfsDirRef,
         types::{Dir, FileSystem},
         util::fatfs_error_to_status,
@@ -96,72 +96,18 @@ impl FatFilesystem {
         let inner = mutex.into_inner().map_err(|_| Status::UNAVAILABLE)?;
         inner.shut_down()
     }
-}
 
-impl FilesystemRename for FatFilesystem {
-    fn rename(
+    /// Do a simple rename of the file, without unlinking dst.
+    /// This assumes that either "dst" and "src" are the same file, or that "dst" has already been
+    /// unlinked.
+    fn rename_internal(
         &self,
-        src_dir: Arc<dyn Any + Sync + Send + 'static>,
-        src_path: Path,
-        dst_dir: Arc<dyn Any + Sync + Send + 'static>,
-        dst_path: Path,
+        filesystem: &FatFilesystemInner,
+        src_dir: Arc<FatDirectory>,
+        src_name: &str,
+        dst_dir: Arc<FatDirectory>,
+        dst_name: &str,
     ) -> Result<(), Status> {
-        let src_dir = src_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
-        let dst_dir = dst_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
-        if dst_dir.is_deleted() {
-            // Can't rename into a deleted folder.
-            return Err(Status::NOT_FOUND);
-        }
-
-        let src_name = src_path.peek().unwrap();
-        let dst_name = dst_path.peek().unwrap();
-
-        // Renaming a file to itself is trivial.
-        if Arc::ptr_eq(&src_dir, &dst_dir) && src_name == dst_name {
-            return Ok(());
-        }
-
-        let filesystem = self.inner.lock().unwrap();
-
-        // Figure out if src is a directory.
-        let entry = src_dir.find_child(&filesystem, &src_name)?;
-        if entry.is_none() {
-            // No such src (if we don't return NOT_FOUND here, fatfs will return it when we
-            // call rename() later).
-            return Err(Status::NOT_FOUND);
-        }
-        let src_is_dir = entry.unwrap().is_dir();
-        if (dst_path.is_dir() || src_path.is_dir()) && !src_is_dir {
-            // The caller wanted a directory (src or dst), but src is not a directory. This is an error.
-            return Err(Status::NOT_DIR);
-        }
-
-        // Make sure destination is a directory, if needed.
-        if let Some(entry) = dst_dir.find_child(&filesystem, &dst_name)? {
-            if entry.is_dir() {
-                // Try to rename over directory. The src must be a directory, and dst must be empty.
-                let dir = entry.to_dir();
-                if !src_is_dir {
-                    return Err(Status::NOT_DIR);
-                }
-
-                if !dir.is_empty().map_err(fatfs_error_to_status)? {
-                    // Can't rename directory onto non-empty directory.
-                    return Err(Status::NOT_EMPTY);
-                }
-
-                // TODO(fxb/56239) allow this path once we support overwriting.
-                return Err(Status::ALREADY_EXISTS);
-            } else {
-                if src_is_dir {
-                    // We were expecting dst to be a directory, but it wasn't.
-                    return Err(Status::NOT_DIR);
-                }
-                // TODO(fxb/56239) allow this path once we support overwriting.
-                return Err(Status::ALREADY_EXISTS);
-            }
-        }
-
         // We're ready to go: remove the entry from the source cache, and close the reference to
         // the underlying file (this ensures all pending writes, etc. have been flushed).
         // We remove the entry with rename() below, and hold the filesystem lock so nothing will
@@ -197,6 +143,81 @@ impl FilesystemRename for FatFilesystem {
                 .unwrap_or_else(|e| panic!("Rename failed, but fatfs says it didn't? - {:?}", e));
         }
         Ok(())
+    }
+}
+
+impl FilesystemRename for FatFilesystem {
+    fn rename(
+        &self,
+        src_dir: Arc<dyn Any + Sync + Send + 'static>,
+        src_path: Path,
+        dst_dir: Arc<dyn Any + Sync + Send + 'static>,
+        dst_path: Path,
+    ) -> Result<(), Status> {
+        let src_dir = src_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
+        let dst_dir = dst_dir.downcast::<FatDirectory>().map_err(|_| Status::INVALID_ARGS)?;
+        if dst_dir.is_deleted() {
+            // Can't rename into a deleted folder.
+            return Err(Status::NOT_FOUND);
+        }
+
+        let src_name = src_path.peek().unwrap();
+        let dst_name = dst_path.peek().unwrap();
+
+        let filesystem = self.inner.lock().unwrap();
+
+        // Figure out if src is a directory.
+        let entry = src_dir.find_child(&filesystem, &src_name)?;
+        if entry.is_none() {
+            // No such src (if we don't return NOT_FOUND here, fatfs will return it when we
+            // call rename() later).
+            return Err(Status::NOT_FOUND);
+        }
+        let src_is_dir = entry.unwrap().is_dir();
+        if (dst_path.is_dir() || src_path.is_dir()) && !src_is_dir {
+            // The caller wanted a directory (src or dst), but src is not a directory. This is an error.
+            return Err(Status::NOT_DIR);
+        }
+
+        // Renaming a file to itself is trivial, but we do it after we've checked that the file
+        // exists and that src and dst have the same type.
+        if Arc::ptr_eq(&src_dir, &dst_dir)
+            && (&src_name as &dyn InsensitiveStringRef) == (&dst_name as &dyn InsensitiveStringRef)
+        {
+            if src_name != dst_name {
+                // Cases don't match - we don't unlink, but we still need to fix the file's LFN.
+                return self.rename_internal(&filesystem, src_dir, src_name, dst_dir, dst_name);
+            }
+            return Ok(());
+        }
+
+        // Make sure destination is a directory, if needed.
+        if let Some(entry) = dst_dir.find_child(&filesystem, &dst_name)? {
+            if entry.is_dir() {
+                // Try to rename over directory. The src must be a directory, and dst must be empty.
+                let dir = entry.to_dir();
+                if !src_is_dir {
+                    return Err(Status::NOT_DIR);
+                }
+
+                if !dir.is_empty().map_err(fatfs_error_to_status)? {
+                    // Can't rename directory onto non-empty directory.
+                    return Err(Status::NOT_EMPTY);
+                }
+
+                // TODO(fxb/56239) allow this path once we support overwriting.
+                return Err(Status::ALREADY_EXISTS);
+            } else {
+                if src_is_dir {
+                    // We were expecting dst to be a directory, but it wasn't.
+                    return Err(Status::NOT_DIR);
+                }
+                // TODO(fxb/56239) allow this path once we support overwriting.
+                return Err(Status::ALREADY_EXISTS);
+            }
+        }
+
+        self.rename_internal(&filesystem, src_dir, src_name, dst_dir, dst_name)
     }
 }
 

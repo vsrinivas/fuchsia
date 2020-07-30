@@ -90,7 +90,7 @@ impl PartialEq for InsensitiveString {
 impl Eq for InsensitiveString {}
 
 // A trait that allows us to find entries in our hash table using &str.
-trait InsensitiveStringRef {
+pub(crate) trait InsensitiveStringRef {
     fn as_str(&self) -> &str;
 }
 

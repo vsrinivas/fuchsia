@@ -494,6 +494,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
             let e = dst_dir.find_entry(name, Some(true), None)?;
             return self.rename(src_path, &e.to_dir(), rest);
         }
+
         // move/rename file
         self.rename_internal(src_path, dst_dir, dst_path)
     }
@@ -518,13 +519,18 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         let short_name = match r {
             DirEntryOrShortName::DirEntry(ref dst_e) => {
                 // check if source and destination entry is the same
-                if e.is_same_entry(dst_e) {
+                if !e.is_same_entry(dst_e) {
+                    return Err(io::Error::new(
+                        ErrorKind::AlreadyExists,
+                        "Destination file already exists",
+                    ));
+                }
+                // if names are exactly the same, we don't need to do anything.
+                if src_name == dst_name {
                     return Ok(());
                 }
-                return Err(io::Error::new(
-                    ErrorKind::AlreadyExists,
-                    "Destination file already exists",
-                ));
+                // otherwise, we'll rewrite the LFN below.
+                dst_e.raw_short_name().clone()
             }
             DirEntryOrShortName::ShortName(short_name) => short_name,
         };

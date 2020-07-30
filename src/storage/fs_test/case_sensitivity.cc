@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fs_test/fs_test_fixture.h"
+#include "src/storage/fs_test/misc.h"
 
 namespace fs_test {
 namespace {
@@ -79,9 +81,16 @@ TEST_P(CaseInsensitiveTest, RenameLowerToUpperSucceeds) {
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
   }
-  // It would be nice if the rename actually changed the representation on disk (even though it's
-  // the same), but at time of writing, that's not supported by fatfs.  For now, just check we can
-  // open both forms of the file.
+
+  // Check the new name is what we get from readdir().
+  ExpectedDirectoryEntry dir[] = {
+      {".", DT_DIR},
+      {upper_name, DT_REG},
+  };
+
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("").c_str(), dir));
+
+  // Check that we can open the file with lower and upper names.
   auto fd = fbl::unique_fd(open(GetPath(lower_name).c_str(), O_RDWR));
   EXPECT_TRUE(fd);
   fd = fbl::unique_fd(open(GetPath(upper_name).c_str(), O_RDWR));
@@ -99,9 +108,16 @@ TEST_P(CaseInsensitiveTest, RenameUpperToLowerSucceeds) {
     EXPECT_EQ(fs().Fsck().status_value(), ZX_OK);
     EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
   }
-  // It would be nice if the rename actually changed the representation on disk (even though it's
-  // the same), but at time of writing, that's not supported by fatfs.  For now, just check we can
-  // open both forms of the file.
+
+  // Check the new name is what we get from readdir().
+  ExpectedDirectoryEntry dir[] = {
+      {".", DT_DIR},
+      {lower_name, DT_REG},
+  };
+
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(GetPath("").c_str(), dir));
+
+  // Check that we can open the file with lower and upper names.
   auto fd = fbl::unique_fd(open(GetPath(lower_name).c_str(), O_RDWR));
   EXPECT_TRUE(fd);
   fd = fbl::unique_fd(open(GetPath(upper_name).c_str(), O_RDWR));
