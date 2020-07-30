@@ -23,6 +23,7 @@ pub struct DataModel {
     packages: RwLock<Vec<Package>>,
     manifests: RwLock<Vec<Manifest>>,
     routes: RwLock<Vec<Route>>,
+    zbi: RwLock<Option<Zbi>>,
     store: RwLock<Box<dyn Store>>,
 }
 
@@ -64,11 +65,20 @@ impl DataModel {
             }
         }
 
+        let mut zbi: Option<Zbi> = None;
+        if let Ok(guard) = store.write().unwrap().get("zbi") {
+            let collection = guard.read().unwrap();
+            if let Ok(value) = collection.get("zbi") {
+                zbi = serde_json::from_value(value)?;
+            }
+        }
+
         Ok(Self {
             components: RwLock::new(components),
             packages: RwLock::new(packages),
             manifests: RwLock::new(manifests),
             routes: RwLock::new(routes),
+            zbi: RwLock::new(zbi),
             store,
         })
     }
@@ -76,7 +86,7 @@ impl DataModel {
     /// Verifies the underlying data model is running the correct current
     /// schema.
     fn setup_schema(mut store: Box<dyn Store>) -> Result<RwLock<Box<dyn Store>>> {
-        let collection_names = vec!["components", "packages", "manifests", "routes"];
+        let collection_names = vec!["components", "packages", "manifests", "routes", "zbi"];
 
         if let Ok(collection) = store.get("scrutiny") {
             let scrutiny: Scrutiny =
@@ -136,6 +146,10 @@ impl DataModel {
         &self.routes
     }
 
+    pub fn zbi(&self) -> &RwLock<Option<Zbi>> {
+        &self.zbi
+    }
+
     pub fn flush(&self) -> Result<()> {
         let mut store = self.store.write().unwrap();
         if let Ok(mut collection) = store.get("components").unwrap().write() {
@@ -161,6 +175,11 @@ impl DataModel {
                     manifest.component_id.to_string(),
                     serde_json::to_value(manifest).unwrap(),
                 )?;
+            }
+        }
+        if let Ok(mut collection) = store.get("zbi").unwrap().write() {
+            if let Some(zbi) = &*self.zbi.read().unwrap() {
+                collection.insert("zbi".to_string(), serde_json::to_value(zbi).unwrap())?;
             }
         }
         store.flush()
@@ -245,6 +264,12 @@ pub struct Route {
     pub protocol_id: i32,
 }
 
+/// Defines all of the parsed information in the ZBI.
+#[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct Zbi {
+    pub version: u32,
+}
+
 /// Defines either a FIDL or Directory protocol with some interface name such
 /// as fuchshia.foo.Bar and an optional path such as "/dev".
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
@@ -281,5 +306,11 @@ mod tests {
 
         let reloaded_model = DataModel::connect(uri.clone()).unwrap();
         assert_eq!(reloaded_model.components.read().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_zbi_empty_on_construction() {
+        let (_, model) = create_model();
+        assert_eq!(*model.zbi().read().unwrap(), None);
     }
 }
