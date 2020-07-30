@@ -835,7 +835,7 @@ func (ifs *ifState) setState(enabled bool) error {
 		_ = syslog.Infof("NIC %s: setting adminUp=%t failed: %s", name, enabled, err)
 		return err
 	}
-	_ = syslog.Infof("NIC %s: set linkOnline=%t interfacesChanged=%t", name, enabled, changed)
+	_ = syslog.Infof("NIC %s: set adminUp=%t interfacesChanged=%t", name, enabled, changed)
 
 	if changed {
 		ifs.ns.onInterfacesChanged()
