@@ -30,7 +30,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   zx::duration vsync_interval = zx::msec(fuzzed_data.ConsumeIntegral<zx_time_t>());
 
   // Negative values here indicates programming or driver bug and are not interesting to fuzz.
-  if (last_vsync_time.get() < 0 || vsync_interval.get() < 0)
+  if (last_vsync_time.get() < 0 || vsync_interval.get() <= 0)
     return 0;
 
   zx::duration constant_prediction_offset = zx::msec(fuzzed_data.ConsumeIntegral<zx_time_t>());

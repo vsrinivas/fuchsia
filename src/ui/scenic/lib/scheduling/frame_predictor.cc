@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/scheduling/frame_predictor.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <algorithm>
 
 namespace scheduling {
@@ -11,6 +13,7 @@ namespace scheduling {
 // static
 zx::time FramePredictor::ComputeNextSyncTime(zx::time last_sync_time, zx::duration sync_interval,
                                              zx::time min_sync_time) {
+  FX_DCHECK(sync_interval.get() > 0);
   // If the last sync time is greater than or equal to the minimum acceptable
   // sync time, just return the last sync.
   // Note: in practice, these numbers will likely differ. The "equal to"

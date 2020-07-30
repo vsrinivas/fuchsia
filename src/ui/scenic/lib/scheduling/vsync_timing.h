@@ -5,9 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_SCHEDULING_VSYNC_TIMING_H_
 #define SRC_UI_SCENIC_LIB_SCHEDULING_VSYNC_TIMING_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
-
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scheduling {
 
@@ -22,7 +21,10 @@ class VsyncTiming {
   zx::duration vsync_interval() const { return vsync_interval_; }
 
   void set_last_vsync_time(zx::time last_vsync_time) { last_vsync_time_ = last_vsync_time; }
-  void set_vsync_interval(zx::duration vsync_interval) { vsync_interval_ = vsync_interval; }
+  void set_vsync_interval(zx::duration vsync_interval) {
+    vsync_interval_ = vsync_interval;
+    FX_DCHECK(vsync_interval_.get() > 0);
+  }
 
  private:
   // Vsync interval of a 60 Hz screen.

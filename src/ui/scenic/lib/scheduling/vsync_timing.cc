@@ -6,6 +6,8 @@
 
 namespace scheduling {
 
-VsyncTiming::VsyncTiming() : last_vsync_time_(0), vsync_interval_(kNsecsFor60fps) {}
+VsyncTiming::VsyncTiming() : last_vsync_time_(0), vsync_interval_(kNsecsFor60fps) {
+  FX_DCHECK(vsync_interval_.get() > 0);
+}
 
 }  // namespace scheduling
