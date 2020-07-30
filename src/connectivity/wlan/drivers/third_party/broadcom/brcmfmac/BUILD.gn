@@ -403,6 +403,18 @@ brcmfmac_copy("brcmfmac-sherlock-mfg") {
   chip = "brcmfmac43455"
 }
 
+brcmfmac_copy("brcmfmac-luis") {
+  board = "luis"
+  bus = "sdio"
+  chip = "brcmfmac43455"
+}
+
+brcmfmac_copy("brcmfmac-luis-mfg") {
+  board = "luis-mfg"
+  bus = "sdio"
+  chip = "brcmfmac43455"
+}
+
 # The test package, including tests in subdirs.
 group("brcmfmac_tests") {
   deps = [
