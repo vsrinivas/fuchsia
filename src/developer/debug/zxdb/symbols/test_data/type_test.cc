@@ -43,7 +43,7 @@ struct Struct : public Base1, private Base2 {
 
 EXPORT Struct GetStruct() { return Struct(); }
 using StructMemberPtr = int (Struct::*)(char);
-StructMemberPtr GetStructMemberPtr() { return &Struct::MyFunc; }
+EXPORT StructMemberPtr GetStructMemberPtr() { return &Struct::MyFunc; }
 
 EXPORT void PassRValueRef(int&& rval_ref) {}
 
@@ -72,8 +72,8 @@ struct TypeForUsing {
 
 }  // namespace my_ns
 
-void My2DArray() {
-  int array[3][4];
+EXPORT void My2DArray() {
+  volatile int array[3][4];  // Prevent the compiler from optimizing this out.
   array[1][2] = 1;
   (void)array;
 }
@@ -124,9 +124,14 @@ struct StructWithEnums {
   // Typed enum class.
   enum class TypedEnum : signed char { TYPED_A = -1, TYPED_B = 1 } typed;
 };
-StructWithEnums GetStructWithEnums() { return StructWithEnums(); }
+EXPORT StructWithEnums GetStructWithEnums() { return StructWithEnums(); }
 
-EXPORT nullptr_t GetNullPtrT() { return nullptr; }
+EXPORT nullptr_t GetNullPtrT(int i) {
+  // The compiler seems to want to strip this unless it does something.
+  volatile int dummy = 0;
+  dummy = i;
+  return nullptr;
+}
 
 // TODO(brettw) "TypeForUsing" lacks a test because the function actually
 // returns "my_ns::TypeForUsing" so we need to find another way to get the

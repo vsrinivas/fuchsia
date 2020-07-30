@@ -263,7 +263,7 @@ TEST(DwarfSymbolFactory, Array2D) {
 
   // Find the "array" variable in the function. It's declared as:
   //
-  //   int array[3][4]
+  //   volatile int array[3][4]
   //
   ASSERT_EQ(1u, function->variables().size());
   const Variable* array = function->variables()[0].Get()->AsVariable();
@@ -274,7 +274,7 @@ TEST(DwarfSymbolFactory, Array2D) {
   const ArrayType* outer_array_type = array->type().Get()->AsArrayType();
   ASSERT_TRUE(outer_array_type);
   EXPECT_EQ(3u, outer_array_type->num_elts());
-  EXPECT_EQ("int[3][4]", outer_array_type->GetFullName());
+  EXPECT_EQ("volatile int[3][4]", outer_array_type->GetFullName());
 
   // The inner array type should be a int[4].
   const Type* inner_type = outer_array_type->value_type();
@@ -282,12 +282,12 @@ TEST(DwarfSymbolFactory, Array2D) {
   const ArrayType* inner_array_type = inner_type->AsArrayType();
   ASSERT_TRUE(inner_array_type);
   EXPECT_EQ(4u, inner_array_type->num_elts());
-  EXPECT_EQ("int[4]", inner_array_type->GetFullName());
+  EXPECT_EQ("volatile int[4]", inner_array_type->GetFullName());
 
-  // The final contained type type should be a "int".
+  // The final contained type type should be a "volatile int".
   const Type* elt_type = inner_array_type->value_type();
   ASSERT_TRUE(elt_type);
-  EXPECT_EQ("int", elt_type->GetFullName());
+  EXPECT_EQ("volatile int", elt_type->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, Collection) {
