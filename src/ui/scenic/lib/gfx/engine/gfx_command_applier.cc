@@ -215,6 +215,9 @@ bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_c
     case fuchsia::ui::gfx::Command::Tag::kSetViewHolderBoundsColor:
       return ApplySetViewHolderBoundsColor(session,
                                            std::move(command.set_view_holder_bounds_color()));
+    case fuchsia::ui::gfx::Command::Tag::kSetDisplayMinimumRgb:
+      return ApplySetDisplayMinimumRgbCmd(session, command_context,
+                                          std::move(command.set_display_minimum_rgb()));
     case fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FX_CHECK(false);
@@ -379,6 +382,31 @@ bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
     }
   }
   return false;
+}
+
+bool GfxCommandApplier::ApplySetDisplayMinimumRgbCmd(
+    Session* session, CommandContext* command_context,
+    fuchsia::ui::gfx::SetDisplayMinimumRgbCmdHACK command) {
+  auto display_manager = command_context->display_manager;
+  const auto& display_controller = *(display_manager->default_display_controller());
+
+  // Attempt to apply minimum rgb.
+  fuchsia::hardware::display::Controller_SetMinimumRgb_Result cmd_result;
+  zx_status_t status = display_controller->SetMinimumRgb(command.min_value, &cmd_result);
+  if (status != ZX_OK || cmd_result.is_err()) {
+    FX_LOGS(WARNING)
+        << "GfxCommandApplier:ApplySetDisplayMinimumRgbCmd failed, controller returned status: "
+        << status;
+    return false;
+  }
+
+  // Now check the config.
+  fuchsia::hardware::display::ConfigResult result;
+  std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+  display_controller->CheckConfig(/*discard=*/false, &result, &ops);
+  FX_CHECK(result == fuchsia::hardware::display::ConfigResult::OK)
+      << "Result: " << static_cast<uint32_t>(result);
+  return true;
 }
 
 bool GfxCommandApplier::ApplySetDisplayRotationCmd(

@@ -97,6 +97,8 @@ union Command {
     55: SetViewHolderBoundsColorCmd set_view_holder_bounds_color;
 
     56: SetCameraClipSpaceTransformCmd set_camera_clip_space_transform;
+
+    57: SetDisplayMinimumRgbCmdHACK set_display_minimum_rgb;
 };
 
 /// Instructs the compositor to create the specified `Resource`, and to register
@@ -853,4 +855,10 @@ struct SetEnableDebugViewBoundsCmd {
 struct SetViewHolderBoundsColorCmd {
     uint32 view_holder_id;
     ColorRgbValue color;
+};
+
+// This command sets the minimum RGB value for all displays, which
+// all pixel values are clamped to.
+struct SetDisplayMinimumRgbCmdHACK {
+    uint8 min_value;
 };

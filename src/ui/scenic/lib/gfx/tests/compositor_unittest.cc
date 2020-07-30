@@ -123,10 +123,50 @@ TEST_F(CompositorTest, Validation) {
 
     // Waits for a call to |SetDisplayColorConversion| by client.
     mock_display_controller.WaitForMessage();
+
+    // Wait for |CheckConfig|.
+    mock_display_controller.WaitForMessage();
   });
 
   ASSERT_TRUE(Apply(
       scenic::NewSetDisplayColorConversionCmdHACK(CompositorId, preoffsets, matrix, postoffsets)));
+
+  server.join();
+}
+
+// Test to make sure that we can set the minimum RGB value for the display via the
+// standard GFX API, across a fidl channel.
+TEST_F(CompositorTest, ValidateMinimumRGB) {
+  ChannelPair device_channel = CreateChannelPair();
+  ChannelPair controller_channel = CreateChannelPair();
+
+  display_manager()->BindDefaultDisplayController(
+      fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
+          std::move(controller_channel.client)),
+      std::move(device_channel.client));
+
+  // Create a mock display controller that runs on a separate thread.
+  uint8_t minimum = 10;
+  std::thread server([&minimum, device_channel = std::move(device_channel.server),
+                      controller_channel = std::move(controller_channel.server)]() mutable {
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+    display::test::MockDisplayController mock_display_controller;
+
+    mock_display_controller.set_minimum_rgb_fn([&](uint8_t minimum_out) {
+      // Check that the display controller got the right value.
+      EXPECT_EQ(minimum, minimum_out);
+    });
+    mock_display_controller.Bind(std::move(device_channel), std::move(controller_channel));
+
+    // Waits for a call to |SetDisplayMinimumRgb| by client.
+    mock_display_controller.WaitForMessage();
+
+    // Wait for |CheckConfig|.
+    mock_display_controller.WaitForMessage();
+  });
+
+  ASSERT_TRUE(Apply(scenic::NewSetDisplayMinimumRgbCmdHACK(minimum)));
 
   server.join();
 }

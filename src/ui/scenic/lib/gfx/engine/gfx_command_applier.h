@@ -207,6 +207,9 @@ class GfxCommandApplier {
   static bool ApplySetDisplayColorConversionCmd(
       Session* session, fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command);
 
+  static bool ApplySetDisplayMinimumRgbCmd(Session* session, CommandContext* command_context,
+                                           fuchsia::ui::gfx::SetDisplayMinimumRgbCmdHACK command);
+
   static bool ApplySetDisplayRotationCmd(Session* session,
                                          fuchsia::ui::gfx::SetDisplayRotationCmdHACK command);
 

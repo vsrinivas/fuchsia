@@ -165,6 +165,8 @@ fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
     uint32_t compositor_id, const std::array<float, 3>& preoffsets,
     const std::array<float, 3 * 3>& matrix, const std::array<float, 3>& postoffsets);
 
+fuchsia::ui::gfx::Command NewSetDisplayMinimumRgbCmdHACK(uint8_t minimum);
+
 fuchsia::ui::gfx::Command NewSetDisplayRotationCmdHACK(uint32_t compositor_id,
                                                        uint32_t rotation_degrees);
 

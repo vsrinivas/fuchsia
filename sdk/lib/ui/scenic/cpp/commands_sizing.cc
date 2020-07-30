@@ -248,6 +248,11 @@ class MeasuringTape {
         Measure(_set_display_color_conversion);
         break;
       }
+      case ::fuchsia::ui::gfx::Command::Tag::kSetDisplayMinimumRgb: {
+        __attribute__((unused)) auto const& _set_display_minimum_rgb = value.set_display_minimum_rgb();
+        Measure(_set_display_minimum_rgb);
+        break;
+      }
       case ::fuchsia::ui::gfx::Command::Tag::kSetDisplayRotation: {
         __attribute__((unused)) auto const& _set_display_rotation = value.set_display_rotation();
         Measure(_set_display_rotation);
@@ -832,6 +837,10 @@ class MeasuringTape {
 
   void Measure(const ::fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK& value) {
     num_bytes_ += FIDL_ALIGN(64);
+  }
+
+  void Measure(const ::fuchsia::ui::gfx::SetDisplayMinimumRgbCmdHACK& value) {
+    num_bytes_ += FIDL_ALIGN(1);
   }
 
   void Measure(const ::fuchsia::ui::gfx::SetDisplayRotationCmdHACK& value) {

@@ -772,6 +772,14 @@ fuchsia::ui::gfx::Command NewSetDisplayColorConversionCmdHACK(
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSetDisplayMinimumRgbCmdHACK(uint8_t minimum) {
+  fuchsia::ui::gfx::SetDisplayMinimumRgbCmdHACK minimum_cmd;
+  minimum_cmd.min_value = minimum;
+  fuchsia::ui::gfx::Command command;
+  command.set_set_display_minimum_rgb(minimum_cmd);
+  return command;
+}
+
 fuchsia::ui::gfx::Command NewSetDisplayRotationCmdHACK(uint32_t compositor_id,
                                                        uint32_t rotation_degrees) {
   fuchsia::ui::gfx::SetDisplayRotationCmdHACK display_rotation;

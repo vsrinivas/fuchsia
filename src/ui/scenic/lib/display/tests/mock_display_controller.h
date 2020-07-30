@@ -34,6 +34,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
                          std::vector<fuchsia::hardware::display::ClientCompositionOp>*)>;
   using SetDisplayColorConversionFn = std::function<void(
       uint64_t, std::array<float, 3>, std::array<float, 9>, std::array<float, 3>)>;
+  using SetMinimumRgbFn = std::function<void(uint8_t)>;
   using ImportEventFn = std::function<void(zx::event event, uint64_t event_id)>;
   using AcknowledgeVsyncFn = std::function<void(uint64_t cookie)>;
 
@@ -63,6 +64,8 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
     set_display_color_conversion_fn_ = std::move(fn);
   }
 
+  void set_minimum_rgb_fn(SetMinimumRgbFn fn) { set_minimum_rgb_fn_ = std::move(fn); }
+
   void SetDisplayColorConversion(uint64_t display_id, std::array<float, 3> preoffsets,
                                  std::array<float, 9> coefficients,
                                  std::array<float, 3> postoffsets) override {
@@ -71,15 +74,25 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
     }
   }
 
+  void SetMinimumRgb(uint8_t minimum, SetMinimumRgbCallback callback) override {
+    auto result = fuchsia::hardware::display::Controller_SetMinimumRgb_Result::WithResponse(
+        fuchsia::hardware::display::Controller_SetMinimumRgb_Response());
+    if (set_minimum_rgb_fn_) {
+      set_minimum_rgb_fn_(minimum);
+    }
+
+    callback(std::move(result));
+  }
+
   void set_check_config_fn(CheckConfigFn fn) { check_config_fn_ = std::move(fn); }
 
   void CheckConfig(bool discard, CheckConfigCallback callback) override {
     fuchsia::hardware::display::ConfigResult result = fuchsia::hardware::display::ConfigResult::OK;
     std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
-
     if (check_config_fn_) {
       check_config_fn_(discard, &result, &ops);
     }
+
     callback(std::move(result), std::move(ops));
   }
 
@@ -104,6 +117,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
  private:
   CheckConfigFn check_config_fn_;
   SetDisplayColorConversionFn set_display_color_conversion_fn_;
+  SetMinimumRgbFn set_minimum_rgb_fn_;
   ImportEventFn import_event_fn_;
   AcknowledgeVsyncFn acknowledge_vsync_fn_;
 
