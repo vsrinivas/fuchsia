@@ -278,6 +278,7 @@ class TestConnection {
     magma_buffer_t buffer;
     ASSERT_EQ(MAGMA_STATUS_OK, magma_import(connection_, handle, &buffer));
     EXPECT_EQ(magma_get_buffer_id(buffer), id);
+    magma_release_buffer(connection_, buffer);
   }
 
   static void BufferImportExport(TestConnection* test1, TestConnection* test2) {
@@ -471,6 +472,8 @@ class TestConnection {
     EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
     EXPECT_EQ(items[0].result, items[0].condition);
     EXPECT_EQ(items[1].result, items[1].condition);
+
+    magma_release_semaphore(connection_, semaphore);
 #else
     GTEST_SKIP();
 #endif
@@ -514,6 +517,7 @@ class TestConnection {
     magma_semaphore_t semaphore;
     ASSERT_EQ(magma_import_semaphore(connection_, handle, &semaphore), MAGMA_STATUS_OK);
     EXPECT_EQ(magma_get_semaphore_id(semaphore), id);
+    magma_release_semaphore(connection_, semaphore);
   }
 
   static void SemaphoreImportExport(TestConnection* test1, TestConnection* test2) {
@@ -661,6 +665,8 @@ class TestConnection {
               magma_get_buffer_format_plane_info_with_size(description, 512, 512, planes));
     EXPECT_EQ(512 * 4u, planes[0].bytes_per_row);
     EXPECT_EQ(0u, planes[0].byte_offset);
+
+    magma_buffer_format_description_release(description);
 
     uint32_t handle;
     uint32_t offset;

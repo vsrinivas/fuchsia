@@ -80,8 +80,9 @@ class TestConnection : public magma::TestDeviceBase {
     EXPECT_EQ(expected_value, result)
         << " expected: 0x" << std::hex << expected_value << " got: 0x" << result;
 
-    magma_release_context(connection_, context_id);
+    magma_release_buffer(connection_, result_buffer);
     magma_release_buffer(connection_, batch_buffer);
+    magma_release_context(connection_, context_id);
 
     status = magma_get_error(connection_);
     ASSERT_EQ(MAGMA_STATUS_OK, status);

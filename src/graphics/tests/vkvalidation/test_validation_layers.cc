@@ -95,6 +95,10 @@ void test_validation_layer(const char* layer_name) {
       vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT"));
   ASSERT_TRUE(f_vkCreateDebugUtilsMessengerEXT);
 
+  auto f_vkDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+      vkGetInstanceProcAddr(vk_instance, "vkDestroyDebugUtilsMessengerEXT"));
+  ASSERT_TRUE(f_vkDestroyDebugUtilsMessengerEXT);
+
   VkDebugUtilsMessengerEXT messenger;
   ASSERT_EQ(VK_SUCCESS,
             f_vkCreateDebugUtilsMessengerEXT(vk_instance, &debug_create_info, nullptr, &messenger));
@@ -155,6 +159,7 @@ void test_validation_layer(const char* layer_name) {
   EXPECT_GE(validation_error_count, 1u);
 
   vkDestroyDevice(vk_device, nullptr);
+  f_vkDestroyDebugUtilsMessengerEXT(vk_instance, messenger, nullptr);
   vkDestroyInstance(vk_instance, nullptr);
 }
 

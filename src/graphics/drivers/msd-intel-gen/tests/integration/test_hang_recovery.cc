@@ -213,6 +213,9 @@ class TestConnection : public magma::TestDeviceBase {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    magma_unmap(connection_, batch_buffer);
+    magma_release_buffer(connection_, batch_buffer);
+
     magma_release_connection(connection_);
     connection_ = nullptr;
   }
