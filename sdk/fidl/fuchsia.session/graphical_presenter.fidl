@@ -48,6 +48,10 @@ table ViewSpec {
     /// Required.
     1: fuchsia.ui.views.ViewHolderToken view_holder_token;
 
+    /// The `ViewRef` of the presented view.
+    /// Required.
+    2: fuchsia.ui.views.ViewRef view_ref;
+
     /// The annotations associated with the presented view.
     ///
     /// The presenter must observe incoming annotations and update the presentation
@@ -60,7 +64,7 @@ table ViewSpec {
     /// `ViewSpec.annotations` for the associated view.
     ///
     /// Optional.
-    2: Annotations annotations;
+    3: Annotations annotations;
 };
 
 /// A `ViewController` gives clients of `GraphicalPresenter` control over the views
