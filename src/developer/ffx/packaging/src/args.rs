@@ -17,6 +17,8 @@ pub struct PackageCommand {
 #[argh(subcommand)]
 pub enum SubCommand {
     Build(BuildCommand),
+    Export(ExportCommand),
+    Import(ImportCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -41,4 +43,20 @@ pub struct BuildCommand {
 
     #[argh(option, description = "write the package hash to this file instead of stdout")]
     pub hash_out: Option<String>,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "export", description = "export a package archive")]
+pub struct ExportCommand {
+    #[argh(positional, description = "package to export")]
+    pub package: String,
+    #[argh(option, description = "output", short = 'o')]
+    pub output: String,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "import", description = "import a package archive")]
+pub struct ImportCommand {
+    #[argh(positional, description = "archive to import")]
+    pub archive: String,
 }

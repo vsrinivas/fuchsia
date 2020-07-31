@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod archive;
 mod repository;
 
 use anyhow::{anyhow, Context, Result};
@@ -18,6 +19,8 @@ pub async fn cmd_package(cmd: PackageCommand) -> Result<()> {
     let repo = &Repository::default_repo().await;
     match cmd.sub {
         SubCommand::Build(subcmd) => cmd_package_build(subcmd, std::io::stdout(), repo),
+        SubCommand::Export(subcmd) => archive::cmd_export(subcmd, repo),
+        SubCommand::Import(subcmd) => archive::cmd_import(subcmd, std::io::stdout(), repo),
     }
 }
 
@@ -110,7 +113,7 @@ mod test {
     use ffx_packaging_args::BuildCommand;
     use std::{fs, io, path};
 
-    fn build_command_for_test_package(tmp: &path::Path) -> Result<BuildCommand> {
+    pub fn build_command_for_test_package(tmp: &path::Path) -> Result<BuildCommand> {
         fs::write(
             tmp.join("foo.cmx"),
             r#"{
@@ -131,7 +134,7 @@ mod test {
         })
     }
     // These hashes should not change unless the package input changes
-    static TEST_PACKAGE_HASHES: &'static [&str] = &[
+    pub static TEST_PACKAGE_HASHES: &'static [&str] = &[
         "01f9a5aa102a75f1f9e034f9ed3f57c0351bd3962ae283d9f58ec0c66b3ee486", // meta.far
         "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b", // bin/foo
     ];
@@ -178,18 +181,17 @@ mod test {
         Ok(())
     }
 
-    fn make_test_repo() -> Result<(tempfile::TempDir, Repository)> {
+    pub fn make_test_repo() -> Result<(tempfile::TempDir, Repository)> {
         let tmp_dir = tempfile::TempDir::new()?;
         let tmp_path = tmp_dir.path();
         let repo = Repository::new(tmp_path.into(), tmp_path.join("blobs"));
         Ok((tmp_dir, repo))
     }
 
-    fn validate_blobs(tmp: &path::Path, blob_hashes: &[&str]) -> Result<()> {
+    pub fn validate_blobs(tmp: &path::Path, blob_hashes: &[&str]) -> Result<()> {
         let blobs_dir = tmp.join("blobs");
         for blob_hash in blob_hashes {
             let blob = blobs_dir.join(blob_hash);
-            println!("{:?}", blob);
             let hash = fuchsia_merkle::MerkleTree::from_reader(fs::File::open(blob)?)?.root();
             assert_eq!(hash.to_string(), *blob_hash);
         }

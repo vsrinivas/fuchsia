@@ -5,7 +5,8 @@
 use anyhow::Result;
 use ffx_config::constants::PACKAGE_REPO;
 use ffx_config::get;
-use std::{fs, path};
+use std::io::{Read, Seek};
+use std::{fs, io, path};
 
 #[derive(Clone)]
 pub struct BlobsDir {
@@ -25,18 +26,19 @@ impl BlobsDir {
         BlobsDir { dir }
     }
 
-    pub fn add_blob<F>(&self, mut blob: F) -> Result<fuchsia_merkle::Hash>
-    where
-        F: std::io::Read + std::io::Seek,
-    {
+    pub fn add_blob(&self, mut blob: impl Read + Seek) -> Result<fuchsia_merkle::Hash> {
         let hash = fuchsia_merkle::MerkleTree::from_reader(&mut blob)?.root();
         blob.seek(std::io::SeekFrom::Start(0))?;
         let blob_path = self.dir.join(hash.to_string());
         if !blob_path.exists() {
             let mut copy = fs::File::create(blob_path)?;
-            std::io::copy(&mut blob, &mut copy)?;
+            io::copy(&mut blob, &mut copy)?;
         }
         Ok(hash)
+    }
+
+    pub fn open_blob(&self, hash: &fuchsia_merkle::Hash) -> Result<fs::File> {
+        Ok(fs::File::open(self.dir.join(hash.to_string()))?)
     }
 }
 

@@ -28,7 +28,7 @@ fn write_zeros(mut target: impl Write, count: usize) -> Result<(), Error> {
 /// * `path_content_map` - map from archive relative path to (size, contents)
 pub fn write(
     mut target: impl Write,
-    path_content_map: BTreeMap<&str, (u64, Box<dyn Read + '_>)>,
+    path_content_map: BTreeMap<impl AsRef<str>, (u64, Box<dyn Read + '_>)>,
 ) -> Result<(), Error> {
     // `write` could be written to take the content chunks as one of:
     // 1. Box<dyn Read>: requires an allocation per chunk
@@ -38,6 +38,7 @@ pub fn write(
     let mut path_data: Vec<u8> = vec![];
     let mut directory_entries = vec![];
     for (destination_name, (size, _)) in &path_content_map {
+        let destination_name = destination_name.as_ref();
         if destination_name.len() > u16::max_value() as usize {
             return Err(Error::NameTooLong(destination_name.len()));
         }
@@ -96,7 +97,7 @@ pub fn write(
             return Err(Error::ContentChunkSizeMismatch {
                 expected: directory_entries[entry_index].data_length,
                 actual: bytes_read,
-                path: archive_path.to_string(),
+                path: archive_path.as_ref().to_string(),
             });
         }
         let pos =
