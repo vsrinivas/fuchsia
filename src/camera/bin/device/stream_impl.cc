@@ -123,7 +123,8 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     return;
   }
 
-  // Construct the frame info and create the release fence.
+  // Construct the frame info and create the release fence. These are held by the server until a
+  // client requests one via GetNextFrame.
   fuchsia::camera3::FrameInfo frame;
   frame.buffer_index = info.buffer_id;
   frame.frame_counter = ++frame_counter_;
@@ -132,23 +133,37 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   ZX_ASSERT(zx::eventpair::create(0u, &fence, &frame.release_fence) == ZX_OK);
   frames_.push(std::move(frame));
 
-  // Release frames in excess of the camping limit.
-  while (frames_.size() > max_camping_buffers_) {
-    frames_.pop();
-  }
-
   // Queue a waiter so that when the client end of the fence is released, the frame is released back
   // to the driver.
+  ZX_ASSERT(frame_waiters_.size() <= max_camping_buffers_);
   auto waiter =
       std::make_unique<async::Wait>(fence.get(), ZX_EVENTPAIR_PEER_CLOSED, 0,
                                     [this, fence = std::move(fence), index = info.buffer_id](
                                         async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                         zx_status_t status, const zx_packet_signal_t* signal) {
+                                      if (status != ZX_OK) {
+                                        return;
+                                      }
                                       legacy_stream_->ReleaseFrame(index);
                                       frame_waiters_.erase(index);
                                     });
   ZX_ASSERT(waiter->Begin(loop_.dispatcher()) == ZX_OK);
   frame_waiters_[info.buffer_id] = std::move(waiter);
+
+  // If there are too many frames outstanding, eagerly release the oldest frame not held by a
+  // client. This may be the frame that was just received.
+  if (frame_waiters_.size() > max_camping_buffers_) {
+    ZX_ASSERT(!frames_.empty());
+    auto buffer_index = frames_.front().buffer_index;
+    auto it = frame_waiters_.find(buffer_index);
+    ZX_ASSERT(it != frame_waiters_.end());
+    // The destructor ordering of Wait vs. WaitBase requires that the wait be explicitly canceled
+    // prior to being deleted if the wait handler holds the reference to the waited-upon object.
+    it->second->Cancel();
+    frame_waiters_.erase(it);
+    legacy_stream_->ReleaseFrame(buffer_index);
+    frames_.pop();
+  }
 
   // Send the frame to any pending recipients.
   SendFrames();

@@ -233,17 +233,26 @@ TEST_F(DeviceTest, GetFrames) {
   }
 
   // Make sure the stream recycles frames once its camping allocation is exhausted.
+  // Also emulate a stuck client that does not return any frames.
+  std::set<zx::eventpair> fences;
+  fit::function<void(fuchsia::camera3::FrameInfo)> on_next_frame;
+  on_next_frame = [&](fuchsia::camera3::FrameInfo info) {
+    fences.insert(std::move(info.release_fence));
+    stream->GetNextFrame(on_next_frame.share());
+  };
+  stream->GetNextFrame(on_next_frame.share());
   constexpr uint32_t kNumFrames = 17;
   for (uint32_t i = 0; i < kNumFrames; ++i) {
     fuchsia::camera2::FrameAvailableInfo frame_info{.buffer_id = i};
     frame_info.metadata.set_timestamp(0);
     ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame_info)), ZX_OK);
-    if (i >= constraints.min_buffer_count_for_camping) {
+    if (i > constraints.min_buffer_count_for_camping) {
       uint32_t recycled_buffer_id = i - constraints.min_buffer_count_for_camping;
       RunLoopUntil(
           [&] { return HasFailure() || !legacy_stream_fake->IsOutstanding(recycled_buffer_id); });
     }
   }
+  fences.clear();
 
   auto client_result = legacy_stream_fake->StreamClientStatus();
   EXPECT_TRUE(client_result.is_ok()) << client_result.error();
