@@ -224,7 +224,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
 
     // Check if the topmost hit is a ChildView.
     final childViewRenderBox = hitTests.path.first.target;
-    return currentCluster.value.stories.firstWhere(
+    return currentCluster.value?.stories?.firstWhere(
       (story) {
         final key = GlobalObjectKey(story.childViewConnection);
         final renderObject = key.currentContext?.findRenderObject();
