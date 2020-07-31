@@ -31,26 +31,6 @@ driver_module("devhost-test") {
   #deprecated_inhibit_driver_shlib_allowlist = true
 }
 
-driver_module("devhost-test-manual") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "test-driver-manual-bind.cc" ]
-  deps = [
-    ":fuchsia.device.devhost.test_llcpp",
-    "//sdk/lib/fdio",
-    "//src/devices/lib/driver",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-  ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  # Tests fail when using #"//sdk/lib/fdio:static",
-  #deprecated_inhibit_driver_shlib_allowlist = true
-}
-
 driver_module("devhost-test-child") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

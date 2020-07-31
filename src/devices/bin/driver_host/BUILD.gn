@@ -108,7 +108,6 @@ isolated_devmgr_unittest_package("driver-host-tests") {
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/devhost-test:devhost-test",
     "//src/devices/tests/devhost-test:devhost-test-child",
-    "//src/devices/tests/devhost-test:devhost-test-manual",
     "//src/devices/tests/sysdev",
     "//src/devices/tests/unit-test-test:unit-test-fail",
     "//src/devices/tests/unit-test-test:unit-test-pass",

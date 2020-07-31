@@ -20,15 +20,12 @@
 
 // Should be same as the one in devhost-test/metadata.h
 struct driver_host_test_metadata {
-  bool make_device_visible_success = true;
   bool init_reply_success = true;
 };
 
 namespace {
 
 using devmgr_integration_test::IsolatedDevmgr;
-
-static constexpr const char kManualChildDriverName[] = "devhost-test-manual.so";
 
 static constexpr const char kDriverTestDir[] = "/boot/driver/test";
 static constexpr const char kPassDriverName[] = "unit-test-pass.so";
@@ -127,7 +124,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenAutoBind) {
 
   board_test::DeviceEntry dev = {};
   struct driver_host_test_metadata test_metadata = {
-      .make_device_visible_success = true,
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -175,7 +171,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindChildrenManualBind) {
 
   board_test::DeviceEntry dev = {};
   struct driver_host_test_metadata test_metadata = {
-      .make_device_visible_success = true,
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -222,7 +217,6 @@ TEST(DeviceControllerIntegrationTest, TestUnbindChildrenSuccess) {
 
   board_test::DeviceEntry dev = {};
   struct driver_host_test_metadata test_metadata = {
-      .make_device_visible_success = true,
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -428,96 +422,6 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   ::llcpp::fuchsia::device::test::Device::Call::Destroy(zx::unowned_channel{dev_channel});
 }
 
-TEST(DeviceControllerIntegrationTest, TestRebindWithMakeVisible_Success) {
-  using driver_integration_test::IsolatedDevmgr;
-  driver_integration_test::IsolatedDevmgr::Args args;
-  driver_integration_test::IsolatedDevmgr devmgr;
-
-  board_test::DeviceEntry dev = {};
-  struct driver_host_test_metadata test_metadata = {
-      .make_device_visible_success = true,
-      .init_reply_success = true,
-  };
-  dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
-  dev.metadata_size = sizeof(test_metadata);
-  dev.vid = PDEV_VID_TEST;
-  dev.pid = PDEV_PID_DEVHOST_TEST;
-  dev.did = 0;
-  args.device_list.push_back(dev);
-  args.path_prefix = "/pkg/";
-
-  ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
-
-  fbl::unique_fd test_fd, parent_fd, child_fd;
-  zx::channel test_channel, parent_channel;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                          "sys/platform/11:0e:0", &test_fd));
-  ASSERT_OK(fdio_get_service_handle(test_fd.release(), test_channel.reset_and_get_address()));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
-  ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
-
-  char libpath[PATH_MAX];
-  int len = snprintf(libpath, sizeof(libpath), "%s/%s", "/boot/driver", kManualChildDriverName);
-  zx_status_t call_status = ZX_OK;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(zx::unowned(parent_channel),
-                                                                 ::fidl::StringView(libpath, len));
-  ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
-  }
-  ASSERT_OK(call_status);
-
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent/devhost-test-child",
-      &child_fd));
-}
-
-TEST(DeviceControllerIntegrationTest, TestRebindWithMakeVisible_Failure) {
-  using driver_integration_test::IsolatedDevmgr;
-  driver_integration_test::IsolatedDevmgr::Args args;
-  driver_integration_test::IsolatedDevmgr devmgr;
-
-  board_test::DeviceEntry dev = {};
-  struct driver_host_test_metadata test_metadata = {
-      .make_device_visible_success = false,
-      .init_reply_success = true,
-  };
-  dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
-  dev.metadata_size = sizeof(test_metadata);
-  dev.vid = PDEV_VID_TEST;
-  dev.pid = PDEV_PID_DEVHOST_TEST;
-  dev.did = 0;
-  args.device_list.push_back(dev);
-  args.path_prefix = "/pkg/";
-
-  ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
-
-  fbl::unique_fd test_fd, parent_fd, child_fd;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
-                                                          "sys/platform/11:0e:0", &test_fd));
-  zx::channel parent_channel;
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
-  ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));
-
-  char libpath[PATH_MAX];
-  int len = snprintf(libpath, sizeof(libpath), "%s/%s", "/boot/driver", kManualChildDriverName);
-  zx_status_t call_status = ZX_OK;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(zx::unowned(parent_channel),
-                                                                 ::fidl::StringView(libpath, len));
-  ASSERT_OK(resp.status());
-  if (resp->result.is_err()) {
-    call_status = resp->result.err();
-  }
-  ASSERT_EQ(call_status, ZX_ERR_IO);
-
-  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-      devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
-}
-
 TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
   using driver_integration_test::IsolatedDevmgr;
   driver_integration_test::IsolatedDevmgr::Args args;
@@ -525,7 +429,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Success) {
 
   board_test::DeviceEntry dev = {};
   struct driver_host_test_metadata test_metadata = {
-      .make_device_visible_success = true,
       .init_reply_success = true,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
@@ -570,7 +473,6 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithInit_Failure) {
 
   board_test::DeviceEntry dev = {};
   struct driver_host_test_metadata test_metadata = {
-      .make_device_visible_success = true,
       .init_reply_success = false,
   };
   dev.metadata = reinterpret_cast<const uint8_t*>(&test_metadata);
