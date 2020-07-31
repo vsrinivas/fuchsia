@@ -197,7 +197,17 @@ async fn connect(
         max_rx_sdu_size: Some(max_rx_sdu_size),
     };
 
-    let channel = match profile_svc.connect(&mut peer_id.into(), psm, params).await? {
+    let channel = match profile_svc
+        .connect(
+            &mut peer_id.into(),
+            &mut ConnectParameters::L2cap(L2capParameters {
+                psm: Some(psm),
+                parameters: Some(params),
+                ..L2capParameters::new_empty()
+            }),
+        )
+        .await?
+    {
         Err(e) => return Err(anyhow!("Could not connect to {}: {:?}", peer_id, e)),
         Ok(channel) => channel,
     };

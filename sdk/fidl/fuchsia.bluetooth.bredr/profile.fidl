@@ -7,6 +7,35 @@ library fuchsia.bluetooth.bredr;
 using fuchsia.bluetooth;
 using zx;
 
+/// The RFCOMM channel ID used when requesting to open a channel.
+/// This is known as a ServerChannel in RFCOMM. It must be within the
+/// range [1,30] (inclusive). See RFCOMM 5.4.
+using RfcommChannel = uint8;
+
+/// The parameters associated with a connection over the RFCOMM protocol.
+table RfcommParameters {
+    /// Required. RFCOMM channel for the connection.
+    1: RfcommChannel channel;
+};
+
+/// The parameters associated with a connection over the L2CAP protocol.
+table L2capParameters {
+    /// Required. Dynamic PSM for the connection. See the defined PSMs in `service.fidl`.
+    1: uint16 psm;
+
+    /// Optional. L2CAP channel parameters.
+    2: ChannelParameters parameters;
+};
+
+/// The channel and relevant parameters for a connection.
+union ConnectParameters {
+    /// An L2CAP connection.
+    1: L2capParameters l2cap;
+
+    /// An RFCOMM connection.
+    2: RfcommParameters rfcomm;
+};
+
 /// Authentication and permission requirements to access an advertised service.
 table SecurityRequirements {
     /// If present and true, the physical link must be authenticated with man-in-the-middle attack
@@ -109,10 +138,11 @@ const uint8 MAX_SERVICES_PER_ADVERTISEMENT = 32;
     Search(ServiceClassProfileIdentifier service_uuid, vector<uint16>:MAX_ATTRIBUTES attr_ids,
            SearchResults results);
 
-    /// Connect an L2CAP channel to the connected peer identified by `peer_id` using the desired
-    /// channel `parameters` listed.  Dynamic PSMs can be specified for the `psm` to connect to.
-    /// See also the defined PSMs in `service.fidl` Returns the channel connected once established,
-    /// or an error code if the channel could not be connected.
-    Connect(fuchsia.bluetooth.PeerId peer_id, uint16 psm, ChannelParameters parameters)
+    /// Connect an L2CAP or RFCOMM channel to the connected peer identified by `peer_id` using the
+    /// desired `connection` parameters listed.  Dynamic PSMs can be specified in `connection`.
+    ///
+    /// Returns the channel connected once established, or an error code if the channel could not
+    /// be connected.
+    Connect(fuchsia.bluetooth.PeerId peer_id, ConnectParameters connection)
         -> (Channel channel) error fuchsia.bluetooth.ErrorCode;
 };

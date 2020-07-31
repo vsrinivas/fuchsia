@@ -11,9 +11,9 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr::{
-        Channel, ConnectionReceiverProxy, MockPeerRequest, PeerObserverMarker, ProfileRequest,
-        ProfileRequestStream, ProfileTestRequest, ProfileTestRequestStream, SearchResultsProxy,
-        ServiceClassProfileIdentifier, ServiceDefinition,
+        Channel, ConnectParameters, ConnectionReceiverProxy, MockPeerRequest, PeerObserverMarker,
+        ProfileRequest, ProfileRequestStream, ProfileTestRequest, ProfileTestRequestStream,
+        SearchResultsProxy, ServiceClassProfileIdentifier, ServiceDefinition,
     },
     fidl_fuchsia_sys::EnvironmentOptions,
     fuchsia_async as fasync,
@@ -120,9 +120,14 @@ impl TestProfileServer {
         inner.new_advertisement(id, services, receiver);
     }
 
-    fn new_connection(&self, id: PeerId, other_id: PeerId, psm: u16) -> Result<Channel, Error> {
+    fn new_connection(
+        &self,
+        id: PeerId,
+        other_id: PeerId,
+        connection: ConnectParameters,
+    ) -> Result<Channel, Error> {
         let mut inner = self.inner.lock();
-        inner.new_connection(id, other_id, psm)
+        inner.new_connection(id, other_id, connection)
     }
 
     fn new_search(
@@ -142,9 +147,10 @@ impl TestProfileServer {
                 let proxy = receiver.into_proxy().expect("couldn't get connection receiver");
                 self.new_advertisement(id, services, proxy);
             }
-            ProfileRequest::Connect { peer_id, psm, responder, .. } => {
-                let mut channel =
-                    self.new_connection(id, peer_id.into(), psm).map_err(|_| ErrorCode::Failed);
+            ProfileRequest::Connect { peer_id, connection, responder, .. } => {
+                let mut channel = self
+                    .new_connection(id, peer_id.into(), connection)
+                    .map_err(|_| ErrorCode::Failed);
                 let _ = responder.send(&mut channel);
             }
             ProfileRequest::Search { service_uuid, attr_ids, results, .. } => {
@@ -372,7 +378,7 @@ impl TestProfileServerInner {
         &mut self,
         initiator: PeerId,
         other: PeerId,
-        psm: u16,
+        connection: ConnectParameters,
     ) -> Result<Channel, Error> {
         if !self.contains_peer(&initiator) {
             return Err(format_err!("Peer {} is not registered", initiator));
@@ -381,6 +387,13 @@ impl TestProfileServerInner {
         if initiator == other {
             return Err(format_err!("Cannot establish connection to oneself"));
         }
+
+        let psm = match connection {
+            ConnectParameters::L2cap(params) => {
+                params.psm.ok_or(format_err!("No PSM provided in connection"))?
+            }
+            ConnectParameters::Rfcomm(_) => return Err(format_err!("RFCOMM not supported")),
+        };
 
         // Attempt to establish a connection between the peers.
         self.peers

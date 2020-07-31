@@ -4,7 +4,7 @@
 
 use {
     super::*,
-    fidl_fuchsia_bluetooth_bredr::ChannelParameters,
+    fidl_fuchsia_bluetooth_bredr::{ConnectParameters, L2capParameters},
     fuchsia_async::DurationExt,
     fuchsia_zircon as zx,
     log::{error, info, trace},
@@ -163,7 +163,13 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
         };
 
         match profile_service
-            .connect(&mut peer_id.into(), PSM_AVCTP, ChannelParameters::new_empty())
+            .connect(
+                &mut peer_id.into(),
+                &mut ConnectParameters::L2cap(L2capParameters {
+                    psm: Some(PSM_AVCTP),
+                    ..L2capParameters::new_empty()
+                }),
+            )
             .await
         {
             Err(fidl_err) => {

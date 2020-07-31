@@ -7,11 +7,11 @@ use anyhow::{Context, Error};
 use fidl::encoding::Decodable;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_bluetooth_bredr::{
-    Attribute, Channel, ChannelMode, ChannelParameters, ConnectionReceiverRequest,
-    ConnectionReceiverRequestStream, DataElement, Information, ProfileDescriptor, ProfileMarker,
-    ProfileProxy, ProtocolDescriptor, ProtocolIdentifier, SearchResultsRequest,
-    SearchResultsRequestStream, SecurityRequirements, ServiceClassProfileIdentifier,
-    ServiceDefinition,
+    Attribute, Channel, ChannelMode, ChannelParameters, ConnectParameters,
+    ConnectionReceiverRequest, ConnectionReceiverRequestStream, DataElement, Information,
+    L2capParameters, ProfileDescriptor, ProfileMarker, ProfileProxy, ProtocolDescriptor,
+    ProtocolIdentifier, SearchResultsRequest, SearchResultsRequestStream, SecurityRequirements,
+    ServiceClassProfileIdentifier, ServiceDefinition,
 };
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::{PeerId, Uuid};
@@ -713,15 +713,16 @@ impl ProfileServerFacade {
 
         let connection_result = match &self.inner.read().profile_server_proxy {
             Some(server) => {
+                let l2cap_params = L2capParameters {
+                    psm: Some(psm),
+                    parameters: Some(ChannelParameters {
+                        channel_mode: Some(mode),
+                        ..ChannelParameters::new_empty()
+                    }),
+                    ..L2capParameters::new_empty()
+                };
                 server
-                    .connect(
-                        &mut peer_id.into(),
-                        psm,
-                        ChannelParameters {
-                            channel_mode: Some(mode),
-                            ..ChannelParameters::new_empty()
-                        },
-                    )
+                    .connect(&mut peer_id.into(), &mut ConnectParameters::L2cap(l2cap_params))
                     .await?
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),

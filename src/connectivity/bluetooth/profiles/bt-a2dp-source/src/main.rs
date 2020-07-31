@@ -260,11 +260,14 @@ impl Peers {
             let channel = match profile
                 .connect(
                     &mut id.into(),
-                    PSM_AVDTP,
-                    ChannelParameters {
-                        channel_mode: Some(channel_mode),
-                        ..ChannelParameters::new_empty()
-                    },
+                    &mut ConnectParameters::L2cap(L2capParameters {
+                        psm: Some(PSM_AVDTP),
+                        parameters: Some(ChannelParameters {
+                            channel_mode: Some(channel_mode),
+                            ..ChannelParameters::new_empty()
+                        }),
+                        ..L2capParameters::new_empty()
+                    }),
                 )
                 .await
             {

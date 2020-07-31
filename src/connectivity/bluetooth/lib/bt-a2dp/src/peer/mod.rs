@@ -10,7 +10,9 @@ use {
         StreamEndpointId,
     },
     fidl::encoding::Decodable,
-    fidl_fuchsia_bluetooth_bredr::{ChannelParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP},
+    fidl_fuchsia_bluetooth_bredr::{
+        ConnectParameters, L2capParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP,
+    },
     fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
     fuchsia_cobalt::CobaltSender,
@@ -193,7 +195,13 @@ impl Peer {
             avdtp.open(&remote_id).await?;
 
             let channel = profile
-                .connect(&mut peer_id.into(), PSM_AVDTP, ChannelParameters::new_empty())
+                .connect(
+                    &mut peer_id.into(),
+                    &mut ConnectParameters::L2cap(L2capParameters {
+                        psm: Some(PSM_AVDTP),
+                        ..L2capParameters::new_empty()
+                    }),
+                )
                 .await
                 .context("FIDL error: {}")?
                 .or(Err(avdtp::Error::PeerDisconnected))?;

@@ -7,8 +7,9 @@ use {
     fidl::encoding::Decodable,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::{
-        ChannelParameters, ConnectionReceiverRequestStream, DataElement, ProtocolDescriptor,
-        ProtocolIdentifier, SecurityRequirements, ServiceDefinition, PSM_AVDTP,
+        ChannelParameters, ConnectParameters, ConnectionReceiverRequestStream, DataElement,
+        L2capParameters, ProtocolDescriptor, ProtocolIdentifier, SecurityRequirements,
+        ServiceDefinition, PSM_AVDTP,
     },
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::types::{PeerId, Uuid},
@@ -85,8 +86,10 @@ async fn test_add_and_remove_profile(profile: ProfileHarness) -> Result<(), Erro
 async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
     let fut = profile.aux().connect(
         &mut PeerId(0xDEAD).into(),
-        PSM_AVDTP,
-        ChannelParameters::new_empty(),
+        &mut ConnectParameters::L2cap(L2capParameters {
+            psm: Some(PSM_AVDTP),
+            ..L2capParameters::new_empty()
+        }),
     );
     match fut.await {
         Ok(Err(_)) => Ok(()),
