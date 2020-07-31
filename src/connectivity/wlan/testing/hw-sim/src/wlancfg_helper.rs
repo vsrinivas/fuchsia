@@ -129,11 +129,21 @@ pub async fn start_ap_and_wait_for_confirmation(network_config: NetworkConfigBui
     panic!("update stream ended unexpectedly");
 }
 
+/// Creates a client controller and update stream for getting status updates.
+pub fn init_client_controller(
+) -> (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream) {
+    let provider = connect_to_service::<fidl_policy::ClientProviderMarker>().unwrap();
+    let (controller_client_end, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
+    let (listener_client_end, listener_server_end) = fidl::endpoints::create_endpoints().unwrap();
+    provider.get_controller(controller_server_end, listener_client_end).unwrap();
+    let listener_stream = listener_server_end.into_stream().unwrap();
+    (controller_client_end, listener_stream)
+}
+
 /// Creates a listener update stream for getting status updates.
 pub fn init_client_listener() -> fidl_policy::ClientStateUpdatesRequestStream {
     let listener = connect_to_service::<fidl_policy::ClientListenerMarker>().unwrap();
-    let (client_end, server_end) =
-        fidl::endpoints::create_endpoints::<fidl_policy::ClientStateUpdatesMarker>().unwrap();
+    let (client_end, server_end) = fidl::endpoints::create_endpoints().unwrap();
     listener.get_listener(client_end).unwrap();
     let listener_stream = server_end.into_stream().unwrap();
     listener_stream

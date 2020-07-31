@@ -17,7 +17,8 @@ use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_inspect;
 use wlan_sme::client::{
-    BssDiscoveryResult, BssInfo, ConnectResult, ConnectionAttemptId, InfoEvent, ScanTxnId,
+    BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult, ConnectionAttemptId,
+    EstablishRsnaFailure, InfoEvent, ScanTxnId,
 };
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
@@ -341,6 +342,9 @@ fn send_connect_result(
         let code = match result {
             Some(ConnectResult::Success) => fidl_sme::ConnectResultCode::Success,
             Some(ConnectResult::Canceled) => fidl_sme::ConnectResultCode::Canceled,
+            Some(ConnectResult::Failed(ConnectFailure::EstablishRsna(
+                EstablishRsnaFailure::KeyFrameExchangeTimeout,
+            ))) => fidl_sme::ConnectResultCode::BadCredentials,
             Some(ConnectResult::Failed(..)) | None => fidl_sme::ConnectResultCode::Failed,
         };
         handle.send_on_finished(code)?;

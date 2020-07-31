@@ -14,7 +14,7 @@ use crate::rsna::{
 };
 use crate::Error;
 use anyhow::{ensure, format_err};
-use log::error;
+use log::{error, warn};
 use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
@@ -74,7 +74,7 @@ impl State {
                                 State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc: last_krc + 1 }
                             }
                             Err(e) => {
-                                error!("error: {}", e);
+                                warn!("Unable to process second EAPOL handshake key frame from supplicant: {}", e);
                                 State::AwaitingMsg2 { pmk, cfg, anonce, last_krc }
                             }
                         }

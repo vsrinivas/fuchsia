@@ -6,8 +6,11 @@ use {
     anyhow::Error,
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_device::MacRole,
+    fidl_fuchsia_wlan_policy::{Credential, NetworkConfig, NetworkIdentifier, SecurityType},
     fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanMarker, WlanProxy, WlanStatus},
-    fidl_fuchsia_wlan_tap::{WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
+    fidl_fuchsia_wlan_tap::{
+        SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
+    },
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
@@ -222,7 +225,13 @@ pub fn create_connect_config<S: ToString>(ssid: &[u8], passphrase: S) -> Connect
     }
 }
 
-fn create_wpa2_psk_authenticator(
+pub fn create_wpa2_network_config<S: ToString>(ssid: &[u8], passphrase: S) -> NetworkConfig {
+    let network_id = NetworkIdentifier { ssid: ssid.to_vec(), type_: SecurityType::Wpa2 };
+    let credential = Credential::Password(passphrase.to_string().as_bytes().to_vec());
+    NetworkConfig { id: Some(network_id), credential: Some(credential) }
+}
+
+pub fn create_wpa2_psk_authenticator(
     bssid: &mac::Bssid,
     ssid: &[u8],
     passphrase: &str,
@@ -267,8 +276,72 @@ fn process_auth_update(
     Ok(())
 }
 
-fn handle_connect_events(
-    event: WlantapPhyEvent,
+pub fn handle_set_channel_event(
+    args: &SetChannelArgs,
+    phy: &WlantapPhyProxy,
+    ssid: &[u8],
+    bssid: &mac::Bssid,
+    protection: &Protection,
+) {
+    debug!("channel: {:?}", args.chan);
+    if args.chan.primary == CHANNEL.primary {
+        send_beacon(&args.chan, bssid, ssid, protection, &phy, 0).unwrap();
+    }
+}
+
+pub fn handle_tx_event(
+    args: &TxArgs,
+    phy: &WlantapPhyProxy,
+    bssid: &mac::Bssid,
+    authenticator: &mut Option<wlan_rsn::Authenticator>,
+) {
+    match mac::MacFrame::parse(&args.packet.data[..], false) {
+        Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
+            match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
+                Some(mac::MgmtBody::Authentication { .. }) => {
+                    send_authentication(&CHANNEL, bssid, &phy)
+                        .expect("Error sending fake authentication frame.");
+                }
+                Some(mac::MgmtBody::AssociationReq { .. }) => {
+                    send_association_response(&CHANNEL, bssid, mac::StatusCode::SUCCESS, &phy)
+                        .expect("Error sending fake association response frame.");
+                    if let Some(authenticator) = authenticator {
+                        let mut updates = wlan_rsn::rsna::UpdateSink::default();
+                        authenticator.initiate(&mut updates).expect("initiating authenticator");
+                        process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
+                            .expect("processing authenticator updates after initiation");
+                    }
+                }
+                _ => {}
+            }
+        }
+        // EAPOL frames are transmitted as data frames with LLC protocol being EAPOL
+        Some(mac::MacFrame::Data { .. }) => {
+            let msdus = mac::MsduIterator::from_raw_data_frame(&args.packet.data[..], false)
+                .expect("reading msdu from data frame");
+            for mac::Msdu { llc_frame, .. } in msdus {
+                assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_EAPOL);
+                if let Some(authenticator) = authenticator {
+                    let mut updates = wlan_rsn::rsna::UpdateSink::default();
+                    let mic_size = authenticator.get_negotiated_protection().mic_size;
+                    let frame_rx = eapol::KeyFrameRx::parse(mic_size as usize, llc_frame.body)
+                        .expect("parsing EAPOL frame");
+                    if let Err(e) =
+                        authenticator.on_eapol_frame(&mut updates, eapol::Frame::Key(frame_rx))
+                    {
+                        error!("error sending EAPOL frame to authenticator: {}", e);
+                    }
+                    process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
+                        .expect("processing authenticator updates after EAPOL frame");
+                }
+            }
+        }
+        _ => (),
+    }
+}
+
+pub fn handle_connect_events(
+    event: &WlantapPhyEvent,
     phy: &WlantapPhyProxy,
     ssid: &[u8],
     bssid: &mac::Bssid,
@@ -277,66 +350,10 @@ fn handle_connect_events(
 ) {
     match event {
         WlantapPhyEvent::SetChannel { args } => {
-            debug!("channel: {:?}", args.chan);
-            if args.chan.primary == CHANNEL.primary {
-                send_beacon(&args.chan, bssid, ssid, protection, &phy, 0).unwrap();
-            }
+            handle_set_channel_event(&args, phy, ssid, bssid, protection)
         }
-        WlantapPhyEvent::Tx { args } => {
-            match mac::MacFrame::parse(&args.packet.data[..], false) {
-                Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
-                    match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
-                        Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_authentication(&CHANNEL, bssid, &phy)
-                                .expect("Error sending fake authentication frame.");
-                        }
-                        Some(mac::MgmtBody::AssociationReq { .. }) => {
-                            send_association_response(
-                                &CHANNEL,
-                                bssid,
-                                mac::StatusCode::SUCCESS,
-                                &phy,
-                            )
-                            .expect("Error sending fake association response frame.");
-                            if let Some(authenticator) = authenticator {
-                                let mut updates = wlan_rsn::rsna::UpdateSink::default();
-                                authenticator
-                                    .initiate(&mut updates)
-                                    .expect("initiating authenticator");
-                                process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
-                                    .expect("processing authenticator updates after initiation");
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                // EAPOL frames are transmitted as data frames with LLC protocol being EAPOL
-                Some(mac::MacFrame::Data { .. }) => {
-                    let msdus =
-                        mac::MsduIterator::from_raw_data_frame(&args.packet.data[..], false)
-                            .expect("reading msdu from data frame");
-                    for mac::Msdu { llc_frame, .. } in msdus {
-                        assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_EAPOL);
-                        if let Some(authenticator) = authenticator {
-                            let mut updates = wlan_rsn::rsna::UpdateSink::default();
-                            let mic_size = authenticator.get_negotiated_protection().mic_size;
-                            let frame_rx =
-                                eapol::KeyFrameRx::parse(mic_size as usize, llc_frame.body)
-                                    .expect("parsing EAPOL frame");
-                            if let Err(e) = authenticator
-                                .on_eapol_frame(&mut updates, eapol::Frame::Key(frame_rx))
-                            {
-                                error!("error sending EAPOL frame to authenticator: {}", e);
-                            }
-                            process_auth_update(&mut updates, &CHANNEL, bssid, &phy)
-                                .expect("processing authenticator updates after EAPOL frame");
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-        _ => {}
+        WlantapPhyEvent::Tx { args } => handle_tx_event(&args, phy, bssid, authenticator),
+        _ => (),
     }
 }
 
@@ -360,7 +377,7 @@ pub async fn connect(
             30.seconds(),
             format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
             |event| {
-                handle_connect_events(event, &phy, ssid, bssid, &protection, &mut authenticator);
+                handle_connect_events(&event, &phy, ssid, bssid, &protection, &mut authenticator);
             },
             connect_fut,
         )
