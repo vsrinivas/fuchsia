@@ -57,12 +57,8 @@ class GpuImage : public Image {
   // Create an Image object from a VkImage.
   // |session| is the Session that this image can be referenced from.
   // |id| is the ID of the resource.
-  // |gpu_mem| is the GPU memory that is associated with this image.
-  // |image_info| specifies size, format, and other properties.
-  // |vk_image| is the VkImage, whose lifetime is now controlled by this
-  // object.
-  GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem, escher::ImageInfo image_info,
-           vk::Image vk_image, vk::ImageLayout initial_layout);
+  // |image| is the escher::Image created from the resource.
+  GpuImage(Session* session, ResourceId id, escher::ImagePtr image);
 };
 
 }  // namespace gfx

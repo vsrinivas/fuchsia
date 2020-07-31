@@ -16,13 +16,9 @@ namespace gfx {
 const ResourceTypeInfo GpuImage::kTypeInfo = {
     ResourceType::kGpuImage | ResourceType::kImage | ResourceType::kImageBase, "GpuImage"};
 
-GpuImage::GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
-                   escher::ImageInfo image_info, vk::Image vk_image, vk::ImageLayout initial_layout)
+GpuImage::GpuImage(Session* session, ResourceId id, escher::ImagePtr image)
     : Image(session, id, GpuImage::kTypeInfo) {
-  image_ = escher::impl::NaiveImage::AdoptVkImage(
-      session->resource_context().escher_resource_recycler, image_info, vk_image,
-      std::move(gpu_mem), initial_layout);
-  FX_CHECK(image_);
+  image_ = image;
 }
 
 GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
@@ -45,35 +41,34 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
     case fuchsia::images::PixelFormat::YUY2:
     case fuchsia::images::PixelFormat::NV12:
     case fuchsia::images::PixelFormat::YV12:
-      error_reporter->ERROR()
-          << "GpuImage::CreateFromMemory(): PixelFormat must be BGRA_8 or R8G8B8A8.";
+      error_reporter->ERROR() << "GpuImage::New(): PixelFormat must be BGRA_8 or R8G8B8A8.";
       return nullptr;
   }
 
   if (image_info.width <= 0) {
-    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): width must be greater than 0.";
+    error_reporter->ERROR() << "GpuImage::New(): width must be greater than 0.";
     return nullptr;
   }
   if (image_info.height <= 0) {
-    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): height must be greater than 0.";
+    error_reporter->ERROR() << "GpuImage::New(): height must be greater than 0.";
     return nullptr;
   }
 
   auto& caps = session->resource_context().vk_device_queues_capabilities;
   if (image_info.width > caps.max_image_width) {
-    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): image width exceeds maximum ("
-                            << image_info.width << " vs. " << caps.max_image_width << ").";
+    error_reporter->ERROR() << "GpuImage::New(): image width exceeds maximum (" << image_info.width
+                            << " vs. " << caps.max_image_width << ").";
     return nullptr;
   }
   if (image_info.height > caps.max_image_height) {
-    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): image height exceeds maximum ("
+    error_reporter->ERROR() << "GpuImage::New(): image height exceeds maximum ("
                             << image_info.height << " vs. " << caps.max_image_height << ").";
     return nullptr;
   }
 
   // TODO(47918): Support non-premultiplied alpha format and remove this.
   if (image_info.alpha_format == fuchsia::images::AlphaFormat::NON_PREMULTIPLIED) {
-    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): Non-premultiplied alpha format "
+    error_reporter->ERROR() << "GpuImage::New(): Non-premultiplied alpha format "
                             << "is not supported yet.";
     return nullptr;
   }
@@ -114,13 +109,13 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   vk_device.getImageMemoryRequirements(vk_image, &memory_reqs);
 
   if (memory_offset >= memory->size()) {
-    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): the offset of the Image must be "
+    error_reporter->ERROR() << "GpuImage::New(): the offset of the Image must be "
                             << "within the range of the Memory";
     return nullptr;
   }
 
   if (memory_offset + memory_reqs.size > memory->size()) {
-    error_reporter->ERROR() << "GpuImage::CreateFromMemory(): the Image must fit within the size "
+    error_reporter->ERROR() << "GpuImage::New(): the Image must fit within the size "
                             << "of the Memory" << memory_reqs.size << " " << memory->size() << " "
                             << memory_offset;
     return nullptr;
@@ -132,8 +127,14 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
           ? memory->GetGpuMem(error_reporter)->Suballocate(memory_reqs.size, memory_offset)
           : memory->GetGpuMem(error_reporter);
 
-  return fxl::AdoptRef(
-      new GpuImage(session, id, std::move(gpu_mem), escher_image_info, vk_image, kInitialLayout));
+  escher::ImagePtr image = escher::impl::NaiveImage::AdoptVkImage(
+      session->resource_context().escher_resource_recycler, escher_image_info, vk_image,
+      std::move(gpu_mem), kInitialLayout);
+  if (!image) {
+    error_reporter->ERROR() << "GpuImage::New(): failed to adopt vk image";
+    return nullptr;
+  }
+  return fxl::AdoptRef(new GpuImage(session, id, image));
 }
 
 GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
@@ -141,7 +142,8 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   auto vk_device = session->resource_context().vk_device;
   auto image_result = vk_device.createImage(create_info);
   if (image_result.result != vk::Result::eSuccess) {
-    error_reporter->ERROR() << "VkCreateImage failed: " << vk::to_string(image_result.result);
+    error_reporter->ERROR() << "GpuImage::New(): VkCreateImage failed: "
+                            << vk::to_string(image_result.result);
     return nullptr;
   }
 
@@ -163,8 +165,14 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   }
   image_info.is_external = true;
 
-  return fxl::AdoptRef(new GpuImage(session, id, std::move(gpu_mem), image_info, image_result.value,
-                                    create_info.initialLayout));
+  escher::ImagePtr image = escher::impl::NaiveImage::AdoptVkImage(
+      session->resource_context().escher_resource_recycler, image_info, image_result.value,
+      std::move(gpu_mem), create_info.initialLayout);
+  if (!image) {
+    error_reporter->ERROR() << "GpuImage::New(): failed to adopt vk image";
+    return nullptr;
+  }
+  return fxl::AdoptRef(new GpuImage(session, id, image));
 }
 
 void GpuImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
