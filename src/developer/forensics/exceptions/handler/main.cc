@@ -14,10 +14,11 @@
 #include <string>
 
 #include "src/developer/forensics/exceptions/constants.h"
-#include "src/developer/forensics/exceptions/exception_handler/handler.h"
+#include "src/developer/forensics/exceptions/handler/handler.h"
 
 int main(int argc, char** argv) {
   using namespace forensics::exceptions;
+  using namespace forensics::exceptions::handler;
 
   syslog::SetTags({"forensics", "exception"});
 
@@ -35,11 +36,11 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     }
 
-    handle_exception = forensics::exceptions::Handle(
-        std::move(exception), loop.dispatcher(), sys::ServiceDirectory::CreateFromNamespace(),
-        kComponentLookupTimeout, kCrashReporterTimeout);
+    handle_exception = Handle(std::move(exception), loop.dispatcher(),
+                              sys::ServiceDirectory::CreateFromNamespace(), kComponentLookupTimeout,
+                              kCrashReporterTimeout);
   } else if (argc == 3) {
-    handle_exception = forensics::exceptions::Handle(
+    handle_exception = Handle(
         /*process_name=*/argv[1], /*process_koid=*/std::stoul(argv[2]), loop.dispatcher(),
         sys::ServiceDirectory::CreateFromNamespace(), kComponentLookupTimeout,
         kCrashReporterTimeout);

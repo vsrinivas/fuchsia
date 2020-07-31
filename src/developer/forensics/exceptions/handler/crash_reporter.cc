@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_handler/crash_reporter.h"
+#include "src/developer/forensics/exceptions/handler/crash_reporter.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -11,6 +11,7 @@
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 using fuchsia::feedback::CrashReport;
 using fuchsia::feedback::CrashReporter_File_Result;
@@ -53,5 +54,6 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   });
 }
 
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics

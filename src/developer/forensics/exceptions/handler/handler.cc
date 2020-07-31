@@ -1,19 +1,20 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_handler/handler.h"
+#include "src/developer/forensics/exceptions/handler/handler.h"
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/forensics/exceptions/exception_handler/component_lookup.h"
-#include "src/developer/forensics/exceptions/exception_handler/crash_reporter.h"
-#include "src/developer/forensics/exceptions/exception_handler/minidump.h"
-#include "src/developer/forensics/exceptions/exception_handler/report_builder.h"
+#include "src/developer/forensics/exceptions/handler/component_lookup.h"
+#include "src/developer/forensics/exceptions/handler/crash_reporter.h"
+#include "src/developer/forensics/exceptions/handler/minidump.h"
+#include "src/developer/forensics/exceptions/handler/report_builder.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 using FileCrashReportResult = fuchsia::feedback::CrashReporter_File_Result;
 using fuchsia::feedback::CrashReport;
@@ -95,5 +96,6 @@ using fuchsia::sys::internal::SourceIdentity;
           });
 }
 
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics

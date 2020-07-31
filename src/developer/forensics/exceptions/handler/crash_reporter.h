@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_CRASH_REPORTER_H_
-#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_CRASH_REPORTER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_CRASH_REPORTER_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_CRASH_REPORTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -18,6 +18,7 @@
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 // Send |crash_report| to the system crash reporter.
 //
@@ -43,7 +44,8 @@ class CrashReporter {
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashReporter);
 };
 
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_CRASH_REPORTER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_CRASH_REPORTER_H_

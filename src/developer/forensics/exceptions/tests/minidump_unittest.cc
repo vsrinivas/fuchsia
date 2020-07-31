@@ -1,18 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_handler/minidump.h"
+#include "src/developer/forensics/exceptions/handler/minidump.h"
 
 #include <lib/async/cpp/executor.h>
 
 #include <gtest/gtest.h>
-#include <third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h>
 
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 namespace {
 
 constexpr char kData[] = "1234567489";
@@ -94,5 +95,6 @@ TEST_F(MinidumpTest, GenerateMinidump) {
 }
 
 }  // namespace
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics

@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_handler/minidump.h"
+#include "src/developer/forensics/exceptions/handler/minidump.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
@@ -16,6 +16,7 @@
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 // GenerateVMOFromStringFile -----------------------------------------------------------------------
 
@@ -121,5 +122,6 @@ zx::thread GetThread(const zx::exception& exception) {
   });
 }
 
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics

@@ -1,8 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_HANDLER_H_
-#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_HANDLER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_HANDLER_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_HANDLER_H_
 
 #include <fuchsia/exception/cpp/fidl.h>
 #include <lib/fit/promise.h>
@@ -14,6 +14,7 @@
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 // Handles asynchronously filing a crash report for a given zx::exception.
 ::fit::promise<> Handle(zx::exception exception, async_dispatcher_t* dispatcher,
@@ -26,7 +27,8 @@ namespace exceptions {
                         std::shared_ptr<sys::ServiceDirectory> services,
                         zx::duration component_lookup_timeout, zx::duration crash_reporter_timeout);
 
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_HANDLER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_HANDLER_H_

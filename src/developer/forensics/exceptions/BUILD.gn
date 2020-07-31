@@ -22,7 +22,7 @@ fuchsia_component("component") {
 
   deps = [
     ":exe",
-    "exception_handler:exe",
+    "handler:exe",
   ]
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_handler/report_builder.h"
+#include "src/developer/forensics/exceptions/handler/report_builder.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -10,6 +10,7 @@
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 CrashReportBuilder& CrashReportBuilder::SetProcessName(const std::string& process_name) {
   process_name_ = process_name;
@@ -98,5 +99,6 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   return crash_report;
 }
 
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics

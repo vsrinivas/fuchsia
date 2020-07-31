@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_handler/handler.h"
+#include "src/developer/forensics/exceptions/handler/handler.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
@@ -15,20 +15,21 @@
 
 #include <type_traits>
 
-#include <garnet/public/lib/fostr/fidl/fuchsia/exception/formatting.h>
 #include <gtest/gtest.h>
-#include <third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h>
-#include <third_party/crashpad/util/file/string_file.h>
 
+#include "garnet/public/lib/fostr/fidl/fuchsia/exception/formatting.h"
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
+#include "third_party/crashpad/util/file/string_file.h"
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 inline void ToString(const fuchsia::exception::ExceptionType& value, std::ostream* os) {
   *os << value;
@@ -348,5 +349,6 @@ TEST_F(HandlerTest, NoException) {
 }
 
 }  // namespace
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics

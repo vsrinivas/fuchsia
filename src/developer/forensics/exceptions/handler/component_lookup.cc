@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/exceptions/exception_handler/component_lookup.h"
+#include "src/developer/forensics/exceptions/handler/component_lookup.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
@@ -12,6 +12,7 @@
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 using fuchsia::sys::internal::CrashIntrospect_FindComponentByProcessKoid_Result;
 using fuchsia::sys::internal::SourceIdentity;
@@ -56,6 +57,6 @@ ComponentLookup::ComponentLookup(async_dispatcher_t* dispatcher,
   });
 }
 
+}  // namespace handler
 }  // namespace exceptions
-
 }  // namespace forensics

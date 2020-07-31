@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_REPORT_BUILDER_H_
-#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_REPORT_BUILDER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_REPORT_BUILDER_H_
+#define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_REPORT_BUILDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
@@ -14,6 +14,7 @@
 
 namespace forensics {
 namespace exceptions {
+namespace handler {
 
 class CrashReportBuilder {
  public:
@@ -35,7 +36,8 @@ class CrashReportBuilder {
   bool is_valid_{true};
 };
 
+}  // namespace handler
 }  // namespace exceptions
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_HANDLER_REPORT_BUILDER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_REPORT_BUILDER_H_
