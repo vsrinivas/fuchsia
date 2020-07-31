@@ -10,7 +10,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt},
-    log::{debug, info},
+    log::info,
     std::{
         future::Future,
         marker::Unpin,
@@ -66,17 +66,12 @@ where
                 .expect("WlantapPhy event stream returned an error");
             (this.event_handler)(event);
         }
-
-        match this.main_future.poll_unpin(cx) {
-            Poll::Pending => {
-                debug!("Polled main_future. Still waiting for completion.");
-                Poll::Pending
-            }
-            Poll::Ready(x) => {
-                info!("main_future complete. No further events will be processed from the event stream.");
-                Poll::Ready((x, this.event_stream.take().unwrap()))
-            }
-        }
+        this.main_future.poll_unpin(cx).map(|x| {
+            info!(
+                "main_future complete. No further events will be processed from the event stream."
+            );
+            (x, this.event_stream.take().unwrap())
+        })
     }
 }
 
