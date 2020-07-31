@@ -34,11 +34,16 @@ class ExploreAction : public ScreenReaderAction {
   fit::promise<fuchsia::accessibility::semantics::Hit> ExecuteHitTestingPromise(
       const ActionData& process_data);
 
-  // Returns a promise that Sets thte A11y Focus. If the screen reader is in a continuous
+  // Returns a promise that sets the A11y Focus. If the screen reader is in a continuous
   // exploration and the new focus determined by [|view_koid|, |node_id|], is the same as the
   // existing A11y Focus, throws an error.
   fit::promise<> SetA11yFocusOrStopPromise(ScreenReaderContext::ScreenReaderMode mode,
                                            zx_koid_t view_koid, uint32_t node_id);
+
+  // Returns a promise that selects a describable ancestor of the node specified
+  // by |hit|, if that node is not describable.
+  fit::result<uint32_t> SelectDescribableNodePromise(zx_koid_t view_koid,
+                                                     fuchsia::accessibility::semantics::Hit& hit);
 
   fit::scope scope_;
 };

@@ -204,6 +204,25 @@ TEST_F(ViewManagerTest, SemanticsSourceGetSemanticNode) {
   EXPECT_EQ(node->attributes().label(), "test_label");
 }
 
+TEST_F(ViewManagerTest, SemanticsSourceGetParentNode) {
+  view_manager_->SetSemanticsEnabled(true);
+  RunLoopUntilIdle();
+
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+  node_updates.emplace_back(CreateTestNode(0u, "test_label_0", {1u, 2u, 3u}));
+  node_updates.emplace_back(CreateTestNode(1u, "test_label_1"));
+  node_updates.emplace_back(CreateTestNode(2u, "test_label_2"));
+  node_updates.emplace_back(CreateTestNode(3u, "test_label_3"));
+  ApplyNodeUpdates(std::move(node_updates));
+
+  const auto root_node = view_manager_->GetParentNode(semantic_provider_->koid(), 2u);
+  const auto null_node = view_manager_->GetParentNode(semantic_provider_->koid(), 0u);
+
+  EXPECT_TRUE(root_node);
+  EXPECT_EQ(root_node->node_id(), 0u);
+  EXPECT_FALSE(null_node);
+}
+
 TEST_F(ViewManagerTest, SemanticsSourceGetNeighboringNodes) {
   view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();

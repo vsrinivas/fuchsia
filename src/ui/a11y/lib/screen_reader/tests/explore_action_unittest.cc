@@ -49,8 +49,10 @@ class ExploreActionTest : public gtest::TestLoopFixture {
 
     // Creating test node to update.
     std::vector<Node> update_nodes;
-    Node node = accessibility_test::CreateTestNode(0, "Label A");
+    Node node = accessibility_test::CreateTestNode(0, "Label A", {1u});
+    Node node_2 = accessibility_test::CreateTestNode(1u, "", {});
     update_nodes.push_back(std::move(node));
+    update_nodes.push_back(std::move(node_2));
 
     // Update the node created above.
     semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
@@ -186,9 +188,28 @@ TEST_F(ExploreActionTest, HitTestNodeIDResultIsNotPresentInTheTree) {
   explore_action.Run(action_data);
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
   EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
-  ASSERT_TRUE(mock_speaker_ptr_->node_ids().empty());
+}
+
+TEST_F(ExploreActionTest, HitTestNodeNotDescribable) {
+  a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
+  a11y::ExploreAction::ActionData action_data;
+  action_data.current_view_koid = semantic_provider_.koid();
+  // Note that x and y are set just for completeness of the data type. the semantic provider is
+  // responsible for returning what was the hit based on these numbers.
+  action_data.local_point.x = 10;
+  action_data.local_point.y = 10;
+
+  semantic_provider_.SetHitTestResult(1u);
+
+  explore_action.Run(action_data);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_FALSE(mock_speaker_ptr_->node_ids().empty());
+  EXPECT_EQ(mock_speaker_ptr_->node_ids()[0], 0u);
 }
 
 TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {

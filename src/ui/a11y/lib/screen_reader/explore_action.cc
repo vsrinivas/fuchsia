@@ -12,6 +12,7 @@
 
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_action.h"
+#include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
 namespace {
@@ -37,6 +38,33 @@ fit::promise<Hit> ExploreAction::ExecuteHitTestingPromise(const ActionData& proc
   return bridge.consumer.promise_or(fit::error());
 }
 
+fit::result<uint32_t> ExploreAction::SelectDescribableNodePromise(zx_koid_t view_koid, Hit& hit) {
+  if (!hit.has_node_id()) {
+    return fit::error();
+  }
+
+  auto hit_test_result_node =
+      action_context_->semantics_source->GetSemanticNode(view_koid, hit.node_id());
+  if (!hit_test_result_node || !hit_test_result_node->has_node_id()) {
+    FX_LOGS(WARNING) << "Invalid hit test result.";
+    return fit::error();
+  }
+
+  auto node_to_return = hit_test_result_node;
+  while (node_to_return && !NodeIsDescribable(node_to_return)) {
+    FX_DCHECK(node_to_return->has_node_id());
+    node_to_return =
+        action_context_->semantics_source->GetParentNode(view_koid, node_to_return->node_id());
+  }
+
+  if (node_to_return && node_to_return->has_node_id()) {
+    return fit::ok(node_to_return->node_id());
+  }
+
+  FX_LOGS(WARNING) << "No describable ancestor found for node " << hit_test_result_node->node_id();
+  return fit::error();
+}
+
 fit::promise<> ExploreAction::SetA11yFocusOrStopPromise(ScreenReaderContext::ScreenReaderMode mode,
                                                         zx_koid_t view_koid, uint32_t node_id) {
   return fit::make_promise([this, mode, view_koid, node_id]() mutable -> fit::promise<> {
@@ -58,25 +86,29 @@ fit::promise<> ExploreAction::SetA11yFocusOrStopPromise(ScreenReaderContext::Scr
 }
 
 void ExploreAction::Run(ActionData process_data) {
-  auto promise =
-      ExecuteHitTestingPromise(process_data)
-          .and_then([this, view_koid = process_data.current_view_koid,
-                     mode = screen_reader_context_->mode()](Hit& hit) mutable -> fit::promise<> {
-            return SetA11yFocusOrStopPromise(mode, view_koid, hit.node_id());
-          })
-          .and_then([this]() mutable -> fit::result<A11yFocusManager::A11yFocusInfo> {
-            auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
-            auto focus = a11y_focus_manager->GetA11yFocus();
-            if (!focus) {
-              return fit::error();
-            }
-            return fit::ok(std::move(*focus));
-          })
-          .and_then([this](const A11yFocusManager::A11yFocusInfo& focus) mutable {
-            return BuildSpeechTaskFromNodePromise(focus.view_ref_koid, focus.node_id);
-          })
-          // Cancel any promises if this class goes out of scope.
-          .wrap_with(scope_);
+  auto promise = ExecuteHitTestingPromise(process_data)
+                     .and_then([this, view_koid = process_data.current_view_koid](
+                                   Hit& hit) mutable -> fit::result<uint32_t> {
+                       return SelectDescribableNodePromise(view_koid, hit);
+                     })
+                     .and_then([this, view_koid = process_data.current_view_koid,
+                                mode = screen_reader_context_->mode()](
+                                   uint32_t& node_id) mutable -> fit::promise<> {
+                       return SetA11yFocusOrStopPromise(mode, view_koid, node_id);
+                     })
+                     .and_then([this]() mutable -> fit::result<A11yFocusManager::A11yFocusInfo> {
+                       auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
+                       auto focus = a11y_focus_manager->GetA11yFocus();
+                       if (!focus) {
+                         return fit::error();
+                       }
+                       return fit::ok(std::move(*focus));
+                     })
+                     .and_then([this](const A11yFocusManager::A11yFocusInfo& focus) mutable {
+                       return BuildSpeechTaskFromNodePromise(focus.view_ref_koid, focus.node_id);
+                     })
+                     // Cancel any promises if this class goes out of scope.
+                     .wrap_with(scope_);
   auto* executor = screen_reader_context_->executor();
   executor->schedule_task(std::move(promise));
 }

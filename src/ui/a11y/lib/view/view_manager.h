@@ -68,6 +68,10 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetParentNode(zx_koid_t koid,
+                                                               uint32_t node_id) const override;
+
+  // |SemanticsSource|
   const fuchsia::accessibility::semantics::Node* GetPreviousNode(
       zx_koid_t koid, uint32_t node_id,
       fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;

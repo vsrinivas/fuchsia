@@ -149,6 +149,18 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetSemanticNode(
   return tree_weak_ptr->GetNode(node_id);
 }
 
+const fuchsia::accessibility::semantics::Node* ViewManager::GetParentNode(zx_koid_t koid,
+                                                                          uint32_t node_id) const {
+  auto tree_weak_ptr = GetTreeByKoid(koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "ViewManager::GetSemanticNode: No semantic tree found for koid: " << koid;
+    return nullptr;
+  }
+
+  return tree_weak_ptr->GetParentNode(node_id);
+}
+
 const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(
     zx_koid_t koid, uint32_t node_id,
     fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {

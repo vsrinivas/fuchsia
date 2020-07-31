@@ -33,6 +33,11 @@ class SemanticsSource {
   virtual const fuchsia::accessibility::semantics::Node* GetSemanticNode(
       zx_koid_t koid, uint32_t node_id) const = 0;
 
+  // Returns the parent of the node with id |node_id|. Returns nullptr if the
+  // intput node is the root.
+  virtual const fuchsia::accessibility::semantics::Node* GetParentNode(zx_koid_t koid,
+                                                                       uint32_t node_id) const = 0;
+
   // Returns the next node in traversal-order neighbors relative to the node with id |node_id|.
   virtual const fuchsia::accessibility::semantics::Node* GetNextNode(
       zx_koid_t koid, uint32_t node_id,

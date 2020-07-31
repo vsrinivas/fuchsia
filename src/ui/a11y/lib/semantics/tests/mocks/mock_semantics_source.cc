@@ -43,6 +43,30 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetSemanticN
   return &node_it->second;
 }
 
+const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetParentNode(
+    zx_koid_t koid, uint32_t node_id) const {
+  const auto it = nodes_.find(koid);
+  if (it == nodes_.end()) {
+    return nullptr;
+  }
+
+  const auto& nodes_for_view = it->second;
+
+  for (const auto& node : nodes_for_view) {
+    if (!node.second.has_child_ids()) {
+      continue;
+    }
+
+    for (const auto child_id : node.second.child_ids()) {
+      if (child_id == node_id) {
+        return GetSemanticNode(koid, child_id);
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
     zx_koid_t koid, uint32_t node_id,
     fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
