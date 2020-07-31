@@ -55,15 +55,6 @@ class TypeBody(object):
                 contents = dict([(k, os.path.join(build_dir, v))
                                  for k, v in contents.iteritems()])
                 return Manifest(origin, self, contents)
-        elif self.name == 'fuzzers':
-            path = os.path.join(build_dir, '%s_zircon_fuzzers.json' % origin)
-            with open(path, 'r') as manifest_file:
-                contents = json.load(manifest_file)
-            fuzzers = list(set([i.replace('-fuzzer.asan-ubsan', '')
-                                 .replace('-fuzzer.asan', '')
-                                 .replace('-fuzzer.ubsan', '')
-                                for i in contents]))
-            return Manifest(origin, self, fuzzers)
         elif self.name == 'host_tests':
             path = os.path.join(build_dir,
                                 '%s_zircon_host_tests.json' % origin)
@@ -89,14 +80,13 @@ class TypeBody(object):
 
 class Type(object):
     AUX = TypeBody('aux', True)
-    FUZZERS = TypeBody('fuzzers', False)
     HOST_TESTS = TypeBody('host_tests', False)
     IMAGE = TypeBody('image', True)
     TESTS = TypeBody('tests', True)
     ZBI_TESTS = TypeBody('zbi_tests', False)
 
     @classmethod
-    def all(cls): return [cls.AUX, cls.FUZZERS, cls.HOST_TESTS, cls.IMAGE,
+    def all(cls): return [cls.AUX, cls.HOST_TESTS, cls.IMAGE,
                           cls.TESTS, cls.ZBI_TESTS]
 
     @classmethod
@@ -324,7 +314,7 @@ class Summary(object):
         data = json.load(input)
         for type in Type.manifests():
             result.objects[type] = FileDataSet.from_json(data[str(type)])
-        for type in [Type.HOST_TESTS, Type.FUZZERS]:
+        for type in [Type.HOST_TESTS]:
             result.objects[type] = data[str(type)]
         result.objects[Type.ZBI_TESTS] = [ZbiTest.from_json(t)
                                           for t in data[str(Type.ZBI_TESTS)]]
@@ -357,18 +347,6 @@ def compare_summaries(reference, current):
     '''Compares summaries for two states of the build.'''
     has_errors = False
     has_warnings = False
-    all_fuzzers_present = True  # Should be a list of changed fuzzers, really
-
-    # Fuzzers
-    reference_fuzzers = set(reference.get_objects(Type.FUZZERS))
-    current_fuzzers = set(current.get_objects(Type.FUZZERS))
-    if reference_fuzzers != current_fuzzers:
-        all_fuzzers_present = False
-        has_errors = True
-        for fuzzer in reference_fuzzers - current_fuzzers:
-            report(Type.FUZZERS, True, 'fuzzer removed: ' + fuzzer)
-        for fuzzer in current_fuzzers - reference_fuzzers:
-            report(Type.FUZZERS, True, 'fuzzer added: ' + fuzzer)
 
     for type in Type.manifests():
         reference_objects = reference.get_objects(type)
