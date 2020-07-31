@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_THREAD_HANDLE_H_
 
 #include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 
 #include <optional>
 #include <vector>

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_JOB_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ZIRCON_JOB_HANDLE_H_
 
+#include <lib/zx/job.h>
+
 #include "src/developer/debug/debug_agent/job_handle.h"
 
 namespace debug_agent {

@@ -8,7 +8,6 @@
 #include <lib/fit/function.h>
 #include <lib/fitx/result.h>
 #include <lib/zx/process.h>
-#include <zircon/status.h>
 
 #include <memory>
 #include <vector>

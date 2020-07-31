@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/binary_launcher.h"
+#include "src/developer/debug/debug_agent/zircon_binary_launcher.h"
 
 #include <inttypes.h>
 #include <lib/fdio/fd.h>
@@ -13,13 +13,12 @@
 
 namespace debug_agent {
 
-BinaryLauncher::BinaryLauncher(std::shared_ptr<sys::ServiceDirectory> env_services)
+ZirconBinaryLauncher::ZirconBinaryLauncher(std::shared_ptr<sys::ServiceDirectory> env_services)
     : builder_(env_services) {}
-BinaryLauncher::~BinaryLauncher() = default;
+ZirconBinaryLauncher::~ZirconBinaryLauncher() = default;
 
-zx_status_t BinaryLauncher::Setup(const std::vector<std::string>& argv) {
-  zx_status_t status = builder_.LoadPath(argv[0]);
-  if (status != ZX_OK)
+zx_status_t ZirconBinaryLauncher::Setup(const std::vector<std::string>& argv) {
+  if (zx_status_t status = builder_.LoadPath(argv[0]); status != ZX_OK)
     return status;
 
   builder_.AddArgs(argv);
@@ -33,15 +32,15 @@ zx_status_t BinaryLauncher::Setup(const std::vector<std::string>& argv) {
   return builder_.Prepare(nullptr);
 }
 
-std::unique_ptr<ProcessHandle> BinaryLauncher::GetProcess() const {
+std::unique_ptr<ProcessHandle> ZirconBinaryLauncher::GetProcess() const {
   zx::process process;
   builder_.data().process.duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
   return std::make_unique<ZirconProcessHandle>(std::move(process));
 }
 
-zx_status_t BinaryLauncher::Start() { return builder_.Start(nullptr); }
+zx_status_t ZirconBinaryLauncher::Start() { return builder_.Start(nullptr); }
 
-zx::socket BinaryLauncher::AddStdioEndpoint(int fd) {
+zx::socket ZirconBinaryLauncher::AddStdioEndpoint(int fd) {
   zx::socket local;
   zx::socket target;
   zx_status_t status = zx::socket::create(0, &local, &target);
@@ -52,7 +51,7 @@ zx::socket BinaryLauncher::AddStdioEndpoint(int fd) {
   return local;
 }
 
-zx::socket BinaryLauncher::ReleaseStdout() { return std::move(out_); }
-zx::socket BinaryLauncher::ReleaseStderr() { return std::move(err_); }
+zx::socket ZirconBinaryLauncher::ReleaseStdout() { return std::move(out_); }
+zx::socket ZirconBinaryLauncher::ReleaseStderr() { return std::move(err_); }
 
 }  // namespace debug_agent

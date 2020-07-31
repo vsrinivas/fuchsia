@@ -5,10 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUGGED_PROCESS_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUGGED_PROCESS_H_
 
-#include <lib/zx/process.h>
-#include <lib/zx/socket.h>
-#include <lib/zx/thread.h>
-
 #include <map>
 #include <memory>
 #include <vector>

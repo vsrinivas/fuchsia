@@ -4,8 +4,8 @@
 
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
 
-#include "src/developer/debug/debug_agent/binary_launcher.h"
 #include "src/developer/debug/debug_agent/component_launcher.h"
+#include "src/developer/debug/debug_agent/zircon_binary_launcher.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
@@ -37,7 +37,7 @@ std::unique_ptr<JobHandle> ZirconSystemInterface::GetComponentRootJob() const {
 }
 
 std::unique_ptr<BinaryLauncher> ZirconSystemInterface::GetLauncher() const {
-  return std::make_unique<BinaryLauncher>(services_);
+  return std::make_unique<ZirconBinaryLauncher>(services_);
 }
 
 std::unique_ptr<ComponentLauncher> ZirconSystemInterface::GetComponentLauncher() const {

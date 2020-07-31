@@ -5,10 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUGGED_THREAD_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUGGED_THREAD_H_
 
-#include <lib/zx/exception.h>
-#include <lib/zx/thread.h>
-#include <zircon/syscalls/exception.h>
-
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/general_registers.h"

@@ -149,7 +149,6 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
 
   // Get the limbo processes.
   if (system_interface_->GetLimboProvider().Valid()) {
-    std::vector<fuchsia::exception::ProcessExceptionMetadata> limbo_processes;
     for (const auto& [process_koid, record] :
          system_interface_->GetLimboProvider().GetLimboRecords()) {
       debug_ipc::ProcessRecord process_record = {};

@@ -11,7 +11,6 @@
 #include <memory>
 
 #include "gtest/gtest_prod.h"
-#include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/agent_configuration.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/component_launcher.h"

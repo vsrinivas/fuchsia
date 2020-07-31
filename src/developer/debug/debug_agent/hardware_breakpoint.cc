@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 
 #include <inttypes.h>
+#include <zircon/status.h>
 
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"

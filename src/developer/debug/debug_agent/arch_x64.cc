@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/debug_agent/arch.h"

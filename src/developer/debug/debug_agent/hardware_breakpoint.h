@@ -5,8 +5,6 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_HARDWARE_BREAKPOINT_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_HARDWARE_BREAKPOINT_H_
 
-#include <zircon/status.h>
-
 #include <set>
 
 #include "src/developer/debug/debug_agent/arch.h"

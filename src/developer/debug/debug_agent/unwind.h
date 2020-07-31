@@ -5,9 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_UNWIND_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_UNWIND_H_
 
-#include <lib/zx/thread.h>
 #include <stdint.h>
-#include <zircon/syscalls/debug.h>
 
 #include <vector>
 
