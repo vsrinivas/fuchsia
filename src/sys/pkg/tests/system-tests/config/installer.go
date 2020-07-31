@@ -23,8 +23,14 @@ import (
 type InstallerMode = string
 
 const (
-	Omaha               = "omaha"
+	// Install OTAs with the omaha-client.
+	Omaha = "omaha"
+
+	// Install OTAs with the system-update-checker.
 	SystemUpdateChecker = "system-update-checker"
+
+	// The default fuchsia update package URL.
+	defaultUpdatePackageURL = "fuchsia-pkg://fuchsia.com/update/0"
 )
 
 type InstallerConfig struct {
@@ -81,6 +87,7 @@ func (c *InstallerConfig) ZBITool() (*zbi.ZBITool, error) {
 	return c.zbiTool, nil
 }
 
+// ConfigureBuild configures a build for the updater.
 func (c *InstallerConfig) ConfigureBuild(ctx context.Context, device *device.Client, build artifacts.Build) (artifacts.Build, error) {
 	switch c.installerMode {
 	case Omaha:
@@ -96,28 +103,53 @@ func (c *InstallerConfig) ConfigureBuild(ctx context.Context, device *device.Cli
 			}
 			c.omahaServer = omahaServer
 		}
+
 		avbTool, err := c.AVBTool()
 		if err != nil {
 			return nil, err
 		}
+
 		zbiTool, err := c.ZBITool()
 		if err != nil {
 			return nil, err
 		}
+
 		return artifacts.NewOmahaBuild(build, c.omahaServer.URL(), avbTool, zbiTool), nil
+
 	case SystemUpdateChecker:
 		return build, nil
+
 	default:
 		return nil, errors.New("Invalid installer mode")
 	}
 }
 
-func (c *InstallerConfig) Updater(repo *packages.Repository) (updater.Updater, error) {
+// Updater returns the configured updater.
+func (c *InstallerConfig) Updater(repo *packages.Repository, updatePackageURL string) (updater.Updater, error) {
 	switch c.installerMode {
 	case Omaha:
-		return nil, errors.New("Omaha updater isn't implemented yet")
+		avbTool, err := c.AVBTool()
+		if err != nil {
+			return nil, err
+		}
+
+		zbiTool, err := c.ZBITool()
+		if err != nil {
+			return nil, err
+		}
+
+		return updater.NewOmahaUpdater(repo, updatePackageURL, c.omahaServer, avbTool, zbiTool)
+
 	case SystemUpdateChecker:
-		return updater.NewSystemUpdateChecker(repo), nil
+		// TODO: The e2e tests only support using the system-update-checker
+		// with the standard update package URL. Otherwise we need to
+		// fall back to manually triggering the system-updater.
+		if updatePackageURL == defaultUpdatePackageURL {
+			return updater.NewSystemUpdateChecker(repo), nil
+		}
+
+		return updater.NewSystemUpdater(repo, updatePackageURL), nil
+
 	default:
 		return nil, errors.New("Invalid installer mode")
 	}

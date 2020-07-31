@@ -28,6 +28,10 @@ _environment_service_account =
 #   - Optional: OTA to recovery instead of rebooting to recovery. Default false.
 #   - Type: boolean
 #
+#   installer
+#   - Optional: Installer to use to install OTA.
+#   - Type: string
+#
 #   service_account
 #   - Optional: The service account that has permission to download the build
 #     artifacts.
@@ -137,6 +141,15 @@ template("system_test_upgrade_suite") {
 
     if (defined(invoker.ota_to_recovery) && invoker.ota_to_recovery) {
       _command += [ "-ota-to-recovery" ]
+    }
+
+    if (defined(invoker.installer)) {
+      assert(invoker.installer != "",
+             "'${_spec_target_name}' cannot have an empty installer")
+      _command += [
+        "-installer",
+        invoker.installer,
+      ]
     }
 
     test_spec(_spec_target_name) {

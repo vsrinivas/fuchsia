@@ -231,28 +231,36 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 
 	// Create a ZBI with the omaha_url argument.
 	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a ZBI with the omaha_url argument.
 	destZbiPath := path.Join(tempDir, "omaha_argument.zbi")
 	imageArguments := map[string]string{
 		"omaha_url": b.omahaUrl,
 	}
-	err = b.zbitool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments)
-	defer os.Remove(destZbiPath)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to create ZBI. %s", err)
+
+	if err := b.zbitool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments); err != nil {
+		return nil, fmt.Errorf("Failed to create ZBI: %w", err)
 	}
 
 	// Create a vbmeta that includes the ZBI we just created.
 	propFiles := map[string]string{
 		"zbi": destZbiPath,
 	}
-	destVbmeta := filepath.Join(paverDir, "zircon-a-omaha-test.vbmeta")
-	srcVbmeta, err := b.GetVbmetaPath(ctx)
+
+	destVbmetaPath := filepath.Join(paverDir, "zircon-a-omaha-test.vbmeta")
+
+	srcVbmetaPath, err := b.GetVbmetaPath(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find zircon-a vbmeta: %w", err)
 	}
-	err = b.avbtool.MakeVBMetaImage(ctx, destVbmeta, srcVbmeta, propFiles)
+
+	err = b.avbtool.MakeVBMetaImage(ctx, destVbmetaPath, srcVbmetaPath, propFiles)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create vbmeta: %w", err)
 	}
 
 	paveScript := filepath.Join(paverDir, "pave.sh")
@@ -262,7 +270,7 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 		paveZedbootScript,
 		paveScript,
 		paver.SSHPublicKey(b.GetSshPublicKey()),
-		paver.OverrideVBMetaA(destVbmeta),
+		paver.OverrideVBMetaA(destVbmetaPath),
 	)
 }
 

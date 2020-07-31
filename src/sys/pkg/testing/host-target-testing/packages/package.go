@@ -55,6 +55,11 @@ func newPackage(repo *Repository, merkle string) (Package, error) {
 	}, nil
 }
 
+// Merkle returns the meta.far merkle.
+func (p *Package) Merkle() string {
+	return p.merkle
+}
+
 // Open opens a file in the package.
 func (p *Package) Open(path string) (*os.File, error) {
 	merkle, ok := p.contents[path]

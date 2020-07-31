@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -169,10 +168,14 @@ func NewOmahaUpdater(
 }
 
 func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
+	logger.Infof(ctx, "injecting omaha_url into %q", u.updatePackageURL)
+
 	pkg, err := u.repo.OpenPackage(u.updatePackageURL.Path[1:])
 	if err != nil {
 		return fmt.Errorf("failed to open url %q: %w", u.updatePackageURL, err)
 	}
+
+	logger.Infof(ctx, "source update package merkle for %q is %q", u.updatePackageURL, pkg.Merkle())
 
 	tempDir, err := ioutil.TempDir("", "update-pkg-expand")
 	if err != nil {
@@ -185,21 +188,31 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	}
 
 	// Create a ZBI with the omaha_url argument.
-	destZbiPath := path.Join(tempDir, "omaha_argument.zbi")
+	destZbi, err := ioutil.TempFile("", "omaha_argument.zbi")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(destZbi.Name())
+
 	imageArguments := map[string]string{
 		"omaha_url": u.omahaServer.URL(),
 	}
 
-	if err := u.zbiTool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments); err != nil {
-		return fmt.Errorf("Failed to create ZBI. %w", err)
+	if err := u.zbiTool.MakeImageArgsZbi(ctx, destZbi.Name(), imageArguments); err != nil {
+		return fmt.Errorf("failed to create ZBI: %w", err)
 	}
 
+	// Create a vbmeta that includes the ZBI we just created.
 	propFiles := map[string]string{
-		"zbi": destZbiPath,
+		"zbi": destZbi.Name(),
 	}
 
 	// Update vbmeta in this package.
 	srcVbmetaPath := filepath.Join(tempDir, "fuchsia.vbmeta")
+
+	if _, err := os.Stat(srcVbmetaPath); err != nil {
+		return fmt.Errorf("vbmeta %q does not exist in repo: %w", srcVbmetaPath, err)
+	}
 
 	// Swap the the updated vbmeta into place.
 	err = util.AtomicallyWriteFile(srcVbmetaPath, 0600, func(f *os.File) error {
@@ -225,6 +238,8 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	if err != nil {
 		return fmt.Errorf("Failed to publish update package: %w", err)
 	}
+
+	logger.Infof(ctx, "published %q as %q to %q", pkgPath, pkgMerkle, u.repo)
 
 	omahaPackageURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", pkgPath, pkgMerkle)
 
