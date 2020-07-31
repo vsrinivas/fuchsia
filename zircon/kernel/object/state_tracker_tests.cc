@@ -32,7 +32,7 @@ class TestDispatcher final : public SoloDispatcher<TestDispatcher, ZX_RIGHTS_BAS
   }
 };
 
-class TestSignalObserver : public SignalObserver {
+class TestSignalObserver final : public SignalObserver {
  public:
   TestSignalObserver() = default;
   TestSignalObserver(void* port, uint64_t key) : port_(port), key_(key) {}
@@ -44,7 +44,7 @@ class TestSignalObserver : public SignalObserver {
   bool called() { return match_called_ || cancel_called_; }
 
  private:
-  void OnMatch(zx_signals_t signals) override {
+  void OnMatch(zx_signals_t signals) final {
     // Ensure we are not called twice.
     ZX_ASSERT(!cancel_called_);
     ZX_ASSERT(!match_called_);
@@ -53,7 +53,7 @@ class TestSignalObserver : public SignalObserver {
     match_called_ = true;
   }
 
-  void OnCancel(zx_signals_t signals) override {
+  void OnCancel(zx_signals_t signals) final {
     // Ensure we are not called twice.
     ZX_ASSERT(!cancel_called_);
     ZX_ASSERT(!match_called_);
@@ -62,7 +62,7 @@ class TestSignalObserver : public SignalObserver {
     cancel_called_ = true;
   }
 
-  bool MatchesKey(const void* port, uint64_t key) override { return port == port_ && key == key_; }
+  bool MatchesKey(const void* port, uint64_t key) final { return port == port_ && key == key_; }
 
   zx_signals_t signals_ = 0;
   bool cancel_called_ = false;

@@ -13,7 +13,7 @@
 
 class RootJobObserver final : public SignalObserver {
  public:
-  ~RootJobObserver();
+  ~RootJobObserver() final;
 
   // Create a RootJobObserver that halts the system when the root job terminates.
   RootJobObserver(fbl::RefPtr<JobDispatcher> root_job, Handle* root_job_handle);

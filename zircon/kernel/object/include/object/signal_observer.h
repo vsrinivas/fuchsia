@@ -48,7 +48,7 @@ class SignalObserver : public fbl::DoublyLinkedListable<SignalObserver*> {
   virtual bool MatchesKey(const void* port, uint64_t key) { return false; }
 
  protected:
-  ~SignalObserver() = default;
+  virtual ~SignalObserver() = default;
 
  private:
   // Dispatcher state, guarded by Dispatcher's lock.

@@ -23,7 +23,7 @@ class Event;
 class WaitSignalObserver final : public SignalObserver {
  public:
   WaitSignalObserver() : SignalObserver() {}
-  ~WaitSignalObserver();
+  ~WaitSignalObserver() final;
 
   // This should be called under the handle table lock. If this succeeds, End() must be called
   // (before the Event is destroyed).
