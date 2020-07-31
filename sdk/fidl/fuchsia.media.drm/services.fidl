@@ -49,7 +49,21 @@ protocol KeySystem {
     ///  store to be removed. It is invalid for the client to provide
     ///  [`NO_DATA_STORE`] or a `data_store_id` value that has not previously
     ///  been added.
+    [Transitional, Deprecated]
     DestroyDataStore(uint32 data_store_id);
+
+    /// Destroys the client data store.
+    ///
+    /// This method permanently removes this data store and all of its contents.
+    /// All provisioning and license data will be removed and any active
+    /// [`ContentDecryptionModule`] using this data store will be closed.
+    ///
+    /// + request `data_store_id` the client-assigned identifier for the data
+    ///  store to be removed. It is invalid for the client to provide
+    ///  [`NO_DATA_STORE`] or a `data_store_id` value that has not previously
+    ///  been added or has been previously destroyed.
+    [Transitional]
+    DestroyDataStoreAndConfirm(uint32 data_store_id) -> ();
 
     /// Creates a new [`ContentDecryptionModule`].
     ///
