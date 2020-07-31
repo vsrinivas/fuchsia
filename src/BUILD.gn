@@ -73,7 +73,12 @@ group("tests") {
     "tests",
     "ui:tests",
     "virtualization:tests",
+
+    # These targets should be removed when the tests are moved to
+    # //src.
     "//zircon/kernel/lib/devicetree/tests",
+    "//zircon/system/ulib:tests",
+    "//zircon/system/utest:tests",
   ]
 }
 

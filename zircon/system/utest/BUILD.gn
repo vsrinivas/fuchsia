@@ -1,0 +1,12 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This target holds tests under //zircon/system/utest which are now hosted in
+# packages but whose code hasn't yet been migrated to //src.
+# When a migration happens, the test needs to be removed from this list and
+# placed within the proper `tests` target under //src.
+
+group("tests") {
+  deps = []
+}
