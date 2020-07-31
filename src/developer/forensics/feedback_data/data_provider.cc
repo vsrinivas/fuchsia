@@ -91,11 +91,10 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
             const auto& attachments_result = std::get<1>(annotations_and_attachments);
             if (attachments_result.is_ok()) {
               for (const auto& [key, value] : attachments_result.value()) {
-                if (value.HasValue() && !value.Value().empty()) {
+                if (value.HasValue()) {
                   attachments[key] = value.Value();
                 }
               }
-
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any attachments";
             }

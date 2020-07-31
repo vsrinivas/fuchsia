@@ -507,6 +507,24 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogAlreadyCached) {
   ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
 }
 
+TEST_F(DatastoreTest, GetAttachments_PreviousSyslogIsEmpty) {
+  const std::string previous_log_contents = "";
+  WriteFile(kPreviousLogsFilePath, previous_log_contents);
+  SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystemPrevious});
+
+  ::fit::result<Attachments> attachments = GetAttachments();
+  ASSERT_TRUE(attachments.is_ok());
+  EXPECT_THAT(attachments.take_value(),
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue))}));
+
+  EXPECT_THAT(GetStaticAttachments(),
+              ElementsAreArray(
+                  {Pair(kAttachmentLogSystemPrevious, AttachmentValue(Error::kMissingValue))}));
+
+  ASSERT_TRUE(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/false));
+}
+
 TEST_F(DatastoreTest, GetAttachments_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.

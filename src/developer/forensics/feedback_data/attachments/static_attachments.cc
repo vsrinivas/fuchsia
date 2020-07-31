@@ -33,6 +33,11 @@ AttachmentValue ReadStringFromFilepath(const std::string& filepath) {
   if (!files::ReadFileToString(filepath, &content)) {
     return AttachmentValue(Error::kFileReadFailure);
   }
+
+  if (content.empty()) {
+    return AttachmentValue(Error::kMissingValue);
+  }
+
   return AttachmentValue(content);
 }
 
