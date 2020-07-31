@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_PROFILE_PROVIDER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -20,10 +21,13 @@ class ProfileProvider : public fuchsia::media::ProfileProvider {
   // fuchsia::media::ProfileProvider implementation.
   void RegisterHandler(zx::thread thread_handle, std::string name, int64_t period,
                        RegisterHandlerCallback callback) override;
+  void RegisterHandlerWithCapacity(zx::thread thread_handle, std::string name, int64_t period,
+                                   float capacity, RegisterHandlerCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::media::ProfileProvider, ProfileProvider*> bindings_;
   sys::ComponentContext& context_;
+  fuchsia::scheduler::ProfileProviderPtr profile_provider_;
 };
 
 }  // namespace media::audio

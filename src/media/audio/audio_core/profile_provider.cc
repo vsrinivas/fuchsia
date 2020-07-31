@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
@@ -31,6 +32,32 @@ void ProfileProvider::RegisterHandler(zx::thread thread_handle, std::string name
           FX_LOGS(WARNING) << "Failed to acquire profile";
         }
         callback(/* period= */ 0, /* capacity= */ 0);
+      });
+}
+
+void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle, std::string name,
+                                                  int64_t period, float capacity_weight,
+                                                  RegisterHandlerCallback callback) {
+  if (!profile_provider_) {
+    profile_provider_ = context_.svc()->Connect<fuchsia::scheduler::ProfileProvider>();
+  }
+  zx::duration interval = period ? zx::duration(period) : ThreadingModel::kMixProfilePeriod;
+  zx::duration capacity(interval.to_nsecs() * capacity_weight);
+  profile_provider_->GetDeadlineProfile(
+      capacity.get(), interval.get(), interval.get(), name,
+      [interval, capacity, callback = std::move(callback),
+       thread_handle = std::move(thread_handle)](zx_status_t status, zx::profile profile) {
+        if (status != ZX_OK) {
+          FX_PLOGS(WARNING, status) << "Failed to acquire deadline profile";
+          callback(0, 0);
+          return;
+        }
+        FX_CHECK(profile);
+        status = thread_handle.set_profile(profile, 0);
+        if (status != ZX_OK) {
+          FX_PLOGS(WARNING, status) << "Failed to set thread profile";
+        }
+        callback(interval.get(), capacity.get());
       });
 }
 

@@ -48,7 +48,13 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
   // |fuchsia::scheduler::ProfileProvider|
   // TODO(eieio): Temporary until the deadline scheduler fully lands in tree.
   void GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period, std::string name,
-                          GetProfileCallback callback) override {}
+                          GetProfileCallback callback) override {
+    // This will fail if used (ex: zx_object_set_profile), but allows us to do some testing of the
+    // consuming code.
+    zx::event e;
+    zx::event::create(0, &e);
+    callback(ZX_OK, zx::profile(e.release()));
+  }
 
   // |fuchsia::scheduler::ProfileProvider|
   void GetCpuAffinityProfile(fuchsia::scheduler::CpuSet cpu_mask,

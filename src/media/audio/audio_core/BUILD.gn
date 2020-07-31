@@ -223,6 +223,7 @@ executable("audio_core_bin") {
 
   deps = [
     ":audio_core_lib",
+    "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/fsl",
     "//src/media/audio/lib/logging",
   ]
