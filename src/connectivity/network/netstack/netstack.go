@@ -499,7 +499,7 @@ func (ns *Netstack) AddRoutes(rs []tcpip.Route, metric routes.Metric, dynamic bo
 		ns.routeTable.AddRoute(r, metric, metricTracksInterface, dynamic, enabled)
 		ifs.mu.Unlock()
 	}
-	ns.stack.SetRouteTable(ns.routeTable.GetNetstackTable())
+	ns.routeTable.UpdateStack(ns.stack)
 	return nil
 }
 
@@ -510,7 +510,7 @@ func (ns *Netstack) DelRoute(r tcpip.Route) error {
 		return err
 	}
 
-	ns.stack.SetRouteTable(ns.routeTable.GetNetstackTable())
+	ns.routeTable.UpdateStack(ns.stack)
 	return nil
 }
 
@@ -523,7 +523,7 @@ func (ns *Netstack) GetExtendedRouteTable() []routes.ExtendedRoute {
 // given interface.
 func (ns *Netstack) UpdateRoutesByInterface(nicid tcpip.NICID, action routes.Action) {
 	ns.routeTable.UpdateRoutesByInterface(nicid, action)
-	ns.stack.SetRouteTable(ns.routeTable.GetNetstackTable())
+	ns.routeTable.UpdateStack(ns.stack)
 }
 
 func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
@@ -784,7 +784,7 @@ func (ifs *ifState) stateChangeLocked(name string, adminUp, linkOnline bool) boo
 				staticRouteAvoidingLifeCycleHooks,
 				true, /* enabled */
 			)
-			ifs.ns.stack.SetRouteTable(ifs.ns.routeTable.GetNetstackTable())
+			ifs.ns.routeTable.UpdateStack(ifs.ns.stack)
 		} else {
 			ifs.onDownLocked(name, false)
 		}

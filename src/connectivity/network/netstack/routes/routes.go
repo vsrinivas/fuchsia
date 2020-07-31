@@ -18,6 +18,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 type Action uint32
@@ -215,23 +216,19 @@ func (rt *RouteTable) GetExtendedRouteTable() ExtendedRouteTable {
 	return append([]ExtendedRoute(nil), rt.mu.routes...)
 }
 
-// GetNetstackTable returns the route table to be fed into the
-// gvisor.dev/gvisor/pkg lib. It contains all routes except for disabled
-// ones.
-func (rt *RouteTable) GetNetstackTable() []tcpip.Route {
+// UpdateStack updates stack with the current route table.
+func (rt *RouteTable) UpdateStack(stack *stack.Stack) {
 	rt.mu.Lock()
-	defer rt.mu.Unlock()
-
 	t := make([]tcpip.Route, 0, len(rt.mu.routes))
 	for _, er := range rt.mu.routes {
 		if er.Enabled {
 			t = append(t, er.Route)
 		}
 	}
+	stack.SetRouteTable(t)
+	rt.mu.Unlock()
 
-	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Netstack route table: %+v", t)
-
-	return t
+	_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "UpdateStack route table: %+v", t)
 }
 
 // UpdateMetricByInterface changes the metric for all routes that track a

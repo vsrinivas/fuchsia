@@ -320,7 +320,7 @@ func (ni *netstackImpl) SetInterfaceMetric(_ fidl.Context, nicid uint32, metric 
 	ifState.updateMetric(m)
 
 	ni.ns.routeTable.UpdateMetricByInterface(nic, m)
-	ni.ns.stack.SetRouteTable(ni.ns.routeTable.GetNetstackTable())
+	ni.ns.routeTable.UpdateStack(ni.ns.stack)
 	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 

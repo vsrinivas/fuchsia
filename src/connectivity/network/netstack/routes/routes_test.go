@@ -12,6 +12,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 var testRouteTable = routes.ExtendedRouteTable{
@@ -534,7 +535,9 @@ func TestGetNetstackTable(t *testing.T) {
 			var tb routes.RouteTable
 			tb.Set(testRouteTable)
 
-			tableGot := tb.GetNetstackTable()
+			var dummyStack stack.Stack
+			tb.UpdateStack(&dummyStack)
+			tableGot := dummyStack.GetRouteTable()
 
 			// Verify no disabled routes are in the Netstack table we got.
 			i := 0
