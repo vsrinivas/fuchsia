@@ -35,6 +35,7 @@ namespace {
 
 using nl::Weave::DeviceLayer::ConfigurationManager;
 using nl::Weave::DeviceLayer::ConfigurationManagerImpl;
+using nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
 using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
 
 // Below expected values are from testdata JSON files and should be
@@ -316,8 +317,7 @@ TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
   const std::string test_device_id_data("1234ABCD");
   uint64_t stored_weave_device_id = 0;
 
-  EXPECT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::FactoryResetConfig(),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
 
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_device_id_file, test_device_id_data));
@@ -340,8 +340,7 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
   uint8_t mfr_cert_buf[UINT16_MAX] = {0};
   size_t cert_len;
 
-  EXPECT_EQ(nl::Weave::DeviceLayer::Internal::EnvironmentConfig::FactoryResetConfig(),
-            WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
   auto fake_dir = std::make_unique<FakeDirectory>();
   EXPECT_EQ(ZX_OK, fake_dir->AddResource(test_mfr_cert_file, test_mfr_cert_data));
   fake_weave_factory_store_provider_.AttachDir(std::move(fake_dir));
@@ -362,6 +361,40 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
   EXPECT_EQ(cert_len, test_mfr_cert_data.size());
   EXPECT_TRUE(std::equal(mfr_cert_buf, mfr_cert_buf + std::min(cert_len, sizeof(mfr_cert_buf)),
                          test_mfr_cert_data.begin(), test_mfr_cert_data.end()));
+}
+
+TEST_F(ConfigurationManagerTest, CacheFlagsOnInit) {
+  constexpr uint64_t kFabricId = 0;
+  constexpr uint8_t kServiceConfig[] = {0};
+  constexpr char kAccountId[] = "account-id";
+
+  // Ensure that all service provisioning flags are off by default.
+  EXPECT_FALSE(ConfigurationMgr().IsServiceProvisioned());
+  EXPECT_FALSE(ConfigurationMgr().IsMemberOfFabric());
+  EXPECT_FALSE(ConfigurationMgr().IsPairedToAccount());
+
+  // Directly inject the service configuration data to the config. Don't use the
+  // APIs, which wouldn't be called on a fresh init.
+  EXPECT_EQ(EnvironmentConfig::FactoryResetConfig(), WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_FabricId, kFabricId),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::WriteConfigValueBin(EnvironmentConfig::kConfigKey_ServiceConfig,
+                                                   kServiceConfig, sizeof(kServiceConfig)),
+            WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::WriteConfigValueStr(EnvironmentConfig::kConfigKey_PairedAccountId,
+                                                   kAccountId, sizeof(kAccountId)),
+            WEAVE_NO_ERROR);
+
+  // Ensure that service provisioning flags are still off.
+  EXPECT_FALSE(ConfigurationMgr().IsServiceProvisioned());
+  EXPECT_FALSE(ConfigurationMgr().IsMemberOfFabric());
+  EXPECT_FALSE(ConfigurationMgr().IsPairedToAccount());
+
+  // Re-initialize the configuration manager and check that the flags are set.
+  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_TRUE(ConfigurationMgr().IsServiceProvisioned());
+  EXPECT_TRUE(ConfigurationMgr().IsMemberOfFabric());
+  EXPECT_TRUE(ConfigurationMgr().IsPairedToAccount());
 }
 
 }  // namespace testing

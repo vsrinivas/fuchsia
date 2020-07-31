@@ -72,6 +72,11 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
     return err;
   }
 
+  err = static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)->_Init();
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
+
   err = GetAndStoreHWInfo();
   if (err != WEAVE_NO_ERROR && err != WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return err;
