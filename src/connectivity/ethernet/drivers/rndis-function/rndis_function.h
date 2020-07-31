@@ -126,6 +126,7 @@ class RndisFunction : public RndisFunctionType,
   };
 
   struct {
+    usb_interface_assoc_descriptor_t assoc;
     usb_interface_descriptor_t communication_interface;
     usb_cs_header_interface_descriptor_t cdc_header;
     usb_cs_call_mgmt_interface_descriptor_t call_mgmt;
