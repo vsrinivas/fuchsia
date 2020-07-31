@@ -4,7 +4,6 @@
 
 #include "server.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/fifo.h>
 #include <string.h>
 #include <unistd.h>
@@ -18,6 +17,7 @@
 #include <new>
 #include <utility>
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
 #include <fbl/algorithm.h>
@@ -62,7 +62,7 @@ void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_
                                     ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate,
                                     ZX_TIME_INFINITE, &signals);
         if (status != ZX_OK) {
-          FX_LOGS(WARNING) << "(fifo) zx_object_wait_one failed: " << zx_status_get_string(status);
+          zxlogf(WARNING, "(fifo) zx_object_wait_one failed: %s", zx_status_get_string(status));
           return;
         }
         if (signals & kSignalFifoTerminate) {
@@ -72,7 +72,7 @@ void OutOfBandRespond(const fzl::fifo<block_fifo_response_t, block_fifo_request_
         break;
       }
       default:
-        FX_LOGS(WARNING) << "Fifo write failed: " << zx_status_get_string(status);
+        zxlogf(WARNING, "Fifo write failed: %s", zx_status_get_string(status));
         return;
     }
   }
@@ -310,7 +310,8 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   auto iobuf = tree_.find(request->vmoid);
   if (!iobuf.IsValid()) {
     // Operation which is not accessing a valid vmo.
-    FX_LOGS(WARNING) << "vmoid " << request->vmoid << " is not valid. Failing read/write request";
+    zxlogf(WARNING, "ProcessReadWriteRequest: vmoid %d is not valid, failing request",
+           request->vmoid);
     return ZX_ERR_IO;
   }
 
@@ -388,7 +389,8 @@ zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
   auto iobuf = tree_.find(request->vmoid);
   if (!iobuf.IsValid()) {
     // Operation which is not accessing a valid vmo
-    FX_LOGS(WARNING) << "vmoid " << request->vmoid << " is not valid. Failing close request";
+    zxlogf(WARNING, "ProcessCloseVmoRequest: vmoid %d is not valid, failing request",
+           request->vmoid);
     return ZX_ERR_IO;
   }
 
@@ -450,7 +452,7 @@ void Server::ProcessRequest(block_fifo_request_t* request) {
       TxnComplete(status, request->reqid, request->group);
       break;
     default:
-      FX_LOGS(WARNING) << "Unrecognized block server operation: " << request->opcode;
+      zxlogf(WARNING, "Unrecognized block server operation: %d", request->opcode);
       TxnComplete(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
   }
 }
@@ -478,7 +480,7 @@ zx_status_t Server::Serve() {
         groupid_t group = requests[i].group;
         if (group >= MAX_TXN_GROUP_COUNT) {
           // Operation which is not accessing a valid group.
-          FX_LOGS(WARNING) << "group " << group << " is not valid, failing request";
+          zxlogf(WARNING, "Serve: group %d is not valid, failing request", group);
           if (wants_reply) {
             OutOfBandRespond(fifo_, ZX_ERR_IO, reqid, group);
           }
@@ -488,8 +490,8 @@ zx_status_t Server::Serve() {
         // Enqueue the message against the transaction group.
         status = groups_[group].Enqueue(wants_reply, reqid);
         if (status != ZX_OK) {
-          FX_LOGS(WARNING) << "Enqueue for group " << group
-                           << "failed: " << zx_status_get_string(status);
+          zxlogf(WARNING, "Serve: Enqueue for group %d failed: %s", group,
+                 zx_status_get_string(status));
           TxnComplete(status, reqid, group);
           continue;
         }

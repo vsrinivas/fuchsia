@@ -4,7 +4,6 @@
 
 #include "txn-group.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -12,6 +11,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 TransactionGroup::TransactionGroup() : fifo_(ZX_HANDLE_INVALID), flags_(0), ctr_(0) {
@@ -31,13 +31,13 @@ zx_status_t TransactionGroup::Enqueue(bool do_respond, reqid_t reqid) {
   fbl::AutoLock lock(&lock_);
   if (flags_ & kTxnFlagRespond) {
     // Shouldn't get more than one response for a txn.
-    FX_LOGS(WARNING) << "Attempted to request second responses for transaction group";
+    zxlogf(WARNING, "Attempted to request second responses for transaction group");
     response_.status = ZX_ERR_IO;
     status = ZX_ERR_IO;
   } else if (response_.status != ZX_OK) {
     // This operation already failed; don't bother processing it.
-    FX_LOGS(WARNING) << "Attempted to enqueue already failed transaction group: "
-                     << zx_status_get_string(response_.status);
+    zxlogf(WARNING, "Attempted to enqueue already failed transaction group: %s",
+           zx_status_get_string(response_.status));
     status = ZX_ERR_IO;
   }
   ctr_++;
@@ -56,7 +56,7 @@ void TransactionGroup::CtrAdd(uint32_t n) {
 void TransactionGroup::Complete(zx_status_t status) {
   fbl::AutoLock lock(&lock_);
   if ((status != ZX_OK) && (response_.status == ZX_OK)) {
-    FX_LOGS(WARNING) << "Transaction completed with error status: " << status;
+    zxlogf(WARNING, "Transaction completed with error status: %s", zx_status_get_string(status));
     response_.status = status;
   }
 
@@ -67,7 +67,7 @@ void TransactionGroup::Complete(zx_status_t status) {
   if ((flags_ & kTxnFlagRespond) && (response_.count == ctr_)) {
     status = zx_fifo_write(fifo_, sizeof(response_), &response_, 1, nullptr);
     if (status != ZX_OK) {
-      fprintf(stderr, "Block Server I/O error: Could not write response\n");
+      zxlogf(ERROR, "Block Server I/O error: Could not write response");
     }
     response_.count = 0;
     response_.status = ZX_OK;
