@@ -12,7 +12,7 @@ group("tests") {
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",
     "//src/devices/block/drivers/ftl/test:ftl-package",
     "//src/devices/block/lib/scsi/test:scsilib-disk-test-package",
-    "//src/devices/nand/drivers/broker/test:nand-broker-package",
+    "//src/devices/nand/drivers/broker/test:nand-broker-package",  # HW-required.
     "//src/devices/rtc/lib/rtc/test:rtc-lib-package",
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",
@@ -21,8 +21,8 @@ group("tests") {
     "//src/lib/ddk/test:ddk-unittest-package",
     "//src/lib/ddktl/test:ddktl-unittest-package",
     "//src/lib/listnode:listnode-package",
-    "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",  # Requires intel-hda HW.
-    "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",  # Requires intel-hda HW.
+    "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",  # HW-required.
+    "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",  # HW-required.
     "//src/zircon/tests/entropy:entropy-package",
     "//src/zircon/tests/events:events-package",
     "//src/zircon/tests/exception:exception-package",
