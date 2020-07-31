@@ -1,0 +1,259 @@
+{
+  "configVersion": 2,
+  "packages": [
+    {
+      "name": "_discoveryapis_commons",
+      "rootUri": "../../../third_party/dart-pkg/pub/_discoveryapis_commons",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "_fe_analyzer_shared",
+      "rootUri": "../../../third_party/dart-pkg/pub/_fe_analyzer_shared",
+      "packageUri": "lib/",
+      "languageVersion": "2.2"
+    },
+    {
+      "name": "analyzer",
+      "rootUri": "../../../third_party/dart-pkg/pub/analyzer",
+      "packageUri": "lib/",
+      "languageVersion": "2.6"
+    },
+    {
+      "name": "args",
+      "rootUri": "../../../third_party/dart-pkg/pub/args",
+      "packageUri": "lib/",
+      "languageVersion": "2.3"
+    },
+    {
+      "name": "async",
+      "rootUri": "../../../third_party/dart-pkg/pub/async",
+      "packageUri": "lib/",
+      "languageVersion": "2.2"
+    },
+    {
+      "name": "boolean_selector",
+      "rootUri": "file:///usr/local/google/home/yifeit/.pub-cache/hosted/pub.dartlang.org/boolean_selector-2.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.4"
+    },
+    {
+      "name": "charcode",
+      "rootUri": "../../../third_party/dart-pkg/pub/charcode",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "cli_util",
+      "rootUri": "file:///usr/local/google/home/yifeit/.pub-cache/hosted/pub.dartlang.org/cli_util-0.1.4",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "collection",
+      "rootUri": "../../../third_party/dart-pkg/pub/collection",
+      "packageUri": "lib/",
+      "languageVersion": "2.9"
+    },
+    {
+      "name": "convert",
+      "rootUri": "../../../third_party/dart-pkg/pub/convert",
+      "packageUri": "lib/",
+      "languageVersion": "1.17"
+    },
+    {
+      "name": "coverage",
+      "rootUri": "file:///usr/local/google/home/yifeit/.pub-cache/hosted/pub.dartlang.org/coverage-0.14.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.7"
+    },
+    {
+      "name": "crypto",
+      "rootUri": "../../../third_party/dart-pkg/pub/crypto",
+      "packageUri": "lib/",
+      "languageVersion": "2.3"
+    },
+    {
+      "name": "csslib",
+      "rootUri": "../../../third_party/dart-pkg/pub/csslib",
+      "packageUri": "lib/",
+      "languageVersion": "2.1"
+    },
+    {
+      "name": "file",
+      "rootUri": "../../../third_party/dart-pkg/pub/file",
+      "packageUri": "lib/",
+      "languageVersion": "2.2"
+    },
+    {
+      "name": "fixnum",
+      "rootUri": "../../../third_party/dart-pkg/pub/fixnum",
+      "packageUri": "lib/",
+      "languageVersion": "2.1"
+    },
+    {
+      "name": "gcloud",
+      "rootUri": "../../../third_party/dart-pkg/pub/gcloud",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "glob",
+      "rootUri": "../../../third_party/dart-pkg/pub/glob",
+      "packageUri": "lib/",
+      "languageVersion": "2.1"
+    },
+    {
+      "name": "googleapis",
+      "rootUri": "../../../third_party/dart-pkg/pub/googleapis",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "googleapis_auth",
+      "rootUri": "../../../third_party/dart-pkg/pub/googleapis_auth",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "html",
+      "rootUri": "../../../third_party/dart-pkg/pub/html",
+      "packageUri": "lib/",
+      "languageVersion": "2.3"
+    },
+    {
+      "name": "http",
+      "rootUri": "../../../third_party/dart-pkg/pub/http",
+      "packageUri": "lib/",
+      "languageVersion": "2.4"
+    },
+    {
+      "name": "http_parser",
+      "rootUri": "../../../third_party/dart-pkg/pub/http_parser",
+      "packageUri": "lib/",
+      "languageVersion": "2.3"
+    },
+    {
+      "name": "io",
+      "rootUri": "../../../third_party/dart-pkg/pub/io",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "matcher",
+      "rootUri": "../../../third_party/dart-pkg/pub/matcher",
+      "packageUri": "lib/",
+      "languageVersion": "2.4"
+    },
+    {
+      "name": "meta",
+      "rootUri": "../../../third_party/dart-pkg/pub/meta",
+      "packageUri": "lib/",
+      "languageVersion": "2.9"
+    },
+    {
+      "name": "path",
+      "rootUri": "../../../third_party/dart-pkg/pub/path",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "pedantic",
+      "rootUri": "../../../third_party/dart-pkg/pub/pedantic",
+      "packageUri": "lib/",
+      "languageVersion": "2.1"
+    },
+    {
+      "name": "platform",
+      "rootUri": "../../../third_party/dart-pkg/pub/platform",
+      "packageUri": "lib/",
+      "languageVersion": "1.24"
+    },
+    {
+      "name": "pool",
+      "rootUri": "../../../third_party/dart-pkg/pub/pool",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "process",
+      "rootUri": "../../../third_party/dart-pkg/pub/process",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "protobuf",
+      "rootUri": "../../../third_party/dart-pkg/pub/protobuf",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "source_span",
+      "rootUri": "../../../third_party/dart-pkg/pub/source_span",
+      "packageUri": "lib/",
+      "languageVersion": "2.6"
+    },
+    {
+      "name": "stack_trace",
+      "rootUri": "../../../third_party/dart-pkg/pub/stack_trace",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "string_scanner",
+      "rootUri": "../../../third_party/dart-pkg/pub/string_scanner",
+      "packageUri": "lib/",
+      "languageVersion": "2.0"
+    },
+    {
+      "name": "term_glyph",
+      "rootUri": "../../../third_party/dart-pkg/pub/term_glyph",
+      "packageUri": "lib/",
+      "languageVersion": "1.8"
+    },
+    {
+      "name": "test",
+      "rootUri": "../../../third_party/dart-pkg/pub/test",
+      "packageUri": "lib/",
+      "languageVersion": "2.7"
+    },
+    {
+      "name": "test_api",
+      "rootUri": "../../../third_party/dart-pkg/pub/test_api",
+      "packageUri": "lib/",
+      "languageVersion": "2.7"
+    },
+    {
+      "name": "test_core",
+      "rootUri": "../../../third_party/dart-pkg/pub/test_core",
+      "packageUri": "lib/",
+      "languageVersion": "2.7"
+    },
+    {
+      "name": "typed_data",
+      "rootUri": "../../../third_party/dart-pkg/pub/typed_data",
+      "packageUri": "lib/",
+      "languageVersion": "2.9"
+    },
+    {
+      "name": "vm_service",
+      "rootUri": "../../../third_party/dart-pkg/pub/vm_service",
+      "packageUri": "lib/",
+      "languageVersion": "2.6"
+    },
+    {
+      "name": "watcher",
+      "rootUri": "../../../third_party/dart-pkg/pub/watcher",
+      "packageUri": "lib/",
+      "languageVersion": "2.2"
+    },
+    {
+      "name": "codesize",
+      "rootUri": "../",
+      "packageUri": "lib/"
+    }
+  ],
+  "generated": "2020-07-31T02:25:33.626903Z",
+  "generator": "pub",
+  "generatorVersion": "2.9.0-edge.06cb010247fb9163db673ba2fd0b338ad6caafb8"
+}

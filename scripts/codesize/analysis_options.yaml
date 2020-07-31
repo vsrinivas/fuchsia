@@ -2,12 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
-  deps = [
-    "blobstats:tests",
-    "codesize:tests",
-    "fxtest:tests",
-    "fxutils:tests",
-  ]
-}
+include: ../../topaz/tools/analysis_options.yaml
+
+analyzer:
+  errors:
+    todo: ignore
+    avoid_returning_this: ignore

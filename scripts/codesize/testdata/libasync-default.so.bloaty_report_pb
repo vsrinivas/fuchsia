@@ -1,0 +1,50 @@
+
+$
+‹5
+‹5
+[Unmapped]
+[Unmapped]
+*
+Ä
+Ä[ELF Headers][ELF Headers]
+C
+¸¸
+ÙÙ[LOAD #1 [R]]
+	g_default[LOAD #1 [R]]
+ä
+Œé&
+¡Åasync_get_default_dispatcher&
+ççasync_set_default_dispatcher0../../zircon/system/ulib/async-default/default.c
+:
+‡‡
+‡‡[section .dynamic][section .dynamic]
+4
+t
+t[section .shstrtab][section .shstrtab]
+4
+**
+**[section .dynstr][section .dynstr]
+8
+$$
+$$[section .gnu.hash][section .gnu.hash]
+8
+
+[section .eh_frame][section .eh_frame]
+4
+
+[section .dynsym][section .dynsym]
+J
+$
+[section .note.gnu.build-id][section .note.gnu.build-id]
+8
+
+[section .rela.dyn][section .rela.dyn]
+.
+
+[section .got][section .got]
+@
+
+[section .eh_frame_hdr][section .eh_frame_hdr]
+,
+
+[section .tbss][section .tbss]»G¿
