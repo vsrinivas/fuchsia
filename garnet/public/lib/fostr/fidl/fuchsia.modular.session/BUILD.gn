@@ -9,6 +9,7 @@ fostr_fidl("fuchsia.modular.session") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.io",
+    "//garnet/public/lib/fostr/fidl/fuchsia.sys",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.policy",
   ]
 }
