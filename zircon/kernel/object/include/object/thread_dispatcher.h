@@ -280,7 +280,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Support for sending an exception to an exception handler and then waiting for a response.
   // Exceptionates have internal locking so we don't need to guard it here.
   Exceptionate exceptionate_;
-  const zx_exception_report_t* exception_report_ TA_GUARDED(get_lock());
 
   // Non-null if the thread is currently processing a channel exception.
   fbl::RefPtr<ExceptionDispatcher> exception_ TA_GUARDED(get_lock());
