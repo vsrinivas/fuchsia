@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon_images.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
@@ -50,21 +49,15 @@ foreach(testpkg, test_packages) {
   }
 }
 
-zircon_extras_manifest("blobfs.manifest") {
-  visibility = [ ":*" ]
-  manifest = "image"
-  patterns = [ "bin/blobfs" ]
-}
-
-manifest_outputs = get_target_outputs(":blobfs.manifest")
-manifest_file = manifest_outputs[0]
-
 test_package("pmd_tests") {
-  deps = [ ":blobfs.manifest" ]
+  deps = [ "//src/storage/bin/blobfs" ]
+  binaries = [
+    {
+      name = "blobfs"
+    },
+  ]
+
   tests = []
-
-  extra = [ manifest_file ]
-
   foreach(testpkg, test_packages) {
     deps += [ ":pmd_${testpkg}_test" ]
     tests += [
