@@ -124,11 +124,10 @@ group("fatfs") {
   deps = [ ":fatfs-v0_4_0" ]
 }
 
-if (!is_fuchsia) {
-  group("flate2") {
-    deps = [ ":flate2-v1_0_14" ]
-  }
+group("flate2") {
+  deps = [ ":flate2-v1_0_14" ]
 }
+
 if (is_fuchsia) {
   group("freetype") {
     deps = [ ":freetype-v0_4_1" ]

@@ -43,6 +43,7 @@ crossbeam = "0.7.3"
 csv = "1.0.7"
 difference = "2.0.0"
 fatfs = "0.4.0"
+flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 futures = "0.3.5"
 futures-executor = "0.3.5"
 futures-io = "0.3.5"
@@ -187,7 +188,6 @@ webpki = "0.21"
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
 async-std = { version = "1.6.0", features = ["attributes"] }
-flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 handlebars = "2.0.0-beta.2"
 home = "0.5.3"
 indoc = "0.3.3"
