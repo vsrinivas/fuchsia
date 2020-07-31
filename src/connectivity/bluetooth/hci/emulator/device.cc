@@ -177,7 +177,7 @@ void Device::Unbind() {
   fake_device_ = nullptr;
   UnpublishHci();
 
-  device_async_remove(emulator_dev_);
+  device_unbind_reply(emulator_dev_);
   emulator_dev_ = nullptr;
 }
 
@@ -391,7 +391,7 @@ void Device::OnLegacyAdvertisingStateChanged() {
 
 void Device::UnpublishHci() {
   if (hci_dev_) {
-    device_remove_deprecated(hci_dev_);
+    device_async_remove(hci_dev_);
     hci_dev_ = nullptr;
   }
 }
