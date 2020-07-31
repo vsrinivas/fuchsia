@@ -310,6 +310,7 @@ impl Control {
                     // initialize to an impossible number
                     let mut last_value: i32 = -1;
                     loop {
+                        let current_sender_channel = current_sender_channel.clone();
                         let sensor = sensor.clone();
                         let mut value =
                             read_sensor_and_get_brightness(sensor, &spline, max_brightness).await;
@@ -319,9 +320,9 @@ impl Control {
                             value,
                             set_brightness_abort_handle.clone(),
                             backlight.clone(),
+                            current_sender_channel,
                         )
                         .await;
-                        current_sender_channel.lock().await.send_value(value);
                         let large_change =
                             (last_value as i32 - value as i32).abs() > LARGE_CHANGE_THRESHOLD_NITS;
                         last_value = value as i32;
@@ -345,9 +346,14 @@ impl Control {
             handle.abort();
         }
         self.auto_sender_channel.lock().await.send_value(false);
-        set_brightness(value, self.set_brightness_abort_handle.clone(), self.backlight.clone())
-            .await;
-        self.current_sender_channel.lock().await.send_value(value);
+        let current_sender_channel = self.current_sender_channel.clone();
+        set_brightness(
+            value,
+            self.set_brightness_abort_handle.clone(),
+            self.backlight.clone(),
+            current_sender_channel,
+        )
+        .await;
     }
 
     async fn set_manual_brightness_smooth(&mut self, value: f32, duration: i64) {
@@ -581,6 +587,7 @@ async fn set_brightness(
     value: f32,
     set_brightness_abort_handle: Arc<Mutex<Option<AbortHandle>>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
+    current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) {
     let value = num_traits::clamp(value, 0.0, 1.0);
     let current_value = get_current_brightness(backlight.clone()).await;
@@ -591,10 +598,11 @@ async fn set_brightness(
         }
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         let backlight = backlight.clone();
+        let current_sender_channel = current_sender_channel.clone();
         fasync::Task::spawn(
             Abortable::new(
                 async move {
-                    set_brightness_impl(value, backlight).await;
+                    set_brightness_impl(value, backlight, current_sender_channel).await;
                 },
                 abort_registration,
             )
@@ -605,7 +613,11 @@ async fn set_brightness(
     }
 }
 
-async fn set_brightness_impl(value: f32, backlight: Arc<Mutex<dyn BacklightControl>>) {
+async fn set_brightness_impl(
+    value: f32,
+    backlight: Arc<Mutex<dyn BacklightControl>>,
+    current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
+) {
     let current_value = get_current_brightness(backlight.clone()).await;
     let mut backlight = backlight.lock().await;
     let set_brightness = |value| {
@@ -613,11 +625,13 @@ async fn set_brightness_impl(value: f32, backlight: Arc<Mutex<dyn BacklightContr
             .set_brightness(value)
             .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
     };
+    let current_sender_channel = current_sender_channel.clone();
     set_brightness_slowly(
         current_value,
         value,
         set_brightness,
         *BRIGHTNESS_CHANGE_DURATION.lock().await,
+        current_sender_channel,
     )
     .await;
 }
@@ -631,19 +645,23 @@ async fn set_brightness_slowly(
     to_value: f32,
     mut set_brightness: impl FnMut(f64),
     duration: Duration,
+    current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) {
     let mut current_value = current_value;
     let to_value = num_traits::clamp(to_value, 0.0, 1.0);
     assert!(to_value <= 1.0);
     assert!(current_value <= 1.0);
+    let current_sender_channel = current_sender_channel.clone();
     let difference = to_value - current_value;
     let steps = (difference.abs() / BRIGHTNESS_STEP_SIZE) as u16;
     if steps > 0 {
         let time_per_step = cmp::min(duration / steps, MAX_BRIGHTNESS_STEP_TIME_MS.millis());
         let step_size = difference / steps as f32;
         for _i in 0..steps {
+            let current_sender_channel = current_sender_channel.clone();
             current_value = current_value + step_size;
             set_brightness(current_value as f64);
+            current_sender_channel.lock().await.send_value(current_value);
             if time_per_step.into_millis() > 0 {
                 fuchsia_async::Timer::new(time_per_step.after_now()).await;
             }
@@ -651,6 +669,7 @@ async fn set_brightness_slowly(
     }
     // Make sure we get to the correct value, there may be rounding errors
     set_brightness(to_value as f64);
+    current_sender_channel.lock().await.send_value(current_value);
     *LAST_SET_BRIGHTNESS.lock().await = to_value;
 }
 
@@ -953,12 +972,43 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_set_brightness_slowly_send_value() {
+        let control = generate_control_struct().await;
+        let (channel_sender, mut channel_receiver) = futures::channel::mpsc::unbounded::<f32>();
+        control.current_sender_channel.lock().await.add_sender_channel(channel_sender).await;
+        let set_brightness = |_| {};
+        set_brightness_slowly(0.4, 0.5, set_brightness, 0.millis(), control.current_sender_channel)
+            .await;
+
+        assert_eq!(cmp_float(0.4, channel_receiver.next().await.unwrap()), true);
+        assert_eq!(cmp_float(0.4, channel_receiver.next().await.unwrap()), true);
+        for _i in 0..13 {
+            channel_receiver.next().await;
+        }
+        assert_eq!(cmp_float(0.41, channel_receiver.next().await.unwrap()), true);
+        for _i in 0..4 {
+            channel_receiver.next().await;
+        }
+        assert_eq!(cmp_float(0.42, channel_receiver.next().await.unwrap()), true);
+        for _i in 0..19 {
+            channel_receiver.next().await;
+        }
+        assert_eq!(cmp_float(0.44, channel_receiver.next().await.unwrap()), true);
+        for _i in 0..58 {
+            channel_receiver.next().await;
+        }
+        assert_eq!(cmp_float(0.50, channel_receiver.next().await.unwrap()), true);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_in_range() {
+        let control = generate_control_struct().await;
         let mut result = Vec::new();
         let set_brightness = |nits| {
             result.push(nits as f32);
         };
-        set_brightness_slowly(0.4, 0.8, set_brightness, 0.millis()).await;
+        set_brightness_slowly(0.4, 0.8, set_brightness, 0.millis(), control.current_sender_channel)
+            .await;
         assert_eq!(401, result.len(), "wrong length");
         assert_eq!(cmp_float(0.4, result[0]), true);
         assert_eq!(cmp_float(0.4, result[1]), true);
@@ -976,11 +1026,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_min() {
+        let control = generate_control_struct().await;
         let mut result = Vec::new();
         let set_brightness = |nits| {
             result.push(nits as f32);
         };
-        set_brightness_slowly(0.4, 0.0, set_brightness, 0.millis()).await;
+        set_brightness_slowly(0.4, 0.0, set_brightness, 0.millis(), control.current_sender_channel)
+            .await;
         assert_eq!(401, result.len(), "wrong length");
         assert_eq!(cmp_float(0.39, result[0]), true);
         assert_eq!(cmp_float(0.39, result[1]), true);
@@ -998,11 +1050,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_max() {
+        let control = generate_control_struct().await;
         let mut result = Vec::new();
         let set_brightness = |nits| {
             result.push(nits as f32);
         };
-        set_brightness_slowly(0.9, 1.2, set_brightness, 0.millis()).await;
+        set_brightness_slowly(0.9, 1.2, set_brightness, 0.millis(), control.current_sender_channel)
+            .await;
         assert_eq!(101, result.len(), "wrong length");
         assert_eq!(cmp_float(0.90, result[0]), true);
         assert_eq!(cmp_float(0.90, result[1]), true);
@@ -1040,10 +1094,17 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_is_abortable_with_auto_brightness_on() {
+        let control = generate_control_struct().await;
         let set_brightness_abort_handle = Arc::new(Mutex::new(None::<AbortHandle>));
         let (_sensor, backlight) = set_mocks(0, 0.0);
         let backlight = backlight.clone();
-        set_brightness(0.04, set_brightness_abort_handle.clone(), backlight.clone()).await;
+        set_brightness(
+            0.04,
+            set_brightness_abort_handle.clone(),
+            backlight.clone(),
+            control.current_sender_channel,
+        )
+        .await;
         // Abort the task before it really gets going
         let mut set_brightness_abort_handle = set_brightness_abort_handle.lock().await;
         if let Some(handle) = set_brightness_abort_handle.take() {
@@ -1059,22 +1120,24 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_impl() {
+        let control = generate_control_struct().await;
         let (_sensor, backlight) = set_mocks(0, 0.0);
         let backlight_clone = backlight.clone();
-        set_brightness_impl(0.3, backlight_clone).await;
+        set_brightness_impl(0.3, backlight_clone, control.current_sender_channel).await;
         let backlight = backlight.lock().await;
         assert_eq!(cmp_float(0.3, backlight.get_brightness().await.unwrap() as f32), true);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_manager_fail_gracefully() {
+        let control = generate_control_struct().await;
         let (_sensor, backlight) = set_mocks_not_valid(0, 0.0);
         {
             let last_set_brightness = &*LAST_SET_BRIGHTNESS.lock().await;
             assert_eq!(cmp_float(*last_set_brightness, 1.0), true);
         }
         let backlight_clone = backlight.clone();
-        set_brightness_impl(0.04, backlight_clone).await;
+        set_brightness_impl(0.04, backlight_clone, control.current_sender_channel).await;
         let last_set_brightness = &*LAST_SET_BRIGHTNESS.lock().await;
         assert_eq!(cmp_float(*last_set_brightness, 0.04), true);
     }

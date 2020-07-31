@@ -29,7 +29,6 @@ mod control;
 mod sender_channel;
 mod sensor;
 
-const BRIGHTNESS_DELTA: f32 = 0.1;
 const ADJUSTMENT_DELTA: f32 = 0.1;
 
 async fn run_brightness_server(
@@ -45,12 +44,7 @@ async fn run_brightness_server(
     let (auto_channel_sender, auto_channel_receiver) = futures::channel::mpsc::unbounded::<bool>();
 
     let watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>> =
-        Arc::new(Mutex::new(WatchHandler::create_with_change_fn(
-            Box::new(move |old_data: &f32, new_data: &f32| {
-                (*new_data - *old_data).abs() >= BRIGHTNESS_DELTA
-            }),
-            initial_current,
-        )));
+        Arc::new(Mutex::new(WatchHandler::create(initial_current)));
     let (current_channel_sender, current_channel_receiver) =
         futures::channel::mpsc::unbounded::<f32>();
 
