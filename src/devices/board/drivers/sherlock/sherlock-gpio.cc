@@ -67,7 +67,7 @@ static const pbus_irq_t gpio_irqs[] = {
 };
 
 // GPIOs to expose from generic GPIO driver.
-#ifdef _FACTORY
+#ifdef FACTORY_BUILD
 #define GPIO_PIN_COUNT 120
 static const gpio_pin_t gpio_pins[] = {
     {T931_GPIOZ(0)},     {T931_GPIOZ(1)},     {T931_GPIOZ(2)},     {T931_GPIOZ(3)},
@@ -145,7 +145,7 @@ static const gpio_pin_t gpio_pins[] = {
     // Luis Audio
     {GPIO_AMP_24V_EN},
 };
-#endif
+#endif  // FACTORY_BUILD
 
 static const pbus_metadata_t gpio_metadata[] = {
     {

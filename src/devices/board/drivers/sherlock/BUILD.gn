@@ -5,7 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 
 config("factory") {
-  defines = [ "_FACTORY" ]
+  defines = [ "FACTORY_BUILD" ]
 }
 
 template("sherlock_driver") {
