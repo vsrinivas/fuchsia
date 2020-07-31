@@ -9,7 +9,7 @@ import("config/config.gni")
 # Example:
 #
 # ```
-#   cipd_package_definition("chromedriver") {
+#   fuchsia_cipd_package("chromedriver") {
 #     package = "path/to/cipd/package"
 #     description = "Prebuilt test binary."
 #     install_mode = "copy"
