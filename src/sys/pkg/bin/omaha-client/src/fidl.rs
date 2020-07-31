@@ -8,6 +8,7 @@ use crate::{
 };
 use anyhow::{Context as _, Error};
 use event_queue::{ClosedClient, ControlHandle, Event, EventQueue, Notify};
+use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
 use fidl_fuchsia_update::{
     self as update, CheckNotStartedReason, CheckingForUpdatesData, ErrorCheckingForUpdateData,
     Initiator, InstallationDeferredData, InstallationErrorData, InstallationProgress,
@@ -17,7 +18,11 @@ use fidl_fuchsia_update::{
 use fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream};
 use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
 use fuchsia_async as fasync;
-use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
+use fuchsia_component::{
+    client::connect_to_service,
+    server::{ServiceFs, ServiceObjLocal},
+};
+use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use omaha_client::{
@@ -313,9 +318,17 @@ where
             }
 
             ManagerRequest::PerformPendingReboot { responder } => {
-                // TODO(56514): implement this stub
                 info!("Received PerformPendingRebootRequest");
-                responder.send(false)?;
+                if server.borrow().state.manager_state == state_machine::State::WaitingForReboot {
+                    connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
+                        .reboot(RebootReason::SystemUpdate)
+                        .await?
+                        .map_err(zx::Status::from_raw)
+                        .context("reboot error")?;
+                    responder.send(true)?;
+                } else {
+                    responder.send(false)?;
+                }
             }
         }
         Ok(())
@@ -1095,5 +1108,24 @@ mod tests {
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
         let result = proxy.perform_pending_reboot().await.unwrap();
         assert_eq!(result, false);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_perform_pending_reboot_waiting_for_reboot() {
+        let fidl = FidlServerBuilder::new().build().await;
+        fidl.borrow_mut().state = State {
+            manager_state: state_machine::State::WaitingForReboot,
+            version_available: None,
+            install_progress: None,
+        };
+        let (proxy, stream) = create_proxy_and_stream::<ManagerMarker>().unwrap();
+        // It will fail because unit test can't access the Admin FIDL.
+        let _ = fasync::Task::local(async move {
+            assert_matches!(
+                FidlServer::handle_client(fidl, IncomingServices::Manager(stream)).await,
+                Err(_)
+            );
+        });
+        assert_matches!(proxy.perform_pending_reboot().await, Err(_));
     }
 }
