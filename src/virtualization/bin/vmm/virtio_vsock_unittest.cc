@@ -23,7 +23,7 @@ struct RxBuffer {
   // was returned.
   uint32_t used_bytes;
 
-  virtio_vsock_hdr_t header;
+  virtio_vsock_hdr_t header __ALIGNED(16);
   uint8_t data[kDataSize] __ALIGNED(16);
   uint8_t data2[kDataSize] __ALIGNED(16);
 };
