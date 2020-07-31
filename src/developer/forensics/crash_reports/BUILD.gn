@@ -134,6 +134,7 @@ source_set("crash_register") {
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
+    "//third_party/rapidjson",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
   ]
@@ -143,6 +144,7 @@ source_set("crash_register") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/utils/fidl:channel_provider_ptr",
+    "//src/lib/files",
   ]
 }
 

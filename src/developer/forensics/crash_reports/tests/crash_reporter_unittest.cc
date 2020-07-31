@@ -42,6 +42,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/timekeeper/test_clock.h"
 
@@ -129,8 +130,8 @@ class CrashReporterTest : public UnitTestFixture {
  public:
   void SetUp() override {
     info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
-    crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
-                                                      std::string(kBuildVersion));
+    crash_register_ = std::make_unique<CrashRegister>(
+        dispatcher(), services(), info_context_, std::string(kBuildVersion), RegisterJsonPath());
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProviderServer();
@@ -210,6 +211,8 @@ class CrashReporterTest : public UnitTestFixture {
     utc_provider_server_ = std::make_unique<stubs::UtcProvider>(dispatcher(), responses);
     InjectServiceProvider(utc_provider_server_.get());
   }
+
+  std::string RegisterJsonPath() { return files::JoinPath(tmp_dir_.path(), "register.json"); }
 
   // Checks that in the local Crashpad database there is:
   //   * only one set of attachments
@@ -427,6 +430,8 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
  private:
+  files::ScopedTempDir tmp_dir_;
+
   // Stubs and fake servers.
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;

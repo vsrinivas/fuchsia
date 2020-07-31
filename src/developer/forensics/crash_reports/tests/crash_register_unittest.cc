@@ -20,6 +20,9 @@
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
@@ -48,8 +51,7 @@ class CrashRegisterTest : public UnitTestFixture {
 
   void SetUp() override {
     info_context_ = std::make_shared<InfoContext>(&InspectRoot(), clock_, dispatcher(), services());
-    crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
-                                                      ErrorOr<std::string>(kBuildVersion));
+    MakeNewCrashRegister();
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     RunLoopUntilIdle();
@@ -84,9 +86,24 @@ class CrashRegisterTest : public UnitTestFixture {
     return product.take_value();
   }
 
+  std::string RegisterJsonPath() { return files::JoinPath(tmp_dir_.path(), "register.json"); }
+
+  std::string ReadRegisterJson() {
+    std::string json;
+    files::ReadFileToString(RegisterJsonPath(), &json);
+    return json;
+  }
+
+  void MakeNewCrashRegister() {
+    crash_register_ =
+        std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
+                                        ErrorOr<std::string>(kBuildVersion), RegisterJsonPath());
+  }
+
  private:
   async::Executor executor_;
   timekeeper::TestClock clock_;
+  files::ScopedTempDir tmp_dir_;
   std::shared_ptr<InfoContext> info_context_;
   std::unique_ptr<CrashRegister> crash_register_;
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
@@ -111,6 +128,13 @@ TEST_F(CrashRegisterTest, Upsert_Basic) {
                                                                StringIs("channel", "some channel"),
                                                            })))),
                                      })))))))));
+  EXPECT_EQ(ReadRegisterJson(), R"({
+    "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx": {
+        "name": "some name",
+        "version": "some version",
+        "channel": "some channel"
+    }
+})");
 }
 
 TEST_F(CrashRegisterTest, Upsert_NoInsertOnMissingProductName) {
@@ -121,6 +145,7 @@ TEST_F(CrashRegisterTest, Upsert_NoInsertOnMissingProductName) {
 
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Not(Contains(NodeMatches(NameMatches("crash_register"))))));
+  EXPECT_TRUE(ReadRegisterJson().empty());
 }
 
 TEST_F(CrashRegisterTest, Upsert_UpdateIfSameComponentUrl) {
@@ -142,7 +167,6 @@ TEST_F(CrashRegisterTest, Upsert_UpdateIfSameComponentUrl) {
                                                                StringIs("channel", "some channel"),
                                                            })))),
                                      })))))))));
-
   CrashReportingProduct another_product;
   another_product.set_name("some other name");
   another_product.set_version("some other version");
@@ -162,6 +186,13 @@ TEST_F(CrashRegisterTest, Upsert_UpdateIfSameComponentUrl) {
                                                       StringIs("channel", "some other channel"),
                                                   })))),
                             })))))))));
+  EXPECT_EQ(ReadRegisterJson(), R"({
+    "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx": {
+        "name": "some other name",
+        "version": "some other version",
+        "channel": "some other channel"
+    }
+})");
 }
 
 TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
@@ -173,6 +204,7 @@ TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
       .channel = std::string("some channel"),
   };
   EXPECT_THAT(GetProduct("some program name"), expected);
+  EXPECT_TRUE(ReadRegisterJson().empty());
 };
 
 TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelProvider) {
@@ -184,6 +216,7 @@ TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelProvider) {
       .channel = ErrorOr<std::string>(Error::kConnectionError),
   };
   EXPECT_THAT(GetProduct("some program name"), expected);
+  EXPECT_TRUE(ReadRegisterJson().empty());
 };
 
 TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
@@ -199,6 +232,13 @@ TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
       .channel = std::string("some channel"),
   };
   EXPECT_THAT(GetProduct(kComponentUrl), expected);
+  EXPECT_EQ(ReadRegisterJson(), R"({
+    "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx": {
+        "name": "some name",
+        "version": "some version",
+        "channel": "some channel"
+    }
+})");
 };
 
 TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
@@ -216,7 +256,52 @@ TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
       .channel = std::string("some channel"),
   };
   EXPECT_THAT(GetProduct("some program name"), expected);
+  EXPECT_EQ(ReadRegisterJson(), R"({
+    "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx": {
+        "name": "some name",
+        "version": "some version",
+        "channel": "some channel"
+    }
+})");
 };
+
+TEST_F(CrashRegisterTest, ReinitializesFromJson) {
+  constexpr char kOtherComponentUrl[] =
+      "fuchsia-pkg://fuchsia.com/my-other-pkg#meta/my-other-component.cmx";
+
+  CrashReportingProduct product;
+  product.set_name("some name");
+  product.set_version("some version");
+  product.set_channel("some channel");
+  Upsert(kComponentUrl, std::move(product));
+
+  CrashReportingProduct another_product;
+  another_product.set_name("some other name");
+  another_product.set_version("some other version");
+  another_product.set_channel("some other channel");
+  Upsert(kComponentUrl, std::move(another_product));
+
+  CrashReportingProduct yet_another_product;
+  yet_another_product.set_name("yet another name");
+  yet_another_product.set_version("yet another version");
+  Upsert(kOtherComponentUrl, std::move(yet_another_product));
+
+  MakeNewCrashRegister();
+  auto expected = Product{
+      .name = "some other name",
+      .version = std::string("some other version"),
+      .channel = std::string("some other channel"),
+  };
+  EXPECT_THAT(GetProduct(kComponentUrl), expected);
+
+  expected = Product{
+      .name = "yet another name",
+      .version = std::string("yet another version"),
+      .channel = ErrorOr<std::string>(Error::kMissingValue),
+
+  };
+  EXPECT_THAT(GetProduct(kOtherComponentUrl), expected);
+}
 
 }  // namespace
 }  // namespace crash_reports

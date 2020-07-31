@@ -19,6 +19,7 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
+#include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -28,7 +29,7 @@ class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
   explicit CrashRegister(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services,
                          std::shared_ptr<InfoContext> info_context,
-                         const ErrorOr<std::string>& build_version);
+                         const ErrorOr<std::string>& build_version, std::string register_filepath);
 
   // |fuchsia::feedback::CrashReportingProductRegister|
   void Upsert(std::string component_url, fuchsia::feedback::CrashReportingProduct product) override;
@@ -38,12 +39,18 @@ class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
   ::fit::promise<Product> GetProduct(const std::string& program_name, fit::Timeout timeout);
 
  private:
+  void RestoreFromJson();
+  void UpdateJson(const std::string& component_url, const Product& product);
+
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   CrashRegisterInfo info_;
   const ErrorOr<std::string> build_version_;
 
   std::map<std::string, Product> component_to_products_;
+
+  rapidjson::Document register_json_;
+  std::string register_filepath_;
 };
 
 }  // namespace crash_reports

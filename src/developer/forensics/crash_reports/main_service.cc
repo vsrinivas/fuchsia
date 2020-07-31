@@ -21,6 +21,7 @@ namespace {
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] = "/config/data/override_config.json";
+const char kCrashRegisterPath[] = "/tmp/crash_register.json";
 
 }  // namespace
 
@@ -78,8 +79,8 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
                                                     Config config) {
   const ErrorOr<std::string> build_version = ReadStringFromFile("/config/build-info/version");
 
-  std::unique_ptr<CrashRegister> crash_register =
-      std::make_unique<CrashRegister>(dispatcher, services, info_context, build_version);
+  std::unique_ptr<CrashRegister> crash_register = std::make_unique<CrashRegister>(
+      dispatcher, services, info_context, build_version, kCrashRegisterPath);
 
   auto crash_reporter = CrashReporter::TryCreate(dispatcher, services, clock, info_context, &config,
                                                  build_version, crash_register.get());
