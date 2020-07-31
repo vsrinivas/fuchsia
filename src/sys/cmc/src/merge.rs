@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    cm_json::{self, Error},
+    cm_json::{self, Error, Location},
     serde_json::{json, Value},
+    serde_json5,
     std::fs,
     std::io::{Read, Write},
     std::path::PathBuf,
@@ -27,13 +28,26 @@ pub fn merge(files: Vec<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> 
             Ok(value) => value,
             Err(_) => {
                 // If JSON parsing fails, try JSON5 parsing (which is slower)
-                cm_json::from_json5_str(&buffer)
-                    .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?
+                serde_json5::from_str(&buffer).map_err(|e| {
+                    let serde_json5::Error::Message { ref location, .. } = e;
+                    let location =
+                        location.as_ref().map(|l| Location { line: l.line, column: l.column });
+                    Error::parse(
+                        format!("Couldn't read input as JSON: {}", e),
+                        location,
+                        Some(filename.as_path()),
+                    )
+                })?
             }
         };
 
-        merge_json(&mut res, &v)
-            .map_err(|e| Error::parse(format!("Multiple manifests set the same key: {}", e)))?;
+        merge_json(&mut res, &v).map_err(|e| {
+            Error::parse(
+                format!("Multiple manifests set the same key: {}", e),
+                None,
+                Some(filename.as_path()),
+            )
+        })?;
     }
     if let Some(output_path) = output {
         fs::OpenOptions::new()

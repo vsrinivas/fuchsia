@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_json::Error;
+use cm_json::{Error, Location};
 use json5format;
 use json5format::{FormatOptions, PathOption};
 use maplit::hashmap;
@@ -11,7 +11,7 @@ use serde::ser::Serialize;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use std::fs;
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::from_utf8;
 
 /// For `.cml` JSON5 files, format the file to match the default style. (The "pretty" option is
@@ -37,9 +37,9 @@ pub fn format(
         .map_err(|e| Error::internal(format!("Unhandled file path: {:?}", e)))?;
 
     let res = if cml || file_path.ends_with(".cml") {
-        format_cml(buffer, Some(file_path))?
+        format_cml(buffer, file.as_path())?
     } else {
-        format_cmx(buffer, pretty)?
+        format_cmx(buffer, file.as_path(), pretty)?
     };
 
     if let Some(output_path) = output {
@@ -57,23 +57,38 @@ pub fn format(
     Ok(())
 }
 
-pub fn format_cmx(buffer: String, pretty: bool) -> Result<Vec<u8>, Error> {
-    let v: serde_json::Value = serde_json::from_str(&buffer)
-        .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
+pub fn format_cmx(buffer: String, file: &Path, pretty: bool) -> Result<Vec<u8>, Error> {
+    let v: serde_json::Value = serde_json::from_str(&buffer).map_err(|e| {
+        Error::parse(
+            format!("Couldn't read input as JSON: {}", e),
+            Some(Location { line: e.line(), column: e.column() }),
+            Some(file),
+        )
+    })?;
     let mut res = Vec::new();
     if pretty {
         let mut ser = Serializer::with_formatter(&mut res, PrettyFormatter::with_indent(b"    "));
-        v.serialize(&mut ser)
-            .map_err(|e| Error::parse(format!("Couldn't serialize JSON: {}", e)))?;
+        v.serialize(&mut ser).map_err(|e| {
+            Error::parse(
+                format!("Couldn't serialize JSON: {}", e),
+                Some(Location { line: e.line(), column: e.column() }),
+                Some(file),
+            )
+        })?;
     } else {
         let mut ser = Serializer::with_formatter(&mut res, CompactFormatter {});
-        v.serialize(&mut ser)
-            .map_err(|e| Error::parse(format!("Couldn't serialize JSON: {}", e)))?;
+        v.serialize(&mut ser).map_err(|e| {
+            Error::parse(
+                format!("Couldn't serialize JSON: {}", e),
+                Some(Location { line: e.line(), column: e.column() }),
+                Some(file),
+            )
+        })?;
     }
     Ok(res)
 }
 
-pub fn format_cml(buffer: String, filename: Option<String>) -> Result<Vec<u8>, Error> {
+pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
     let options = FormatOptions {
         collapse_containers_of_one: true,
         sort_array_items: true, // but use options_by_path to turn this off for program args
@@ -133,21 +148,29 @@ pub fn format_cml(buffer: String, filename: Option<String>) -> Result<Vec<u8>, E
         ..Default::default()
     };
 
-    json5format::format(&buffer, filename, Some(options)).map_err(|err| match err {
-        json5format::Error::Configuration(errstr) => Error::Internal(errstr),
-        json5format::Error::Parse(location, errstr) => match location {
-            Some(location) => Error::Parse { err: format!("{}: {}", location, errstr) },
-            None => Error::Parse { err: errstr },
+    json5format::format(&buffer, Some(file.to_string_lossy().into_owned()), Some(options)).map_err(
+        |err| match err {
+            json5format::Error::Configuration(errstr) => Error::Internal(errstr),
+            json5format::Error::Parse(location, errstr) => match location {
+                Some(location) => Error::parse(
+                    errstr,
+                    Some(Location { line: location.line, column: location.col }),
+                    Some(file),
+                ),
+                None => Error::parse(errstr, None, Some(file)),
+            },
+            json5format::Error::Internal(location, errstr) => match location {
+                Some(location) => Error::Internal(format!("{}: {}", location, errstr)),
+                None => Error::Internal(errstr),
+            },
+            json5format::Error::TestFailure(location, errstr) => match location {
+                Some(location) => {
+                    Error::Internal(format!("{}: Test failure: {}", location, errstr))
+                }
+                None => Error::Internal(format!("Test failure: {}", errstr)),
+            },
         },
-        json5format::Error::Internal(location, errstr) => match location {
-            Some(location) => Error::Internal(format!("{}: {}", location, errstr)),
-            None => Error::Internal(errstr),
-        },
-        json5format::Error::TestFailure(location, errstr) => match location {
-            Some(location) => Error::Internal(format!("{}: Test failure: {}", location, errstr)),
-            None => Error::Internal(format!("Test failure: {}", errstr)),
-        },
-    })
+    )
 }
 
 #[cfg(test)]

@@ -1109,6 +1109,7 @@ mod tests {
     use matches::assert_matches;
     use serde_json;
     use serde_json5;
+    use std::path::Path;
 
     // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
     // subtype.
@@ -1136,8 +1137,11 @@ mod tests {
     }
 
     fn parse_as_ref(input: &str) -> Result<OfferFromRef, Error> {
-        serde_json::from_value::<OfferFromRef>(cm_json::from_json_str(input)?)
-            .map_err(|e| Error::parse(format!("{}", e)))
+        serde_json::from_value::<OfferFromRef>(cm_json::from_json_str(
+            input,
+            &Path::new("test.cml"),
+        )?)
+        .map_err(|e| Error::parse(format!("{}", e), None, None))
     }
 
     #[test]
@@ -1167,8 +1171,7 @@ mod tests {
     }
 
     fn parse_rights_test(input: &str, expected: Right) {
-        let v = cm_json::from_json5_str(&format!("\"{}\"", input)).expect("invalid json");
-        let r: Right = serde_json::from_value(v).expect("invalid right");
+        let r: Right = serde_json5::from_str(&format!("\"{}\"", input)).expect("invalid json");
         assert_eq!(r, expected);
     }
 

@@ -4,7 +4,7 @@
 
 use {
     crate::{cml, one_or_many::OneOrMany},
-    cm_json::{self, Error, JsonSchema, CMX_SCHEMA},
+    cm_json::{self, Error, JsonSchema, Location, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
     lazy_static::lazy_static,
     serde_json::Value,
@@ -47,9 +47,12 @@ pub fn validate<P: AsRef<Path>>(
 }
 
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
-pub fn parse_cml(buffer: &str) -> Result<cml::Document, Error> {
-    let document: cml::Document =
-        serde_json5::from_str(buffer).map_err(|e| Error::parse(format!("{}", e)))?;
+pub fn parse_cml(buffer: &str, file: &Path) -> Result<cml::Document, Error> {
+    let document: cml::Document = serde_json5::from_str(buffer).map_err(|e| {
+        let serde_json5::Error::Message { location, msg } = e;
+        let location = location.map(|l| Location { line: l.line, column: l.column });
+        Error::parse(msg, location, Some(file))
+    })?;
     let mut ctx = ValidationContext {
         document: &document,
         all_children: HashMap::new(),
@@ -63,7 +66,11 @@ pub fn parse_cml(buffer: &str) -> Result<cml::Document, Error> {
         all_environment_names: HashSet::new(),
         all_event_names: HashSet::new(),
     };
-    ctx.validate()?;
+    let mut res = ctx.validate();
+    if let Err(Error::Validate { filename, .. }) = &mut res {
+        *filename = Some(file.to_string_lossy().into_owned());
+    }
+    res?;
     Ok(document)
 }
 
@@ -92,16 +99,19 @@ fn validate_file<P: AsRef<Path>>(
             for extra_schema in extra_schemas {
                 let schema = JsonSchema::new_from_file(&extra_schema.0.as_ref())?;
                 validate_json(&v, &schema).map_err(|e| match (&e, &extra_schema.1) {
-                    (Error::Validate { schema_name, err }, Some(extra_msg)) => Error::Validate {
-                        schema_name: schema_name.clone(),
-                        err: format!("{}\n{}", err, extra_msg),
-                    },
+                    (Error::Validate { schema_name, err, filename }, Some(extra_msg)) => {
+                        Error::Validate {
+                            schema_name: schema_name.clone(),
+                            err: format!("{}\n{}", err, extra_msg),
+                            filename: filename.clone(),
+                        }
+                    }
                     _ => e,
                 })?;
             }
         }
         Some("cml") => {
-            parse_cml(&buffer)?;
+            parse_cml(&buffer, file)?;
         }
         _ => {
             return Err(Error::invalid_args(BAD_EXTENSION));
@@ -1271,6 +1281,39 @@ mod tests {
         }"##;
         let result = write_and_validate("test.cml", input.as_bytes());
         assert_matches!(result, Ok(()));
+    }
+
+    #[test]
+    fn test_cml_error_location() {
+        let input = r##"{
+    "use": [
+        {
+            "protocol": "/svc/fuchsia.logger.Log",
+            "from": "self",
+        },
+    ],
+}"##;
+        let result = write_and_validate("test.cml", input.as_bytes());
+        assert_matches!(
+            result,
+            Err(Error::Parse { err, location: Some(l), filename: Some(f) })
+                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", or none" &&
+                l == Location { line: 5, column: 21 } &&
+                f.ends_with("/test.cml")
+        );
+
+        let input = r##"{
+    "use": [
+        { "event": "started" },
+    ],
+}"##;
+        let result = write_and_validate("test.cml", input.as_bytes());
+        assert_matches!(
+            result,
+            Err(Error::Validate { schema_name: None, err, filename: Some(f) })
+                if &err == "\"from\" should be present with \"event\"" &&
+                f.ends_with("/test.cml")
+        );
     }
 
     test_validate_cml! {
@@ -2507,7 +2550,8 @@ mod tests {
                 }),
             Err(Error::Validate {
                 schema_name: None,
-                err
+                err,
+                ..
             }) if &err ==
                 "Strong dependency cycles were found. Break the cycle by removing a \
                 dependency or marking an offer as weak. Cycles: \
@@ -3073,7 +3117,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err }) if &err ==
+            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
                 "'__stop_timeout_ms' must be provided if the environment does not extend \
                 another environment"
         ),
@@ -3380,7 +3424,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err }) if &err ==
+            Err(Error::Validate { schema_name: None, err, .. }) if &err ==
                 "Strong dependency cycles were found. Break the cycle by removing a dependency \
                 or marking an offer as weak. \
                 Cycles: {{child a -> child b -> environment my_env -> child a}}"
@@ -3841,7 +3885,7 @@ mod tests {
                     "unknown_field": {},
                 }
             ),
-            Err(Error::Parse { err }) if err.starts_with("unknown field `unknown_field`, expected one of ")
+            Err(Error::Parse { err, .. }) if err.starts_with("unknown field `unknown_field`, expected one of ")
         ),
     }
 

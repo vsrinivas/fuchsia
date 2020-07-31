@@ -5,7 +5,7 @@
 use crate::cml::{self, CapabilityClause};
 use crate::one_or_many::OneOrMany;
 use crate::validate;
-use cm_json::{cm, Error};
+use cm_json::{cm, Error, Location};
 use serde::ser::Serialize;
 use serde_json::{
     self,
@@ -39,19 +39,21 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
     }
 
     let mut buffer = String::new();
-    File::open(&file.as_path())?.read_to_string(&mut buffer)?;
-    let document = validate::parse_cml(&buffer)?;
+    File::open(file.as_path())?.read_to_string(&mut buffer)?;
+    let document = validate::parse_cml(&buffer, file.as_path())?;
     let out = compile_cml(document)?;
 
     let mut res = Vec::new();
     if pretty {
         let mut ser = Serializer::with_formatter(&mut res, PrettyFormatter::with_indent(b"    "));
-        out.serialize(&mut ser)
-            .map_err(|e| Error::parse(format!("Couldn't serialize JSON: {}", e)))?;
+        out.serialize(&mut ser).map_err(|e| {
+            Error::parse(format!("Couldn't serialize JSON: {}", e), None, Some(file.as_path()))
+        })?;
     } else {
         let mut ser = Serializer::with_formatter(&mut res, CompactFormatter {});
-        out.serialize(&mut ser)
-            .map_err(|e| Error::parse(format!("Couldn't serialize JSON: {}", e)))?;
+        out.serialize(&mut ser).map_err(|e| {
+            Error::parse(format!("Couldn't serialize JSON: {}", e), None, Some(file.as_path()))
+        })?;
     }
     if let Some(output_path) = output {
         fs::OpenOptions::new()
@@ -64,8 +66,13 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
         println!("{}", from_utf8(&res)?);
     }
     // Sanity check that output conforms to CM schema.
-    serde_json::from_slice::<cm::Document>(&res)
-        .map_err(|e| Error::parse(format!("Couldn't read output as JSON: {}", e)))?;
+    serde_json::from_slice::<cm::Document>(&res).map_err(|e| {
+        Error::parse(
+            format!("Couldn't read output as JSON: {}", e),
+            Some(Location { line: e.line(), column: e.column() }),
+            Some(file.as_path()),
+        )
+    })?;
     Ok(())
 }
 
@@ -98,7 +105,7 @@ pub fn translate_program(program: &Map<String, Value>) -> Result<Map<String, Val
                     }
                 }
                 _ => {
-                    return Err(Error::parse(format!(
+                    return Err(Error::validate(format!(
                         "Unexpected entry in lifecycle section: {}",
                         v
                     )));
