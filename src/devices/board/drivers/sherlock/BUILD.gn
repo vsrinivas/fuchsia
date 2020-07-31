@@ -32,6 +32,7 @@ template("sherlock_driver") {
       "sherlock-camera.cc",
       "sherlock-canvas.cc",
       "sherlock-clk.cc",
+      "sherlock-cpu.cc",
       "sherlock-display.cc",
       "sherlock-emmc.cc",
       "sherlock-gpio.cc",

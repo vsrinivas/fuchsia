@@ -11,6 +11,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+#include <optional>
 #include <variant>
 
 #include <ddktl/fidl.h>
@@ -61,7 +62,10 @@ class FidlMessenger {
 
   explicit FidlMessenger() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   explicit FidlMessenger(const async_loop_config_t* config) : loop_(config) {}
-  virtual ~FidlMessenger() { if (binding_) binding_->Unbind(); }
+  virtual ~FidlMessenger() {
+    if (binding_)
+      binding_->Unbind();
+  }
 
   // Local channel to send FIDL client messages
   zx::channel& local() { return local_; }
@@ -75,8 +79,13 @@ class FidlMessenger {
   }
 
   // Set handlers to be called when FIDL message is received
-  // Note: Message operation context |op_ctx| and |op| must outlive FidlMessenger
-  zx_status_t SetMessageOp(void* op_ctx, MessageOp* op);
+  // - Message operation context |op_ctx| and |op| must outlive FidlMessenger
+  // - If `remote` is empty, FidlHandler will create a new channel, storing the local endpoint in
+  //   `local` for the client to retrieve later and binding the remote endpoint to the server.
+  //   Otherwise, the endpoint in `remote` will be bound to the server, and FidlHandler will
+  //   assume the client has retained the local endpoint.
+  zx_status_t SetMessageOp(void* op_ctx, MessageOp* op,
+                           std::optional<zx::channel> remote = std::nullopt);
 
  private:
   MessageOp* message_op_ = nullptr;

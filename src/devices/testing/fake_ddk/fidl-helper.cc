@@ -68,9 +68,9 @@ bool FidlMessenger::Dispatch(fidl_msg_t* msg, ::fidl::Transaction* txn) {
   return found;
 }
 
-zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op) {
+zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op,
+                                        std::optional<zx::channel> optional_remote) {
   zx_status_t status;
-  zx::channel remote;
 
   if (message_op_) {
     // Message op was already set
@@ -78,8 +78,16 @@ zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op) {
   }
   message_op_ = op;
   op_ctx_ = op_ctx;
-  if ((status = zx::channel::create(0, &local_, &remote)) < 0) {
-    return status;
+
+  // If the caller provided a remote endpoint, we use it below and assume they kept the local
+  // endpoint. Otherwise, create a new channel and store the local endpoint.
+  zx::channel remote;
+  if (optional_remote) {
+    remote = std::move(optional_remote.value());
+  } else {
+    if ((status = zx::channel::create(0, &local_, &remote)) < 0) {
+      return status;
+    }
   }
 
   if ((status = loop_.StartThread("fake_ddk_fidl")) < 0) {

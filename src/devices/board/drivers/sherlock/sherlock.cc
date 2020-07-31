@@ -91,6 +91,10 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "I2cInit() failed");
   }
 
+  if (CpuInit() != ZX_OK) {
+    zxlogf(ERROR, "CpuInit() failed\n");
+  }
+
   if (SpiInit() != ZX_OK) {
     zxlogf(ERROR, "SpiInit() failed");
   }
@@ -179,7 +183,7 @@ int Sherlock::Thread() {
   }
 
   if (SecureMemInit() != ZX_OK) {
-    zxlogf(ERROR, "SecureMemInit failed");
+    zxlogf(ERROR, "SecureMbemInit failed");
   }
 
   if (BacklightInit() != ZX_OK) {

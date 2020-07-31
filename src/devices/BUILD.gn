@@ -21,6 +21,7 @@ group("tests") {
     "block:tests",
     "bus:tests",
     "clock:tests",
+    "cpu:tests",
     "gpio:tests",
     "i2c:tests",
     "lib:tests",

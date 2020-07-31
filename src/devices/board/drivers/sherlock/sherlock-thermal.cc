@@ -135,7 +135,7 @@ fuchsia_hardware_thermal_ThermalDeviceInfo aml_sherlock_config =
                                 [10] = {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
                             },
                         .latency = 0,
-                        .count = 11,
+                        .count = 10,
                     },
                 [fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN] =
                     {
