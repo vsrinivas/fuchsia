@@ -32,6 +32,28 @@ std::string GetNullTerminatedStringAt(const uint8_t* data, size_t data_length, s
   return std::string(start);
 }
 
+// This method enables the user to deserialize from a raw pointer (void or char*
+// or similar) into a data structure, even if the raw pointer may be to an
+// unaligned data structure.  Unaligned access is undefined in C++.  This
+// happens frequently with the deserialized ELF libs.
+template <typename Dest, typename Source>
+inline Dest bit_cast(const Source& source) {
+  Dest dest;
+  memcpy(static_cast<void*>(std::addressof(dest)), static_cast<const void*>(std::addressof(source)),
+         sizeof(dest));
+  return dest;
+}
+
+// This method enables the user to deserialize from a pointer into a
+// deserialized buffer, if the pointer might be unaligned.  Unaligned access is
+// undefined in C++.  This happens frequently with the deserialized ELF libs.
+template <typename T>
+inline T safe_copy(const T* source) {
+  const char* raw_ptr = reinterpret_cast<const char*>(source);
+  T copy = bit_cast<T, const char>(*raw_ptr);
+  return copy;
+}
+
 // Given a name, a symbol table (sized array of Elf64_Sym), and an accessor for
 // a corresponding string table, find the symbol with the given name.
 const Elf64_Sym* GetSymbolFromTable(
@@ -45,7 +67,8 @@ const Elf64_Sym* GetSymbolFromTable(
   const Elf64_Sym* end = symtab.first + symtab.second;
 
   for (auto symbol = symbols; symbol <= end; symbol++) {
-    auto got_name = get_string(symbol->st_name);
+    Elf64_Sym s = safe_copy<Elf64_Sym>(symbol);
+    auto got_name = get_string(s.st_name);
 
     if (got_name && *got_name == name) {
       return symbol;
@@ -66,8 +89,9 @@ std::optional<std::map<std::string, Elf64_Sym>> SymtabToMap(
   const Elf64_Sym* symbols = symtab_ptr;
   const Elf64_Sym* end = symtab_ptr + symtab_size;
   for (auto symbol = symbols; symbol != end; symbol++) {
-    auto sym_name = GetNullTerminatedStringAt(strtab.ptr, strtab.size, symbol->st_name);
-    out[sym_name] = *symbol;
+    Elf64_Sym s = safe_copy<Elf64_Sym>(symbol);
+    auto sym_name = GetNullTerminatedStringAt(strtab.ptr, strtab.size, s.st_name);
+    out[sym_name] = s;
   }
 
   return out;
@@ -400,27 +424,27 @@ std::optional<std::vector<uint8_t>> ElfLib::GetNote(const std::string& name, uin
 
     auto data = GetSegmentData(idx);
 
-    const Elf64_Nhdr* header;
+    Elf64_Nhdr header;
     size_t namesz_padded;
     size_t descsz_padded;
 
     for (const uint8_t* pos = data.ptr; pos < data.ptr + data.size;
          pos += sizeof(Elf64_Nhdr) + namesz_padded + descsz_padded) {
-      header = reinterpret_cast<const Elf64_Nhdr*>(pos);
-      namesz_padded = (header->n_namesz + 3) & ~3UL;
-      descsz_padded = (header->n_descsz + 3) & ~3UL;
+      header = bit_cast<Elf64_Nhdr, const uint8_t>(*pos);
+      namesz_padded = (header.n_namesz + 3) & ~3UL;
+      descsz_padded = (header.n_descsz + 3) & ~3UL;
 
-      if (header->n_type != type) {
+      if (header.n_type != type) {
         continue;
       }
 
       auto name_data = pos + sizeof(Elf64_Nhdr);
-      std::string entry_name(reinterpret_cast<const char*>(name_data), header->n_namesz - 1);
+      std::string entry_name(reinterpret_cast<const char*>(name_data), header.n_namesz - 1);
 
       if (entry_name == name) {
         auto desc_data = name_data + namesz_padded;
 
-        return std::vector(desc_data, desc_data + header->n_descsz);
+        return std::vector(desc_data, desc_data + header.n_descsz);
       }
     }
   }
