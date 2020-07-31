@@ -8,6 +8,7 @@ use {
     crate::config::Config,
     crate::constants::ENV_FILE,
     crate::environment::Environment,
+    crate::file_flatten_env_var::file_flatten_env_var,
     crate::flatten_env_var::flatten_env_var,
     anyhow::{bail, Context, Result},
     ffx_config_plugin_args::ConfigLevel,
@@ -23,20 +24,13 @@ pub mod constants;
 mod env_var;
 pub mod environment;
 mod file_backed_config;
+mod file_flatten_env_var;
 mod flatten_env_var;
-mod heuristic_config;
-mod heuristic_fns;
 mod persistent_config;
 mod priority_config;
 mod runtime_config;
 
 pub use config_macros::{ffx_cmd, ffx_env, get, print, remove, set};
-
-#[cfg(target_os = "linux")]
-mod linux;
-
-#[cfg(not(target_os = "linux"))]
-mod not_linux;
 
 pub async fn get_config(name: &str, ffx: Ffx, env: Result<String>) -> Result<Option<Value>> {
     get_config_with_build_dir(name, &None, ffx, env, identity).await
@@ -68,8 +62,27 @@ pub async fn try_get_config_str(
 ) -> Result<Option<String>> {
     Ok(get_config_with_build_dir(name, &None, ffx, env, flatten_env_var)
         .await?
-        .map(|v| v.as_str().map(|s| s.to_string()))
-        .flatten())
+        .and_then(|v| v.as_str().map(|s| s.to_string())))
+}
+
+pub async fn try_get_config_file(
+    name: &str,
+    ffx: Ffx,
+    env: Result<String>,
+) -> Result<Option<PathBuf>> {
+    Ok(get_config_with_build_dir(name, &None, ffx, env, file_flatten_env_var)
+        .await?
+        .and_then(|v| v.as_str().map(|s| PathBuf::from(s.to_string()))))
+}
+
+pub async fn try_get_config_file_str(
+    name: &str,
+    ffx: Ffx,
+    env: Result<String>,
+) -> Result<Option<String>> {
+    Ok(get_config_with_build_dir(name, &None, ffx, env, file_flatten_env_var)
+        .await?
+        .and_then(|v| v.as_str().map(|s| s.to_string())))
 }
 
 pub async fn get_config_bool(name: &str, default: bool, ffx: Ffx, env: Result<String>) -> bool {
@@ -82,6 +95,16 @@ pub async fn get_config_bool(name: &str, default: bool, ffx: Ffx, env: Result<St
                 _ => default,
             })
         })
+}
+
+pub async fn try_get_config_number(
+    name: &str,
+    ffx: Ffx,
+    env: Result<String>,
+) -> Result<Option<u64>> {
+    Ok(get_config_with_build_dir(name, &None, ffx, env, flatten_env_var)
+        .await?
+        .and_then(|v| v.as_u64()))
 }
 
 pub async fn set_config(
@@ -165,7 +188,7 @@ pub fn find_env_file() -> Result<String> {
 }
 
 pub fn save_config(
-    config: &mut Config<'_>,
+    config: &mut Config,
     build_dir: &Option<String>,
     env_file: Result<String>,
 ) -> Result<()> {

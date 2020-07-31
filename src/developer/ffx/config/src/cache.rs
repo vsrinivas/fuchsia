@@ -6,7 +6,6 @@ use {
     crate::config::Config,
     crate::constants::CONFIG_CACHE_TIMEOUT,
     crate::environment::Environment,
-    crate::heuristic_config::HeuristicFn,
     anyhow::{anyhow, Result},
     async_std::sync::{Arc, RwLock},
     ffx_lib_args::Ffx,
@@ -14,25 +13,18 @@ use {
     std::time::Instant,
 };
 
-#[cfg(target_os = "linux")]
-use crate::linux::imp::heuristics;
-
-#[cfg(not(target_os = "linux"))]
-use crate::not_linux::imp::heuristics;
-
-struct CacheItem<'a> {
+struct CacheItem {
     created: Instant,
-    config: Arc<RwLock<Config<'a>>>,
+    config: Arc<RwLock<Config>>,
 }
 
-type Cache = RwLock<HashMap<Option<String>, CacheItem<'static>>>;
+type Cache = RwLock<HashMap<Option<String>, CacheItem>>;
 
 lazy_static::lazy_static! {
-    static ref HEURISTICS: HashMap<&'static str, HeuristicFn> = heuristics();
     static ref CACHE: Cache = RwLock::new(HashMap::new());
 }
 
-fn is_cache_item_expired(item: &CacheItem<'static>, now: Instant) -> bool {
+fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {
     now.checked_duration_since(item.created).map_or(false, |t| t > CONFIG_CACHE_TIMEOUT)
 }
 
@@ -40,7 +32,7 @@ async fn read_cache(
     build_dir: &Option<String>,
     now: Instant,
     cache: &Cache,
-) -> Option<Arc<RwLock<Config<'static>>>> {
+) -> Option<Arc<RwLock<Config>>> {
     let read_guard = cache.read().await;
     (*read_guard)
         .get(build_dir)
@@ -52,7 +44,7 @@ pub(crate) async fn load_config(
     build_dir: &Option<String>,
     ffx: Ffx,
     env: &Result<String>,
-) -> Result<Arc<RwLock<Config<'static>>>> {
+) -> Result<Arc<RwLock<Config>>> {
     load_config_with_instant(build_dir, Instant::now(), &CACHE, ffx, env).await
 }
 
@@ -62,7 +54,7 @@ async fn load_config_with_instant(
     cache: &Cache,
     ffx: Ffx,
     env: &Result<String>,
-) -> Result<Arc<RwLock<Config<'static>>>> {
+) -> Result<Arc<RwLock<Config>>> {
     let cache_hit = read_cache(build_dir, now, cache).await;
     match cache_hit {
         Some(h) => Ok(h),
@@ -81,7 +73,6 @@ async fn load_config_with_instant(
                             config: Arc::new(RwLock::new(Config::new(
                                 &Environment::try_load(env.as_ref().ok()),
                                 build_dir,
-                                &HEURISTICS,
                                 ffx,
                             )?)),
                         },
@@ -199,7 +190,6 @@ mod test {
             config: Arc::new(RwLock::new(Config::new(
                 &Environment::try_load(env().as_ref().ok()),
                 &build_dirs[0],
-                &HEURISTICS,
                 Default::default(),
             )?)),
         };

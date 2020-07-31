@@ -35,6 +35,7 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:tempfile",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
 
@@ -48,12 +49,9 @@ if (host_toolchain == current_toolchain) {
       "src/env_var.rs",
       "src/environment.rs",
       "src/file_backed_config.rs",
+      "src/file_flatten_env_var.rs",
       "src/flatten_env_var.rs",
-      "src/heuristic_config.rs",
-      "src/heuristic_fns.rs",
       "src/lib.rs",
-      "src/linux.rs",
-      "src/not_linux.rs",
       "src/persistent_config.rs",
       "src/priority_config.rs",
       "src/runtime_config.rs",

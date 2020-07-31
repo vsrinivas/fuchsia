@@ -27,17 +27,17 @@ pub async fn build_ssh_command(
         return Err(anyhow!("missing SSH command"));
     }
 
-    let port = get!(str, SSH_PORT, "").await;
-    let key = get!(str, SSH_PRIV, "").await;
+    let port = get!(str, SSH_PORT).await?;
+    let key = get!(file_str, SSH_PRIV).await?;
 
     let mut c = Command::new("ssh");
 
-    if port.len() > 0 {
-        c.arg("-p").arg(port);
+    if let Some(p) = port {
+        c.arg("-p").arg(p);
     }
 
-    if key.len() > 0 {
-        c.arg("-i").arg(key);
+    if let Some(k) = key {
+        c.arg("-i").arg(k);
     }
 
     let addr = addrs.iter().next().ok_or(anyhow!("no IP's for chosen target"))?;

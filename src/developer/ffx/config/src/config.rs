@@ -6,31 +6,28 @@ use {
     crate::api::{PersistentConfig, ReadConfig, WriteConfig},
     crate::environment::Environment,
     crate::file_backed_config::FileBacked,
-    crate::heuristic_config::{Heuristic, HeuristicFn},
     crate::runtime_config::Runtime,
     anyhow::{anyhow, Result},
     ffx_config_plugin_args::ConfigLevel,
     ffx_lib_args::Ffx,
     serde_json::Value,
-    std::{collections::HashMap, fmt},
+    std::fmt,
 };
 
-pub struct Config<'a> {
+pub struct Config {
     data: Option<FileBacked>,
-    heuristics: Heuristic<'a>,
     runtime: Runtime,
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum ConfigOrder {
-    Heuristics,
     Persistent,
     Runtime,
 }
 
 struct ReadConfigIterator<'a> {
     curr: Option<ConfigOrder>,
-    config: &'a Config<'a>,
+    config: &'a Config,
 }
 
 impl<'a> Iterator for ReadConfigIterator<'a> {
@@ -39,9 +36,7 @@ impl<'a> Iterator for ReadConfigIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         // Check for configuration in this order:
         // 1. Runtime Configuration (set by the command line)
-        // 2. Environment Variables
-        // 3. Configuration Files
-        // 4. Heuristics (Methods that can guess from the environment)
+        // 2. Configuration Files
         match &self.curr {
             None => {
                 self.curr = Some(ConfigOrder::Runtime);
@@ -53,48 +48,28 @@ impl<'a> Iterator for ReadConfigIterator<'a> {
                         self.curr = Some(ConfigOrder::Persistent);
                         Some(Box::new(c))
                     }
-                    None => {
-                        self.curr = Some(ConfigOrder::Heuristics);
-                        Some(Box::new(&self.config.heuristics))
-                    }
+                    None => None,
                 },
-                ConfigOrder::Persistent => {
-                    self.curr = Some(ConfigOrder::Heuristics);
-                    Some(Box::new(&self.config.heuristics))
-                }
-                ConfigOrder::Heuristics => None,
+                ConfigOrder::Persistent => None,
             },
         }
     }
 }
 
-impl<'a> Config<'a> {
-    pub fn new(
-        env: &Environment,
-        build_dir: &Option<String>,
-        heuristics: &'a HashMap<&'static str, HeuristicFn>,
-        runtime: Ffx,
-    ) -> Result<Self> {
+impl Config {
+    pub fn new(env: &Environment, build_dir: &Option<String>, runtime: Ffx) -> Result<Self> {
         Ok(Self {
             data: Some(Config::load_persistent_config(env, build_dir)?),
-            heuristics: Heuristic::new(heuristics),
             runtime: Runtime::new(runtime),
         })
     }
 
     #[cfg(test)]
-    fn new_without_perisist_config(
-        heuristics: &'a HashMap<&'static str, HeuristicFn>,
-        runtime: Ffx,
-    ) -> Result<Self> {
-        Ok(Self {
-            data: None,
-            heuristics: Heuristic::new(heuristics),
-            runtime: Runtime::new(runtime),
-        })
+    fn new_without_perisist_config(runtime: Ffx) -> Result<Self> {
+        Ok(Self { data: None, runtime: Runtime::new(runtime) })
     }
 
-    fn iter(&'a self) -> ReadConfigIterator<'a> {
+    fn iter(&self) -> ReadConfigIterator<'_> {
         ReadConfigIterator { curr: None, config: self }
     }
 
@@ -108,7 +83,7 @@ impl<'a> Config<'a> {
     }
 }
 
-impl<'a> fmt::Display for Config<'a> {
+impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
@@ -125,7 +100,7 @@ impl<'a> fmt::Display for Config<'a> {
     }
 }
 
-impl<'a> PersistentConfig for Config<'a> {
+impl PersistentConfig for Config {
     fn save(
         &self,
         global: &Option<String>,
@@ -139,13 +114,13 @@ impl<'a> PersistentConfig for Config<'a> {
     }
 }
 
-impl<'a> ReadConfig for Config<'a> {
+impl ReadConfig for Config {
     fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
         self.iter().find_map(|c| c.get(key, mapper))
     }
 }
 
-impl<'a> WriteConfig for Config<'a> {
+impl WriteConfig for Config {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
         self.data
             .as_mut()
@@ -171,34 +146,8 @@ mod test {
     use std::convert::identity;
     use std::default::Default;
 
-    fn test_heuristic(key: &str) -> Option<Value> {
-        Some(Value::String(key.to_string()))
-    }
-
     fn test_cli_params(test: &str) -> Ffx {
         Ffx { config: Some(test.to_string()), ..Default::default() }
-    }
-
-    #[test]
-    fn test_config_heuristics() -> Result<()> {
-        let (heuristic_key, heuristic_key_2) = ("test", "test_2");
-        let mut heuristics = HashMap::<&str, HeuristicFn>::new();
-        heuristics.insert(heuristic_key, test_heuristic);
-        heuristics.insert(heuristic_key_2, test_heuristic);
-
-        let config = Config::new_without_perisist_config(&heuristics, test_cli_params(""))?;
-
-        let missing_key = "whatever";
-        assert_eq!(None, config.get(missing_key, identity));
-        assert_eq!(
-            Some(Value::String(heuristic_key.to_string())),
-            config.get(heuristic_key, identity)
-        );
-        assert_eq!(
-            Some(Value::String(heuristic_key_2.to_string())),
-            config.get(heuristic_key_2, identity)
-        );
-        Ok(())
     }
 
     #[test]
@@ -206,68 +155,28 @@ mod test {
         let (key_1, value_1) = ("test 1", "test 2");
         let (key_2, value_2) = ("test 3", "test 4");
 
-        let heuristics = HashMap::new();
-
-        let config = Config::new_without_perisist_config(
-            &heuristics,
-            test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
-        )?;
+        let config = Config::new_without_perisist_config(test_cli_params(&format!(
+            "{}={}, {}={}",
+            key_1, value_1, key_2, value_2
+        )))?;
 
         let missing_key = "whatever";
         assert_eq!(None, config.get(missing_key, identity));
         assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1, identity));
         assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2, identity));
-        Ok(())
-    }
-
-    #[test]
-    fn test_config_all() -> Result<()> {
-        let (heuristic_key, heuristic_key_2) = ("test", "test_2");
-        let mut heuristics = HashMap::<&str, HeuristicFn>::new();
-        heuristics.insert(heuristic_key, test_heuristic);
-        heuristics.insert(heuristic_key_2, test_heuristic);
-
-        let (key_1, value_1) = ("test_1", "test_1_runtime");
-        let (key_2, value_2) = ("test_2", "test_2_runtime");
-        let config = Config::new_without_perisist_config(
-            &heuristics,
-            test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
-        )?;
-
-        let missing_key = "whatever";
-        assert_eq!(None, config.get(missing_key, identity));
-        assert_eq!(Some(Value::String(value_1.to_string())), config.get(key_1, identity));
-        assert_eq!(Some(Value::String(value_2.to_string())), config.get(key_2, identity));
-        assert_eq!(
-            Some(Value::String(heuristic_key.to_string())),
-            config.get(heuristic_key, identity)
-        );
-        assert_eq!(Some(Value::String(value_2.to_string())), config.get(heuristic_key_2, identity));
-
         Ok(())
     }
 
     #[test]
     fn test_config_display() -> Result<()> {
-        let (heuristic_key, heuristic_key_2) = ("h_test", "h_test_2");
-        let mut heuristics = HashMap::<&str, HeuristicFn>::new();
-        heuristics.insert(heuristic_key, test_heuristic);
-        heuristics.insert(heuristic_key_2, test_heuristic);
-
         let (key_1, value_1) = ("run_test_1", "test_1_runtime");
         let (key_2, value_2) = ("run_test_2", "test_2_runtime");
-        let config = Config::new_without_perisist_config(
-            &heuristics,
-            test_cli_params(&format!("{}={}, {}={}", key_1, value_1, key_2, value_2)),
-        )?;
+        let config = Config::new_without_perisist_config(test_cli_params(&format!(
+            "{}={}, {}={}",
+            key_1, value_1, key_2, value_2
+        )))?;
 
         let output = format!("{}", config);
-        let h_test_1 = format!("\"{}\" = \"{}\"", heuristic_key, heuristic_key);
-        let h_reg_1 = Regex::new(&h_test_1).expect("test regex");
-        assert_eq!(1, h_reg_1.find_iter(&output).count(), "{}", output);
-        let h_test_2 = format!("\"{}\" = \"{}\"", heuristic_key_2, heuristic_key_2);
-        let h_reg_2 = Regex::new(&h_test_2).expect("test regex");
-        assert_eq!(1, h_reg_2.find_iter(&output).count());
 
         // Test runtime params
         let run_key_1 = Regex::new(&key_1).expect("test regex");
