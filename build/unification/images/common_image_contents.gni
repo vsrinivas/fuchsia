@@ -175,6 +175,7 @@ common_image_contents = [
   "//src/devices/usb/drivers/usb-test/usb-tester",
   "//src/devices/usb/drivers/usb-virtual-bus",
   "//src/diagnostics/dlog",
+  "//src/graphics/display/bin/display-test",
   "//src/graphics/display/drivers/aml-canvas",
   "//src/graphics/display/drivers/amlogic-display",
   "//src/graphics/display/drivers/display",

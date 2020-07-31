@@ -42,7 +42,6 @@ common_test_contents = [
   "//src/devices/usb/lib/usb/test:usb-desc-lib-test",
   "//src/devices/usb/lib/usb/test:usb-request-test",
   "//src/devices/usb/lib/usb/test:usb-wrapper-test",
-  "//src/graphics/display/bin/display-test",
   "//src/media/audio/drivers/alc5663",
   "//src/media/audio/tools/audio-driver-ctl:test",
   "//src/storage/fshost:block-watcher-test",
