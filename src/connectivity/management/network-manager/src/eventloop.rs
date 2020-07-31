@@ -34,6 +34,7 @@
 //! * Updates local state.
 
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_router_config::{
     Id, Lif, Port, RouterAdminRequest, RouterStateGetPortsResponder, RouterStateRequest,
     SecurityFeatures,
@@ -41,9 +42,7 @@ use fidl_fuchsia_router_config::{
 use fuchsia_component::server::ServiceFs;
 
 use anyhow::{Context as _, Error};
-use dns_server_watcher::{
-    DnsServerWatcherEvent, DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT,
-};
+use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
 use futures::future;
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use network_manager_core::{
@@ -122,7 +121,6 @@ impl EventLoop {
             DnsServersUpdateSource::Netstack,
             self.device.get_netstack_dns_server_watcher()?,
         )
-        .map(|r| r.context("Netstack's DNS server event stream"))
         .fuse();
         let oir_stream = crate::oir_worker::new_stream()
             .await
@@ -170,9 +168,9 @@ impl EventLoop {
                     let event = netstack_res?.ok_or(anyhow::anyhow!("Netstack event stream unexpectedly ended"))?;
                     self.handle_netstack_event(event).await
                 }
-                netstack_dns_res = netstack_dns_stream.try_next() => {
-                    let event = netstack_dns_res?.ok_or(anyhow::anyhow!("Netstack DNS Server watcher stream unexpectedly ended"))?;
-                    self.handle_dns_server_watcher_event(event).await
+                netstack_dns_res = netstack_dns_stream.next() => {
+                    let (source, res) = netstack_dns_res.ok_or(anyhow::anyhow!("Netstack DNS Server watcher stream unexpectedly ended"))?;
+                    self.handle_dns_server_watcher_event(source, res.context("error getting next DNS server event from netstack")?).await
                 }
                 oir_res = oir_stream.try_next() => {
                     let event = oir_res?.ok_or(anyhow::anyhow!("OIR stream unexpectedly ended"))?;
@@ -210,8 +208,11 @@ impl EventLoop {
         Ok(())
     }
 
-    async fn handle_dns_server_watcher_event(&mut self, event: DnsServerWatcherEvent) {
-        let DnsServerWatcherEvent { source, servers } = event;
+    async fn handle_dns_server_watcher_event(
+        &mut self,
+        source: DnsServersUpdateSource,
+        servers: Vec<fnet_name::DnsServer_>,
+    ) {
         trace!("got DNS server event from source = {:?} with servers = {:?}", source, servers);
         let () = self.dns_servers.set_servers_from_source(source, servers);
         let () = self

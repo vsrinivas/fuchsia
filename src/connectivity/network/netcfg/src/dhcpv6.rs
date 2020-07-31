@@ -7,7 +7,8 @@ use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
 use fidl_fuchsia_net_name as fnet_name;
 
 use anyhow::Context as _;
-use dns_server_watcher::{DnsServerWatcherEvent, DnsServers, DnsServersUpdateSource};
+use async_helpers::stream::WithTag as _;
+use dns_server_watcher::{DnsServers, DnsServersUpdateSource};
 use futures::future::TryFutureExt as _;
 use futures::stream::StreamExt as _;
 
@@ -50,9 +51,7 @@ pub(super) fn start_client(
         .map_err(errors::Error::NonFatal)?;
 
     let stream = futures::stream::try_unfold(client, move |proxy| {
-        proxy
-            .watch_servers()
-            .map_ok(move |servers| Some((DnsServerWatcherEvent { source, servers }, proxy)))
+        proxy.watch_servers().map_ok(move |s| Some((s, proxy)))
     })
     .map(move |r| {
         r.with_context(|| {
@@ -61,7 +60,8 @@ pub(super) fn start_client(
                 interface_id
             )
         })
-    });
+    })
+    .tagged(source);
 
     if watchers.insert(source, stream.boxed()).is_some() {
         return Err(errors::Error::Fatal(anyhow::anyhow!(

@@ -5,17 +5,9 @@
 //! DNS Server watcher stream.
 
 use fidl_fuchsia_net_name::{DnsServerWatcherProxy, DnsServer_};
+
+use async_helpers::stream::WithTag as _;
 use futures::{future::TryFutureExt as _, stream::Stream};
-
-/// An updated DNS server event from some source.
-#[derive(Debug, PartialEq)]
-pub struct DnsServerWatcherEvent {
-    /// The source of the DNS server update.
-    pub source: DnsServersUpdateSource,
-
-    /// The updated list of DNS servers.
-    pub servers: Vec<DnsServer_>,
-}
 
 /// The possible sources of DNS server updates.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -30,12 +22,11 @@ pub enum DnsServersUpdateSource {
 pub fn new_dns_server_stream(
     source: DnsServersUpdateSource,
     proxy: DnsServerWatcherProxy,
-) -> impl Stream<Item = Result<DnsServerWatcherEvent, fidl::Error>> {
+) -> impl Stream<Item = (DnsServersUpdateSource, Result<Vec<DnsServer_>, fidl::Error>)> {
     futures::stream::try_unfold(proxy, move |proxy| {
-        proxy
-            .watch_servers()
-            .map_ok(move |servers| Some((DnsServerWatcherEvent { source, servers }, proxy)))
+        proxy.watch_servers().map_ok(move |s| Some((s, proxy)))
     })
+    .tagged(source)
 }
 
 #[cfg(test)]
@@ -122,30 +113,13 @@ mod tests {
                 w.push_config(vec![NDP_SERVER]);
                 w.push_config(vec![STATIC_SERVER]);
             }
-            let nxt = stream
-                .next()
-                .await
-                .expect("Stream ended unexpectedly")
-                .expect("FIDL error occurred");
-            assert_eq!(
-                nxt,
-                DnsServerWatcherEvent {
-                    source: DnsServersUpdateSource::Netstack,
-                    servers: vec![NDP_SERVER]
-                }
-            );
-            let nxt = stream
-                .next()
-                .await
-                .expect("Stream ended unexpectedly")
-                .expect("FIDL error occurred");
-            assert_eq!(
-                nxt,
-                DnsServerWatcherEvent {
-                    source: DnsServersUpdateSource::Netstack,
-                    servers: vec![STATIC_SERVER]
-                }
-            );
+            let (source, res) = stream.next().await.expect("stream ended unexpectedly");
+            assert_eq!(source, DnsServersUpdateSource::Netstack);
+            assert_eq!(vec![NDP_SERVER], res.expect("FIDL error occurred"));
+
+            let (source, res) = stream.next().await.expect("stream ended unexpectedly");
+            assert_eq!(source, DnsServersUpdateSource::Netstack);
+            assert_eq!(vec![STATIC_SERVER], res.expect("FIDL error occurred"));
 
             // Abort the serving future so join will end.
             abort_handle.abort();
@@ -153,11 +127,9 @@ mod tests {
         })
         .await;
         let _aborted = serve_result.expect_err("Future must've been aborted");
-        let _fidl_error: fidl::Error = stream
-            .next()
-            .await
-            .expect("Stream must yield a final value")
-            .expect_err("Stream must yield an error");
+        let (source, res) = stream.next().await.expect("Stream must yield a final value");
+        assert_eq!(source, DnsServersUpdateSource::Netstack);
+        let _fidl_error: fidl::Error = res.expect_err("Stream must yield an error");
         assert!(stream.next().await.is_none(), "Stream must end after error");
     }
 }

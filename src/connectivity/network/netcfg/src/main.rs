@@ -22,6 +22,7 @@ use std::convert::TryInto as _;
 use std::fs;
 use std::io;
 use std::path;
+use std::pin::Pin;
 use std::str::FromStr;
 
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
@@ -42,9 +43,7 @@ use fuchsia_zircon::{self as zx, DurationNum as _};
 
 use anyhow::Context as _;
 use argh::FromArgs;
-use dns_server_watcher::{
-    DnsServerWatcherEvent, DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT,
-};
+use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use log::{debug, error, info, trace, warn};
@@ -100,7 +99,10 @@ const MAX_ADD_DEVICE_ATTEMPTS: u8 = 3;
 /// are started or stopped.
 type DnsServerWatchers<'a> = async_helpers::stream::StreamMap<
     DnsServersUpdateSource,
-    stream::BoxStream<'a, Result<DnsServerWatcherEvent, anyhow::Error>>,
+    stream::BoxStream<
+        'a,
+        (DnsServersUpdateSource, Result<Vec<fnet_name::DnsServer_>, anyhow::Error>),
+    >,
 >;
 
 /// Defines log levels.
@@ -446,6 +448,63 @@ impl<'a> NetCfg<'a> {
         dns::update_servers(&self.lookup_admin, &mut self.dns_servers, source, servers).await
     }
 
+    /// Handles the completion of the DNS server watcher associated with `source`.
+    ///
+    /// Clears the servers for `source` and removes the watcher from `dns_watchers`.
+    async fn handle_dns_server_watcher_done(
+        &mut self,
+        source: DnsServersUpdateSource,
+        dns_watchers: &mut DnsServerWatchers<'_>,
+    ) -> Result<(), anyhow::Error> {
+        match source {
+            DnsServersUpdateSource::Default => {
+                return Err(anyhow::anyhow!(
+                    "should not have a DNS server watcher for the default source"
+                ));
+            }
+            DnsServersUpdateSource::Netstack => {}
+            DnsServersUpdateSource::Dhcpv6 { interface_id } => {
+                let state = self
+                    .interface_states
+                    .get_mut(&interface_id)
+                    .ok_or(anyhow::anyhow!("no interface state found for id={}", interface_id))?;
+
+                match &mut state.specific {
+                    InterfaceState::Host(state) => {
+                        let _: fnet::Ipv6SocketAddress =
+                            state.dhcpv6_client_addr.take().ok_or(anyhow::anyhow!(
+                                "DHCPv6 was not being performed on host interface with id={}",
+                                interface_id
+                            ))?;
+                    }
+                    InterfaceState::WlanAp(WlanApInterfaceState {}) => {
+                        return Err(anyhow::anyhow!(
+                            "should not have a DNS watcher for a WLAN AP interface with id={}",
+                            interface_id
+                        ));
+                    }
+                }
+            }
+        }
+
+        match self.update_dns_servers(source, vec![]).await {
+            Ok(()) => {}
+            Err(errors::Error::NonFatal(e)) => {
+                error!("non-fatal error clearing DNS servers for {:?} after completing DNS watcher: {}", source, e);
+            }
+            Err(errors::Error::Fatal(e)) => {
+                return Err(e.context(format!("error learing DNS servers for {:?}", source)));
+            }
+        }
+
+        // The watcher stream may have already been removed if it was exhausted so we don't
+        // care what the return value is. At the end of this function, it is guaranteed that
+        // `dns_watchers` will not have a stream for `source` anyways.
+        let _: Option<Pin<Box<stream::BoxStream<'_, _>>>> = dns_watchers.remove(&source);
+
+        Ok(())
+    }
+
     /// Run the network configuration eventloop.
     ///
     /// The device directory will be monitored for device events and the netstack will be
@@ -484,7 +543,7 @@ impl<'a> NetCfg<'a> {
             DnsServersUpdateSource::Netstack,
             dns_server_watcher,
         )
-        .map(move |r| r.context("error getting next Netstack DNS server update event"))
+        .map(move |(s, r)| (s, r.context("error getting next Netstack DNS server update event")))
         .boxed();
 
         let dns_watchers = DnsServerWatchers::empty();
@@ -533,12 +592,17 @@ impl<'a> NetCfg<'a> {
                             ))?;
                     self.handle_netstack_event(event, dns_watchers.get_mut()).await.context("error handling netstack event")?
                 }
-                dns_watchers_res = dns_watchers.try_next() => {
-                    let (source, servers) = match dns_watchers_res.context("error getting next event from DNS server watcher stream")? {
-                        Some(DnsServerWatcherEvent { source, servers }) => (source, servers),
-
-                        None => {
-                            unreachable!("dns watchers stream should never be exhausted")
+                dns_watchers_res = dns_watchers.next() => {
+                    let (source, res) = dns_watchers_res.ok_or(anyhow::anyhow!("dns watchers stream should never be exhausted"))?;
+                    let servers = match res {
+                        Ok(s) => s,
+                        Err(e) => {
+                            // TODO(57484): Restart the DNS server watcher.
+                            error!("non-fatal error getting next event from DNS server watcher stream with source = {:?}: {}", source, e);
+                            let () = self.handle_dns_server_watcher_done(source, dns_watchers.get_mut())
+                                .await
+                                .with_context(|| format!("error handling completion of DNS serever watcher for {:?}", source))?;
+                            continue;
                         }
                     };
 
@@ -1662,7 +1726,7 @@ mod tests {
                 .map(|r| r.context("error running lookup admin")),
         )
         .await
-        .context("error handling client tremination due to interface down")?;
+        .context("error handling client termination due to interface down")?;
         assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
         matches::assert_matches!(client_server.try_next().await, Ok(None));
 
@@ -1700,13 +1764,40 @@ mod tests {
         .await
         .context("error handling client termination due to address change")?;
         matches::assert_matches!(client_server.try_next().await, Ok(None));
-        let mut client_server = check_new_client(
+        let _client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR1,
             &mut dns_watchers,
         )
         .await
         .context("error checking for new client with sockaddr1 after address change")?;
+
+        // Complete the DNS server watcher then start a new one.
+        let ((), ()) = future::try_join(
+            netcfg
+                .handle_dns_server_watcher_done(DHCPV6_DNS_SOURCE, &mut dns_watchers)
+                .map(|r| r.context("error handling completion of dns server watcher")),
+            run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
+                .map(|r| r.context("error running lookup admin")),
+        )
+        .await
+        .context("error handling DNS server watcher completion")?;
+        assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
+        let () = handle_netstack_event(
+            &mut netcfg,
+            &mut dns_watchers,
+            true, /* up */
+            ipv6addrs(Some(LINK_LOCAL_SOCKADDR1)),
+        )
+        .await
+        .context("error handling netstack event with sockaddr1 after completing dns watcher")?;
+        let mut client_server = check_new_client(
+            &mut servers.dhcpv6_client_provider,
+            LINK_LOCAL_SOCKADDR1,
+            &mut dns_watchers,
+        )
+        .await
+        .context("error checking for new client with sockaddr1 after completing dns watcher")?;
 
         // An event that indicates the interface is removed should stop the client.
         let ((), ()) = future::try_join(
