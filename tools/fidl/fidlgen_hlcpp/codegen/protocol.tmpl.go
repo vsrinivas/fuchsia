@@ -440,17 +440,11 @@ namespace {
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
 {{- /* Note: fidl::internal::SingleUseMessageHandler assumes that the lambda captures a single */}}
 {{- /* fit::function. When changing CallbackType, make sure to update SingleUseMessageHandler. */}}
-{{ .ResponseHandlerType }}({{ $.Name }}::{{ .CallbackType }} callback) {
+{{ .ResponseHandlerType }}({{ $.Name }}::{{ .CallbackType }}&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for {{ $.Name }}::{{ .Name }}\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message message) {
-        const char* error_msg = nullptr;
-        zx_status_t status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
-        if (status != ZX_OK) {
-          FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
-          return status;
-        }
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
       {{- if .Response }}
         ::fidl::Decoder decoder(std::move(message));
       {{- end }}
@@ -460,7 +454,7 @@ namespace {
       {{- end -}}
         );
         return ZX_OK;
-      });
+      }, &{{ .ResponseTypeName }});
 }
 
 }  // namespace

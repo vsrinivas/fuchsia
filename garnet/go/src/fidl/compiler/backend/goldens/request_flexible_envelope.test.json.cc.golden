@@ -438,29 +438,17 @@ namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
 Protocol_RequestStrictResponseFlexible_ResponseHandler(
-    Protocol::RequestStrictResponseFlexibleCallback callback) {
+    Protocol::RequestStrictResponseFlexibleCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for "
                       "Protocol::RequestStrictResponseFlexible\n");
-  return ::std::make_unique<
-      ::fidl::internal::SingleUseMessageHandler>([callback_ =
-                                                      std::move(callback)](
-                                                     ::fidl::Message message) {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
-        &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message,
-          &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable,
-          error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<FlexibleFoo>(&decoder, 16));
-    return ZX_OK;
-  });
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<FlexibleFoo>(&decoder, 16));
+        return ZX_OK;
+      },
+      &fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable);
 }
 
 }  // namespace
@@ -478,29 +466,17 @@ namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
 Protocol_RequestFlexibleResponseStrict_ResponseHandler(
-    Protocol::RequestFlexibleResponseStrictCallback callback) {
+    Protocol::RequestFlexibleResponseStrictCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for "
                       "Protocol::RequestFlexibleResponseStrict\n");
-  return ::std::make_unique<
-      ::fidl::internal::SingleUseMessageHandler>([callback_ =
-                                                      std::move(callback)](
-                                                     ::fidl::Message message) {
-    const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(
-        &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
-        &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(
-          message,
-          &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable,
-          error_msg);
-      return status;
-    }
-    ::fidl::Decoder decoder(std::move(message));
-    callback_(::fidl::DecodeAs<StrictFoo>(&decoder, 16));
-    return ZX_OK;
-  });
+  return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
+        ::fidl::Decoder decoder(std::move(message));
+        callback_(::fidl::DecodeAs<StrictFoo>(&decoder, 16));
+        return ZX_OK;
+      },
+      &fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable);
 }
 
 }  // namespace

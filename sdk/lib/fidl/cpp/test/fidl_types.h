@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 extern const FidlCodedStruct unbounded_nonnullable_string_message_type;
+extern const FidlCodedStruct zero_arg_message_type;
 
 #if defined(__cplusplus)
 }

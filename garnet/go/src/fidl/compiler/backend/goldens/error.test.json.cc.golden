@@ -268,23 +268,16 @@ zx_status_t Example_Proxy::Dispatch_(::fidl::Message message) {
 namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-Example_foo_ResponseHandler(Example::fooCallback callback) {
+Example_foo_ResponseHandler(Example::fooCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for Example::foo\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message message) {
-        const char* error_msg = nullptr;
-        zx_status_t status =
-            message.Decode(&fidl_test_json_ExamplefooResponseTable, &error_msg);
-        if (status != ZX_OK) {
-          FIDL_REPORT_DECODING_ERROR(
-              message, &fidl_test_json_ExamplefooResponseTable, error_msg);
-          return status;
-        }
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<Example_foo_Result>(&decoder, 16));
         return ZX_OK;
-      });
+      },
+      &fidl_test_json_ExamplefooResponseTable);
 }
 
 }  // namespace

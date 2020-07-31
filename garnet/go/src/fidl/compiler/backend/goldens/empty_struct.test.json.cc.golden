@@ -122,26 +122,17 @@ namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
 EmptyProtocol_SendAndReceive_ResponseHandler(
-    EmptyProtocol::SendAndReceiveCallback callback) {
+    EmptyProtocol::SendAndReceiveCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(
       callback,
       "Callback must not be empty for EmptyProtocol::SendAndReceive\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message message) {
-        const char* error_msg = nullptr;
-        zx_status_t status = message.Decode(
-            &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable,
-            &error_msg);
-        if (status != ZX_OK) {
-          FIDL_REPORT_DECODING_ERROR(
-              message, &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable,
-              error_msg);
-          return status;
-        }
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<Empty>(&decoder, 16));
         return ZX_OK;
-      });
+      },
+      &fidl_test_json_EmptyProtocolSendAndReceiveResponseTable);
 }
 
 }  // namespace

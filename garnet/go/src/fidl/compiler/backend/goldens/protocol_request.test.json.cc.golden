@@ -80,24 +80,17 @@ zx_status_t Parent_Proxy::Dispatch_(::fidl::Message message) {
 namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-Parent_GetChild_ResponseHandler(Parent::GetChildCallback callback) {
+Parent_GetChild_ResponseHandler(Parent::GetChildCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback,
                       "Callback must not be empty for Parent::GetChild\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message message) {
-        const char* error_msg = nullptr;
-        zx_status_t status =
-            message.Decode(&test_name_ParentGetChildResponseTable, &error_msg);
-        if (status != ZX_OK) {
-          FIDL_REPORT_DECODING_ERROR(
-              message, &test_name_ParentGetChildResponseTable, error_msg);
-          return status;
-        }
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::fidl::InterfaceHandle<class Child>>(
             &decoder, 16));
         return ZX_OK;
-      });
+      },
+      &test_name_ParentGetChildResponseTable);
 }
 
 }  // namespace
@@ -111,25 +104,17 @@ namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
 Parent_GetChildRequest_ResponseHandler(
-    Parent::GetChildRequestCallback callback) {
+    Parent::GetChildRequestCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(
       callback, "Callback must not be empty for Parent::GetChildRequest\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message message) {
-        const char* error_msg = nullptr;
-        zx_status_t status = message.Decode(
-            &test_name_ParentGetChildRequestResponseTable, &error_msg);
-        if (status != ZX_OK) {
-          FIDL_REPORT_DECODING_ERROR(
-              message, &test_name_ParentGetChildRequestResponseTable,
-              error_msg);
-          return status;
-        }
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(
             ::fidl::DecodeAs<::fidl::InterfaceRequest<Child>>(&decoder, 16));
         return ZX_OK;
-      });
+      },
+      &test_name_ParentGetChildRequestResponseTable);
 }
 
 }  // namespace

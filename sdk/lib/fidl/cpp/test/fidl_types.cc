@@ -45,3 +45,11 @@ const FidlCodedStruct unbounded_nonnullable_string_message_type = {
     .fields = unbounded_nonnullable_string_fields,
     .name = "unbounded_nonnullable_string_message",
 };
+
+const FidlCodedStruct zero_arg_message_type = {
+    .tag = kFidlTypeStruct,
+    .field_count = 0,
+    .size = sizeof(fidl_message_header_t),
+    .fields = nullptr,
+    .name = "zero_arg_message_type",
+};

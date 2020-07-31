@@ -61,22 +61,15 @@ zx_status_t Top_Proxy::Dispatch_(::fidl::Message message) {
 namespace {
 
 ::std::unique_ptr<::fidl::internal::SingleUseMessageHandler>
-Top_GetFoo_ResponseHandler(Top::GetFooCallback callback) {
+Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
   ZX_DEBUG_ASSERT_MSG(callback, "Callback must not be empty for Top::GetFoo\n");
   return ::std::make_unique<::fidl::internal::SingleUseMessageHandler>(
-      [callback_ = std::move(callback)](::fidl::Message message) {
-        const char* error_msg = nullptr;
-        zx_status_t status =
-            message.Decode(&top_TopGetFooResponseTable, &error_msg);
-        if (status != ZX_OK) {
-          FIDL_REPORT_DECODING_ERROR(message, &top_TopGetFooResponseTable,
-                                     error_msg);
-          return status;
-        }
+      [callback_ = std::move(callback)](::fidl::Message&& message) {
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<::bottom::Foo>(&decoder, 16));
         return ZX_OK;
-      });
+      },
+      &top_TopGetFooResponseTable);
 }
 
 }  // namespace
