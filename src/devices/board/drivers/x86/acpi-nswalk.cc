@@ -34,6 +34,7 @@
 #include "power.h"
 #include "resources.h"
 #include "sysmem.h"
+#include "util.h"
 
 namespace acpi {
 
@@ -451,7 +452,14 @@ ACPI_STATUS AcpiWalker::OnDescent(ACPI_HANDLE object) {
   }
 
   acpi_apply_workarounds(object, info.get());
-  if (!memcmp(&info->Name, "HDAS", 4)) {
+
+  // Is this an Intel HDA audio device?  If so, attempt to find the NHLT and publish it as
+  // metadata for the driver to pick up later on.
+  //
+  // TODO(fxb/56832): Remove this when we have a better way to manage driver
+  // dependencies on ACPI.
+  constexpr uint32_t kHDAS_Id = make_fourcc('H', 'D', 'A', 'S');
+  if (info->Name == kHDAS_Id) {
     // We must have already seen at least one PCI root due to traversal order.
     if (last_pci_ == kNoLastPci) {
       zxlogf(ERROR, "acpi: Found HDAS node, but no prior PCI root was discovered!");
