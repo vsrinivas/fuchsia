@@ -53,7 +53,7 @@
       "name": "collection",
       "rootUri": "../../../third_party/dart-pkg/pub/collection",
       "packageUri": "lib/",
-      "languageVersion": "2.9"
+      "languageVersion": "2.10"
     },
     {
       "name": "convert",
@@ -233,7 +233,7 @@
       "name": "typed_data",
       "rootUri": "../../../third_party/dart-pkg/pub/typed_data",
       "packageUri": "lib/",
-      "languageVersion": "2.9"
+      "languageVersion": "2.10"
     },
     {
       "name": "vm_service",

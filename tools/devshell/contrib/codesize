@@ -12,6 +12,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 fx-config-read
 
 exec "${PREBUILT_DART_DIR}/bin/dart" \
---enable-experiment=non-nullable --no-null-safety \
+--enable-experiment=non-nullable --no-sound-null-safety \
 --packages="${FUCHSIA_DIR}/scripts/codesize/.dart_tool/package_config.json" \
 "${FUCHSIA_DIR}/scripts/codesize/bin/main.dart" "$@"
