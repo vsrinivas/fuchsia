@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("//build/test.gni")
 
 if (is_host) {
@@ -23,6 +24,12 @@ if (is_host) {
       ":src",
       "//src/lib/fxl",
     ]
+  }
+
+  sdk_host_tool("symbol_index_sdk") {
+    category = "partner"
+    deps = [ ":symbol-index" ]
+    output_name = "symbol-index"
   }
 
   test("symbol_index_tests") {

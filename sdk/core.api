@@ -164,6 +164,7 @@ sdk://tools/arm64/loglistener
 sdk://tools/arm64/merkleroot
 sdk://tools/arm64/minfs
 sdk://tools/arm64/pm
+sdk://tools/arm64/symbol-index
 sdk://tools/arm64/symbolize
 sdk://tools/arm64/zbi
 sdk://tools/bootserver
@@ -179,6 +180,7 @@ sdk://tools/loglistener
 sdk://tools/merkleroot
 sdk://tools/minfs
 sdk://tools/pm
+sdk://tools/symbol-index
 sdk://tools/symbolize
 sdk://tools/x64/bootserver
 sdk://tools/x64/cmc
@@ -193,6 +195,7 @@ sdk://tools/x64/loglistener
 sdk://tools/x64/merkleroot
 sdk://tools/x64/minfs
 sdk://tools/x64/pm
+sdk://tools/x64/symbol-index
 sdk://tools/x64/symbolize
 sdk://tools/x64/zbi
 sdk://tools/x64/zxdb
