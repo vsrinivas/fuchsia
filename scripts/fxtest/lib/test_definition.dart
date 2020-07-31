@@ -21,6 +21,7 @@ class TestDefinition {
   final String name;
   final String os;
   final PackageUrl packageUrl;
+  final String maxLogSeverity;
   String hash;
 
   final List<TestEnvironment> testEnvironments;
@@ -35,6 +36,7 @@ class TestDefinition {
     this.runtimeDeps,
     this.label,
     this.path,
+    this.maxLogSeverity,
     this.testEnvironments = const [],
   });
 
@@ -48,6 +50,7 @@ class TestDefinition {
             .cast<TestEnvironment>()
             .toList() ??
         [];
+    Map<dynamic, dynamic> logSettings = testDetails['log_settings'] ?? {};
     return TestDefinition(
       buildDir: buildDir,
       command: List<String>.from(testDetails['command'] ?? []),
@@ -60,6 +63,7 @@ class TestDefinition {
           ? null
           : PackageUrl.fromString(testDetails['package_url']),
       path: testDetails['path'] ?? '',
+      maxLogSeverity: logSettings['max_severity'],
       testEnvironments: testEnvironments,
     );
   }
@@ -74,6 +78,7 @@ class TestDefinition {
   path: $path
   name: $name
   os: $os
+  max_log_severity: $maxLogSeverity
 />''';
 
   TestType get testType {

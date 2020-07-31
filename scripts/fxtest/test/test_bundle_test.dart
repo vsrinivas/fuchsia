@@ -32,11 +32,16 @@ void main() {
       );
       final commandTokens2 = testDef
           .createExecutionHandle()
-          .getInvocationTokens(['--restrict-logs']);
+          .getInvocationTokens(['--max-log-severity=WARN']);
       expect(
         commandTokens2.fullCommand,
-        ['fx', 'shell', 'run-test-component', '--restrict-logs', componentUrl]
-            .join(' '),
+        [
+          'fx',
+          'shell',
+          'run-test-component',
+          '--max-log-severity=WARN',
+          componentUrl
+        ].join(' '),
       );
     });
   });

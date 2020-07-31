@@ -63,6 +63,11 @@ class TestBundle {
   /// Optional. Path to fx. If provided, it replaces any 'fx' command.
   final String fxPath;
 
+  /// This will keep track if user doesn't want to restrict logs.
+  /// This is temporary till we fully implement new features to decentralize
+  /// log restricting list.
+  final bool shouldRestrictLogs;
+
   static bool hasDeviceTests(List<TestBundle> testBundles) {
     return testBundles
         .any((e) => !hostTestTypes.contains(e.testDefinition.testType));
@@ -105,6 +110,7 @@ class TestBundle {
     this.fxPath,
     this.isDryRun = false,
     this.raiseOnFailure = false,
+    this.shouldRestrictLogs = true,
     this.runnerFlags = const [],
     Function(String) realtimeOutputSink,
   })  : _realtimeOutputSink = realtimeOutputSink,
@@ -143,6 +149,7 @@ class TestBundle {
         isDryRun: testsConfig.flags.dryRun,
         fxPath: fxPath,
         raiseOnFailure: testsConfig.flags.shouldFailFast,
+        shouldRestrictLogs: testsConfig.flags.shouldRestrictLogs,
         runnerFlags: testsConfig.runnerTokens,
         realtimeOutputSink: realtimeOutputSink ?? (String val) => null,
         testRunner: testRunnerBuilder(testsConfig),
@@ -170,6 +177,14 @@ class TestBundle {
         'All device tests must be component-tests, but this is a binary',
       );
       return;
+    }
+
+    if (testType == TestType.component) {
+      // once we implement this feature fully we can remove --restrict-logs flag
+      // from fx test.
+      if (testDefinition.maxLogSeverity != null && shouldRestrictLogs) {
+        runnerFlags.add('--max-log-severity=${testDefinition.maxLogSeverity}');
+      }
     }
 
     CommandTokens commandTokens =

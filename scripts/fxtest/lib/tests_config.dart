@@ -199,9 +199,6 @@ class TestsConfig {
     if (flags.realm != null) {
       runnerTokens.add('--realm-label=${flags.realm}');
     }
-    if (flags.shouldRestrictLogs) {
-      runnerTokens.add('--restrict-logs');
-    }
     if (flags.minSeverityLogs != null) {
       runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
     }

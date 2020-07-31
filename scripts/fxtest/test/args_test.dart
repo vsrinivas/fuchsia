@@ -326,8 +326,8 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.realm, 'foo');
-      expect(
-          testsConfig.runnerTokens, ['--realm-label=foo', '--restrict-logs']);
+      expect(testsConfig.flags.shouldRestrictLogs, true);
+      expect(testsConfig.runnerTokens, ['--realm-label=foo']);
     });
 
     test('with no --restrict-logs', () {
@@ -337,7 +337,7 @@ void main() {
       );
       // Still true because that is the default
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens, ['--restrict-logs']);
+      expect(testsConfig.runnerTokens, []);
     });
 
     test('with --no-restrict-logs', () {
@@ -355,7 +355,7 @@ void main() {
         fxEnv: FakeFxEnv.shared,
       );
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(testsConfig.runnerTokens, ['--restrict-logs']);
+      expect(testsConfig.runnerTokens, []);
     });
 
     test('with --restrict-logs and --realm', () {
@@ -368,12 +368,9 @@ void main() {
       );
       expect(testsConfig.flags.realm, 'bar');
       expect(testsConfig.flags.shouldRestrictLogs, true);
-      expect(
-          testsConfig.runnerTokens,
-          containsAll([
-            '--restrict-logs',
-            '--realm-label=bar',
-          ]));
+      expect(testsConfig.runnerTokens, [
+        '--realm-label=bar',
+      ]);
     });
 
     test('with --min-severity-logs', () {

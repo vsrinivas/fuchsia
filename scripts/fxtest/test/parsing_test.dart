@@ -15,7 +15,7 @@ void main() {
                 'host_x64/gen/topaz/tools/doc_checker/doc_checker_tests.deps.json',
             'path': 'host_x64/doc_checker_tests',
             'name': '//topaz/tools/doc_checker:doc_checker_tests',
-            'os': 'linux'
+            'os': 'linux',
           }
         },
       ];
@@ -47,6 +47,7 @@ void main() {
             'os': 'fuchsia',
             'package_url':
                 'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
+            'log_settings': {'max_severity': 'ERROR'},
           }
         },
       ];
@@ -62,8 +63,78 @@ void main() {
       expect(tds[0].name, testJson[0]['test']['name']);
       expect(tds[0].cpu, testJson[0]['test']['cpu']);
       expect(tds[0].os, testJson[0]['test']['os']);
+      expect(tds[0].maxLogSeverity,
+          testJson[0]['test']['log_settings']['max_severity']);
       expect(tds[0].testType, TestType.component);
     });
+
+    test('for device tests with no max_severity', () {
+      TestsManifestReader tr = TestsManifestReader();
+      List<dynamic> testJson = [
+        {
+          'environments': [],
+          'test': {
+            'cpu': 'arm64',
+            'path':
+                '/pkgfs/packages/run_test_component_test/0/test/run_test_component_test',
+            'name':
+                '//garnet/bin/run_test_component/test:run_test_component_test',
+            'os': 'fuchsia',
+            'package_url':
+                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
+            'log_settings': {},
+          }
+        },
+      ];
+      List<TestDefinition> tds = tr.parseManifest(
+        testJson: testJson,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fxLocation: FakeFxEnv.shared.fx,
+      );
+      expect(tds, hasLength(1));
+      expect(tds[0].packageUrl.toString(), testJson[0]['test']['package_url']);
+      expect(tds[0].runtimeDeps, '');
+      expect(tds[0].path, testJson[0]['test']['path']);
+      expect(tds[0].name, testJson[0]['test']['name']);
+      expect(tds[0].cpu, testJson[0]['test']['cpu']);
+      expect(tds[0].os, testJson[0]['test']['os']);
+      expect(tds[0].maxLogSeverity, null);
+      expect(tds[0].testType, TestType.component);
+    });
+
+    test('for device tests with no log_settings', () {
+      TestsManifestReader tr = TestsManifestReader();
+      List<dynamic> testJson = [
+        {
+          'environments': [],
+          'test': {
+            'cpu': 'arm64',
+            'path':
+                '/pkgfs/packages/run_test_component_test/0/test/run_test_component_test',
+            'name':
+                '//garnet/bin/run_test_component/test:run_test_component_test',
+            'os': 'fuchsia',
+            'package_url':
+                'fuchsia-pkg://fuchsia.com/run_test_component_test#meta/run_test_component_test.cmx',
+          }
+        },
+      ];
+      List<TestDefinition> tds = tr.parseManifest(
+        testJson: testJson,
+        buildDir: FakeFxEnv.shared.outputDir,
+        fxLocation: FakeFxEnv.shared.fx,
+      );
+      expect(tds, hasLength(1));
+      expect(tds[0].packageUrl.toString(), testJson[0]['test']['package_url']);
+      expect(tds[0].runtimeDeps, '');
+      expect(tds[0].path, testJson[0]['test']['path']);
+      expect(tds[0].name, testJson[0]['test']['name']);
+      expect(tds[0].cpu, testJson[0]['test']['cpu']);
+      expect(tds[0].os, testJson[0]['test']['os']);
+      expect(tds[0].maxLogSeverity, null);
+      expect(tds[0].testType, TestType.component);
+    });
+
     test('for unsupported tests', () {
       TestsManifestReader tr = TestsManifestReader();
       List<dynamic> testJson = [
