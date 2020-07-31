@@ -138,19 +138,7 @@ config_data("config_fdr") {
   outputs = [ "recovery_fdr.config" ]
 }
 
-generate_manifest("fs.manifest") {
-  visibility = [ ":*" ]
-  args = [
-    "--binary=bin/blobfs",
-    "--binary=bin/minfs",
-  ]
-}
-fs_manifest_outputs = get_target_outputs(":fs.manifest")
-fs_manifest_file = fs_manifest_outputs[0]
-
 package("system_recovery") {
-  extra = [ fs_manifest_file ]
-
   meta = [
     {
       path = rebase_path("meta/system_recovery.cmx")
@@ -160,11 +148,18 @@ package("system_recovery") {
 
   deps = [
     ":bin",
-    ":fs.manifest",
     "//garnet/go/src/grand_unified_binary",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
   ]
 
   binaries = [
+    {
+      name = "blobfs"
+    },
+    {
+      name = "minfs"
+    },
     {
       name = "system_recovery"
       path = "system_recovery"
@@ -177,8 +172,6 @@ package("system_recovery") {
 }
 
 package("system-recovery-fdr") {
-  extra = [ fs_manifest_file ]
-
   meta = [
     {
       path = rebase_path("meta/system_recovery_fdr.cmx")
@@ -188,10 +181,17 @@ package("system-recovery-fdr") {
 
   deps = [
     ":bin_fdr",
-    ":fs.manifest",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
   ]
 
   binaries = [
+    {
+      name = "blobfs"
+    },
+    {
+      name = "minfs"
+    },
     {
       name = "system_recovery_fdr"
       path = "system_recovery_fdr"
@@ -229,18 +229,22 @@ empty_repo_manifest_outputs = get_target_outputs(":empty-repo.manifest")
 empty_repo_manifest = empty_repo_manifest_outputs[0]
 
 test_package("system_recovery_tests") {
-  extra = [
-    fs_manifest_file,
-    empty_repo_manifest,
-  ]
+  extra = [ empty_repo_manifest ]
   deps = [
     ":bin_test",
     ":empty-repo.manifest",
-    ":fs.manifest",
     "//garnet/go/src/grand_unified_binary",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
   ]
 
   binaries = [
+    {
+      name = "blobfs"
+    },
+    {
+      name = "minfs"
+    },
     {
       name = "pkgsvr"
       source = "grand_unified_binary"

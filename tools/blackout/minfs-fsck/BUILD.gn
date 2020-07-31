@@ -41,21 +41,16 @@ rustc_binary("minfs-fsck-target-bin") {
   sources = [ "src/target.rs" ]
 }
 
-generate_manifest("minfs.manifest") {
-  visibility = [ ":*" ]
-  args = [ "--binary=bin/minfs" ]
-}
-minfs_manifest_outputs = get_target_outputs(":minfs.manifest")
-minfs_manifest_file = minfs_manifest_outputs[0]
-
 package("minfs-fsck-target") {
   testonly = true
-  extra = [ minfs_manifest_file ]
   deps = [
     ":minfs-fsck-target-bin",
-    ":minfs.manifest",
+    "//src/storage/bin/minfs",
   ]
   binaries = [
+    {
+      name = "minfs"
+    },
     {
       name = "minfs_fsck_target_bin"
     },

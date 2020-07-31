@@ -55,22 +55,17 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
   sources = [ "src/target.rs" ]
 }
 
-generate_manifest("blobfs.manifest") {
-  visibility = [ ":*" ]
-  args = [ "--binary=bin/blobfs" ]
-}
-blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
-blobfs_manifest_file = blobfs_manifest_outputs[0]
-
 package("blobfs-fsck-soft-target") {
   testonly = true
-  extra = [ blobfs_manifest_file ]
   deps = [
     ":blobfs-fsck-soft-target-bin",
-    ":blobfs.manifest",
+    "//src/storage/bin/blobfs",
     "//zircon/system/ulib/blobfs/test:blobfs-load-generator",
   ]
   binaries = [
+    {
+      name = "blobfs"
+    },
     {
       name = "blobfs_fsck_soft_target_bin"
     },
@@ -87,14 +82,16 @@ package("blobfs-fsck-soft-target") {
 }
 
 test_package("blobfs-fsck-soft-target-test") {
-  extra = [ blobfs_manifest_file ]
   deps = [
     ":blobfs-fsck-soft-target-bin_test",
-    ":blobfs.manifest",
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
+    "//src/storage/bin/blobfs",
     "//zircon/system/ulib/blobfs/test:blobfs-load-generator",
   ]
   binaries = [
+    {
+      name = "blobfs"
+    },
     {
       name = "blobfs-load-generator"
     },

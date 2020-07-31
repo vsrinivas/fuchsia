@@ -25,23 +25,20 @@ rustc_library("fs_management") {
   sources = [ "src/lib.rs" ]
 }
 
-generate_manifest("fs_management.manifest") {
-  visibility = [ ":*" ]
-  args = [
-    "--binary=bin/blobfs",
-    "--binary=bin/minfs",
-  ]
-}
-
-manifest_outputs = get_target_outputs(":fs_management.manifest")
-fs_management_manifests = [ manifest_outputs[0] ]
-
 test_package("fs_management_tests") {
-  extra = fs_management_manifests
   deps = [
-    ":fs_management.manifest",
     ":fs_management_test",
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/minfs",
+  ]
+  binaries = [
+    {
+      name = "blobfs"
+    },
+    {
+      name = "minfs"
+    },
   ]
   tests = [
     {

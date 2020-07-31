@@ -40,18 +40,15 @@ rustc_test("blackout-target-lib-test") {
   ]
 }
 
-generate_manifest("minfs.manifest") {
-  visibility = [ ":*" ]
-  args = [ "--binary=bin/minfs" ]
-}
-minfs_manifest_outputs = get_target_outputs(":minfs.manifest")
-minfs_manifest_file = minfs_manifest_outputs[0]
-
 test_package("blackout-target-test") {
-  extra = [ minfs_manifest_file ]
   deps = [
     ":blackout-target-lib-test",
-    ":minfs.manifest",
+    "//src/storage/bin/minfs",
+  ]
+  binaries = [
+    {
+      name = "minfs"
+    },
   ]
   tests = [
     {
