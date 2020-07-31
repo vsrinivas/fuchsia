@@ -32,6 +32,11 @@ class InspectServiceTest : public gtest::RealLoopFixture {
     return ret;
   }
 
+  void MakePrivateSnapshotHandler() {
+    handler_ = inspect::MakeTreeHandler(
+        &inspector_, dispatcher(), inspect::TreeHandlerSettings{.force_private_snapshot = true});
+  }
+
   async::Executor executor_;
 
  private:
@@ -61,6 +66,59 @@ TEST_F(InspectServiceTest, SingleTree) {
   RunLoopUntil([&] { return done; });
 
   EXPECT_TRUE(names.empty());
+}
+
+TEST_F(InspectServiceTest, SingleTreeGetContent) {
+  auto val = root().CreateInt("val", 1);
+
+  auto ptr = Connect();
+  ptr.set_error_handler(
+      [](zx_status_t status) { ASSERT_TRUE(false) << "Error detected on connection"; });
+
+  fit::result<fuchsia::inspect::TreeContent> content;
+
+  ptr->GetContent([&](fuchsia::inspect::TreeContent returned_content) {
+    content = fit::ok(std::move(returned_content));
+  });
+
+  RunLoopUntil([&] { return !!content; });
+
+  val.Add(1);
+
+  auto hierarchy = inspect::ReadFromVmo(std::move(content.take_value().buffer().vmo));
+  ASSERT_TRUE(hierarchy.is_ok());
+
+  const inspect::IntPropertyValue* val_prop =
+      hierarchy.value().node().get_property<inspect::IntPropertyValue>("val");
+  ASSERT_NE(nullptr, val_prop);
+  EXPECT_EQ(2, val_prop->value());
+}
+
+TEST_F(InspectServiceTest, SingleTreeGetContentPrivate) {
+  auto val = root().CreateInt("val", 1);
+
+  MakePrivateSnapshotHandler();
+  auto ptr = Connect();
+  ptr.set_error_handler(
+      [](zx_status_t status) { ASSERT_TRUE(false) << "Error detected on connection"; });
+
+  fit::result<fuchsia::inspect::TreeContent> content;
+
+  ptr->GetContent([&](fuchsia::inspect::TreeContent returned_content) {
+    content = fit::ok(std::move(returned_content));
+  });
+
+  RunLoopUntil([&] { return !!content; });
+
+  val.Add(1);
+
+  auto hierarchy = inspect::ReadFromVmo(std::move(content.take_value().buffer().vmo));
+  ASSERT_TRUE(hierarchy.is_ok());
+
+  const inspect::IntPropertyValue* val_prop =
+      hierarchy.value().node().get_property<inspect::IntPropertyValue>("val");
+  ASSERT_NE(nullptr, val_prop);
+  EXPECT_EQ(1, val_prop->value());
 }
 
 TEST_F(InspectServiceTest, ListChildNames) {

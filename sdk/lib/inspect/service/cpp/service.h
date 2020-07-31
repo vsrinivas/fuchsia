@@ -10,12 +10,20 @@
 
 namespace inspect {
 
+struct TreeHandlerSettings {
+  // If true, snapshots of trees returned by the handler must be private
+  // copies. Setting this option disables VMO sharing between a reader
+  // and the writer.
+  bool force_private_snapshot = false;
+};
+
 // Returns a handler for fuchsia.inspect.Tree connections on the given Inspector.
 //
 // This is meant to be used to construct a vfs::Service Node to serve the given Inspector as a
 // fuchsia.inspect.Tree.
 fidl::InterfaceRequestHandler<fuchsia::inspect::Tree> MakeTreeHandler(
-    const inspect::Inspector* inspector, async_dispatcher_t* dispatcher = nullptr);
+    const inspect::Inspector* inspector, async_dispatcher_t* dispatcher = nullptr,
+    TreeHandlerSettings settings = {});
 
 }  // namespace inspect
 
