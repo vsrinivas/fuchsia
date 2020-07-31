@@ -762,8 +762,11 @@ def main():
                                               info, blob))
                 sizes['blob'] = blob['size']
             return sizes
-        sizes = [json_size(info)
-                 for info in (get_elf_info(file) for file in files) if info]
+        # Sort for stable output.
+        sizes = sorted([json_size(info)
+                        for info in (get_elf_info(file) for file in files)
+                        if info],
+                       key=lambda info: info['path'])
         totals = {}
         for file in sizes:
             for key, val in file.items():
