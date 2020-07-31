@@ -457,29 +457,36 @@ transmit:
 
 void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr, uint16_t dport,
                   const ip6_addr_t* saddr, uint16_t sport) {
-  nbmsg* msg = reinterpret_cast<nbmsg*>(data);
+  nbmsg msg_header;
   // Not enough bytes to be a message
-  if ((len < sizeof(*msg)) || (msg->magic != NB_MAGIC)) {
+  if (len < sizeof(msg_header)) {
     return;
   }
-  len -= sizeof(*msg);
+  // Must be copied to stack structure rather than interpreted in place for
+  // UBSan, see fxbug.dev/45621.
+  memcpy(&msg_header, data, sizeof(msg_header));
+  char* msg_data = reinterpret_cast<char*>(data) + sizeof(msg_header);
 
-  if (len && msg->cmd != NB_DATA && msg->cmd != NB_LAST_DATA) {
-    msg->data[len - 1] = '\0';
+  if (msg_header.magic != NB_MAGIC) {
+    return;
+  }
+  len -= sizeof(msg_header);
+
+  if (len && msg_header.cmd != NB_DATA && msg_header.cmd != NB_LAST_DATA) {
+    msg_data[len - 1] = '\0';
   }
 
   if (!all_features()) {
     assert(!netbootloader());  // This is checked in netsvc's main().
-    if (msg->cmd != NB_QUERY) {
+    if (msg_header.cmd != NB_QUERY) {
       // Only QUERY is allowed in minimal mode.
       return;
     }
   }
 
-  switch (msg->cmd) {
+  switch (msg_header.cmd) {
     case NB_QUERY: {
-      if (strcmp(reinterpret_cast<char*>(msg->data), "*") &&
-          strcmp(reinterpret_cast<char*>(msg->data), nodename())) {
+      if (strcmp(msg_data, "*") && strcmp(msg_data, nodename())) {
         break;
       }
       size_t dlen = strlen(nodename()) + 1;
@@ -487,8 +494,8 @@ void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr
       if ((dlen + sizeof(nbmsg)) > sizeof(buf)) {
         return;
       }
-      msg->cmd = NB_ACK;
-      memcpy(buf, msg, sizeof(nbmsg));
+      msg_header.cmd = NB_ACK;
+      memcpy(buf, &msg_header, sizeof(nbmsg));
       memcpy(buf + sizeof(nbmsg), nodename(), dlen);
       udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport, false);
       break;
@@ -518,22 +525,22 @@ void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr
     }
     case NB_SHELL_CMD:
       if (!is_mcast) {
-        netboot_run_cmd(reinterpret_cast<char*>(msg->data));
+        netboot_run_cmd(msg_data);
         return;
       }
       break;
     case NB_OPEN:
-      nb_open(reinterpret_cast<char*>(msg->data), msg->cookie, msg->arg, saddr, sport, dport);
+      nb_open(msg_data, msg_header.cookie, msg_header.arg, saddr, sport, dport);
       break;
     case NB_READ:
-      nb_read(msg->cookie, msg->arg, saddr, sport, dport);
+      nb_read(msg_header.cookie, msg_header.arg, saddr, sport, dport);
       break;
     case NB_WRITE:
       len--;  // NB NUL-terminator is not part of the data
-      nb_write(reinterpret_cast<char*>(msg->data), len, msg->cookie, msg->arg, saddr, sport, dport);
+      nb_write(msg_data, len, msg_header.cookie, msg_header.arg, saddr, sport, dport);
       break;
     case NB_CLOSE:
-      nb_close(msg->cookie, saddr, sport, dport);
+      nb_close(msg_header.cookie, saddr, sport, dport);
       break;
     default:
       // If the bootloader is enabled, then let it have a crack at the
