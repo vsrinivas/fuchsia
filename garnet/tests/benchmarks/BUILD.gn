@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon_images.gni")
-import("//build/images/manifest.gni")
 import("//build/package.gni")
 
 executable("garnet_benchmarks_bin") {
@@ -14,21 +12,13 @@ executable("garnet_benchmarks_bin") {
   deps = [ "//garnet/testing/benchmarking:benchmarking" ]
 }
 
-zircon_extras_manifest("zircon-test-manifest") {
-  visibility = [ ":*" ]
-  manifest = "tests"
-  patterns = [ "test/fs-bench" ]
-}
-
 package("garnet_benchmarks") {
   testonly = true
 
   deps = [
     ":garnet_benchmarks_bin",
-    ":zircon-test-manifest",
+    "//zircon/system/utest/fs-bench",
   ]
-
-  extra = get_target_outputs(":zircon-test-manifest")
 
   binaries = [
     {
@@ -38,6 +28,9 @@ package("garnet_benchmarks") {
     {
       shell = true
       name = "garnet_benchmarks"
+    },
+    {
+      name = "fs-bench"
     },
   ]
 }
