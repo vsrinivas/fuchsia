@@ -35,13 +35,6 @@ default_args = {
 }
 
 # Enable checking for all source code we control.
-check_targets = [
-  "//examples/*",
-  "//garnet/*",
-  "//sdk/*",
-  "//src/*",
-  "//tools/*",
-  "//topaz/*",
-  "//vendor/*",
-  "//zircon/*",
+no_check_targets = [
+  "//third_party/*",
 ]
