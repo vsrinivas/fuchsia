@@ -52,8 +52,11 @@ template("dart_package_config") {
       # Each entry must contain these values:
       #   - `name`: The name of the package;
       #   - `root_uri`: Path to the package root relative to root_build_dir;
-      #   - `language_version`: The dart language version.
       #   - `package_uri`: The path in which the source lives
+      #
+      # The following entries may optionally be specified
+      #   - `language_version`: The dart language version.
+      #   - `pubspec_path`: The path to the pubspec file to find the language version
       "package_config_entries",
     ]
     walk_keys = [ "package_config_entry_barrier" ]
@@ -82,6 +85,8 @@ template("dart_package_config") {
       rebase_path(intermediate_file, root_build_dir),
       "--output",
       rebase_path(package_config_file, root_build_dir),
+      "--root",
+      rebase_path("//", root_build_dir),
     ]
 
     if (!defined(deps)) {

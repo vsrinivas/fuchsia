@@ -10,7 +10,10 @@ import argparse
 import collections
 import json
 import os
+import re
 import sys
+
+DEFAULT_LANGUAGE_VERSION = "2.8"
 
 Package = collections.namedtuple(
     'Package', ['name', 'rootUri', 'languageVersion', 'packageUri'])
@@ -35,6 +38,26 @@ class PackageConfig:
         }
 
 
+def language_version_from_pubspec(pubspec):
+    """ parse the content of a pubspec.yaml """
+    import yaml
+    with open(pubspec) as pubspec:
+        parsed = yaml.safe_load(pubspec)
+        if not parsed:
+            return DEFAULT_LANGUAGE_VERSION
+
+        # If a format like sdk: '>=a.b' or sdk: 'a.b' is found, we'll use a.b.
+        # In all other cases we default to 2.8
+        env_sdk = parsed.get('environment', {}).get('sdk', 'any')
+        match = re.search(r"^(>=)?((0|[1-9]\d*)\.(0|[1-9]\d*))", env_sdk)
+        if match:
+            min_sdk_version = match.group(2)
+        else:
+            min_sdk_version = DEFAULT_LANGUAGE_VERSION
+
+        return min_sdk_version
+
+
 def collect_packages(items, relative_to):
     '''Reads metadata produced by GN and creates a list of packages.
   - items: a list of objects collected from gn
@@ -45,10 +68,18 @@ def collect_packages(items, relative_to):
   '''
     packages = []
     for item in items:
+        if 'language_version' in item:
+            language_version = item['language_version']
+        elif 'pubspec_path' in item:
+            language_version = language_version_from_pubspec(
+                item['pubspec_path'])
+        else:
+            language_version = DEFAULT_LANGUAGE_VERSION
+
         package = Package(
             name=item['name'],
             rootUri=os.path.relpath(item['root_uri'], relative_to),
-            languageVersion=item['language_version'],
+            languageVersion=language_version,
             packageUri=item['package_uri'])
 
         #TODO(56428): enable once we sort out our duplicate packages
@@ -71,7 +102,11 @@ def main():
         '--input', help='Path to original package_config', required=True)
     parser.add_argument(
         '--output', help='Path to the updated package_config', required=True)
+    parser.add_argument(
+        '--root', help='Path to fuchsia root', required=True)
     args = parser.parse_args()
+
+    sys.path += [os.path.join(args.root, 'third_party', 'pyyaml', 'lib')]
 
     with open(args.input, 'r') as input_file:
         contents = json.load(input_file)

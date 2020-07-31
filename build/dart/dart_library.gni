@@ -41,8 +41,13 @@ declare_args() {
 #     depends on this library.
 #
 #   language_version (optional)
-#     Specify the Dart language version to use for this package. Defaults to
-#     "2.8".
+#     Specify the Dart language version to use for this package.
+#     If language_version is not specified but pubspec is then the language
+#     version will be read from the pubspec. If no language version can be
+#     determined then we will default to version 2.8.
+#     It is recommended to specify a language_version if it is well known
+#     instead of relying on the pubspec file since this will improve compilation
+#     times.
 #
 #   infer_package_name (optional)
 #     Infer the package name based on the path to the package.
@@ -104,7 +109,6 @@ declare_args() {
 #       "//foo/bar/owl",
 #     ]
 #   }
-
 if (current_toolchain == dart_toolchain) {
   template("dart_library") {
     forward_variables_from(invoker,
@@ -221,16 +225,15 @@ if (current_toolchain == dart_toolchain) {
              ] + rebase_path(package_files)
     }
 
-    language_version = "2.8"
-    if (defined(invoker.language_version)) {
-      language_version = invoker.language_version
-    }
-
     _metadata = {
       package_config_entries = [
         {
           name = package_name
-          language_version = language_version
+          if (defined(invoker.language_version)) {
+            language_version = invoker.language_version
+          } else if (defined(invoker.pubspec)) {
+            pubspec_path = rebase_path(invoker.pubspec, root_build_dir)
+          }
           root_uri = rebase_path(package_root, root_build_dir)
           if (defined(invoker.source_dir)) {
             package_uri = invoker.source_dir
