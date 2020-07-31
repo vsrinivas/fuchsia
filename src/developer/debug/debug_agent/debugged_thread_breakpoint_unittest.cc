@@ -7,6 +7,7 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
+#include "src/developer/debug/debug_agent/mock_debug_agent_harness.h"
 #include "src/developer/debug/debug_agent/mock_exception_handle.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_breakpoint.h"
@@ -70,18 +71,6 @@ class TestProcess : public MockProcess {
   WatchpointMap watchpoints_;
 };
 
-class TestStreamBackend : public LocalStreamBackend {
- public:
-  void HandleNotifyException(debug_ipc::NotifyException exception) override {
-    exceptions_.push_back(std::move(exception));
-  }
-
-  const std::vector<debug_ipc::NotifyException>& exceptions() const { return exceptions_; }
-
- private:
-  std::vector<debug_ipc::NotifyException> exceptions_;
-};
-
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
   zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override { return ZX_OK; }
@@ -94,24 +83,6 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 };
 
 // Helpers -----------------------------------------------------------------------------------------
-
-struct TestContext {
-  std::unique_ptr<DebugAgent> debug_agent;
-  std::unique_ptr<TestStreamBackend> backend;
-};
-
-TestContext CreateTestContext() {
-  TestContext context;
-
-  context.debug_agent =
-      std::make_unique<DebugAgent>(std::make_unique<MockSystemInterface>(MockJobHandle(1)));
-
-  // Create the connection to the debug agent.
-  context.backend = std::make_unique<TestStreamBackend>();
-  context.debug_agent->Connect(&context.backend->stream());
-
-  return context;
-}
 
 // If |thread| is null, it means a process-wide breakpoint.
 debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
@@ -138,7 +109,7 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_k
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(DebuggedThreadBreakpoint, NormalException) {
-  TestContext context = CreateTestContext();
+  MockDebugAgentHarness harness;
 
   constexpr zx_koid_t kProcKoid = 12;    // MockJobTree job121-p2
   constexpr zx_koid_t kThreadKoid = 23;  // second-thread
@@ -147,8 +118,8 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.
-  TestProcess process(context.debug_agent.get(), kProcKoid, "job121-p2");
-  DebuggedThread thread(context.debug_agent.get(), &process, std::move(owning_thread_handle));
+  TestProcess process(harness.debug_agent(), kProcKoid, "job121-p2");
+  DebuggedThread thread(harness.debug_agent(), &process, std::move(owning_thread_handle));
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
@@ -165,12 +136,12 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
       std::make_unique<MockExceptionHandle>(kThreadKoid, debug_ipc::ExceptionType::kPageFault));
 
   // We should've received an exception notification.
-  ASSERT_EQ(context.backend->exceptions().size(), 1u);
+  ASSERT_EQ(harness.stream_backend()->exceptions().size(), 1u);
   {
-    EXPECT_EQ(context.backend->exceptions()[0].type, debug_ipc::ExceptionType::kPageFault);
-    EXPECT_EQ(context.backend->exceptions()[0].hit_breakpoints.size(), 0u);
+    EXPECT_EQ(harness.stream_backend()->exceptions()[0].type, debug_ipc::ExceptionType::kPageFault);
+    EXPECT_EQ(harness.stream_backend()->exceptions()[0].hit_breakpoints.size(), 0u);
 
-    auto& thread_record = context.backend->exceptions()[0].thread;
+    auto& thread_record = harness.stream_backend()->exceptions()[0].thread;
     EXPECT_EQ(thread_record.process_koid, kProcKoid);
     EXPECT_EQ(thread_record.thread_koid, kThreadKoid);
     EXPECT_EQ(thread_record.state, debug_ipc::ThreadRecord::State::kBlocked);
@@ -180,18 +151,18 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
 }
 
 TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
-  TestContext context = CreateTestContext();
+  MockDebugAgentHarness harness;
 
   // Create a process from our mocked object hierarchy.
   constexpr zx_koid_t kProcKoid = 12;    // MockJobTree job121-p2
   constexpr zx_koid_t kThreadKoid = 23;  // second-thread
-  TestProcess process(context.debug_agent.get(), kProcKoid, "job121-p2");
+  TestProcess process(harness.debug_agent(), kProcKoid, "job121-p2");
 
   auto owning_thread_handle = std::make_unique<MockThreadHandle>(kThreadKoid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.
-  DebuggedThread thread(context.debug_agent.get(), &process, std::move(owning_thread_handle));
+  DebuggedThread thread(harness.debug_agent(), &process, std::move(owning_thread_handle));
 
   // Set the exception information the arch provider is going to return. Some architectures like
   // x64 will issue the exception on the following address, so we need to back-compute it.
@@ -213,9 +184,9 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
       kThreadKoid, debug_ipc::ExceptionType::kSoftwareBreakpoint));
 
   // We should've received an exception notification.
-  ASSERT_EQ(context.backend->exceptions().size(), 1u);
+  ASSERT_EQ(harness.stream_backend()->exceptions().size(), 1u);
   {
-    auto& exception = context.backend->exceptions()[0];
+    auto& exception = harness.stream_backend()->exceptions()[0];
 
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);
@@ -246,9 +217,9 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
       kThreadKoid, debug_ipc::ExceptionType::kSoftwareBreakpoint));
 
   // We should've received an exception notification with hit breakpoints.
-  ASSERT_EQ(context.backend->exceptions().size(), 2u);
+  ASSERT_EQ(harness.stream_backend()->exceptions().size(), 2u);
   {
-    auto& exception = context.backend->exceptions()[1];
+    auto& exception = harness.stream_backend()->exceptions()[1];
 
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);
@@ -266,18 +237,18 @@ TEST(DebuggedThreadBreakpoint, SWBreakpoint) {
 }
 
 TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
-  TestContext context = CreateTestContext();
+  MockDebugAgentHarness harness;
 
   // Create a process from our mocked object hierarchy.
   constexpr zx_koid_t kProcKoid = 12;    // MockJobTree job121-p2
   constexpr zx_koid_t kThreadKoid = 23;  // second-thread
-  TestProcess process(context.debug_agent.get(), kProcKoid, "job121-p2");
+  TestProcess process(harness.debug_agent(), kProcKoid, "job121-p2");
 
   auto owning_thread_handle = std::make_unique<MockThreadHandle>(kThreadKoid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.
-  DebuggedThread thread(context.debug_agent.get(), &process, std::move(owning_thread_handle));
+  DebuggedThread thread(harness.debug_agent(), &process, std::move(owning_thread_handle));
 
   // Set the exception information the arch provider is going to return.
   constexpr uint64_t kAddress = 0xdeadbeef;
@@ -306,9 +277,9 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
       kThreadKoid, debug_ipc::ExceptionType::kHardwareBreakpoint));
 
   // We should've received an exception notification.
-  ASSERT_EQ(context.backend->exceptions().size(), 1u);
+  ASSERT_EQ(harness.stream_backend()->exceptions().size(), 1u);
   {
-    auto& exception = context.backend->exceptions()[0];
+    auto& exception = harness.stream_backend()->exceptions()[0];
 
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kHardwareBreakpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);
@@ -328,18 +299,18 @@ TEST(DebuggedThreadBreakpoint, HWBreakpoint) {
 TEST(DebuggedThreadBreakpoint, Watchpoint) {
   constexpr uint64_t kWatchpointLength = 8;
 
-  TestContext context = CreateTestContext();
+  MockDebugAgentHarness harness;
 
   // Create a process from our mocked object hierarchy.
   constexpr zx_koid_t kProcKoid = 12;    // MockJobTree job121-p2
   constexpr zx_koid_t kThreadKoid = 23;  // second-thread
-  TestProcess process(context.debug_agent.get(), kProcKoid, "job121-p2");
+  TestProcess process(harness.debug_agent(), kProcKoid, "job121-p2");
 
   auto owning_thread_handle = std::make_unique<MockThreadHandle>(kThreadKoid);
   MockThreadHandle* mock_thread_handle = owning_thread_handle.get();
 
   // Create the thread that will be on an exception.
-  DebuggedThread thread(context.debug_agent.get(), &process, std::move(owning_thread_handle));
+  DebuggedThread thread(harness.debug_agent(), &process, std::move(owning_thread_handle));
 
   // Add a watchpoint.
   const debug_ipc::AddressRange kRange = {0x1000, 0x1000 + kWatchpointLength};
@@ -377,7 +348,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
 
   // We should've received an exception notification.
   {
-    auto& exception = context.backend->exceptions()[0];
+    auto& exception = harness.stream_backend()->exceptions()[0];
 
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kWatchpoint)
         << debug_ipc::ExceptionTypeToString(exception.type);

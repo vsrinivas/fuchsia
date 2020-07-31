@@ -9,12 +9,10 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/arch.h"
-#include "src/developer/debug/debug_agent/local_stream_backend.h"
+#include "src/developer/debug/debug_agent/mock_debug_agent_harness.h"
 #include "src/developer/debug/debug_agent/mock_exception_handle.h"
-#include "src/developer/debug/debug_agent/mock_job_tree.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_handle.h"
-#include "src/developer/debug/debug_agent/mock_system_interface.h"
 #include "src/developer/debug/debug_agent/mock_thread_handle.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
@@ -28,8 +26,8 @@ using namespace fuchsia::exception;
 namespace debug_agent {
 namespace {
 
-bool HasAttachedProcessWithKoid(DebugAgent& debug_agent, zx_koid_t koid) {
-  DebuggedProcess* proc = debug_agent.GetDebuggedProcess(koid);
+bool HasAttachedProcessWithKoid(DebugAgent* debug_agent, zx_koid_t koid) {
+  DebuggedProcess* proc = debug_agent->GetDebuggedProcess(koid);
   if (!proc)
     return false;
 
@@ -38,32 +36,6 @@ bool HasAttachedProcessWithKoid(DebugAgent& debug_agent, zx_koid_t koid) {
 }
 
 // Setup -------------------------------------------------------------------------------------------
-
-class DebugAgentStreamBackend : public LocalStreamBackend {
- public:
-  void HandleAttach(debug_ipc::AttachReply attach_reply) override {
-    attach_replies_.push_back(std::move(attach_reply));
-  }
-
-  void HandleNotifyProcessStarting(debug_ipc::NotifyProcessStarting notification) override {
-    process_starts_.push_back(std::move(notification));
-  }
-
-  void HandleNotifyModules(debug_ipc::NotifyModules modules) override {
-    modules_.push_back(std::move(modules));
-  }
-
-  const std::vector<debug_ipc::AttachReply>& attach_replies() const { return attach_replies_; }
-  const std::vector<debug_ipc::NotifyProcessStarting>& process_starts() const {
-    return process_starts_;
-  }
-  const std::vector<debug_ipc::NotifyModules> modules() const { return modules_; }
-
- private:
-  std::vector<debug_ipc::AttachReply> attach_replies_;
-  std::vector<debug_ipc::NotifyProcessStarting> process_starts_;
-  std::vector<debug_ipc::NotifyModules> modules_;
-};
 
 class DebugAgentMockProcess : public MockProcess {
  public:
@@ -92,13 +64,8 @@ class DebugAgentMockProcess : public MockProcess {
 class DebugAgentTests : public debug_ipc::TestWithLoop {};
 
 TEST_F(DebugAgentTests, OnGlobalStatus) {
-  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
-  MockSystemInterface* system_interface = owning_system_interface.get();
-  DebugAgentStreamBackend stream_backend;
-
-  DebugAgent debug_agent(std::move(owning_system_interface));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   debug_ipc::StatusRequest request = {};
 
@@ -113,7 +80,7 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
 
   auto process1 = std::make_unique<MockProcess>(nullptr, kProcessKoid1, kProcessName1);
   process1->AddThread(kProcess1ThreadKoid1);
-  debug_agent.InjectProcessForTest(std::move(process1));
+  harness.debug_agent()->InjectProcessForTest(std::move(process1));
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -133,7 +100,7 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   auto process2 = std::make_unique<MockProcess>(nullptr, kProcessKoid2, kProcessName2);
   process2->AddThread(kProcess2ThreadKoid1);
   process2->AddThread(kProcess2ThreadKoid2);
-  debug_agent.InjectProcessForTest(std::move(process2));
+  harness.debug_agent()->InjectProcessForTest(std::move(process2));
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -157,15 +124,15 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
 
   constexpr zx_koid_t kProcKoid1 = 100;
   constexpr zx_koid_t kThreadKoid1 = 101;
-  system_interface->mock_limbo_provider().AppendException(MockProcessHandle(kProcKoid1, "proc1"),
-                                                          MockThreadHandle(kThreadKoid1, "thread1"),
-                                                          MockExceptionHandle(kThreadKoid1));
+  harness.system_interface()->mock_limbo_provider().AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kThreadKoid1, "thread1"),
+      MockExceptionHandle(kThreadKoid1));
 
   constexpr zx_koid_t kProcKoid2 = 102;
   constexpr zx_koid_t kThreadKoid2 = 103;
-  system_interface->mock_limbo_provider().AppendException(MockProcessHandle(kProcKoid2, "proc2"),
-                                                          MockThreadHandle(kThreadKoid1, "thread2"),
-                                                          MockExceptionHandle(kThreadKoid2));
+  harness.system_interface()->mock_limbo_provider().AppendException(
+      MockProcessHandle(kProcKoid2, "proc2"), MockThreadHandle(kThreadKoid1, "thread2"),
+      MockExceptionHandle(kThreadKoid2));
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -183,23 +150,21 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
 }
 
 TEST_F(DebugAgentTests, OnProcessStatus) {
-  DebugAgentStreamBackend stream_backend;
-  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   constexpr uint64_t kProcessKoid1 = 0x1234;
   std::string kProcessName1 = "process-1";
   auto process1 =
-      std::make_unique<DebugAgentMockProcess>(&debug_agent, kProcessKoid1, kProcessName1);
-  debug_agent.InjectProcessForTest(std::move(process1));
+      std::make_unique<DebugAgentMockProcess>(harness.debug_agent(), kProcessKoid1, kProcessName1);
+  harness.debug_agent()->InjectProcessForTest(std::move(process1));
 
   constexpr uint64_t kProcessKoid2 = 0x5678;
   std::string kProcessName2 = "process-2";
   auto process2 =
-      std::make_unique<DebugAgentMockProcess>(&debug_agent, kProcessKoid2, kProcessName2);
+      std::make_unique<DebugAgentMockProcess>(harness.debug_agent(), kProcessKoid2, kProcessName2);
   auto* process2_ptr = process2.get();
-  debug_agent.InjectProcessForTest(std::move(process2));
+  harness.debug_agent()->InjectProcessForTest(std::move(process2));
 
   // Asking for a un-existent process should fail.
   debug_ipc::ProcessStatusRequest request = {};
@@ -222,12 +187,12 @@ TEST_F(DebugAgentTests, OnProcessStatus) {
 
   loop().RunUntilNoTasks();
 
-  auto& process_starts = stream_backend.process_starts();
+  auto& process_starts = harness.stream_backend()->process_starts();
   ASSERT_EQ(process_starts.size(), 1u);
   EXPECT_EQ(process_starts[0].koid, kProcessKoid2);
   EXPECT_EQ(process_starts[0].name, kProcessName2);
 
-  auto& modules = stream_backend.modules();
+  auto& modules = harness.stream_backend()->modules();
   ASSERT_EQ(modules.size(), 1u);
   EXPECT_EQ(modules[0].process_koid, kProcessKoid2);
 
@@ -245,13 +210,8 @@ TEST_F(DebugAgentTests, OnProcessStatus) {
 TEST_F(DebugAgentTests, OnAttachNotFound) {
   uint32_t transaction_id = 1u;
 
-  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
-  MockSystemInterface* system_interface = owning_system_interface.get();
-  DebugAgentStreamBackend stream_backend;
-
-  DebugAgent debug_agent(std::move(owning_system_interface));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   debug_ipc::AttachRequest attach_request;
   attach_request.type = debug_ipc::TaskType::kProcess;
@@ -261,23 +221,23 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
 
   {
     // Should've gotten an attach reply.
-    auto& attach_replies = stream_backend.attach_replies();
+    auto& attach_replies = harness.stream_backend()->attach_replies();
     ASSERT_EQ(attach_replies.size(), 1u);
     EXPECT_ZX_EQ(attach_replies[0].status, ZX_ERR_NOT_FOUND);
   }
 
   constexpr zx_koid_t kProcKoid1 = 100;
   constexpr zx_koid_t kThreadKoid1 = 101;
-  system_interface->mock_limbo_provider().AppendException(MockProcessHandle(kProcKoid1, "proc1"),
-                                                          MockThreadHandle(kThreadKoid1, "thread1"),
-                                                          MockExceptionHandle(kThreadKoid1));
+  harness.system_interface()->mock_limbo_provider().AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kThreadKoid1, "thread1"),
+      MockExceptionHandle(kThreadKoid1));
 
   // Even with limbo it should fail.
   remote_api->OnAttach(transaction_id++, attach_request);
 
   {
     // Should've gotten an attach reply.
-    auto& attach_replies = stream_backend.attach_replies();
+    auto& attach_replies = harness.stream_backend()->attach_replies();
     ASSERT_EQ(attach_replies.size(), 2u);
     EXPECT_ZX_EQ(attach_replies[1].status, ZX_ERR_NOT_FOUND);
   }
@@ -287,10 +247,8 @@ TEST_F(DebugAgentTests, OnAttach) {
   constexpr zx_koid_t kProcess1Koid = 11u;  // Koid for job1-p2 from the GetMockJobTree() hierarchy.
   uint32_t transaction_id = 1u;
 
-  DebugAgentStreamBackend stream_backend;
-  DebugAgent debug_agent(std::make_unique<MockSystemInterface>(*GetMockJobTree()));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   debug_ipc::AttachRequest attach_request;
   attach_request.type = debug_ipc::TaskType::kProcess;
@@ -299,10 +257,10 @@ TEST_F(DebugAgentTests, OnAttach) {
   remote_api->OnAttach(transaction_id++, attach_request);
 
   // We should've received a watch command (which does the low level exception watching).
-  EXPECT_TRUE(HasAttachedProcessWithKoid(debug_agent, kProcess1Koid));
+  EXPECT_TRUE(HasAttachedProcessWithKoid(harness.debug_agent(), kProcess1Koid));
 
   // We should've gotten an attach reply.
-  auto& attach_replies = stream_backend.attach_replies();
+  auto& attach_replies = harness.stream_backend()->attach_replies();
   auto reply = attach_replies.back();
   ASSERT_EQ(attach_replies.size(), 1u);
   EXPECT_ZX_EQ(reply.status, ZX_OK);
@@ -341,13 +299,8 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
   // debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
   uint32_t transaction_id = 1u;
 
-  DebugAgentStreamBackend stream_backend;
-  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
-  MockSystemInterface* system_interface = owning_system_interface.get();
-
-  DebugAgent debug_agent(std::move(owning_system_interface));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   constexpr zx_koid_t kProcKoid = 100;
   constexpr zx_koid_t kThreadKoid = 101;
@@ -355,8 +308,8 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
   MockThreadHandle mock_thread(kThreadKoid, "thread");
   mock_process.set_threads({mock_thread});
 
-  system_interface->mock_limbo_provider().AppendException(mock_process, mock_thread,
-                                                          MockExceptionHandle(kThreadKoid));
+  harness.system_interface()->mock_limbo_provider().AppendException(
+      mock_process, mock_thread, MockExceptionHandle(kThreadKoid));
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.type = debug_ipc::TaskType::kProcess;
@@ -364,10 +317,10 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
   remote_api->OnAttach(transaction_id++, attach_request);
 
   // Process should be watching.
-  EXPECT_TRUE(HasAttachedProcessWithKoid(debug_agent, kProcKoid));
+  EXPECT_TRUE(HasAttachedProcessWithKoid(harness.debug_agent(), kProcKoid));
 
   // We should've gotten an attach reply.
-  auto& attach_replies = stream_backend.attach_replies();
+  auto& attach_replies = harness.stream_backend()->attach_replies();
   ASSERT_EQ(attach_replies.size(), 1u);
   auto reply = attach_replies.back();
   EXPECT_ZX_EQ(reply.status, ZX_OK);
@@ -375,7 +328,7 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
   EXPECT_EQ(reply.name, "proc");
 
   {
-    DebuggedProcess* process = debug_agent.GetDebuggedProcess(kProcKoid);
+    DebuggedProcess* process = harness.debug_agent()->GetDebuggedProcess(kProcKoid);
     ASSERT_TRUE(process);
     auto threads = process->GetThreads();
     ASSERT_EQ(threads.size(), 1u);
@@ -396,27 +349,22 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
 }
 
 TEST_F(DebugAgentTests, OnEnterLimbo) {
-  DebugAgentStreamBackend stream_backend;
-  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
-  MockSystemInterface* system_interface = owning_system_interface.get();
-
-  DebugAgent debug_agent(std::move(owning_system_interface));
-  debug_agent.Connect(&stream_backend.stream());
+  MockDebugAgentHarness harness;
 
   constexpr zx_koid_t kProcKoid1 = 100;
   constexpr zx_koid_t kThreadKoid1 = 101;
-  system_interface->mock_limbo_provider().AppendException(MockProcessHandle(kProcKoid1, "proc1"),
-                                                          MockThreadHandle(kThreadKoid1, "thread1"),
-                                                          MockExceptionHandle(kThreadKoid1));
+  harness.system_interface()->mock_limbo_provider().AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kThreadKoid1, "thread1"),
+      MockExceptionHandle(kThreadKoid1));
 
   // Call the limbo.
-  system_interface->mock_limbo_provider().CallOnEnterLimbo();
+  harness.system_interface()->mock_limbo_provider().CallOnEnterLimbo();
 
   // Should've sent a notification.
   {
-    ASSERT_EQ(stream_backend.process_starts().size(), 1u);
+    ASSERT_EQ(harness.stream_backend()->process_starts().size(), 1u);
 
-    auto& process_start = stream_backend.process_starts()[0];
+    auto& process_start = harness.stream_backend()->process_starts()[0];
     EXPECT_EQ(process_start.type, debug_ipc::NotifyProcessStarting::Type::kLimbo);
     EXPECT_EQ(process_start.koid, kProcKoid1);
     EXPECT_EQ(process_start.component_id, 0u);
@@ -425,13 +373,8 @@ TEST_F(DebugAgentTests, OnEnterLimbo) {
 }
 
 TEST_F(DebugAgentTests, DetachFromLimbo) {
-  DebugAgentStreamBackend stream_backend;
-  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
-  MockSystemInterface* system_interface = owning_system_interface.get();
-
-  DebugAgent debug_agent(std::move(owning_system_interface));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   constexpr zx_koid_t kProcKoid = 14;  // MockJobTree job11-p1
 
@@ -445,15 +388,15 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
     remote_api->OnDetach(request, &reply);
 
     ASSERT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
-    ASSERT_EQ(system_interface->mock_limbo_provider().release_calls().size(), 0u);
+    ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 0u);
   }
 
   // Adding it should now find it and remove it.
   constexpr zx_koid_t kProcKoid1 = 100;
   constexpr zx_koid_t kThreadKoid1 = 101;
-  system_interface->mock_limbo_provider().AppendException(MockProcessHandle(kProcKoid1, "proc1"),
-                                                          MockThreadHandle(kThreadKoid1, "thread1"),
-                                                          MockExceptionHandle(kThreadKoid1));
+  harness.system_interface()->mock_limbo_provider().AppendException(
+      MockProcessHandle(kProcKoid1, "proc1"), MockThreadHandle(kThreadKoid1, "thread1"),
+      MockExceptionHandle(kThreadKoid1));
   {
     debug_ipc::DetachRequest request = {};
     request.type = debug_ipc::TaskType::kProcess;
@@ -463,8 +406,8 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
     remote_api->OnDetach(request, &reply);
 
     ASSERT_ZX_EQ(reply.status, ZX_OK);
-    ASSERT_EQ(system_interface->mock_limbo_provider().release_calls().size(), 1u);
-    EXPECT_EQ(system_interface->mock_limbo_provider().release_calls()[0], kProcKoid1);
+    ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 1u);
+    EXPECT_EQ(harness.system_interface()->mock_limbo_provider().release_calls()[0], kProcKoid1);
   }
 
   // This should've remove it from limbo, trying it again should fail.
@@ -477,21 +420,16 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
     remote_api->OnDetach(request, &reply);
 
     ASSERT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
-    ASSERT_EQ(system_interface->mock_limbo_provider().release_calls().size(), 1u);
-    EXPECT_EQ(system_interface->mock_limbo_provider().release_calls()[0], kProcKoid1);
+    ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 1u);
+    EXPECT_EQ(harness.system_interface()->mock_limbo_provider().release_calls()[0], kProcKoid1);
   }
 }
 
 TEST_F(DebugAgentTests, Kill) {
   uint32_t transaction_id = 1u;
 
-  DebugAgentStreamBackend stream_backend;
-  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
-  MockSystemInterface* system_interface = owning_system_interface.get();
-
-  DebugAgent debug_agent(std::move(owning_system_interface));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   constexpr zx_koid_t kProcKoid = 14;  // MockJobTree job11-p1
 
@@ -513,9 +451,9 @@ TEST_F(DebugAgentTests, Kill) {
     remote_api->OnAttach(transaction_id++, attach_request);
 
     // There should be a process.
-    ASSERT_EQ(debug_agent.procs_.size(), 1u);
+    ASSERT_EQ(harness.debug_agent()->procs_.size(), 1u);
     // Should not come from limbo.
-    EXPECT_FALSE(debug_agent.procs_.begin()->second->from_limbo());
+    EXPECT_FALSE(harness.debug_agent()->procs_.begin()->second->from_limbo());
   }
 
   // Killing now should work.
@@ -527,7 +465,7 @@ TEST_F(DebugAgentTests, Kill) {
     remote_api->OnKill(kill_request, &kill_reply);
 
     // There should be no more processes.
-    ASSERT_EQ(debug_agent.procs_.size(), 0u);
+    ASSERT_EQ(harness.debug_agent()->procs_.size(), 0u);
 
     // Killing again should fail.
     remote_api->OnKill(kill_request, &kill_reply);
@@ -543,11 +481,11 @@ TEST_F(DebugAgentTests, Kill) {
   MockThreadHandle mock_thread(kLimboThreadKoid, "thread");
   MockExceptionHandle mock_exception(kLimboThreadKoid);
   mock_process.set_threads({mock_thread});
-  system_interface->mock_limbo_provider().AppendException(mock_process, mock_thread,
-                                                          mock_exception);
+  harness.system_interface()->mock_limbo_provider().AppendException(mock_process, mock_thread,
+                                                                    mock_exception);
 
   // There should be no more processes.
-  ASSERT_EQ(debug_agent.procs_.size(), 0u);
+  ASSERT_EQ(harness.debug_agent()->procs_.size(), 0u);
 
   // Killing now should release it.
   {
@@ -558,16 +496,16 @@ TEST_F(DebugAgentTests, Kill) {
     remote_api->OnKill(kill_request, &kill_reply);
     ASSERT_ZX_EQ(kill_reply.status, ZX_OK);
 
-    ASSERT_EQ(system_interface->mock_limbo_provider().release_calls().size(), 1u);
-    EXPECT_EQ(system_interface->mock_limbo_provider().release_calls()[0], kLimboProcKoid);
+    ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 1u);
+    EXPECT_EQ(harness.system_interface()->mock_limbo_provider().release_calls()[0], kLimboProcKoid);
 
     // Killing again should not find it.
     remote_api->OnKill(kill_request, &kill_reply);
     ASSERT_ZX_EQ(kill_reply.status, ZX_ERR_NOT_FOUND);
   }
 
-  system_interface->mock_limbo_provider().AppendException(mock_process, mock_thread,
-                                                          mock_exception);
+  harness.system_interface()->mock_limbo_provider().AppendException(mock_process, mock_thread,
+                                                                    mock_exception);
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.type = debug_ipc::TaskType::kProcess;
@@ -575,12 +513,12 @@ TEST_F(DebugAgentTests, Kill) {
   remote_api->OnAttach(transaction_id++, attach_request);
 
   // There should be a process.
-  ASSERT_EQ(debug_agent.procs_.size(), 1u);
+  ASSERT_EQ(harness.debug_agent()->procs_.size(), 1u);
 
   {
-    auto it = debug_agent.procs_.find(kLimboProcKoid);
-    ASSERT_NE(it, debug_agent.procs_.end());
-    EXPECT_TRUE(debug_agent.procs_.begin()->second->from_limbo());
+    auto it = harness.debug_agent()->procs_.find(kLimboProcKoid);
+    ASSERT_NE(it, harness.debug_agent()->procs_.end());
+    EXPECT_TRUE(harness.debug_agent()->procs_.begin()->second->from_limbo());
 
     // Killing it should free the process.
     debug_ipc::KillRequest kill_request = {};
@@ -590,41 +528,37 @@ TEST_F(DebugAgentTests, Kill) {
     remote_api->OnKill(kill_request, &kill_reply);
     ASSERT_ZX_EQ(kill_reply.status, ZX_OK);
 
-    ASSERT_EQ(debug_agent.procs_.size(), 0u);
+    ASSERT_EQ(harness.debug_agent()->procs_.size(), 0u);
 
     // There should be a limbo process to be killed.
-    ASSERT_EQ(debug_agent.killed_limbo_procs_.size(), 1u);
-    EXPECT_EQ(debug_agent.killed_limbo_procs_.count(kLimboProcKoid), 1u);
+    ASSERT_EQ(harness.debug_agent()->killed_limbo_procs_.size(), 1u);
+    EXPECT_EQ(harness.debug_agent()->killed_limbo_procs_.count(kLimboProcKoid), 1u);
 
     // There should've have been more release calls (yet).
-    ASSERT_EQ(system_interface->mock_limbo_provider().release_calls().size(), 1u);
+    ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 1u);
 
     // When the process "re-enters" the limbo, it should be removed.
-    system_interface->mock_limbo_provider().AppendException(mock_process, mock_thread,
-                                                            mock_exception);
-    system_interface->mock_limbo_provider().CallOnEnterLimbo();
+    harness.system_interface()->mock_limbo_provider().AppendException(mock_process, mock_thread,
+                                                                      mock_exception);
+    harness.system_interface()->mock_limbo_provider().CallOnEnterLimbo();
 
     // There should not be an additional proc in the agent.
-    ASSERT_EQ(debug_agent.procs_.size(), 0u);
+    ASSERT_EQ(harness.debug_agent()->procs_.size(), 0u);
 
     // There should've been a release call.
-    ASSERT_EQ(system_interface->mock_limbo_provider().release_calls().size(), 2u);
-    EXPECT_EQ(system_interface->mock_limbo_provider().release_calls()[1], kLimboProcKoid);
+    ASSERT_EQ(harness.system_interface()->mock_limbo_provider().release_calls().size(), 2u);
+    EXPECT_EQ(harness.system_interface()->mock_limbo_provider().release_calls()[1], kLimboProcKoid);
   }
 }
 
 TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
-  DebugAgentStreamBackend stream_backend;
-  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
-
-  DebugAgent debug_agent(std::move(owning_system_interface));
-  debug_agent.Connect(&stream_backend.stream());
-  RemoteAPI* remote_api = &debug_agent;
+  MockDebugAgentHarness harness;
+  RemoteAPI* remote_api = harness.debug_agent();
 
   // The default strategy should be first chance for a type that has yet to be
   // updated.
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,
-            debug_agent.GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+            harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
 
   {
     const debug_ipc::UpdateGlobalSettingsRequest request = {
@@ -640,7 +574,7 @@ TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
   }
 
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kSecondChance,
-            debug_agent.GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+            harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
 
   {
     const debug_ipc::UpdateGlobalSettingsRequest request = {
@@ -656,7 +590,7 @@ TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
   }
 
   EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,
-            debug_agent.GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+            harness.debug_agent()->GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
 }
 
 }  // namespace debug_agent

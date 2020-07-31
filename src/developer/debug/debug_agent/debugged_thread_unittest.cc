@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/mock_debug_agent_harness.h"
 #include "src/developer/debug/debug_agent/mock_exception_handle.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_handle.h"
@@ -65,6 +66,8 @@ void SetRegister(const Register& reg, std::vector<Register>* regs) {
 }
 
 TEST(DebuggedThread, Resume) {
+  MockDebugAgentHarness harness;
+
   constexpr zx_koid_t kProcessKoid = 0x8723456;
   MockProcess process(nullptr, kProcessKoid);
 
@@ -82,7 +85,8 @@ TEST(DebuggedThread, Resume) {
     // TODO(brettw) this should use a MockThreadHandle but the suspensions are not yet hooked up
     // with that in a way that will make the DebuggedThread happy.
     debugged_thread = std::make_unique<DebuggedThread>(
-        nullptr, &process, std::make_unique<ZirconThreadHandle>(std::move(current_thread)));
+        harness.debug_agent(), &process,
+        std::make_unique<ZirconThreadHandle>(std::move(current_thread)));
 
     // Let the test know it can continue.
     ASSERT_EQ(event.signal(0, ZX_USER_SIGNAL_0), ZX_OK);

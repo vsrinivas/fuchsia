@@ -160,6 +160,7 @@ source_set("test_lib") {
   sources = [
     "local_stream_backend.cc",
     "local_stream_backend.h",
+    "mock_debug_agent_harness.h",
     "mock_exception_handle.h",
     "mock_job_handle.cc",
     "mock_job_handle.h",
@@ -171,6 +172,7 @@ source_set("test_lib") {
     "mock_process.h",
     "mock_process_handle.cc",
     "mock_process_handle.h",
+    "mock_stream_backend.h",
     "mock_system_interface.cc",
     "mock_system_interface.h",
     "mock_thread.cc",
