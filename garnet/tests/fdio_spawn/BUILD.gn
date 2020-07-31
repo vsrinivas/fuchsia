@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon_images.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -65,26 +64,14 @@ executable("return_arg_test_util") {
   deps = [ "//src/lib/fxl" ]
 }
 
-# TODO(bryanhenry): This is a copy from //src/sys/dash. Ideally we wouldn't need to copy this target
-# around to include bin/sh in packages, but get_target_outputs seems to only work on targets in the
-# current file. See if there's a way to improve this.
-zircon_extras_manifest("dash_bin_manifest") {
-  visibility = [ ":*" ]
-  manifest = "image"
-  patterns = [ "bin/sh" ]
-}
-
 test_package("fdio_spawn_tests") {
   deps = [
     ":bin",
-    ":dash_bin_manifest",
     ":fake_launcher_util",
     ":return_arg_test_util",
     ":spawn_child_util",
+    "//zircon/third_party/uapp/dash",
   ]
-
-  # This includes bin/sh in the package
-  extra = get_target_outputs(":dash_bin_manifest")
 
   binaries = [
     {
@@ -92,6 +79,9 @@ test_package("fdio_spawn_tests") {
     },
     {
       name = "return_arg_test_util"
+    },
+    {
+      name = "sh"
     },
     {
       name = "spawn_child_util"
