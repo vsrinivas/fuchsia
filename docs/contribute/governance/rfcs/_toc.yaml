@@ -10,5 +10,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0002_platform_versioning.md
 - title: "RFC-0003: Logging"
   path: /docs/contribute/governance/rfcs/0003_logging.md
+- title: "RFC-0004: Units of Bytes"
+  path: /docs/contribute/governance/rfcs/0004_units_of_bytes.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
