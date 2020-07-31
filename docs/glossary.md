@@ -434,6 +434,12 @@ optimized for Fuchsia and is used by many system components. Flutter also runs
 on a variety of other platforms, including Android and iOS. Fuchsia itself does
 not require you to use any particular language or user interface framework.
 
+### **FTP** {#ftp}
+
+[FIDL Tuning Proposal](/docs/contribute/governance/fidl#process). An FTP is the
+way developers can suggest changes to FIDL. After being written, an FTP goes
+through a formal review process where it is either accepted or rejected.
+
 ### **Fuchsia API Surface** {#fuchsia-api-surface}
 
 The Fuchsia API Surface is the combination of the
