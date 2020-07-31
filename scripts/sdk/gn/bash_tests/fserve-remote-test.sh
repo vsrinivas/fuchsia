@@ -77,12 +77,13 @@ TEST_fserve_remote() {
 EOF
 
   # Run command.
-  BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
 
   # Common command line args, used for each call to ssh
-  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected=(_ANY_  "desktop.example.com" )
   ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
   ssh_common_expected+=(-o "ControlMaster=auto")
+  ssh_common_expected+=(-t)
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
@@ -98,7 +99,10 @@ EOF
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&" "./bin/fconfig.sh list")
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
+    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
+    "./bin/fconfig.sh default device-name" "&&" "./bin/fconfig.sh list")
  gn-test-check-mock-args "${expected[@]}"
 
 # shellcheck disable=SC1090
@@ -109,8 +113,13 @@ EOF
 # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.5"
   expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
-  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&"
+    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh" "&&" "sleep 0")
   gn-test-check-mock-args "${expected[@]}"
 
 
@@ -159,11 +168,12 @@ EOF
 
 
   # Run command.
-  BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_with_config_log.txt" 2>&1
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_with_config_log.txt" 2>&1
 
-  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected=(_ANY_  "desktop.example.com" )
   ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
   ssh_common_expected+=(-o "ControlMaster=auto")
+  ssh_common_expected+=(-t)
 
    # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
@@ -179,8 +189,12 @@ EOF
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&")
-  expected+=("./bin/fconfig.sh set bucket custom-bucket" "&&" "./bin/fconfig.sh set image test-image" "&&" "./bin/fconfig.sh list")
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
+    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
+    "./bin/fconfig.sh default device-name" "&&"
+    "./bin/fconfig.sh set bucket custom-bucket" "&&"
+    "./bin/fconfig.sh set image test-image" "&&" "./bin/fconfig.sh list")
   gn-test-check-mock-args "${expected[@]}"
 
 # shellcheck disable=SC1090
@@ -191,8 +205,13 @@ EOF
 # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.5"
   expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
-  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes"
+    "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
+    "&&" "./bin/fserve.sh" "&&" "sleep 0")
   gn-test-check-mock-args "${expected[@]}"
 
 
@@ -242,12 +261,13 @@ TEST_fserve_remote_existing_session() {
 EOF
 
   # Run command.
-  BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
 
   # Common command line args, used for each call to ssh
-  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected=(_ANY_  "desktop.example.com" )
   ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
   ssh_common_expected+=(-o "ControlMaster=auto")
+  ssh_common_expected+=(-t)
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
@@ -275,7 +295,10 @@ EOF
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.5"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&" "./bin/fconfig.sh list")
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
+    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
+    "./bin/fconfig.sh default device-name" "&&" "./bin/fconfig.sh list")
  gn-test-check-mock-args "${expected[@]}"
 
 # shellcheck disable=SC1090
@@ -286,8 +309,13 @@ EOF
 # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.7"
   expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
-  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes"
+    "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
+    "&&" "./bin/fserve.sh" "&&" "sleep 0")
   gn-test-check-mock-args "${expected[@]}"
 
 
@@ -332,12 +360,13 @@ TEST_fserve_remote_pm_running() {
 EOF
 
   # Run command.
-  BT_EXPECT "${FSERVE_REMOTE_CMD}" glinux.google.com "${REMOTE_PATH}" > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
 
   # Common command line args, used for each call to ssh
-  ssh_common_expected=(_ANY_  "glinux.google.com" )
+  ssh_common_expected=(_ANY_  "desktop.example.com" )
   ssh_common_expected+=(-S "${HOME}/.ssh/control-fuchsia-fx-remote")
   ssh_common_expected+=(-o "ControlMaster=auto")
+  ssh_common_expected+=(-t)
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
@@ -354,8 +383,12 @@ EOF
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&" "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&" "./bin/fconfig.sh list")
- gn-test-check-mock-args "${expected[@]}"
+  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
+    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
+    "./bin/fconfig.sh default device-name"
+    "&&" "./bin/fconfig.sh list")
+  gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.4"
@@ -371,8 +404,13 @@ EOF
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.6"
   expected=("${ssh_common_expected[@]}" )
-  expected+=(-6 -L "\*:8083:localhost:8083" -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22" -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345" -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443")
-  expected+=(-R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh")
+  expected+=(-6 -L "\*:8083:localhost:8083"
+    -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
+    -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
+    -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes"
+    "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
+    "&&" "./bin/fserve.sh" "&&" "sleep 0")
   gn-test-check-mock-args "${expected[@]}"
 
 

@@ -23,6 +23,12 @@ usage: fserve-remote.sh [--no-serve] [--device-name <device hostname>] HOSTNAME 
       Name of GCS bucket containing the image archive.
   --no-serve
       Only tunnel, do not start a package server.
+  -x
+      Enable debug
+  --ttl
+      Time to keep the tunnel open. Defaults to "infinity". The format
+      of the time is the same as the sleep command. This is primarily
+      intended for testing. Tests should use "0" to return immediately.
 
   HOSTNAME
       The hostname of the workstation you want to serve from
@@ -31,6 +37,8 @@ usage: fserve-remote.sh [--no-serve] [--device-name <device hostname>] HOSTNAME 
 EOF
 }
 
+DEBUG_FLAG=""
+TTL_TIME="infinity"
 START_SERVE=1
 REMOTE_HOST=""
 REMOTE_DIR=""
@@ -59,6 +67,14 @@ while [[ $# -ne 0 ]]; do
   --image)
     shift
     IMAGE="${1}"
+    ;;
+  -x)
+    DEBUG_FLAG="-x"
+    set -x
+    ;;
+  --ttl)
+    shift
+    TTL_TIME="${1}"
     ;;
   -*)
     fx-error "Unknown flag: $1"
@@ -110,6 +126,11 @@ fi
 echo "Using remote ${REMOTE_HOST}:${REMOTE_DIR}"
 echo "Using target device ${DEVICE_NAME}"
 
+# set the device name as the default to avoid confusion, and clear out the IP address
+set-fuchsia-property "device-name" "${DEVICE_NAME}"
+set-fuchsia-property "device-ip" ""
+
+
 # Use a dedicated ControlPath so script can manage a connection seperately from the user's. We
 # intentionally do not use %h/%p in the control path because there can only be one forwarding
 # session at a time (due to the local forward of 8083).
@@ -117,10 +138,11 @@ ssh_base_args=(
   "${REMOTE_HOST}"
   -S "${HOME}/.ssh/control-fuchsia-fx-remote"
   -o "ControlMaster=auto"
+  -t
 )
 
 ssh_exit() {
-  if ! ssh "${ssh_base_args[@]}" -O exit > /dev/null 2>&1; then
+  if ! ssh "${ssh_base_args[@]}" -O exit > /dev/null; then
     echo "Error exiting session: $?"
   fi
 }
@@ -132,6 +154,7 @@ trap_exit() {
   exit
 }
 trap trap_exit EXIT
+trap trap_exit SIGINT
 
 
 # First we need to check if we already have a control master for the
@@ -170,11 +193,13 @@ args=(
   -o "ExitOnForwardFailure=yes"
 )
 
-# Set the configuration properties to match the remote device.
+# Set the configuration properties to match the remote device. Set the IP address,
+# and clear the device name to avoid any confusion.
 remote_cmds=(
   "cd \$HOME" "&&" # change directories to home, to avoid issues if the remote dir was deleted out from under us.
   "cd ${REMOTE_DIR}" "&&"
-  "./bin/fconfig.sh set device-ip 127.0.0.1"
+  "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
+  "./bin/fconfig.sh default device-name"
   )
 
 if [[ "${BUCKET}" != "" ]]; then
@@ -188,7 +213,9 @@ fi
 # Run fconfig.sh list to print out the settings, this will help diagnosing any
 # problems.
 remote_cmds+=("&&" "./bin/fconfig.sh list")
-
+if [[ "${DEBUG_FLAG}" != "" ]]; then
+  remote_cmds+=("&&" "echo Desktop env is \$(env)")
+fi
 # The variables here should be expanded locally, disabling the shellcheck lint
 # message about ssh and variables.
 # shellcheck disable=SC2029
@@ -209,10 +236,22 @@ fi
 if ((START_SERVE)); then
   # Starts a package server
   args+=(cd "\$HOME" "&&" cd "${REMOTE_DIR}" "&&" ./bin/fserve.sh)
+  if [[ "${DEBUG_FLAG}" != "" ]]; then
+    args+=("${DEBUG_FLAG}")
+  fi
+  # fserve.sh runs in the background, keep the tunnel open by running sleep.
+  args+=("&&" "sleep ${TTL_TIME}")
 else
   # Starts nothing, just goes to sleep
-  args+=("-nNT")
+  args+=("sleep ${TTL_TIME}")
 fi
 
+echo "Press Ctrl-C to stop tunneling."
 # shellcheck disable=SC2029
 ssh "${ssh_base_args[@]}" "${args[@]}"
+
+# Wait for user Ctrl-C. Then script exit will trigger trap_exit to close the ssh connection.
+# a TTL of 0 is used in unit tests.
+if [[ "$TTL_TIME" != "0" ]]; then
+  read -r -d '' _ </dev/tty
+fi
