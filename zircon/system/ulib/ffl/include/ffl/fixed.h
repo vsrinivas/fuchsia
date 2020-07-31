@@ -107,7 +107,9 @@ class Fixed {
   constexpr Integer Ceiling() const {
     const Integer value = value_ / Format::AdjustmentFactor;
     const Integer power = Format::AdjustedPower;
-    const auto saturated_value = SaturateAddAs<Integer>(value, Format::AdjustedFractionalMask);
+    const auto saturated_value = Format::IsUnsigned || value >= 0
+                                     ? SaturateAddAs<Integer>(value, Format::AdjustedFractionalMask)
+                                     : value;
     return static_cast<Integer>(saturated_value / power);
   }
 

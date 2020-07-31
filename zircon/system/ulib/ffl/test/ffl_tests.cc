@@ -951,13 +951,27 @@ static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint32_t>());
 static_assert(FixedComparisonPromotionTestVaryLeftFractionalBits<uint64_t>());
 
 static_assert(1 == Fixed<int, 0>{1}.Ceiling());
-static_assert(1 == Fixed<int, 1>{FromRatio(1, 2)}.Ceiling());
-static_assert(1 == Fixed<int, 2>{FromRatio(1, 2)}.Ceiling());
-static_assert(1 == Fixed<int, 2>{FromRatio(1, 4)}.Ceiling());
-static_assert(0 == Fixed<int, 1>{FromRatio(-1, 2)}.Ceiling());
-static_assert(0 == Fixed<int, 2>{FromRatio(-1, 2)}.Ceiling());
-static_assert(0 == Fixed<int, 2>{FromRatio(-1, 4)}.Ceiling());
+static_assert(0 == Fixed<int, 0>{0}.Ceiling());
 static_assert(-1 == Fixed<int, 0>{-1}.Ceiling());
+
+static_assert(1 == Fixed<int, 1>{FromRatio(1, 2)}.Ceiling());
+static_assert(0 == Fixed<int, 1>{FromRatio(-1, 2)}.Ceiling());
+
+static_assert(2 == Fixed<int, 2>{FromRatio(8, 4)}.Ceiling());
+static_assert(2 == Fixed<int, 2>{FromRatio(7, 4)}.Ceiling());
+static_assert(2 == Fixed<int, 2>{FromRatio(5, 4)}.Ceiling());
+static_assert(1 == Fixed<int, 2>{FromRatio(4, 4)}.Ceiling());
+static_assert(1 == Fixed<int, 2>{FromRatio(3, 4)}.Ceiling());
+static_assert(1 == Fixed<int, 2>{FromRatio(2, 4)}.Ceiling());
+static_assert(1 == Fixed<int, 2>{FromRatio(1, 4)}.Ceiling());
+static_assert(0 == Fixed<int, 2>{0}.Ceiling());
+static_assert(0 == Fixed<int, 2>{FromRatio(-1, 4)}.Ceiling());
+static_assert(0 == Fixed<int, 2>{FromRatio(-2, 4)}.Ceiling());
+static_assert(0 == Fixed<int, 2>{FromRatio(-3, 4)}.Ceiling());
+static_assert(-1 == Fixed<int, 2>{FromRatio(-4, 4)}.Ceiling());
+static_assert(-1 == Fixed<int, 2>{FromRatio(-5, 4)}.Ceiling());
+static_assert(-1 == Fixed<int, 2>{FromRatio(-7, 4)}.Ceiling());
+static_assert(-2 == Fixed<int, 2>{FromRatio(-8, 4)}.Ceiling());
 
 static_assert(1 == Fixed<int8_t, 7>::Max().Ceiling());
 static_assert(1 == Fixed<int16_t, 15>::Max().Ceiling());
@@ -968,23 +982,36 @@ static_assert(1 == Fixed<uint16_t, 16>::Max().Ceiling());
 static_assert(1 == Fixed<uint32_t, 32>::Max().Ceiling());
 static_assert(1 == Fixed<uint64_t, 64>::Max().Ceiling());
 
-static_assert(0 == Fixed<int8_t, 7>::Min().Ceiling());
-static_assert(0 == Fixed<int16_t, 15>::Min().Ceiling());
-static_assert(0 == Fixed<int32_t, 31>::Min().Ceiling());
-static_assert(0 == Fixed<int64_t, 63>::Min().Ceiling());
+static_assert(-1 == Fixed<int8_t, 7>::Min().Ceiling());
+static_assert(-1 == Fixed<int16_t, 15>::Min().Ceiling());
+static_assert(-1 == Fixed<int32_t, 31>::Min().Ceiling());
+static_assert(-1 == Fixed<int64_t, 63>::Min().Ceiling());
 static_assert(0 == Fixed<uint8_t, 8>::Min().Ceiling());
 static_assert(0 == Fixed<uint16_t, 16>::Min().Ceiling());
 static_assert(0 == Fixed<uint32_t, 32>::Min().Ceiling());
 static_assert(0 == Fixed<uint64_t, 64>::Min().Ceiling());
 
 static_assert(1 == Fixed<int, 0>{1}.Floor());
-static_assert(0 == Fixed<int, 1>{FromRatio(1, 2)}.Floor());
-static_assert(0 == Fixed<int, 2>{FromRatio(1, 2)}.Floor());
-static_assert(0 == Fixed<int, 2>{FromRatio(1, 4)}.Floor());
-static_assert(-1 == Fixed<int, 1>{FromRatio(-1, 2)}.Floor());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-1, 2)}.Floor());
-static_assert(-1 == Fixed<int, 2>{FromRatio(-1, 4)}.Floor());
+static_assert(0 == Fixed<int, 0>{0}.Floor());
 static_assert(-1 == Fixed<int, 0>{-1}.Floor());
+
+static_assert(0 == Fixed<int, 1>{FromRatio(1, 2)}.Floor());
+static_assert(-1 == Fixed<int, 1>{FromRatio(-1, 2)}.Floor());
+
+static_assert(2 == Fixed<int, 2>{FromRatio(8, 4)}.Floor());
+static_assert(1 == Fixed<int, 2>{FromRatio(7, 4)}.Floor());
+static_assert(1 == Fixed<int, 2>{FromRatio(5, 4)}.Floor());
+static_assert(0 == Fixed<int, 2>{FromRatio(3, 4)}.Floor());
+static_assert(0 == Fixed<int, 2>{FromRatio(2, 4)}.Floor());
+static_assert(0 == Fixed<int, 2>{FromRatio(1, 4)}.Floor());
+static_assert(0 == Fixed<int, 2>{0}.Floor());
+static_assert(-1 == Fixed<int, 2>{FromRatio(-1, 4)}.Floor());
+static_assert(-1 == Fixed<int, 2>{FromRatio(-2, 4)}.Floor());
+static_assert(-1 == Fixed<int, 2>{FromRatio(-3, 4)}.Floor());
+static_assert(-1 == Fixed<int, 2>{FromRatio(-4, 4)}.Floor());
+static_assert(-2 == Fixed<int, 2>{FromRatio(-5, 4)}.Floor());
+static_assert(-2 == Fixed<int, 2>{FromRatio(-7, 4)}.Floor());
+static_assert(-2 == Fixed<int, 2>{FromRatio(-8, 4)}.Floor());
 
 static_assert(0 == Fixed<int8_t, 7>::Max().Floor());
 static_assert(0 == Fixed<int16_t, 15>::Max().Floor());
