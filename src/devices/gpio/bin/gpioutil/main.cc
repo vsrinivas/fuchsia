@@ -17,23 +17,34 @@
 #include "gpioutil.h"
 
 int main(int argc, char** argv) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return -1;
-  }
-  status = fdio_service_connect(argv[1], remote.release());
-  if (status != ZX_OK) {
-    return -1;
-  }
-
   GpioFunc func;
   uint8_t write_value, out_value;
   ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
   if (ParseArgs(argc, argv, &func, &write_value, &in_flag, &out_value)) {
+    printf("Unable to parse arguments!\n\n");
+    usage();
     return -1;
   }
 
-  return ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(local)), func,
-                    write_value, in_flag, out_value);
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    printf("Unable to create channel!\n\n");
+    usage();
+    return -1;
+  }
+  status = fdio_service_connect(argv[2], remote.release());
+  if (status != ZX_OK) {
+    printf("Unable to connect to device!\n\n");
+    usage();
+    return -1;
+  }
+
+  int ret = ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(local)), func,
+                       write_value, in_flag, out_value);
+  if (ret == -1) {
+    printf("Client call failed!\n\n");
+    usage();
+  }
+  return ret;
 }

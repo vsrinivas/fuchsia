@@ -4,18 +4,9 @@
 
 #include "gpioutil.h"
 
-void usage(char* prog) {
-  fprintf(stderr, "usage:\n");
-  fprintf(stderr, "    %s DEVICE r\n", prog);
-  fprintf(stderr, "    %s DEVICE w value\n", prog);
-  fprintf(stderr, "    %s DEVICE i flags\n", prog);
-  fprintf(stderr, "    %s DEVICE o initial_value\n", prog);
-}
-
 template <typename T, typename ReturnType>
 zx::status<ReturnType> GetStatus(const T& result) {
   if (result.status() != ZX_OK) {
-    printf("Unable to connect to device\n");
     return zx::error(result.status());
   }
   if (result->result.has_invalid_tag()) {
@@ -27,7 +18,6 @@ zx::status<ReturnType> GetStatus(const T& result) {
 template <typename T>
 zx::status<> GetStatus(const T& result) {
   if (result.status() != ZX_OK) {
-    printf("Unable to connect to device\n");
     return zx::error(result.status());
   }
   if (result->result.has_invalid_tag()) {
@@ -39,7 +29,6 @@ zx::status<> GetStatus(const T& result) {
 int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
               ::llcpp::fuchsia::hardware::gpio::GpioFlags* in_flag, uint8_t* out_value) {
   if (argc < 3) {
-    usage(argv[0]);
     return -1;
   }
 
@@ -47,7 +36,7 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   *in_flag = ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL;
   *out_value = 0;
   unsigned long flag = 0;
-  switch (argv[2][0]) {
+  switch (argv[1][0]) {
     case 'r':
       *func = Read;
       break;
@@ -55,7 +44,6 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
       *func = Write;
 
       if (argc < 4) {
-        usage(argv[0]);
         return -1;
       }
       *write_value = static_cast<uint8_t>(std::stoul(argv[3]));
@@ -64,12 +52,11 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
       *func = ConfigIn;
 
       if (argc < 4) {
-        usage(argv[0]);
         return -1;
       }
       flag = std::stoul(argv[3]);
       if (flag > 3) {
-        usage(argv[0]);
+        printf("Invalid flag\n\n");
         return -1;
       }
       *in_flag = static_cast<::llcpp::fuchsia::hardware::gpio::GpioFlags>(flag);
@@ -78,7 +65,6 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
       *func = ConfigOut;
 
       if (argc < 4) {
-        usage(argv[0]);
         return -1;
       }
       *out_value = static_cast<uint8_t>(std::stoul(argv[3]));
@@ -130,6 +116,7 @@ int ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient client, GpioFu
       break;
     }
     default:
+      printf("Invalid function\n\n");
       return -1;
   }
   return 0;

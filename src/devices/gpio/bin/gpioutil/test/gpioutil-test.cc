@@ -95,7 +95,7 @@ class GpioUtilTest : public zxtest::Test {
 
 TEST_F(GpioUtilTest, ReadTest) {
   int argc = 3;
-  const char* argv[] = {"gpioutil", "some_path", "r"};
+  const char* argv[] = {"gpioutil", "r", "some_path"};
 
   GpioFunc func;
   uint8_t write_value, out_value;
@@ -115,7 +115,7 @@ TEST_F(GpioUtilTest, ReadTest) {
 
 TEST_F(GpioUtilTest, WriteTest) {
   int argc = 4;
-  const char* argv[] = {"gpioutil", "some_path", "w", "7"};
+  const char* argv[] = {"gpioutil", "w", "some_path", "7"};
 
   GpioFunc func;
   uint8_t write_value, out_value;
@@ -135,7 +135,7 @@ TEST_F(GpioUtilTest, WriteTest) {
 
 TEST_F(GpioUtilTest, ConfigInTest) {
   int argc = 4;
-  const char* argv[] = {"gpioutil", "some_path", "i", "2"};
+  const char* argv[] = {"gpioutil", "i", "some_path", "2"};
 
   GpioFunc func;
   uint8_t write_value, out_value;
@@ -155,7 +155,7 @@ TEST_F(GpioUtilTest, ConfigInTest) {
 
 TEST_F(GpioUtilTest, ConfigOutTest) {
   int argc = 4;
-  const char* argv[] = {"gpioutil", "some_path", "o", "3"};
+  const char* argv[] = {"gpioutil", "o", "some_path", "3"};
 
   GpioFunc func;
   uint8_t write_value, out_value;

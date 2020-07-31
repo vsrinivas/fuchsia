@@ -10,6 +10,23 @@
 #include <stdio.h>
 #include <zircon/status.h>
 
+static void usage() {
+  printf("usage:\n");
+  printf("    gpioutil h                          [Prints help message (this)]\n");
+  printf("    gpioutil r DEVICE                   [Read from GPIO]\n");
+  printf("    gpioutil w DEVICE value             [Write to GPIO <value>]\n");
+  printf("    gpioutil i DEVICE flags             [Config GPIO as IN with <flags>]\n");
+  printf("        available flags: 0 - GPIO_PULL_DOWN\n");
+  printf("                         1 - GPIO_PULL_UP\n");
+  printf("                         2 - GPIO_NO_PULL\n");
+  printf("    gpioutil o DEVICE initial_value     [Config GPIO as OUT with <initial_value>]\n\n");
+  printf(
+      "     * DEVICE is path to device. Sample: "
+      "/dev/sys/platform/05:04:1/aml-axg-gpio/gpio-<pin>,\n");
+  printf("       where <pin> corresponds to the pin number calculated for it. For example, see\n");
+  printf("       calculation in lib/amlogic/include/soc/aml-t931/t931-gpio.h\n");
+}
+
 enum GpioFunc { Read = 0, Write = 1, ConfigIn = 2, ConfigOut = 3, Invalid = 4 };
 
 template <typename T, typename ReturnType>
