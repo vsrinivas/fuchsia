@@ -40,12 +40,7 @@ bool RetrieveExceptionContext(ExceptionContext* pe) {
   // We mark the exception to be handled. We need this because we pass on the exception to the
   // handler, which will resume it before we get the control back. If we don't mark it as handled,
   // the exception will bubble out of our environment.
-  if (!MarkExceptionAsHandled(pe)) {
-    FX_LOGS(ERROR) << "Could not mark exception as handled.";
-    return false;
-  }
-
-  return true;
+  return MarkExceptionAsHandled(pe);
 }
 
 ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {
@@ -132,7 +127,7 @@ ProcessException GetFakeException(zx_koid_t process_koid = 1, zx_koid_t thread_k
 
 // Tests -------------------------------------------------------------------------------------------
 
-TEST(ProcessLimboManager, ProcessLimboHandler) {
+TEST(ProcessLimboManagerTest, ProcessLimboHandler) {
   ProcessLimboManager limbo_manager;
 
   // Use the handler interface.
@@ -322,7 +317,7 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
   excps[2].job.kill();
 }
 
-TEST(ProcessLimboManager, FromExceptionBroker) {
+TEST(ProcessLimboManagerTest, FromExceptionBroker) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/1u,
@@ -366,7 +361,7 @@ TEST(ProcessLimboManager, FromExceptionBroker) {
 
 // WatchActive -------------------------------------------------------------------------------------
 
-TEST(ProcessLimboManager, WatchActiveCalls) {
+TEST(ProcessLimboManagerTest, WatchActiveCalls) {
   ProcessLimboManager limbo_manager;
   auto handler = CreateHandler(&limbo_manager);
 
@@ -466,7 +461,7 @@ TEST(ProcessLimboManager, WatchActiveCalls) {
   }
 }
 
-TEST(ProcessLimboManager, ManyHandlers) {
+TEST(ProcessLimboManagerTest, ManyHandlers) {
   ProcessLimboManager limbo_manager;
 
   std::vector<std::unique_ptr<ProcessLimboHandler>> handlers;
@@ -513,7 +508,7 @@ TEST(ProcessLimboManager, ManyHandlers) {
   EXPECT_TRUE(active_callbacks[2]);
 }
 
-TEST(ProcessLimboManager, Filters) {
+TEST(ProcessLimboManagerTest, Filters) {
   ProcessLimboManager limbo_manager;
 
   // Override how the manager gets the process name.
@@ -553,7 +548,7 @@ TEST(ProcessLimboManager, Filters) {
   EXPECT_TRUE(limbo.find(kProcessKoid2) != limbo.end());
 }
 
-TEST(ProcessLimboManager, FiltersGetSet) {
+TEST(ProcessLimboManagerTest, FiltersGetSet) {
   ProcessLimboManager limbo_manager;
   auto handler = CreateHandler(&limbo_manager);
 
@@ -630,7 +625,7 @@ TEST(ProcessLimboManager, FiltersGetSet) {
   }
 }
 
-TEST(ProcessLimboManager, DisablingFrees) {
+TEST(ProcessLimboManagerTest, DisablingFrees) {
   ProcessLimboManager limbo_manager;
   auto handler = CreateHandler(&limbo_manager);
 

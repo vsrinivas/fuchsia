@@ -1,88 +1,11 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-group("tests") {
-  testonly = true
-
-  public_deps = [
-    # ExceptionBrokerConfig.FilterArray fails
-    #":exception-broker-config-tests",
-    ":exception-broker-tests",
-
-    # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/forensics/exceptions",
-    "//src/developer/forensics/testing/fakes:fake-crash-reporter",
-  ]
-}
-
-test_package("exception-broker-config-tests") {
-  tests = [
-    {
-      name = "exception_broker_config_test"
-    },
-  ]
-
-  deps = [ ":exception_broker_config_test" ]
-
-  resources = [
-    {
-      path = "configs/test_enable_jitd_on_startup.json"
-      dest = "enable_jitd_on_startup.json"
-    },
-  ]
-}
-
-test_package("exception-broker-tests") {
-  tests = [
-    {
-      name = "exception_broker_unittest"
-    },
-    {
-      name = "exception_broker_integration_test"
-    },
-    {
-      name = "exception_broker_config_test"
-    },
-    {
-      name = "limbo_client_unittest"
-    },
-  ]
-
-  # These are binaries needed by some tests. Mainly used to trigger exceptions.
-  binaries = [
-    {
-      name = "exception_broker_crasher"
-    },
-    {
-      name = "exception_handler"
-    },
-  ]
-
-  deps = [
-    ":crasher",
-    ":exception_broker_config_test",
-    ":exception_broker_integration_test",
-    ":exception_broker_unittest",
-    "//src/developer/forensics/exceptions/handler:exe",
-    "//src/developer/forensics/exceptions/limbo_client:tests",
-  ]
-
-  resources = [
-    {
-      path = "configs/test_enable_jitd_on_startup.json"
-      dest = "enable_jitd_on_startup.json"
-    },
-    {
-      path = "configs/test_filter_jitd_config.json"
-      dest = "filter_jitd_config.json"
-    },
-  ]
-}
-
-# Utilities used for testing purposes.
+###############################################################################
+# SOURCES
+###############################################################################
 source_set("test_lib") {
   testonly = true
 
@@ -101,7 +24,49 @@ source_set("test_lib") {
   ]
 }
 
-executable("exception_broker_unittest") {
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("crasher") {
+  testonly = true
+
+  output_name = "exception_broker_crasher"
+
+  sources = [ "crasher.cc" ]
+}
+
+executable("exception_broker_config_test_exe") {
+  testonly = true
+
+  sources = [ "exception_broker_config_test.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/forensics/exceptions:lib",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("exception_broker_integration_test_exe") {
+  testonly = true
+
+  sources = [ "exception_broker_integration_test.cc" ]
+
+  deps = [
+    ":test_lib",
+    "//src/developer/forensics/exceptions:lib",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("exception_broker_unittest_exe") {
   testonly = true
 
   sources = [
@@ -129,40 +94,121 @@ executable("exception_broker_unittest") {
   ]
 }
 
-executable("exception_broker_integration_test") {
+executable("stub_exception_handler_exe") {
   testonly = true
 
-  sources = [ "exception_broker_integration_test.cc" ]
+  # We need the same name as the real sub-process spawned by the exception broker,
+  # but we need to put it in a different build directory that the default one.
+  output_name = "exception_handler"
+  output_dir = target_out_dir
 
-  deps = [
-    ":test_lib",
-    "//src/developer/forensics/exceptions:lib",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//third_party/googletest:gtest",
-  ]
+  sources = [ "stub_exception_handler.cc" ]
 }
 
-executable("exception_broker_config_test") {
+executable("limbo_client_unittest_exe") {
   testonly = true
 
-  sources = [ "exception_broker_config_test.cc" ]
+  sources = [ "limbo_client_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.exception",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/forensics/exceptions:lib",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/exceptions/limbo_client:lib",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
-executable("crasher") {
-  testonly = true
-  output_name = "exception_broker_crasher"
+###############################################################################
+# RESOURCES
+###############################################################################
+resource("enable_jitd_on_startup") {
+  sources = [ "configs/test_enable_jitd_on_startup.json" ]
 
-  sources = [ "crasher.cc" ]
+  outputs = [ "data/enable_jitd_on_startup.json" ]
+}
+
+resource("filter_jitd_config") {
+  sources = [ "configs/test_filter_jitd_config.json" ]
+
+  outputs = [ "data/filter_jitd_config.json" ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("exception_broker_config_test") {
+  testonly = true
+
+  manifest = "meta/exception_broker_config_test.cmx"
+
+  deps = [
+    ":enable_jitd_on_startup",
+    ":exception_broker_config_test_exe",
+    ":filter_jitd_config",
+  ]
+}
+
+fuchsia_component("exception_broker_integration_test") {
+  testonly = true
+
+  manifest = "meta/exception_broker_integration_test.cmx"
+
+  deps = [
+    ":crasher",
+    ":exception_broker_integration_test_exe",
+  ]
+}
+
+fuchsia_component("exception_broker_unittest") {
+  testonly = true
+
+  manifest = "meta/exception_broker_unittest.cmx"
+
+  deps = [
+    ":crasher",
+    ":exception_broker_unittest_exe",
+
+    # Stub exception handler sub-process that avoids making FIDL calls like the real one.
+    ":stub_exception_handler_exe",
+  ]
+}
+
+fuchsia_component("limbo_client_unittest") {
+  testonly = true
+
+  manifest = "meta/limbo_client_unittest.cmx"
+
+  deps = [ ":limbo_client_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("exception-broker-tests") {
+  test_components = [
+    ":exception_broker_config_test",
+    ":exception_broker_integration_test",
+    ":exception_broker_unittest",
+    ":limbo_client_unittest",
+  ]
+}
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":exception-broker-tests",
+
+    # Packages for the components that we are injecting in the integration tests.
+    "//src/developer/forensics/exceptions",
+    "//src/developer/forensics/testing/fakes:fake-crash-reporter",
+  ]
 }

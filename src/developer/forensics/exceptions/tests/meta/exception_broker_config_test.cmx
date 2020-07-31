@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/exception_broker_config_test"
+        "binary": "bin/exception_broker_config_test_exe"
     },
     "sandbox": {
         "services": [

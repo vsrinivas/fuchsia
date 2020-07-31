@@ -67,6 +67,7 @@ TEST_F(MinidumpTest, GenerateMinidump) {
     FAIL() << "Could not initialize exception.";
     return;
   }
+  ASSERT_TRUE(MarkExceptionAsHandled(&ec));
 
   zx::vmo minidump_vmo = GenerateMinidump(std::move(ec.exception));
   ASSERT_TRUE(minidump_vmo.is_valid());

@@ -346,6 +346,11 @@ TEST_F(HandlerTest, NoException) {
   auto& report = crash_reporter().reports().front();
 
   ValidateReport(report, kComponentUrl, false);
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exception.job.kill();
 }
 
 }  // namespace

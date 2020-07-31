@@ -29,14 +29,7 @@ bool GetExceptionContext(ExceptionContext* pe) {
   // We mark the exception to be handled. We need this because we pass on the exception to the
   // handler, which will resume it before we get the control back. If we don't mark it as handled,
   // the exception will bubble out of our environment.
-  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-  if (zx_status_t res = pe->exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
-      res != ZX_OK) {
-    FX_PLOGS(ERROR, res) << "Could not set handled state to exception.";
-    return false;
-  }
-
-  return true;
+  return MarkExceptionAsHandled(pe);
 }
 
 ExceptionInfo ExceptionContextToExceptionInfo(const ExceptionContext& pe) {

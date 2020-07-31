@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/limbo_client_unittest"
+        "binary": "bin/limbo_client_unittest_exe"
     },
     "sandbox": {
         "services": [

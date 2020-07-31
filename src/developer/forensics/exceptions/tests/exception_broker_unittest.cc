@@ -60,6 +60,11 @@ TEST_F(ExceptionBrokerTest, ExecutesCallback) {
   }
 
   EXPECT_EQ(NumSubprocesses(), 0u);
+
+  // We kill the job. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exception.job.kill();
 }
 
 TEST_F(ExceptionBrokerTest, LimitsNumSubprocesses) {
@@ -80,8 +85,8 @@ TEST_F(ExceptionBrokerTest, LimitsNumSubprocesses) {
     RunLoopUntilIdle();
   }
 
-  // This should only ever fail if spawing the handler processes fails becuase the callback for the
-  // second call to OnException would be immediately posted on the loop when broker fails to crate
+  // This should only ever fail if spawing the handler processes fails because the callback for the
+  // second call to OnException would be immediately posted on the loop when broker fails to create
   // the first handler. This results in |called2| being set to true during the call to
   // RunLoopUntilIdle() above.
   ASSERT_FALSE(called2);
@@ -91,6 +96,12 @@ TEST_F(ExceptionBrokerTest, LimitsNumSubprocesses) {
   }
 
   EXPECT_EQ(NumSubprocesses(), 0u);
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exceptions[0].job.kill();
+  exceptions[1].job.kill();
 }
 
 }  // namespace

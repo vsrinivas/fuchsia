@@ -45,30 +45,3 @@ fuchsia_component("component") {
 fuchsia_package("limbo-client") {
   deps = [ ":component" ]
 }
-
-# Tests --------------------------------------------------------------------------------------------
-
-group("tests") {
-  testonly = true
-
-  public_deps = [ ":limbo_client_unittest" ]
-}
-
-executable("limbo_client_unittest") {
-  testonly = true
-
-  sources = [ "limbo_client_unittest.cc" ]
-
-  deps = [
-    ":lib",
-    "//sdk/fidl/fuchsia.exception",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/lib/fxl/test:test_settings",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
