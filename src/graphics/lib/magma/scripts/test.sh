@@ -46,12 +46,12 @@ pvr)
     msd_img_rgx_integration_tests \
     msd_img_rgx_no_hardware_integration_tests
   ;;
-vsi|vsl)
-  fx-command-run test --no-build --simple -o \
+vsi)
+  fx-command-run test --simple -o \
     magma_unit_tests \
-    msd_vsl_gc_nonhardware_tests \
+    msd_vsi_vip_nonhardware_tests \
     magma-abi-conformance-tests-vsi \
-    msd-vsl-gc-integration-tests \
+    msd-vsi-vip-integration-tests \
     test-magma-vsi-exec \
   ;;
 *)
