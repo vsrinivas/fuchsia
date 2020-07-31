@@ -124,9 +124,10 @@ async fn maintain_utc(
             netstack_events.try_next().await
         {
             if interfaces.into_iter().any(|fnetstack::NetInterface { flags, addr, .. }| {
-                if flags & (fnetstack::NET_INTERFACE_FLAG_UP | fnetstack::NET_INTERFACE_FLAG_DHCP)
-                    == 0
-                {
+                if flags & fnetstack::NET_INTERFACE_FLAG_UP == 0 {
+                    return false;
+                }
+                if flags & fnetstack::NET_INTERFACE_FLAG_DHCP == 0 {
                     return false;
                 }
                 match addr {
