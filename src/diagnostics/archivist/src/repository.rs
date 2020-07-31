@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 use {
     crate::{
-        events::types::ComponentIdentifier,
-        types::{
+        container::{
             DiagnosticsArtifactsContainer, InspectArtifactsContainer, LifecycleArtifactsContainer,
             LifecycleDataContainer, UnpopulatedInspectDataContainer,
         },
+        events::types::ComponentIdentifier,
     },
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{self, Selector},

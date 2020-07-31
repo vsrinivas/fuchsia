@@ -4,13 +4,12 @@
 
 use {
     crate::{
-        configs,
-        data_repository::DiagnosticsDataRepository,
-        diagnostics,
+        configs, diagnostics,
         events::types::{
             ComponentEvent, ComponentEventStream, ComponentIdentifier, DiagnosticsReadyEvent,
             EventMetadata,
         },
+        repository::DiagnosticsDataRepository,
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,

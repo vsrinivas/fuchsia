@@ -3,11 +3,8 @@
 // found in the LICENSE file.
 use {
     crate::{
-        constants,
-        data_repository::DiagnosticsDataRepository,
-        diagnostics::DiagnosticsServerStats,
-        formatter,
-        types::{DiagnosticsServer, LifecycleDataContainer},
+        constants, container::LifecycleDataContainer, diagnostics::DiagnosticsServerStats,
+        formatter, repository::DiagnosticsDataRepository, server::DiagnosticsServer,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -155,7 +152,7 @@ mod tests {
         crate::{
             diagnostics,
             events::types::{ComponentIdentifier, LegacyIdentifier},
-            types::{DiagnosticsServer, InspectDataCollector},
+            inspect::collector::InspectDataCollector,
         },
         fdio,
         fidl::endpoints::{create_proxy, ServerEnd},

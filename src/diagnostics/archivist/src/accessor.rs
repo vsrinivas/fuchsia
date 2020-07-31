@@ -4,16 +4,17 @@
 
 use {
     crate::{
-        data_repository::DiagnosticsDataRepository, diagnostics, inspect, lifecycle,
-        types::DiagnosticsServer,
+        diagnostics, inspect, lifecycle, repository::DiagnosticsDataRepository,
+        server::DiagnosticsServer,
     },
     anyhow::{format_err, Error},
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_diagnostics::{self, BatchIteratorMarker},
     fidl_fuchsia_diagnostics::{
-        ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorMarker,
-        ClientSelectorConfiguration, DataType, Selector, SelectorArgument,
+        ArchiveAccessorRequest, ArchiveAccessorRequestStream, ClientSelectorConfiguration,
+        DataType, Selector, SelectorArgument,
     },
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync},
     fuchsia_inspect::NumericProperty,
     fuchsia_zircon_status as zx_status,
     futures::{TryFutureExt, TryStreamExt},

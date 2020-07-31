@@ -46,7 +46,7 @@ boot. These messages appear when running [`fx bugreport`].
 [SourceIdentity]: https://fuchsia.dev/reference/fidl/fuchsia.sys.internal#SourceIdentity
 [debuglog]: /docs/reference/kernel_objects/debuglog.md
 [128kb buffer in the kernel]: /zircon/kernel/lib/debuglog/debuglog.cc
-[4MB buffer in the archivist]: /src/diagnostics/archivist/src/logs.rs
+[4MB buffer in the archivist]: /src/diagnostics/archivist/src/logs/mod.rs
 [Recording]: /docs/development/logs/recording.md
 [Viewing]: /docs/development/logs/viewing.md
 [feedback data]: /src/developer/forensics/feedback_data

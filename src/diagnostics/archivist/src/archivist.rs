@@ -4,11 +4,11 @@
 
 use {
     crate::{
-        archive, archive_accessor, configs, constants,
-        data_repository::DiagnosticsDataRepository,
-        data_stats, diagnostics,
+        accessor::ArchiveAccessor,
+        archive, configs, constants, data_stats, diagnostics,
         events::{stream::EventStream, types::EventSource},
         logs,
+        repository::DiagnosticsDataRepository,
     },
     anyhow::Error,
     fidl_fuchsia_diagnostics::Selector,
@@ -263,14 +263,14 @@ impl Archivist {
 
         fs.dir("svc")
             .add_fidl_service(move |stream| {
-                let all_archive_accessor = archive_accessor::ArchiveAccessor::new(
+                let all_archive_accessor = ArchiveAccessor::new(
                     all_inspect_repository.clone(),
                     all_accessor_stats.clone(),
                 );
                 all_archive_accessor.spawn_archive_accessor_server(stream)
             })
             .add_fidl_service_at(constants::FEEDBACK_ARCHIVE_ACCESSOR_NAME, move |chan| {
-                let feedback_archive_accessor = archive_accessor::ArchiveAccessor::new(
+                let feedback_archive_accessor = ArchiveAccessor::new(
                     feedback_inspect_repository.clone(),
                     feedback_accessor_stats.clone(),
                 );

@@ -5,16 +5,18 @@
 use {
     crate::{
         constants,
-        data_repository::DiagnosticsDataRepository,
-        diagnostics::{self, DiagnosticsServerStats},
-        formatter,
-        types::{
-            DiagnosticsServer, Moniker, PopulatedInspectDataContainer, ReadSnapshot, SnapshotData,
+        container::{
+            PopulatedInspectDataContainer, ReadSnapshot, SnapshotData,
             UnpopulatedInspectDataContainer,
         },
+        diagnostics::{self, DiagnosticsServerStats},
+        formatter,
+        repository::DiagnosticsDataRepository,
+        server::DiagnosticsServer,
     },
     anyhow::Error,
     async_trait::async_trait,
+    collector::Moniker,
     diagnostics_schema::{self as schema, Schema},
     fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
@@ -33,6 +35,8 @@ use {
     std::convert::{TryFrom, TryInto},
     std::sync::Arc,
 };
+
+pub mod collector;
 
 /// Packet containing a node hierarchy and all the metadata needed to
 /// populate a diagnostics schema for that node hierarchy.
@@ -452,11 +456,9 @@ impl DiagnosticsServer for ReaderServer {
 #[cfg(test)]
 mod tests {
     use {
+        super::collector::InspectDataCollector,
         super::*,
-        crate::{
-            events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
-            types::InspectDataCollector,
-        },
+        crate::events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
         anyhow::format_err,
         fdio,
         fidl::endpoints::create_proxy,
