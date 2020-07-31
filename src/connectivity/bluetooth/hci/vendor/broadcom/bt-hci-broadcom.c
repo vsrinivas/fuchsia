@@ -106,6 +106,8 @@ typedef struct {
   bool is_uart;  // true if underlying transport is UART
 } bcm_hci_t;
 
+static int bcm_hci_start_thread(void* arg);
+
 static zx_status_t bcm_hci_get_protocol(void* ctx, uint32_t proto_id, void* out_proto) {
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -119,6 +121,19 @@ static zx_status_t bcm_hci_get_protocol(void* ctx, uint32_t proto_id, void* out_
   hci_proto->ctx = hci->hci.ctx;
 
   return ZX_OK;
+}
+
+static void bcm_hci_init(void* ctx) {
+  bcm_hci_t* hci = ctx;
+
+  // create thread to continue initialization
+  thrd_t t;
+  int thrd_rc = thrd_create_with_name(&t, bcm_hci_start_thread, hci, "bcm_hci_start_thread");
+  if (thrd_rc != thrd_success) {
+    // This will schedule the device to be unbound.
+    return device_init_reply(hci->zxdev, thrd_status_to_zx_status(thrd_rc), NULL);
+  }
+  // The thread will call device_init_reply() once it is ready to make the device visible.
 }
 
 static void bcm_hci_unbind(void* ctx) {
@@ -178,6 +193,7 @@ static zx_protocol_device_t bcm_hci_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = bcm_hci_get_protocol,
     .message = fuchsia_bt_hci_message_instance,
+    .init = bcm_hci_init,
     .unbind = bcm_hci_unbind,
     .release = bcm_hci_release,
 };
@@ -428,14 +444,16 @@ static int bcm_hci_start_thread(void* arg) {
   zx_handle_close(hci->command_channel);
   hci->command_channel = ZX_HANDLE_INVALID;
 
-  device_make_visible(hci->zxdev, NULL);
+  // Make the device visible and able to be unbound.
+  device_init_reply(hci->zxdev, ZX_OK, NULL);
   return 0;
 
 fail:
   zxlogf(ERROR, "bcm_hci_start_thread: device initialization failed: %s\n",
          zx_status_get_string(status));
 
-  device_async_remove(hci->zxdev);
+  // This will schedule the device to be unbound.
+  device_init_reply(hci->zxdev, status, NULL);
   return -1;
 }
 
@@ -461,7 +479,6 @@ static zx_status_t bcm_hci_bind(void* ctx, zx_device_t* device) {
       .ctx = hci,
       .ops = &bcm_hci_device_proto,
       .proto_id = ZX_PROTOCOL_BT_HCI,
-      .flags = DEVICE_ADD_INVISIBLE,
   };
 
   hci->transport_dev = device;
@@ -470,14 +487,6 @@ static zx_status_t bcm_hci_bind(void* ctx, zx_device_t* device) {
   if (status != ZX_OK) {
     bcm_hci_release(hci);
     return status;
-  }
-
-  // create thread to continue initialization
-  thrd_t t;
-  int thrd_rc = thrd_create_with_name(&t, bcm_hci_start_thread, hci, "bcm_hci_start_thread");
-  if (thrd_rc != thrd_success) {
-    device_async_remove(hci->zxdev);
-    return thrd_status_to_zx_status(thrd_rc);
   }
 
   return ZX_OK;
