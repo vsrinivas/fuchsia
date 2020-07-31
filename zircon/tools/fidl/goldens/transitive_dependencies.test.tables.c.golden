@@ -9,5 +9,5 @@ extern const struct FidlCodedStruct top_BazTable;
 
 
 
-const struct FidlCodedStruct top_BazTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=4u, .name="top/Baz"};
+const struct FidlCodedStruct top_BazTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="top/Baz"};
 

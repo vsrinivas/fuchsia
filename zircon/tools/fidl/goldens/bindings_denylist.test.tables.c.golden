@@ -12,10 +12,10 @@ extern const struct FidlCodedEnum test_name_OnlyDartTable;
 
 
 extern const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolRequestTable;
-const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolRequestTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolRequest"};
+const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolRequest"};
 
 extern const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolResponseTable;
-const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolResponseTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=16u, .name="test.name/OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolResponse"};
+const struct FidlCodedStruct test_name_OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="test.name/OnlyLibfuzzerLibfuzzerNeedsNonemptyProtocolResponse"};
 
 
 const struct FidlCodedBits test_name_OnlySyzkallerTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=1ul, .name="test.name/OnlySyzkaller"};
@@ -30,7 +30,7 @@ static const struct FidlXUnionField Fields30test_name_OnlyLlcppNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
 const struct FidlCodedXUnion test_name_OnlyLlcppNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields30test_name_OnlyLlcppNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/OnlyLlcpp", .strictness=kFidlStrictness_Strict};
-const struct FidlCodedStruct test_name_OnlyGoTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=1u, .name="test.name/OnlyGo"};
+const struct FidlCodedStruct test_name_OnlyGoTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="test.name/OnlyGo"};
 
 static bool EnumValidatorFor_test_name_OnlyDart(uint64_t v) { return (v == 1ul) || false; }
 const struct FidlCodedEnum test_name_OnlyDartTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_OnlyDart, .name="test.name/OnlyDart"};

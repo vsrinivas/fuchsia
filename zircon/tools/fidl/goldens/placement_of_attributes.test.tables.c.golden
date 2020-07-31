@@ -15,10 +15,11 @@ extern const struct FidlCodedBits example_ExampleBitsTable;
 
 
 extern const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable;
-static const struct FidlStructField Fields36example_ExampleProtocolMethodRequest[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&exampleusing_EmptyTable), .offset=16u, .padding=7u}
+static const struct FidlStructElement Fields36example_ExampleProtocolMethodRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&exampleusing_EmptyTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .fields=Fields36example_ExampleProtocolMethodRequest, .field_count=1u, .size=24u, .name="example/ExampleProtocolMethodRequest"};
+const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=Fields36example_ExampleProtocolMethodRequest, .element_count=2u, .size=24u, .name="example/ExampleProtocolMethodRequest"};
 
 
 static const struct FidlXUnionField Fields21example_ExampleXUnion[] = {
@@ -42,7 +43,7 @@ static const struct FidlTableField Fields20example_ExampleTable[] = {
 };
 const struct FidlCodedTable example_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields20example_ExampleTable, .field_count=1u, .name="example/ExampleTable"};
 
-const struct FidlCodedStruct example_ExampleStructTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=4u, .name="example/ExampleStruct"};
+const struct FidlCodedStruct example_ExampleStructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="example/ExampleStruct"};
 
 static bool EnumValidatorFor_example_ExampleEnum(uint64_t v) { return (v == 1ul) || false; }
 const struct FidlCodedEnum example_ExampleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_example_ExampleEnum, .name="example/ExampleEnum"};

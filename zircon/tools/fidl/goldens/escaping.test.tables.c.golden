@@ -7,5 +7,5 @@ extern const struct FidlCodedStruct escapeme_DocCommentWithQuotesTable;
 
 
 
-const struct FidlCodedStruct escapeme_DocCommentWithQuotesTable = {.tag=kFidlTypeStruct, .fields=NULL, .field_count=0u, .size=1u, .name="escapeme/DocCommentWithQuotes"};
+const struct FidlCodedStruct escapeme_DocCommentWithQuotesTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="escapeme/DocCommentWithQuotes"};
 

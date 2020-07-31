@@ -70,17 +70,80 @@ static inline bool FidlAddOutOfLine(uint32_t offset, uint32_t size, uint32_t* ou
   return true;
 }
 
+typedef uint8_t FidlStructElementType;
+static const FidlStructElementType kFidlStructElementType_Field = (uint8_t)1u;
+static const FidlStructElementType kFidlStructElementType_Padding64 = (uint8_t)2u;
+static const FidlStructElementType kFidlStructElementType_Padding32 = (uint8_t)3u;
+static const FidlStructElementType kFidlStructElementType_Padding16 = (uint8_t)4u;
+
 struct FidlStructField {
-  const fidl_type_t* type;
+  FidlStructElementType element_type;
+  uint32_t offset;
+  const fidl_type_t* field_type;
+};
+
+struct FidlStructPadding {
+  FidlStructElementType element_type;
+  uint32_t offset;
+  // Masks with 0xff on bytes with padding and 0x00 otherwsie.
+  // They are used by VisitInternalPadding to zero (encoding) and validate (decoding)
+  // padding bytes.
   union {
-    uint32_t offset;
-    uint32_t padding_offset;
+    uint16_t mask_16;
+    uint32_t mask_32;
+    uint64_t mask_64;
   };
-  uint8_t padding;
+};
+
+// A struct element is either a field or padding.
+struct FidlStructElement {
+  union {
+    FidlStructElementType element_type;
+    struct FidlStructField field;
+    struct FidlStructPadding padding;
+  };
 
 #ifdef __cplusplus
-  constexpr FidlStructField(const fidl_type* type, uint32_t offset, uint8_t padding)
-      : type(type), offset(offset), padding(padding) {}
+  static constexpr FidlStructElement Field(const fidl_type* type, uint32_t offset) {
+    return FidlStructElement{
+        .field =
+            FidlStructField{
+                .element_type = kFidlStructElementType_Field,
+                .offset = offset,
+                .field_type = type,
+            },
+    };
+  }
+  static constexpr FidlStructElement Padding64(uint32_t offset, uint64_t mask) {
+    return FidlStructElement{
+        .padding =
+            FidlStructPadding{
+                .element_type = kFidlStructElementType_Padding64,
+                .offset = offset,
+                .mask_64 = mask,
+            },
+    };
+  }
+  static constexpr FidlStructElement Padding32(uint32_t offset, uint32_t mask) {
+    return FidlStructElement{
+        .padding =
+            FidlStructPadding{
+                .element_type = kFidlStructElementType_Padding32,
+                .offset = offset,
+                .mask_32 = mask,
+            },
+    };
+  }
+  static constexpr FidlStructElement Padding16(uint32_t offset, uint16_t mask) {
+    return FidlStructElement{
+        .padding =
+            FidlStructPadding{
+                .element_type = kFidlStructElementType_Padding16,
+                .offset = offset,
+                .mask_16 = mask,
+            },
+    };
+  }
 #endif  // __cplusplus
 };
 
@@ -224,10 +287,10 @@ struct FidlCodedBits FIDL_INTERNAL_INHERIT_TYPE_T {
 // the purview of this library. It's easier for the compiler to stash it.
 struct FidlCodedStruct FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
-  // This way `tag` and `field_count` together takes 4 bytes.
-  const uint32_t field_count : 24;
+  // This way `tag` and `element_count` together takes 4 bytes.
+  const uint32_t element_count : 24;
   const uint32_t size;
-  const struct FidlStructField* const fields;
+  const struct FidlStructElement* const elements;
   const char* name;  // may be nullptr if omitted at compile time
 
   FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(FidlCodedStruct)

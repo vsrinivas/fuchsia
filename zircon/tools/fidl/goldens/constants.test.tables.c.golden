@@ -23,11 +23,13 @@ const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlyi
 
 const struct FidlCodedBits values_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=8ul, .name="values/Bits"};
 
-static const struct FidlStructField Fields13values_Struct[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable), .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=(fidl_type_t*)(&fidl_internal_kBoolTable), .offset=24u, .padding=3u},
-    /*FidlStructField*/{.type=(fidl_type_t*)(&values_EnumTable), .offset=28u, .padding=0u},
-    /*FidlStructField*/{.type=(fidl_type_t*)(&values_BitsTable), .offset=32u, .padding=4u}
+static const struct FidlStructElement Fields13values_Struct[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=24u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=24u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967040u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=28u, .field_type=(fidl_type_t*)(&values_EnumTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=32u, .field_type=(fidl_type_t*)(&values_BitsTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
 };
-const struct FidlCodedStruct values_StructTable = {.tag=kFidlTypeStruct, .fields=Fields13values_Struct, .field_count=4u, .size=40u, .name="values/Struct"};
+const struct FidlCodedStruct values_StructTable = {.tag=kFidlTypeStruct, .elements=Fields13values_Struct, .element_count=6u, .size=40u, .name="values/Struct"};
 

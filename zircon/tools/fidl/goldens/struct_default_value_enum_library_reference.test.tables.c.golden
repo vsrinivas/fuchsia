@@ -8,8 +8,8 @@ extern const struct FidlCodedStruct example_FooTable;
 
 
 
-static const struct FidlStructField Fields11example_Foo[] = {
-    /*FidlStructField*/{.type=(fidl_type_t*)(&dependent_MyEnumTable), .offset=0u, .padding=0u}
+static const struct FidlStructElement Fields11example_Foo[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=0u, .field_type=(fidl_type_t*)(&dependent_MyEnumTable)}}
 };
-const struct FidlCodedStruct example_FooTable = {.tag=kFidlTypeStruct, .fields=Fields11example_Foo, .field_count=1u, .size=4u, .name="example/Foo"};
+const struct FidlCodedStruct example_FooTable = {.tag=kFidlTypeStruct, .elements=Fields11example_Foo, .element_count=1u, .size=4u, .name="example/Foo"};
 

@@ -211,9 +211,10 @@ class FidlEncoder final
     return Status::kSuccess;
   }
 
-  Status VisitInternalPadding(Position padding_position, uint32_t padding_length) {
-    auto padding_ptr = padding_position.template GetFromDest<uint8_t>();
-    memset(padding_ptr, 0, padding_length);
+  template <typename MaskType>
+  Status VisitInternalPadding(Position padding_position, MaskType mask) {
+    MaskType* ptr = padding_position.template GetFromDest<MaskType>();
+    *ptr &= static_cast<MaskType>(~mask);
     return Status::kSuccess;
   }
 

@@ -13,11 +13,11 @@ static const struct FidlCodedVector Vector1024nonnullable5uint8Table = {.tag=kFi
 static const struct FidlCodedVector Vector1024nullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nullable};
 
 
-static const struct FidlStructField Fields20example_ByteAndBytes[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=1u, .padding=7u},
-    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table), .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table), .offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=(fidl_type_t*)(&Vector1024nullable5uint8Table), .offset=40u, .padding=0u}
+static const struct FidlStructElement Fields20example_ByteAndBytes[] = {
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=24u, .field_type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=40u, .field_type=(fidl_type_t*)(&Vector1024nullable5uint8Table)}}
 };
-const struct FidlCodedStruct example_ByteAndBytesTable = {.tag=kFidlTypeStruct, .fields=Fields20example_ByteAndBytes, .field_count=4u, .size=56u, .name="example/ByteAndBytes"};
+const struct FidlCodedStruct example_ByteAndBytesTable = {.tag=kFidlTypeStruct, .elements=Fields20example_ByteAndBytes, .element_count=4u, .size=56u, .name="example/ByteAndBytes"};
 
