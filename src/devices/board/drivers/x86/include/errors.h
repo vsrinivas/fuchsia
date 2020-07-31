@@ -16,6 +16,7 @@ static inline zx_status_t acpi_to_zx_status(ACPI_STATUS acpi_status) {
       return ZX_ERR_NOT_FOUND;
     case AE_NO_MEMORY:
       return ZX_ERR_NO_MEMORY;
+    case AE_NOT_FOUND:
     case AE_NOT_EXIST:
       return ZX_ERR_NOT_FOUND;
     case AE_ALREADY_EXISTS:
