@@ -16,12 +16,17 @@ static size_t used_size(uint16_t queue_size) {
          sizeof(*VirtioRing::avail_event);
 }
 
+static zx_gpaddr_t align_addr(zx_gpaddr_t addr) {
+  zx_gpaddr_t over_align = addr % alignof(std::max_align_t);
+  return addr + alignof(std::max_align_t) - over_align;
+}
+
 VirtioQueueFake::VirtioQueueFake(const PhysMem& phys_mem, zx_gpaddr_t addr, uint16_t size)
     : phys_mem_(phys_mem),
-      desc_(addr),
-      avail_(desc_ + desc_size(size)),
-      used_(avail_ + avail_size(size)),
-      end_(used_ + used_size(size)) {
+      desc_(align_addr(addr)),
+      avail_(align_addr(desc_ + desc_size(size))),
+      used_(align_addr(avail_ + avail_size(size))),
+      end_(align_addr(used_ + used_size(size))) {
   // Configure the ring size.
   ring_.size = size;
 }
@@ -39,7 +44,7 @@ void VirtioQueueFake::Configure(zx_gpaddr_t data_addr, size_t data_len) {
   ring_.avail_event = phys_mem_.as<uint16_t>(end_ - sizeof(uint16_t));
 
   // Configure data addresses.
-  data_begin_ = data_addr;
+  data_begin_ = align_addr(data_addr);
   data_end_ = data_addr + data_len;
 }
 
