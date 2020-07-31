@@ -68,6 +68,9 @@ class DebugAgent : public RemoteAPI,
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
   DebuggedThread* GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid);
 
+  // Returns the exception handling strategy for a given type.
+  debug_ipc::ExceptionStrategy GetExceptionStrategy(debug_ipc::ExceptionType type);
+
  private:
   FRIEND_TEST(DebugAgentTests, Kill);
 
@@ -206,6 +209,8 @@ class DebugAgent : public RemoteAPI,
   // Once we caught the component, we hold on into the controller to be able
   // to detach/kill it correctly.
   std::map<uint64_t, fuchsia::sys::ComponentControllerPtr> running_components_;
+
+  std::map<debug_ipc::ExceptionType, debug_ipc::ExceptionStrategy> exception_strategies_;
 
   AgentConfiguration configuration_;
 

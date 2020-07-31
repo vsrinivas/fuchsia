@@ -127,7 +127,7 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
 
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception @ 0x" << std::hex << regs->ip()
                     << std::dec << ": " << debug_ipc::ExceptionTypeToString(exception.type) << " ("
-                    << debug_ipc::ExceptionStrategyToString(exception.exception.strategy) << ")";
+                    << debug_ipc::ExceptionStrategyToString(strategy.value()) << ")";
 
   switch (exception.type) {
     case debug_ipc::ExceptionType::kSingleStep:

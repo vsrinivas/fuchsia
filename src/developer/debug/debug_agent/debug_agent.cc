@@ -487,9 +487,12 @@ void DebugAgent::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableReque
     reply->status = ZX_ERR_NOT_FOUND;
 }
 
-// TODO(fxbug.dev/48767): Implement me.
 void DebugAgent::OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
-                                        debug_ipc::UpdateGlobalSettingsReply* reply) {}
+                                        debug_ipc::UpdateGlobalSettingsReply* reply) {
+  if (request.exception_strategy.type != debug_ipc::ExceptionType::kNone) {
+    exception_strategies_[request.exception_strategy.type] = request.exception_strategy.value;
+  }
+}
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
@@ -534,6 +537,14 @@ zx_status_t DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_in
   *new_process = proc.get();
   procs_[process_id] = std::move(proc);
   return ZX_OK;
+}
+
+debug_ipc::ExceptionStrategy DebugAgent::GetExceptionStrategy(debug_ipc::ExceptionType type) {
+  auto strategy = exception_strategies_.find(type);
+  if (strategy == exception_strategies_.end()) {
+    return debug_ipc::ExceptionStrategy::kFirstChance;
+  }
+  return strategy->second;
 }
 
 // Attaching ---------------------------------------------------------------------------------------

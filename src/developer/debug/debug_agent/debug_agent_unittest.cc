@@ -613,4 +613,50 @@ TEST_F(DebugAgentTests, Kill) {
   }
 }
 
+TEST_F(DebugAgentTests, OnUpdateGlobalSettings) {
+  DebugAgentStreamBackend stream_backend;
+  auto owning_system_interface = std::make_unique<MockSystemInterface>(*GetMockJobTree());
+
+  DebugAgent debug_agent(std::move(owning_system_interface));
+  debug_agent.Connect(&stream_backend.stream());
+  RemoteAPI* remote_api = &debug_agent;
+
+  // The default strategy should be first chance for a type that has yet to be
+  // updated.
+  EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,
+            debug_agent.GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+
+  {
+    const debug_ipc::UpdateGlobalSettingsRequest request = {
+        .exception_strategy =
+            {
+                .type = debug_ipc::ExceptionType::kGeneral,
+                .value = debug_ipc::ExceptionStrategy::kSecondChance,
+            },
+    };
+    debug_ipc::UpdateGlobalSettingsReply reply;
+    remote_api->OnUpdateGlobalSettings(request, &reply);
+    EXPECT_EQ(ZX_OK, reply.status);
+  }
+
+  EXPECT_EQ(debug_ipc::ExceptionStrategy::kSecondChance,
+            debug_agent.GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+
+  {
+    const debug_ipc::UpdateGlobalSettingsRequest request = {
+        .exception_strategy =
+            {
+                .type = debug_ipc::ExceptionType::kGeneral,
+                .value = debug_ipc::ExceptionStrategy::kFirstChance,
+            },
+    };
+    debug_ipc::UpdateGlobalSettingsReply reply;
+    remote_api->OnUpdateGlobalSettings(request, &reply);
+    EXPECT_EQ(ZX_OK, reply.status);
+  }
+
+  EXPECT_EQ(debug_ipc::ExceptionStrategy::kFirstChance,
+            debug_agent.GetExceptionStrategy(debug_ipc::ExceptionType::kGeneral));
+}
+
 }  // namespace debug_agent
