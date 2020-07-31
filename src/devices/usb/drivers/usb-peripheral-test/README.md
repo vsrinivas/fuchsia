@@ -10,6 +10,8 @@ bulk transfers.
 
 ## How to Run
 
+> DEPRECATED: hikey960 no longer supported
+
 First of all, this test only works with devices that implement USB peripheral role functionality.
 The [hikey960 board](../../../../docs/targets/hikey960.md) is one of those devices, so here we
 assume you are using a hikey960 board. To run the test, follow these steps:
@@ -42,6 +44,8 @@ CASE usb_peripheral_tests                               [PASSED]
 ```
 
 ## TODO
+
+Update these instructions to use a different device
 
 Future versions of this test may include:
 * isochronous transfers

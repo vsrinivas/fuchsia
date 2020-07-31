@@ -58,7 +58,6 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
   void DsiImplPrintDsiRegisters();
   zx_status_t DsiImplWriteReg(uint32_t reg, uint32_t val);
   zx_status_t DsiImplReadReg(uint32_t reg, uint32_t* val);
-  // TODO(payamm): Implement BIST and test on Hikey
   zx_status_t DsiImplEnableBist(uint32_t pattern);
 
   void DdkUnbindNew(ddk::UnbindTxn txn);

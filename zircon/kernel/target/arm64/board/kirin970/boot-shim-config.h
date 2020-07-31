@@ -85,14 +85,6 @@ static const dcfg_arm_generic_timer_driver_t timer_driver = {
     .irq_virt = 27,
 };
 
-static const dcfg_hisilicon_power_driver_t power_driver = {
-    .sctrl_phys = 0xfff0a000,
-    .pmu_phys = 0xfff34000,
-};
-
-static const zbi_platform_id_t platform_id = {
-    .vid = PDEV_VID_HISILICON, .pid = PDEV_PID_CORNEL, .board_name = "COR_AL00_VD"};
-
 static void append_board_boot_item(zbi_header_t* bootdata) {
   // add CPU configuration
   append_boot_item(bootdata, ZBI_TYPE_CPU_CONFIG, 0, &cpu_config,
@@ -111,8 +103,6 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
                    sizeof(psci_driver));
   append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
                    sizeof(timer_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_HISILICON_POWER, &power_driver,
-                   sizeof(power_driver));
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));

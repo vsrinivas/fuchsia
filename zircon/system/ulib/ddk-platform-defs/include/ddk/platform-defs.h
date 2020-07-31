@@ -58,16 +58,8 @@ __BEGIN_CDECLS
 #define PDEV_VID_QEMU               0x01
 #define PDEV_PID_QEMU               0x01
 
-// 96Boards
+// 96Boards (unused)
 #define PDEV_VID_96BOARDS           0x02
-#define PDEV_PID_HIKEY960           0x01
-
-#define PDEV_DID_HIKEY960_I2C_TEST  0x01
-#define PDEV_DID_HI3660_CLK         0x02
-#define PDEV_DID_HIKEY960_USB       0x03
-#define PDEV_DID_HI_DISPLAY         0x04
-#define PDEV_DID_HISILICON_UFS      0x05
-#define PDEV_DID_HI3660_GPIO        0x06
 
 // Google
 #define PDEV_VID_GOOGLE             0x03

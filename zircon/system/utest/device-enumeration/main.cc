@@ -114,8 +114,6 @@ fbl::String GetTestFilter() {
     return "*As370*";
   } else if (!strcmp(board_name, "visalia")) {
     return "*Visalia*";
-  } else if (!strcmp(board_name, "hikey960")) {
-    return "*Hikey960*";
   } else if (!strcmp(board_name, "Nocturne")) {
     return "*Nocturne*";
   } else if (!strcmp(board_name, "c18")) {
@@ -627,19 +625,6 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
   EXPECT_EQ(zx_system_get_num_cpus(), 4);
-}
-
-TEST_F(DeviceEnumerationTest, Hikey960Test) {
-  static const char* kDevicePaths[] = {
-      "sys/platform/hikey960",
-      "sys/platform/02:00:6/hi3660-gpio",
-      "sys/platform/00:00:9/dw-i2c",
-      "sys/platform/02:00:2/hi3660-clk",
-      "hikey-usb/dwc3",
-      "dwc3/dwc3/usb-peripheral",
-  };
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
 TEST_F(DeviceEnumerationTest, NocturneTest) {

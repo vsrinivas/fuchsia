@@ -329,7 +329,7 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
                           pages_to_remove * PAGE_SIZE);
     // Technically if there's an IOMMU the new mapping might be at a different
     // address, so we'd need to update the GPU address space to represent
-    // that. However, on current systems (amlogic and hikey960) that doesn't
+    // that. However, on current systems (amlogic) that doesn't
     // happen.
     // TODO(ZX-2924): Shrink existing PMTs when that's supported.
     std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =

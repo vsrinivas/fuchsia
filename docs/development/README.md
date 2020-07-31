@@ -61,7 +61,6 @@ This section covers Fuchsia development hardware targets.
  - [Toulouse][toulouse]
  - [Khadas VIM2][khadas-vim]
  - [iMX8M EVK][imx8mevk]
- - [HiKey960 (96boards.org)][hikey960]
 
 ## Drivers
 
@@ -109,7 +108,6 @@ This section covers Fuchsia-wide conventions and best practices.
 [toulouse]: /docs/development/hardware/toulouse.md "Toulouse"
 [khadas-vim]: /docs/development/hardware/khadas-vim.md "Khadas VIM2"
 [imx8mevk]: /docs/development/hardware/imx8mevk.md "iMX8M EVK"
-[hikey960]: /docs/development/hardware/hikey960.md "HiKey960 (96boards.org)"
 [intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
 [fidl-api]: /docs/concepts/api/fidl.md

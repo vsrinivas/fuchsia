@@ -79,7 +79,7 @@ constexpr bool kStartEventAggregatorWorkerDefault(true);
 // ReadBoardName returns the board name of the currently running device.
 //
 // At the time of this writing, this will either be 'pc' for x86 devices, or an
-// appropriate board name for ARM devices (hikey960, sherlock, qemu).
+// appropriate board name for ARM devices (sherlock, qemu).
 //
 // This uses the fuchsia-sysinfo fidl service to read the board_name field out
 // of the ZBI. This string will never exceed a length of 32.

@@ -124,7 +124,6 @@ template("boot_shim") {
 shims = [
   "as370",
   "c18",
-  "hikey960",
   "cleo",
   "msm8x53-som",
   "msm8998",
