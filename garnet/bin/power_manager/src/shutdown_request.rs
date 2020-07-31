@@ -16,7 +16,6 @@ pub enum ShutdownRequest {
     Reboot(RebootReason),
     RebootBootloader,
     RebootRecovery,
-    Mexec,
 }
 
 /// Converts a ShutdownRequest into a fuchsia.device.manager.SystemPowerState value.
@@ -31,7 +30,6 @@ impl Into<fdevicemgr::SystemPowerState> for ShutdownRequest {
             ShutdownRequest::RebootRecovery => {
                 fdevicemgr::SystemPowerState::SystemPowerStateRebootRecovery
             }
-            ShutdownRequest::Mexec => fdevicemgr::SystemPowerState::SystemPowerStateMexec,
         }
     }
 }

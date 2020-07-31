@@ -273,8 +273,7 @@ impl SystemShutdownHandler {
                             let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                         fpowercontrol::AdminRequest::Mexec { responder } => {
-                            let result = self.handle_shutdown(ShutdownRequest::Mexec).await;
-                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
+                            let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
                         }
                         fpowercontrol::AdminRequest::SuspendToRam { responder } => {
                             let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
@@ -544,7 +543,6 @@ pub mod tests {
             ShutdownRequest::RebootBootloader,
             ShutdownRequest::RebootRecovery,
             ShutdownRequest::PowerOff,
-            ShutdownRequest::Mexec,
         ];
 
         // At the end of the test, verify the Component Manager's received shutdown count (expected
@@ -726,5 +724,29 @@ pub mod tests {
 
         // When the test exits, the mock nodes' drop methods verify that the expected messages
         // were received
+    }
+
+    /// Tests that the expected fuchsia.hardware.power.statecontrol.Admin methods return
+    /// NOT_SUPPORTED as intended.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unsupported_shutdown_methods() {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fpowercontrol::AdminMarker>().unwrap();
+        let node = SystemShutdownHandlerBuilder::new(create_dummy_node())
+            .with_component_mgr_proxy(setup_fake_component_mgr_service(|| {}))
+            .build()
+            .unwrap();
+
+        node.handle_new_service_connection(stream);
+
+        assert_eq!(proxy.mexec().await.unwrap(), Err(zx::Status::NOT_SUPPORTED.into_raw()));
+        assert_eq!(
+            proxy.power_fully_on().await.unwrap(),
+            Err(zx::Status::NOT_SUPPORTED.into_raw())
+        );
+        assert_eq!(
+            proxy.suspend_to_ram().await.unwrap(),
+            Err(zx::Status::NOT_SUPPORTED.into_raw())
+        );
     }
 }
