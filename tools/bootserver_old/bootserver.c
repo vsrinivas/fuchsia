@@ -383,11 +383,12 @@ int main(int argc, char** argv) {
   int sock = 1;
   size_t num_fvms = 0;
   size_t num_firmware = 0;
-  char board_info_template[] = "/tmp/board_info.XXXXXX";
-  const char block_device_path_template[] = "/tmp/block_device_path.XXXXXX";
-  char block_device_path[] = "/tmp/block_device_path.XXXXXX";
+  char* tmpdir = getenv("TMPDIR");
+  char board_info_template[] = "%s/board_info.XXXXXX";
+  char board_info_file[PATH_MAX];
+  const char block_device_path_template[] = "%s/block_device_path.XXXXXX";
+  char block_device_path[PATH_MAX];
   const char* board_name = NULL;
-  const char* board_info_file = NULL;
   const char* bootloader_image = NULL;
   struct firmware firmware_images[MAX_FIRMWARE_IMAGES];
   const char* zircona_image = NULL;
@@ -405,6 +406,10 @@ int main(int argc, char** argv) {
   int once = 0;
   bool allow_zedboot_version_mismatch = false;
   int status;
+
+  if (tmpdir == NULL) {
+    tmpdir = "/tmp";
+  }
 
   memset(&allowed_addr, 0, sizeof(allowed_addr));
   cmdline[0] = 0;
@@ -860,12 +865,13 @@ int main(int argc, char** argv) {
     // This needs to be first as it validates that the other images are
     // correct.
     if (status == 0 && board_name) {
-      strcpy(board_info_template, "/tmp/board_info.XXXXXX");
-      board_info_file = mktemp(board_info_template);
-      status = xfer2(&ra, board_info_file, NB_BOARD_INFO_FILENAME);
+      snprintf(board_info_file, sizeof(board_info_file), board_info_template, tmpdir);
+      const char* tmpfile = mktemp(board_info_file);
+      status = xfer2(&ra, tmpfile, NB_BOARD_INFO_FILENAME);
       if (status == 0) {
-        status = validate_board_name(board_name, board_info_file);
+        status = validate_board_name(board_name, tmpfile);
       }
+      unlink(tmpfile);
     }
     if (status == 0 && cmdline[0]) {
       status = xfer(&ra, "(cmdline)", cmdline);
@@ -875,7 +881,7 @@ int main(int argc, char** argv) {
     }
     // Wipe partition tables before writing anything to persistent storage.
     if (status == 0 && wipe_partition_tables_device_path) {
-      strcpy(block_device_path, block_device_path_template);
+      snprintf(block_device_path, sizeof(block_device_path), block_device_path_template, tmpdir);
       int fd = mkstemp(block_device_path);
       modify_partition_table_info_t info = {};
       strncpy(info.block_device_path, wipe_partition_tables_device_path, ZX_MAX_NAME_LEN);
@@ -884,11 +890,12 @@ int main(int argc, char** argv) {
       if (status == 0) {
         status = xfer(&ra, block_device_path, NB_WIPE_PARTITION_TABLES_FILENAME);
       }
+      unlink(block_device_path);
       close(fd);
     }
     // Initialize partition tables before writing anything to persistent storage.
     if (status == 0 && init_partition_tables_device_path) {
-      strcpy(block_device_path, block_device_path_template);
+      snprintf(block_device_path, sizeof(block_device_path), block_device_path_template, tmpdir);
       int fd = mkstemp(block_device_path);
       modify_partition_table_info_t info = {};
       strncpy(info.block_device_path, init_partition_tables_device_path, ZX_MAX_NAME_LEN);
@@ -897,6 +904,7 @@ int main(int argc, char** argv) {
       if (status == 0) {
         status = xfer(&ra, block_device_path, NB_INIT_PARTITION_TABLES_FILENAME);
       }
+      unlink(block_device_path);
       close(fd);
     }
     for (size_t i = 0; i < num_fvms; i++) {
