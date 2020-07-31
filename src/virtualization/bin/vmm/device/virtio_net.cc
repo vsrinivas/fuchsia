@@ -203,6 +203,10 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   void Start(fuchsia::virtualization::hardware::StartInfo start_info,
              fuchsia::hardware::ethernet::MacAddress mac_address, StartCallback callback) override {
     PrepStart(std::move(start_info));
+    rx_stream_.Init(&guest_ethernet_, phys_mem_,
+                    fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
+    tx_stream_.Init(&guest_ethernet_, phys_mem_,
+                    fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
 
     mac_address_ = std::move(mac_address);
 
@@ -228,14 +232,6 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
               netstack_->SetInterfaceStatus(nic_id, true);
             })
             .or_else([]() mutable { FX_CHECK(false) << "Failed to set ethernet IP address."; })
-            .and_then([this]() {
-              rx_stream_.Init(
-                  &guest_ethernet_, phys_mem_,
-                  fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
-              tx_stream_.Init(
-                  &guest_ethernet_, phys_mem_,
-                  fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
-            })
             .and_then(std::move(callback))
             .wrap_with(scope_));
   }
