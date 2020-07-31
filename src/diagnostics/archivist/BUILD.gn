@@ -54,7 +54,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:json5",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
@@ -65,6 +64,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]

@@ -6,9 +6,9 @@ use {
     crate::{cml, one_or_many::OneOrMany},
     cm_json::{self, Error, JsonSchema, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
-    json5,
     lazy_static::lazy_static,
     serde_json::Value,
+    serde_json5,
     std::{
         collections::{HashMap, HashSet},
         fmt,
@@ -49,7 +49,7 @@ pub fn validate<P: AsRef<Path>>(
 /// Read in and parse .cml file. Returns a cml::Document if the file is valid, or an Error if not.
 pub fn parse_cml(buffer: &str) -> Result<cml::Document, Error> {
     let document: cml::Document =
-        json5::from_str(buffer).map_err(|e| Error::parse(format!("{}", e)))?;
+        serde_json5::from_str(buffer).map_err(|e| Error::parse(format!("{}", e)))?;
     let mut ctx = ValidationContext {
         document: &document,
         all_children: HashMap::new(),

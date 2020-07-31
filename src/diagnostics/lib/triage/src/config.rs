@@ -53,7 +53,7 @@ impl TryFrom<String> for ConfigFileSchema {
     type Error = anyhow::Error;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        match json5::from_str::<ConfigFileSchema>(&s) {
+        match serde_json5::from_str::<ConfigFileSchema>(&s) {
             Ok(config) => Ok(config),
             Err(e) => return Err(format_err!("Error {}", e)),
         }

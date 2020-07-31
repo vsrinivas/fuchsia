@@ -130,7 +130,7 @@ fn run(opts: CommandLineOpts) -> anyhow::Result<()> {
 
     // write out the merged index
     let serialized_output =
-        json5::to_string(&ctx.output()).context("Could not json-encode merged index")?;
+        serde_json5::to_string(&ctx.output()).context("Could not json-encode merged index")?;
     fs::write(&opts.output_file, serialized_output.as_bytes())
         .context("Could not write merged index to file")?;
 
@@ -255,11 +255,11 @@ mod tests {
 
         // write the first index file
         let index1 = gen_index(2);
-        tmp_input_index1.write_all(json5::to_string(&index1).unwrap().as_bytes()).unwrap();
+        tmp_input_index1.write_all(serde_json5::to_string(&index1).unwrap().as_bytes()).unwrap();
 
         // write the second index file
         let index2 = gen_index(2);
-        tmp_input_index2.write_all(json5::to_string(&index2).unwrap().as_bytes()).unwrap();
+        tmp_input_index2.write_all(serde_json5::to_string(&index2).unwrap().as_bytes()).unwrap();
 
         assert!(matches!(
             run(CommandLineOpts {

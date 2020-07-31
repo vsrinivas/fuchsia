@@ -1106,9 +1106,9 @@ pub(super) fn alias_or_path(alias: Option<&NameOrPath>, path: &Path) -> Result<P
 mod tests {
     use super::*;
     use cm_json::{self, Error};
-    use json5;
     use matches::assert_matches;
     use serde_json;
+    use serde_json5;
 
     // Exercise reference parsing tests on `OfferFromRef` because it contains every reference
     // subtype.
@@ -1263,15 +1263,15 @@ mod tests {
 
     #[test]
     fn test_deny_unknown_fields() {
-        assert_matches!(json5::from_str::<Document>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Environment>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<RunnerRegistration>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<ResolverRegistration>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Use>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Expose>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Offer>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Capability>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Child>("{ unknown: \"\" }"), Err(_));
-        assert_matches!(json5::from_str::<Collection>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Document>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Environment>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<RunnerRegistration>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<ResolverRegistration>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Use>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Expose>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Offer>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Capability>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Child>("{ unknown: \"\" }"), Err(_));
+        assert_matches!(serde_json5::from_str::<Collection>("{ unknown: \"\" }"), Err(_));
     }
 }

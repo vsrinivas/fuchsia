@@ -105,7 +105,7 @@ impl TryFrom<&str> for RuntimeConfig {
     fn try_from(s: &str) -> Result<Self, Error> {
         // TODO(viktard): Configuration is currently encoded as JSON5. This will likely be replaced
         // with persistent FIDL.
-        json5::from_str(s).map_err(|e| e.into())
+        serde_json5::from_str(s).map_err(|e| e.into())
     }
 }
 

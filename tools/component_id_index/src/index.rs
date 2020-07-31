@@ -28,7 +28,7 @@ pub struct Index {
 impl Index {
     pub fn from_file(path: &str) -> anyhow::Result<Index> {
         let contents = fs::read_to_string(path).context("unable to read file")?;
-        json5::from_str::<Index>(&contents).context("unable to parse to json5")
+        serde_json5::from_str::<Index>(&contents).context("unable to parse to json5")
     }
 }
 

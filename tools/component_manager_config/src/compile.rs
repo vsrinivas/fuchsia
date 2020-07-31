@@ -6,8 +6,8 @@ use anyhow::{format_err, Error};
 use argh::FromArgs;
 use fidl::encoding::encode_persistent;
 use fidl_fuchsia_component_internal as component_internal;
-use json5;
 use serde::Deserialize;
+use serde_json5;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -29,7 +29,7 @@ impl Into<component_internal::Config> for Config {
 impl Config {
     fn from_json_file(path: PathBuf) -> Result<Self, Error> {
         let data = fs::read_to_string(path)?;
-        json5::from_str(&data).map_err(|e| format_err!("failed reading config json: {}", e))
+        serde_json5::from_str(&data).map_err(|e| format_err!("failed reading config json: {}", e))
     }
 }
 

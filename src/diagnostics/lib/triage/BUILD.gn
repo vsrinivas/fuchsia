@@ -10,13 +10,13 @@ lib_deps = [
   "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
   "//src/sys/lib/cm_json",
   "//third_party/rust_crates:anyhow",
-  "//third_party/rust_crates:json5",
   "//third_party/rust_crates:lazy_static",
   "//third_party/rust_crates:nom",
   "//third_party/rust_crates:regex",
   "//third_party/rust_crates:serde",
   "//third_party/rust_crates:serde_derive",
   "//third_party/rust_crates:serde_json",
+  "//third_party/rust_crates:serde_json5",
 ]
 
 rustc_library("triage") {

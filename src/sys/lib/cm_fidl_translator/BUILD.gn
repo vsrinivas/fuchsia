@@ -15,9 +15,9 @@ rustc_library("cm_fidl_translator") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/lib/cm_fidl_validator",
     "//src/sys/lib/cm_json",
-    "//third_party/rust_crates:json5",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]

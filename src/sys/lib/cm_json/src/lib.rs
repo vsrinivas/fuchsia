@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow, json5, serde_json,
+    anyhow, serde_json,
     serde_json::Value,
+    serde_json5,
     std::borrow::Cow,
     std::error,
     std::fmt,
@@ -133,7 +134,7 @@ pub fn from_json_str(json: &str) -> Result<Value, Error> {
 }
 
 pub fn from_json5_str(json5: &str) -> Result<Value, Error> {
-    let v: Value = json5::from_str(json5)
+    let v: Value = serde_json5::from_str(json5)
         .map_err(|e| Error::parse(format!("Couldn't read input as JSON5: {}", e)))?;
     Ok(v)
 }

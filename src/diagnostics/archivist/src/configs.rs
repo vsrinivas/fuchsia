@@ -5,9 +5,10 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::Selector,
-    fuchsia_inspect as inspect, json5,
+    fuchsia_inspect as inspect,
     selectors::parse_selector_file,
     serde::Deserialize,
+    serde_json5,
     std::path::{Path, PathBuf},
     std::{collections::BTreeMap, fs},
 };
@@ -149,7 +150,7 @@ impl PipelineConfig {
 pub fn parse_config(path: impl Into<PathBuf>) -> Result<Config, Error> {
     let path: PathBuf = path.into();
     let json_string: String = fs::read_to_string(path)?;
-    let config: Config = json5::from_str(&json_string)?;
+    let config: Config = serde_json5::from_str(&json_string)?;
     if let Some(summarized_dirs) = &config.summarized_dirs {
         if summarized_dirs.iter().any(|(dir, _)| dir == "archive") {
             return Err(format_err!("Invalid name 'archive' in summarized dirs"));

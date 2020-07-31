@@ -35,9 +35,9 @@ if (host_toolchain == current_toolchain) {
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:json5",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:serde_json5",
     ]
 
     test_deps = [ "//third_party/rust_crates:tempfile" ]

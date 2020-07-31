@@ -5,8 +5,8 @@
 //! Useful utilities for Serde JSON deserialization.
 
 use {
-    json5,
     serde::de::DeserializeOwned,
+    serde_json5,
     std::{
         fs,
         path::{Path, PathBuf},
@@ -19,7 +19,8 @@ pub fn load_from_path<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> Result<T,
     let path = path.as_ref();
     let contents = fs::read_to_string(path)
         .map_err(|e| LoadError::Io { path: path.into(), error: e.into() })?;
-    json5::from_str(&contents).map_err(|e| LoadError::Parse { path: path.into(), error: e.into() })
+    serde_json5::from_str(&contents)
+        .map_err(|e| LoadError::Parse { path: path.into(), error: e.into() })
 }
 
 /// Serde JSON load/deserialization errors.

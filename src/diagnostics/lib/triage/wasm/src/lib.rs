@@ -4,7 +4,7 @@ pub mod shim;
 mod bindings {
     use wasm_bindgen::prelude::*;
 
-    use {super::shim, json5, std::collections::HashMap};
+    use {super::shim, serde_json5, std::collections::HashMap};
 
     macro_rules! format_js_err {
         ($msg:literal $(,)?) => {
@@ -62,8 +62,9 @@ mod bindings {
                 bail_js_err!("configs param is not String.");
             }
 
-            match json5::from_str::<HashMap<String, String>>(&serialized_configs.unwrap().as_str())
-            {
+            match serde_json5::from_str::<HashMap<String, String>>(
+                &serialized_configs.unwrap().as_str(),
+            ) {
                 Err(err) => format_js_err!("Failed to deserialize configs: {}", err),
                 Ok(configs) => match self.shim.build_context(configs) {
                     Err(err) => format_js_err!("Failed to parse configs: {}", err),
