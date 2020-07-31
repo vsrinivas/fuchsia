@@ -281,6 +281,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/fvm-test#meta/fvm-test.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/fxl_tests#meta/fxl_unittests.cmx",
          "max_severity": "FATAL"
       },

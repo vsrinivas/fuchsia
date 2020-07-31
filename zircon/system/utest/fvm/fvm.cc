@@ -2557,7 +2557,7 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
       ::fidl::StringView(FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)));
   ASSERT_OK(resp.status());
   ASSERT_FALSE(resp->result.is_response());
-  ASSERT_EQ(resp->result.err(), ZX_ERR_IO);
+  ASSERT_EQ(resp->result.err(), ZX_ERR_INTERNAL);
 
   // Grow the ramdisk to the appropiate size and bind should succeed.
   ASSERT_OK(ramdisk_grow(ramdisk(), kFvmPartitionSize));

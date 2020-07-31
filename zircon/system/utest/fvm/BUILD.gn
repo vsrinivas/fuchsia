@@ -112,7 +112,7 @@ isolated_devmgr_unittest_package("fvm-test") {
   ]
 }
 
-group("fvm-tests") {
+group("tests") {
   testonly = true
   deps = [
     ":fvm-integration-test",
