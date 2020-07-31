@@ -195,8 +195,7 @@ The following is an example for a directory called `fortune`.
 
 ```gn
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("fortune") {
   testonly = true
@@ -230,39 +229,18 @@ executable("test") {
   ]
 }
 
-package("pkg") {
-  package_name = "fortune"
-
-  deps = [
-    ":bin"
-  ]
-
-  binaries = [
-    {
-      name = "fortune"
-    },
-  ]
-
-  meta = [
-    {
-      dest = "fortune.cmx"
-      path = rebase_path(dest)
-    },
-  ]
+fuchsia_component("component") {
+  manifest = "meta/fortune.cmx"
+  deps = [ ":bin" ]
 }
 
-unittest_package("fortune-tests") {
-  testonly = true
-  deps = [
-    ":test",
-  ]
+fuchsia_package("pkg") {
+  package_name = "fortune"
+  deps = [ ":component" ]
+}
 
-  tests = [
-    {
-      name = "fortune-test"
-      environments = basic_env
-    },
-  ]
+fuchsia_unittest_package("fortune-tests") {
+  deps = [ ":test" ]
 }
 ```
 
