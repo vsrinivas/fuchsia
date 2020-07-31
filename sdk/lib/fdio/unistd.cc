@@ -183,7 +183,7 @@ int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
 __EXPORT
 zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
   fbl::AutoLock lock(&fdio_lock);
-  if (fd >= FDIO_MAX_FD) {
+  if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
     return ZX_ERR_INVALID_ARGS;
   }
   fdio_t* io = fdio_fdtab[fd];

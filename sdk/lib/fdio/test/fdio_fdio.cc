@@ -114,6 +114,10 @@ TEST(FDIOTest, UnbindFromFD) {
   (void)fd.release();
   EXPECT_EQ(io, io2);
   fdio_unsafe_release(io2);
+
+  // Invalid file descriptors.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_unbind_from_fd(-1, &io2));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_unbind_from_fd(FDIO_MAX_FD, &io2));
 }
 
 TEST(FDIOTest, GetServiceHandle) {
