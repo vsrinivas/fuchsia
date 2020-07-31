@@ -37,7 +37,9 @@ source_set("archive_reader") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.diagnostics",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   deps = [

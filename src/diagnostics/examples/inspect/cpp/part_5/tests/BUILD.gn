@@ -18,6 +18,8 @@ test("integration_part_5") {
     "//src/diagnostics/examples/inspect/fidl:fuchsia.examples.inspect",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }

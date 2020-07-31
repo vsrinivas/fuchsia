@@ -21,9 +21,11 @@ source_set("cmx_facet_parser") {
     "//src/lib/fxl",
     "//src/lib/json_parser",
     "//src/lib/pkg_url",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
     "//zircon/system/ulib/trace",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -39,7 +41,9 @@ executable("cmx_facet_parser_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/googletest:gmock",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   # TODO(46551): Fix the leaks and remove this.

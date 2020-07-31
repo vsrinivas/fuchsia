@@ -61,7 +61,7 @@ if (defined(zx)) {
 
     deps = [ "$zx/system/public" ]
 
-    public_deps = [ "$zx/../third_party/rapidjson" ]
+    public_deps = [ "$zx/third_party/rapidjson" ]
   }
 
   zx_host_tool("kazoo") {

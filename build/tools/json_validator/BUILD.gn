@@ -9,7 +9,9 @@ executable("json_validator") {
 
   deps = [
     "//src/lib/fxl",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

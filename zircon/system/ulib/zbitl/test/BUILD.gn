@@ -34,9 +34,11 @@ test("zbitl-unittests") {
   deps = [
     "//src/lib/files",
     "//src/lib/fxl",
-    "//third_party/rapidjson",
     "//zircon/public/lib/zbitl",
     "//zircon/public/lib/zxtest",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
   if (is_fuchsia) {
     sources += [ "vmo-tests.cc" ]

@@ -24,9 +24,11 @@ source_set("chunked-compression") {
   public_deps = [ "//zircon/public/lib/fbl" ]
   deps = [
     "//src/lib/fxl",
-    "//third_party/zstd",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/zstd",
   ]
 
   if (is_fuchsia) {

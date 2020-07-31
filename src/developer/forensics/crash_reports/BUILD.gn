@@ -111,7 +111,9 @@ source_set("config") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -134,9 +136,11 @@ source_set("crash_register") {
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
-    "//third_party/rapidjson",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   deps = [
@@ -345,8 +349,10 @@ source_set("store") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

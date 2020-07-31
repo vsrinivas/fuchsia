@@ -60,11 +60,13 @@ if (is_host) {
       "//src/lib/fidl_codec",
       "//third_party/googletest:gtest",
       "//third_party/protobuf:protobuf_full",
-      "//third_party/rapidjson",
       "//tools/fidlcat/lib:host_lib",
       "//tools/fidlcat/lib:session_proto",
       "//zircon/public/lib/fidl_base",
       "//zircon/system/public",
+
+      # TODO(57392): Move it back to //third_party once unification completes.
+      "//zircon/third_party/rapidjson",
     ]
   }
 }

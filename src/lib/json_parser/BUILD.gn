@@ -20,10 +20,12 @@ source_set("json_parser") {
 
   public_deps = [
     "//src/lib/fxl",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -42,7 +44,9 @@ executable("json_parser_unittests_bin") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   # TODO(46748): Fix the leaks and remove this.

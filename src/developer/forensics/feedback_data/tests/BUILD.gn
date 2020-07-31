@@ -122,8 +122,10 @@ executable("data_provider_unittest_exe") {
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
     "//zircon/public/lib/zx",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -231,8 +233,10 @@ executable("feedback_data_integration_test_exe") {
     "//src/ui/lib/escher/test/common:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
     "//zircon/public/lib/zx",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -306,8 +310,10 @@ executable("integrity_reporter_unittest_exe") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

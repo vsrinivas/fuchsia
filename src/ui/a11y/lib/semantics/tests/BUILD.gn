@@ -47,7 +47,9 @@ executable("semantics_tests") {
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
     "//third_party/googletest:gmock",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   # TODO(46525): Fix the leaks and remove this.

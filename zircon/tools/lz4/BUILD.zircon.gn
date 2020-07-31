@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-lz4_lib = "$zx/../third_party/lz4/lib"
-lz4_programs = "$zx/../third_party/lz4/programs"
+lz4_lib = "$zx/third_party/lz4/lib"
+lz4_programs = "$zx/third_party/lz4/programs"
 
 zx_host_tool("lz4") {
   sources = [

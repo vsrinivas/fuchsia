@@ -68,7 +68,9 @@ source_set("enclosing_environment") {
   deps = [
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:bin",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   public_configs = [ "//sdk/config" ]

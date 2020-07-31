@@ -27,12 +27,14 @@ source_set("lib") {
     "//sdk/lib/fdio",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

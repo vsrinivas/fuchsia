@@ -21,8 +21,10 @@ source_set("chromium") {
   public_deps = [
     "//garnet/lib/perfmon",
     "//third_party/modp_b64",
-    "//third_party/rapidjson",
     "//zircon/system/ulib/trace-reader",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

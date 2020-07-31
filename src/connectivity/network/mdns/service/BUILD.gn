@@ -110,8 +110,10 @@ source_set("source_set") {
     "//src/lib/fsl",
     "//src/lib/inet",
     "//src/lib/json_parser",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   if (enable_mdns_trace) {

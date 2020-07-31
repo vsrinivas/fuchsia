@@ -18,8 +18,10 @@ source_set("volume-descriptor") {
   public_deps = [
     ":options",
     "utils:guid",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fit",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -30,7 +32,9 @@ source_set("address-descriptor") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
-  deps = [ "//third_party/rapidjson" ]
+
+  # TODO(57392): Move it back to //third_party once unification completes.
+  deps = [ "//zircon/third_party/rapidjson" ]
 }
 
 source_set("partition") {
@@ -41,7 +45,9 @@ source_set("partition") {
     "//src/storage/volume_image:volume-descriptor",
     "//src/storage/volume_image/utils:io-interfaces",
   ]
-  deps = [ "//third_party/rapidjson" ]
+
+  # TODO(57392): Move it back to //third_party once unification completes.
+  deps = [ "//zircon/third_party/rapidjson" ]
 }
 
 source_set("volume-descriptor-test") {

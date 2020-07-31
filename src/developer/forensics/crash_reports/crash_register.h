@@ -19,7 +19,8 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
+// TODO(57392): Move it back to //third_party once unification completes.
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
 namespace crash_reports {

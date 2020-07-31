@@ -206,5 +206,6 @@ source_set("utils") {
     "//sdk/fidl/fuchsia.feedback",
   ]
 
-  deps = [ "//third_party/rapidjson" ]
+  # TODO(57392): Move it back to //third_party once unification completes.
+  deps = [ "//zircon/third_party/rapidjson" ]
 }

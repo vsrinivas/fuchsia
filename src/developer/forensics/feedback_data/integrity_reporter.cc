@@ -6,9 +6,10 @@
 
 #include "src/developer/forensics/feedback_data/errors.h"
 #include "src/developer/forensics/utils/errors.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/prettywriter.h"
-#include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
+// TODO(57392): Move it back to //third_party once unification completes.
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
 namespace forensics {
 namespace feedback_data {

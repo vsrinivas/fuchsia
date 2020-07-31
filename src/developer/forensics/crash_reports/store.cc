@@ -15,9 +15,10 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/join_strings.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/prettywriter.h"
-#include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
+// TODO(57392): Move it back to //third_party once unification completes.
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/prettywriter.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
 namespace forensics {
 namespace crash_reports {

@@ -56,7 +56,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
-    "//third_party/rapidjson",
+    "//zircon/third_party/rapidjson",
   ]
 }
 

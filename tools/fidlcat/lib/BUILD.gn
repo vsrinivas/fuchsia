@@ -47,10 +47,12 @@ if (is_host) {
       "//src/lib/fidl_codec:value_proto",
       "//src/lib/fxl",
       "//third_party/protobuf:protobuf_full",
-      "//third_party/rapidjson",
       "//tools/fidlcat:lib",
       "//zircon/public/lib/fidl_base",
       "//zircon/public/lib/fit",
+
+      # TODO(57392): Move it back to //third_party once unification completes.
+      "//zircon/third_party/rapidjson",
     ]
 
     public_deps = [ "//zircon/system/public" ]

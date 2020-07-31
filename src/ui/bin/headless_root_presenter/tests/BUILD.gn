@@ -43,7 +43,9 @@ executable("headless_root_presenter_apptests") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/bin/headless_root_presenter:lib",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   # This is a dependency of the semantic tree to perform certain matrix transform operations.

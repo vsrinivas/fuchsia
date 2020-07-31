@@ -36,7 +36,9 @@ source_set("model") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -49,6 +51,8 @@ executable("model_unittest") {
     "//garnet/public/lib/json",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }

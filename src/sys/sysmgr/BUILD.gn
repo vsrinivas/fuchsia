@@ -37,8 +37,10 @@ source_set("lib") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
-    "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   if (auto_update_packages) {

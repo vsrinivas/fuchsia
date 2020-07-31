@@ -36,13 +36,15 @@ config("zstd_config") {
 }
 
 config("zstd_include") {
-  include_dirs = [ "//build/secondary/third_party/zstd/include" ]
+  # TODO(57392): Move it back to //third_party once unification completes.
+  include_dirs = [ "//build/secondary/zircon/third_party/zstd/include" ]
 }
 
 static_library("zstd") {
+  # TODO(57392): Move it back to //third_party once unification completes.
   public = [
-    "//build/secondary/third_party/zstd/include/zstd/zstd.h",
-    "//build/secondary/third_party/zstd/include/zstd/zstd_errors.h",
+    "//build/secondary/zircon/third_party/zstd/include/zstd/zstd.h",
+    "//build/secondary/zircon/third_party/zstd/include/zstd/zstd_errors.h",
   ]
 
   sources = [
@@ -104,7 +106,10 @@ config("zstd_seekable_public_config") {
 }
 
 static_library("zstdseek") {
-  public = [ "//build/secondary/third_party/zstd/include/zstd/zstd_seekable.h" ]
+  # TODO(57392): Move it back to //third_party once unification completes.
+  public = [
+    "//build/secondary/zircon/third_party/zstd/include/zstd/zstd_seekable.h",
+  ]
 
   sources = [
     "contrib/seekable_format/zstdseek_compress.c",

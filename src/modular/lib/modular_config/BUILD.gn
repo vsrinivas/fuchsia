@@ -14,7 +14,9 @@ source_set("modular_config") {
 
   public_deps = [
     ":modular_config_constants",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   deps = [

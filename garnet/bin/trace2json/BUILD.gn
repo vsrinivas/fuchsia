@@ -31,9 +31,11 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/trace_converters:chromium",
-    "//third_party/rapidjson",
     "//third_party/zlib:zfstream",
     "//zircon/system/ulib/trace-reader",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

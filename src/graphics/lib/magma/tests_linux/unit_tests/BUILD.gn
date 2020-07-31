@@ -12,7 +12,9 @@ executable("virtmagma_unit_tests_linux") {
     "//src/graphics/lib/magma/src/libmagma_linux",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan:headers",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   sources = [ "virtmagma_unit_tests.cc" ]

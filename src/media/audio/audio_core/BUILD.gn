@@ -183,10 +183,12 @@ source_set("audio_core_lib") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/lib/clock:utils",
-    "//third_party/rapidjson",
     "//zircon/public/lib/ffl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 
   deps = [

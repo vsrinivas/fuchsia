@@ -17,7 +17,9 @@ if (!is_fuchsia) {
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:libc",
-      "//third_party/zstd",
+
+      # TODO(57392): Move it back to //third_party once unification completes.
+      "//zircon/third_party/zstd",
     ]
     test_deps = [ "//third_party/rust_crates:hex" ]
 

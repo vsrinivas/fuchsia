@@ -282,9 +282,11 @@ test("blobfs-integration-paged") {
 fuzzer("zstd-fuzzer") {
   sources = [ "zstd-fuzzer.cc" ]
   deps = [
-    "//third_party/zstd",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/blobfs:private_headers",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/zstd",
   ]
 }
 
@@ -300,18 +302,22 @@ fuzzer("lz4-fuzzer") {
 fuzzer("zstd-seekable-symmetric-fuzzer") {
   sources = [ "zstd-seekable-symmetric-fuzzer.cc" ]
   deps = [
-    "//third_party/zstd:zstdseek",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/blobfs:private_headers",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/zstd:zstdseek",
   ]
 }
 
 fuzzer("zstd-seekable-fuzzer") {
   sources = [ "zstd-seekable-fuzzer.cc" ]
   deps = [
-    "//third_party/zstd:zstdseek",
     "//zircon/system/ulib/blobfs",
     "//zircon/system/ulib/blobfs:private_headers",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/zstd:zstdseek",
   ]
 }
 

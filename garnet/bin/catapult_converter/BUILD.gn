@@ -12,7 +12,9 @@ source_set("converter") {
   sources = [ "converter.cc" ]
   deps = [
     "//src/lib/fxl",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -22,7 +24,9 @@ executable("converter_bin") {
   sources = [ "main.cc" ]
   deps = [
     ":converter",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -55,7 +59,9 @@ test("catapult_converter_unittest") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

@@ -31,9 +31,11 @@ static_library("lib") {
     "//src/lib/fidl_codec",
     "//src/lib/line_input",
     "//third_party/quickjs:qjs-lib",
-    "//third_party/rapidjson",
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/zx",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

@@ -14,9 +14,11 @@ source_set("session_spec") {
     "//garnet/lib/perfmon",
     "//src/lib/fxl",
     "//src/lib/json_parser",
-    "//third_party/rapidjson",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -30,7 +32,9 @@ source_set("session_result_spec") {
     "//garnet/lib/perfmon",
     "//src/lib/fxl",
     "//src/lib/json_parser",
-    "//third_party/rapidjson",
+
+    # TODO(57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
   ]
 }
 

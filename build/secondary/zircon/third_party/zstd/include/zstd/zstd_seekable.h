@@ -5,6 +5,7 @@
 #ifndef THIRD_PARTY_ZSTD_INCLUDE_ZSTD_ZSTD_SEEKABLE_H_
 #define THIRD_PARTY_ZSTD_INCLUDE_ZSTD_ZSTD_SEEKABLE_H_
 
-#include "../../../../../../third_party/zstd/contrib/seekable_format/zstd_seekable.h"
+// TODO(57392): Move it back to //third_party once unification completes.
+#include "../../../../../../zircon/third_party/zstd/contrib/seekable_format/zstd_seekable.h"
 
 #endif  // THIRD_PARTY_ZSTD_INCLUDE_ZSTD_ZSTD_SEEKABLE_H_

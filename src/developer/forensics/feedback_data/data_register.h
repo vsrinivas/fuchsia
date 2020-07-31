@@ -9,7 +9,7 @@
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
 namespace feedback_data {

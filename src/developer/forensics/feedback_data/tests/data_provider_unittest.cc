@@ -38,8 +38,9 @@
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/schema.h"
+// TODO(57392): Move it back to //third_party once unification completes.
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace forensics {
 namespace feedback_data {

@@ -8,10 +8,11 @@
 #include <zircon/errors.h>
 
 #include "src/lib/files/file.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/error/en.h"
-#include "third_party/rapidjson/include/rapidjson/schema.h"
-#include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
+// TODO(57392): Move it back to //third_party once unification completes.
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/error/en.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/schema.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
 namespace forensics {
 namespace feedback_data {
