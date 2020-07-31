@@ -37,6 +37,7 @@ copy("copy_configs") {
 
   # Any data that is needed for a test should be included in this list.
   sources = [
+    "test_data/config/annotation_tests.triage",
     "test_data/config/error_rate.triage",
     "test_data/config/log_tests.triage",
     "test_data/config/other.triage",
@@ -53,7 +54,10 @@ copy("copy_configs") {
 copy("copy_bugreport") {
   testonly = true
 
-  sources = [ "test_data/bugreport/inspect.json" ]
+  sources = [
+    "test_data/bugreport/annotations.json",
+    "test_data/bugreport/inspect.json",
+  ]
 
   # If this path changes then the integration.rs file needs to be udpated
   # to look in the correct place.

@@ -379,6 +379,21 @@ test: {
 }
 ```
 
+### annotations.json
+
+The bugreport contains a file `annotations.json` which contains information
+on the build, board, uptime, and so on.
+
+Values can be fetched from this file by using the function `Annotation()` with
+a single string parameter which is a key of the JSON object in the file. For
+example,
+
+```json5
+eval: {
+    using_chromebook: "Annotation('build.board') == 'chromebook-x64'",
+}
+```
+
 ### Use multiple configuration files
 
 You can add any number of Triage configuration files, and even use variables
@@ -525,6 +540,8 @@ logical OR of the values.
 * SyslogHas(matcher), KlogHas(matcher), BootlogHas(matcher) return true if the
 corresponding log file has a line matching matcher, which is a string containing
 a regex expression.
+* Annotation(key) returns the corresponding value from the annotations.json
+file.
 
 Note: Since logs are not structured, selectors can't be applied to them, so we
 supply regex matching functions instead.

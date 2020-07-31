@@ -6,7 +6,7 @@ pub mod fetch;
 
 use {
     super::config::{self, DataFetcher, DiagnosticData, Source},
-    fetch::{InspectFetcher, SelectorString, SelectorType, TextFetcher},
+    fetch::{InspectFetcher, KeyValueFetcher, SelectorString, SelectorType, TextFetcher},
     fuchsia_inspect_node_hierarchy::Property as DiagnosticProperty,
     lazy_static::lazy_static,
     serde::{Deserialize, Deserializer},
@@ -74,6 +74,7 @@ pub struct FileDataFetcher<'a> {
     syslog: &'a TextFetcher,
     klog: &'a TextFetcher,
     bootlog: &'a TextFetcher,
+    annotations: &'a KeyValueFetcher,
 }
 
 impl<'a> FileDataFetcher<'a> {
@@ -83,6 +84,7 @@ impl<'a> FileDataFetcher<'a> {
             syslog: TextFetcher::ref_empty(),
             klog: TextFetcher::ref_empty(),
             bootlog: TextFetcher::ref_empty(),
+            annotations: KeyValueFetcher::ref_empty(),
         };
         for DiagnosticData { source, data, .. } in data.iter() {
             match source {
@@ -104,6 +106,11 @@ impl<'a> FileDataFetcher<'a> {
                 Source::Bootlog => {
                     if let DataFetcher::Text(data) = data {
                         fetcher.bootlog = data;
+                    }
+                }
+                Source::Annotations => {
+                    if let DataFetcher::KeyValue(data) = data {
+                        fetcher.annotations = data;
                     }
                 }
             }
@@ -139,6 +146,7 @@ pub struct TrialDataFetcher<'a> {
     klog: &'a TextFetcher,
     syslog: &'a TextFetcher,
     bootlog: &'a TextFetcher,
+    annotations: &'a KeyValueFetcher,
 }
 
 lazy_static! {
@@ -152,6 +160,7 @@ impl<'a> TrialDataFetcher<'a> {
             klog: TextFetcher::ref_empty(),
             syslog: TextFetcher::ref_empty(),
             bootlog: TextFetcher::ref_empty(),
+            annotations: KeyValueFetcher::ref_empty(),
         }
     }
 
@@ -161,6 +170,7 @@ impl<'a> TrialDataFetcher<'a> {
             klog: TextFetcher::ref_empty(),
             syslog: TextFetcher::ref_empty(),
             bootlog: TextFetcher::ref_empty(),
+            annotations: KeyValueFetcher::ref_empty(),
         }
     }
 
@@ -174,6 +184,10 @@ impl<'a> TrialDataFetcher<'a> {
 
     pub fn set_bootlog(&mut self, fetcher: &'a TextFetcher) {
         self.bootlog = fetcher;
+    }
+
+    pub fn set_annotations(&mut self, fetcher: &'a KeyValueFetcher) {
+        self.annotations = fetcher;
     }
 
     fn fetch(&self, name: &str) -> MetricValue {
@@ -327,6 +341,7 @@ pub enum Function {
     SyslogHas,
     BootlogHas,
     Missing,
+    Annotation,
 }
 
 // Behavior for short circuiting execution when applying operands.
@@ -567,6 +582,7 @@ impl<'a> MetricState<'a> {
                 self.log_contains(function, namespace, operands)
             }
             Function::Missing => self.is_missing(namespace, operands),
+            Function::Annotation => self.annotation(namespace, operands),
         }
     }
 
@@ -576,6 +592,20 @@ impl<'a> MetricState<'a> {
             Expression::IsMissing(operands) => self.is_missing(namespace, operands),
             Expression::Metric(name) => self.metric_value_by_name(namespace, name),
             Expression::Value(value) => value.clone(),
+        }
+    }
+
+    fn annotation(&self, namespace: &str, operands: &Vec<Expression>) -> MetricValue {
+        if operands.len() != 1 {
+            return MetricValue::Missing("Annotation() needs 1 string argument".to_string());
+        }
+        match self.evaluate(namespace, &operands[0]) {
+            MetricValue::String(string) => match &self.fetcher {
+                Fetcher::TrialData(fetcher) => fetcher.annotations,
+                Fetcher::FileData(fetcher) => fetcher.annotations,
+            }
+            .fetch(&string),
+            _ => MetricValue::Missing("Annotation() needs a string argument".to_string()),
         }
     }
 
@@ -1098,6 +1128,35 @@ mod test {
         Ok(())
     }
 
+    #[test]
+    fn annotations_work() -> Result<(), Error> {
+        let annotation_text = r#"{ "build.board": "chromebook-x64", "answer": 42 }"#.to_string();
+        let annotations =
+            DiagnosticData::new("a".to_string(), Source::Annotations, annotation_text)?;
+        let metrics = HashMap::new();
+        let data = vec![annotations];
+        let fetcher = FileDataFetcher::new(&data);
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher));
+        assert_eq!(
+            state.eval_value("", "Annotation('build.board')"),
+            MetricValue::String("chromebook-x64".to_string())
+        );
+        assert_eq!(state.eval_value("", "Annotation('answer')"), MetricValue::Int(42));
+        assert_eq!(
+            state.eval_value("", "Annotation('bogus')"),
+            MetricValue::Missing("Key 'bogus' not found in annotations".to_string())
+        );
+        assert_eq!(
+            state.eval_value("", "Annotation('bogus', 'Double bogus')"),
+            MetricValue::Missing("Annotation() needs 1 string argument".to_string())
+        );
+        assert_eq!(
+            state.eval_value("", "Annotation(42)"),
+            MetricValue::Missing("Annotation() needs a string argument".to_string())
+        );
+        Ok(())
+    }
+
     // Correct operation of the klog, syslog, and bootlog fields of TrialDataFetcher are tested
     // in the integration test via log_tests.triage.
 
@@ -1193,4 +1252,6 @@ mod test {
             MetricValue::Bool(true)
         );
     }
+
+    // Correct operation of annotations is tested via annotation_tests.triage.
 }

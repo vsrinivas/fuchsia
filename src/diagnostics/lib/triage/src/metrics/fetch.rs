@@ -10,7 +10,7 @@ use {
     regex::Regex,
     selectors,
     serde_derive::Deserialize,
-    serde_json::Value as JsonValue,
+    serde_json::{map::Map as JsonMap, Value as JsonValue},
     std::{convert::TryFrom, str::FromStr, sync::Arc},
 };
 
@@ -77,6 +77,59 @@ impl TryFrom<String> for SelectorString {
 pub struct ComponentInspectInfo {
     processed_data: NodeHierarchy,
     moniker: Vec<String>,
+}
+
+pub struct KeyValueFetcher {
+    pub map: JsonMap<String, JsonValue>,
+}
+
+impl TryFrom<&str> for KeyValueFetcher {
+    type Error = anyhow::Error;
+
+    fn try_from(json_text: &str) -> Result<Self, Self::Error> {
+        let raw_json =
+            json_text.parse::<JsonValue>().context("Couldn't parse KeyValue text as JSON.")?;
+        match raw_json {
+            JsonValue::Object(map) => Ok(KeyValueFetcher { map }),
+            _ => bail!("Bad json KeyValue data needs to be Object (map)."),
+        }
+    }
+}
+
+impl TryFrom<&JsonMap<String, JsonValue>> for KeyValueFetcher {
+    type Error = anyhow::Error;
+
+    fn try_from(map: &JsonMap<String, JsonValue>) -> Result<Self, Self::Error> {
+        // This doesn't fail today, but that's an implementation detail; don't count on it.
+        Ok(KeyValueFetcher { map: map.clone() })
+    }
+}
+
+lazy_static! {
+    static ref EMPTY_KEY_VALUE_FETCHER: KeyValueFetcher = KeyValueFetcher { map: JsonMap::new() };
+}
+
+impl KeyValueFetcher {
+    pub fn ref_empty() -> &'static Self {
+        &EMPTY_KEY_VALUE_FETCHER
+    }
+
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    pub fn fetch(&self, key: &str) -> MetricValue {
+        match self.map.get(key) {
+            Some(value) => MetricValue::from(value),
+            None => {
+                println!("Dict len is {}", self.map.len());
+                for (key, value) in self.map.iter() {
+                    println!("Dict dump: {:?}:{:?}", key, value);
+                }
+                MetricValue::Missing(format!("Key '{}' not found in annotations", key))
+            }
+        }
+    }
 }
 
 pub struct TextFetcher {
@@ -334,4 +387,6 @@ mod test {
         assert!(!fetcher1.contains("a"));
         assert!(!fetcher2.contains("a"));
     }
+
+    // KeyValueFetcher is tested in metrics::test::annotations_work()
 }

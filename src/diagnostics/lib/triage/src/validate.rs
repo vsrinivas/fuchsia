@@ -6,7 +6,10 @@ use {
     super::{
         act::{Action, Actions},
         config::ParseResult,
-        metrics::{fetch::TextFetcher, Fetcher, MetricState, MetricValue, TrialDataFetcher},
+        metrics::{
+            fetch::{KeyValueFetcher, TextFetcher},
+            Fetcher, MetricState, MetricValue, TrialDataFetcher,
+        },
     },
     anyhow::{bail, format_err, Error},
     serde::Deserialize,
@@ -22,6 +25,7 @@ pub struct Trial {
     klog: Option<String>,
     syslog: Option<String>,
     bootlog: Option<String>,
+    annotations: Option<json::map::Map<String, json::Value>>,
 }
 
 // Outer String is namespace, inner String is trial name
@@ -39,6 +43,7 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
             let klog_fetcher;
             let syslog_fetcher;
             let bootlog_fetcher;
+            let annotations_fetcher;
             let mut fetcher = match &trial.values {
                 Some(values) => Fetcher::TrialData(TrialDataFetcher::new(values)),
                 None => Fetcher::TrialData(TrialDataFetcher::new_empty()),
@@ -55,6 +60,10 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
                 if let Some(bootlog) = &trial.bootlog {
                     bootlog_fetcher = TextFetcher::try_from(&**bootlog)?;
                     fetcher.set_bootlog(&bootlog_fetcher);
+                }
+                if let Some(annotations) = &trial.annotations {
+                    annotations_fetcher = KeyValueFetcher::try_from(annotations)?;
+                    fetcher.set_annotations(&annotations_fetcher);
                 }
             }
             let state = MetricState { metrics, fetcher };
@@ -189,6 +198,7 @@ mod test {
             klog: None,
             syslog: None,
             bootlog: None,
+            annotations: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -205,6 +215,7 @@ mod test {
             klog: None,
             syslog: None,
             bootlog: None,
+            annotations: None,
         };
         let good_trial = Trial {
             yes: Some(vec!["fires".to_string()]),
@@ -213,6 +224,7 @@ mod test {
             klog: None,
             syslog: None,
             bootlog: None,
+            annotations: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -228,6 +240,7 @@ mod test {
             klog: None,
             syslog: None,
             bootlog: None,
+            annotations: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,

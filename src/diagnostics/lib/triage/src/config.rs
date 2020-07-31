@@ -6,7 +6,7 @@ use {
     crate::{
         act::{Actions, ActionsSchema},
         metrics::{
-            fetch::{InspectFetcher, SelectorString, TextFetcher},
+            fetch::{InspectFetcher, KeyValueFetcher, SelectorString, TextFetcher},
             Metric, Metrics,
         },
         validate::{validate, Trials, TrialsSchema},
@@ -26,6 +26,7 @@ pub enum Source {
     Klog = 1,
     Syslog = 2,
     Bootlog = 3,
+    Annotations = 4,
 }
 
 /// Schema for JSON triage configuration. This structure is parsed directly from the configuration
@@ -62,6 +63,7 @@ impl TryFrom<String> for ConfigFileSchema {
 pub enum DataFetcher {
     Inspect(InspectFetcher),
     Text(TextFetcher),
+    KeyValue(KeyValueFetcher),
     None,
 }
 
@@ -81,6 +83,9 @@ impl DiagnosticData {
             Source::Syslog | Source::Klog | Source::Bootlog => {
                 DataFetcher::Text(TextFetcher::try_from(&*contents).context("Parsing plain text")?)
             }
+            Source::Annotations => DataFetcher::KeyValue(
+                KeyValueFetcher::try_from(&*contents).context("Parsing annotations")?,
+            ),
         };
         Ok(DiagnosticData { name, source, data })
     }

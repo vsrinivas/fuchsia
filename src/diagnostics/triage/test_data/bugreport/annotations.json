@@ -1,0 +1,16 @@
+{
+    "build.board": "chromebook-x64",
+    "build.is_debug": "true",
+    "build.latest-commit-date": "2020-06-11T22:12:48+00:00",
+    "build.product": "",
+    "build.version": "2020-06-11T22:12:48+00:00",
+    "device.board-name": "Standard PC (Q35 + ICH9, 2009)",
+    "device.feedback-id": "f94a2bd4-ea1d-42df-b4e2-b1c655298b30",
+    "device.uptime": "0d0h0m39s",
+    "device.utc-time": "2020-06-17 00:10:57 GMT",
+    "hardware.product.manufacturer": "default-manufacturer",
+    "hardware.product.model": "default-model",
+    "hardware.product.name": "default-fuchsia",
+    "system.last-reboot.reason": "cold",
+    "system.update-channel.current": "fuchsia.com"
+}

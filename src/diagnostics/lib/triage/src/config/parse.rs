@@ -201,6 +201,7 @@ fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseErr
         function!("KlogHas", KlogHas),
         function!("BootlogHas", BootlogHas),
         function!("Missing", Missing),
+        function!("Annotation", Annotation),
     ))(i)
 }
 

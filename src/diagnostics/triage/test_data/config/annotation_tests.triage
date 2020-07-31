@@ -1,0 +1,32 @@
+{
+    act: {
+        test_not_chromebook: {
+            type: "Warning",
+            trigger: "Not(Annotation('build.board') == 'chromebook-x64')",
+            print: "Not using a chromebook",
+        },
+        test_is_chromebook: {
+            type: "Warning",
+            trigger: "Annotation('build.board') == 'chromebook-x64'",
+            print: "Running on a chromebook",
+        },
+    },
+    test: {
+        is_chromebook: {
+            no: [
+                "test_not_chromebook",
+            ],
+            annotations: {
+                "build.board": "chromebook-x64",
+            },
+        },
+        chromebook_no: {
+            yes: [
+                "test_not_chromebook",
+            ],
+            annotations: {
+                "build.board": "HAL-9000",
+            },
+        },
+    },
+}

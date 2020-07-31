@@ -56,6 +56,15 @@ fn inspect_file_path() -> Result<String, Error> {
     path_for_file("inspect.json", Some(&Path::new("test_data").join("triage").join("bugreport")))
 }
 
+/// This is needed to work correctly in CQ. If this call fails make sure
+/// that you have added the file to the `copy` target in the BUILD.gn file.
+fn annotations_file_path() -> Result<String, Error> {
+    path_for_file(
+        "annotations.json",
+        Some(&Path::new("test_data").join("triage").join("bugreport")),
+    )
+}
+
 /// Returns the path to the triage binary.
 fn binary_path() -> Result<String, Error> {
     path_for_file("triage", None)
@@ -137,6 +146,11 @@ fn bugreport_path_should_find_bugreport() {
 #[test]
 fn inspect_file_path_should_find_file() {
     assert!(inspect_file_path().is_ok(), "should be able to find the inspect.json file");
+}
+
+#[test]
+fn annotations_file_path_should_find_file() {
+    assert!(annotations_file_path().is_ok(), "should be able to find the annotations.json file");
 }
 
 #[test]
@@ -297,6 +311,24 @@ integration_test!(
     vec![],
     1,
     "[WARNING] Error rate for app.cmx is too high"
+);
+
+integration_test!(
+    annotation_test,
+    vec!["annotation_tests.triage"],
+    vec![],
+    vec![],
+    1,
+    "[WARNING] Running on a chromebook"
+);
+
+integration_test!(
+    annotation_test2,
+    vec!["annotation_tests.triage"],
+    vec![],
+    vec![],
+    1,
+    not "[WARNING] Not using a chromebook"
 );
 
 integration_test!(log_tests, vec!["log_tests.triage"], vec![], vec![], 0, "");
