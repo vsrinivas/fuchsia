@@ -8,6 +8,8 @@ import("//build/testing/environments.gni")
 dart_test("update_test") {
   sources = [ "update_test.dart" ]
 
+  environments = [ emu_env ]
+
   deps = [
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/logging",
