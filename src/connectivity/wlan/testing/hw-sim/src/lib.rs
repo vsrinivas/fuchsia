@@ -4,10 +4,13 @@
 
 use {
     anyhow::Error,
+    fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_device::MacRole,
-    fidl_fuchsia_wlan_policy::{Credential, NetworkConfig, NetworkIdentifier, SecurityType},
-    fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanMarker, WlanProxy, WlanStatus},
+    fidl_fuchsia_wlan_policy::{
+        self as wlan_policy, Credential, NetworkConfig, NetworkIdentifier, SecurityType,
+    },
+    fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanProxy, WlanStatus},
     fidl_fuchsia_wlan_tap::{
         SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
@@ -436,15 +439,30 @@ pub fn rx_wlan_data_frame(
 }
 
 pub async fn loop_until_iface_is_found() {
-    let wlan_service = connect_to_service::<WlanMarker>().expect("connecting to wlan service");
+    // Connect to the client policy service and get a client controller.
+    let policy_provider = connect_to_service::<wlan_policy::ClientProviderMarker>()
+        .expect("connecting to wlan policy");
+    let (client_controller, server_end) = create_proxy().expect("creating client controller");
+    let (update_client_end, _update_server_end) =
+        create_endpoints().expect("creating client listener");
+    let () =
+        policy_provider.get_controller(server_end, update_client_end).expect("getting controller");
+
+    // Attempt to issue a scan command until the request succeeds.  Scanning will fail until a
+    // client interface is available.  A successful response to a scan request indicates that the
+    // client policy layer is ready to use.
+    // TODO(57415): Figure out a new way to signal that the client policy layer is ready to go.
     let mut retry = test_utils::RetryWithBackoff::infinite_with_max_interval(10.seconds());
     loop {
-        let status = wlan_service.status().await.expect("getting wlan status");
-        if status.error.code != ErrCode::Ok {
-            let slept = retry.sleep_unless_timed_out().await;
-            assert!(slept, "Wlanstack did not recognize the interface in time");
-        } else {
-            return;
+        let (scan_proxy, server_end) = create_proxy().unwrap();
+        client_controller.scan_for_networks(server_end).expect("requesting scan");
+
+        match scan_proxy.get_next().await.expect("getting scan results") {
+            Err(_) => {
+                let slept = retry.sleep_unless_timed_out().await;
+                assert!(slept, "Wlanstack did not recognize the interface in time");
+            }
+            Ok(_) => return,
         }
     }
 }

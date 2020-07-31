@@ -4,7 +4,7 @@
 
 use {
     crate::wlancfg_helper::{start_ap_and_wait_for_confirmation, NetworkConfigBuilder},
-    fidl_fuchsia_wlan_service::WlanMarker,
+    fidl_fuchsia_wlan_policy::ClientProviderMarker,
     fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{Time, Timer},
     fuchsia_component::client::connect_to_service,
@@ -95,7 +95,7 @@ impl TestHelper {
     fn create_phy_and_helper(config: wlantap::WlantapPhyConfig) -> Self {
         // If injected, wlancfg does not start automatically in a test component.
         // Connecting to the service to start wlancfg so that it can create new interfaces.
-        let _wlan_proxy = connect_to_service::<WlanMarker>().expect("starting wlancfg");
+        let _wlan_proxy = connect_to_service::<ClientProviderMarker>().expect("starting wlancfg");
 
         let wlantap = Wlantap::open_from_isolated_devmgr().expect("Failed to open wlantapctl");
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");

@@ -10,7 +10,7 @@
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"
                 ],
-                "fuchsia.wlan.service.Wlan": [
+                "fuchsia.wlan.policy.ClientProvider": [
                     "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx"
                 ]
             }
@@ -25,7 +25,7 @@
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
-            "fuchsia.wlan.service.Wlan"
+            "fuchsia.wlan.policy.ClientProvider"
         ]
     }
 }
