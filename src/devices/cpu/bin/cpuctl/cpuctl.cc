@@ -41,13 +41,19 @@ void usage(const char* cmd) {
   spaces[kCmdLen - 1] = '\0';    // Null terminate.
 
   fprintf(stderr, "\nInteract with the CPU\n");
-  fprintf(stderr, "\t%s help                   Print this message and quit.\n", cmd);
-  fprintf(stderr, "\t%s list                   List this system's performance domains\n", cmd);
-  fprintf(stderr, "\t%s describe [domain]      Describes a given performance domain's performance states\n",
-          cmd);
-  fprintf(stderr, "\t%s                        describes all domains if `domain` is omitted.\n",
+  fprintf(stderr, "\t%s help                     Print this message and quit.\n", cmd);
+  fprintf(stderr, "\t%s list                     List this system's performance domains\n", cmd);
+  fprintf(
+      stderr,
+      "\t%s describe [domain]        Describes a given performance domain's performance states\n",
+      cmd);
+  fprintf(stderr, "\t%s                          describes all domains if `domain` is omitted.\n",
           spaces);
-  fprintf(stderr, "\t%s pstate domain state    Set the CPU's performance state.\n", cmd);
+  fprintf(stderr, "\t%s pstate <domain> [state]  Set the CPU's performance state to `state`. \n",
+          cmd);
+  fprintf(stderr,
+          "\t%s                          Returns the current state if `state` is omitted.\n",
+          spaces);
 }
 
 // Call `ListCb cb` with all the names of devices in kCpuDevicePath. Each of
@@ -136,22 +142,54 @@ void describe(const char* domain) {
   }
 }
 
-void set_performance_state(const char* domain, const char* pstate) {
+void set_performance_state(fuchsia_device::Controller::SyncClient& client, const char* domain,
+                           const char* pstate) {
+  char* end;
+  long desired_state = strtol(pstate, &end, 10);
+  if (end == pstate || *end != '\0' || desired_state < 0 ||
+      desired_state > MAX_DEVICE_PERFORMANCE_STATES) {
+    fprintf(stderr, "Bad pstate '%s', must be a positive integer between 0 and %u\n", pstate,
+            MAX_DEVICE_PERFORMANCE_STATES);
+    return;
+  }
+
+  auto result = client.SetPerformanceState(static_cast<uint32_t>(desired_state));
+  if (result.status() != ZX_OK) {
+    fprintf(stderr, "Failed to set pstate, st = %d\n", result.status());
+    return;
+  }
+
+  if (!result.ok()) {
+    fprintf(stderr, "Failed to set pstate\n");
+    return;
+  }
+
+  printf("Set pstate for domain '%s' to %u\n", domain, result.value().out_state);
+}
+
+void get_performance_state(fuchsia_device::Controller::SyncClient& client, const char* domain) {
+  auto resp = client.GetCurrentPerformanceState();
+
+  if (resp.status() != ZX_OK) {
+    fprintf(stderr, "Failed to get pstate for domain = %s, st = %d\n", domain, resp.status());
+    return;
+  }
+
+  printf("Domain %s is currently in pstate %u\n", domain, resp.value().out_state);
+}
+
+zx_status_t describe_all() {
+  list(describe);
+  return ZX_OK;
+}
+
+void get_set_performance_state(const char* domain, const char* pstate) {
   if (strnlen(domain, 4) != 3) {
     fprintf(stderr, "Domain must be 3 characters long (nnn)\n");
     return;
   }
   char path[kMaxPathLen];
   snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain);
-
-  char* end;
-  long desired_state = strtol(pstate, &end, 10);
-  if (end == pstate || *end != '\0'  ||
-      desired_state < 0 || desired_state > MAX_DEVICE_PERFORMANCE_STATES) {
-    fprintf(stderr, "Bad pstate '%s', must be a positive integer between 0 and %u\n", pstate,
-                    MAX_DEVICE_PERFORMANCE_STATES);
-    return;
-  }
 
   zx::channel channel_local, channel_remote;
   zx_status_t st = zx::channel::create(0, &channel_local, &channel_remote);
@@ -166,25 +204,13 @@ void set_performance_state(const char* domain, const char* pstate) {
     return;
   }
 
-  auto client = std::make_unique<fuchsia_device::Controller::SyncClient>(std::move(channel_local));
+  fuchsia_device::Controller::SyncClient client(std::move(channel_local));
 
-  auto result = client->SetPerformanceState(static_cast<uint32_t>(desired_state));
-  if (!result.ok()) {
-    fprintf(stderr, "Failed to set pstate\n");
-    return;
+  if (pstate != nullptr) {
+    set_performance_state(client, domain, pstate);
+  } else {
+    get_performance_state(client, domain);
   }
-
-  if (result.status() != ZX_OK) {
-    fprintf(stderr, "Failed to set pstate, st = %d\n", result.status());
-    return;
-  }
-
-  printf("Set pstate for domain '%s' to %u\n", domain, result.value().out_state);
-}
-
-zx_status_t describe_all() {
-  list(describe);
-  return ZX_OK;
 }
 
 int main(int argc, char* argv[]) {
@@ -209,10 +235,12 @@ int main(int argc, char* argv[]) {
       return describe_all() == ZX_OK ? 0 : -1;
     }
   } else if (!strncmp(subcmd, "pstate", 6)) {
-    if (argc >= 4) {
-      set_performance_state(argv[2], argv[3]);
+    if (argc == 4) {
+      get_set_performance_state(argv[2], argv[3]);
+    } else if (argc == 3) {
+      get_set_performance_state(argv[2], nullptr);
     } else {
-      fprintf(stderr, "pstate <domain> <pstate>\n");
+      fprintf(stderr, "pstate <domain> [pstate]\n");
       usage(cmd);
       return -1;
     }
