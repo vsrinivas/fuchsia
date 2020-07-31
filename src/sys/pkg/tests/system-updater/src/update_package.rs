@@ -36,7 +36,19 @@ async fn rejects_invalid_package_name() {
     // the not_update package URL, not `fuchsia.com/update`.
     assert_eq!(
         env.take_interactions(),
-        vec![Gc, PackageResolve(not_update_package_url.to_string())]
+        vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Gc,
+            PackageResolve(not_update_package_url.to_string())
+        ]
     );
 
     let loggers = env.logger_factory.loggers.lock().clone();
@@ -70,7 +82,22 @@ async fn fails_if_package_unavailable() {
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
-    assert_eq!(env.take_interactions(), vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()),]);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

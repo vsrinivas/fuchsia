@@ -3,15 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::update::State,
+    crate::update::{BuildInfo, State},
     anyhow::Error,
-    fidl_fuchsia_update_installer as fidl,
+    fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
+    fidl_fuchsia_update_installer as fidl_installer,
     fuchsia_url::pkg_url::PkgUrl,
     futures::prelude::*,
     serde::{Deserialize, Serialize},
     std::{collections::VecDeque, time::SystemTime},
-    update_package::UpdatePackage,
 };
+
+mod version;
+pub use version::Version;
 
 const UPDATE_HISTORY_PATH: &str = "/data/update_history.json";
 const MAX_UPDATE_ATTEMPTS: usize = 5;
@@ -63,7 +66,7 @@ impl UpdateAttempt {
     }
 }
 
-impl From<&UpdateAttempt> for fidl::UpdateResult {
+impl From<&UpdateAttempt> for fidl_installer::UpdateResult {
     fn from(attempt: &UpdateAttempt) -> Self {
         Self {
             attempt_id: Some(attempt.attempt_id().to_string()),
@@ -102,39 +105,12 @@ impl PendingAttempt {
     }
 }
 
-/// The version of the OS.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Version {
-    update_hash: String,
-}
-
-impl Version {
-    #[cfg(test)]
-    pub fn for_hash(update_hash: String) -> Self {
-        Self { update_hash }
-    }
-
-    pub async fn for_update_package(update_package: &UpdatePackage) -> Self {
-        match update_package.hash().await {
-            Ok(hash) => Self { update_hash: hash.to_string() },
-            Err(_) => Self::default(),
-        }
-    }
-
-    pub fn current(last_target_version: Option<&Version>) -> Self {
-        match last_target_version {
-            Some(version) => version.clone(),
-            None => Self::default(),
-        }
-    }
-}
-
 // TODO(fxb/55401): replace this struct with the one in fidl-fuchsia-update-installer-ext.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UpdateOptions;
 
 // TODO(fxb/55401): move this to fidl-fuchsia-update-installer-ext.
-impl From<&UpdateOptions> for fidl::Options {
+impl From<&UpdateOptions> for fidl_installer::Options {
     fn from(_options: &UpdateOptions) -> Self {
         Self {
             initiator: None,
@@ -168,11 +144,15 @@ impl UpdateHistory {
     /// Start a new update attempt, returns an PendingAttempt with initial information, caller
     /// should fill in additional information and pass it back to `record_update_attempt()`.
     #[must_use]
-    pub fn start_update_attempt(
+    pub async fn start_update_attempt(
         &self,
         options: UpdateOptions,
         update_url: PkgUrl,
         start_time: SystemTime,
+        data_sink: &DataSinkProxy,
+        boot_manager: &BootManagerProxy,
+        build_info: &impl BuildInfo,
+        pkgfs_system: &Option<pkgfs::system::Client>,
     ) -> PendingAttempt {
         // Generate a random UUID like 6fa28c38-d149-4c8b-a1fc-2cdbc714aad2.
         let attempt_id = uuid::Uuid::new_v4().to_string();
@@ -181,7 +161,12 @@ impl UpdateHistory {
                 .iter()
                 .find(|attempt| attempt.state == State::COMPLETE)
                 .map(|attempt| &attempt.target_version),
-        );
+            data_sink,
+            boot_manager,
+            build_info,
+            pkgfs_system,
+        )
+        .await;
         PendingAttempt { attempt_id, source_version, options, update_url, start_time }
     }
 
@@ -317,20 +302,36 @@ mod serde_system_time {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, anyhow::anyhow, pretty_assertions::assert_eq, serde_json::json,
-        std::time::Duration,
+        super::version::mock_pkgfs_system,
+        super::*,
+        crate::update::environment::NamespaceBuildInfo,
+        anyhow::anyhow,
+        mock_paver::MockPaverServiceBuilder,
+        pretty_assertions::assert_eq,
+        serde_json::json,
+        std::{sync::Arc, time::Duration},
     };
 
     fn make_reader(res: &str) -> impl Future<Output = Result<Vec<u8>, Error>> {
         future::ready(Ok(res.as_bytes().to_owned()))
     }
 
-    fn record_fake_update_attempt(history: &mut UpdateHistory, i: usize) {
-        let update_attempt = history.start_update_attempt(
-            UpdateOptions,
-            "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
-            SystemTime::UNIX_EPOCH + Duration::from_nanos(i as u64),
-        );
+    async fn record_fake_update_attempt(history: &mut UpdateHistory, i: usize) {
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let data_sink = paver.spawn_data_sink_service();
+        let boot_manager = paver.spawn_boot_manager_service();
+        let (pkgfs_system, _pkgfs_dir) = mock_pkgfs_system("").await;
+        let update_attempt = history
+            .start_update_attempt(
+                UpdateOptions,
+                "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
+                SystemTime::UNIX_EPOCH + Duration::from_nanos(i as u64),
+                &data_sink,
+                &boot_manager,
+                &NamespaceBuildInfo,
+                &Some(pkgfs_system),
+            )
+            .await;
         history.record_update_attempt(
             update_attempt.finish(Version::for_hash("new".to_owned()), State::FAIL),
         );
@@ -351,6 +352,14 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn start_update_attempt_uses_last_successful_attempt_as_source_version() {
+        let completed_target_version = Version {
+            update_hash: "completed target version".to_string(),
+            vbmeta_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .to_string(),
+            zbi_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .to_string(),
+            ..Version::default()
+        };
         let history = UpdateHistory {
             update_attempts: VecDeque::from(vec![
                 UpdateAttempt {
@@ -365,7 +374,7 @@ mod tests {
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old".to_owned()),
-                    target_version: Version::for_hash("completed target version".to_owned()),
+                    target_version: completed_target_version.clone(),
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
@@ -373,15 +382,24 @@ mod tests {
                 },
             ]),
         };
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let data_sink = paver.spawn_data_sink_service();
+        let boot_manager = paver.spawn_boot_manager_service();
+        let (pkgfs_system, _pkgfs_dir) = mock_pkgfs_system("").await;
         assert_eq!(
             history
                 .start_update_attempt(
                     UpdateOptions,
                     "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
-                    SystemTime::UNIX_EPOCH + Duration::from_nanos(42)
+                    SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
+                    &data_sink,
+                    &boot_manager,
+                    &NamespaceBuildInfo,
+                    &Some(pkgfs_system),
                 )
+                .await
                 .source_version,
-            Version::for_hash("completed target version".to_owned())
+            completed_target_version
         );
     }
 
@@ -390,10 +408,16 @@ mod tests {
         let (send, recv) = futures::channel::oneshot::channel();
 
         let mut history = UpdateHistory::default();
-        record_fake_update_attempt(&mut history, 42);
+        record_fake_update_attempt(&mut history, 42).await;
         let update_attempt = UpdateAttempt {
             attempt_id: history.update_attempts[0].attempt_id.clone(),
-            source_version: Version::default(),
+            source_version: Version {
+                vbmeta_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    .to_string(),
+                zbi_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    .to_string(),
+                ..Version::default()
+            },
             target_version: Version::for_hash("new".to_owned()),
             options: UpdateOptions,
             update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
@@ -414,8 +438,20 @@ mod tests {
                 "version": "1",
                 "content": [{
                     "id": history.update_attempts[0].attempt_id.clone(),
-                    "source": {"update_hash": ""},
-                    "target": {"update_hash": "new"},
+                    "source": {
+                        "update_hash": "",
+                        "system_image_hash": "",
+                        "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                        "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                        "build_version": ""
+                    },
+                    "target": {
+                        "update_hash": "new",
+                        "system_image_hash": "",
+                        "vbmeta_hash": "",
+                        "zbi_hash": "",
+                        "build_version": ""
+                    },
                     "options": null,
                     "url": "fuchsia-pkg://fuchsia.com/update",
                     "start": 42,
@@ -429,7 +465,7 @@ mod tests {
     async fn record_update_attempt_only_keep_max_size() {
         let mut history = UpdateHistory::default();
         for i in 0..10 {
-            record_fake_update_attempt(&mut history, i);
+            record_fake_update_attempt(&mut history, i).await;
         }
 
         assert_eq!(
@@ -438,7 +474,15 @@ mod tests {
                 .rev()
                 .map(|i| UpdateAttempt {
                     attempt_id: history.update_attempts[9 - i].attempt_id.clone(),
-                    source_version: Version::default(),
+                    source_version: Version {
+                        vbmeta_hash:
+                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                .to_string(),
+                        zbi_hash:
+                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                .to_string(),
+                        ..Version::default()
+                    },
                     target_version: Version::for_hash("new".to_owned()),
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
@@ -458,7 +502,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn single_attempt_history_1_attempt() {
         let mut history = UpdateHistory::default();
-        record_fake_update_attempt(&mut history, 42);
+        record_fake_update_attempt(&mut history, 42).await;
         assert_eq!(history.attempts(), 1);
     }
 
@@ -466,7 +510,7 @@ mod tests {
     async fn matching_version_attempts_history_max_attempts() {
         let mut history = UpdateHistory::default();
         for i in 0..MAX_UPDATE_ATTEMPTS {
-            record_fake_update_attempt(&mut history, i);
+            record_fake_update_attempt(&mut history, i).await;
         }
 
         assert_eq!(history.attempts(), MAX_UPDATE_ATTEMPTS as u32);

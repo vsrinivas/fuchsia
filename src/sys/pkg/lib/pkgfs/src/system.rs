@@ -4,7 +4,12 @@
 
 //! Typesafe wrappers around the /pkgfs/system filesystem.
 
-use {anyhow::anyhow, fidl_fuchsia_io::DirectoryProxy, std::fs, thiserror::Error};
+use {
+    anyhow::anyhow,
+    fidl_fuchsia_io::{DirectoryProxy, FileProxy},
+    std::fs,
+    thiserror::Error,
+};
 
 /// An error encountered while opening the system image.
 #[derive(Debug, Error)]
@@ -18,6 +23,17 @@ pub enum SystemImageFileOpenError {
 
     #[error("unexpected error: {0}")]
     Other(anyhow::Error),
+}
+
+/// An error encountered while reading the system image hash.
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum SystemImageFileHashError {
+    #[error("failed to open \"meta\" file: {0}")]
+    Open(#[from] SystemImageFileOpenError),
+
+    #[error("while reading the file: {0}")]
+    Read(#[from] io_util::file::ReadError),
 }
 
 /// An open handle to /pkgfs/system.
@@ -50,15 +66,7 @@ impl Client {
 
     /// Open a file from the system_image package wrapped by this `Client`.
     pub async fn open_file(&self, path: &str) -> Result<fs::File, SystemImageFileOpenError> {
-        let file_proxy =
-            io_util::directory::open_file(&self.proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-                .await
-                .map_err(|e| match e {
-                    io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
-                        SystemImageFileOpenError::NotFound
-                    }
-                    other => SystemImageFileOpenError::Io(other),
-                })?;
+        let file_proxy = self.open_file_as_proxy(path).await?;
         fdio::create_fd(
             file_proxy
                 .into_channel()
@@ -69,6 +77,24 @@ impl Client {
                 .into(),
         )
         .map_err(|e| SystemImageFileOpenError::Other(e.into()))
+    }
+
+    /// Returns the system image hash.
+    pub async fn hash(&self) -> Result<String, SystemImageFileHashError> {
+        let file_proxy = self.open_file_as_proxy("meta").await?;
+        let hash = io_util::file::read_to_string(&file_proxy).await?;
+        Ok(hash)
+    }
+
+    async fn open_file_as_proxy(&self, path: &str) -> Result<FileProxy, SystemImageFileOpenError> {
+        io_util::directory::open_file(&self.proxy, path, fidl_fuchsia_io::OPEN_RIGHT_READABLE)
+            .await
+            .map_err(|e| match e {
+                io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND) => {
+                    SystemImageFileOpenError::NotFound
+                }
+                other => SystemImageFileOpenError::Io(other),
+            })
     }
 }
 
@@ -115,6 +141,24 @@ mod tests {
         assert_matches!(
             client.open_file("missing-file").await,
             Err(SystemImageFileOpenError::NotFound)
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn from_pkgfs_root_hash_succeeds() {
+        let system_image_package = SystemImageBuilder::new().build().await;
+        let blobfs = BlobfsRamdisk::start().unwrap();
+        system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+        let pkgfs = PkgfsRamdisk::builder()
+            .blobfs(blobfs)
+            .system_image_merkle(system_image_package.meta_far_merkle_root())
+            .start()
+            .unwrap();
+        let client = Client::open_from_pkgfs_root(&pkgfs.root_dir_proxy().unwrap()).unwrap();
+
+        assert_eq!(
+            client.hash().await.unwrap(),
+            "ac005270136ee566e3a908267e0eb1076fd777430cb0216bb1e96fc866fad6ed"
         );
     }
 }

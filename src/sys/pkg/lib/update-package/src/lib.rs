@@ -14,6 +14,7 @@ mod name;
 mod packages;
 mod update_mode;
 mod util;
+mod version;
 
 pub use crate::{
     board::VerifyBoardError,
@@ -23,6 +24,7 @@ pub use crate::{
     name::VerifyNameError,
     packages::ParsePackageError,
     update_mode::{ParseUpdateModeError, UpdateMode},
+    version::ReadVersionError,
 };
 
 use {fidl_fuchsia_io::DirectoryProxy, fuchsia_hash::Hash, fuchsia_url::pkg_url::PkgUrl};
@@ -82,6 +84,11 @@ impl UpdatePackage {
     /// Returns the package hash of this update package.
     pub async fn hash(&self) -> Result<Hash, HashError> {
         hash::hash(&self.proxy).await
+    }
+
+    /// Returns the version of this update package.
+    pub async fn version(&self) -> Result<String, ReadVersionError> {
+        version::read_version(&self.proxy).await
     }
 }
 

@@ -8,6 +8,9 @@
             "deprecated-misc-storage",
             "isolated-persistent-storage"
         ],
+        "pkgfs": [
+            "system"
+        ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.hardware.power.statecontrol.Admin",

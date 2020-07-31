@@ -338,7 +338,17 @@ pub async fn test_no_network() -> Result<(), Error> {
         .context("Building TestEnv")?;
 
     let update_result = env.run().await;
-    assert_eq!(update_result.paver_events, vec![]);
+    assert_eq!(
+        update_result.paver_events,
+        vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::ReadAsset {
+                configuration: Configuration::A,
+                asset: Asset::VerifiedBootMetadata
+            },
+            PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
+        ]
+    );
     update_result.check_packages();
 
     let err = update_result.result.unwrap_err();
@@ -372,6 +382,12 @@ pub async fn test_pave_fails() -> Result<(), Error> {
     assert_eq!(
         result.paver_events,
         vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::ReadAsset {
+                configuration: Configuration::A,
+                asset: Asset::VerifiedBootMetadata
+            },
+            PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteAsset {
                 asset: Asset::Kernel,
@@ -417,6 +433,12 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
     assert_eq!(
         result.paver_events,
         vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::ReadAsset {
+                configuration: Configuration::A,
+                asset: Asset::VerifiedBootMetadata
+            },
+            PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteFirmware {
                 firmware_type: "".to_owned(),
@@ -652,6 +674,12 @@ pub async fn test_omaha_works() -> Result<(), Error> {
     assert_eq!(
         result.paver_events,
         vec![
+            PaverEvent::QueryActiveConfiguration,
+            PaverEvent::ReadAsset {
+                configuration: Configuration::A,
+                asset: Asset::VerifiedBootMetadata
+            },
+            PaverEvent::ReadAsset { configuration: Configuration::A, asset: Asset::Kernel },
             PaverEvent::QueryActiveConfiguration,
             PaverEvent::WriteFirmware {
                 firmware_type: "".to_owned(),

@@ -74,6 +74,7 @@ async fn fails_on_image_write_error() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -106,6 +107,15 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -220,6 +230,15 @@ async fn do_writes_to_inactive_config_if_abr_supported(
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: active_config,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: active_config,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -271,6 +290,15 @@ async fn writes_recovery_called_legacy_zedboot() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -316,6 +344,15 @@ async fn writes_recovery() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -361,6 +398,15 @@ async fn writes_recovery_vbmeta() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -410,6 +456,15 @@ async fn writes_fuchsia_vbmeta() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,

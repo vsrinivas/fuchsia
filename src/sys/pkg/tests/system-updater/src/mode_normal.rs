@@ -41,6 +41,15 @@ async fn updates_the_system() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -84,6 +93,15 @@ async fn requires_zbi() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,

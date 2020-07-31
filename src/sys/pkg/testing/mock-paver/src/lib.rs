@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Error},
+    fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver as paver, fuchsia_async as fasync,
     fuchsia_zircon::{Status, Vmo},
     futures::prelude::*,
@@ -30,6 +31,7 @@ fn read_mem_buffer(buffer: &fidl_fuchsia_mem::Buffer) -> Vec<u8> {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PaverEvent {
+    ReadAsset { configuration: paver::Configuration, asset: paver::Asset },
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
     WriteFirmware { firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
@@ -43,6 +45,7 @@ pub enum PaverEvent {
 pub struct MockPaverServiceBuilder {
     call_hook: Option<Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>>,
     firmware_hook: Option<Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>>,
+    read_hook: Option<Box<dyn Fn(&PaverEvent) -> Result<Vec<u8>, Status> + Send + Sync>>,
     event_hook: Option<Box<dyn Fn(&PaverEvent) + Send + Sync>>,
     active_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
@@ -53,6 +56,7 @@ impl MockPaverServiceBuilder {
         Self {
             call_hook: None,
             firmware_hook: None,
+            read_hook: None,
             event_hook: None,
             active_config: paver::Configuration::A,
             boot_manager_close_with_epitaph: None,
@@ -72,6 +76,14 @@ impl MockPaverServiceBuilder {
         F: Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync + 'static,
     {
         self.firmware_hook = Some(Box::new(firmware_hook));
+        self
+    }
+
+    pub fn read_hook<F>(mut self, read_hook: F) -> Self
+    where
+        F: Fn(&PaverEvent) -> Result<Vec<u8>, Status> + Send + Sync + 'static,
+    {
+        self.read_hook = Some(Box::new(read_hook));
         self
     }
 
@@ -100,12 +112,14 @@ impl MockPaverServiceBuilder {
         let firmware_hook = self.firmware_hook.unwrap_or_else(|| {
             Box::new(|_| paver::WriteFirmwareResult::Status(Status::OK.into_raw()))
         });
+        let read_hook = self.read_hook.unwrap_or_else(|| Box::new(|_| Ok(vec![])));
         let event_hook = self.event_hook.unwrap_or_else(|| Box::new(|_| ()));
 
         MockPaverService {
             events: Mutex::new(vec![]),
             call_hook: Box::new(call_hook),
             firmware_hook: Box::new(firmware_hook),
+            read_hook: Box::new(read_hook),
             event_hook: Box::new(event_hook),
             active_config: self.active_config,
             boot_manager_close_with_epitaph: self.boot_manager_close_with_epitaph,
@@ -117,6 +131,7 @@ pub struct MockPaverService {
     events: Mutex<Vec<PaverEvent>>,
     call_hook: Box<dyn Fn(&PaverEvent) -> Status + Send + Sync>,
     firmware_hook: Box<dyn Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync>,
+    read_hook: Box<dyn Fn(&PaverEvent) -> Result<Vec<u8>, Status> + Send + Sync>,
     event_hook: Box<dyn Fn(&PaverEvent) + Send + Sync>,
     active_config: paver::Configuration,
     boot_manager_close_with_epitaph: Option<Status>,
@@ -196,6 +211,18 @@ impl MockPaverService {
                     let status = (*self.call_hook)(&event);
                     self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
+                }
+                paver::DataSinkRequest::ReadAsset { configuration, asset, responder } => {
+                    let event = PaverEvent::ReadAsset { configuration, asset };
+                    let mut result = (*self.read_hook)(&event)
+                        .map(|payload| {
+                            let vmo = Vmo::create(payload.len() as u64).expect("Creating VMO");
+                            vmo.write(&payload, 0).expect("writing to VMO");
+                            Buffer { vmo, size: payload.len() as u64 }
+                        })
+                        .map_err(|status| status.into_raw());
+                    self.push_event(event);
+                    responder.send(&mut result).expect("paver response to send");
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
             }
@@ -298,7 +325,6 @@ impl MockPaverService {
 pub mod tests {
     use {
         super::*,
-        fidl_fuchsia_mem::Buffer,
         fidl_fuchsia_paver as paver,
         fuchsia_zircon::{self as zx, VmoOptions},
         matches::assert_matches,

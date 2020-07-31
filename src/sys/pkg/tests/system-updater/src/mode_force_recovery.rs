@@ -51,6 +51,15 @@ async fn writes_recovery_and_force_reboots_into_it() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -99,6 +108,15 @@ async fn reboots_regardless_of_reboot_arg() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -139,7 +157,23 @@ async fn rejects_zbi() {
         .await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
 
-    assert_eq!(env.take_interactions(), vec![Gc, PackageResolve(UPDATE_PKG_URL.to_string()), Gc]);
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Gc,
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Gc
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

@@ -34,6 +34,7 @@ rustc_library("fuchsia-pkg-testing") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/system-image",
+    "//src/sys/pkg/lib/update-package",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
@@ -66,6 +67,7 @@ rustc_library("fuchsia-pkg-testing") {
     "src/serve.rs",
     "src/serve/handler.rs",
     "src/system_image.rs",
+    "src/update_package.rs",
   ]
 
   inputs = [

@@ -28,6 +28,8 @@ pub trait CobaltConnector {
 pub trait BuildInfo {
     /// Read the current board name, returning None if the file does not exist.
     async fn board(&self) -> Result<Option<String>, Error>;
+    /// Read the current version, returning None if the file does not exist.
+    async fn version(&self) -> Result<Option<String>, Error>;
 }
 
 /// The collection of external data files and services an update attempt will utilize to perform
@@ -41,6 +43,7 @@ pub struct Environment<B = NamespaceBuildInfo, C = NamespaceCobaltConnector> {
     pub(super) power_state_control: PowerStateControlProxy,
     pub(super) build_info: B,
     pub(super) cobalt_connector: C,
+    pub(super) pkgfs_system: Option<pkgfs::system::Client>,
 }
 
 impl Environment {
@@ -63,6 +66,7 @@ impl Environment {
                 .context("connect to fuchsia.hardware.power.statecontrol.Admin")?,
             build_info: NamespaceBuildInfo,
             cobalt_connector: NamespaceCobaltConnector,
+            pkgfs_system: pkgfs::system::Client::open_from_namespace().ok(),
         })
     }
 }
@@ -80,9 +84,8 @@ impl CobaltConnector for NamespaceCobaltConnector {
 #[derive(Debug)]
 pub struct NamespaceBuildInfo;
 
-#[async_trait]
-impl BuildInfo for NamespaceBuildInfo {
-    async fn board(&self) -> Result<Option<String>, Error> {
+impl NamespaceBuildInfo {
+    async fn read_file(&self, name: &str) -> Result<Option<String>, Error> {
         let build_info = io_util::directory::open_in_namespace(
             "/config/build-info",
             io_util::OPEN_RIGHT_READABLE,
@@ -90,19 +93,32 @@ impl BuildInfo for NamespaceBuildInfo {
         .context("while opening /config/build-info")?;
 
         let file =
-            match io_util::directory::open_file(&build_info, "board", io_util::OPEN_RIGHT_READABLE)
+            match io_util::directory::open_file(&build_info, name, io_util::OPEN_RIGHT_READABLE)
                 .await
             {
                 Ok(file) => file,
                 Err(io_util::node::OpenError::OpenError(fuchsia_zircon::Status::NOT_FOUND)) => {
                     return Ok(None)
                 }
-                Err(e) => return Err(e).context("while opening /config/build-info/board"),
+                Err(e) => {
+                    return Err(e)
+                        .with_context(|| format!("while opening /config/build-info/{}", name))
+                }
             };
 
         let contents = io_util::file::read_to_string(&file)
             .await
-            .context("while reading /config/build-info/board")?;
+            .with_context(|| format!("while reading /config/build-info/{}", name))?;
         Ok(Some(contents))
+    }
+}
+
+#[async_trait]
+impl BuildInfo for NamespaceBuildInfo {
+    async fn board(&self) -> Result<Option<String>, Error> {
+        self.read_file("board").await
+    }
+    async fn version(&self) -> Result<Option<String>, Error> {
+        self.read_file("version").await
     }
 }

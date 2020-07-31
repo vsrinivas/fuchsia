@@ -25,6 +25,15 @@ async fn uses_custom_update_package() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
             Gc,
@@ -144,6 +153,15 @@ async fn does_not_reboot_if_requested_not_to_reboot() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,

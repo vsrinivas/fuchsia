@@ -51,6 +51,15 @@ async fn succeeds_without_writable_data() {
     assert_eq!(
         env.take_interactions(),
         vec![
+            Paver(PaverEvent::QueryActiveConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
             Gc,
             PackageResolve(UPDATE_PKG_URL.to_string()),
             Gc,
@@ -102,10 +111,18 @@ async fn writes_history() {
 
     assert_eq!(env.read_history(), None);
 
+    env.set_build_version("0.1");
+
     env.resolver
         .register_package("update", UPDATE_HASH)
-        .add_file("packages.json", make_packages_json([]))
-        .add_file("zbi", "fake zbi");
+        .add_file("packages.json", make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67"]))
+        .add_file("zbi", "fake zbi")
+        .add_file("fuchsia.vbmeta", "vbmeta")
+        .add_file("version", "0.2");
+    env.resolver.register_package(
+        "system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67",
+        "838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67",
+    );
 
     env.run_system_updater_oneshot(SystemUpdaterArgs {
         initiator: Some(Initiator::User),
@@ -124,9 +141,17 @@ async fn writes_history() {
             "content": [{
                 "source": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "build_version": "0.1"
                 },
                 "target": {
                     "update_hash": UPDATE_HASH,
+                    "system_image_hash": "838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67",
+                    "vbmeta_hash": "a0c6f07a4b3a17fb9348db981de3c5602e2685d626599be1bd909195c694a57b",
+                    "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
+                    "build_version": "0.2"
                 },
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/update",
@@ -161,9 +186,17 @@ async fn replaces_bogus_history() {
             "content": [{
                 "source": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "build_version": ""
                 },
                 "target": {
                     "update_hash": UPDATE_HASH,
+                    "system_image_hash": "",
+                    "vbmeta_hash": "",
+                    "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
+                    "build_version": ""
                 },
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/update",
@@ -215,9 +248,17 @@ async fn increments_attempts_counter_on_retry() {
             {
                 "source": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "build_version": ""
                 },
                 "target": {
                     "update_hash": UPDATE_HASH,
+                    "system_image_hash": "",
+                    "vbmeta_hash": "",
+                    "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
+                    "build_version": ""
                 },
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/update",
@@ -227,9 +268,17 @@ async fn increments_attempts_counter_on_retry() {
             {
                 "source": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "build_version": ""
                 },
                 "target": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "",
+                    "zbi_hash": "",
+                    "build_version": ""
                 },
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/not-found",
@@ -252,9 +301,17 @@ async fn serves_fidl_with_history_present() {
                 "id": "1",
                 "source": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "",
+                    "zbi_hash": "",
+                    "build_version": ""
                 },
                 "target": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "",
+                    "zbi_hash": "",
+                    "build_version": ""
                 },
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/second-attempt",
@@ -265,9 +322,17 @@ async fn serves_fidl_with_history_present() {
                 "id": "0",
                 "source": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "",
+                    "zbi_hash": "",
+                    "build_version": ""
                 },
                 "target": {
                     "update_hash": "",
+                    "system_image_hash": "",
+                    "vbmeta_hash": "",
+                    "zbi_hash": "",
+                    "build_version": ""
                 },
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/first-attempt",

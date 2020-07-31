@@ -93,12 +93,19 @@ pub async fn update(
             fx_log_info!("starting system update with config: {:?}", config);
             cobalt.log_ota_start(&config.target_version, config.initiator, config.start_time);
 
-            let attempt = history.lock().start_update_attempt(
-                // TODO(fxb/55408): replace with the real options
-                history::UpdateOptions,
-                config.update_url.clone(),
-                config.start_time,
-            );
+            let attempt = history
+                .lock()
+                .start_update_attempt(
+                    // TODO(fxb/55408): replace with the real options
+                    history::UpdateOptions,
+                    config.update_url.clone(),
+                    config.start_time,
+                    &env.data_sink,
+                    &env.boot_manager,
+                    &env.build_info,
+                    &env.pkgfs_system,
+                )
+                .await;
             let mut target_version = history::Version::default();
             let res = update_attempt(&config, &env, &mut phase, &mut target_version).await;
             let status_code = metrics::result_to_status_code(res.as_ref().map(|_| ()));

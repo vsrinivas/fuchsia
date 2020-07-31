@@ -309,6 +309,14 @@ impl TestEnv {
         file.write_all(board.as_ref().as_bytes()).expect("write board file");
     }
 
+    /// Set the version of the build that system-updater is running on.
+    fn set_build_version(&self, version: impl AsRef<str>) {
+        // Write the "version" file into the build-info directory.
+        let mut file =
+            File::create(self.build_info_path.join("version")).expect("create version file");
+        file.write_all(version.as_ref().as_bytes()).expect("write version file");
+    }
+
     fn set_target_channel(&self, contents: impl AsRef<[u8]>) {
         let misc_ota_dir = self.misc_path.join("ota");
         fs::create_dir_all(&misc_ota_dir).unwrap();

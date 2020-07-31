@@ -61,6 +61,17 @@ async fn paver_write_asset(
     Ok(())
 }
 
+pub async fn paver_read_asset(
+    data_sink: &DataSinkProxy,
+    configuration: Configuration,
+    asset: Asset,
+) -> Result<Buffer, Error> {
+    let result = data_sink.read_asset(configuration, asset).await?;
+    let buffer = result
+        .map_err(|status| anyhow!("read_asset responded with {}", Status::from_raw(status)))?;
+    Ok(buffer)
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum ImageTarget<'a> {
     Firmware { subtype: &'a str },
@@ -192,7 +203,7 @@ pub fn connect_in_namespace() -> Result<(DataSinkProxy, BootManagerProxy), Error
 /// Determines the active configuration which will be used as the default boot choice on a normal
 /// cold boot, which may or may not be the currently running configuration, or none if no
 /// configurations are currently bootable.
-async fn paver_query_active_configuration(
+pub async fn paver_query_active_configuration(
     boot_manager: &BootManagerProxy,
 ) -> Result<ActiveConfiguration, Error> {
     match boot_manager.query_active_configuration().await {

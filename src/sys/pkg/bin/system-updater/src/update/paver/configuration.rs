@@ -47,6 +47,16 @@ impl ActiveConfiguration {
             ActiveConfiguration::NotSupported => InactiveConfiguration::NotSupported,
         }
     }
+
+    /// Converts this [`ActiveConfiguration`] into a specific configuration, or none if ABR is
+    /// not supported.
+    pub fn to_configuration(self) -> Option<Configuration> {
+        match self {
+            ActiveConfiguration::A => Some(Configuration::A),
+            ActiveConfiguration::B => Some(Configuration::B),
+            ActiveConfiguration::NotSupported => None,
+        }
+    }
 }
 
 impl InactiveConfiguration {
