@@ -21,7 +21,7 @@ using ComponentEventCode =
 class LogStatsFetcher {
  public:
   struct Metrics {
-    // The number of new error logs across all components since the last call to
+    // The number of new error logs across all components + klog since the last call to
     // FetchMetrics().
     uint64_t error_count = 0;
 
@@ -29,7 +29,9 @@ class LogStatsFetcher {
     uint64_t klog_count = 0;
 
     // A map from component event codes (as defined in metrics.yaml) to the
-    // number of error logs since the last call to FetchMetrics().
+    // number of error logs since the last call to FetchMetrics(). Errors
+    // that don't belong to components in the allowlist will be reported with
+    // "Other" as event code.
     std::unordered_map<ComponentEventCode, uint64_t> per_component_error_count;
   };
 

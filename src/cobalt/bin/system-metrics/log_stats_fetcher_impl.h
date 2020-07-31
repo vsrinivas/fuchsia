@@ -38,7 +38,21 @@ class LogStatsFetcherImpl : public LogStatsFetcher {
  private:
   void OnInspectSnapshotReady(const std::vector<inspect::contrib::DiagnosticsData>& data_vector);
 
-  uint64_t last_reported_error_count_ = 0;
+  // Calculate total error count across all components. Returns false if inspect data is invalid.
+  bool CalculateTotalErrorCount(const inspect::contrib::DiagnosticsData& inspect, uint64_t* result);
+
+  // Calculates error count for each component since the last report. Components not in the
+  // allowlist will be lumped together and reported as "Other". Returns false if inspect data is
+  // invalid.
+  bool CalculatePerComponentErrorCount(const inspect::contrib::DiagnosticsData& inspect,
+                                       uint64_t total_count,
+                                       std::unordered_map<ComponentEventCode, uint64_t>* result);
+
+  // Calculates the number of logs in klog since the last report. Return false if inspect data is
+  // invalid.
+  bool CalculateKlogCount(const inspect::contrib::DiagnosticsData& inspect, uint64_t* result);
+
+  uint64_t last_reported_total_error_count_ = 0;
   uint64_t last_reported_klog_count_ = 0;
   MetricsCallback metrics_callback_;
   async::Executor executor_;

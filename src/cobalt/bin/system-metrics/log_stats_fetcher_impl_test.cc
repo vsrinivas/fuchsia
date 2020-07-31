@@ -94,8 +94,10 @@ TEST_F(LogStatsFetcherImplTest, Simple) {
   // All counts are relative to the baseline, e.g. error count = 11-8 = 3.
   EXPECT_EQ(3u, metrics.error_count);
   EXPECT_EQ(1u, metrics.klog_count);
-  EXPECT_EQ(1u, metrics.per_component_error_count.size());
+  EXPECT_EQ(2u, metrics.per_component_error_count.size());
   EXPECT_EQ(2u, metrics.per_component_error_count[ComponentEventCode::Appmgr]);
+  // There's been 3 new errors, 2 of them coming from Appmgr, so 1 should be reported as "Other".
+  EXPECT_EQ(1u, metrics.per_component_error_count[ComponentEventCode::Other]);
 }
 
 TEST_F(LogStatsFetcherImplTest, CountDrops) {
@@ -125,8 +127,9 @@ TEST_F(LogStatsFetcherImplTest, CountDrops) {
   // restarted).
   EXPECT_EQ(4u, metrics.error_count);
   EXPECT_EQ(2u, metrics.klog_count);
-  EXPECT_EQ(1u, metrics.per_component_error_count.size());
+  EXPECT_EQ(2u, metrics.per_component_error_count.size());
   EXPECT_EQ(1u, metrics.per_component_error_count[ComponentEventCode::Appmgr]);
+  EXPECT_EQ(3u, metrics.per_component_error_count[ComponentEventCode::Other]);
 }
 
 TEST_F(LogStatsFetcherImplTest, MultipleComponents) {
@@ -157,9 +160,10 @@ TEST_F(LogStatsFetcherImplTest, MultipleComponents) {
   ASSERT_TRUE(FetchMetricsSync(&metrics));
   EXPECT_EQ(4u, metrics.error_count);
   EXPECT_EQ(1u, metrics.klog_count);
-  EXPECT_EQ(2u, metrics.per_component_error_count.size());
+  EXPECT_EQ(3u, metrics.per_component_error_count.size());
   EXPECT_EQ(2u, metrics.per_component_error_count[ComponentEventCode::Appmgr]);
   EXPECT_EQ(1u, metrics.per_component_error_count[ComponentEventCode::Sysmgr]);
+  EXPECT_EQ(1u, metrics.per_component_error_count[ComponentEventCode::Other]);
 }
 
 TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
@@ -190,9 +194,10 @@ TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
   ASSERT_TRUE(FetchMetricsSync(&metrics));
   EXPECT_EQ(3u, metrics.error_count);
   EXPECT_EQ(1u, metrics.klog_count);
-  // Since foo is not in the allowlist, it should not have a corresponding entry in the map.
-  EXPECT_EQ(1u, metrics.per_component_error_count.size());
+  // Since foo is not in the allowlist, it must be reported as "Other".
+  EXPECT_EQ(2u, metrics.per_component_error_count.size());
   EXPECT_EQ(2u, metrics.per_component_error_count[ComponentEventCode::Appmgr]);
+  EXPECT_EQ(1u, metrics.per_component_error_count[ComponentEventCode::Other]);
 }
 
 }  // namespace
