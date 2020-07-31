@@ -15,8 +15,8 @@ assert(!defined(zx) || zx != "/",
 import("//build/unification/zx_library.gni")
 
 zx_library("abr") {
-  output_prefix_override = true
-  sdk = "static"
+  sdk = "source"
+  sdk_publishable = true
   sdk_headers = [
     "lib/abr/data.h",
     "lib/abr/ops.h",
