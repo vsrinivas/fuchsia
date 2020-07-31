@@ -47,31 +47,18 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
     crash_server = std::make_unique<CrashServer>(*(config->crash_server.url));
   }
 
-  return TryCreate(dispatcher, std::move(services), clock, std::move(info_context), config,
-                   build_version, crash_register, std::move(crash_server));
+  return std::unique_ptr<CrashReporter>(
+      new CrashReporter(dispatcher, std::move(services), clock, std::move(info_context),
+                        std::move(config), build_version, crash_register, std::move(crash_server)));
 }
 
-std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context, const Config* config,
-    const ErrorOr<std::string>& build_version, CrashRegister* crash_register,
-    std::unique_ptr<CrashServer> crash_server) {
-  auto queue = Queue::TryCreate(dispatcher, services, info_context, crash_server.get());
-  if (!queue) {
-    FX_LOGS(FATAL) << "Failed to set up crash reporter";
-    return nullptr;
-  }
-
-  return std::unique_ptr<CrashReporter>(new CrashReporter(
-      dispatcher, std::move(services), clock, std::move(info_context), std::move(config),
-      build_version, crash_register, std::move(crash_server), std::move(queue)));
-}
-
-CrashReporter::CrashReporter(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context, const Config* config,
-    const ErrorOr<std::string>& build_version, CrashRegister* crash_register,
-    std::unique_ptr<CrashServer> crash_server, std::unique_ptr<Queue> queue)
+CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
+                             std::shared_ptr<sys::ServiceDirectory> services,
+                             const timekeeper::Clock& clock,
+                             std::shared_ptr<InfoContext> info_context, const Config* config,
+                             const ErrorOr<std::string>& build_version,
+                             CrashRegister* crash_register,
+                             std::unique_ptr<CrashServer> crash_server)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
@@ -80,8 +67,8 @@ CrashReporter::CrashReporter(
       crash_register_(crash_register),
       utc_provider_(services_, clock),
       crash_server_(std::move(crash_server)),
-      queue_(std::move(queue)),
-      info_(std::move(info_context)),
+      queue_(dispatcher_, services_, info_context, crash_server_.get()),
+      info_(info_context),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
       data_provider_ptr_(dispatcher_, services_),
       device_id_provider_ptr_(dispatcher_, services_) {
@@ -91,7 +78,6 @@ CrashReporter::CrashReporter(
   if (config->crash_server.url) {
     FX_CHECK(crash_server_);
   }
-  FX_CHECK(queue_);
 
   const auto& upload_policy = config_->crash_server.upload_policy;
   settings_.set_upload_policy(upload_policy);
@@ -99,7 +85,7 @@ CrashReporter::CrashReporter(
     privacy_settings_watcher_.StartWatching();
   }
 
-  queue_->WatchSettings(&settings_);
+  queue_.WatchSettings(&settings_);
 
   info_.ExposeSettings(&settings_);
 }
@@ -146,8 +132,9 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                     std::move(report), std::move(bugreport), utc_provider_.CurrentTime(), device_id,
                     build_version_, product.value(), &annotations, &attachments, &minidump);
 
-                if (!queue_->Add(Shorten(program_name), std::move(attachments), std::move(minidump),
-                                 annotations)) {
+                // TODO(57293): Change queue to take a Report as input.
+                if (!queue_.Add(Shorten(program_name), std::move(attachments), std::move(minidump),
+                                annotations)) {
                   FX_LOGS(ERROR) << "Error adding new report to the queue";
                   info_.LogCrashState(cobalt::CrashState::kDropped);
                   return ::fit::error();

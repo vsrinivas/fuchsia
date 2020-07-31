@@ -24,16 +24,16 @@ class Settings {
 
   // Policy defining whether to upload pending and future crash reports to a remote crash server.
   enum class UploadPolicy {
-    // Crash reports should (1) not be uploaded and (2) marked as completed in the Crashpad database
-    // to avoid trying to ever upload them in the future.
+    // Crash reports should not be uploaded and purged from the store.
     DISABLED,
 
-    // Crash reports should be uploaded and on success marked as completed in the Crashpad database.
+    // Crash reports should be uploaded and on success removed from the store, if present.
     // If the upload is unsuccessful and the policy changes to DISABLED, the crash report should
     // follow the DISABLED policy.
     ENABLED,
 
-    // Crash reports should stay pending until a change in policy to either DISABLED or ENABLED.
+    // Crash reports should stay pending and kept in the store until a change in policy to either
+    // DISABLED or ENABLED.
     LIMBO,
   };
 

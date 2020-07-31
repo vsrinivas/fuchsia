@@ -35,8 +35,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
  public:
   // Static factory method.
   //
-  // Returns nullptr if the crash reporter cannot be instantiated, e.g., because the local report
-  // database cannot be accessed.
+  // Returns nullptr if the crash reporter cannot be instantiated.
   static std::unique_ptr<CrashReporter> TryCreate(async_dispatcher_t* dispatcher,
                                                   std::shared_ptr<sys::ServiceDirectory> services,
                                                   const timekeeper::Clock& clock,
@@ -44,23 +43,17 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
                                                   const Config* config,
                                                   const ErrorOr<std::string>& build_version,
                                                   CrashRegister* crash_register);
+
   // For testing purposes and injecting a stub CrashServer.
-  static std::unique_ptr<CrashReporter> TryCreate(
-      async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-      const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context,
-      const Config* config, const ErrorOr<std::string>& build_version,
-      CrashRegister* crash_register, std::unique_ptr<CrashServer> crash_server);
+  CrashReporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+                const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context,
+                const Config* config, const ErrorOr<std::string>& build_version,
+                CrashRegister* crash_register, std::unique_ptr<CrashServer> crash_server);
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
  private:
-  CrashReporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                const timekeeper::Clock& clock, std::shared_ptr<InfoContext> info_context,
-                const Config* config, const ErrorOr<std::string>& build_version,
-                CrashRegister* crash_register, std::unique_ptr<CrashServer> crash_server,
-                std::unique_ptr<Queue> queue);
-
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -69,7 +62,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashRegister* crash_register_;
   const UTCTimeProvider utc_provider_;
   const std::unique_ptr<CrashServer> crash_server_;
-  const std::unique_ptr<Queue> queue_;
+  Queue queue_;
 
   CrashReporterInfo info_;
   Settings settings_;

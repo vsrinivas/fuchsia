@@ -15,18 +15,9 @@
 
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/utils/errors.h"
-#include "third_party/crashpad/client/crash_report_database.h"
-#include "third_party/crashpad/util/file/file_writer.h"
 
 namespace forensics {
 namespace crash_reports {
-
-// Writes a VMO into a Crashpad writer.
-bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer);
-
-// Adds a file attachment to a Crashpad report.
-bool AddAttachment(const std::string& filename, const fuchsia::mem::Buffer& content,
-                   crashpad::CrashReportDatabase::NewReport* crashpad_report);
 
 // Shorten |program_name| into a shortname by removing the "fuchsia-pkg://" prefix if present and
 // replacing all '/' with ':'.

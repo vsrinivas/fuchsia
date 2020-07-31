@@ -77,11 +77,8 @@ using testing::UnorderedElementsAreArray;
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
 
-constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
+constexpr char kStorePath[] = "/tmp/reports";
 
-// "attachments" should be kept in sync with the value defined in
-// //crashpad/client/crash_report_database_generic.cc
-constexpr char kCrashpadAttachmentsDir[] = "attachments";
 constexpr char kProgramName[] = "crashing_program";
 
 constexpr char kBuildVersion[] = "some-version";
@@ -105,7 +102,7 @@ const std::map<std::string, std::string> kDefaultAnnotations = {
 const std::map<std::string, std::string> kEmptyAnnotations = {};
 
 constexpr char kDefaultAttachmentBundleKey[] = "feedback.attachment.bundle.key";
-constexpr char kEmptyAttachmentBundleKey[] = "";
+constexpr char kEmptyAttachmentBundleKey[] = "empty.attachment.key";
 
 Attachment BuildAttachment(const std::string& key, const std::string& value) {
   Attachment attachment;
@@ -138,9 +135,7 @@ class CrashReporterTest : public UnitTestFixture {
     RunLoopUntilIdle();
   }
 
-  void TearDown() override {
-    ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
-  }
+  void TearDown() override { ASSERT_TRUE(files::DeletePath(kStorePath, /*recursive=*/true)); }
 
  protected:
   // Sets up the underlying crash reporter using the given |config| and |crash_server|.
@@ -150,10 +145,9 @@ class CrashReporterTest : public UnitTestFixture {
              (!config_.crash_server.url && !crash_server));
     crash_server_ = crash_server.get();
 
-    attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
-    crash_reporter_ = CrashReporter::TryCreate(dispatcher(), services(), clock_, info_context_,
-                                               &config_, ErrorOr<std::string>(kBuildVersion),
-                                               crash_register_.get(), std::move(crash_server));
+    crash_reporter_ = std::make_unique<CrashReporter>(
+        dispatcher(), services(), clock_, info_context_, &config_,
+        ErrorOr<std::string>(kBuildVersion), crash_register_.get(), std::move(crash_server));
     FX_CHECK(crash_reporter_);
   }
 
@@ -213,32 +207,6 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   std::string RegisterJsonPath() { return files::JoinPath(tmp_dir_.path(), "register.json"); }
-
-  // Checks that in the local Crashpad database there is:
-  //   * only one set of attachments
-  //   * the set of attachment filenames matches |expected_extra_attachments|
-  //   * no attachment is empty
-  void CheckAttachmentsInDatabase(
-      const std::vector<std::string>& expected_extra_attachment_filenames = {}) {
-    const std::vector<std::string> subdirs = GetAttachmentSubdirsInDatabase();
-    // We expect a single crash report to have been generated.
-    ASSERT_EQ(subdirs.size(), 1u);
-
-    // We expect as attachments the ones returned by the feedback::DataProvider and the extra ones
-    // specific to the crash analysis flow under test.
-    std::vector<std::string> expected_attachments = expected_extra_attachment_filenames;
-
-    std::vector<std::string> attachments;
-    const std::string report_attachments_dir = files::JoinPath(attachments_dir_, subdirs[0]);
-    ASSERT_TRUE(files::ReadDirContents(report_attachments_dir, &attachments));
-    RemoveCurrentDirectory(&attachments);
-    EXPECT_THAT(attachments, UnorderedElementsAreArray(expected_attachments));
-    for (const std::string& attachment : attachments) {
-      uint64_t size;
-      ASSERT_TRUE(files::GetFileSize(files::JoinPath(report_attachments_dir, attachment), &size));
-      EXPECT_GT(size, 0u) << "attachment file '" << attachment << "' shouldn't be empty";
-    }
-  }
 
   // Checks that on the crash server the annotations received match the concatenation of:
   //   * |expected_extra_annotations|
@@ -323,8 +291,7 @@ class CrashReporterTest : public UnitTestFixture {
   // Files one crash report.
   //
   // |attachment| is useful to control the lower bound of the size of the report by controlling the
-  // size of some of the attachment(s). This comes in handy when testing the database size limit
-  // enforcement logic for instance.
+  // size of some of the attachment(s).
   ::fit::result<void, zx_status_t> FileOneCrashReportWithSingleAttachment(
       const std::string& attachment = kSingleAttachmentValue) {
     std::vector<Attachment> attachments;
@@ -414,22 +381,6 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
  private:
-  // Returns all the attachment subdirectories under the over-arching attachment directory in the
-  // database.
-  //
-  // Each subdirectory corresponds to one local crash report.
-  std::vector<std::string> GetAttachmentSubdirsInDatabase() {
-    std::vector<std::string> subdirs;
-    FX_CHECK(files::ReadDirContents(attachments_dir_, &subdirs));
-    RemoveCurrentDirectory(&subdirs);
-    return subdirs;
-  }
-
-  void RemoveCurrentDirectory(std::vector<std::string>* dirs) {
-    dirs->erase(std::remove(dirs->begin(), dirs->end(), "."), dirs->end());
-  }
-
- private:
   files::ScopedTempDir tmp_dir_;
 
   // Stubs and fake servers.
@@ -444,7 +395,6 @@ class CrashReporterTest : public UnitTestFixture {
   StubCrashServer* crash_server_;
 
  private:
-  std::string attachments_dir_;
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
   Config config_;
@@ -463,7 +413,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReport) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer(kDefaultAnnotations);
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
@@ -480,7 +429,6 @@ TEST_F(CrashReporterTest, Check_UTCTimeIsNotReady) {
   });
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 
   EXPECT_EQ(crash_server_->latest_annotations().find("reportTimeMillis"),
@@ -500,7 +448,6 @@ TEST_F(CrashReporterTest, Check_guidNotSet) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 
   EXPECT_EQ(crash_server_->latest_annotations().find("guid"),
@@ -524,7 +471,6 @@ TEST_F(CrashReporterTest, Check_UnknownChannel) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 
   ASSERT_NE(crash_server_->latest_annotations().find("channel"),
@@ -580,11 +526,10 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
                   },
                   /*attachments=*/std::move(attachments))
                   .is_ok());
-  CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer({
       {"annotation.key", "annotation.value"},
   });
-  CheckAttachmentsOnServer({kSingleAttachmentKey});
+  CheckAttachmentsOnServer({kSingleAttachmentKey, kEmptyAttachmentBundleKey});
 }
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
@@ -600,7 +545,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithEventId) {
   report.set_event_id("some-event-id");
 
   ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer({
       {"comments", "some-event-id"},
   });
@@ -622,7 +566,6 @@ TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithProgramUptime) {
   report.set_program_uptime(uptime.get());
 
   ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer({
       {"ptime", std::to_string(uptime.to_msecs())},
   });
@@ -638,7 +581,6 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReport) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer(kDefaultAnnotations);
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
@@ -652,7 +594,6 @@ TEST_F(CrashReporterTest, Succeed_OnGenericInputCrashReportWithSignature) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneGenericCrashReport("some-signature").is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer({
       {"signature", "some-signature"},
   });
@@ -671,7 +612,6 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
   fsl::VmoFromString("minidump", &minidump);
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer({
       {"should_process", "true"},
   });
@@ -687,7 +627,6 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer({
       {"signature", "fuchsia-no-minidump"},
   });
@@ -708,14 +647,13 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReport) {
   ASSERT_TRUE(
       FileOneDartCrashReport("FileSystemException", "cannot open file", std::move(stack_trace))
           .is_ok());
-  CheckAttachmentsInDatabase({"DartError"});
   CheckAnnotationsOnServer({
       {"error_runtime_type", "FileSystemException"},
       {"error_message", "cannot open file"},
       {"type", "DartError"},
       {"should_process", "true"},
   });
-  CheckAttachmentsOnServer({"DartError"});
+  CheckAttachmentsOnServer({"DartError", kEmptyAttachmentBundleKey});
 }
 
 TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
@@ -727,7 +665,6 @@ TEST_F(CrashReporterTest, Succeed_OnDartInputCrashReportWithoutExceptionData) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneDartCrashReport(std::nullopt, std::nullopt, std::nullopt).is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer({
       {"type", "DartError"},
       {"signature", "fuchsia-no-dart-stack-trace"},
@@ -760,7 +697,6 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckAnnotationsOnServer(kDefaultAnnotations);
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }
@@ -782,7 +718,6 @@ TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
 }
 
 TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
@@ -801,7 +736,6 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
   SetUpUtcProviderServer({kExternalResponse});
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
-  CheckAttachmentsInDatabase({kDefaultAttachmentBundleKey});
   CheckServerStillExpectRequests();
 
   SetPrivacySettings(kUserOptInDataSharing);
@@ -809,34 +743,6 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
 
   CheckAnnotationsOnServer(kDefaultAnnotations);
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
-}
-
-TEST_F(CrashReporterTest, Succeed_OnConcurrentReports) {
-  SetUpCrashReporterDefaultConfig(std::vector<bool>(10, kUploadSuccessful));
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
-  SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
-  SetUpUtcProviderServer({kExternalResponse});
-
-  // We generate ten crash reports before runnning the loop to make sure that one crash
-  // report filing doesn't clean up the concurrent crash reports being filed.
-  const size_t kNumReports = 10;
-
-  std::vector<::fit::result<void, zx_status_t>> results;
-  for (size_t i = 0; i < kNumReports; ++i) {
-    CrashReport report;
-    report.set_program_name(kProgramName);
-    crash_reporter_->File(std::move(report), [&results](::fit::result<void, zx_status_t> result) {
-      results.push_back(result);
-    });
-  }
-
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_EQ(results.size(), kNumReports);
-  for (const auto result : results) {
-    EXPECT_TRUE(result.is_ok());
-  }
 }
 
 TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
@@ -880,7 +786,6 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAttachments) {
   SetUpUtcProviderServer({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer(kDefaultAnnotations);
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
@@ -894,9 +799,8 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
   SetUpUtcProviderServer({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer();
-  CheckAttachmentsOnServer({kSingleAttachmentKey});
+  CheckAttachmentsOnServer({kSingleAttachmentKey, kEmptyAttachmentBundleKey});
 }
 
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
@@ -907,7 +811,6 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
   SetUpUtcProviderServer({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer({
       {"debug.bugreport.empty", "true"},
   });
@@ -922,7 +825,6 @@ TEST_F(CrashReporterTest, Succeed_OnDataProviderNotServing) {
   SetUpUtcProviderServer({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer({
       {"debug.bugreport.error", "FIDL connection error"},
   });

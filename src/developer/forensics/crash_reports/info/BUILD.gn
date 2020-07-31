@@ -11,8 +11,6 @@ source_set("info") {
     "crash_register_info.h",
     "crash_reporter_info.cc",
     "crash_reporter_info.h",
-    "database_info.cc",
-    "database_info.h",
     "info_context.h",
     "main_service_info.cc",
     "main_service_info.h",

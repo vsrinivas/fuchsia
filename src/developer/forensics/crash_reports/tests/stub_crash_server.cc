@@ -44,23 +44,5 @@ bool StubCrashServer::MakeRequest(const Report& report, std::string* server_repo
   return *next_return_value_++;
 }
 
-bool StubCrashServer::MakeRequest(const std::map<std::string, std::string>& annotations,
-                                  const std::map<std::string, crashpad::FileReader*>& attachments,
-                                  std::string* server_report_id) {
-  latest_annotations_ = annotations;
-  latest_attachment_keys_.clear();
-  for (const auto& [key, unused_value] : attachments) {
-    latest_attachment_keys_.push_back(key);
-  }
-
-  FX_CHECK(ExpectRequest()) << fxl::StringPrintf(
-      "no more calls to MakeRequest() expected (%lu/%lu calls made)",
-      std::distance(request_return_values_.cbegin(), next_return_value_),
-      request_return_values_.size());
-  if (*next_return_value_) {
-    *server_report_id = kStubServerReportId;
-  }
-  return *next_return_value_++;
-}
 }  // namespace crash_reports
 }  // namespace forensics
