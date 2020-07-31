@@ -9,6 +9,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/bt/hci.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <optional>
 
 #include "vendor_hci.h"
 
@@ -16,12 +17,12 @@ namespace btintel {
 
 class Device;
 
-using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::UnbindableNew,
-                               ddk::Messageable>;
+using DeviceType = ddk::Device<Device, ddk::Initializable, ddk::GetProtocolable,
+                               ddk::UnbindableNew, ddk::Messageable>;
 
 class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:
-  Device(zx_device_t* device, bt_hci_protocol_t* hci);
+  Device(zx_device_t* device, bt_hci_protocol_t* hci, bool secure);
 
   ~Device() = default;
 
@@ -33,9 +34,10 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   // otherwise the device will be removed and devhost will
   // unbind.
   // If |secure| is true, use the "secure" firmware method.
-  zx_status_t LoadFirmware(bool secure);
+  zx_status_t LoadFirmware(ddk::InitTxn init_txn, bool secure);
 
   // ddk::Device methods
+  void DdkInit(ddk::InitTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
@@ -59,10 +61,11 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   zx_status_t LoadSecureFirmware(zx::channel* cmd, zx::channel* acl);
   zx_status_t LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl);
 
-  // Removes the device and leaves an error on the kernel log
+  // Informs the device manager that device initialization has failed,
+  // which will unbind the device, and leaves an error on the kernel log
   // prepended with |note|.
   // Returns |status|.
-  zx_status_t Remove(zx_status_t status, const char* note);
+  zx_status_t InitFailed(ddk::InitTxn init_txn, zx_status_t status, const char* note);
 
   // Maps the firmware refrenced by |name| into memory.
   // Returns the vmo that the firmware is loaded into or ZX_HANDLE_INVALID if it
@@ -73,6 +76,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   zx_handle_t MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw_size);
 
   ddk::BtHciProtocolClient hci_;
+  bool secure_;
   bool firmware_loaded_;
 };
 

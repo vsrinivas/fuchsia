@@ -5,6 +5,7 @@
 #include "device.h"
 
 #include <fbl/string_printf.h>
+#include <future>
 #include <lib/zx/vmo.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -15,12 +16,18 @@
 
 namespace btintel {
 
-Device::Device(zx_device_t* device, bt_hci_protocol_t* hci)
-    : DeviceType(device), hci_(hci), firmware_loaded_(false) {}
+Device::Device(zx_device_t* device, bt_hci_protocol_t* hci, bool secure)
+    : DeviceType(device), hci_(hci), secure_(secure), firmware_loaded_(false) {}
 
-zx_status_t Device::Bind() { return DdkAdd("bt_hci_intel", DEVICE_ADD_INVISIBLE); }
+zx_status_t Device::Bind() { return DdkAdd("bt_hci_intel"); }
 
-zx_status_t Device::LoadFirmware(bool secure) {
+void Device::DdkInit(ddk::InitTxn init_txn) {
+  auto f = std::async(std::launch::async, [this, txn = std::move(init_txn)]() mutable {
+    LoadFirmware(std::move(txn), secure_);
+  });
+}
+
+zx_status_t Device::LoadFirmware(ddk::InitTxn init_txn, bool secure) {
   tracef("LoadFirmware(secure: %s)\n", (secure ? "yes" : "no"));
 
   // TODO(armansito): Track metrics for initialization failures.
@@ -29,22 +36,22 @@ zx_status_t Device::LoadFirmware(bool secure) {
   zx::channel our_cmd, their_cmd, our_acl, their_acl;
   status = zx::channel::create(0, &our_cmd, &their_cmd);
   if (status != ZX_OK) {
-    return Remove(status, "failed to create command channel");
+    return InitFailed(std::move(init_txn), status, "failed to create command channel");
   }
   status = zx::channel::create(0, &our_acl, &their_acl);
   if (status != ZX_OK) {
-    return Remove(status, "failed to create ACL channel");
+    return InitFailed(std::move(init_txn), status, "failed to create ACL channel");
   }
 
   // Get the channels
   status = BtHciOpenCommandChannel(std::move(their_cmd));
   if (status != ZX_OK) {
-    return Remove(status, "failed to bind command channel");
+    return InitFailed(std::move(init_txn), status, "failed to bind command channel");
   }
 
   status = BtHciOpenAclDataChannel(std::move(their_acl));
   if (status != ZX_OK) {
-    return Remove(status, "failed to bind ACL channel");
+    return InitFailed(std::move(init_txn), status, "failed to bind ACL channel");
   }
 
   if (secure) {
@@ -54,17 +61,17 @@ zx_status_t Device::LoadFirmware(bool secure) {
   }
 
   if (status != ZX_OK) {
-    return Remove(status, "failed to initialize controller");
+    return InitFailed(std::move(init_txn), status, "failed to initialize controller");
   }
 
   firmware_loaded_ = true;
-  DdkMakeVisible();
+  init_txn.Reply(ZX_OK);  // This will make the device visible and able to be unbound.
   return ZX_OK;
 }
 
-zx_status_t Device::Remove(zx_status_t status, const char* note) {
+zx_status_t Device::InitFailed(ddk::InitTxn init_txn, zx_status_t status, const char* note) {
   errorf("%s: %s", note, zx_status_get_string(status));
-  DdkRemoveDeprecated();
+  init_txn.Reply(status);
   return status;
 }
 

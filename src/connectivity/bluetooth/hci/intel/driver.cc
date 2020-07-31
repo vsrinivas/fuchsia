@@ -50,7 +50,7 @@ zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
     return result;
   }
 
-  auto btdev = new btintel::Device(device, &hci);
+  auto btdev = new btintel::Device(device, &hci, secure);
   result = btdev->Bind();
   if (result != ZX_OK) {
     errorf("failed binding device: %s\n", zx_status_get_string(result));
@@ -58,7 +58,7 @@ zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
     return result;
   }
   // Bind succeeded and devmgr is now responsible for releasing |btdev|
-  auto f = std::async(std::launch::async, [btdev, secure]() { btdev->LoadFirmware(secure); });
+  // The device's init hook will load the firmware.
   return ZX_OK;
 }
 
