@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -437,7 +438,12 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	r.blobURL = os.ExpandEnv(r.blobURL)
 	r.repoURL = os.ExpandEnv(r.repoURL)
 	if err := r.execute(ctx, expandedArgs); err != nil {
-		logger.Errorf(ctx, "command %v failed: %v", expandedArgs, err)
+		var errExit *exec.ExitError
+		if errors.As(err, &errExit) {
+			logger.Errorf(ctx, "command %v failed: %v", expandedArgs, errExit)
+		} else {
+			logger.Errorf(ctx, "%v", err)
+		}
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess

@@ -23,6 +23,7 @@ import (
 	"github.com/creack/pty"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
@@ -358,7 +359,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		err := cmd.Wait()
 		if err != nil {
 			checkForEBUSY(ctx, &outputSink)
-			err = fmt.Errorf("QEMU invocation error: %w", err)
+			err = fmt.Errorf("%s: %w", constants.QEMUInvocationErrorMsg, err)
 		}
 		t.c <- err
 		os.RemoveAll(workdir)
