@@ -111,6 +111,7 @@ executable("cobalt_system_metrics_unittests") {
 
   sources = [
     "archivist_stats_fetcher_impl_test.cc",
+    "log_stats_fetcher_impl_test.cc",
     "system_metrics_daemon_test.cc",
   ]
 

@@ -12,29 +12,40 @@ namespace cobalt {
 
 namespace {
 
-static constexpr char kAllowlistFilePath[] = "/config/data/log_stats_component_allowlist.txt";
+static constexpr char kDefaultAllowlistFilePath[] =
+    "/config/data/log_stats_component_allowlist.txt";
 
 }  // namespace
 
 // static
-void LogStatsFetcherImpl::LoadAllowlist(const std::string& allowlist_path,
-                                        std::unordered_map<std::string, ComponentEventCode>* map) {
+std::unordered_map<std::string, ComponentEventCode> LogStatsFetcherImpl::LoadAllowlist(
+    const std::string& allowlist_path) {
+  std::unordered_map<std::string, ComponentEventCode> result;
   std::ifstream allowlist_file_stream(allowlist_path);
   uint32_t component_code;
   while (allowlist_file_stream >> component_code) {
     std::string component_url;
     allowlist_file_stream >> component_url;
-    (*map)[component_url] = static_cast<ComponentEventCode>(component_code);
+    result[component_url] = static_cast<ComponentEventCode>(component_code);
   }
+  return result;
 }
 
 LogStatsFetcherImpl::LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
                                          sys::ComponentContext* context)
+    : LogStatsFetcherImpl(
+          dispatcher,
+          [context]() { return context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(); },
+          LoadAllowlist(kDefaultAllowlistFilePath)) {}
+
+LogStatsFetcherImpl::LogStatsFetcherImpl(
+    async_dispatcher_t* dispatcher,
+    fit::function<fuchsia::diagnostics::ArchiveAccessorPtr()> connector,
+    std::unordered_map<std::string, ComponentEventCode> component_code_map)
     : executor_(dispatcher),
-      archive_reader_(context->svc()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
-                      {"core/archivist:root/log_stats:*",
-                       "core/archivist:root/log_stats/by_component/*:error_logs"}) {
-  LoadAllowlist(kAllowlistFilePath, &component_code_map_);
+      archive_reader_(connector(), {"core/archivist:root/log_stats:*",
+                                    "core/archivist:root/log_stats/by_component/*:error_logs"}),
+      component_code_map_(std::move(component_code_map)) {
   // This establishes a baseline for error counts so that the next call to FetchMetrics() only
   // includes logs since the daemon started as opposed to since the  boot time. This is especially
   // important if the daemon had previously crashed and has been relaunched.

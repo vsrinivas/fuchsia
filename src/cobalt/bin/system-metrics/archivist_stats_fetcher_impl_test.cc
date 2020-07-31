@@ -13,6 +13,8 @@
 #include <gtest/gtest.h>
 #include <src/lib/fsl/vmo/strings.h>
 
+#include "src/cobalt/bin/system-metrics/testing/fake_archive.h"
+
 namespace {
 
 const uint64_t kExpectedMetricCount = 11;
@@ -52,53 +54,6 @@ const char kExpectedArchiveOutput[] = R"(
 }
 )";
 
-// A faked implementation of ArchiveAccessor that repeatedly returns only one component with the
-// given JSON value.
-class FakeArchive : public fuchsia::diagnostics::ArchiveAccessor {
- public:
-  explicit FakeArchive(std::string return_value)
-      : iterator_bindings_(std::make_unique<fidl::BindingSet<fuchsia::diagnostics::BatchIterator,
-                                                             std::unique_ptr<FakeIterator>>>()),
-        return_value_(std::move(return_value)) {}
-
-  FakeArchive(FakeArchive&&) = default;
-  FakeArchive(const FakeArchive&) = delete;
-  FakeArchive& operator=(FakeArchive&&) = default;
-  FakeArchive& operator=(const FakeArchive&) = delete;
-
-  void StreamDiagnostics(
-      fuchsia::diagnostics::StreamParameters params,
-      fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override {
-    iterator_bindings_->AddBinding(std::make_unique<FakeIterator>(return_value_),
-                                   std::move(request));
-  }
-
- private:
-  class FakeIterator : public fuchsia::diagnostics::BatchIterator {
-   public:
-    explicit FakeIterator(std::string return_value) : return_value_(std::move(return_value)) {}
-
-   private:
-    void GetNext(GetNextCallback callback) override {
-      std::vector<fuchsia::diagnostics::FormattedContent> contents;
-      if (!sent) {
-        fuchsia::diagnostics::FormattedContent content;
-        ZX_ASSERT(fsl::VmoFromString(return_value_, &content.json()));
-        contents.emplace_back(std::move(content));
-        sent = true;
-      }
-      callback(fit::ok(std::move(contents)));
-    }
-
-    bool sent = false;
-    std::string return_value_;
-  };
-  std::unique_ptr<
-      fidl::BindingSet<fuchsia::diagnostics::BatchIterator, std::unique_ptr<FakeIterator>>>
-      iterator_bindings_;
-  std::string return_value_;
-};
-
 class TestArchivistStatsFetcherImpl : public cobalt::ArchivistStatsFetcherImpl {
  public:
   TestArchivistStatsFetcherImpl(async_dispatcher_t* dispatcher,
@@ -120,7 +75,7 @@ class ArchivistStatsFetcherImplTest : public gtest::TestLoopFixture {
     return ret;
   }
 
-  FakeArchive fake_archive_;
+  cobalt::FakeArchive fake_archive_;
   TestArchivistStatsFetcherImpl test_fetcher_;
   fidl::BindingSet<fuchsia::diagnostics::ArchiveAccessor> archive_bindings_;
 };
@@ -168,7 +123,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MeasurementsRepeatFailed) {
 // Ensure that updating multiple metrics over time works as expected.
 TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   std::vector<uint64_t> values;
-  fake_archive_ = FakeArchive(R"(
+  fake_archive_ = cobalt::FakeArchive(R"(
     {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 5
@@ -182,7 +137,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   EXPECT_EQ(5u, values[0]);
 
   values.clear();
-  fake_archive_ = FakeArchive(R"(
+  fake_archive_ = cobalt::FakeArchive(R"(
     {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 7
@@ -196,7 +151,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   EXPECT_EQ(2u, values[0]);
 
   values.clear();
-  fake_archive_ = FakeArchive(R"(
+  fake_archive_ = cobalt::FakeArchive(R"(
     {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "inspect_batch_iterator_get_next_errors": 10
@@ -210,7 +165,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   EXPECT_EQ(10u, values[0]);
 
   values.clear();
-  fake_archive_ = FakeArchive(R"(
+  fake_archive_ = cobalt::FakeArchive(R"(
     {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 8,
@@ -225,7 +180,7 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   EXPECT_EQ(1u, values[0]);
 
   values.clear();
-  fake_archive_ = FakeArchive(R"(
+  fake_archive_ = cobalt::FakeArchive(R"(
     {"moniker": "core/archivist",
      "payload": {"root": {"all_archive_accessor_node": {
        "archive_accessor_connections_opened": 9,

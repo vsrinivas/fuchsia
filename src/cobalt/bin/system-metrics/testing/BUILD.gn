@@ -6,6 +6,8 @@ source_set("fake_fetchers") {
   testonly = true
 
   sources = [
+    "fake_archive.cc",
+    "fake_archive.h",
     "fake_archivist_stats_fetcher.cc",
     "fake_archivist_stats_fetcher.h",
     "fake_cpu_stats_fetcher.cc",

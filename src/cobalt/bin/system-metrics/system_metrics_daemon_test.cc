@@ -252,8 +252,8 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
 // Verifies that loading the component allow list for error log metrics works properly.
 TEST_F(SystemMetricsDaemonTest, LoadLogMetricAllowList) {
-  std::unordered_map<std::string, cobalt::ComponentEventCode> map;
-  cobalt::LogStatsFetcherImpl::LoadAllowlist("/pkg/data/log_stats_component_allowlist.txt", &map);
+  std::unordered_map<std::string, cobalt::ComponentEventCode> map =
+      cobalt::LogStatsFetcherImpl::LoadAllowlist("/pkg/data/log_stats_component_allowlist.txt");
   EXPECT_EQ(cobalt::ComponentEventCode::Appmgr,
             map["fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm"]);
   EXPECT_EQ(cobalt::ComponentEventCode::Sysmgr,

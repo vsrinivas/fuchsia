@@ -19,10 +19,18 @@ namespace cobalt {
 
 class LogStatsFetcherImpl : public LogStatsFetcher {
  public:
-  static void LoadAllowlist(const std::string& allowlist_path,
-                            std::unordered_map<std::string, ComponentEventCode>* map);
+  static std::unordered_map<std::string, ComponentEventCode> LoadAllowlist(
+      const std::string& allowlist_path);
 
+  // This constructor creates an ArchiveAccessor using |context| and loads the allowlist from the
+  // config file (located in kDefaultAllowlistFilePath).
   LogStatsFetcherImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context);
+
+  // This constructor is intended to be used in tests that need a fake ArchiveAccessor and
+  // allowlist.
+  LogStatsFetcherImpl(async_dispatcher_t* dispatcher,
+                      fit::function<fuchsia::diagnostics::ArchiveAccessorPtr()> connector,
+                      std::unordered_map<std::string, ComponentEventCode> component_code_map);
 
   // Overridden from LogStatsFetcher:
   void FetchMetrics(MetricsCallback metrics_callback) override;
