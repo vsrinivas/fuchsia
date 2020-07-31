@@ -9,7 +9,6 @@ pub mod test_utils;
 
 #[macro_use]
 mod common;
-mod watchers;
 
 pub mod immutable;
 pub mod mutable;
@@ -23,3 +22,4 @@ pub mod entry_container;
 pub mod helper;
 pub mod read_dirents;
 pub mod traversal_position;
+pub mod watchers;

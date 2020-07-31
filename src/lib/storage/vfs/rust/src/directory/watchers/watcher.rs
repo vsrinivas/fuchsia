@@ -95,7 +95,7 @@ impl Controller {
     /// watcher mask does not specify that it needs to receive this event, then the producer is not
     /// used and `false` is returned.  If the producers mask and the watcher mask overlap, then
     /// `true` is returned (even if the producer did not generate a single buffer).
-    pub(crate) fn send_event(&mut self, producer: &mut dyn EventProducer) -> bool {
+    pub fn send_event(&mut self, producer: &mut dyn EventProducer) -> bool {
         if self.mask & producer.mask() == 0 {
             return false;
         }

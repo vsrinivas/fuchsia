@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
         INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, WATCH_MASK_EXISTING,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
@@ -36,6 +36,10 @@ use {
             entry::{DirectoryEntry, EntryInfo},
             entry_container::{AsyncGetEntry, AsyncReadDirents, Directory, MutableDirectory},
             traversal_position::AlphabeticalTraversal,
+            watchers::{
+                event_producers::{SingleNameEventProducer, StaticVecEventProducer},
+                Watchers,
+            },
         },
         execution_scope::ExecutionScope,
         filesystem::Filesystem,
@@ -61,6 +65,7 @@ struct FatDirectoryData {
     children: HashMap<InsensitiveString, WeakFatNode>,
     /// True if this directory has been deleted.
     deleted: bool,
+    watchers: Watchers,
 }
 
 // Whilst it's tempting to use the unicase crate, at time of writing, it had its own case tables,
@@ -165,6 +170,7 @@ impl FatDirectory {
                 parent,
                 children: HashMap::new(),
                 deleted: false,
+                watchers: Watchers::new(),
             }),
         })
     }
@@ -218,7 +224,7 @@ impl FatDirectory {
     /// entry corresponds to a node on the filesystem, and that there is no existing entry with
     /// that name in the cache.
     pub fn add_child(
-        self: Arc<Self>,
+        self: &Arc<Self>,
         fs: &FatFilesystemInner,
         name: String,
         child: FatNode,
@@ -319,6 +325,7 @@ impl FatDirectory {
             return Ok(entry);
         };
 
+        let mut created = false;
         let node = {
             // Cache failed - try the real filesystem.
             let entry = self.find_child(&fs_lock, name)?;
@@ -342,6 +349,7 @@ impl FatDirectory {
                 }
             } else if flags & OPEN_FLAG_CREATE != 0 {
                 // Child entry does not exist, but we've been asked to create it.
+                created = true;
                 let dir = self.borrow_dir(&fs_lock)?;
                 if flags & OPEN_FLAG_DIRECTORY != 0
                     || (mode & MODE_TYPE_MASK == MODE_TYPE_DIRECTORY)
@@ -368,17 +376,28 @@ impl FatDirectory {
             }
         };
 
-        self.data
-            .write()
-            .unwrap()
-            .children
-            .insert(InsensitiveString(name.to_owned()), node.downgrade());
+        let mut data = self.data.write().unwrap();
+        data.children.insert(InsensitiveString(name.to_owned()), node.downgrade());
+        if created {
+            data.watchers.send_event(&mut SingleNameEventProducer::added(name));
+        }
+
         Ok(node)
     }
 
     /// True if this directory has been deleted.
     pub(crate) fn is_deleted(&self) -> bool {
         self.data.read().unwrap().deleted
+    }
+
+    /// Called to indicate a file or directory was removed from this directory.
+    pub(crate) fn did_remove(&self, name: &str) {
+        self.data.write().unwrap().watchers.send_event(&mut SingleNameEventProducer::removed(name));
+    }
+
+    /// Called to indicate a file or directory was added to this directory.
+    pub(crate) fn did_add(&self, name: &str) {
+        self.data.write().unwrap().watchers.send_event(&mut SingleNameEventProducer::added(name));
     }
 }
 
@@ -433,7 +452,9 @@ impl MutableDirectory for FatDirectory {
                 }
                 dir.remove(&name).map_err(fatfs_error_to_status)
             }
-        }
+        }?;
+        self.data.write().unwrap().watchers.send_event(&mut SingleNameEventProducer::removed(name));
+        Ok(())
     }
 
     fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
@@ -605,15 +626,51 @@ impl Directory for FatDirectory {
 
     fn register_watcher(
         self: Arc<Self>,
-        _scope: ExecutionScope,
-        _mask: u32,
-        _channel: fasync::Channel,
-    ) -> Status {
-        // TODO(simonshields): add watcher support.
-        panic!("Not implemented");
+        scope: ExecutionScope,
+        mask: u32,
+        channel: fasync::Channel,
+    ) -> Result<(), Status> {
+        let fs_lock = self.filesystem.lock().unwrap();
+        let mut data = self.data.write().unwrap();
+        let is_deleted = data.deleted;
+        let is_root = data.parent.is_none();
+        if let Some(controller) = data.watchers.add(scope, self.clone(), mask, channel) {
+            if mask & WATCH_MASK_EXISTING != 0 && !is_deleted {
+                let entries = {
+                    let dir = self.borrow_dir(&fs_lock)?;
+                    let synthesized_dot = if is_root {
+                        // We need to synthesize a "." entry.
+                        Some(Ok(".".to_owned()))
+                    } else {
+                        None
+                    };
+                    synthesized_dot
+                        .into_iter()
+                        .chain(dir.iter().filter_map(|maybe_entry| {
+                            maybe_entry
+                                .map(|entry| {
+                                    let name = entry.file_name();
+                                    if &name == ".." {
+                                        None
+                                    } else {
+                                        Some(name)
+                                    }
+                                })
+                                .transpose()
+                        }))
+                        .collect::<std::io::Result<Vec<String>>>()
+                        .map_err(fatfs_error_to_status)?
+                };
+                controller.send_event(&mut StaticVecEventProducer::existing(entries));
+            }
+            controller.send_event(&mut SingleNameEventProducer::idle());
+        }
+        Ok(())
     }
 
-    fn unregister_watcher(self: Arc<Self>, _key: usize) {}
+    fn unregister_watcher(self: Arc<Self>, key: usize) {
+        self.data.write().unwrap().watchers.remove(key);
+    }
 
     fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         let fs_lock = self.filesystem.lock().unwrap();

@@ -79,7 +79,7 @@ pub trait Directory: Any + Send + Sync {
         scope: ExecutionScope,
         mask: u32,
         channel: Channel,
-    ) -> Status;
+    ) -> Result<(), Status>;
 
     /// Unregister a watcher from this directory. The watcher should no longer
     /// receive events.

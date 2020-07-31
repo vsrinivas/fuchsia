@@ -535,7 +535,11 @@ where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
         let directory = self.directory.clone();
-        let status = directory.register_watcher(self.scope.clone(), mask, channel);
-        responder(status)
+        responder(
+            directory
+                .register_watcher(self.scope.clone(), mask, channel)
+                .err()
+                .unwrap_or(Status::OK),
+        )
     }
 }

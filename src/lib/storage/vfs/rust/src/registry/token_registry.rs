@@ -335,7 +335,7 @@ mod tests {
                 _scope: ExecutionScope,
                 _mask: u32,
                 _channel: Channel,
-            ) -> Status {
+            ) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 

@@ -274,7 +274,7 @@ where
         scope: ExecutionScope,
         mask: u32,
         channel: Channel,
-    ) -> Status {
+    ) -> Result<(), Status> {
         let mut this = self.inner.lock();
 
         let mut names = StaticVecEventProducer::existing({
@@ -287,7 +287,7 @@ where
             controller.send_event(&mut SingleNameEventProducer::idle());
         }
 
-        Status::OK
+        Ok(())
     }
 
     fn unregister_watcher(self: Arc<Self>, key: usize) {

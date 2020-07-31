@@ -142,6 +142,10 @@ impl FatFilesystem {
                 .add_child(&filesystem, dst_name.to_owned(), cache_entry)
                 .unwrap_or_else(|e| panic!("Rename failed, but fatfs says it didn't? - {:?}", e));
         }
+
+        src_dir.did_remove(src_name);
+        dst_dir.did_add(dst_name);
+
         Ok(())
     }
 }

@@ -331,13 +331,12 @@ where
         scope: ExecutionScope,
         mask: u32,
         channel: Channel,
-    ) -> Status {
+    ) -> Result<(), Status> {
         // Failure to send a command may indicate that the directory does not support watchers, or
         // that the executor shutdown is in progress.  In any case the error can be ignored.
         self.watchers
             .unbounded_send(WatcherCommand::RegisterWatcher { scope, mask, channel })
-            .map(|()| Status::OK)
-            .unwrap_or(Status::NOT_SUPPORTED)
+            .map_err(|_| Status::NOT_SUPPORTED)
     }
 
     fn unregister_watcher(self: Arc<Self>, key: usize) {
