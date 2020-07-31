@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
 )
 
@@ -43,10 +42,7 @@ func TestParse2Summary(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		testResults := SummaryToResultSink(summary, []*resultpb.StringPair{
-			{Key: "builder", Value: "fuchsia.x64"},
-			{Key: "bucket", Value: "ci"},
-		})
+		testResults := SummaryToResultSink(summary, name)
 		expectRequests += (len(testResults)-1)/chunkSize + 1
 		requests = append(requests, createTestResultsRequests(testResults, chunkSize)...)
 		for _, testResult := range testResults {
@@ -57,31 +53,5 @@ func TestParse2Summary(t *testing.T) {
 	}
 	if len(requests) != expectRequests {
 		t.Errorf("Incorrect number of request chuncks, got: %d want %d", len(requests), expectRequests)
-	}
-}
-
-func TestParse2SummaryNoTags(t *testing.T) {
-	t.Parallel()
-	const chunkSize = 5
-	var requests []*sinkpb.ReportTestResultsRequest
-	expectRequests := 0
-	for _, name := range []string{"summary.json", "summary2.json"} {
-		summary, err := ParseSummary(filepath.Join(*testDataFlag, name))
-		if err != nil {
-			log.Fatal(err)
-		}
-		testResults := SummaryToResultSink(summary, []*resultpb.StringPair{})
-		for _, r := range testResults {
-			for _, tag := range r.Tags {
-				if tag.Key == bucketTagKey || tag.Key == builderTagKey {
-					t.Errorf("Unexpected tag key: %s, value: %s", tag.Key, tag.Value)
-				}
-			}
-		}
-		expectRequests += (len(testResults)-1)/chunkSize + 1
-		requests = append(requests, createTestResultsRequests(testResults, chunkSize)...)
-	}
-	if len(requests) != expectRequests {
-		t.Errorf("Incorrect number of request chuncks, got: %d, want %d", len(requests), expectRequests)
 	}
 }

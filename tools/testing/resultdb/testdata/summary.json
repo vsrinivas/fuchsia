@@ -3,7 +3,7 @@
         {
             "name": "prefix/testtarget1",
             "gn_label": "label1",
-            "output_file": "path/to/output.txt",
+            "output_file": "tools/testing/resultdb/testdata/test_output.txt",
             "result": "PASS",
             "cases": [
                 {

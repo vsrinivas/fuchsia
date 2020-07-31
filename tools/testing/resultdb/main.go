@@ -15,45 +15,30 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/jsonpb"
-	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"golang.org/x/sync/errgroup"
 )
 
-const (
-	bucketTagKey  string = "buildbucket_bucket"
-	builderTagKey string = "buildbucket_builder"
-)
-
 var (
-	summaries   flagmisc.StringsValue
-	luciBucket  string
-	luciBuilder string
+	summaries  flagmisc.StringsValue
+	outputRoot string
 )
 
 func main() {
 	flag.Var(&summaries, "summary", "summary.json file location.")
-	flag.StringVar(&luciBucket, "bucket", "", "LUCI BuildBucket name (ex: global.cq).")
-	flag.StringVar(&luciBuilder, "builder", "", "LUCI Builder name (ex: fuchsia.x64).")
+	flag.StringVar(&outputRoot, "output", "",
+		"Output root path to be joined with 'output_file' field in summary.json. If not set, current directory will be used.")
 
 	flag.Parse()
 
-	tags := []*resultpb.StringPair{}
-	if len(luciBuilder) > 0 {
-		tags = append(tags, &resultpb.StringPair{Key: builderTagKey, Value: luciBuilder})
-	}
-	if len(luciBucket) > 0 {
-		tags = append(tags, &resultpb.StringPair{Key: bucketTagKey, Value: luciBucket})
-	}
 	var requests []*sinkpb.ReportTestResultsRequest
 	for _, summaryFile := range summaries {
 		summary, err := ParseSummary(summaryFile)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		testResults := SummaryToResultSink(summary, tags)
+		testResults := SummaryToResultSink(summary, outputRoot)
 		requests = append(requests, createTestResultsRequests(testResults, 50)...)
 	}
 

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -33,16 +35,19 @@ func ParseSummary(filePath string) (*runtests.TestSummary, error) {
 }
 
 // SummaryToResultSink converts runtests.TestSummary data into an array of result_sink TestResult.
-func SummaryToResultSink(s *runtests.TestSummary, tags []*resultpb.StringPair) []*sinkpb.TestResult {
+func SummaryToResultSink(s *runtests.TestSummary, outputRoot string) []*sinkpb.TestResult {
+	if len(outputRoot) == 0 {
+		outputRoot, _ = os.Getwd()
+	}
+	rootPath, _ := filepath.Abs(outputRoot)
 	r := []*sinkpb.TestResult{}
 	for _, test := range s.Tests {
 		if len(test.Cases) > 0 {
-			testCases := testCaseToResultSink(test.Cases, &test, tags)
+			testCases := testCaseToResultSink(test.Cases, &test)
 			r = append(r, testCases...)
-		} else {
-			if testResult, err := testDetailsToResultSink(&test, tags); err == nil {
-				r = append(r, testResult)
-			}
+		}
+		if testResult, err := testDetailsToResultSink(&test, rootPath); err == nil {
+			r = append(r, testResult)
 		}
 	}
 	return r
@@ -51,16 +56,14 @@ func SummaryToResultSink(s *runtests.TestSummary, tags []*resultpb.StringPair) [
 // testCaseToResultSink converts TestCaseResult defined in //tools/testing/testparser/result.go
 // to ResultSink's TestResult. A testcase will not be converted if test result cannot be
 // mapped to result_sink.Status.
-func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *runtests.TestDetails, tags []*resultpb.StringPair) []*sinkpb.TestResult {
+func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *runtests.TestDetails) []*sinkpb.TestResult {
 	testResult := []*sinkpb.TestResult{}
-	resultTags := make([]*resultpb.StringPair, len(tags))
-	copy(resultTags, tags)
 
 	for _, testCase := range testCases {
 		testID := fmt.Sprintf("%s/%s:%s", testDetail.Name, testCase.SuiteName, testCase.CaseName)
 		r := sinkpb.TestResult{
 			TestId: testID,
-			Tags:   append(resultTags, &resultpb.StringPair{Key: "format", Value: testCase.Format}),
+			Tags:   []*resultpb.StringPair{{Key: "format", Value: testCase.Format}},
 		}
 		status, err := testCaseStatusToResultDBStatus(testCase.Status)
 		if err != nil {
@@ -83,10 +86,9 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 // testCaseToResultSink converts TestDetail defined in /tools/testing/runtests/runtests.go
 // to ResultSink's TestResult. Returns (nil, error) is a test result cannot be mapped to
 // result_sink.Status
-func testDetailsToResultSink(testDetail *runtests.TestDetails, tags []*resultpb.StringPair) (*sinkpb.TestResult, error) {
+func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, error) {
 	r := sinkpb.TestResult{
 		TestId: testDetail.Name,
-		Tags:   tags,
 	}
 	status, err := testDetailResultToResultDBStatus(testDetail.Result)
 	if err != nil {
@@ -100,6 +102,16 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, tags []*resultpb.
 	}
 	if testDetail.DurationMillis > 0 {
 		r.Duration = ptypes.DurationProto(time.Duration(testDetail.DurationMillis) * time.Millisecond)
+	}
+	outputFile := filepath.Join(outputRoot, testDetail.OutputFile)
+	if isReadable(outputFile) {
+		r.Artifacts = map[string]*sinkpb.Artifact{
+			filepath.Base(outputFile): {
+				Body:        &sinkpb.Artifact_FilePath{FilePath: outputFile},
+				ContentType: "text/plain",
+			}}
+	} else {
+		log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
 	}
 	r.Expected = determineExpected(r.Status)
 	return &r, nil
@@ -141,4 +153,23 @@ func testDetailResultToResultDBStatus(result runtests.TestResult) (sinkpb.TestSt
 		return sinkpb.TestStatus_FAIL, nil
 	}
 	return sinkpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("Cannot map Result: %s to result_sink test_result status", result)
+}
+
+func isReadable(p string) bool {
+	if len(p) == 0 {
+		return false
+	}
+	info, err := os.Stat(p)
+	if err != nil {
+		return false
+	}
+	if info.IsDir() {
+		return false
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		return false
+	}
+	f.Close()
+	return true
 }

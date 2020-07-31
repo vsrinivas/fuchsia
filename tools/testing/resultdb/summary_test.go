@@ -6,20 +6,17 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
-	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 func TestParseSummary(t *testing.T) {
 	const testCount = 10
 	summary := createTestSummary(testCount)
-	testResults := SummaryToResultSink(summary, []*resultpb.StringPair{
-		{Key: "builder", Value: "fuchsia.x64"},
-		{Key: "bucket", Value: "ci"},
-	})
+	testResults := SummaryToResultSink(summary, "")
 	if len(testResults) != testCount {
 		t.Errorf(
 			"Parsed incorrect number of resultdb tests in TestSummary, got %d, want %d",
@@ -56,4 +53,17 @@ func createTestSummary(testCount int) *runtests.TestSummary {
 		})
 	}
 	return &runtests.TestSummary{Tests: t}
+}
+
+func TestIsReadable(t *testing.T) {
+	if r := isReadable(""); r {
+		t.Errorf("Empty string cannot be readable. got %t, want false", r)
+	}
+	if r := isReadable(*testDataFlag); r {
+		t.Errorf("Directory should not be readable. got %t, want false", r)
+	}
+	luciCtx := filepath.Join(*testDataFlag, "lucictx.json")
+	if r := isReadable(luciCtx); !r {
+		t.Errorf("File %v should be readable. got %t, want true", luciCtx, r)
+	}
 }
