@@ -35,7 +35,6 @@ struct AppmgrArgs {
   fidl::VectorPtr<std::string> sysmgr_args;
   std::optional<fuchsia::sys::LoaderPtr> loader;
   bool run_virtual_console;
-  bool retry_sysmgr_crash;
   zx::channel trace_server_channel;
 };
 
@@ -81,10 +80,7 @@ class Appmgr {
   fuchsia::sys::ComponentControllerPtr sysmgr_;
   std::string sysmgr_url_;
   fidl::VectorPtr<std::string> sysmgr_args_;
-  RestartBackOff sysmgr_backoff_;
-  bool sysmgr_retry_crashes_;
-  bool sysmgr_permanently_failed_;
-  bool sysmgr_running_;
+  bool sysmgr_running_ = false;
   StorageWatchdog storage_watchdog_;
 
   LifecycleServer lifecycle_server_;

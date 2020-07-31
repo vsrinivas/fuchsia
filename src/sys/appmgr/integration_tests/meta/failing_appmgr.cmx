@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/failing_appmgr"
+    },
+    "sandbox": {
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

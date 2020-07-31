@@ -134,7 +134,6 @@ int main(int argc, char** argv) {
                              .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
                              .sysmgr_args = {},
                              .run_virtual_console = true,
-                             .retry_sysmgr_crash = true,
                              .trace_server_channel = std::move(trace_server)};
   component::Appmgr appmgr(loop.dispatcher(), std::move(args));
 

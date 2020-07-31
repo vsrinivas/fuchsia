@@ -201,6 +201,9 @@
         {
             protocol: [
                 "/svc/fuchsia.boot.WriteOnlyLog",
+
+                // For triggering reboot when sysmgr exits
+                "/svc/fuchsia.hardware.power.statecontrol.Admin",
                 "/svc/fuchsia.process.Launcher",
             ],
         },

@@ -12,8 +12,6 @@ group("integration_tests") {
   testonly = true
   deps = [
     ":appmgr_integration_tests",
-    ":hub_tests",
-    ":realm_tests",
     "component_events",
     "components",
     "fidl",
@@ -25,6 +23,26 @@ group("integration_tests") {
     "policy",
     "sandbox",
     "util",
+  ]
+}
+
+executable("full_tests") {
+  testonly = true
+
+  output_name = "appmgr_full_integration_tests"
+
+  sources = [ "full_integration_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -136,11 +154,28 @@ executable("crashing_component") {
   ]
 }
 
+executable("failing_appmgr") {
+  testonly = true
+  output_name = "failing_appmgr"
+  sources = [ "failing_appmgr.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//src/sys/appmgr:appmgr_for_test",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 test_package("appmgr_integration_tests") {
   deps = [
     ":crashing_component",
     ":crashing_process",
     ":echo_server",
+    ":failing_appmgr",
+    ":full_tests",
     ":hub_tests",
     ":realm_tests",
     ":sysmgr_config",
@@ -160,6 +195,9 @@ test_package("appmgr_integration_tests") {
     {
       name = "crashing_component"
     },
+    {
+      name = "failing_appmgr"
+    },
   ]
 
   meta = [
@@ -175,9 +213,17 @@ test_package("appmgr_integration_tests") {
       path = rebase_path("meta/crashing_component.cmx")
       dest = "crashing_component.cmx"
     },
+    {
+      path = rebase_path("meta/failing_appmgr.cmx")
+      dest = "failing_appmgr.cmx"
+    },
   ]
 
   tests = [
+    {
+      name = "appmgr_full_integration_tests"
+      environments = basic_envs
+    },
     {
       name = "appmgr_realm_integration_tests"
       environments = basic_envs

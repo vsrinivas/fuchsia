@@ -70,6 +70,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/loader",
     "//garnet/public/lib/json",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.internal",
@@ -77,7 +78,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/backoff",
     "//src/lib/cmx",
     "//src/lib/fsl",
     "//src/lib/fxl",

@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/appmgr_full_integration_tests"
+    },
+    "sandbox": {
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

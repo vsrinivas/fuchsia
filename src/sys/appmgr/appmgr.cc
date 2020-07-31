@@ -5,14 +5,18 @@
 #include "src/sys/appmgr/appmgr.h"
 
 #include <fcntl.h>
+#include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/zx/time.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo_dir.h>
@@ -26,9 +30,6 @@ using fuchsia::sys::TerminationReason;
 
 namespace component {
 namespace {
-constexpr zx::duration kMinSmsmgrBackoff = zx::msec(200);
-constexpr zx::duration kMaxSysmgrBackoff = zx::sec(15);
-constexpr zx::duration kSysmgrAliveReset = zx::sec(5);
 constexpr zx::duration kCpuSamplePeriod = zx::min(1);
 constexpr size_t kMaxInspectSize = 2 * 1024 * 1024 /* 2MB */;
 }  // namespace
@@ -41,10 +42,6 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       publish_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
-      sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
-      sysmgr_retry_crashes_(args.retry_sysmgr_crash),
-      sysmgr_permanently_failed_(false),
-      sysmgr_running_(false),
       storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)),
       lifecycle_server_(this),
       lifecycle_executor_(dispatcher),
@@ -104,57 +101,33 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
   // 3. Prepare to run sysmgr and install callback to actually start it once the
   //    logs are connected.
-  auto run_sysmgr = [this] {
-    sysmgr_backoff_.Start();
+  auto run_sysmgr = [this, dispatcher] {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
     launch_info.arguments = fidl::Clone(sysmgr_args_);
     sysmgr_.events().OnDirectoryReady = [this] { sysmgr_running_ = true; };
-    sysmgr_.events().OnTerminated = [this](zx_status_t status,
-                                           TerminationReason termination_reason) {
-      sysmgr_running_ = false;
-      if (termination_reason != TerminationReason::EXITED) {
-        FX_LOGS(WARNING) << "sysmgr launch failed: "
-                         << sys::TerminationReasonToString(termination_reason);
-        sysmgr_permanently_failed_ = true;
-      } else if (status == ZX_ERR_INVALID_ARGS) {
-        FX_LOGS(WARNING) << "sysmgr reported invalid arguments";
-        sysmgr_permanently_failed_ = true;
-      } else {
-        FX_LOGS(INFO) << "sysmgr exited with status " << status;
-      }
-
-      if (!sysmgr_retry_crashes_) {
-        FX_CHECK(ZX_OK == status) << "sysmgr retries are disabled and it failed ("
-                                  << sys::TerminationReasonToString(termination_reason)
-                                  << ", status " << status << ")";
-      }
+    sysmgr_.events().OnTerminated = [dispatcher](zx_status_t exit_code,
+                                                 TerminationReason termination_reason) {
+      // If sysmgr exited for any reason, something went wrong, so trigger reboot.
+      FX_LOGS(ERROR) << "sysmgr exited with status " << exit_code;
+      fuchsia::hardware::power::statecontrol::AdminPtr power_admin;
+      zx_status_t status =
+          fdio_service_connect("/svc/fuchsia.hardware.power.statecontrol.Admin",
+                               power_admin.NewRequest(dispatcher).TakeChannel().release());
+      FX_CHECK(status == ZX_OK) << "Could not connect to power state control service: "
+                                << zx_status_get_string(status);
+      const auto reason = fuchsia::hardware::power::statecontrol::RebootReason::SYSTEM_FAILURE;
+      auto cb = [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result result) {
+        if (result.is_err()) {
+          FX_LOGS(FATAL) << "Failed to reboot after sysmgr exited: "
+                         << zx_status_get_string(result.err());
+        }
+      };
+      power_admin->Reboot(reason, cb);
     };
     root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
   };
-
-  root_realm_->log_connector()->OnReady([this, dispatcher, run_sysmgr] {
-    if (!sysmgr_retry_crashes_) {
-      run_sysmgr();
-      return;
-    } else {
-      run_sysmgr();
-
-      auto retry_handler = [this, dispatcher, run_sysmgr](zx_status_t error) {
-        if (sysmgr_permanently_failed_) {
-          FX_LOGS(ERROR) << "sysmgr permanently failed. Check system configuration.";
-          return;
-        }
-
-        auto delay_duration = sysmgr_backoff_.GetNext();
-        FX_LOGS(WARNING) << fxl::StringPrintf("sysmgr failed, restarting in %.3fs",
-                                              .001f * delay_duration.to_msecs());
-        async::PostDelayedTask(dispatcher, run_sysmgr, delay_duration);
-      };
-
-      sysmgr_.set_error_handler(retry_handler);
-    }
-  });
+  root_realm_->log_connector()->OnReady(run_sysmgr);
 
   // 4. Publish outgoing directories.
   // Connect to the tracing service, and then publish the root realm's hub

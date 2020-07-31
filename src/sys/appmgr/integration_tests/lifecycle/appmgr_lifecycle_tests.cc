@@ -62,7 +62,6 @@ class AppmgrLifecycleTest : public sys::testing::TestWithEnvironment,
         .sysmgr_args = {},
         .loader = std::optional<fuchsia::sys::LoaderPtr>(std::move(loader)),
         .run_virtual_console = false,
-        .retry_sysmgr_crash = true,
         .trace_server_channel = std::move(trace_server)};
     appmgr_ = std::make_unique<component::Appmgr>(dispatcher(), std::move(args));
 

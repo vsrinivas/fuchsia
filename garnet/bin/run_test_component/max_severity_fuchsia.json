@@ -33,6 +33,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/appmgr_full_integration_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/asix-88179-integration-test#meta/asix-88179-integration-test.cmx",
          "max_severity": "ERROR"
       },
