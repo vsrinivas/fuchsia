@@ -94,7 +94,7 @@ and string-like argument values are un-quoted. For instance, to specify the
 
 ''');
 
-  const defaultQueryConstructors = <String>['SourceLang'];
+  const defaultQueryConstructors = <String>['CodeCategory', 'SourceLang'];
   final argResults = parser.parse(args);
   if (argResults['help']) {
     final examples =

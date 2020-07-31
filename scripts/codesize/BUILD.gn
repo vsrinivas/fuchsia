@@ -34,6 +34,10 @@ dart_test("codesize_tests") {
     "codesize.dart",
     "common_util.dart",
     "io.dart",
+    "queries/categories/categories.dart",
+    "queries/categories/fidl_cpp.dart",
+    "queries/categories/untraceable.dart",
+    "queries/code_category.dart",
     "queries/dump_names.dart",
     "queries/index.dart",
     "queries/mock_query.dart",
@@ -50,6 +54,7 @@ dart_test("codesize_tests") {
   # Tests
   sources += [
     "cli_test.dart",
+    "queries/categories/fidl_cpp_test.dart",
     "reflect_test.dart",
     "render/terminal_test.dart",
     "run_queries_test.dart",

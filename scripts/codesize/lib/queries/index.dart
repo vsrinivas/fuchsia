@@ -14,11 +14,40 @@ import 'dart:math' as math;
 import '../common_util.dart';
 import '../render/ast.dart';
 import '../types.dart';
+import 'categories/categories.dart';
+import 'code_category.dart';
 import 'dump_names.dart';
 import 'source_lang.dart';
 
-class CompileUnitContext with SourceLangCompileContextMixin {
+/// A context object that allows queries to temporarily stow information
+/// related to a particular compile unit, at the same time ensuring separation
+/// of concerns.
+///
+/// This is accomplished by having query implementations define their
+/// domain-specific mixins, which are combined together in this class.
+///
+/// The mixins themselves typically define lazily evaluated computations for
+/// fields that are costly to compute. For example, many queries may make use of
+/// the source langauge information of a compile unit, and that information is
+/// defined and evaluated at most once, in `SourceLangCompileContextMixin`.
+///
+/// ## Lifecycle of a context
+///
+/// When running codesize on reports, the `CompileUnitContext` is created once
+/// for each compile unit that appears in a bloaty report, and then re-used for
+/// all queries. Afterwards, it is discarded and any information stored related
+/// to this compile unit are lost.
+class CompileUnitContext
+    with
+        SourceLangCompileContextMixin,
+        CppCodingTableContextMixin,
+        CppDomainObjectContextMixin,
+        CppRuntimeContextMixin,
+        CFidlContextMixin,
+        UntraceableContextMixin {
   CompileUnitContext(this.name);
+
+  /// Name of the compile unit.
   final String name;
 }
 
@@ -94,10 +123,13 @@ String printMapSorted<K>(Map<K, Tally> map) {
   }).join('\n');
 }
 
+/// Sorts a map of binary names to their size, breaking ties by first sorting
+/// by size, then sorting by name lexicographically.
 List<MapEntry<String, Tally>> sortBinaries(Map<String, Tally> tallyByBinary) =>
     tallyByBinary.entries.toList()
-      ..sort((a, b) => ((int c) => c != 0 ? c : a.key.compareTo(b.key))(
-          -a.value.size.compareTo(b.value.size)));
+      ..sort((a, b) => ((int sizeComp) => sizeComp != 0
+          ? sizeComp
+          : a.key.compareTo(b.key))(-a.value.size.compareTo(b.value.size)));
 
 /// Utility class for calculating various statistics on a set of tallies.
 class Statistics {
@@ -154,9 +186,8 @@ abstract class Query {
   /// Human-readable description of what this query measures.
   String getDescription();
 
-  static String stripQuerySuffix(String typeName) => typeName.endsWith('Query')
-      ? typeName.substring(0, typeName.length - 'Query'.length)
-      : typeName;
+  static String stripQuerySuffix(String typeName) =>
+      maybeRemoveSuffix(typeName, 'Query');
 }
 
 /// A `QueryReport` contains the distilled results from running a query,
@@ -167,19 +198,6 @@ abstract class Query {
 abstract class QueryReport {
   Iterable<AnyNode> export();
 }
-
-class QueryFactory {
-  const QueryFactory(this.type, this.description);
-  final Type type;
-  final String description;
-
-  String get name => Query.stripQuerySuffix(type.toString());
-}
-
-const List<QueryFactory> allQueries = [
-  QueryFactory(SourceLangQuery, SourceLangQuery.description),
-  QueryFactory(DumpNamesQuery, DumpNamesQuery.description),
-];
 
 class Lazy<T, Context> {
   Lazy(this.func);
@@ -235,3 +253,22 @@ class BasicRenderer extends Renderer {
     }
   }
 }
+
+/// `QueryFactory` encapsulates a query type and its description.
+/// We may instantiate a query from its factory at run-time via reflection,
+/// see `ReflectQuery.instantiate`.
+class QueryFactory {
+  const QueryFactory(this.type, this.description);
+  final Type type;
+  final String description;
+
+  String get name => Query.stripQuerySuffix(type.toString());
+}
+
+/// List of all queries supported by codesize.
+/// Add new queries to this list.
+const List<QueryFactory> allQueries = [
+  QueryFactory(CodeCategoryQuery, CodeCategoryQuery.description),
+  QueryFactory(SourceLangQuery, SourceLangQuery.description),
+  QueryFactory(DumpNamesQuery, DumpNamesQuery.description),
+];
