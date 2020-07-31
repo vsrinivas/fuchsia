@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 
 #include "imx227.h"
+#include "src/camera/drivers/sensors/imx227/constants.h"
 #include "src/camera/drivers/sensors/imx227/imx227_id.h"
 #include "src/camera/drivers/sensors/imx227/imx227_modes.h"
 #include "src/camera/drivers/sensors/imx227/imx227_otp_config.h"
@@ -20,8 +21,8 @@ const uint16_t kLineLengthPckReg = 0x0342;
 const int32_t kLog2GainShift = 18;
 const int32_t kSensorExpNumber = 1;
 const uint32_t kMasterClock = 288000000;
-const uint32_t kMaxIntegrationTime =
-    0x15BC;  // Max allowed for 30fps = 2782 (dec)=0x0ADE (hex) 15fps = 5564 (dec)=0x15BC (hex).
+
+const uint32_t kDefaultMaxIntegrationTimeInLines = kMaxCoarseIntegrationTimeFor15fpsInLines;
 const uint16_t kEndOfSequence = 0x0000;
 }  // namespace
 
@@ -268,7 +269,7 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
     case INT_TIME_MAX:
     case INT_TIME_LONG_MAX:
     case INT_TIME_LIMIT:
-      out_value->uint_value = kMaxIntegrationTime;
+      out_value->uint_value = kDefaultMaxIntegrationTimeInLines;
       break;
     case DAY_LIGHT_INT_TIME_MAX:
       out_value->uint_value = 0;
@@ -297,6 +298,10 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
       break;
     case MODE:
       out_value->uint_value = current_mode_;
+      break;
+    case FRAME_RATE_COARSE_INT_LUT:
+      std::copy(std::begin(frame_rate_to_integration_time_lut),
+                std::end(frame_rate_to_integration_time_lut), out_value->frame_rate_info_value);
       break;
     default:
       return ZX_ERR_NOT_SUPPORTED;

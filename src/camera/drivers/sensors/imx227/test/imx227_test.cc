@@ -13,6 +13,9 @@
 #include <mock/ddktl/protocol/mipicsi.h>
 #include <zxtest/zxtest.h>
 
+#include "src/camera/drivers/sensors/imx227/constants.h"
+#include "src/camera/drivers/sensors/imx227/imx227_id.h"
+
 // The following equality operators are necessary for mocks.
 
 bool operator==(const i2c_op_t& lhs, const i2c_op_t& rhs) { return true; }
@@ -139,6 +142,21 @@ class Imx227DeviceTest : public zxtest::Test {
   FakeImx227Device dut_;
 };
 
+// Returns the coarse integration time corresponding to the requested |frame_rate| if found in the
+// lookup table provided.
+static uint32_t GetCoarseMaxIntegrationTime(const frame_rate_info_t* lut, uint32_t size,
+                                            uint32_t frame_rate) {
+  for (uint32_t i = 0; i < size; i++) {
+    auto fps =
+        lut[i].frame_rate.frames_per_sec_numerator / lut[i].frame_rate.frames_per_sec_denominator;
+
+    if (frame_rate == fps) {
+      return lut[i].max_coarse_integration_time;
+    }
+  }
+  return 0;
+}
+
 TEST_F(Imx227DeviceTest, Sanity) { ASSERT_OK(dut().CameraSensor2Init()); }
 
 // TODO(50737): The expected I2C operations don't match up with those made by
@@ -147,6 +165,18 @@ TEST_F(Imx227DeviceTest, DISABLED_GetSensorId) {
   dut().ExpectGetSensorId();
   ASSERT_OK(dut().CameraSensor2Init());
   ASSERT_OK(dut().CameraSensor2GetSensorId(nullptr));
+}
+
+TEST_F(Imx227DeviceTest, GetFrameRateCoarseIntLut) {
+  extension_value_data_type_t ext_val;
+  ASSERT_OK(dut().CameraSensor2Init());
+  ASSERT_OK(dut().CameraSensor2GetExtensionValue(FRAME_RATE_COARSE_INT_LUT, &ext_val));
+  EXPECT_EQ(
+      kMaxCoarseIntegrationTimeFor30fpsInLines,
+      GetCoarseMaxIntegrationTime(ext_val.frame_rate_info_value, EXTENSION_VALUE_ARRAY_LEN, 30));
+  EXPECT_EQ(
+      kMaxCoarseIntegrationTimeFor15fpsInLines,
+      GetCoarseMaxIntegrationTime(ext_val.frame_rate_info_value, EXTENSION_VALUE_ARRAY_LEN, 15));
 }
 
 }  // namespace

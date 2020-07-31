@@ -24,10 +24,6 @@
 
 namespace camera {
 
-inline const uint8_t kByteShift = 8;
-inline const uint16_t kSensorModelIdReg = 0x0016;
-inline const uint16_t kSensorModelIdDefault = 0x0227;
-
 struct SensorCtx {
   // TODO(55045): Add details for each one of these and also remove unused ones.
   uint32_t again_limit;
