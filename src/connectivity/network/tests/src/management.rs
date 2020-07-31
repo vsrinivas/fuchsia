@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::HashSet;
+
 use fidl_fuchsia_hardware_ethernet as eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_dhcp as dhcp;
 use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_netemul_network as netemul_network;
 use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
@@ -24,27 +27,31 @@ use crate::{
     try_all, try_any, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, DHCP_SERVER_DEFAULT_CONFIG_PATH,
 };
 
-/// Waits for a non-loopback interface to come up.
+/// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.
 ///
 /// Useful when waiting for an interface to be discovered and brought up by a
 /// network manager.
+///
+/// Returns the interface's ID and name.
 pub(crate) async fn wait_for_non_loopback_interface_up<
     F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
 >(
     netstack: &netstack::NetstackProxy,
     mut wait_for_netmgr: &mut F,
+    exclude_ids: Option<&HashSet<u32>>,
     timeout: zx::Duration,
-) -> Result<u32> {
+) -> Result<(u32, String)> {
     let mut wait_for_interface = netstack
         .take_event_stream()
         .try_filter_map(|netstack::NetstackEvent::OnInterfacesChanged { interfaces }| {
             future::ok(interfaces.into_iter().find_map(
-                |netstack::NetInterface { id, features, flags, .. }| {
+                |netstack::NetInterface { id, features, flags, name, .. }| {
                     // Ignore the loopback device.
                     if features & eth::INFO_FEATURE_LOOPBACK == 0
                         && flags & netstack::NET_INTERFACE_FLAG_UP != 0
+                        && exclude_ids.map_or(true, |x| !x.contains(&id))
                     {
-                        Some(id)
+                        Some((id, name))
                     } else {
                         None
                     }
@@ -105,9 +112,10 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
     let netstack = environment
         .connect_to_service::<netstack::NetstackMarker>()
         .context("connect to netstack service")?;
-    let _id: u32 = wait_for_non_loopback_interface_up(
+    let (_id, _name): (u32, String) = wait_for_non_loopback_interface_up(
         &netstack,
         &mut wait_for_netmgr,
+        None,
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await
@@ -116,6 +124,131 @@ async fn test_oir<E: netemul::Endpoint>(name: &str) -> Result {
     environment
         .remove_virtual_device(endpoint_mount_path)
         .with_context(|| format!("remove virtual device {}", endpoint_mount_path.display()))
+}
+
+/// Tests that stable interface name conflicts are handled gracefully.
+// TODO(54025): Enable this test for NetworkManager.
+#[variants_test]
+async fn test_oir_interface_name_conflict<E: netemul::Endpoint>(name: &str) -> Result {
+    let sandbox = netemul::TestSandbox::new().context("create sandbox")?;
+    let environment = sandbox
+        .create_netstack_environment_with::<Netstack2, _, _>(name, &[KnownServices::LookupAdmin])
+        .context("create netstack environment")?;
+
+    // Start the network manager.
+    let launcher = environment.get_launcher().context("get launcher")?;
+    let mut netmgr = fuchsia_component::client::launch(
+        &launcher,
+        NetCfg::PKG_URL.to_string(),
+        NetCfg::testing_args(),
+    )
+    .context("launch the network manager")?;
+
+    let mut wait_for_netmgr = netmgr.wait().fuse();
+    let netstack = environment
+        .connect_to_service::<netstack::NetstackMarker>()
+        .context("connect to netstack service")?;
+
+    // Add a device to the environment and wait for it to be added to the netstack.
+    //
+    // Non PCI and USB devices get their interface names from their MAC addresses.
+    // Using the same MAC address for different devices will result in the same
+    // interface name.
+    let mac = || Some(Box::new(net::MacAddress { octets: [2, 3, 4, 5, 6, 7] }));
+    let ethx7 = sandbox
+        .create_endpoint_with(
+            "ep1",
+            netemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
+        )
+        .await
+        .context("create ethx7")?;
+    let () = ethx7.set_link_up(true).await.context("set link up")?;
+    let endpoint_mount_path = E::dev_path("ep1");
+    let endpoint_mount_path = endpoint_mount_path.as_path();
+    let () = environment
+        .add_virtual_device(&ethx7, endpoint_mount_path)
+        .with_context(|| format!("add virtual device1 {}", endpoint_mount_path.display()))?;
+    let (id_ethx7, name_ethx7) = wait_for_non_loopback_interface_up(
+        &netstack,
+        &mut wait_for_netmgr,
+        None,
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    )
+    .await
+    .context("wait for first non loopback interface")?;
+    assert_eq!(
+        &name_ethx7, "ethx7",
+        "first interface should use a stable name based on its MAC address"
+    );
+
+    // Create an interface that the network manager does not know about that will cause a
+    // name conflict with the first temporary name.
+    let etht0 =
+        sandbox.create_endpoint::<netemul::Ethernet, _>("etht0").await.context("create eth0")?;
+    let () = etht0.set_link_up(true).await.context("set link up")?;
+    let name = "etht0";
+    let netstack_id_etht0 = netstack
+        .add_ethernet_device(
+            name,
+            &mut netstack::InterfaceConfig {
+                name: name.to_string(),
+                filepath: "/fake/filepath/for_test".to_string(),
+                metric: 0,
+            },
+            etht0
+                .get_ethernet()
+                .await
+                .context("netstack.add_ethernet_device requires an Ethernet endpoint")?,
+        )
+        .await
+        .context("add_ethernet_device FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_ethernet_device error")?;
+    let () = netstack
+        .set_interface_status(netstack_id_etht0, true /* enabled */)
+        .context("set interface status FIDL error")?;
+    let (id_etht0, name_etht0) = wait_for_non_loopback_interface_up(
+        &netstack,
+        &mut wait_for_netmgr,
+        Some(&std::iter::once(id_ethx7).collect()),
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    )
+    .await
+    .context("wait for second non loopback interface")?;
+    assert_eq!(id_etht0, netstack_id_etht0);
+    assert_eq!(&name_etht0, "etht0");
+
+    // Add another device from the network manager with the same MAC address and wait for it
+    // to be added to the netstack. Its first two attempts at adding a name should conflict
+    // with the above two devices.
+    let etht1 = sandbox
+        .create_endpoint_with(
+            "ep2",
+            netemul_network::EndpointConfig { mtu: 1500, mac: mac(), backing: E::NETEMUL_BACKING },
+        )
+        .await
+        .context("create etht1")?;
+    let () = etht1.set_link_up(true).await.context("set link up")?;
+    let endpoint_mount_path = E::dev_path("ep2");
+    let endpoint_mount_path = endpoint_mount_path.as_path();
+    let () = environment
+        .add_virtual_device(&etht1, endpoint_mount_path)
+        .with_context(|| format!("add virtual device2 {}", endpoint_mount_path.display()))?;
+    let (id_etht1, name_etht1) = wait_for_non_loopback_interface_up(
+        &netstack,
+        &mut wait_for_netmgr,
+        Some(&vec![id_ethx7, id_etht0].into_iter().collect()),
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    )
+    .await
+    .context("wait for third non loopback interface")?;
+    assert_ne!(id_ethx7, id_etht1, "interface IDs should be different");
+    assert_ne!(id_etht0, id_etht1, "interface IDs should be different");
+    assert_eq!(
+        &name_etht1, "etht1",
+        "second interface from network manager should use a temporary name"
+    );
+    Ok(())
 }
 
 /// Make sure the DHCP server is configured to start serving requests when NetCfg discovers

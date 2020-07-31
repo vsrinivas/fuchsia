@@ -160,9 +160,11 @@ impl Config {
 pub struct FileBackedConfig<'a> {
     path: &'a path::Path,
     config: Config,
+    temp_id: u64,
 }
 
 impl<'a> FileBackedConfig<'a> {
+    /// Loads the persistent/stable interface names from the backing file.
     pub fn load<P: AsRef<path::Path>>(path: &'a P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
         let config = match fs::File::open(path) {
@@ -177,11 +179,12 @@ impl<'a> FileBackedConfig<'a> {
                 }
             }
         }?;
-        Ok(Self { path, config })
+        Ok(Self { path, config, temp_id: 0 })
     }
 
+    /// Stores the persistent/stable interface names to the backing file.
     pub fn store(&self) -> Result<(), anyhow::Error> {
-        let Self { path, config } = self;
+        let Self { path, config, temp_id: _ } = self;
         let temp_file_path = match path.file_name() {
             None => Err(anyhow::format_err!("unexpected non-file path {}", path.display())),
             Some(file_name) => {
@@ -212,6 +215,7 @@ impl<'a> FileBackedConfig<'a> {
         Ok(())
     }
 
+    /// Returns a stable interface name for the specified interface.
     pub fn get_stable_name(
         &mut self,
         topological_path: &str,
@@ -230,6 +234,18 @@ impl<'a> FileBackedConfig<'a> {
         };
         let (_key, value) = &self.config.names[index];
         Ok(value)
+    }
+
+    /// Returns a temporary name for an interface.
+    pub fn get_temporary_name(&mut self, wlan: bool) -> String {
+        let id = self.temp_id;
+        self.temp_id += 1;
+
+        if wlan {
+            format!("wlant{}", id)
+        } else {
+            format!("etht{}", id)
+        }
     }
 }
 
@@ -348,6 +364,16 @@ mod tests {
             assert_eq!(name, test.want_name);
             assert_eq!(interface_config.config.names.len(), 1);
         }
+    }
+
+    #[test]
+    fn test_get_temporary_name() {
+        let temp_dir = tempfile::tempdir_in("/data").expect("failed to create the temp dir");
+        let path = temp_dir.path().join("net.config.json");
+        let mut interface_config =
+            FileBackedConfig::load(&path).expect("failed to load the interface config");
+        assert_eq!(&interface_config.get_temporary_name(false), "etht0");
+        assert_eq!(&interface_config.get_temporary_name(true), "wlant1");
     }
 
     #[test]

@@ -2,14 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::fmt::Display;
+
 use fidl_fuchsia_hardware_ethernet as feth;
 use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
 use fidl_fuchsia_hardware_network as fhwnet;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_netstack as fnetstack;
+use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use async_trait::async_trait;
+
+/// An error when adding a device.
+pub(super) enum AddDeviceError {
+    AlreadyExists,
+    Other(anyhow::Error),
+}
+
+impl From<anyhow::Error> for AddDeviceError {
+    fn from(e: anyhow::Error) -> AddDeviceError {
+        AddDeviceError::Other(e)
+    }
+}
+
+impl AddDeviceError {
+    pub(super) fn context<C: Display + Send + Sync + 'static>(self, context: C) -> AddDeviceError {
+        match self {
+            AddDeviceError::AlreadyExists => AddDeviceError::AlreadyExists,
+            AddDeviceError::Other(e) => AddDeviceError::Other(e.context(context)),
+        }
+    }
+}
 
 /// An abstraction over a [`Device`]'s info.
 pub(super) trait DeviceInfo {
@@ -78,7 +102,7 @@ pub(super) trait Device {
         topological_path: String,
         config: &mut fnetstack::InterfaceConfig,
         device_instance: <Self::ServiceMarker as fidl::endpoints::ServiceMarker>::Proxy,
-    ) -> Result<u64, anyhow::Error>;
+    ) -> Result<u64, AddDeviceError>;
 }
 
 /// An implementation of [`Device`] for ethernet devices.
@@ -116,7 +140,7 @@ impl Device for EthernetDevice {
         topological_path: String,
         config: &mut fnetstack::InterfaceConfig,
         device_instance: feth::DeviceProxy,
-    ) -> Result<u64, anyhow::Error> {
+    ) -> Result<u64, AddDeviceError> {
         let client = device_instance
             .into_channel()
             .map_err(|_: feth::DeviceProxy| {
@@ -124,7 +148,7 @@ impl Device for EthernetDevice {
             })?
             .into_zx_channel();
 
-        let interface_id = netcfg
+        let res = netcfg
             .netstack
             .add_ethernet_device(
                 &topological_path,
@@ -133,10 +157,14 @@ impl Device for EthernetDevice {
             )
             .await
             .context("add_ethernet_device FIDL error")?
-            .map_err(fuchsia_zircon::Status::from_raw)
-            .context("add_ethernet_device error")?;
+            .map_err(zx::Status::from_raw)
+            .map(Into::into);
 
-        Ok(interface_id.into())
+        if res == Err(zx::Status::ALREADY_EXISTS) {
+            return Err(AddDeviceError::AlreadyExists);
+        }
+
+        res.context("add_ethernet_device error").map_err(AddDeviceError::Other)
     }
 }
 
@@ -182,19 +210,19 @@ impl Device for NetworkDevice {
         topological_path: String,
         config: &mut fnetstack::InterfaceConfig,
         device_instance: fhwnet::DeviceInstanceProxy,
-    ) -> Result<u64, anyhow::Error> {
+    ) -> Result<u64, AddDeviceError> {
         let (device, req) = fidl::endpoints::create_proxy().context("create device proxy")?;
         let () = device_instance.get_device(req).context("get device")?;
         let (mac_addressing, req) =
             fidl::endpoints::create_proxy().context("create mac addressing proxy")?;
         let () = device_instance.get_mac_addressing(req).context("get mac address")?;
 
-        let interface_id = netcfg
+        netcfg
             .stack
             .add_interface(
                 fnet_stack::InterfaceConfig {
                     name: Some(config.name.clone()),
-                    topopath: Some(topological_path),
+                    topopath: Some(topological_path.clone()),
                     metric: Some(config.metric),
                 },
                 &mut fnet_stack::DeviceDefinition::Ethernet(fnet_stack::EthernetDeviceDefinition {
@@ -217,11 +245,13 @@ impl Device for NetworkDevice {
                 }),
             )
             .await
-            .context("stack add interface request")?
+            .with_context(|| format!("stack add interface request"))?
             .map_err(|e: fnet_stack::Error| {
-                anyhow::anyhow!("error adding netdev interface: {:?}", e,)
-            })?;
-
-        Ok(interface_id)
+                if e == fnet_stack::Error::AlreadyExists {
+                    AddDeviceError::AlreadyExists
+                } else {
+                    AddDeviceError::Other(anyhow::anyhow!("error adding netdev interface: {:?}", e))
+                }
+            })
     }
 }

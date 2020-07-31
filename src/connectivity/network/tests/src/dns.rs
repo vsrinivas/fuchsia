@@ -261,9 +261,10 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
         .connect_to_service::<netstack::NetstackMarker>()
         .context("connect to netstack service")?;
     let mut wait_for_netmgr_fut = netmgr.wait().fuse();
-    let _id: u32 = crate::management::wait_for_non_loopback_interface_up(
+    let (_id, _name): (u32, String) = crate::management::wait_for_non_loopback_interface_up(
         &netstack,
         &mut wait_for_netmgr_fut,
+        None,
         ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
     )
     .await

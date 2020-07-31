@@ -89,6 +89,9 @@ const WLAN_AP_NETWORK_ADDR: fnet::Ipv4Address = fidl_ip_v4!(192.168.255.248);
 /// 1 day in seconds.
 const WLAN_AP_DHCP_LEASE_TIME_SECONDS: u32 = 24 * 60 * 60;
 
+/// The maximum number of times to attempt to add a device.
+const MAX_ADD_DEVICE_ATTEMPTS: u8 = 3;
+
 /// A map of DNS server watcher streams that yields `DnsServerWatcherEvent` as DNS
 /// server updates become available.
 ///
@@ -805,10 +808,45 @@ impl<'a> NetCfg<'a> {
         match event {
             fvfs_watcher::WatchEvent::ADD_FILE | fvfs_watcher::WatchEvent::EXISTING => {
                 let filepath = path::Path::new(dev_dir_path).join(filename);
-                let () = self
-                    .add_new_device::<D>(&filepath)
-                    .await
-                    .with_context(|| format!("add new {} at {}", D::NAME, filepath.display()))?;
+
+                info!("found new {} at {}", D::NAME, filepath.display());
+
+                let mut i = 0;
+                loop {
+                    // TODO(56559): The same interface may flap so instead of using a
+                    // temporary name, try to determine if the interface flapped and wait
+                    // for the teardown to complete.
+                    match self.add_new_device::<D>(&filepath, i == 0 /* stable_name */).await {
+                        Ok(()) => {
+                            break;
+                        }
+                        Err(devices::AddDeviceError::AlreadyExists) => {
+                            i += 1;
+                            if i == MAX_ADD_DEVICE_ATTEMPTS {
+                                return Err(anyhow::anyhow!(
+                                    "failed to add {} at {} after {} attempts due to already exists error",
+                                    D::NAME,
+                                    filepath.display(),
+                                    MAX_ADD_DEVICE_ATTEMPTS,
+                                ));
+                            }
+
+                            warn!(
+                                "got already exists error on attempt {} of adding {} at {}, trying again...",
+                                i,
+                                D::NAME,
+                                filepath.display()
+                            );
+                        }
+                        Err(devices::AddDeviceError::Other(e)) => {
+                            return Err(e.context(format!(
+                                "add new {} at {}",
+                                D::NAME,
+                                filepath.display()
+                            )));
+                        }
+                    }
+                }
             }
             fvfs_watcher::WatchEvent::IDLE | fvfs_watcher::WatchEvent::REMOVE_FILE => {}
             event => {
@@ -828,18 +866,14 @@ impl<'a> NetCfg<'a> {
     async fn add_new_device<D: devices::Device>(
         &mut self,
         filepath: &path::PathBuf,
-    ) -> Result<(), anyhow::Error> {
+        stable_name: bool,
+    ) -> Result<(), devices::AddDeviceError> {
         let (topological_path, device_instance) =
             get_topo_path_and_device::<D::ServiceMarker>(filepath)
                 .await
                 .context("get topological path and device")?;
 
-        info!(
-            "found new {} {} with topological path {}",
-            D::NAME,
-            filepath.display(),
-            topological_path
-        );
+        info!("{} {} has topological path {}", D::NAME, filepath.display(), topological_path);
 
         let (info, mac) =
             D::device_info_and_mac(&device_instance).await.context("get device info and MAC")?;
@@ -851,19 +885,30 @@ impl<'a> NetCfg<'a> {
         let wlan = info.is_wlan();
         let (metric, features) = crate::get_metric_and_features(wlan);
         let eth_info = D::eth_device_info(info, mac, features);
-        let name = self
-            .persisted_interface_config
-            .get_stable_name(
-                &topological_path, /* TODO(tamird): we can probably do
-                                    * better with std::borrow::Cow. */
-                mac,
-                wlan,
-            )
-            .context("get stable name")?;
+        let interface_name = if stable_name {
+            self.persisted_interface_config
+                .get_stable_name(
+                    &topological_path, /* TODO(tamird): we can probably do
+                                        * better with std::borrow::Cow. */
+                    mac,
+                    wlan,
+                )
+                .context("get stable name")?
+                .to_string()
+        } else {
+            self.persisted_interface_config.get_temporary_name(wlan)
+        };
+
+        info!(
+            "adding {} at {} to stack with name = {}",
+            D::NAME,
+            filepath.display(),
+            interface_name
+        );
 
         let mut config = matchers::config_for_device(
             &eth_info,
-            name.to_string(),
+            interface_name,
             &topological_path,
             metric,
             &self.default_config_rules,
@@ -873,11 +918,12 @@ impl<'a> NetCfg<'a> {
         let interface_id =
             D::add_to_stack(self, topological_path.clone(), &mut config.fidl, device_instance)
                 .await
-                .context("add device to stack")?;
+                .map_err(|e| e.context("add to stack"))?;
 
         self.configure_eth_interface(interface_id, &topological_path, &eth_info, &config)
             .await
             .context("configure ethernet interface")
+            .map_err(devices::AddDeviceError::Other)
     }
 
     /// Start the DHCP server.
