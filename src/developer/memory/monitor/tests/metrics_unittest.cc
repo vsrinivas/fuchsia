@@ -53,50 +53,52 @@ class MetricsUnitTest : public gtest::RealLoopFixture {
             },
         .vmos =
             {
-                {.koid = 1, .name = "uncompressed-bootfs", .committed_bytes = 1},
-                {.koid = 2, .name = "magma_create_buffer", .committed_bytes = 2},
-                {.koid = 3, .name = "Sysmem:buf", .committed_bytes = 3},
-                {.koid = 4, .name = "test", .committed_bytes = 4},
-                {.koid = 5, .name = "test", .committed_bytes = 5},
-                {.koid = 6, .name = "test", .committed_bytes = 6},
-                {.koid = 7, .name = "test", .committed_bytes = 7},
-                {.koid = 8, .name = "test", .committed_bytes = 8},
-                {.koid = 9, .name = "test", .committed_bytes = 9},
-                {.koid = 10, .name = "test", .committed_bytes = 10},
-                {.koid = 11, .name = "test", .committed_bytes = 11},
-                {.koid = 12, .name = "test", .committed_bytes = 12},
-                {.koid = 13, .name = "test", .committed_bytes = 13},
-                {.koid = 14, .name = "test", .committed_bytes = 14},
-                {.koid = 15, .name = "test", .committed_bytes = 15},
-                {.koid = 16, .name = "test", .committed_bytes = 16},
-                {.koid = 17, .name = "test", .committed_bytes = 17},
-                {.koid = 18, .name = "test", .committed_bytes = 18},
-                {.koid = 19, .name = "test", .committed_bytes = 19},
-                {.koid = 20, .name = "test", .committed_bytes = 20},
-            },
+              {.koid = 1, .name = "uncompressed-bootfs", .committed_bytes = 1},
+              {.koid = 2, .name = "magma_create_buffer", .committed_bytes = 2},
+              {.koid = 3, .name = "SysmemAmlogicProtectedPool", .committed_bytes = 3},
+              {.koid = 4, .name = "SysmemContiguousPool", .committed_bytes = 4},
+              {.koid = 5, .name = "test", .committed_bytes = 5},
+              {.koid = 6, .name = "test", .committed_bytes = 6},
+              {.koid = 7, .name = "test", .committed_bytes = 7},
+              {.koid = 8, .name = "dart", .committed_bytes = 8},
+              {.koid = 9, .name = "test", .committed_bytes = 9},
+              {.koid = 10, .name = "test", .committed_bytes = 10},
+              {.koid = 11, .name = "test", .committed_bytes = 11},
+              {.koid = 12, .name = "test", .committed_bytes = 12},
+              {.koid = 13, .name = "test", .committed_bytes = 13},
+              {.koid = 14, .name = "test", .committed_bytes = 14},
+              {.koid = 15, .name = "test", .committed_bytes = 15},
+              {.koid = 16, .name = "test", .committed_bytes = 16},
+              {.koid = 17, .name = "test", .committed_bytes = 17},
+              {.koid = 18, .name = "test", .committed_bytes = 18},
+              {.koid = 19, .name = "test", .committed_bytes = 19},
+              {.koid = 20, .name = "test", .committed_bytes = 20},
+              {.koid = 21, .name = "test", .committed_bytes = 21},
+              {.koid = 22, .name = "test", .committed_bytes = 22},
+          },
         .processes =
             {
-                {.koid = 1, .name = "bin/bootsvc", .vmos = {1}},
-                {.koid = 2, .name = "test", .vmos = {2}},
-                {.koid = 3, .name = "driver_host:sys", .vmos = {3}},
-                {.koid = 4, .name = "/boot/bin/minfs", .vmos = {4}},
-                {.koid = 5, .name = "/boot/bin/blobfs", .vmos = {5}},
-                {.koid = 6, .name = "io.flutter.product_runner.aot", .vmos = {6}},
-                {.koid = 7, .name = "/pkg/web_engine_exe:renderer", .vmos = {7}},
-                {.koid = 8, .name = "kronk.cmx", .vmos = {8}},
-                {.koid = 9, .name = "scenic.cmx", .vmos = {9}},
-                {.koid = 10, .name = "driver_host:pdev:05:00:f", .vmos = {10}},
-                {.koid = 11, .name = "netstack.cmx", .vmos = {11}},
-                {.koid = 12, .name = "amber.cmx", .vmos = {12}},
-                {.koid = 13, .name = "pkgfs", .vmos = {13}},
-                {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
-                {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
-                {.koid = 16, .name = "fshost.cm", .vmos = {16}},
-                {.koid = 17, .name = "archivist.cm", .vmos = {17}},
-                {.koid = 18, .name = "cobalt.cmx", .vmos = {18}},
-                {.koid = 19, .name = "audio_core.cmx", .vmos = {19}},
-                {.koid = 20, .name = "context_provider.cmx", .vmos = {20}},
-            },
+              {.koid = 1, .name = "bin/bootsvc", .vmos = {1}},
+              {.koid = 2, .name = "test", .vmos = {2}},
+              {.koid = 3, .name = "driver_host:sys", .vmos = {3, 4}},
+              {.koid = 4, .name = "fshost.cm", .vmos = {5}},
+              {.koid = 5, .name = "/boot/bin/minfs", .vmos = {6}},
+              {.koid = 6, .name = "/boot/bin/blobfs", .vmos = {7}},
+              {.koid = 7, .name = "io.flutter.product_runner.aot", .vmos = {8,9}},
+              {.koid = 8, .name = "web_engine_exe:renderer", .vmos = {10}},
+              {.koid = 9, .name = "web_engine_exe:gpu", .vmos = {11}},
+              {.koid = 10, .name = "kronk.cmx", .vmos = {12}},
+              {.koid = 11, .name = "scenic.cmx", .vmos = {13}},
+              {.koid = 12, .name = "driver_host:pdev:05:00:f", .vmos = {14}},
+              {.koid = 13, .name = "netstack.cmx", .vmos = {15}},
+              {.koid = 14, .name = "pkgfs", .vmos = {16}},
+              {.koid = 15, .name = "cast_agent.cmx", .vmos = {17}},
+              {.koid = 16, .name = "archivist.cm", .vmos = {18}},
+              {.koid = 17, .name = "cobalt.cmx", .vmos = {19}},
+              {.koid = 18, .name = "audio_core.cmx", .vmos = {20}},
+              {.koid = 19, .name = "context_provider.cmx", .vmos = {21}},
+              {.koid = 20, .name = "new", .vmos = {22}},
+          },
     }};
   }
   async::Executor executor_;
@@ -140,11 +142,11 @@ TEST_F(MetricsUnitTest, All) {
     return cs.GetCapture(c, l, true /*use_capture_supplier_time*/);
   });
   RunLoopUntil([&cs] { return cs.empty(); });
-  // memory metric: 18 buckets + 3 (Orphaned, Kernel and Free buckets)  +
+  // memory metric: 20 buckets + 4 (Orphaned, Kernel, Undigested and Free buckets)  +
   // memory_general_breakdown metric: 10 +
   // memory_leak metric: 10
-  // = 43
-  EXPECT_EQ(43U, logger.logged_events().size());
+  // = 44
+  EXPECT_EQ(44U, logger.logged_events().size());
   using Breakdown = cobalt_registry::MemoryGeneralBreakdownMetricDimensionGeneralBreakdown;
   using Breakdown2 = cobalt_registry::MemoryLeakMetricDimensionGeneralBreakdown;
   for (const auto& cobalt_event : logger.logged_events()) {
@@ -153,18 +155,72 @@ TEST_F(MetricsUnitTest, All) {
       case cobalt_registry::kMemoryMetricId:
         ASSERT_EQ(1u, cobalt_event.event_codes.size());
         switch (cobalt_event.event_codes[0]) {
+          case MemoryMetricDimensionBucket::ZbiBuffer:
+            EXPECT_EQ(1u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Graphics:
+            EXPECT_EQ(2u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::ProtectedPool:
+            EXPECT_EQ(3u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::ContiguousPool:
+            EXPECT_EQ(4u, cobalt_event.payload.memory_bytes_used());
+            break;
           case MemoryMetricDimensionBucket::Fshost:
-            EXPECT_EQ(16u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(5u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Minfs:
+            EXPECT_EQ(6u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Blobfs:
+            EXPECT_EQ(7u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::FlutterApps:
+            EXPECT_EQ(8u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Flutter:
+            EXPECT_EQ(9u, cobalt_event.payload.memory_bytes_used());
             break;
           case MemoryMetricDimensionBucket::Web:
-            EXPECT_EQ(15u, cobalt_event.payload.memory_bytes_used());
+            EXPECT_EQ(21u, cobalt_event.payload.memory_bytes_used());
             break;
-          case MemoryMetricDimensionBucket::Cast:
+          case MemoryMetricDimensionBucket::Kronk:
+            EXPECT_EQ(12u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Scenic:
+            EXPECT_EQ(13u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Amlogic:
             EXPECT_EQ(14u, cobalt_event.payload.memory_bytes_used());
             break;
+          case MemoryMetricDimensionBucket::Netstack:
+            EXPECT_EQ(15u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Pkgfs:
+            EXPECT_EQ(16u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Cast:
+            EXPECT_EQ(17u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Archivist:
+            EXPECT_EQ(18u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Cobalt:
+            EXPECT_EQ(19u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Audio:
+            EXPECT_EQ(20u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Context:
+            EXPECT_EQ(21u, cobalt_event.payload.memory_bytes_used());
+            break;
+          case MemoryMetricDimensionBucket::Undigested:
+            EXPECT_EQ(22, cobalt_event.payload.memory_bytes_used());
+            break;
           case MemoryMetricDimensionBucket::Orphaned:
-            // 900 kmem.vmo - (1 + 2 + 3 + ... + 20) vmo digested in buckets = 690
-            EXPECT_EQ(690U, cobalt_event.payload.memory_bytes_used());
+            // 900 kmem.vmo - (1 + 2 + 3 + ... + 22) vmo digested in buckets = 647
+            EXPECT_EQ(647, cobalt_event.payload.memory_bytes_used());
             break;
           case MemoryMetricDimensionBucket::Kernel:
             // 60 wired + 200 total_heap + 60 mmu_overhead + 10 ipc + 20 other = 350
@@ -174,7 +230,7 @@ TEST_F(MetricsUnitTest, All) {
             EXPECT_EQ(800u, cobalt_event.payload.memory_bytes_used());
             break;
           default:
-            EXPECT_TRUE(cobalt_event.payload.memory_bytes_used() < 21);
+            ADD_FAILURE();
             break;
         }
         break;
