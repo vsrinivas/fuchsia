@@ -354,6 +354,17 @@ standard_variants += [
       ]
     }
   },
+
+  # TODO(30033): see above
+  {
+    variant = {
+      name = "kasan-sancov"
+      bases = [
+        "kasan",
+        "sancov",
+      ]
+    }
+  },
   {
     variant = {
       name = "lto"

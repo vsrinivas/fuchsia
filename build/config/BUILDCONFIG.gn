@@ -777,6 +777,14 @@ declare_args() {
       name = "kasan"
       select_variant = []
     },
+
+    # TODO(30033): Eventually this will go away and just "asan" will cover it.
+    # This is just ignored so it can be passed through to the Zircon GN build.
+    # It has no effect on variant selection in the Fuchsia GN build.
+    {
+      name = "kasan-sancov"
+      select_variant = []
+    },
   ]
 }
 
