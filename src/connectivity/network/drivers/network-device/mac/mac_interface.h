@@ -91,7 +91,7 @@ class ClientState {
       size_t shift = 0;
       static_assert(decltype(a.address.octets)::size() <= sizeof(hash));
       for (uint8_t octet : a.address.octets) {
-        hash |= static_cast<size_t>(octet << shift);
+        hash |= static_cast<size_t>(octet) << shift;
         shift += 8;
       }
       return hash;
