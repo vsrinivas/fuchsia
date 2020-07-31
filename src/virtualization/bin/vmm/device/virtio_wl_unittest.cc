@@ -472,7 +472,10 @@ TEST_F(VirtioWlTest, Recv) {
   EXPECT_EQ(new_vfd_cmd[0]->hdr.flags, 0u);
   EXPECT_EQ(new_vfd_cmd[0]->vfd_id, static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
   EXPECT_EQ(new_vfd_cmd[0]->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
-  EXPECT_GT(new_vfd_cmd[0]->pfn, 0u);
+  // We use memcpy to avoid an unaligned access, due to the packed structure.
+  uint64_t pfn;
+  memcpy(&pfn, &new_vfd_cmd[0]->pfn, sizeof(pfn));
+  EXPECT_GT(pfn, 0u);
   EXPECT_EQ(new_vfd_cmd[0]->size, static_cast<uint32_t>(PAGE_SIZE));
   EXPECT_EQ(*reinterpret_cast<uint8_t*>(new_vfd_cmd[0]->pfn * PAGE_SIZE), 0xaa);
 
