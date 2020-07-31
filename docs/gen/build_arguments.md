@@ -526,13 +526,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e89ba0d1d66fee2fa9884eada3a95edd0ce87605/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9cd1a4dadb51b31665f5e50c5ffc25bb9d10571a/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e89ba0d1d66fee2fa9884eada3a95edd0ce87605/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9cd1a4dadb51b31665f5e50c5ffc25bb9d10571a/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1953,7 +1953,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:913
+From //build/config/BUILDCONFIG.gn:921
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1962,7 +1962,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:918
+From //build/config/BUILDCONFIG.gn:926
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1989,6 +1989,9 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 }, {
   name = "kasan"
+  select_variant = []
+}, {
+  name = "kasan-sancov"
   select_variant = []
 }]
 ```
