@@ -10,14 +10,16 @@
 #include <zxtest/zxtest.h>
 
 // Asserts that a condition is true.  If false, prints an error then
-// aborts the test run.  Use only when |current_test_info| is not in scope.
+// aborts the test run.
 //
-// Note: The <unittest.h> ASSERT_* and EXPECT_* macros only work within
-// the body of a test function or a test helper since they assume that
-// |current_test_info| is in scope and that the function returns bool
-// to indicate success or failure.  This isn't always practical for the
-// tests in this library.  Crashing the process when a test fails isn't
-// great but it's better than not checking the condition.
+// This is for use when we don't want the test to continue running after a
+// failure.  zxtest's ASSERT_*() macros do "return;" on failure, which
+// doesn't work in functions with non-void return types, and it continues
+// running if the calling function doesn't check for failure with something
+// like ASSERT_NO_FATAL_FAILURES().
+//
+// Functions defined using zxtest's TEST() macro should use zxtest's
+// ASSERT_*() and EXPECT_*() assertions instead of ASSERT_CRITICAL().
 #define ASSERT_CRITICAL(x)                                                       \
   do {                                                                           \
     if (!(x)) {                                                                  \
