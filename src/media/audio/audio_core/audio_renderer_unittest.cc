@@ -165,6 +165,79 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   }
 }
 
+TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
+  auto fake_output = testing::FakeAudioOutput::Create(
+      &threading_model(), &context().device_manager(), &context().link_matrix());
+
+  context().route_graph().AddRenderer(std::move(renderer_));
+  context().route_graph().AddDevice(fake_output.get());
+
+  fidl_renderer_->SetPcmStreamType(PcmStreamType());
+  AddPayloadBuffer(0, PAGE_SIZE, fidl_renderer_.get());
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = 128;
+  fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
+  fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
+  fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
+  fidl_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
+  RunLoopUntilIdle();
+
+  std::vector<LinkMatrix::LinkHandle> links;
+  context().link_matrix().SourceLinks(*fake_output, &links);
+  ASSERT_EQ(1u, links.size());
+  auto stream = links[0].stream;
+  ASSERT_TRUE(stream);
+
+  // Expect 3 buffers. Since these have NO_TIMESTAMP and also no discontinutity flag, they should
+  // be continuous starting at pts 0.
+  constexpr size_t kPacketSizeFrames = 32;
+  int64_t expected_packet_pts = 0;
+  for (uint32_t i = 0; i < 3; ++i) {
+    auto buffer = stream->ReadLock(zx::time(0), expected_packet_pts, kPacketSizeFrames);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->is_continuous(), i != 0);
+    EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
+    EXPECT_EQ(buffer->length().Floor(), kPacketSizeFrames);
+    EXPECT_NE(nullptr, buffer->payload());
+    expected_packet_pts = buffer->end().Floor();
+  }
+
+  // Send another set of packets after lead time + padding to ensure these packets cannot be played
+  // continuously with the last set of packets. Now we use FLAG_DISCONTINUITY which means they
+  // will not be continuous with the previous packets.
+  //
+  // TODO(57377): Use a fake clock for unittests.
+  zx::nanosleep(zx::deadline_after(stream->GetMinLeadTime() + zx::msec(30)));
+  packet.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
+  fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
+  fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
+  fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
+  RunLoopUntilIdle();
+
+  {
+    auto buffer = stream->ReadLock(zx::time(0), expected_packet_pts, kPacketSizeFrames);
+    ASSERT_TRUE(buffer);
+    // GT here as we are not continuous with the previous packet.
+    EXPECT_GT(buffer->start().Floor(), expected_packet_pts);
+    EXPECT_TRUE(buffer->is_continuous());
+    EXPECT_EQ(buffer->length().Floor(), kPacketSizeFrames);
+    EXPECT_NE(nullptr, buffer->payload());
+    expected_packet_pts = buffer->end().Floor();
+  }
+
+  for (uint32_t i = 0; i < 2; ++i) {
+    auto buffer = stream->ReadLock(zx::time(0), expected_packet_pts, kPacketSizeFrames);
+    ASSERT_TRUE(buffer);
+    EXPECT_TRUE(buffer->is_continuous());
+    EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
+    EXPECT_EQ(buffer->length().Floor(), kPacketSizeFrames);
+    EXPECT_NE(nullptr, buffer->payload());
+    expected_packet_pts = buffer->end().Floor();
+  }
+}
+
 // The renderer should be routed once the format is set.
 TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_), 0u);

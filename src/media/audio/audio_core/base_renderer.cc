@@ -402,6 +402,23 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
   FractionalFrames<int64_t> packet_ffpts{0};
   if (packet.pts == fuchsia::media::NO_TIMESTAMP) {
     start_pts = next_frac_frame_pts_;
+
+    // If the packet has both pts == NO_TIMESTAMP and STREAM_PACKET_FLAG_DISCONTINUITY, then we will
+    // ensure the calculated PTS is playable (that is, greater than now + min_lead_time).
+    if (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) {
+      zx::time ref_now;
+      zx_status_t status = raw_clock().read(ref_now.get_address());
+      FX_CHECK(status == ZX_OK);
+      zx::time deadline = ref_now + min_lead_time_;
+
+      auto first_valid_frame = FractionalFrames<int64_t>::FromRaw(
+          reference_clock_to_fractional_frames_->Apply(deadline.get()));
+      if (start_pts < first_valid_frame) {
+        zx::time start_ref_time = deadline + kPaddingForUnspecifiedRefTime;
+        start_pts = FractionalFrames<int64_t>::FromRaw(
+            reference_clock_to_fractional_frames_->Apply(start_ref_time.get()));
+      }
+    }
   } else {
     // Looks like we have an explicit PTS on this packet. Boost it into the fractional input frame
     // domain, then apply our continuity threshold rules.
