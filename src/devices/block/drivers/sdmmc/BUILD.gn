@@ -65,6 +65,7 @@ test("sdmmc-test") {
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.block.partition",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.rpmb",
     "//sdk/banjo/ddk.protocol.sdio",
     "//sdk/banjo/ddk.protocol.sdmmc",
     "//sdk/fidl/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_llcpp",
