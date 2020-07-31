@@ -10,8 +10,8 @@ use anyhow::Context as _;
 use dns_server_watcher::{DnsServerWatcherEvent, DnsServers, DnsServersUpdateSource};
 use futures::future::TryFutureExt as _;
 use futures::stream::StreamExt as _;
-use log::error;
 
+use crate::errors::{self, ContextExt as _};
 use crate::{dns, DnsServerWatchers};
 
 /// Start a DHCPv6 client for the specified host interface.
@@ -20,13 +20,13 @@ pub(super) fn start_client(
     interface_id: u64,
     sockaddr: fnet::Ipv6SocketAddress,
     watchers: &mut DnsServerWatchers<'_>,
-) -> Result<bool, anyhow::Error> {
+) -> Result<(), errors::Error> {
     let source = DnsServersUpdateSource::Dhcpv6 { interface_id };
     if watchers.contains_key(&source) {
-        return Err(anyhow::anyhow!(
+        return Err(errors::Error::Fatal(anyhow::anyhow!(
             "interface with id={} already has a DHCPv6 client",
             interface_id
-        ));
+        )));
     }
 
     let params = fnet_dhcpv6::NewClientParams {
@@ -39,19 +39,16 @@ pub(super) fn start_client(
         }),
     };
     let (client, server) = fidl::endpoints::create_proxy::<fnet_dhcpv6::ClientMarker>()
-        .context("create DHCPv6 client fidl endpoints")?;
-    let () = match dhcpv6_client_provider.new_client(params, server) {
-        Ok(o) => o,
-        Err(e) => {
-            // Not all environments may have a DHCPv6 client service so we consider this a
-            // non-fatal error.
-            error!(
-                "failed to start DHCPv6 client for host interface with id={} using socketaddr {:?}: {}",
-                interface_id, sockaddr, e
-            );
-            return Ok(false);
-        }
-    };
+        .context("error creating DHCPv6 client fidl endpoints")
+        .map_err(errors::Error::Fatal)?;
+
+    // Not all environments may have a DHCPv6 client service so we consider this a
+    // non-fatal error.
+    let () = dhcpv6_client_provider
+        .new_client(params, server)
+        .context("error creating new DHCPv6 client")
+        .map_err(errors::Error::NonFatal)?;
+
     let stream = futures::stream::try_unfold(client, move |proxy| {
         proxy
             .watch_servers()
@@ -59,17 +56,21 @@ pub(super) fn start_client(
     })
     .map(move |r| {
         r.with_context(|| {
-            format!("DHCPv6 DNS server watcher stream for interface ID = {}", interface_id)
+            format!(
+                "error getting next event from DHCPv6 DNS server watcher for interface ID = {}",
+                interface_id
+            )
         })
     });
 
-    assert!(
-        watchers.insert(source, stream.boxed()).is_none(),
-        "interface with id={} should not have a DHCPv6 client",
-        interface_id
-    );
+    if watchers.insert(source, stream.boxed()).is_some() {
+        return Err(errors::Error::Fatal(anyhow::anyhow!(
+            "interface with id={} should not have a DHCPv6 client",
+            interface_id
+        )));
+    }
 
-    Ok(true)
+    Ok(())
 }
 
 /// Stops the DHCPv6 client running on the specified host interface.
@@ -80,7 +81,7 @@ pub(super) async fn stop_client(
     dns_servers: &mut DnsServers,
     interface_id: u64,
     watchers: &mut DnsServerWatchers<'_>,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), errors::Error> {
     let source = DnsServersUpdateSource::Dhcpv6 { interface_id };
 
     // Dropping the client end of the Client interface should stop the
@@ -88,13 +89,13 @@ pub(super) async fn stop_client(
     if watchers.remove(&source).is_none() {
         // Should never happen as we only set the DHCPv6 client
         // socket address if we successfully create a client.
-        return Err(anyhow::anyhow!(
+        return Err(errors::Error::Fatal(anyhow::anyhow!(
             "expected to remove a DNS watcher for host interface with id={}",
             interface_id
-        ));
+        )));
     }
 
     dns::update_servers(lookup_admin, dns_servers, source, vec![])
         .await
-        .context("clear DNS servers")
+        .context("error clearing DNS servers")
 }

@@ -7,7 +7,9 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource};
-use log::{trace, warn};
+use log::trace;
+
+use crate::errors;
 
 /// Updates the DNS servers used by the DNS resolver.
 pub(super) async fn update_servers(
@@ -15,33 +17,19 @@ pub(super) async fn update_servers(
     dns_servers: &mut DnsServers,
     source: DnsServersUpdateSource,
     servers: Vec<fnet_name::DnsServer_>,
-) -> Result<(), anyhow::Error> {
+) -> Result<(), errors::Error> {
     trace!("updating DNS servers obtained from {:?} to {:?}", source, servers);
 
     let () = dns_servers.set_servers_from_source(source, servers);
     let mut servers = dns_servers.consolidated();
     trace!("updating LookupAdmin with DNS servers = {:?}", servers);
 
-    // Netstack2's LookupAdmin service does not implement
-    // fuchsia.net.name/LookupAdmin.SetDnsServers in anticipation of the transition
-    // to dns-resolver.
-    //
-    // TODO(51998): Remove the NOT_SUPPORTED check and consider all errors as
-    // a true error.
-    let () = lookup_admin
+    lookup_admin
         .set_dns_servers(&mut servers.iter_mut())
         .await
-        .context("set DNS servers request")?
+        .context("error sending set DNS servers request")
+        .map_err(errors::Error::NonFatal)?
         .map_err(zx::Status::from_raw)
-        .or_else(|e| {
-            if e == zx::Status::NOT_SUPPORTED {
-                warn!("LookupAdmin does not support setting consolidated list of DNS servers");
-                Ok(())
-            } else {
-                Err(e)
-            }
-        })
-        .context("set DNS servers")?;
-
-    Ok(())
+        .context("error setting DNS servers")
+        .map_err(errors::Error::NonFatal)
 }

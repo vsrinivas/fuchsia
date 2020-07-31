@@ -14,23 +14,39 @@ use fuchsia_zircon as zx;
 use anyhow::Context as _;
 use async_trait::async_trait;
 
+use crate::errors;
+
 /// An error when adding a device.
 pub(super) enum AddDeviceError {
     AlreadyExists,
-    Other(anyhow::Error),
+    Other(errors::Error),
 }
 
-impl From<anyhow::Error> for AddDeviceError {
-    fn from(e: anyhow::Error) -> AddDeviceError {
+impl From<errors::Error> for AddDeviceError {
+    fn from(e: errors::Error) -> AddDeviceError {
         AddDeviceError::Other(e)
     }
 }
 
-impl AddDeviceError {
-    pub(super) fn context<C: Display + Send + Sync + 'static>(self, context: C) -> AddDeviceError {
+impl errors::ContextExt for AddDeviceError {
+    fn context<C>(self, context: C) -> AddDeviceError
+    where
+        C: Display + Send + Sync + 'static,
+    {
         match self {
             AddDeviceError::AlreadyExists => AddDeviceError::AlreadyExists,
             AddDeviceError::Other(e) => AddDeviceError::Other(e.context(context)),
+        }
+    }
+
+    fn with_context<C, F>(self, f: F) -> AddDeviceError
+    where
+        C: Display + Send + Sync + 'static,
+        F: FnOnce() -> C,
+    {
+        match self {
+            AddDeviceError::AlreadyExists => AddDeviceError::AlreadyExists,
+            AddDeviceError::Other(e) => AddDeviceError::Other(e.with_context(f)),
         }
     }
 }
@@ -85,7 +101,7 @@ pub(super) trait Device {
     /// Get the device's information and MAC address.
     async fn device_info_and_mac(
         device_instance: &<Self::ServiceMarker as fidl::endpoints::ServiceMarker>::Proxy,
-    ) -> Result<(Self::DeviceInfo, feth_ext::MacAddress), anyhow::Error>;
+    ) -> Result<(Self::DeviceInfo, feth_ext::MacAddress), errors::Error>;
 
     /// Returns an [`EthernetInfo`] representation of the device.
     ///
@@ -117,12 +133,13 @@ impl Device for EthernetDevice {
 
     async fn device_info_and_mac(
         device_instance: &feth::DeviceProxy,
-    ) -> Result<(feth_ext::EthernetInfo, feth_ext::MacAddress), anyhow::Error> {
+    ) -> Result<(feth_ext::EthernetInfo, feth_ext::MacAddress), errors::Error> {
         let info: feth_ext::EthernetInfo = device_instance
             .get_info()
             .await
             .map(Into::into)
-            .context("getting device info for ethdev")?;
+            .context("error getting device info for ethdev")
+            .map_err(errors::Error::NonFatal)?;
         let mac_addr = info.mac;
         Ok((info, mac_addr))
     }
@@ -144,7 +161,7 @@ impl Device for EthernetDevice {
         let client = device_instance
             .into_channel()
             .map_err(|_: feth::DeviceProxy| {
-                anyhow::anyhow!("failed to convert device proxy into channel",)
+                errors::Error::Fatal(anyhow::anyhow!("failed to convert device proxy into channel"))
             })?
             .into_zx_channel();
 
@@ -156,15 +173,18 @@ impl Device for EthernetDevice {
                 fidl::endpoints::ClientEnd::<feth::DeviceMarker>::new(client),
             )
             .await
-            .context("add_ethernet_device FIDL error")?
+            .context("error sending add_ethernet_device request")
+            .map_err(errors::Error::Fatal)?
             .map_err(zx::Status::from_raw)
             .map(Into::into);
 
         if res == Err(zx::Status::ALREADY_EXISTS) {
-            return Err(AddDeviceError::AlreadyExists);
+            Err(AddDeviceError::AlreadyExists)
+        } else {
+            res.context("error adding ethernet device")
+                .map_err(errors::Error::NonFatal)
+                .map_err(AddDeviceError::Other)
         }
-
-        res.context("add_ethernet_device error").map_err(AddDeviceError::Other)
     }
 }
 
@@ -180,18 +200,32 @@ impl Device for NetworkDevice {
 
     async fn device_info_and_mac(
         device_instance: &fhwnet::DeviceInstanceProxy,
-    ) -> Result<(fhwnet::Info, feth_ext::MacAddress), anyhow::Error> {
-        let (device, req) = fidl::endpoints::create_proxy().context("create device proxy")?;
-        let () = device_instance.get_device(req).context("get device")?;
-        let (mac_addressing, req) =
-            fidl::endpoints::create_proxy().context("create mac addressing proxy")?;
-        let () = device_instance.get_mac_addressing(req).context("get mac address")?;
-        let info = device.get_info().await.context("get netdev info")?;
+    ) -> Result<(fhwnet::Info, feth_ext::MacAddress), errors::Error> {
+        let (device, req) = fidl::endpoints::create_proxy()
+            .context("error creating device proxy")
+            .map_err(errors::Error::Fatal)?;
+        let () = device_instance
+            .get_device(req)
+            .context("error geting device")
+            .map_err(errors::Error::NonFatal)?;
+        let (mac_addressing, req) = fidl::endpoints::create_proxy()
+            .context("error creating mac addressing proxy")
+            .map_err(errors::Error::Fatal)?;
+        let () = device_instance
+            .get_mac_addressing(req)
+            .context("error getting MAC addressing client")
+            .map_err(errors::Error::NonFatal)?;
+        let info = device
+            .get_info()
+            .await
+            .context("error getting netdev info")
+            .map_err(errors::Error::NonFatal)?;
         let mac_addr = feth_ext::MacAddress {
             octets: mac_addressing
                 .get_unicast_address()
                 .await
-                .context("get unicast address")?
+                .context("error getting unicast MAC address")
+                .map_err(errors::Error::NonFatal)?
                 .octets,
         };
         Ok((info, mac_addr))
@@ -211,11 +245,20 @@ impl Device for NetworkDevice {
         config: &mut fnetstack::InterfaceConfig,
         device_instance: fhwnet::DeviceInstanceProxy,
     ) -> Result<u64, AddDeviceError> {
-        let (device, req) = fidl::endpoints::create_proxy().context("create device proxy")?;
-        let () = device_instance.get_device(req).context("get device")?;
-        let (mac_addressing, req) =
-            fidl::endpoints::create_proxy().context("create mac addressing proxy")?;
-        let () = device_instance.get_mac_addressing(req).context("get mac address")?;
+        let (device, req) = fidl::endpoints::create_proxy()
+            .context("error creating device proxy")
+            .map_err(errors::Error::Fatal)?;
+        let () = device_instance
+            .get_device(req)
+            .context("error getting device")
+            .map_err(errors::Error::NonFatal)?;
+        let (mac_addressing, req) = fidl::endpoints::create_proxy()
+            .context("error creating mac addressing proxy")
+            .map_err(errors::Error::Fatal)?;
+        let () = device_instance
+            .get_mac_addressing(req)
+            .context("error getting MAC addressing client")
+            .map_err(errors::Error::NonFatal)?;
 
         netcfg
             .stack
@@ -230,7 +273,9 @@ impl Device for NetworkDevice {
                         device
                             .into_channel()
                             .map_err(|_: fhwnet::DeviceProxy| {
-                                anyhow::anyhow!("failed to retrieve network device ClientEnd")
+                                errors::Error::Fatal(anyhow::anyhow!(
+                                    "failed to retrieve network device ClientEnd"
+                                ))
                             })?
                             .into(),
                     ),
@@ -238,19 +283,25 @@ impl Device for NetworkDevice {
                         mac_addressing
                             .into_channel()
                             .map_err(|_: fhwnet::MacAddressingProxy| {
-                                anyhow::anyhow!("failed to retrieve mac addressing ClientEnd")
+                                errors::Error::Fatal(anyhow::anyhow!(
+                                    "failed to retrieve mac addressing ClientEnd"
+                                ))
                             })?
                             .into(),
                     ),
                 }),
             )
             .await
-            .with_context(|| format!("stack add interface request"))?
+            .context("error sending stack add interface request")
+            .map_err(errors::Error::Fatal)?
             .map_err(|e: fnet_stack::Error| {
                 if e == fnet_stack::Error::AlreadyExists {
                     AddDeviceError::AlreadyExists
                 } else {
-                    AddDeviceError::Other(anyhow::anyhow!("error adding netdev interface: {:?}", e))
+                    AddDeviceError::Other(errors::Error::NonFatal(anyhow::anyhow!(
+                        "error adding netdev interface: {:?}",
+                        e
+                    )))
                 }
             })
     }

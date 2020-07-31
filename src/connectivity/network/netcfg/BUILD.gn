@@ -59,6 +59,7 @@ rustc_binary("bin") {
     "src/devices.rs",
     "src/dhcpv6.rs",
     "src/dns.rs",
+    "src/errors.rs",
     "src/main.rs",
     "src/matchers.rs",
   ]

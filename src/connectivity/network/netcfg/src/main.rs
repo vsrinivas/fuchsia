@@ -7,13 +7,14 @@
 // From https://docs.rs/futures/0.3.1/futures/macro.select.html:
 //   Note that select! relies on proc-macro-hack, and may require to set the compiler's
 //   recursion limit very high, e.g. #![recursion_limit="1024"].
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 extern crate network_manager_core_interface as interface;
 
 mod devices;
 mod dhcpv6;
 mod dns;
+mod errors;
 mod matchers;
 
 use std::collections::{hash_map::Entry, HashMap, HashSet};
@@ -32,7 +33,7 @@ use fidl_fuchsia_net_ext::{self as fnet_ext, IntoExt as _, IpExt as _};
 use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
-use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_net_stack_ext as fnet_stack_ext;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
 use fuchsia_component::client::connect_to_service;
@@ -52,6 +53,7 @@ use net_declare::fidl_ip_v4;
 use serde::Deserialize;
 
 use self::devices::{Device as _, DeviceInfo as _};
+use self::errors::ContextExt as _;
 
 /// Interface metrics.
 ///
@@ -392,7 +394,7 @@ impl<'a> NetCfg<'a> {
             .context("could not connect to DHCPv6 client provider")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
-                .context("loading persistent interface configurations")?;
+                .context("error loading persistent interface configurations")?;
 
         Ok(NetCfg {
             stack,
@@ -417,19 +419,19 @@ impl<'a> NetCfg<'a> {
 
         if !rules.is_empty() {
             let mut rules = netfilter::parser::parse_str_to_rules(&rules.join(""))
-                .context("parsing filter rules")?;
+                .context("error parsing filter rules")?;
             cas_filter_rules!(self.filter, get_rules, update_rules, rules);
         }
 
         if !nat_rules.is_empty() {
             let mut nat_rules = netfilter::parser::parse_str_to_nat_rules(&nat_rules.join(""))
-                .context("parsing NAT rules")?;
+                .context("error parsing NAT rules")?;
             cas_filter_rules!(self.filter, get_nat_rules, update_nat_rules, nat_rules);
         }
 
         if !rdr_rules.is_empty() {
             let mut rdr_rules = netfilter::parser::parse_str_to_rdr_rules(&rdr_rules.join(""))
-                .context("parsing RDR rules")?;
+                .context("error parsing RDR rules")?;
             cas_filter_rules!(self.filter, get_rdr_rules, update_rdr_rules, rdr_rules);
         }
 
@@ -441,7 +443,7 @@ impl<'a> NetCfg<'a> {
         &mut self,
         source: DnsServersUpdateSource,
         servers: Vec<fnet_name::DnsServer_>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), errors::Error> {
         dns::update_servers(&self.lookup_admin, &mut self.dns_servers, source, servers).await
     }
 
@@ -454,7 +456,7 @@ impl<'a> NetCfg<'a> {
         let ethdev_dir_path = &ethdev_dir_path;
         let mut ethdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
             open_directory_in_namespace(ethdev_dir_path, OPEN_RIGHT_READABLE)
-                .context("opening ethdev directory")?,
+                .context("error opening ethdev directory")?,
         )
         .await
         .with_context(|| format!("creating watcher for ethdevs {}", ethdev_dir_path))?
@@ -464,17 +466,17 @@ impl<'a> NetCfg<'a> {
         let netdev_dir_path = &netdev_dir_path;
         let mut netdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
             open_directory_in_namespace(netdev_dir_path, OPEN_RIGHT_READABLE)
-                .context("opening netdev directory")?,
+                .context("error opening netdev directory")?,
         )
         .await
-        .with_context(|| format!("creating watcher for netdevs {}", netdev_dir_path))?
+        .with_context(|| format!("error creating watcher for netdevs {}", netdev_dir_path))?
         .fuse();
 
         let mut netstack_stream = self.netstack.take_event_stream().fuse();
 
         let (dns_server_watcher, dns_server_watcher_req) =
             fidl::endpoints::create_proxy::<fnet_name::DnsServerWatcherMarker>()
-                .context("create dns server watcher")?;
+                .context("error creating dns server watcher")?;
         let () = self
             .stack
             .get_dns_server_watcher(dns_server_watcher_req)
@@ -483,7 +485,7 @@ impl<'a> NetCfg<'a> {
             DnsServersUpdateSource::Netstack,
             dns_server_watcher,
         )
-        .map(move |r| r.context("Netstack DNS server event stream"))
+        .map(move |r| r.context("error getting next Netstack DNS server update event"))
         .boxed();
 
         let dns_watchers = DnsServerWatchers::empty();
@@ -508,7 +510,7 @@ impl<'a> NetCfg<'a> {
             let () = futures::select! {
                 ethdev_dir_watcher_res = ethdev_dir_watcher_stream.try_next() => {
                     let event = ethdev_dir_watcher_res
-                        .with_context(|| format!("watching ethdevs at {}", ethdev_dir_path))?
+                        .with_context(|| format!("error watching ethdevs at {}", ethdev_dir_path))?
                         .ok_or_else(|| anyhow::anyhow!(
                             "ethdev directory {} watcher stream ended unexpectedly",
                             ethdev_dir_path
@@ -517,7 +519,7 @@ impl<'a> NetCfg<'a> {
                 }
                 netdev_dir_watcher_res = netdev_dir_watcher_stream.try_next() => {
                     let event = netdev_dir_watcher_res
-                        .with_context(|| format!("watching netdevs at {}", netdev_dir_path))?
+                        .with_context(|| format!("error watching netdevs at {}", netdev_dir_path))?
                         .ok_or_else(|| anyhow::anyhow!(
                             "netdev directory {} watcher stream ended unexpectedly",
                             netdev_dir_path
@@ -529,17 +531,25 @@ impl<'a> NetCfg<'a> {
                         .context("Netstack event stream")?
                         .ok_or(
                             anyhow::anyhow!("Netstack event stream ended unexpectedly",
-                        ))?;
-                    self.handle_netstack_event(event, dns_watchers.get_mut()).await?
+                            ))?;
+                    self.handle_netstack_event(event, dns_watchers.get_mut()).await.context("error handling netstack event")?
                 }
                 dns_watchers_res = dns_watchers.try_next() => {
-                    match dns_watchers_res.context("DNS server watchers stream")? {
-                        Some(DnsServerWatcherEvent { source, servers }) => {
-                            let () = self.update_dns_servers(source, servers).await
-                                .with_context(|| format!("handle {:?} DNS servers update", source))?;
-                        }
+                    let (source, servers) = match dns_watchers_res.context("error getting next event from DNS server watcher stream")? {
+                        Some(DnsServerWatcherEvent { source, servers }) => (source, servers),
+
                         None => {
                             unreachable!("dns watchers stream should never be exhausted")
+                        }
+                    };
+
+                    match self.update_dns_servers(source, servers).await {
+                        Ok(()) => {},
+                        Err(errors::Error::NonFatal(e)) => {
+                            error!("non-fatal error handling DNS servers update from {:?}: {}", source, e);
+                        }
+                        Err(errors::Error::Fatal(e)) => {
+                            return Err(e.context(format!("error handling {:?} DNS servers update", source)));
                         }
                     }
                 }
@@ -575,17 +585,35 @@ impl<'a> NetCfg<'a> {
         for interface in &interfaces {
             let id = interface.id;
             let _: bool = removable_ids.remove(&u64::from(id));
-            let () = self
-                .handle_netstack_interface_update(interface, watchers)
-                .await
-                .with_context(|| format!("handle netstack interface (id={}) update", id))?;
+            match self.handle_netstack_interface_update(interface, watchers).await {
+                Ok(()) => {}
+                Err(errors::Error::NonFatal(e)) => {
+                    error!(
+                        "non-fatal error handling netstack update event for interface w/ id={}: {}",
+                        id, e
+                    );
+                }
+                Err(errors::Error::Fatal(e)) => {
+                    return Err(
+                        e.context(format!("error handling netstack interface (id={}) update", id))
+                    );
+                }
+            }
         }
 
         for id in removable_ids.into_iter() {
-            let () = self
-                .handle_interface_removed(id, watchers)
-                .await
-                .with_context(|| format!("handle removed interface (id={})", id))?;
+            match self.handle_interface_removed(id, watchers).await {
+                Ok(()) => {}
+                Err(errors::Error::NonFatal(e)) => {
+                    error!(
+                        "non-fatal error handling removed event for interface with id={}: {}",
+                        id, e
+                    );
+                }
+                Err(errors::Error::Fatal(e)) => {
+                    return Err(e.context(format!("error handling removed interface (id={})", id)));
+                }
+            }
         }
 
         Ok(())
@@ -595,15 +623,15 @@ impl<'a> NetCfg<'a> {
         &mut self,
         interface_id: u64,
         watchers: &mut DnsServerWatchers<'_>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), errors::Error> {
         // TODO(56136): Configure interfaces that were not discovered through devfs.
         let state = match self.interface_states.remove(&interface_id) {
             Some(s) => s,
             None => {
-                return Err(anyhow::anyhow!(
+                return Err(errors::Error::Fatal(anyhow::anyhow!(
                     "attempted to remove state for an unknown interface with ID = {}",
                     interface_id
-                ))
+                )));
             }
         };
 
@@ -624,7 +652,10 @@ impl<'a> NetCfg<'a> {
                 )
                 .await
                 .with_context(|| {
-                    format!("stop DHCPv6 client on removed interface with id={}", interface_id)
+                    format!(
+                        "error stopping DHCPv6 client on removed interface with id={}",
+                        interface_id
+                    )
                 })?;
                 state.dhcpv6_client_addr = None;
             }
@@ -635,10 +666,7 @@ impl<'a> NetCfg<'a> {
                     "WLAN AP interface with id={} is removed, stopping DHCP server",
                     interface_id
                 );
-                match self.stop_dhcp_server().await {
-                    Ok(()) => {}
-                    Err(e) => error!("error stopping DHCP server: {}", e),
-                }
+                let () = self.stop_dhcp_server().await.context("error stopping DHCP server")?;
             }
         }
 
@@ -649,7 +677,7 @@ impl<'a> NetCfg<'a> {
         &mut self,
         interface: &fnetstack::NetInterface,
         watchers: &mut DnsServerWatchers<'_>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), errors::Error> {
         let fnetstack::NetInterface { id, flags, name, ipv6addrs, .. } = interface;
         let up = flags & fnetstack::NET_INTERFACE_FLAG_UP != 0;
 
@@ -685,10 +713,13 @@ impl<'a> NetCfg<'a> {
                     )
                     .await
                     .with_context(|| {
-                        format!("stop DHCPv6 client on down interface {} (id={})", name, id)
+                        format!(
+                            "error stopping DHCPv6 client on down interface {} (id={})",
+                            name, id
+                        )
                     })?;
-                    state.dhcpv6_client_addr = None;
 
+                    state.dhcpv6_client_addr = None;
                     return Ok(());
                 }
 
@@ -709,7 +740,7 @@ impl<'a> NetCfg<'a> {
                         )
                             .await
                             .with_context(|| {
-                                format!("stop DHCPv6 client on interface {} (id={}) since sockaddr {:?} was removed", name, id, sockaddr)
+                                format!("error stopping DHCPv6 client on interface {} (id={}) since sockaddr {:?} was removed", name, id, sockaddr)
                             })?;
                         state.dhcpv6_client_addr = None;
                     }
@@ -747,19 +778,22 @@ impl<'a> NetCfg<'a> {
                     name, id, sockaddr,
                 );
 
-                let started =
-                    dhcpv6::start_client(&self.dhcpv6_client_provider, id, sockaddr, watchers)
-                        .with_context(|| {
-                            format!("start DHCPv6 client on interface {} (id={})", name, id)
-                        })?;
-
-                if started {
-                    state.dhcpv6_client_addr = Some(sockaddr);
-                } else {
-                    warn!(
-                        "failed to start DHCPv6 client on interface {} (id={}) w/ sockaddr {:?}",
-                        name, id, sockaddr
-                    );
+                match dhcpv6::start_client(&self.dhcpv6_client_provider, id, sockaddr, watchers) {
+                    Ok(()) => {
+                        state.dhcpv6_client_addr = Some(sockaddr);
+                    }
+                    Err(errors::Error::NonFatal(e)) => {
+                        error!(
+                            "failed to start DHCPv6 client on interface {} (id={}) w/ sockaddr {:?}: {}",
+                            name, id, sockaddr, e
+                        );
+                    }
+                    Err(errors::Error::Fatal(e)) => {
+                        return Err(errors::Error::Fatal(e.context(format!(
+                            "error starting DHCPv6 client on interface {} (id={})",
+                            name, id
+                        ))));
+                    }
                 }
             }
             InterfaceState::WlanAp(WlanApInterfaceState {}) => {
@@ -771,19 +805,14 @@ impl<'a> NetCfg<'a> {
 
                 if up {
                     info!("WLAN AP interface {} (id={}) came up so starting DHCP server", name, id);
-                    match self.start_dhcp_server().await {
-                        Ok(()) => {}
-                        Err(e) => error!("error starting DHCP server: {}", e),
-                    }
+                    let () =
+                        self.start_dhcp_server().await.context("error starting DHCP server")?;
                 } else {
                     info!(
                         "WLAN AP interface {} (id={}) went down so stopping DHCP server",
                         name, id
                     );
-                    match self.stop_dhcp_server().await {
-                        Ok(()) => {}
-                        Err(e) => error!("error stopping DHCP server: {}", e),
-                    }
+                    let () = self.stop_dhcp_server().await.context("error stopping DHCP server")?;
                 }
             }
         }
@@ -823,12 +852,14 @@ impl<'a> NetCfg<'a> {
                         Err(devices::AddDeviceError::AlreadyExists) => {
                             i += 1;
                             if i == MAX_ADD_DEVICE_ATTEMPTS {
-                                return Err(anyhow::anyhow!(
+                                error!(
                                     "failed to add {} at {} after {} attempts due to already exists error",
                                     D::NAME,
                                     filepath.display(),
                                     MAX_ADD_DEVICE_ATTEMPTS,
-                                ));
+                                );
+
+                                break;
                             }
 
                             warn!(
@@ -838,9 +869,19 @@ impl<'a> NetCfg<'a> {
                                 filepath.display()
                             );
                         }
-                        Err(devices::AddDeviceError::Other(e)) => {
+                        Err(devices::AddDeviceError::Other(errors::Error::NonFatal(e))) => {
+                            error!(
+                                "non-fatal error adding {} at {}: {}",
+                                D::NAME,
+                                filepath.display(),
+                                e
+                            );
+
+                            break;
+                        }
+                        Err(devices::AddDeviceError::Other(errors::Error::Fatal(e))) => {
                             return Err(e.context(format!(
-                                "add new {} at {}",
+                                "error adding new {} at {}",
                                 D::NAME,
                                 filepath.display()
                             )));
@@ -871,12 +912,13 @@ impl<'a> NetCfg<'a> {
         let (topological_path, device_instance) =
             get_topo_path_and_device::<D::ServiceMarker>(filepath)
                 .await
-                .context("get topological path and device")?;
+                .context("error getting topological path and device")?;
 
         info!("{} {} has topological path {}", D::NAME, filepath.display(), topological_path);
 
-        let (info, mac) =
-            D::device_info_and_mac(&device_instance).await.context("get device info and MAC")?;
+        let (info, mac) = D::device_info_and_mac(&device_instance)
+            .await
+            .context("error getting device info and MAC")?;
         if !self.allow_virtual_devices && !info.is_physical() {
             warn!("{} at {} is not a physical device, skipping", D::NAME, filepath.display());
             return Ok(());
@@ -893,7 +935,8 @@ impl<'a> NetCfg<'a> {
                     mac,
                     wlan,
                 )
-                .context("get stable name")?
+                .context("error getting stable name")
+                .map_err(errors::Error::Fatal)?
                 .to_string()
         } else {
             self.persisted_interface_config.get_temporary_name(wlan)
@@ -918,27 +961,33 @@ impl<'a> NetCfg<'a> {
         let interface_id =
             D::add_to_stack(self, topological_path.clone(), &mut config.fidl, device_instance)
                 .await
-                .map_err(|e| e.context("add to stack"))?;
+                .context("error adding to stack")?;
 
         self.configure_eth_interface(interface_id, &topological_path, &eth_info, &config)
             .await
-            .context("configure ethernet interface")
+            .context("error configuring ethernet interface")
             .map_err(devices::AddDeviceError::Other)
     }
 
     /// Start the DHCP server.
-    async fn start_dhcp_server(&self) -> Result<(), anyhow::Error> {
+    async fn start_dhcp_server(&self) -> Result<(), errors::Error> {
         self.dhcp_server
             .start_serving()
             .await
-            .context("start DHCP server request")?
+            .context("eerror sending start DHCP server request")
+            .map_err(errors::Error::NonFatal)?
             .map_err(zx::Status::from_raw)
-            .context("start DHCP server")
+            .context("error starting DHCP server")
+            .map_err(errors::Error::NonFatal)
     }
 
     /// Stop the DHCP server.
-    async fn stop_dhcp_server(&self) -> Result<(), anyhow::Error> {
-        self.dhcp_server.stop_serving().await.context("stop DHCP server request")
+    async fn stop_dhcp_server(&self) -> Result<(), errors::Error> {
+        self.dhcp_server
+            .stop_serving()
+            .await
+            .context("error sending stop DHCP server request")
+            .map_err(errors::Error::NonFatal)
     }
 
     /// Configure an ethernet interface.
@@ -952,7 +1001,7 @@ impl<'a> NetCfg<'a> {
         topological_path: &str,
         info: &feth_ext::EthernetInfo,
         config: &matchers::InterfaceConfig,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), errors::Error> {
         let interface_id_u32: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
 
         if topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS) {
@@ -963,12 +1012,12 @@ impl<'a> NetCfg<'a> {
                     None
                 }
             }) {
-                return Err(anyhow::anyhow!("multiple WLAN AP interfaces are not supported, have WLAN AP interface with id = {}", id));
+                return Err(errors::Error::NonFatal(anyhow::anyhow!("multiple WLAN AP interfaces are not supported, have WLAN AP interface with id = {}", id)));
             }
 
             match self.interface_states.entry(interface_id) {
                 Entry::Occupied(entry) => {
-                    return Err(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a WLAN AP, existing state = {:?}", entry.key(), entry.get()));
+                    return Err(errors::Error::Fatal(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a WLAN AP, existing state = {:?}", entry.key(), entry.get())));
                 }
                 Entry::Vacant(entry) => {
                     let _: &mut CommonInterfaceState =
@@ -983,11 +1032,12 @@ impl<'a> NetCfg<'a> {
 
             let () = self
                 .configure_wlan_ap_and_dhcp_server(interface_id_u32, config.fidl.name.clone())
-                .await?;
+                .await
+                .context("error configuring wlan ap and dhcp server")?;
         } else {
             match self.interface_states.entry(interface_id) {
                 Entry::Occupied(entry) => {
-                    return Err(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a host, existing state = {:?}", entry.key(), entry.get()));
+                    return Err(errors::Error::Fatal(anyhow::anyhow!("multiple interfaces with the same ID = {}; attempting to add state for a host, existing state = {:?}", entry.key(), entry.get())));
                 }
                 Entry::Vacant(entry) => {
                     let _: &mut CommonInterfaceState =
@@ -997,10 +1047,16 @@ impl<'a> NetCfg<'a> {
 
             info!("discovered host interface with id={}, configuring interface", interface_id);
 
-            let () = self.configure_host(interface_id_u32, info, config).await?;
+            let () = self
+                .configure_host(interface_id_u32, info, config)
+                .await
+                .context("error configuring host")?;
         }
 
-        Ok(self.netstack.set_interface_status(interface_id_u32, true)?)
+        self.netstack
+            .set_interface_status(interface_id_u32, true)
+            .context("error sending set interface status request")
+            .map_err(errors::Error::Fatal)
     }
 
     /// Configure host interface.
@@ -1009,43 +1065,54 @@ impl<'a> NetCfg<'a> {
         interface_id: u32,
         info: &feth_ext::EthernetInfo,
         config: &matchers::InterfaceConfig,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), errors::Error> {
         if should_enable_filter(&self.filter_enabled_interface_types, &info.features) {
             info!("enable filter for nic {}", interface_id);
             let () = self
                 .stack
                 .enable_packet_filter(interface_id.into())
                 .await
-                .squash_result()
-                .context("failed to enable packet filter")?;
+                .context("error sending enable packet filter request")
+                .map_err(errors::Error::Fatal)?
+                .map_err(fnet_stack_ext::NetstackError)
+                .context("failed to enable packet filter")
+                .map_err(errors::Error::NonFatal)?;
         } else {
             info!("disable filter for nic {}", interface_id);
             let () = self
                 .stack
                 .disable_packet_filter(interface_id.into())
                 .await
-                .squash_result()
-                .context("couldn't call disable_packet_filter")?;
+                .context("error sending disable packet filter request")
+                .map_err(errors::Error::Fatal)?
+                .map_err(fnet_stack_ext::NetstackError)
+                .context("failed to disable packet filter")
+                .map_err(errors::Error::NonFatal)?;
         };
 
         match config.ip_address_config {
             matchers::IpAddressConfig::Dhcp => {
                 let (dhcp_client, server_end) =
                     fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
-                        .context("dhcp client: failed to create fidl endpoints")?;
+                        .context("dhcp client: failed to create fidl endpoints")
+                        .map_err(errors::Error::Fatal)?;
                 let () = self
                     .netstack
                     .get_dhcp_client(interface_id, server_end)
                     .await
-                    .context("failed to call netstack.get_dhcp_client")?
+                    .context("failed to call netstack.get_dhcp_client")
+                    .map_err(errors::Error::Fatal)?
                     .map_err(zx::Status::from_raw)
-                    .context("failed to get dhcp client")?;
+                    .context("failed to get dhcp client")
+                    .map_err(errors::Error::NonFatal)?;
                 let () = dhcp_client
                     .start()
                     .await
-                    .context("start DHCP client request")?
+                    .context("error sending start DHCP client request")
+                    .map_err(errors::Error::Fatal)?
                     .map_err(zx::Status::from_raw)
-                    .context("failed to start dhcp client")?;
+                    .context("failed to start dhcp client")
+                    .map_err(errors::Error::NonFatal)?;
             }
             matchers::IpAddressConfig::StaticIp(subnet) => {
                 let fnet::Subnet { mut addr, prefix_len } = subnet.into();
@@ -1053,18 +1120,23 @@ impl<'a> NetCfg<'a> {
                     .netstack
                     .set_interface_address(interface_id, &mut addr, prefix_len)
                     .await
-                    .context("set interface address request")?;
+                    .context("error sending set interface address request")
+                    .map_err(errors::Error::Fatal)?;
                 if status != fnetstack::Status::Ok {
                     // Do not consider this a fatal error because the interface could
                     // have been removed after it was added, but before we reached
                     // this point.
-                    error!(
-                        "failed to set interface address with status = {:?}: {}",
-                        status, message
-                    );
+                    return Err(errors::Error::NonFatal(anyhow::anyhow!(
+                        "failed to set interface (id={}) address to {:?} with status = {:?}: {}",
+                        interface_id,
+                        addr,
+                        status,
+                        message
+                    )));
                 }
             }
         }
+
         Ok(())
     }
 
@@ -1077,7 +1149,7 @@ impl<'a> NetCfg<'a> {
         &mut self,
         interface_id: u32,
         name: String,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), errors::Error> {
         // Calculate and set the interface address based on the network address.
         // The interface address should be the first available address.
         let network_addr_as_u32 = u32::from_be_bytes(WLAN_AP_NETWORK_ADDR.addr);
@@ -1087,16 +1159,17 @@ impl<'a> NetCfg<'a> {
             .netstack
             .set_interface_address(interface_id, &mut addr.into_ext(), WLAN_AP_PREFIX_LEN)
             .await
-            .context("set interface address request")?;
+            .context("error sending set interface address request")
+            .map_err(errors::Error::Fatal)?;
         if status != fnetstack::Status::Ok {
             // Do not consider this a fatal error because the interface could
             // have been removed after it was added, but before we reached
             // this point.
-            return Err(anyhow::anyhow!(
+            return Err(errors::Error::NonFatal(anyhow::anyhow!(
                 "failed to set interface address for WLAN AP with status = {:?}: {}",
                 status,
                 message
-            ));
+            )));
         }
 
         // First we clear any leases that the server knows about since the server
@@ -1107,9 +1180,11 @@ impl<'a> NetCfg<'a> {
             .dhcp_server
             .clear_leases()
             .await
-            .context("clear DHCP leases request")?
+            .context("error sending clear DHCP leases request")
+            .map_err(errors::Error::NonFatal)?
             .map_err(zx::Status::from_raw)
-            .context("clear DHCP leases request")?;
+            .context("error clearing DHCP leases request")
+            .map_err(errors::Error::NonFatal)?;
 
         // Configure the DHCP server.
         let v = vec![addr.into()];
@@ -1118,9 +1193,11 @@ impl<'a> NetCfg<'a> {
             .dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::IpAddrs(v))
             .await
-            .context("set DHCP IpAddrs parameter request")?
+            .context("error sending set DHCP IpAddrs parameter request")
+            .map_err(errors::Error::NonFatal)?
             .map_err(zx::Status::from_raw)
-            .context("set DHCP IpAddrs parameter")?;
+            .context("error setting DHCP IpAddrs parameter")
+            .map_err(errors::Error::NonFatal)?;
 
         let v = vec![name];
         debug!("setting DHCP BoundDeviceNames parameter to {:?}", v);
@@ -1128,9 +1205,11 @@ impl<'a> NetCfg<'a> {
             .dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::BoundDeviceNames(v))
             .await
-            .context("set DHCP BoundDeviceName parameter request")?
+            .context("error sending set DHCP BoundDeviceName parameter request")
+            .map_err(errors::Error::NonFatal)?
             .map_err(zx::Status::from_raw)
-            .context("set DHCP BoundDeviceNames parameter")?;
+            .context("error setting DHCP BoundDeviceNames parameter")
+            .map_err(errors::Error::NonFatal)?;
 
         let v = fnet_dhcp::LeaseLength {
             default: Some(WLAN_AP_DHCP_LEASE_TIME_SECONDS),
@@ -1141,9 +1220,11 @@ impl<'a> NetCfg<'a> {
             .dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::Lease(v))
             .await
-            .context("set DHCP LeaseLength parameter request")?
+            .context("error sending set DHCP LeaseLength parameter request")
+            .map_err(errors::Error::NonFatal)?
             .map_err(zx::Status::from_raw)
-            .context("set DHCP LeaseLength parameter")?;
+            .context("error setting DHCP LeaseLength parameter")
+            .map_err(errors::Error::NonFatal)?;
 
         let host_mask = u32::max_value() >> WLAN_AP_PREFIX_LEN;
         let broadcast_addr_as_u32 = network_addr_as_u32 | host_mask;
@@ -1168,9 +1249,11 @@ impl<'a> NetCfg<'a> {
         self.dhcp_server
             .set_parameter(&mut fnet_dhcp::Parameter::AddressPool(v))
             .await
-            .context("set DHCP AddressPool parameter request")?
+            .context("error sending set DHCP AddressPool parameter request")
+            .map_err(errors::Error::NonFatal)?
             .map_err(zx::Status::from_raw)
-            .context("set DHCP AddressPool parameter")
+            .context("error setting DHCP AddressPool parameter")
+            .map_err(errors::Error::NonFatal)
     }
 }
 
@@ -1191,86 +1274,112 @@ fn get_metric_and_features(wlan: bool) -> (u32, feth_ext::EthernetFeatures) {
 /// and `S`.
 async fn get_topo_path_and_device<S: fidl::endpoints::ServiceMarker>(
     filepath: &std::path::PathBuf,
-) -> Result<(String, S::Proxy), anyhow::Error> {
+) -> Result<(String, S::Proxy), errors::Error> {
     let filepath = filepath
         .to_str()
-        .ok_or_else(|| anyhow::anyhow!("failed to convert {} to str", filepath.display()))?;
+        .ok_or_else(|| anyhow::anyhow!("failed to convert {} to str", filepath.display()))
+        .map_err(errors::Error::NonFatal)?;
 
     // Get the topological path using `fuchsia.device/Controller`.
     let (controller, req) = fidl::endpoints::create_proxy::<fdev::ControllerMarker>()
-        .context("creating fuchsia.device.Controller proxy")?;
+        .context("error creating fuchsia.device.Controller proxy")
+        .map_err(errors::Error::Fatal)?;
     fdio::service_connect(filepath, req.into_channel().into())
-        .with_context(|| format!("fdio::service_connect({})", filepath))?;
+        .with_context(|| format!("error calling fdio::service_connect({})", filepath))
+        .map_err(errors::Error::NonFatal)?;
     let path = controller
         .get_topological_path()
         .await
-        .context("get topological path request")?
+        .context("error sending get topological path request")
+        .map_err(errors::Error::NonFatal)?
         .map_err(zx::Status::from_raw)
-        .context("get topological path")?;
+        .context("error getting topological path")
+        .map_err(errors::Error::NonFatal)?;
 
     // The same channel is expeceted to implement `S`.
     let ch = controller
         .into_channel()
-        .map_err(|_: fdev::ControllerProxy| anyhow::anyhow!("failed to get controller's channel"))?
+        .map_err(|_: fdev::ControllerProxy| anyhow::anyhow!("failed to get controller's channel"))
+        .map_err(errors::Error::Fatal)?
         .into_zx_channel();
-    let device =
-        fidl::endpoints::ClientEnd::<S>::new(ch).into_proxy().context("client end proxy")?;
+    let device = fidl::endpoints::ClientEnd::<S>::new(ch)
+        .into_proxy()
+        .context("error getting client end proxy")
+        .map_err(errors::Error::Fatal)?;
 
     Ok((path, device))
 }
 
 #[fuchsia_async::run_singlethreaded]
-async fn main() -> Result<(), anyhow::Error> {
-    let opt: Opt = argh::from_env();
+async fn main() {
+    // We use a closure so we can grab the error and log it before returning from main.
+    let f = || async {
+        let opt: Opt = argh::from_env();
 
-    fsyslog::init_with_tags(&["netcfg"])?;
-    fsyslog::set_severity(opt.min_severity.into());
+        fsyslog::init_with_tags(&["netcfg"])?;
+        fsyslog::set_severity(opt.min_severity.into());
 
-    info!("starting");
-    debug!("starting with options = {:?}", opt);
+        info!("starting");
+        debug!("starting with options = {:?}", opt);
 
-    let Config {
-        dns_config: DnsConfig { servers },
-        rules: default_config_rules,
-        filter_config,
-        filter_enabled_interface_types,
-    } = Config::load(format!("/config/data/{}", opt.config_data))?;
+        let Config {
+            dns_config: DnsConfig { servers },
+            rules: default_config_rules,
+            filter_config,
+            filter_enabled_interface_types,
+        } = Config::load(format!("/config/data/{}", opt.config_data))?;
 
-    let filter_enabled_interface_types: HashSet<InterfaceType> =
-        filter_enabled_interface_types.into_iter().map(Into::into).collect();
-    if filter_enabled_interface_types.iter().any(|interface_type| match interface_type {
-        &InterfaceType::UNKNOWN(_) => true,
-        _ => false,
-    }) {
-        return Err(anyhow::anyhow!(
-            "failed to parse filter_enabled_interface_types: {:?}",
-            filter_enabled_interface_types
-        ));
+        let filter_enabled_interface_types: HashSet<InterfaceType> =
+            filter_enabled_interface_types.into_iter().map(Into::into).collect();
+        if filter_enabled_interface_types.iter().any(|interface_type| match interface_type {
+            &InterfaceType::UNKNOWN(_) => true,
+            _ => false,
+        }) {
+            return Err(anyhow::anyhow!(
+                "failed to parse filter_enabled_interface_types: {:?}",
+                filter_enabled_interface_types
+            ));
+        };
+
+        let (path, allow_virtual) =
+            if opt.netemul { (NETEMUL_DEV_PATH, true) } else { (DEV_PATH, false) };
+
+        let mut netcfg =
+            NetCfg::new(path, allow_virtual, default_config_rules, filter_enabled_interface_types)
+                .context("error creating new netcfg instance")?;
+
+        let () =
+            netcfg.update_filters(filter_config).await.context("update filters based on config")?;
+
+        let servers = servers.into_iter().map(static_source_from_ip).collect();
+        debug!("updating default servers to {:?}", servers);
+        match netcfg.update_dns_servers(DnsServersUpdateSource::Default, servers).await {
+            Ok(()) => {}
+            Err(errors::Error::NonFatal(e)) => {
+                error!("non-fatal error updating default DNS servers: {}", e);
+            }
+            Err(errors::Error::Fatal(e)) => {
+                return Err(e.context("error updating default DNS servers"));
+            }
+        }
+
+        // Should never return.
+        netcfg.run().await.context("error running eventloop")
     };
 
-    let (path, allow_virtual) =
-        if opt.netemul { (NETEMUL_DEV_PATH, true) } else { (DEV_PATH, false) };
-
-    let mut netcfg =
-        NetCfg::new(path, allow_virtual, default_config_rules, filter_enabled_interface_types)
-            .context("new instance")?;
-
-    let () =
-        netcfg.update_filters(filter_config).await.context("update filters based on config")?;
-
-    let servers = servers.into_iter().map(static_source_from_ip).collect();
-    debug!("updating default servers to {:?}", servers);
-    let () = netcfg
-        .update_dns_servers(DnsServersUpdateSource::Default, servers)
-        .await
-        .context("updating default servers")?;
-
-    netcfg.run().await.context("run eventloop")
+    match f().await {
+        Ok(()) => unreachable! {},
+        Err(e) => {
+            let err_str = format!("fatal error running main: {:?}", e);
+            error!("{}", err_str);
+            panic!(err_str);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use futures::future::{self, FutureExt as _};
+    use futures::future::{self, FutureExt as _, TryFutureExt as _};
     use futures::stream::TryStreamExt as _;
     use matchers::{ConfigOption, InterfaceMatcher, InterfaceSpec};
     use net_declare::{fidl_ip, fidl_ip_v6};
@@ -1290,26 +1399,35 @@ mod tests {
         dhcpv6_client_provider: fnet_dhcpv6::ClientProviderRequestStream,
     }
 
+    impl Into<anyhow::Error> for errors::Error {
+        fn into(self) -> anyhow::Error {
+            match self {
+                errors::Error::NonFatal(e) => e,
+                errors::Error::Fatal(e) => e,
+            }
+        }
+    }
+
     fn test_netcfg<'a>() -> Result<(NetCfg<'a>, ServerEnds), anyhow::Error> {
         let (stack, _stack_server) = fidl::endpoints::create_proxy::<fnet_stack::StackMarker>()
-            .context("create stack endpoints")?;
+            .context("error creating stack endpoints")?;
         let (netstack, _netstack_server) =
             fidl::endpoints::create_proxy::<fnetstack::NetstackMarker>()
-                .context("create netstack endpoints")?;
+                .context("error creating netstack endpoints")?;
         let (lookup_admin, lookup_admin_server) =
             fidl::endpoints::create_proxy::<fnet_name::LookupAdminMarker>()
-                .context("create lookup_admin endpoints")?;
+                .context("error creating lookup_admin endpoints")?;
         let (filter, _filter_server) = fidl::endpoints::create_proxy::<fnet_filter::FilterMarker>()
             .context("create filter endpoints")?;
         let (dhcp_server, _dhcp_server_server) =
             fidl::endpoints::create_proxy::<fnet_dhcp::Server_Marker>()
-                .context("create dhcp_serveer endpoints")?;
+                .context("error creating dhcp_serveer endpoints")?;
         let (dhcpv6_client_provider, dhcpv6_client_provider_server) =
             fidl::endpoints::create_proxy::<fnet_dhcpv6::ClientProviderMarker>()
-                .context("create dhcpv6_client_provider endpoints")?;
+                .context("error creating dhcpv6_client_provider endpoints")?;
         let persisted_interface_config =
             interface::FileBackedConfig::load(&PERSISTED_INTERFACE_CONFIG_FILEPATH)
-                .context("loading persistent interface configurations")?;
+                .context("error loading persistent interface configurations")?;
 
         Ok((
             NetCfg {
@@ -1330,10 +1448,10 @@ mod tests {
             ServerEnds {
                 lookup_admin: lookup_admin_server
                     .into_stream()
-                    .context("lookup_admin server to stream")?,
+                    .context("error converting lookup_admin server to stream")?,
                 dhcpv6_client_provider: dhcpv6_client_provider_server
                     .into_stream()
-                    .context("dhcpv6_client_provider server to stream")?,
+                    .context("error converting dhcpv6_client_provider server to stream")?,
             },
         ))
     }
@@ -1399,7 +1517,11 @@ mod tests {
                     hwaddr: vec![2, 3, 4, 5, 6, 7],
                 }],
             };
-            netcfg.handle_netstack_event(event, dns_watchers).await.context("handle netstack event")
+            netcfg
+                .handle_netstack_event(event, dns_watchers)
+                .await
+                .context("error handling netstack event")
+                .map_err(Into::into)
         };
 
         /// Make sure that a new DHCPv6 client was requested, and verify its parameters.
@@ -1408,32 +1530,36 @@ mod tests {
             sockaddr: fnet::Ipv6SocketAddress,
             dns_watchers: &mut DnsServerWatchers<'_>,
         ) -> Result<fnet_dhcpv6::ClientRequestStream, anyhow::Error> {
-            let evt = server.try_next().await.context("next dhcpv6 client provider event")?;
-            let client_server =
-                match evt.ok_or(anyhow::anyhow!("expected dhcpv6 client provider request"))? {
-                    fnet_dhcpv6::ClientProviderRequest::NewClient {
+            let evt = server
+                .try_next()
+                .await
+                .context("error getting next dhcpv6 client provider event")?;
+            let client_server = match evt
+                .ok_or(anyhow::anyhow!("expected dhcpv6 client provider request"))?
+            {
+                fnet_dhcpv6::ClientProviderRequest::NewClient {
+                    params,
+                    request,
+                    control_handle: _,
+                } => {
+                    assert_eq!(
                         params,
-                        request,
-                        control_handle: _,
-                    } => {
-                        assert_eq!(
-                            params,
-                            fnet_dhcpv6::NewClientParams {
-                                interface_id: Some(INTERFACE_ID.into()),
-                                address: Some(sockaddr),
-                                models: Some(fnet_dhcpv6::OperationalModels {
-                                    stateless: Some(fnet_dhcpv6::Stateless {
-                                        options_to_request: Some(vec![
-                                            fnet_dhcpv6::RequestableOptionCode::DnsServers
-                                        ]),
-                                    }),
+                        fnet_dhcpv6::NewClientParams {
+                            interface_id: Some(INTERFACE_ID.into()),
+                            address: Some(sockaddr),
+                            models: Some(fnet_dhcpv6::OperationalModels {
+                                stateless: Some(fnet_dhcpv6::Stateless {
+                                    options_to_request: Some(vec![
+                                        fnet_dhcpv6::RequestableOptionCode::DnsServers
+                                    ]),
                                 }),
-                            }
-                        );
+                            }),
+                        }
+                    );
 
-                        request.into_stream().context("client server end to stream")?
-                    }
-                };
+                    request.into_stream().context("error converting client server end to stream")?
+                }
+            };
             assert!(dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should have a watcher");
             Ok(client_server)
         }
@@ -1446,7 +1572,7 @@ mod tests {
             let req = server
                 .try_next()
                 .await
-                .context("next lookup admin request")?
+                .context("error getting next lookup admin request")?
                 .ok_or(anyhow::anyhow!("expected lookup admin request"))?;
             if let fnet_name::LookupAdminRequest::SetDnsServers { servers, responder } = req {
                 if expected_servers != &servers {
@@ -1456,13 +1582,13 @@ mod tests {
                         expected_servers
                     ));
                 }
-                responder.send(&mut Ok(())).context("send response")
+                responder.send(&mut Ok(())).context("error sending set dns servres response")
             } else {
                 Err(anyhow::anyhow!("unknown request = {:?}", req))
             }
         }
 
-        let (mut netcfg, mut servers) = test_netcfg().context("create netcfg")?;
+        let (mut netcfg, mut servers) = test_netcfg().context("error creating test netcfg")?;
         let mut dns_watchers = DnsServerWatchers::empty();
 
         // Mock a fake DNS update from the netstack.
@@ -1478,12 +1604,12 @@ mod tests {
                         )),
                     }],
                 )
-                .map(|r| r.context("update netstack DNS servers")),
+                .map(|r| r.context("error updating netstack DNS servers").map_err(Into::into)),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
-                .map(|r| r.context("lookup admin")),
+                .map(|r| r.context("error running lookup admin")),
         )
         .await
-        .context("handle setting netstack DNS servers")?;
+        .context("error setting netstack DNS servers")?;
 
         // Mock a new interface being discovered by NetCfg (we only need to make NetCfg aware of a
         // NIC with ID `INTERFACE_ID` to test DHCPv6).
@@ -1501,14 +1627,14 @@ mod tests {
             ipv6addrs(Some(LINK_LOCAL_SOCKADDR1)),
         )
         .await
-        .context("handle netstack event with sockaddr1")?;
+        .context("error handling netstack event with sockaddr1")?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR1,
             &mut dns_watchers,
         )
         .await
-        .context("check for new client with sockaddr1")?;
+        .context("error checking for new client with sockaddr1")?;
 
         // Mock a fake DNS update from the DHCPv6 client.
         let ((), ()) = future::try_join(
@@ -1524,12 +1650,12 @@ mod tests {
                         )),
                     }],
                 )
-                .map(|r| r.context("update netstack DNS servers")),
+                .map(|r| r.context("error updating netstack DNS servers").map_err(Into::into)),
             run_lookup_admin_once(&mut servers.lookup_admin, &vec![DNS_SERVER2, DNS_SERVER1])
-                .map(|r| r.context("lookup admin")),
+                .map(|r| r.context("error running lookup admin")),
         )
         .await
-        .context("handle setting dhcpv6 DNS servers")?;
+        .context("error setting dhcpv6 DNS servers")?;
 
         // Not having any more link local IPv6 addresses should terminate the client.
         let ((), ()) = future::try_join(
@@ -1539,12 +1665,13 @@ mod tests {
                 true, /* up */
                 ipv6addrs(None),
             )
-            .map(|r| r.context("handle netstack event with sockaddr1")),
+            .map(|r| r.context("error handling netstack event with sockaddr1"))
+            .map_err(Into::into),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
-                .map(|r| r.context("lookup admin")),
+                .map(|r| r.context("error running lookup admin")),
         )
         .await
-        .context("handle client termination due to empty addresses")?;
+        .context("error handling client termination due to empty addresses")?;
         assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
         matches::assert_matches!(client_server.try_next().await, Ok(None));
 
@@ -1557,14 +1684,14 @@ mod tests {
             ipv6addrs(Some(LINK_LOCAL_SOCKADDR2)),
         )
         .await
-        .context("handle netstack event with sockaddr2")?;
+        .context("error handling netstack event with sockaddr2")?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
             &mut dns_watchers,
         )
         .await
-        .context("check for new client with sockaddr2")?;
+        .context("error checking for new client with sockaddr2")?;
 
         // Interface being down should terminate the client.
         let ((), ()) = future::try_join(
@@ -1574,12 +1701,12 @@ mod tests {
                 false, /* down */
                 ipv6addrs(Some(LINK_LOCAL_SOCKADDR2)),
             )
-            .map(|r| r.context("handle netstack event with sockaddr2 and interface down")),
+            .map(|r| r.context("error handling netstack event with sockaddr2 and interface down")),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
-                .map(|r| r.context("lookup admin")),
+                .map(|r| r.context("error running lookup admin")),
         )
         .await
-        .context("handle client tremination due to interface down")?;
+        .context("error handling client tremination due to interface down")?;
         assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
         matches::assert_matches!(client_server.try_next().await, Ok(None));
 
@@ -1592,14 +1719,14 @@ mod tests {
             ipv6addrs(Some(LINK_LOCAL_SOCKADDR2)),
         )
         .await
-        .context("handle netstack event with sockaddr2")?;
+        .context("error handling netstack event with sockaddr2")?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
             &mut dns_watchers,
         )
         .await
-        .context("check for new client with sockaddr2 after interface up again")?;
+        .context("error checking for new client with sockaddr2 after interface up again")?;
 
         // Should start a new DHCPv6 client when we get an interface changed event that shows the
         // interface as up with a new link-local address.
@@ -1610,12 +1737,12 @@ mod tests {
                 true, /* up */
                 ipv6addrs(Some(LINK_LOCAL_SOCKADDR1)),
             )
-            .map(|r| r.context("handle netstack event with sockaddr1 replacing sockaddr2")),
+            .map(|r| r.context("error handling netstack event with sockaddr1 replacing sockaddr2")),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
-                .map(|r| r.context("lookup admin")),
+                .map(|r| r.context("error running lookup admin")),
         )
         .await
-        .context("handle client termination due to address change")?;
+        .context("error handling client termination due to address change")?;
         matches::assert_matches!(client_server.try_next().await, Ok(None));
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
@@ -1623,7 +1750,7 @@ mod tests {
             &mut dns_watchers,
         )
         .await
-        .context("check for new client with sockaddr1 after address change")?;
+        .context("error checking for new client with sockaddr1 after address change")?;
 
         // An event that indicates the interface is removed should stop the client.
         let ((), ()) = future::try_join(
@@ -1632,12 +1759,13 @@ mod tests {
                     fnetstack::NetstackEvent::OnInterfacesChanged { interfaces: vec![] },
                     &mut dns_watchers,
                 )
-                .map(|r| r.context("handle netstack event with empty list of interfaces")),
+                .map(|r| r.context("error handling netstack event with empty list of interfaces"))
+                .map_err(Into::into),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
-                .map(|r| r.context("lookup admin")),
+                .map(|r| r.context("error running lookup admin")),
         )
         .await
-        .context("handle client termination due to interface removal")?;
+        .context("error handling client termination due to interface removal")?;
         assert!(!dns_watchers.contains_key(&DHCPV6_DNS_SOURCE), "should not have a watcher");
         matches::assert_matches!(client_server.try_next().await, Ok(None));
         assert!(!netcfg.interface_states.contains_key(&INTERFACE_ID.into()));

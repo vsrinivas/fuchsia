@@ -15,7 +15,7 @@ macro_rules! exec_fidl {
 
 /// Newtype wrapper of `fidl_fuchsia_net_stack::Error` so that external traits
 /// (`thiserror::Error` in particular) can be implemented for it.
-pub struct NetstackError(fidl_net_stack::Error);
+pub struct NetstackError(pub fidl_net_stack::Error);
 
 impl std::fmt::Debug for NetstackError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
