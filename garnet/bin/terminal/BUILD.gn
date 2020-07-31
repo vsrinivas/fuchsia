@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/config/fuchsia/zircon_images.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
@@ -111,19 +110,17 @@ config_data("tiles_config") {
   sources = [ "config/tiles.config" ]
 }
 
-zircon_extras_manifest("terminal_tests_zircon_deps.manifest") {
-  visibility = [ ":*" ]
-  manifest = "image"
-  patterns = [ "bin/sh" ]
-}
-
 test_package("terminal_tests") {
   deps = [
     ":lib_test",
-    ":terminal_tests_zircon_deps.manifest",
+    "//zircon/third_party/uapp/dash",
   ]
 
-  extra = get_target_outputs(":terminal_tests_zircon_deps.manifest")
+  binaries = [
+    {
+      name = "sh"
+    },
+  ]
 
   tests = [
     {
