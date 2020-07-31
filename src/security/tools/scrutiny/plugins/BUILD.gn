@@ -16,6 +16,7 @@ if (!is_fuchsia) {
     visibility = [ "//src/security/tools/scrutiny/*" ]
     deps = [
       "//src/security/tools/scrutiny/framework",
+      "//src/security/tools/scrutiny/utils",
       "//src/sys/pkg/lib/fuchsia-archive",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
@@ -47,8 +48,8 @@ if (!is_fuchsia) {
       "src/components/types.rs",
       "src/components/util.rs",
       "src/health.rs",
-      "src/management.rs",
       "src/lib.rs",
+      "src/management.rs",
       "src/search.rs",
     ]
   }
@@ -56,7 +57,5 @@ if (!is_fuchsia) {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":plugins_test($host_toolchain)",
-  ]
+  public_deps = [ ":plugins_test($host_toolchain)" ]
 }

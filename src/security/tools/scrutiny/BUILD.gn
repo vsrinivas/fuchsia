@@ -13,5 +13,6 @@ group("tests") {
     "//src/security/tools/scrutiny/app:tests",
     "//src/security/tools/scrutiny/framework:tests",
     "//src/security/tools/scrutiny/plugins:tests",
+    "//src/security/tools/scrutiny/utils:tests",
   ]
 }
