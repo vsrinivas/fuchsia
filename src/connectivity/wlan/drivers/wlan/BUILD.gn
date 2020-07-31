@@ -55,10 +55,10 @@ executable("wlan_minstrel_unittest") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
-    "//garnet/public/lib/timekeeper:testing",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/connectivity/wlan/lib/mlme/cpp/tests:test_main",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
   ]
