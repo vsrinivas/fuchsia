@@ -40,6 +40,7 @@
 #include "src/sys/appmgr/hub/hub_info.h"
 #include "src/sys/appmgr/hub/realm_hub.h"
 #include "src/sys/appmgr/log_connector_impl.h"
+#include "src/sys/appmgr/moniker.h"
 #include "src/sys/appmgr/namespace.h"
 #include "src/sys/appmgr/namespace_builder.h"
 #include "src/sys/appmgr/runner_holder.h"
@@ -78,6 +79,13 @@ struct RealmArgs {
       fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
       fbl::RefPtr<ComponentIdIndex> component_id_index);
 
+  static RealmArgs MakeWithCustomLoader(
+      fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
+      std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
+      bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
+      fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+      fbl::RefPtr<ComponentIdIndex> component_id_index, fuchsia::sys::LoaderPtr loader);
+
   fxl::WeakPtr<Realm> parent;
   std::string label;
   std::string data_path;
@@ -90,6 +98,7 @@ struct RealmArgs {
   fxl::UniqueFD appmgr_config_dir;
   CpuWatcher* cpu_watcher;
   fbl::RefPtr<ComponentIdIndex> component_id_index;
+  std::optional<fuchsia::sys::LoaderPtr> loader;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -190,9 +199,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
                               const std::string& instance_id);
 
-  // Fetches the relative realm path up to the provided |realm|
-  std::vector<std::string> RelativeRealmPath(Realm* relative_root_realm);
-
   // Creates a connection to |fuchsia::sys::internal::ComponentEventProvider|.
   zx_status_t BindComponentEventProvider(
       fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider> request);
@@ -217,6 +223,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   // Shutdown realm's namespace processing all pending messages.
   void ShutdownNamespace(ShutdownNamespaceCallback callback = nullptr);
+
+  static Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp);
 
  private:
   static uint32_t next_numbered_label_;

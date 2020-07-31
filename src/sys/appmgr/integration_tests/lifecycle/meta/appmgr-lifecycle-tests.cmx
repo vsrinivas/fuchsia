@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "test/appmgr-lifecycle-tests"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "isolated-temp"
+        ],
+        "pkgfs": [
+            "packages/config-data/0/data/appmgr"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

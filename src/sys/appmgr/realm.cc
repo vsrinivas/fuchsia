@@ -219,16 +219,6 @@ std::string ComponentUrlToPathComponent(const FuchsiaPkgUrl& fp) {
   std::replace(resource.begin(), resource.end(), '/', ':');
   return fxl::Substitute("$0:$1:$2#$3", fp.host_name(), fp.package_name(), fp.variant(), resource);
 }
-
-Moniker ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) {
-  std::vector<std::string> realm_path;
-  for (Realm* leaf = realm; leaf != nullptr; leaf = leaf->parent().get()) {
-    realm_path.push_back(leaf->label());
-  }
-  std::reverse(realm_path.begin(), realm_path.end());
-  return Moniker{.url = fp.ToString(), .realm_path = std::move(realm_path)};
-}
-
 }  // namespace
 
 // static
@@ -248,7 +238,8 @@ RealmArgs RealmArgs::Make(fxl::WeakPtr<Realm> parent, std::string label, std::st
           .additional_services = nullptr,
           .options = std::move(options),
           .appmgr_config_dir = std::move(appmgr_config_dir),
-          .component_id_index = std::move(component_id_index)};
+          .component_id_index = std::move(component_id_index),
+          .loader = std::nullopt};
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
@@ -267,7 +258,28 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
           .additional_services = std::move(additional_services),
           .options = std::move(options),
           .appmgr_config_dir = std::move(appmgr_config_dir),
-          .component_id_index = std::move(component_id_index)};
+          .component_id_index = std::move(component_id_index),
+          .loader = std::nullopt};
+}
+
+RealmArgs RealmArgs::MakeWithCustomLoader(
+    fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
+    std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
+    bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
+    fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir,
+    fbl::RefPtr<ComponentIdIndex> component_id_index, fuchsia::sys::LoaderPtr loader) {
+  return {.parent = parent,
+          .label = label,
+          .data_path = data_path,
+          .cache_path = cache_path,
+          .temp_path = temp_path,
+          .environment_services = env_services,
+          .run_virtual_console = run_virtual_console,
+          .additional_services = std::move(additional_services),
+          .options = std::move(options),
+          .appmgr_config_dir = std::move(appmgr_config_dir),
+          .component_id_index = std::move(component_id_index),
+          .loader = std::optional<fuchsia::sys::LoaderPtr>{std::move(loader)}};
 }
 
 std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
@@ -389,10 +401,14 @@ Realm::Realm(RealmArgs args, zx::job job)
         })));
   }
 
-  fuchsia::sys::ServiceProviderPtr service_provider;
-  default_namespace_->services()->AddBinding(service_provider.NewRequest());
-  service_provider->ConnectToService(fuchsia::sys::Loader::Name_,
-                                     loader_.NewRequest().TakeChannel());
+  if (args.loader) {
+    loader_ = std::move(args.loader.value());
+  } else {
+    fuchsia::sys::ServiceProviderPtr service_provider;
+    default_namespace_->services()->AddBinding(service_provider.NewRequest());
+    service_provider->ConnectToService(fuchsia::sys::Loader::Name_,
+                                       loader_.NewRequest().TakeChannel());
+  }
 
   std::string error;
   if (!files::IsDirectoryAt(appmgr_config_dir_.get(), SchemeMap::kConfigDirPath)) {
@@ -669,6 +685,15 @@ void Realm::CreateComponent(fuchsia::sys::LaunchInfo launch_info,
     CreateComponentWithRunnerForScheme(launcher_type, std::move(launch_info),
                                        std::move(component_request), std::move(callback));
   }
+}
+
+Moniker Realm::ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) {
+  std::vector<std::string> realm_path;
+  for (Realm* leaf = realm; leaf != nullptr; leaf = leaf->parent().get()) {
+    realm_path.push_back(leaf->label());
+  }
+  std::reverse(realm_path.begin(), realm_path.end());
+  return Moniker{.url = fp.ToString(), .realm_path = std::move(realm_path)};
 }
 
 void Realm::CreateShell(const std::string& path, zx::channel svc) {
@@ -1167,7 +1192,7 @@ std::string Realm::IsolatedPathForComponentInstance(const FuchsiaPkgUrl& fp,
   std::string path = old_path;
   // if (a) is possible, use it instead, and move (b) to (a) if needed.
   std::string instance_id_path;
-  auto instance_id = component_id_index_->LookupMoniker(ComputeMoniker(this, fp));
+  auto instance_id = component_id_index_->LookupMoniker(Realm::ComputeMoniker(this, fp));
   if (instance_id) {
     auto* root_realm = GetRootRealm(this);
     switch (storage_type) {

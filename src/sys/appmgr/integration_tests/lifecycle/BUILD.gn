@@ -1,0 +1,98 @@
+#Copyright 2018 The Fuchsia Authors.All rights reserved.
+#Use of this source code is governed by a BSD - style license that can be
+#found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("lifecycle") {
+  testonly = true
+  deps = [ ":appmgr-lifecycle-tests" ]
+}
+
+executable("appmgr-lifecycle-tests-bin") {
+  testonly = true
+  output_name = "appmgr-lifecycle-tests"
+
+  sources = [ "appmgr_lifecycle_tests.cc" ]
+
+  deps = [
+    ":test-lifecycle-component",
+    ":test-sysmgr-bin",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr:appmgr_for_test",
+    "//src/sys/appmgr:lib",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("test-lifecycle-component") {
+  testonly = true
+
+  sources = [ "test_lifecycle_component.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("test-sysmgr-bin") {
+  testonly = true
+
+  sources = [ "test_sysmgr.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+test_package("appmgr-lifecycle-tests") {
+  public_deps = [
+    ":appmgr-lifecycle-tests-bin",
+    ":test-lifecycle-component",
+    ":test-sysmgr-bin",
+  ]
+
+  binaries = [
+    {
+      name = "test-lifecycle-component"
+    },
+    {
+      name = "test-sysmgr-bin"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/test-lifecycle-component.cmx")
+      dest = "test-lifecycle-component.cmx"
+    },
+    {
+      path = rebase_path("meta/test-sysmgr-bin.cmx")
+      dest = "test-sysmgr-bin.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "appmgr-lifecycle-tests"
+      environments = basic_envs
+    },
+  ]
+}

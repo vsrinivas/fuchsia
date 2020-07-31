@@ -23,4 +23,8 @@ bool operator<(const Moniker& l, const Moniker& r) {
   return l.realm_path < r.realm_path;
 }
 
+bool operator==(const Moniker& l, const Moniker& r) {
+  return l.url.compare(r.url) == 0 && l.realm_path == r.realm_path;
+}
+
 }  // namespace component

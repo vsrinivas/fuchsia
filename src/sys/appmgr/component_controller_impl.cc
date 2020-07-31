@@ -187,7 +187,7 @@ void ComponentControllerBase::NotifyDiagnosticsDirReady(uint32_t max_retries) {
 }
 
 fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
-ComponentControllerBase::GetDiagnosticsDir() {
+ComponentControllerBase::GetDir(std::string path) {
   // This error would occur if the method was called when the component out/ directory wasn't ready
   // yet. This can be triggered when a listener is attached to a realm and notifies about existing
   // components. It could happen that the component exists, but its out is not ready yet. Under such
@@ -217,7 +217,7 @@ ComponentControllerBase::GetDiagnosticsDir() {
 
   const uint32_t flags = fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_RIGHT_READABLE |
                          fuchsia::io::OPEN_RIGHT_WRITABLE;
-  exported_dir_->Open(flags, 0u /* mode */, "diagnostics", diagnostics_dir_node.NewRequest());
+  exported_dir_->Open(flags, 0u /* mode */, path, diagnostics_dir_node.NewRequest());
   return bridge.consumer.promise().and_then([diagnostics_dir_node =
                                                  std::move(diagnostics_dir_node)]() mutable {
     auto diagnostics_dir =
@@ -225,6 +225,16 @@ ComponentControllerBase::GetDiagnosticsDir() {
     return fit::make_result_promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>(
         fit::ok(std::move(diagnostics_dir)));
   });
+}
+
+fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
+ComponentControllerBase::GetDiagnosticsDir() {
+  return GetDir("diagnostics");
+}
+
+fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
+ComponentControllerBase::GetServiceDir() {
+  return GetDir("svc");
 }
 
 void ComponentControllerBase::SendOnDirectoryReadyEvent() {

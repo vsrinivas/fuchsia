@@ -5,6 +5,7 @@
 #ifndef SRC_SYS_APPMGR_MONIKER_H_
 #define SRC_SYS_APPMGR_MONIKER_H_
 
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,21 @@ struct Moniker {
 // This operator allows |Moniker| to be used as a key in a std::map<>.
 bool operator<(const Moniker& l, const Moniker& r);
 
+// This operator allows |Moniker| to be used in an std::find<>
+bool operator==(const Moniker& l, const Moniker& r);
+
 }  // namespace component
+
+namespace std {
+// This allows |Moniker| to be used in an std::unordered_set<>
+template <>
+struct hash<component::Moniker> {
+  size_t operator()(const component::Moniker& moniker) const {
+    string realm_url =
+        accumulate(moniker.realm_path.begin(), moniker.realm_path.end(), std::string(""));
+    return hash<string>()(moniker.url + ":" + realm_url);
+  }
+};
+}  // namespace std
 
 #endif  // SRC_SYS_APPMGR_MONIKER_H_

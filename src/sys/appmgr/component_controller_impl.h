@@ -108,6 +108,9 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   // Provides a handle to the component out/diagnostics directory if one exists.
   fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetDiagnosticsDir();
 
+  // Provides a handle to the component out/svc directory if one exists.
+  fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetServiceDir();
+
  protected:
   ComponentHub* hub() { return &hub_; }
   fxl::RefPtr<Namespace> ns() const { return ns_; }
@@ -125,6 +128,10 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
  private:
   // Notifies a realm's ComponentEventListener with the out/diagnostics directory for a component.
   void NotifyDiagnosticsDirReady(uint32_t max_retries);
+
+  // This is the implementation of |GetDiagnosticsDir| and |GetServiceDir| as the only difference is
+  // the name of the directory they are requesting.
+  fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t> GetDir(std::string path);
 
   async::Executor executor_;
 

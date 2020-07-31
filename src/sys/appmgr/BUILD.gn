@@ -108,16 +108,21 @@ source_set("appmgr_for_test") {
   sources = [
     "appmgr.cc",
     "appmgr.h",
+    "lifecycle.cc",
+    "lifecycle.h",
   ]
 
   public_deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fs",
   ]
 }
@@ -128,13 +133,18 @@ executable("bin") {
   sources = [
     "appmgr.cc",
     "appmgr.h",
+    "lifecycle.cc",
+    "lifecycle.h",
     "main.cc",
   ]
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/sys/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
   # appmgr starts early in the boot sequence before shared libraries from

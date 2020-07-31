@@ -16,6 +16,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/sys/appmgr/appmgr.h"
+#include "src/sys/appmgr/moniker.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace {
@@ -84,7 +85,7 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
+  auto pa_directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   zx::channel svc_for_sys_server, svc_for_sys_client;
   status = zx::channel::create(0, &svc_for_sys_server, &svc_for_sys_client);
@@ -120,7 +121,14 @@ int main(int argc, char** argv) {
 
   trace::TraceProvider trace_provider(std::move(trace_client), loop.dispatcher());
 
-  component::AppmgrArgs args{.pa_directory_request = std::move(request),
+  auto lifecycle_request = zx_take_startup_handle(PA_LIFECYCLE);
+  std::unordered_set<component::Moniker> lifecycle_allowlist;
+  lifecycle_allowlist.insert(component::Moniker{
+      .url = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx", .realm_path = {"sys"}});
+
+  component::AppmgrArgs args{.pa_directory_request = std::move(pa_directory_request),
+                             .lifecycle_request = std::move(lifecycle_request),
+                             .lifecycle_allowlist = std::move(lifecycle_allowlist),
                              .root_realm_services = std::move(root_realm_services),
                              .environment_services = std::move(environment_services),
                              .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",

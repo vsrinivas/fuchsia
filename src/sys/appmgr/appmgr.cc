@@ -5,9 +5,11 @@
 #include "src/sys/appmgr/appmgr.h"
 
 #include <fcntl.h>
+#include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/zx/time.h>
@@ -42,7 +44,11 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
       sysmgr_retry_crashes_(args.retry_sysmgr_crash),
       sysmgr_permanently_failed_(false),
-      storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)) {
+      sysmgr_running_(false),
+      storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)),
+      lifecycle_server_(this),
+      lifecycle_executor_(dispatcher),
+      lifecycle_allowlist_(std::move(args.lifecycle_allowlist)) {
   RecordSelfCpuStats();
   inspector_.GetRoot().CreateLazyNode(
       "inspect_stats",
@@ -65,24 +71,48 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       ComponentIdIndex::CreateFromAppmgrConfigDir(appmgr_config_dir);
   FX_CHECK(component_id_index) << "Cannot read component ID Index. error = "
                                << static_cast<int>(component_id_index.error());
-  RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
-      nullptr, internal::kRootLabel, kRootDataDir, kRootCacheDir, kRootTempDir,
-      std::move(args.environment_services), args.run_virtual_console,
-      std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
-      std::move(appmgr_config_dir), component_id_index.take_value());
+
+  RealmArgs realm_args;
+  if (args.loader) {
+    FX_LOGS(INFO) << "Creating root realm with a custom loader";
+    realm_args = RealmArgs::MakeWithCustomLoader(
+        nullptr, internal::kRootLabel, kRootDataDir, kRootCacheDir, kRootTempDir,
+        std::move(args.environment_services), args.run_virtual_console,
+        std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
+        std::move(appmgr_config_dir), component_id_index.take_value(),
+        std::move(args.loader.value()));
+  } else {
+    realm_args = RealmArgs::MakeWithAdditionalServices(
+        nullptr, internal::kRootLabel, kRootDataDir, kRootCacheDir, kRootTempDir,
+        std::move(args.environment_services), args.run_virtual_console,
+        std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
+        std::move(appmgr_config_dir), component_id_index.take_value());
+  }
   realm_args.cpu_watcher = cpu_watcher_.get();
   root_realm_ = Realm::Create(std::move(realm_args));
   FX_CHECK(root_realm_) << "Cannot create root realm ";
 
-  // 2. Prepare to run sysmgr and install callback to actually start it once the
+  // 2. Listen for lifecycle requests
+  zx_status_t status;
+  if (args.lifecycle_request != ZX_HANDLE_INVALID) {
+    status = lifecycle_server_.Create(dispatcher, zx::channel(std::move(args.lifecycle_request)));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to bind lifecycle service.";
+      return;
+    }
+  }
+
+  // 3. Prepare to run sysmgr and install callback to actually start it once the
   //    logs are connected.
   auto run_sysmgr = [this] {
     sysmgr_backoff_.Start();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = sysmgr_url_;
     launch_info.arguments = fidl::Clone(sysmgr_args_);
+    sysmgr_.events().OnDirectoryReady = [this] { sysmgr_running_ = true; };
     sysmgr_.events().OnTerminated = [this](zx_status_t status,
                                            TerminationReason termination_reason) {
+      sysmgr_running_ = false;
       if (termination_reason != TerminationReason::EXITED) {
         FX_LOGS(WARNING) << "sysmgr launch failed: "
                          << sys::TerminationReasonToString(termination_reason);
@@ -126,12 +156,12 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     }
   });
 
-  // 3. Publish outgoing directories.
+  // 4. Publish outgoing directories.
   // Connect to the tracing service, and then publish the root realm's hub
   // directory as 'hub/' and the first nested realm's (to be created by sysmgr)
   // service directory as 'svc/'.
   zx::channel svc_client_chan, svc_server_chan;
-  zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
+  status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to create channel: " << status;
     return;
@@ -148,6 +178,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     // In test environments the tracing registry may not be available. If this
     // fails, let's still proceed.
   }
+
   if (args.pa_directory_request != ZX_HANDLE_INVALID) {
     auto svc = fbl::AdoptRef(new fs::RemoteDir(std::move(svc_client_chan)));
     auto diagnostics = fbl::AdoptRef(new fs::PseudoDir());
@@ -188,6 +219,84 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 }
 
 Appmgr::~Appmgr() = default;
+
+void Appmgr::FindLifecycleComponentsInRealm(Realm* realm,
+                                            std::vector<LifecycleComponent>* lifecycle_components) {
+  // Look through child realms
+  for (auto it = realm->children().begin(); it != realm->children().end(); ++it) {
+    FindLifecycleComponentsInRealm(it->first, lifecycle_components);
+  }
+
+  // Look for applications in the lifecycle allow list
+  auto applications = realm->applications();
+  for (auto it = applications.begin(); it != applications.end(); ++it) {
+    auto controller = it->first;
+
+    FuchsiaPkgUrl package_url;
+    package_url.Parse(controller->url());
+    Moniker component_moniker = Realm::ComputeMoniker(realm, package_url);
+
+    if (lifecycle_allowlist_.find(component_moniker) == lifecycle_allowlist_.end()) {
+      continue;
+    }
+
+    FX_LOGS(INFO) << component_moniker.url << " is in the lifecycle allow list.";
+    lifecycle_components->emplace_back(it->second, component_moniker);
+  }
+}
+
+struct ShutdownCountdown {
+  int component_count;
+  fit::function<void(zx_status_t)> complete_callback;
+  std::vector<fuchsia::process::lifecycle::LifecyclePtr> lifecycle_ptrs;
+
+  ShutdownCountdown(int component_count, fit::function<void(zx_status_t)> complete_callback)
+      : component_count(component_count), complete_callback(std::move(complete_callback)) {}
+};
+
+void Appmgr::Shutdown(fit::function<void(zx_status_t)> callback) {
+  FX_LOGS(INFO) << "appmgr shutdown called.";
+
+  std::vector<LifecycleComponent> lifecycle_components;
+  FindLifecycleComponentsInRealm(root_realm_.get(), &lifecycle_components);
+
+  auto components_remaining = std::make_shared<ShutdownCountdown>(
+      lifecycle_components.size(), std::move(callback));
+
+  // Schedule tasks to shutdown the running lifecycle components. These tasks will be performed
+  // concurrently.
+  for (auto component : lifecycle_components) {
+    // Connect to its lifecycle service and tell it to shutdown.
+    lifecycle_executor_.schedule_task(component.controller->GetServiceDir().and_then(
+        [components_remaining, component](fidl::InterfaceHandle<fuchsia::io::Directory>& dir) {
+          // The lifecycle_allowlist_ contains v1 components which expose their services over svc/
+          // instead of the PA_LIFECYCLE channel.
+          fuchsia::process::lifecycle::LifecyclePtr lifecycle;
+          zx_status_t status = fdio_service_connect_at(
+              dir.TakeChannel().release(), "fuchsia.process.lifecycle.Lifecycle",
+              lifecycle.NewRequest().TakeChannel().release());
+          if (status != ZX_OK) {
+            FX_LOGS(ERROR) << "Failed to connect to fuchsia.process.lifecycle.Lifecycle for "
+                           << component.moniker.url << ".";
+            return;
+          }
+
+          lifecycle.set_error_handler(
+              [components_remaining, url = component.moniker.url](zx_status_t status) {
+                components_remaining.get()->component_count--;
+                if (components_remaining.get()->component_count == 0) {
+                  FX_LOGS(INFO) << "All lifecycle components shut down.";
+                  components_remaining.get()->complete_callback(ZX_OK);
+                }
+              });
+
+          lifecycle->Stop();
+
+          // Keep the lifecycle from being destroyed to ensure the channel stays open.
+          components_remaining->lifecycle_ptrs.push_back(std::move(lifecycle));
+        }));
+  }
+}
 
 void Appmgr::RecordSelfCpuStats() {
   zx::job my_job;
