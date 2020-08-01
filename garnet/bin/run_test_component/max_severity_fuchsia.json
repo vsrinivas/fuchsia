@@ -1,6 +1,10 @@
 {
    "tests": [
       {
+         "url": "fuchsia-pkg://fuchsia.com/logging-cpp-tests#meta/logging_cpp_unittests.cmx",
+         "max_severity": "FATAL"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/gesture_recognizers_tests.cmx",
          "max_severity": "ERROR"
       },

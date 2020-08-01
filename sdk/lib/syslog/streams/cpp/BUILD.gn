@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -15,14 +16,16 @@ group("tests") {
   deps = [ ":streams-cpp-tests" ]
 }
 
-source_set("streams-encoder") {
+sdk_source_set("streams-encoder") {
+  category = "internal"
+  sdk_name = "streams_encoder"
+
   sources = [
     "encode.cc",
     "encode.h",
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
     "//zircon/public/lib/zx",
   ]

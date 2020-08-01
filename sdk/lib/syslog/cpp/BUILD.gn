@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_shared_library.gni")
 import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
@@ -55,7 +56,7 @@ sdk_source_set("backend_legacy") {
   include_base = "//sdk"
 
   if (is_fuchsia) {
-    sources = [ "logging_backend_fuchsia.cc" ]
+    sources = [ "logging_backend_fuchsia_legacy.cc" ]
 
     libs = [ "zircon" ]
 
@@ -66,6 +67,47 @@ sdk_source_set("backend_legacy") {
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/syslog",
     ]
+
+    public_configs = [ "//sdk/config" ]
+  } else {
+    public_deps = [ ":backend_host" ]
+  }
+}
+
+sdk_shared_library("backend_fuchsia_globals") {
+  category = "internal"
+
+  sources = [
+    "logging_backend_fuchsia_globals.cc",
+    "logging_backend_fuchsia_globals.h",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+sdk_source_set("backend") {
+  # Keep internal for now until the API stabilizes.
+  category = "internal"
+
+  sdk_name = "syslog_cpp_backend"
+
+  if (is_fuchsia) {
+    sources = [
+      "logging_backend_fuchsia.cc",
+      "logging_backend_fuchsia_globals.h",
+    ]
+
+    deps = [
+      ":backend_fuchsia_globals",
+      ":cpp",
+      "//sdk/fidl/fuchsia.diagnostics.stream",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+      "//sdk/lib/fdio",
+      "//sdk/lib/syslog/streams/cpp:streams-encoder",
+      "//zircon/public/lib/fit",
+    ]
+
+    include_base = "//sdk"
 
     public_configs = [ "//sdk/config" ]
   } else {
@@ -95,12 +137,31 @@ executable("logging_cpp_unittests") {
   }
 }
 
+executable("logging_cpp_unittests_structured") {
+  testonly = true
+
+  sources = [ "log_structure_unittest.cc" ]
+
+  deps = [
+    ":backend",
+    ":cpp",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 test_package("logging-cpp-tests") {
-  deps = [ ":logging_cpp_unittests" ]
+  deps = [
+    ":logging_cpp_unittests",
+    ":logging_cpp_unittests_structured",
+  ]
 
   tests = [
     {
       name = "logging_cpp_unittests"
+    },
+    {
+      name = "logging_cpp_unittests_structured"
     },
   ]
 }
