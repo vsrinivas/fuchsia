@@ -1899,6 +1899,9 @@ fn check_url_scheme(
                     }
                 }
                 cm_types::ParseError::InvalidValue => Error::invalid_field(decl_type, keyword),
+                e => {
+                    panic!("unexpected parse error: {:?}", e);
+                }
             });
             return false;
         }

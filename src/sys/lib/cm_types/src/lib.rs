@@ -7,7 +7,7 @@
 //! and deserialization implementations that perform the required validation.
 
 use {
-    serde::de,
+    serde::{de, ser},
     serde::{Deserialize, Serialize},
     std::{borrow::Cow, default::Default, fmt, str::FromStr},
     thiserror::Error,
@@ -28,6 +28,12 @@ pub enum ParseError {
     /// The string was too long or too short.
     #[error("invalid length")]
     InvalidLength,
+    /// A name was expected and the string was a path.
+    #[error("not a name")]
+    NotAName,
+    /// A path was expected and the string was a name.
+    #[error("not a path")]
+    NotAPath,
 }
 
 impl Name {
@@ -112,6 +118,9 @@ impl<'de> de::Deserialize<'de> for Name {
                         s.len(),
                         &"a non-empty name no more than 100 characters in length",
                     ),
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
                 })
             }
         }
@@ -198,6 +207,152 @@ impl<'de> de::Deserialize<'de> for Path {
                         s.len(),
                         &"a non-empty path no more than 1024 characters in length",
                     ),
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
+                })
+            }
+        }
+        deserializer.deserialize_string(Visitor)
+    }
+}
+
+/// A string that could be a name or filesystem path.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum NameOrPath {
+    Name(Name),
+    Path(Path),
+}
+
+impl NameOrPath {
+    /// Get the name if this is a name, or return an error if not.
+    pub fn extract_name(self) -> Result<Name, ParseError> {
+        match self {
+            Self::Name(n) => Ok(n),
+            Self::Path(_) => Err(ParseError::NotAName),
+        }
+    }
+
+    /// Get the name if this is a name, or return an error if not.
+    pub fn extract_name_borrowed(&self) -> Result<&Name, ParseError> {
+        match self {
+            Self::Name(ref n) => Ok(n),
+            Self::Path(_) => Err(ParseError::NotAName),
+        }
+    }
+
+    /// Get the path if this is a path, or return an error if not.
+    pub fn extract_path(self) -> Result<Path, ParseError> {
+        match self {
+            Self::Path(p) => Ok(p),
+            Self::Name(_) => Err(ParseError::NotAPath),
+        }
+    }
+
+    /// Get the path if this is a path, or return an error if not.
+    pub fn extract_path_borrowed(&self) -> Result<&Path, ParseError> {
+        match self {
+            Self::Path(ref p) => Ok(p),
+            Self::Name(_) => Err(ParseError::NotAPath),
+        }
+    }
+
+    /// Return true if this object holds a name.
+    pub fn is_name(&self) -> bool {
+        match self {
+            Self::Name(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Return true if this object holds a path.
+    pub fn is_path(&self) -> bool {
+        match self {
+            Self::Path(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Return a string representation of this name or path.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Name(s) => &s.0,
+            Self::Path(s) => &s.0,
+        }
+    }
+}
+
+impl FromStr for NameOrPath {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if s.starts_with("/") {
+            NameOrPath::Path(s.parse()?)
+        } else {
+            NameOrPath::Name(s.parse()?)
+        })
+    }
+}
+
+impl From<NameOrPath> for String {
+    fn from(n: NameOrPath) -> Self {
+        n.to_string()
+    }
+}
+
+impl fmt::Display for NameOrPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.as_str(), f)
+    }
+}
+
+impl ser::Serialize for NameOrPath {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> de::Deserialize<'de> for NameOrPath {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = NameOrPath;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(
+                    "a non-empty path no more than 1024 characters \
+                     in length, with a leading `/`, and containing no \
+                     empty path segments, or \
+                     a non-empty string no more than 100 characters in \
+                     length, containing only alpha-numeric characters",
+                )
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                s.parse().map_err(|err| match err {
+                    ParseError::InvalidValue => E::invalid_value(
+                        de::Unexpected::Str(s),
+                        &"a path with leading `/` and non-empty segments, or \
+                              a name containing only alpha-numeric characters or [_-.]",
+                    ),
+                    ParseError::InvalidLength => E::invalid_length(
+                        s.len(),
+                        &"a non-empty path no more than 1024 characters in length, or \
+                              a non-empty name no more than 100 characters in length",
+                    ),
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
                 })
             }
         }
@@ -277,6 +432,9 @@ impl<'de> de::Deserialize<'de> for RelativePath {
                         s.len(),
                         &"a non-empty path no more than 1024 characters in length",
                     ),
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
                 })
             }
         }
@@ -354,6 +512,9 @@ impl<'de> de::Deserialize<'de> for Url {
                         s.len(),
                         &"a non-empty URL no more than 4096 characters in length",
                     ),
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
                 })
             }
         }
@@ -446,6 +607,9 @@ impl<'de> de::Deserialize<'de> for UrlScheme {
                         s.len(),
                         &"a non-empty URL scheme no more than 100 characters in length",
                     ),
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
                 })
             }
         }

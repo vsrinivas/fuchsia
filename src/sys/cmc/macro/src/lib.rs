@@ -115,6 +115,9 @@ fn gen_visit_str(ty: Option<TokenStream2>, expected: &syn::LitStr) -> TokenStrea
                     ParseError::InvalidLength => {
                         E::invalid_length(value.len(), &#expected)
                     }
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
                 })?;
             Ok(#ret)
         }

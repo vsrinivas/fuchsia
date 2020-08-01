@@ -9,8 +9,8 @@ use thiserror::Error;
 
 // Re-export symbols.
 pub use cm_types::{
-    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, StorageType,
-    Url, UrlScheme,
+    DependencyType, Durability, Name, NameOrPath, ParseError, Path, RelativePath, StartupMode,
+    StorageType, Url, UrlScheme,
 };
 
 /// The in-memory representation of a binary Component Manifest JSON file.
@@ -253,9 +253,9 @@ pub struct UseProtocol {
     /// Used service source.
     pub source: Ref,
     /// Used service source path.
-    pub source_path: Path,
+    pub source_path: NameOrPath,
     /// Used service target path.
-    pub target_path: Path,
+    pub target_path: NameOrPath,
 }
 
 /// Used directory capability. See [`UseDirectoryDecl`].
@@ -266,9 +266,9 @@ pub struct UseDirectory {
     /// Used directory source.
     pub source: Ref,
     /// Used directory source path.
-    pub source_path: Path,
+    pub source_path: NameOrPath,
     /// Used directory target path.
-    pub target_path: Path,
+    pub target_path: NameOrPath,
     /// Used rights for the directory.
     pub rights: Rights,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -363,8 +363,8 @@ pub struct ExposeService {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExposeProtocol {
     pub source: Ref,
-    pub source_path: Path,
-    pub target_path: Path,
+    pub source_path: NameOrPath,
+    pub target_path: NameOrPath,
     pub target: ExposeTarget,
 }
 
@@ -374,8 +374,8 @@ pub struct ExposeProtocol {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExposeDirectory {
     pub source: Ref,
-    pub source_path: Path,
-    pub target_path: Path,
+    pub source_path: NameOrPath,
+    pub target_path: NameOrPath,
     pub target: ExposeTarget,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
@@ -437,9 +437,9 @@ pub struct OfferService {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferProtocol {
     pub source: Ref,
-    pub source_path: Path,
+    pub source_path: NameOrPath,
     pub target: Ref,
-    pub target_path: Path,
+    pub target_path: NameOrPath,
     /// Offered capability dependency_type
     pub dependency_type: DependencyType,
 }
@@ -450,9 +450,9 @@ pub struct OfferProtocol {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferDirectory {
     pub source: Ref,
-    pub source_path: Path,
+    pub source_path: NameOrPath,
     pub target: Ref,
-    pub target_path: Path,
+    pub target_path: NameOrPath,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rights: Option<Rights>,
     #[serde(skip_serializing_if = "Option::is_none")]

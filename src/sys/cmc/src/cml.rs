@@ -8,107 +8,13 @@ use {
     cmc_macro::{CheckedVec, OneOrMany, Reference},
     serde::{de, Deserialize},
     serde_json::{Map, Value},
-    std::{collections::HashMap, fmt, str::FromStr},
+    std::{collections::HashMap, fmt},
 };
 
 pub use cm_types::{
-    DependencyType, Durability, Name, ParseError, Path, RelativePath, StartupMode, StorageType, Url,
+    DependencyType, Durability, Name, NameOrPath, ParseError, Path, RelativePath, StartupMode,
+    StorageType, Url,
 };
-
-/// A string that could be a name or filesystem path.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum NameOrPath {
-    Name(Name),
-    Path(Path),
-}
-
-impl NameOrPath {
-    /// Get the name if this is a name, or return an error if not.
-    pub fn extract_name(self) -> Result<Name, Error> {
-        match self {
-            Self::Name(n) => Ok(n),
-            Self::Path(_) => Err(Error::internal("not a name")),
-        }
-    }
-
-    /// Get the name if this is a name, or return an error if not.
-    pub fn extract_name_borrowed(&self) -> Result<&Name, Error> {
-        match self {
-            Self::Name(ref n) => Ok(n),
-            Self::Path(_) => Err(Error::internal("not a name")),
-        }
-    }
-
-    /// Get the path if this is a path, or return an error if not.
-    pub fn extract_path(self) -> Result<Path, Error> {
-        match self {
-            Self::Path(p) => Ok(p),
-            Self::Name(_) => Err(Error::internal("not a path")),
-        }
-    }
-
-    /// Get the path if this is a path, or return an error if not.
-    pub fn extract_path_borrowed(&self) -> Result<&Path, Error> {
-        match self {
-            Self::Path(ref p) => Ok(p),
-            Self::Name(_) => Err(Error::internal("not a path")),
-        }
-    }
-}
-
-impl FromStr for NameOrPath {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(if s.starts_with("/") {
-            NameOrPath::Path(s.parse()?)
-        } else {
-            NameOrPath::Name(s.parse()?)
-        })
-    }
-}
-
-impl<'de> de::Deserialize<'de> for NameOrPath {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        struct Visitor;
-
-        impl<'de> de::Visitor<'de> for Visitor {
-            type Value = NameOrPath;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str(
-                    "a non-empty path no more than 1024 characters \
-                     in length, with a leading `/`, and containing no \
-                     empty path segments, or \
-                     a non-empty string no more than 100 characters in \
-                     length, containing only alpha-numeric characters",
-                )
-            }
-
-            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                s.parse().map_err(|err| match err {
-                    ParseError::InvalidValue => E::invalid_value(
-                        de::Unexpected::Str(s),
-                        &"a path with leading `/` and non-empty segments, or \
-                              a name containing only alpha-numeric characters or [_-.]",
-                    ),
-                    ParseError::InvalidLength => E::invalid_length(
-                        s.len(),
-                        &"a non-empty path no more than 1024 characters in length, or \
-                              a non-empty name no more than 100 characters in length",
-                    ),
-                })
-            }
-        }
-        deserializer.deserialize_string(Visitor)
-    }
-}
 
 /// A list of offer targets.
 #[derive(CheckedVec, Debug)]
@@ -147,6 +53,16 @@ pub struct OneOrManyNames;
     unique_items = true
 )]
 pub struct OneOrManyPaths;
+
+/// Generates deserializer for `OneOrMany<Path>`.
+#[derive(OneOrMany, Debug, Clone)]
+#[one_or_many(
+    expected = "a name or path or nonempty array of names or paths, with unique elements",
+    inner_type = "NameOrPath",
+    min_length = 1,
+    unique_items = true
+)]
+pub struct OneOrManyNameOrPaths;
 
 /// Generates deserializer for `OneOrMany<ExposeFromRef>`.
 #[derive(OneOrMany, Debug, Clone)]
@@ -622,8 +538,8 @@ pub struct Capability {
 #[serde(deny_unknown_fields)]
 pub struct Use {
     pub service: Option<Name>,
-    pub protocol: Option<OneOrMany<Path>>,
-    pub directory: Option<Path>,
+    pub protocol: Option<OneOrMany<NameOrPath>>,
+    pub directory: Option<NameOrPath>,
     pub storage: Option<StorageType>,
     pub runner: Option<Name>,
     pub from: Option<UseFromRef>,
@@ -640,8 +556,8 @@ pub struct Use {
 #[serde(deny_unknown_fields)]
 pub struct Expose {
     pub service: Option<Name>,
-    pub protocol: Option<OneOrMany<Path>>,
-    pub directory: Option<Path>,
+    pub protocol: Option<OneOrMany<NameOrPath>>,
+    pub directory: Option<NameOrPath>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
     pub from: OneOrMany<ExposeFromRef>,
@@ -655,8 +571,8 @@ pub struct Expose {
 #[serde(deny_unknown_fields)]
 pub struct Offer {
     pub service: Option<Name>,
-    pub protocol: Option<OneOrMany<Path>>,
-    pub directory: Option<Path>,
+    pub protocol: Option<OneOrMany<NameOrPath>>,
+    pub directory: Option<NameOrPath>,
     pub storage: Option<StorageType>,
     pub runner: Option<Name>,
     pub resolver: Option<Name>,
@@ -696,6 +612,7 @@ pub trait FromClause {
 /// provided.
 // TODO: Refactor the methods that use this so they don't require this, probably by breaking
 // them up.
+#[derive(Debug, PartialEq, Eq)]
 pub enum RoutingClauseType {
     Capability,
     Use,
@@ -705,8 +622,8 @@ pub enum RoutingClauseType {
 
 pub trait CapabilityClause {
     fn service(&self) -> &Option<Name>;
-    fn protocol(&self) -> Option<OneOrMany<Path>>;
-    fn directory(&self) -> Option<Path>;
+    fn protocol(&self) -> Option<OneOrMany<NameOrPath>>;
+    fn directory(&self) -> Option<NameOrPath>;
     fn storage(&self) -> &Option<Name>;
     fn storage_type(&self) -> &Option<StorageType>;
     fn runner(&self) -> &Option<Name>;
@@ -740,21 +657,15 @@ pub trait RightsClause {
     fn rights(&self) -> Option<&Rights>;
 }
 
-fn name_to_path(name: &Name) -> Path {
-    format!("/svc/{}", name).parse().unwrap()
-}
-
 impl CapabilityClause for Capability {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> Option<OneOrMany<Path>> {
-        // TODO: Once protocol capabilites are integrated with use/offer/expose, return the name
-        self.protocol.as_ref().map(|n| OneOrMany::One(name_to_path(n)))
+    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
+        self.protocol.as_ref().map(|n| OneOrMany::One(NameOrPath::Name(n.clone())))
     }
-    fn directory(&self) -> Option<Path> {
-        // TODO: Once directory capabilites are integrated with use/offer/expose, return the name
-        self.directory.as_ref().map(name_to_path)
+    fn directory(&self) -> Option<NameOrPath> {
+        self.directory.as_ref().map(|n| NameOrPath::Name(n.clone()))
     }
     fn storage(&self) -> &Option<Name> {
         &self.storage
@@ -827,10 +738,10 @@ impl CapabilityClause for Use {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> Option<OneOrMany<Path>> {
+    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Path> {
+    fn directory(&self) -> Option<NameOrPath> {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
@@ -914,10 +825,10 @@ impl CapabilityClause for Expose {
     }
     // TODO(340156): Only OneOrMany::One protocol is supported for now. Teach `expose` rules to accept
     // `Many` protocols.
-    fn protocol(&self) -> Option<OneOrMany<Path>> {
+    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Path> {
+    fn directory(&self) -> Option<NameOrPath> {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
@@ -995,10 +906,10 @@ impl CapabilityClause for Offer {
     fn service(&self) -> &Option<Name> {
         &self.service
     }
-    fn protocol(&self) -> Option<OneOrMany<Path>> {
+    fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Path> {
+    fn directory(&self) -> Option<NameOrPath> {
         self.directory.clone()
     }
     fn storage(&self) -> &Option<Name> {
@@ -1100,6 +1011,10 @@ pub(super) fn alias_or_name(alias: Option<&NameOrPath>, name: &Name) -> Result<N
 
 pub(super) fn alias_or_path(alias: Option<&NameOrPath>, path: &Path) -> Result<Path, Error> {
     Ok(alias.map(|a| a.extract_path_borrowed()).transpose()?.unwrap_or(path).clone())
+}
+
+pub(super) fn alias_or_name_or_path(alias: Option<&NameOrPath>, id: &NameOrPath) -> NameOrPath {
+    alias.map(|a| a).unwrap_or(id).clone()
 }
 
 #[cfg(test)]

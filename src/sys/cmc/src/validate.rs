@@ -178,10 +178,14 @@ struct ValidationContext<'a> {
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 enum CapabilityId {
     Service(cml::Name),
+    Protocol(cml::NameOrPath),
+    Directory(cml::NameOrPath),
     // A service in a `use` declaration has a target path in the component's namespace.
     UsedService(cml::Path),
-    Protocol(cml::Path),
-    Directory(cml::Path),
+    // A protocol in a `use` declaration has a target path in the component's namespace.
+    UsedProtocol(cml::Path),
+    // A directory in a `use` declaration has a target path in the component's namespace.
+    UsedDirectory(cml::Path),
     Storage(cml::Name),
     Runner(cml::Name),
     Resolver(cml::Name),
@@ -195,9 +199,11 @@ impl CapabilityId {
     pub fn type_str(&self) -> &'static str {
         match self {
             CapabilityId::Service(_) => "service",
-            CapabilityId::UsedService(_) => "service",
             CapabilityId::Protocol(_) => "protocol",
             CapabilityId::Directory(_) => "directory",
+            CapabilityId::UsedService(_) => "service",
+            CapabilityId::UsedDirectory(_) => "directory",
+            CapabilityId::UsedProtocol(_) => "protocol",
             CapabilityId::Storage(_) => "storage",
             CapabilityId::Runner(_) => "runner",
             CapabilityId::Resolver(_) => "resolver",
@@ -210,9 +216,9 @@ impl CapabilityId {
     /// Return the directory containing the capability.
     pub fn get_dir_path(&self) -> Option<&Path> {
         match self {
-            CapabilityId::Directory(p) => Some(Path::new(p.as_str())),
             CapabilityId::UsedService(p) => Path::new(p.as_str()).parent(),
-            CapabilityId::Protocol(p) => Path::new(p.as_str()).parent(),
+            CapabilityId::UsedProtocol(p) => Path::new(p.as_str()).parent(),
+            CapabilityId::UsedDirectory(p) => Some(Path::new(p.as_str())),
             _ => None,
         }
     }
@@ -225,6 +231,8 @@ impl CapabilityId {
     ///
     /// When multiple capability identifiers are specified, the target names are the same as the
     /// source names.
+    // TODO: Break up this function by clause type, it's trying to do too much. This will be easier
+    // to do once name-based capabilities have fully replaced path-based.
     pub fn from_clause<T>(
         clause: &T,
         clause_type: cml::RoutingClauseType,
@@ -238,35 +246,112 @@ impl CapabilityId {
         let alias = clause.r#as();
         let path = clause.path();
         if let Some(n) = clause.service().as_ref() {
-            return match (clause_type, path) {
-                (cml::RoutingClauseType::Use, Some(path)) => {
-                    Ok(vec![CapabilityId::UsedService(path.clone())])
-                }
-                (cml::RoutingClauseType::Use, None) => {
-                    let path: cml::Path = format!("/svc/{}", n).parse().unwrap();
+            return match clause_type {
+                cml::RoutingClauseType::Use => {
+                    let path = match path {
+                        Some(path) => path.clone(),
+                        None => format!("/svc/{}", n).parse().unwrap(),
+                    };
                     Ok(vec![CapabilityId::UsedService(path)])
                 }
                 _ => Ok(vec![CapabilityId::Service(cml::alias_or_name(alias, n)?)]),
             };
-        } else if let Some(OneOrMany::One(protocol)) = clause.protocol().as_ref() {
-            return Ok(vec![CapabilityId::Protocol(cml::alias_or_path(alias, protocol)?)]);
-        } else if let Some(OneOrMany::Many(protocols)) = clause.protocol().as_ref() {
-            return match (alias, protocols.len()) {
-                (Some(valid_alias), 1) => {
-                    Ok(vec![CapabilityId::Protocol(valid_alias.extract_path_borrowed()?.clone())])
+        } else if let Some(OneOrMany::One(protocol)) = clause.protocol() {
+            return match (clause_type, protocol) {
+                (cml::RoutingClauseType::Capability, protocol) => {
+                    Ok(vec![CapabilityId::Protocol(protocol)])
                 }
-
-                (Some(_), _) => Err(Error::validate(
-                    "\"as\" field can only be specified when one `protocol` is supplied.",
-                )),
-
-                (None, _) => Ok(protocols
-                    .iter()
-                    .map(|svc: &cml::Path| CapabilityId::Protocol(svc.clone()))
-                    .collect()),
+                (cml::RoutingClauseType::Use, cml::NameOrPath::Path(protocol)) => {
+                    Ok(vec![CapabilityId::UsedProtocol(cml::alias_or_path(alias, &protocol)?)])
+                }
+                (cml::RoutingClauseType::Use, cml::NameOrPath::Name(protocol)) => {
+                    let path = match path {
+                        Some(path) => path.clone(),
+                        None => format!("/svc/{}", protocol).parse().unwrap(),
+                    };
+                    Ok(vec![CapabilityId::UsedProtocol(path)])
+                }
+                (_, protocol) => {
+                    Ok(vec![CapabilityId::Protocol(cml::alias_or_name_or_path(alias, &protocol))])
+                }
             };
-        } else if let Some(p) = clause.directory().as_ref() {
-            return Ok(vec![CapabilityId::Directory(cml::alias_or_path(alias, p)?)]);
+        } else if let Some(OneOrMany::Many(protocols)) = clause.protocol() {
+            return match clause_type {
+                cml::RoutingClauseType::Capability => {
+                    panic!("can't have capability clause with many protocols")
+                }
+                cml::RoutingClauseType::Use if protocols.len() == 1 => match &protocols[0] {
+                    cml::NameOrPath::Path(protocol) => {
+                        Ok(vec![CapabilityId::UsedProtocol(cml::alias_or_path(alias, protocol)?)])
+                    }
+                    cml::NameOrPath::Name(protocol) => {
+                        let path = match path {
+                            Some(path) => path.clone(),
+                            None => format!("/svc/{}", protocol).parse().unwrap(),
+                        };
+                        Ok(vec![CapabilityId::UsedProtocol(path)])
+                    }
+                },
+                cml::RoutingClauseType::Use => {
+                    if alias.is_some() {
+                        return Err(Error::validate(
+                            "\"as\" field can only be specified when one `protocol` is supplied.",
+                        ));
+                    }
+                    if path.is_some() {
+                        return Err(Error::validate(
+                            "\"path\" field can only be specified when one `protocol` is supplied.",
+                        ));
+                    }
+                    Ok(protocols
+                        .iter()
+                        .map(|protocol: &cml::NameOrPath| match protocol {
+                            cml::NameOrPath::Path(protocol) => {
+                                CapabilityId::UsedProtocol(protocol.clone())
+                            }
+                            cml::NameOrPath::Name(protocol) => {
+                                let protocol: cml::Path =
+                                    format!("/svc/{}", protocol).parse().unwrap();
+                                CapabilityId::UsedProtocol(protocol)
+                            }
+                        })
+                        .collect())
+                }
+                _ if protocols.len() == 1 => Ok(vec![CapabilityId::Protocol(
+                    cml::alias_or_name_or_path(alias, &protocols[0]),
+                )]),
+                _ => {
+                    if alias.is_some() {
+                        return Err(Error::validate(
+                            "\"as\" field can only be specified when one `protocol` is supplied.",
+                        ));
+                    }
+                    Ok(protocols
+                        .iter()
+                        .map(|protocol: &cml::NameOrPath| CapabilityId::Protocol(protocol.clone()))
+                        .collect())
+                }
+            };
+        } else if let Some(directory) = clause.directory() {
+            return match (clause_type, directory) {
+                (cml::RoutingClauseType::Capability, directory) => {
+                    Ok(vec![CapabilityId::Directory(directory)])
+                }
+                (cml::RoutingClauseType::Use, cml::NameOrPath::Path(directory)) => {
+                    Ok(vec![CapabilityId::UsedDirectory(cml::alias_or_path(alias, &directory)?)])
+                }
+                (cml::RoutingClauseType::Use, cml::NameOrPath::Name(_)) => {
+                    if path.is_none() {
+                        return Err(Error::validate(
+                            "\"path\" field should be present for `use directory`.",
+                        ));
+                    }
+                    Ok(vec![CapabilityId::UsedDirectory(path.unwrap().clone())])
+                }
+                (_, directory) => {
+                    Ok(vec![CapabilityId::Directory(cml::alias_or_name_or_path(alias, &directory))])
+                }
+            };
         } else if let Some(n) = clause.storage().as_ref() {
             return Ok(vec![CapabilityId::Storage(cml::alias_or_name(alias, n)?)]);
         } else if let Some(n) = clause.runner().as_ref() {
@@ -333,9 +418,10 @@ impl fmt::Display for CapabilityId {
             | CapabilityId::Resolver(n)
             | CapabilityId::Event(n) => n.as_str(),
             CapabilityId::UsedService(p)
-            | CapabilityId::Protocol(p)
-            | CapabilityId::Directory(p)
-            | CapabilityId::EventStream(p) => p.as_str(),
+            | CapabilityId::UsedProtocol(p)
+            | CapabilityId::UsedDirectory(p) => p.as_str(),
+            CapabilityId::EventStream(p) => p.as_str(),
+            CapabilityId::Protocol(p) | CapabilityId::Directory(p) => p.as_str(),
             CapabilityId::StorageType(s) => s.as_str(),
         };
         write!(f, "{}", s)
@@ -552,42 +638,42 @@ impl<'a> ValidationContext<'a> {
         use_: &'a cml::Use,
         used_ids: &mut HashMap<String, CapabilityId>,
     ) -> Result<(), Error> {
-        match (&use_.service, &use_.r#as) {
-            (Some(_), Some(_)) => {
-                Err(Error::validate("\"as\" field cannot be used with \"service\""))
+        if use_.service.is_some() && use_.r#as.is_some() {
+            return Err(Error::validate("\"as\" field cannot be used with \"service\""));
+        }
+        if let Some(protocol) = use_.protocol.as_ref() {
+            for protocol in protocol.iter() {
+                if protocol.is_name() && use_.r#as.is_some() {
+                    return Err(Error::validate("\"as\" field cannot be used with \"protocol\""));
+                }
             }
-            _ => Ok(()),
-        }?;
-        match (&use_.runner, &use_.r#as) {
-            (Some(_), Some(_)) => {
-                Err(Error::validate("\"as\" field cannot be used with \"runner\""))
+        }
+        if use_.directory.is_some() && use_.r#as.is_some() {
+            if use_.directory.as_ref().unwrap().is_name() {
+                return Err(Error::validate("\"as\" field cannot be used with \"directory\""));
             }
-            _ => Ok(()),
-        }?;
-
-        match (&use_.event, &use_.from) {
-            (Some(_), None) => Err(Error::validate("\"from\" should be present with \"event\"")),
-            _ => Ok(()),
-        }?;
-
-        match (&use_.event, &use_.filter) {
-            (None, Some(_)) => Err(Error::validate("\"filter\" can only be used with \"event\"")),
-            _ => Ok(()),
-        }?;
+        }
+        if use_.runner.is_some() && use_.r#as.is_some() {
+            return Err(Error::validate("\"as\" field cannot be used with \"runner\""));
+        }
+        if use_.event.is_some() && use_.from.is_none() {
+            return Err(Error::validate("\"from\" should be present with \"event\""));
+        }
+        if use_.event.is_none() && use_.filter.is_some() {
+            return Err(Error::validate("\"filter\" can only be used with \"event\""));
+        }
 
         let storage = use_.storage.as_ref().map(|s| s.as_str());
-        match (storage, &use_.r#as) {
-            (Some("meta"), Some(_)) => {
-                Err(Error::validate("\"as\" field cannot be used with storage type \"meta\""))
+        if storage.is_some() && use_.r#as.is_some() {
+            if storage.unwrap() == "meta" {
+                return Err(Error::validate(
+                    "\"as\" field cannot be used with storage type \"meta\"",
+                ));
             }
-            _ => Ok(()),
-        }?;
-        match (storage, &use_.from) {
-            (Some(_), Some(_)) => {
-                Err(Error::validate("\"from\" field cannot be used with \"storage\""))
-            }
-            _ => Ok(()),
-        }?;
+        }
+        if storage.is_some() && use_.from.is_some() {
+            return Err(Error::validate("\"from\" field cannot be used with \"storage\""));
+        }
 
         if let Some(event_stream) = use_.event_stream.as_ref() {
             let events = event_stream.to_vec();
@@ -629,12 +715,12 @@ impl<'a> ValidationContext<'a> {
 
                 if match (used_id, &capability_id) {
                     // Directories can't be the same or partially overlap.
-                    (CapabilityId::Directory(_), CapabilityId::Directory(_)) => {
+                    (CapabilityId::UsedDirectory(_), CapabilityId::UsedDirectory(_)) => {
                         dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
                     }
 
                     // Protocols and Services can't overlap with Directories.
-                    (_, CapabilityId::Directory(_)) | (CapabilityId::Directory(_), _) => {
+                    (_, CapabilityId::UsedDirectory(_)) | (CapabilityId::UsedDirectory(_), _) => {
                         dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
                     }
 
@@ -672,6 +758,8 @@ impl<'a> ValidationContext<'a> {
         expose: &'a cml::Expose,
         used_ids: &mut HashMap<String, CapabilityId>,
     ) -> Result<(), Error> {
+        // TODO: Many of these checks are similar, see if we can unify them
+
         // Ensure that if the expose target is framework, the source target is self always.
         if expose.to == Some(cml::ExposeToRef::Framework) {
             match &expose.from {
@@ -684,7 +772,7 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure that services exposed from self are defined in `services`.
+        // Ensure that services exposed from self are defined in `capabilities`.
         if let Some(service_name) = &expose.service {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                 if !self.all_services.contains(service_name) {
@@ -696,16 +784,50 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that protocols exposed from self are defined in `capabilities`.
+        if let Some(protocol) = expose.protocol.as_ref() {
+            for protocol in protocol {
+                if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                    if let cml::NameOrPath::Name(protocol) = protocol {
+                        if !self.all_protocols.contains(protocol) {
+                            return Err(Error::validate(format!(
+                           "Protocol \"{}\" is exposed from self, so it must be declared as a \"protocol\" in \"capabilities\"",
+                           protocol
+                       )));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ensure that directories exposed from self are defined in `capabilities`.
+        if let Some(directory) = &expose.directory {
+            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                if let cml::NameOrPath::Name(directory) = directory {
+                    if !self.all_directories.contains(directory) {
+                        return Err(Error::validate(format!(
+                           "Directory \"{}\" is exposed from self, so it must be declared as a \"directory\" in \"capabilities\"",
+                           directory
+                       )));
+                    }
+                }
+            }
+        }
+
         // Ensure directory rights are specified if exposing from self.
-        if expose.directory.is_some() {
+        if let Some(directory) = expose.directory.as_ref() {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_)
                 || expose.rights.is_some()
             {
                 match &expose.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
-                    None => return Err(Error::validate(
-                        "Rights required for this expose statement as it is exposing from self.",
-                    )),
+                    None => {
+                        if directory.is_path() {
+                            return Err(Error::validate(
+                            "Rights required for this expose statement as it is exposing from self.",
+                        ));
+                        }
+                    }
                 };
             }
 
@@ -720,7 +842,7 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure that runners exposed from self are defined in `runners`.
+        // Ensure that runners exposed from self are defined in `capabilities`.
         if let Some(runner_name) = &expose.runner {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                 if !self.all_runners.contains(runner_name) {
@@ -732,7 +854,7 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure that resolvers exposed from self are defined in `resolvers`.
+        // Ensure that resolvers exposed from self are defined in `capabilities`.
         if let Some(resolver_name) = &expose.resolver {
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                 if !self.all_resolvers.contains(resolver_name) {
@@ -748,9 +870,8 @@ impl<'a> ValidationContext<'a> {
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
-                    "\"{}\" is a duplicate \"expose\" target {} for \"{}\"",
+                    "\"{}\" is a duplicate \"expose\" target capability for \"{}\"",
                     capability_id,
-                    capability_id.type_str(),
                     expose.to.as_ref().unwrap_or(&cml::ExposeToRef::Parent)
                 )));
             }
@@ -769,6 +890,8 @@ impl<'a> ValidationContext<'a> {
         used_ids: &mut HashMap<&'a cml::Name, HashMap<String, CapabilityId>>,
         strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
+        // TODO: Many of these checks are repititious, see if we can unify them
+
         // Ensure that services offered from self are defined in `services`.
         if let Some(service_name) = &offer.service {
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
@@ -782,15 +905,47 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that protocols offered from self are defined in `capabilities`.
+        if let Some(protocol) = offer.protocol.as_ref() {
+            for protocol in protocol.iter() {
+                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                    if let cml::NameOrPath::Name(protocol) = protocol {
+                        if !self.all_protocols.contains(protocol) {
+                            return Err(Error::validate(format!(
+                           "Protocol \"{}\" is offered from self, so it must be declared as a \"protocol\" in \"capabilities\"",
+                           protocol
+                       )));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ensure that directories offered from self are defined in `capabilities`.
+        if let Some(directory) = &offer.directory {
+            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                if let cml::NameOrPath::Name(directory) = directory {
+                    if !self.all_directories.contains(directory) {
+                        return Err(Error::validate(format!(
+                           "Directory \"{}\" is offered from self, so it must be declared as a \"directory\" in \"capabilities\"",
+                           directory
+                       )));
+                    }
+                }
+            }
+        }
+
         // Ensure directory rights are specified if offering from self.
-        if offer.directory.is_some() {
+        if let Some(directory) = offer.directory.as_ref() {
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) || offer.rights.is_some() {
                 match &offer.rights {
                     Some(rights) => self.validate_directory_rights(&rights)?,
                     None => {
-                        return Err(Error::validate(
-                            "Rights required for this offer as it is offering from self.",
-                        ))
+                        if directory.is_path() {
+                            return Err(Error::validate(
+                                "Rights required for this offer as it is offering from self.",
+                            ));
+                        }
                     }
                 };
             }
@@ -867,10 +1022,8 @@ impl<'a> ValidationContext<'a> {
                 if ids_for_entity.insert(target_cap_id.to_string(), target_cap_id.clone()).is_some()
                 {
                     return Err(Error::validate(format!(
-                        "\"{}\" is a duplicate \"offer\" target {} for \"{}\"",
-                        target_cap_id,
-                        target_cap_id.type_str(),
-                        to
+                        "\"{}\" is a duplicate \"offer\" target capability for \"{}\"",
+                        target_cap_id, to
                     )));
                 }
             }
@@ -1338,15 +1491,30 @@ mod tests {
                 "use": [
                   { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                   { "service": "fuchsia.sys2.Realm", "from": "framework" },
-                  { "protocol": "/fonts/CoolFonts", "as": "/svc/MyFonts" },
-                  { "protocol": "/svc/fuchsia.test.hub.HubReport", "from": "framework" },
-                  { "protocol": ["/svc/fuchsia.ui.scenic.Scenic", "/svc/fuchsia.logger.LogSink"] },
+                  { "protocol": "CoolFonts", "path": "/svc/MyFonts" },
+                  { "protocol": "/fonts/CoolFonts", "as": "/svc/MyFonts2" },
+                  { "protocol": "fuchsia.test.hub.HubReport", "from": "framework" },
+                  { "protocol": "/svc/fuchsia.test.hub.HubReport2", "from": "framework" },
+                  { "protocol": ["fuchsia.ui.scenic.Scenic", "fuchsia.logger.LogSink"] },
+                  { "protocol": ["/svc/fuchsia.ui.scenic.Scenic2", "/svc/fuchsia.logger.LogSink2"] },
                   {
-                    "directory": "/data/assets",
+                    "directory": "assets",
+                    "path": "/data/assets",
                     "rights": ["rw*"],
                   },
                   {
-                    "directory": "/data/config",
+                    "directory": "config",
+                    "from": "parent",
+                    "path": "/data/config",
+                    "rights": ["rx*"],
+                    "subdir": "fonts/all",
+                  },
+                  {
+                    "directory": "/data/assets2",
+                    "rights": ["rw*"],
+                  },
+                  {
+                    "directory": "/data/config2",
                     "from": "parent",
                     "rights": ["rx*"],
                     "subdir": "fonts/all",
@@ -1403,6 +1571,18 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"service\""
         ),
+        test_cml_use_as_with_protocol(
+            json!({
+                "use": [ { "protocol": "foo", "as": "xxx" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"protocol\""
+        ),
+        test_cml_use_as_with_directory(
+            json!({
+                "use": [ { "directory": "foo", "as": "xxx" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"directory\""
+        ),
         test_cml_use_as_with_runner(
             json!({
                 "use": [ { "runner": "elf", "as": "xxx" } ]
@@ -1437,7 +1617,7 @@ mod tests {
         test_cml_use_bad_duplicate_target_paths(
             json!({
                 "use": [
-                  { "protocol": "/svc/fuchsia.sys2.Realm" },
+                  { "protocol": "fuchsia.sys2.Realm" },
                   { "service": "fuchsia.sys2.Realm" },
                 ],
             }),
@@ -1451,7 +1631,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or path or nonempty array of names or paths, with unique elements"
         ),
         test_cml_use_bad_subdir(
             json!({
@@ -1489,7 +1669,7 @@ mod tests {
         test_cml_use_disallows_common_prefixes_service(
             json!({
                 "use": [
-                    { "directory": "/foo/bar", "rights": [ "r*" ] },
+                    { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ] },
                     { "service": "fuchsia", "path": "/foo/bar/fuchsia" },
                 ],
             }),
@@ -1498,7 +1678,7 @@ mod tests {
         test_cml_use_disallows_common_prefixes_protocol(
             json!({
                 "use": [
-                    { "directory": "/foo/bar", "rights": [ "r*" ] },
+                    { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ] },
                     { "protocol": "/foo/bar/fuchsia.2" },
                 ],
             }),
@@ -1589,6 +1769,10 @@ mod tests {
                         "as": "logger"
                     },
                     {
+                        "protocol": "A",
+                        "from": "self",
+                    },
+                    {
                         "protocol": "/svc/A",
                         "from": "self",
                     },
@@ -1608,6 +1792,7 @@ mod tests {
                 ],
                 "capabilities": [
                     { "service": "fuchsia.fonts.Provider" },
+                    { "protocol": "A" },
                 ],
                 "children": [
                     {
@@ -1673,10 +1858,10 @@ mod tests {
             json!({
                 "expose": [
                     { "service": "logger", "from": "#logger", "as": "thing" },
-                    { "service": "thing", "from": "self" },
+                    { "protocol": "thing", "from": "self" },
                 ],
                 "capabilities": [
-                    { "service": "thing" },
+                    { "protocol": "thing" },
                 ],
                 "children": [
                     {
@@ -1685,7 +1870,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"expose\" target service for \"parent\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"expose\" target capability for \"parent\""
         ),
         test_cml_expose_duplicate_target_paths(
             json!({
@@ -1700,7 +1885,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"expose\" target directory for \"parent\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"expose\" target capability for \"parent\""
         ),
         test_cml_expose_invalid_multiple_from(
             json!({
@@ -1744,21 +1929,6 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
         ),
-        test_cml_expose_bad_duplicate_targets(
-            json!({
-                "expose": [
-                    {
-                        "protocol": ["/svc/A", "/svc/B"],
-                        "from": "self"
-                    },
-                    {
-                        "protocol": "/svc/A",
-                        "from": "self"
-                    },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/A\" is a duplicate \"expose\" target protocol for \"parent\""
-        ),
         test_cml_expose_empty_protocols(
             json!({
                 "expose": [
@@ -1769,7 +1939,7 @@ mod tests {
                     }
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or path or nonempty array of names or paths, with unique elements"
         ),
         test_cml_expose_bad_subdir(
             json!({
@@ -1798,35 +1968,60 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "`subdir` is not supported for expose to framework. Directly expose the subdirectory instead."
         ),
-        test_cml_expose_service_from_self(
+        test_cml_expose_from_self(
             json!({
                 "expose": [
                     {
-                        "service": "pkg_service",
+                        "service": "foo_service",
+                        "from": "self",
+                    },
+                    {
+                        "protocol": "foo_protocol",
+                        "from": "self",
+                    },
+                    {
+                        "protocol": [ "bar_protocol", "baz_protocol" ],
+                        "from": "self",
+                    },
+                    {
+                        "directory": "foo_directory",
+                        "from": "self",
+                    },
+                    {
+                        "runner": "foo_runner",
+                        "from": "self",
+                    },
+                    {
+                        "resolver": "foo_resolver",
                         "from": "self",
                     },
                 ],
                 "capabilities": [
                     {
-                        "service": "pkg_service",
-                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        "service": "foo_service",
                     },
-                ]
-            }),
-            Ok(())
-        ),
-        test_cml_expose_resolver_from_self(
-            json!({
-                "expose": [
                     {
-                        "resolver": "pkg_resolver",
+                        "protocol": "foo_protocol",
+                    },
+                    {
+                        "protocol": "bar_protocol",
+                    },
+                    {
+                        "protocol": "baz_protocol",
+                    },
+                    {
+                        "directory": "foo_directory",
+                        "path": "/dir",
+                        "rights": [ "r*" ],
+                    },
+                    {
+                        "runner": "foo_runner",
+                        "path": "/svc/runner",
                         "from": "self",
                     },
-                ],
-                "capabilities": [
                     {
-                        "resolver": "pkg_resolver",
-                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        "resolver": "foo_resolver",
+                        "path": "/svc/resolver",
                     },
                 ]
             }),
@@ -1842,6 +2037,39 @@ mod tests {
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is exposed from self, so it must be declared as a \"service\" in \"capabilities\""
+        ),
+        test_cml_expose_protocol_from_self_missing(
+            json!({
+                "expose": [
+                    {
+                        "protocol": "pkg_protocol",
+                        "from": "self",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Protocol \"pkg_protocol\" is exposed from self, so it must be declared as a \"protocol\" in \"capabilities\""
+        ),
+        test_cml_expose_protocol_from_self_missing_multiple(
+            json!({
+                "expose": [
+                    {
+                        "protocol": [ "foo_protocol", "bar_protocol" ],
+                        "from": "self",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Protocol \"foo_protocol\" is exposed from self, so it must be declared as a \"protocol\" in \"capabilities\""
+        ),
+        test_cml_expose_directory_from_self_missing(
+            json!({
+                "expose": [
+                    {
+                        "directory": "pkg_directory",
+                        "from": "self",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Directory \"pkg_directory\" is exposed from self, so it must be declared as a \"directory\" in \"capabilities\""
         ),
         test_cml_expose_runner_from_self_missing(
             json!({
@@ -1918,10 +2146,25 @@ mod tests {
                         "to": [ "#echo_server" ]
                     },
                     {
+                        "protocol": "fuchsia.fonts.LegacyProvider",
+                        "from": "parent",
+                        "to": [ "#echo_server" ],
+                        "dependency": "weak_for_migration"
+                    },
+                    {
                         "protocol": "/svc/fuchsia.fonts.LegacyProvider",
                         "from": "parent",
                         "to": [ "#echo_server" ],
                         "dependency": "weak_for_migration"
+                    },
+                    {
+                        "protocol": [
+                            "fuchsia.settings.Accessibility",
+                            "fuchsia.ui.scenic.Scenic"
+                        ],
+                        "from": "parent",
+                        "to": [ "#echo_server" ],
+                        "dependency": "strong"
                     },
                     {
                         "protocol": [
@@ -1933,10 +2176,23 @@ mod tests {
                         "dependency": "strong"
                     },
                     {
+                        "directory": "assets",
+                        "from": "self",
+                        "to": [ "#echo_server" ],
+                        "rights": ["r*"]
+                    },
+                    {
                         "directory": "/data/assets",
                         "from": "self",
                         "to": [ "#echo_server" ],
                         "rights": ["rw*"]
+                    },
+                    {
+                        "directory": "index",
+                        "subdir": "files",
+                        "from": "parent",
+                        "to": [ "#modular" ],
+                        "dependency": "weak_for_migration"
                     },
                     {
                         "directory": "/data/index",
@@ -1995,6 +2251,11 @@ mod tests {
                 ],
                 "capabilities": [
                     { "service": "fuchsia.net.Netstack" },
+                    {
+                        "directory": "assets",
+                        "path": "/data/assets",
+                        "rights": [ "rw*" ],
+                    },
                     {
                         "storage": "minfs",
                         "from": "parent",
@@ -2213,7 +2474,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a name or path or nonempty array of names or paths, with unique elements"
         ),
         test_cml_offer_target_equals_from(
             json!({
@@ -2258,13 +2519,17 @@ mod tests {
                         "as": "thing"
                     },
                     {
-                        "service": "thing",
+                        "directory": "thing",
                         "from": "self",
                         "to": [ "#echo_server" ],
                     },
                 ],
                 "capabilities": [
-                    { "service": "thing" },
+                    {
+                        "directory": "thing",
+                        "path": "/thing",
+                        "rights": [ "r*" ],
+                    },
                 ],
                 "children": [
                     {
@@ -2277,7 +2542,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"offer\" target service for \"#echo_server\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"thing\" is a duplicate \"offer\" target capability for \"#echo_server\""
         ),
         test_cml_offer_duplicate_target_paths(
             json!({
@@ -2307,10 +2572,10 @@ mod tests {
                     {
                         "name": "echo_server",
                         "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
-                    }
-                ]
+                    },
+                ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"offer\" target directory for \"#echo_server\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/thing\" is a duplicate \"offer\" target capability for \"#echo_server\""
         ),
         test_cml_offer_duplicate_storage_types(
             json!({
@@ -2336,28 +2601,7 @@ mod tests {
                     "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
                 } ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"cache\" is a duplicate \"offer\" target storage type for \"#echo_server\""
-        ),
-        test_cml_offer_duplicate_runner_name(
-            json!({
-                "offer": [
-                    {
-                        "runner": "elf",
-                        "from": "parent",
-                        "to": [ "#echo_server" ]
-                    },
-                    {
-                        "runner": "elf",
-                        "from": "framework",
-                        "to": [ "#echo_server" ]
-                    }
-                ],
-                "children": [ {
-                    "name": "echo_server",
-                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
-                } ]
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"elf\" is a duplicate \"offer\" target runner for \"#echo_server\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"cache\" is a duplicate \"offer\" target capability for \"#echo_server\""
         ),
         // if "as" is specified, only 1 "protocol" array item is allowed.
         test_cml_offer_bad_as(
@@ -2402,12 +2646,32 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "service": "fuchsia.fonts.Resolver",
+                        "service": "foo_service",
                         "from": "self",
                         "to": [ "#modular" ],
                     },
                     {
-                        "resolver": "pkg_resolver",
+                        "protocol": "foo_protocol",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                    {
+                        "protocol": [ "bar_protocol", "baz_protocol" ],
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                    {
+                        "directory": "foo_directory",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                    {
+                        "runner": "foo_runner",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                    {
+                        "resolver": "foo_resolver",
                         "from": "self",
                         "to": [ "#modular" ],
                     },
@@ -2420,10 +2684,29 @@ mod tests {
                 ],
                 "capabilities": [
                     {
-                        "service": "fuchsia.fonts.Resolver",
+                        "service": "foo_service",
                     },
                     {
-                        "resolver": "pkg_resolver",
+                        "protocol": "foo_protocol",
+                    },
+                    {
+                        "protocol": "bar_protocol",
+                    },
+                    {
+                        "protocol": "baz_protocol",
+                    },
+                    {
+                        "directory": "foo_directory",
+                        "path": "/dir",
+                        "rights": [ "r*" ],
+                    },
+                    {
+                        "runner": "foo_runner",
+                        "path": "/svc/fuchsia.sys2.ComponentRunner",
+                        "from": "self",
+                    },
+                    {
+                        "resolver": "foo_resolver",
                         "path": "/svc/fuchsia.sys2.ComponentResolver",
                     },
                 ]
@@ -2434,7 +2717,7 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "service": "fuchsia.fonts.Resolver",
+                        "service": "pkg_service",
                         "from": "self",
                         "to": [ "#modular" ],
                     },
@@ -2446,7 +2729,61 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"fuchsia.fonts.Resolver\" is offered from self, so it must be declared as a \"service\" in \"capabilities\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is offered from self, so it must be declared as a \"service\" in \"capabilities\""
+        ),
+        test_cml_offer_protocol_from_self_missing(
+            json!({
+                "offer": [
+                    {
+                        "protocol": "pkg_protocol",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Protocol \"pkg_protocol\" is offered from self, so it must be declared as a \"protocol\" in \"capabilities\""
+        ),
+        test_cml_offer_protocol_from_self_missing_multiple(
+            json!({
+                "offer": [
+                    {
+                        "protocol": [ "foo_protocol", "bar_protocol" ],
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Protocol \"foo_protocol\" is offered from self, so it must be declared as a \"protocol\" in \"capabilities\""
+        ),
+        test_cml_offer_directory_from_self_missing(
+            json!({
+                "offer": [
+                    {
+                        "directory": "pkg_directory",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Directory \"pkg_directory\" is offered from self, so it must be declared as a \"directory\" in \"capabilities\""
         ),
         test_cml_offer_runner_from_self_missing(
             json!({
@@ -3580,63 +3917,64 @@ mod tests {
         ),
         test_cml_path(
             json!({
-                "use": [
-                  {
-                    "directory": "/foo/?!@#$%/Bar",
-                    "rights": ["read_bytes"],
-                  },
+                "capabilities": [
+                    {
+                        "protocol": "foo",
+                        "path": "/foo/?!@#$%/Bar",
+                    },
                 ]
             }),
             Ok(())
         ),
         test_cml_path_invalid_empty(
             json!({
-                "use": [
-                  { "protocol": "" },
+                "capabilities": [
+                    { "protocol": "foo", "path": "" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a non-empty path no more than 1024 characters in length"
         ),
         test_cml_path_invalid_root(
             json!({
-                "use": [
-                  { "protocol": "/" },
+                "capabilities": [
+                    { "protocol": "foo", "path": "/" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with leading `/` and non-empty segments"
         ),
         test_cml_path_invalid_absolute_is_relative(
             json!({
-                "use": [
-                  { "protocol": "foo/bar" },
+                "capabilities": [
+                    { "protocol": "foo", "path": "foo/bar" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"foo/bar\", expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"foo/bar\", expected a path with leading `/` and non-empty segments"
         ),
         test_cml_path_invalid_trailing(
             json!({
-                "use": [
-                  { "protocol": "/foo/bar/" },
+                "capabilities": [
+                    { "protocol": "foo", "path":"/foo/bar/" },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/foo/bar/\", expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/foo/bar/\", expected a path with leading `/` and non-empty segments"
         ),
         test_cml_path_too_long(
             json!({
-                "use": [
-                  { "protocol": format!("/{}", "a".repeat(1024)) },
+                "capabilities": [
+                    { "protocol": "foo", "path": format!("/{}", "a".repeat(1024)) },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid length 1025, expected a path or nonempty array of paths, with unique elements"
+            Err(Error::Parse { err, .. }) if &err == "invalid length 1025, expected a non-empty path no more than 1024 characters in length"
         ),
         test_cml_relative_path(
             json!({
                 "use": [
-                  {
-                    "directory": "/foo",
-                    "rights": ["r*"],
-                    "subdir": "?!@#$%/Bar",
-                  },
+                    {
+                        "directory": "foo",
+                        "path": "/foo",
+                        "rights": ["r*"],
+                        "subdir": "?!@#$%/Bar",
+                    },
                 ]
             }),
             Ok(())
@@ -3644,11 +3982,12 @@ mod tests {
         test_cml_relative_path_invalid_empty(
             json!({
                 "use": [
-                  {
-                    "directory": "/foo",
-                    "rights": ["r*"],
-                    "subdir": "",
-                  },
+                    {
+                        "directory": "foo",
+                        "path": "/foo",
+                        "rights": ["r*"],
+                        "subdir": "",
+                    },
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a non-empty path no more than 1024 characters in length"
@@ -3656,11 +3995,12 @@ mod tests {
         test_cml_relative_path_invalid_root(
             json!({
                 "use": [
-                  {
-                    "directory": "/foo",
-                    "rights": ["r*"],
-                    "subdir": "/",
-                  },
+                    {
+                        "directory": "foo",
+                        "path": "/foo",
+                        "rights": ["r*"],
+                        "subdir": "/",
+                    },
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/\", expected a path with no leading `/` and non-empty segments"
@@ -3668,11 +4008,12 @@ mod tests {
         test_cml_relative_path_invalid_absolute(
             json!({
                 "use": [
-                  {
-                    "directory": "/foo",
-                    "rights": ["r*"],
-                    "subdir": "/bar",
-                  },
+                    {
+                        "directory": "foo",
+                        "path": "/foo",
+                        "rights": ["r*"],
+                        "subdir": "/bar",
+                    },
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/bar\", expected a path with no leading `/` and non-empty segments"
@@ -3680,11 +4021,12 @@ mod tests {
         test_cml_relative_path_invalid_trailing(
             json!({
                 "use": [
-                  {
-                    "directory": "/foo",
-                    "rights": ["r*"],
-                    "subdir": "bar/",
-                  },
+                    {
+                        "directory": "foo",
+                        "path": "/foo",
+                        "rights": ["r*"],
+                        "subdir": "bar/",
+                    },
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"bar/\", expected a path with no leading `/` and non-empty segments"
@@ -3692,11 +4034,12 @@ mod tests {
         test_cml_relative_path_too_long(
             json!({
                 "use": [
-                  {
-                    "directory": "/foo",
-                    "rights": ["r*"],
-                    "subdir": format!("{}", "a".repeat(1025)),
-                  },
+                    {
+                        "directory": "foo",
+                        "path": "/foo",
+                        "rights": ["r*"],
+                        "subdir": format!("{}", "a".repeat(1025)),
+                    },
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid length 1025, expected a non-empty path no more than 1024 characters in length"
@@ -3705,7 +4048,7 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "service": "/loggers/fuchsia.logger.Log",
+                        "service": "fuchsia.logger.Log",
                         "from": &format!("#{}", "a".repeat(101)),
                     },
                 ],
@@ -4132,23 +4475,13 @@ mod tests {
 
     #[test]
     fn test_capability_id() -> Result<(), Error> {
-        // Simple tests.
+        // service
         assert_eq!(
             CapabilityId::from_clause(
                 &cml::Offer { service: Some("a".parse().unwrap()), ..empty_offer() },
                 cml::RoutingClauseType::Offer
             )?,
             vec![CapabilityId::Service("a".parse().unwrap())]
-        );
-        assert_eq!(
-            CapabilityId::from_clause(
-                &cml::Offer {
-                    protocol: Some(OneOrMany::One("/a".parse().unwrap())),
-                    ..empty_offer()
-                },
-                cml::RoutingClauseType::Offer
-            )?,
-            vec![CapabilityId::Protocol("/a".parse().unwrap())]
         );
         assert_eq!(
             CapabilityId::from_clause(
@@ -4168,6 +4501,18 @@ mod tests {
             )?,
             vec![CapabilityId::UsedService("/b".parse().unwrap())]
         );
+
+        // protocol
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Offer {
+                    protocol: Some(OneOrMany::One("a".parse().unwrap())),
+                    ..empty_offer()
+                },
+                cml::RoutingClauseType::Offer
+            )?,
+            vec![CapabilityId::Protocol("a".parse().unwrap())]
+        );
         assert_eq!(
             CapabilityId::from_clause(
                 &cml::Offer {
@@ -4177,6 +4522,22 @@ mod tests {
                 cml::RoutingClauseType::Offer
             )?,
             vec![CapabilityId::Protocol("/a".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Offer {
+                    protocol: Some(OneOrMany::Many(vec![
+                        "a".parse().unwrap(),
+                        "b".parse().unwrap()
+                    ],)),
+                    ..empty_offer()
+                },
+                cml::RoutingClauseType::Offer
+            )?,
+            vec![
+                CapabilityId::Protocol("a".parse().unwrap()),
+                CapabilityId::Protocol("b".parse().unwrap())
+            ]
         );
         assert_eq!(
             CapabilityId::from_clause(
@@ -4196,11 +4557,67 @@ mod tests {
         );
         assert_eq!(
             CapabilityId::from_clause(
+                &cml::Use { protocol: Some(OneOrMany::One("a".parse().unwrap())), ..empty_use() },
+                cml::RoutingClauseType::Use
+            )?,
+            vec![CapabilityId::UsedProtocol("/svc/a".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Use {
+                    protocol: Some(OneOrMany::Many(vec![
+                        "a".parse().unwrap(),
+                        "b".parse().unwrap(),
+                    ],)),
+                    ..empty_use()
+                },
+                cml::RoutingClauseType::Use
+            )?,
+            vec![
+                CapabilityId::UsedProtocol("/svc/a".parse().unwrap()),
+                CapabilityId::UsedProtocol("/svc/b".parse().unwrap())
+            ]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Use {
+                    protocol: Some(OneOrMany::One("a".parse().unwrap())),
+                    path: Some("/b".parse().unwrap()),
+                    ..empty_use()
+                },
+                cml::RoutingClauseType::Use
+            )?,
+            vec![CapabilityId::UsedProtocol("/b".parse().unwrap())]
+        );
+
+        // directory
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Offer { directory: Some("a".parse().unwrap()), ..empty_offer() },
+                cml::RoutingClauseType::Offer
+            )?,
+            vec![CapabilityId::Directory("a".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(
                 &cml::Offer { directory: Some("/a".parse().unwrap()), ..empty_offer() },
                 cml::RoutingClauseType::Offer
             )?,
             vec![CapabilityId::Directory("/a".parse().unwrap())]
         );
+        assert_eq!(
+            CapabilityId::from_clause(
+                &cml::Use {
+                    directory: Some("a".parse().unwrap()),
+                    path: Some("/b".parse().unwrap()),
+                    ..empty_use()
+                },
+                cml::RoutingClauseType::Use
+            )?,
+            vec![CapabilityId::UsedDirectory("/b".parse().unwrap())]
+        );
+
+        // storage
         assert_eq!(
             CapabilityId::from_clause(
                 &cml::Offer { storage: Some(cml::StorageType::Cache), ..empty_offer() },

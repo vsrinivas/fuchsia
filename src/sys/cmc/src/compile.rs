@@ -137,24 +137,20 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             let target_ids = all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use)
                 .ok_or_else(|| Error::internal("no capability"))?;
             let source_ids = p.to_vec();
-            for target_id in target_ids {
-                let target_path = target_id.extract_path()?;
-                // When multiple source paths are provided, there is no way to alias each one, so
-                // source_path == target_path.
-                // When one source path is provided, source_path may be aliased to a different
-                // target_path, so we source_paths[0] to derive the source_path.
-                let source_path =
-                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_path.clone() };
+            for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
+                let target_path = cml::NameOrPath::Path(target_id.extract_path()?);
                 out_uses.push(cm::Use::Protocol(cm::UseProtocol {
                     source: source.clone(),
-                    source_path,
+                    source_path: source_id.clone(),
                     target_path,
                 }));
             }
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
-            let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
-                .extract_path()?;
+            let target_path = cml::NameOrPath::Path(
+                one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
+                    .extract_path()?,
+            );
             let rights = extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
             out_uses.push(cm::Use::Directory(cm::UseDirectory {
@@ -240,32 +236,24 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             let target_ids =
                 all_target_capability_ids(expose, expose, cml::RoutingClauseType::Expose)
                     .ok_or_else(|| Error::internal("no capability"))?;
-            for target_id in target_ids {
-                let target_path = target_id.extract_path()?;
-                // When multiple source paths are provided, there is no way to alias each one, so
-                // source_path == target_path.
-                // When one source path is provided, source_path may be aliased to a different
-                // target_path, so we source_paths[0] to derive the source_path.
-                let source_path =
-                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_path.clone() };
+            for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
                 out_exposes.push(cm::Expose::Protocol(cm::ExposeProtocol {
                     source: source.clone(),
-                    source_path,
-                    target_path,
+                    source_path: source_id.clone(),
+                    target_path: target_id,
                     target: target.clone(),
                 }))
             }
         } else if let Some(p) = expose.directory() {
             let source = extract_single_expose_source(expose)?;
-            let target_path =
-                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
-                    .extract_path()?;
+            let target_id =
+                one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?;
             let rights = extract_expose_rights(expose)?;
             let subdir = extract_expose_subdir(expose);
             out_exposes.push(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
                 source_path: p.clone(),
-                target_path,
+                target_path: target_id,
                 target,
                 rights,
                 subdir,
@@ -330,14 +318,17 @@ fn translate_offer(
                 // source_path == target_path.
                 // When one source path is provided, source_path may be aliased to a different
                 // target_path, so we source_ids[0] to derive the source_path.
-                let target_path = target_id.extract_path()?;
-                let source_path =
-                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_path.clone() };
+                //
+                // TODO: This logic could be simplified to use iter::zip() if
+                // extract_all_targets_for_each_child returned separate vectors for targets and
+                // target_ids instead of the cross product of them.
+                let source_id =
+                    if source_ids.len() == 1 { source_ids[0].clone() } else { target_id.clone() };
                 out_offers.push(cm::Offer::Protocol(cm::OfferProtocol {
-                    source_path,
+                    source_path: source_id.clone(),
                     source: source.clone(),
                     target,
-                    target_path,
+                    target_path: target_id.clone(),
                     dependency_type: offer
                         .dependency
                         .clone()
@@ -348,12 +339,11 @@ fn translate_offer(
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
-                let target_path = target_id.extract_path()?;
                 out_offers.push(cm::Offer::Directory(cm::OfferDirectory {
                     source_path: p.clone(),
                     source: source.clone(),
                     target,
-                    target_path,
+                    target_path: target_id,
                     rights: extract_offer_rights(offer)?,
                     subdir: extract_offer_subdir(offer),
                     dependency_type: offer
@@ -749,7 +739,7 @@ fn extract_all_targets_for_each_child(
     Ok(out_targets)
 }
 
-/// Return the target paths (or names) specified in the given capability.
+/// Return the target names or paths specified in the given capability.
 fn all_target_capability_ids<T, U>(
     in_obj: &T,
     to_obj: &U,
@@ -777,14 +767,49 @@ where
             }
         } else if let Some(p) = in_obj.protocol() {
             Some(match p {
-                OneOrMany::One(p) => OneOrMany::One(cml::NameOrPath::Path(p.clone())),
+                OneOrMany::One(cml::NameOrPath::Name(n))
+                    if clause_type == cml::RoutingClauseType::Use =>
+                {
+                    if let Some(path) = to_obj.path() {
+                        OneOrMany::One(cml::NameOrPath::Path(path.clone()))
+                    } else {
+                        OneOrMany::One(cml::NameOrPath::Path(
+                            format!("/svc/{}", n).parse().unwrap(),
+                        ))
+                    }
+                }
+                OneOrMany::One(cml::NameOrPath::Name(n))
+                    if clause_type == cml::RoutingClauseType::Use =>
+                {
+                    OneOrMany::One(cml::NameOrPath::Name(n.clone()))
+                }
+                OneOrMany::One(path) => OneOrMany::One(path.clone()),
                 OneOrMany::Many(v) => {
-                    let many = v.iter().map(|p| cml::NameOrPath::Path(p.clone())).collect();
+                    let many = v
+                        .iter()
+                        .map(|p| match p {
+                            cml::NameOrPath::Name(n) => {
+                                if let cml::RoutingClauseType::Use = clause_type {
+                                    cml::NameOrPath::Path(format!("/svc/{}", n).parse().unwrap())
+                                } else {
+                                    cml::NameOrPath::Name(n.clone())
+                                }
+                            }
+                            path => path.clone(),
+                        })
+                        .collect();
                     OneOrMany::Many(many)
                 }
             })
-        } else if let Some(p) = in_obj.directory() {
-            Some(OneOrMany::One(cml::NameOrPath::Path(p.clone())))
+        } else if let Some(d) = in_obj.directory() {
+            Some(match d {
+                cml::NameOrPath::Name(_) if clause_type == cml::RoutingClauseType::Use => {
+                    let path = to_obj.path().expect("no path on use directory");
+                    OneOrMany::One(cml::NameOrPath::Path(path.clone()))
+                }
+                cml::NameOrPath::Name(n) => OneOrMany::One(cml::NameOrPath::Name(n.clone())),
+                path => OneOrMany::One(path.clone()),
+            })
         } else if let Some(n) = in_obj.storage() {
             Some(OneOrMany::One(cml::NameOrPath::Name(n.clone())))
         } else if let Some(n) = in_obj.runner() {
@@ -945,11 +970,21 @@ mod tests {
                 "use": [
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "service": "fuchsia.sys2.Realm", "from": "framework" },
-                    { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
-                    { "protocol": "/svc/fuchsia.sys2.LegacyRealm", "from": "framework" },
-                    { "directory": "/data/assets", "rights" : ["read_bytes"]},
+                    { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
+                    { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider2" },
+                    { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
+                    { "protocol": "/svc/fuchsia.sys2.LegacyRealm2", "from": "framework" },
+                    { "directory": "assets", "rights" : ["read_bytes"], "path": "/data/assets" },
+                    { "directory": "/data/assets2", "rights" : ["read_bytes"]},
                     {
-                        "directory": "/data/config",
+                        "directory": "config",
+                        "path": "/data/config",
+                        "from": "parent",
+                        "rights": ["read_bytes"],
+                        "subdir": "fonts",
+                    },
+                    {
+                        "directory": "/data/config2",
                         "from": "parent",
                         "rights": ["read_bytes"],
                         "subdir": "fonts",
@@ -993,8 +1028,17 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/fonts/LegacyCoolFonts",
+                "source_path": "LegacyCoolFonts",
                 "target_path": "/svc/fuchsia.fonts.LegacyProvider"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "parent": {}
+                },
+                "source_path": "/fonts/LegacyCoolFonts",
+                "target_path": "/svc/fuchsia.fonts.LegacyProvider2"
             }
         },
         {
@@ -1002,8 +1046,17 @@ mod tests {
                 "source": {
                     "framework": {}
                 },
-                "source_path": "/svc/fuchsia.sys2.LegacyRealm",
+                "source_path": "fuchsia.sys2.LegacyRealm",
                 "target_path": "/svc/fuchsia.sys2.LegacyRealm"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "framework": {}
+                },
+                "source_path": "/svc/fuchsia.sys2.LegacyRealm2",
+                "target_path": "/svc/fuchsia.sys2.LegacyRealm2"
             }
         },
         {
@@ -1011,7 +1064,7 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/data/assets",
+                "source_path": "assets",
                 "target_path": "/data/assets",
                 "rights": [
                     "read_bytes"
@@ -1023,8 +1076,33 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/data/config",
+                "source_path": "/data/assets2",
+                "target_path": "/data/assets2",
+                "rights": [
+                    "read_bytes"
+                ]
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "parent": {}
+                },
+                "source_path": "config",
                 "target_path": "/data/config",
+                "rights": [
+                    "read_bytes"
+                ],
+                "subdir": "fonts"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "parent": {}
+                },
+                "source_path": "/data/config2",
+                "target_path": "/data/config2",
                 "rights": [
                     "read_bytes"
                 ],
@@ -1111,9 +1189,20 @@ mod tests {
                         "from": ["#logger", "self"],
                     },
                     {
+                        "protocol": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "as": "fuchsia.logger.LegacyLog",
+                        "to": "parent"
+                    },
+                    {
                         "protocol": "/loggers/fuchsia.logger.LegacyLog",
                         "from": "#logger",
-                        "as": "/svc/fuchsia.logger.LegacyLog",
+                        "as": "/svc/fuchsia.logger.LegacyLog2",
+                        "to": "parent"
+                    },
+                    {
+                        "protocol": [ "A", "B" ],
+                        "from": "self",
                         "to": "parent"
                     },
                     {
@@ -1122,11 +1211,18 @@ mod tests {
                         "to": "parent"
                     },
                     {
+                        "directory": "blob",
+                        "from": "self",
+                        "to": "framework",
+                        "rights": ["r*"],
+                    },
+                    {
                         "directory": "/volumes/blobfs/blob",
                         "from": "self",
                         "to": "framework",
                         "rights": ["r*"],
                     },
+                    { "directory": "hub", "from": "framework" },
                     { "directory": "/hub", "from": "framework" },
                     { "runner": "web", "from": "self" },
                     { "runner": "web", "from": "#logger", "to": "parent", "as": "web-rename" },
@@ -1134,6 +1230,13 @@ mod tests {
                 ],
                 "capabilities": [
                     { "service": "my.service.Service" },
+                    { "protocol": "A" },
+                    { "protocol": "B" },
+                    {
+                        "directory": "blob",
+                        "path": "/volumes/blobfs/blob",
+                        "rights": ["r*"],
+                    },
                     {
                         "runner": "web",
                         "path": "/svc/fuchsia.component.ComponentRunner",
@@ -1190,8 +1293,40 @@ mod tests {
                         "name": "logger"
                     }
                 },
+                "source_path": "fuchsia.logger.Log",
+                "target_path": "fuchsia.logger.LegacyLog",
+                "target": "parent"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
                 "source_path": "/loggers/fuchsia.logger.LegacyLog",
-                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "target_path": "/svc/fuchsia.logger.LegacyLog2",
+                "target": "parent"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "self": {}
+                },
+                "source_path": "A",
+                "target_path": "A",
+                "target": "parent"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "self": {}
+                },
+                "source_path": "B",
+                "target_path": "B",
                 "target": "parent"
             }
         },
@@ -1220,6 +1355,23 @@ mod tests {
                 "source": {
                     "self": {}
                 },
+                "source_path": "blob",
+                "target_path": "blob",
+                "target": "framework",
+                "rights": [
+                    "connect",
+                    "enumerate",
+                    "traverse",
+                    "read_bytes",
+                    "get_attributes"
+                ]
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "self": {}
+                },
                 "source_path": "/volumes/blobfs/blob",
                 "target_path": "/volumes/blobfs/blob",
                 "target": "framework",
@@ -1230,6 +1382,16 @@ mod tests {
                     "read_bytes",
                     "get_attributes"
                 ]
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "framework": {}
+                },
+                "source_path": "hub",
+                "target_path": "hub",
+                "target": "parent"
             }
         },
         {
@@ -1285,6 +1447,31 @@ mod tests {
             }
         },
         {
+            "protocol": {
+                "name": "A",
+                "source_path": "/svc/A"
+            }
+        },
+        {
+            "protocol": {
+                "name": "B",
+                "source_path": "/svc/B"
+            }
+        },
+        {
+            "directory": {
+                "name": "blob",
+                "source_path": "/volumes/blobfs/blob",
+                "rights": [
+                    "connect",
+                    "enumerate",
+                    "traverse",
+                    "read_bytes",
+                    "get_attributes"
+                ]
+            }
+        },
+        {
             "runner": {
                 "name": "web",
                 "source": {
@@ -1324,10 +1511,23 @@ mod tests {
                         "to": [ "#netstack" ]
                     },
                     {
+                        "protocol": "fuchsia.logger.LegacyLog",
+                        "from": "#logger",
+                        "to": [ "#netstack" ],
+                        "dependency": "weak_for_migration"
+                    },
+                    {
                         "protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#netstack" ],
                         "dependency": "weak_for_migration"
+                    },
+                    {
+                        "protocol": "fuchsia.logger.LegacyLog",
+                        "from": "#logger",
+                        "to": [ "#modular" ],
+                        "as": "fuchsia.logger.LegacySysLog",
+                        "dependency": "strong"
                     },
                     {
                         "protocol": "/svc/fuchsia.logger.LegacyLog",
@@ -1338,11 +1538,25 @@ mod tests {
                     },
                     {
                         "protocol": [
+                            "fuchsia.setui.SetUiService",
+                            "fuchsia.wlan.service.Wlan"
+                        ],
+                        "from": "parent",
+                        "to": [ "#modular" ]
+                    },
+                    {
+                        "protocol": [
                             "/svc/fuchsia.setui.SetUiService",
                             "/svc/fuchsia.wlan.service.Wlan"
                         ],
                         "from": "parent",
                         "to": [ "#modular" ]
+                    },
+                    {
+                        "directory": "assets",
+                        "from": "parent",
+                        "to": [ "#netstack" ],
+                        "dependency": "weak_for_migration"
                     },
                     {
                         "directory": "/data/assets",
@@ -1351,12 +1565,26 @@ mod tests {
                         "dependency": "weak_for_migration"
                     },
                     {
+                        "directory": "data",
+                        "from": "parent",
+                        "to": [ "#modular" ],
+                        "as": "assets",
+                        "subdir": "index/file",
+                        "dependency": "strong"
+                    },
+                    {
                         "directory": "/data/assets",
                         "from": "parent",
                         "to": [ "#modular" ],
                         "as": "/data",
                         "subdir": "index/file",
                         "dependency": "strong"
+                    },
+                    {
+                        "directory": "hub",
+                        "from": "framework",
+                        "to": [ "#modular" ],
+                        "as": "hub",
                     },
                     {
                         "directory": "/hub",
@@ -1509,6 +1737,23 @@ mod tests {
                         "name": "logger"
                     }
                 },
+                "source_path": "fuchsia.logger.LegacyLog",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_path": "fuchsia.logger.LegacyLog",
+                "dependency_type": "weak_for_migration"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
                 "source_path": "/svc/fuchsia.logger.LegacyLog",
                 "target": {
                     "child": {
@@ -1526,6 +1771,23 @@ mod tests {
                         "name": "logger"
                     }
                 },
+                "source_path": "fuchsia.logger.LegacyLog",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "fuchsia.logger.LegacySysLog",
+                "dependency_type": "strong"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "child": {
+                        "name": "logger"
+                    }
+                },
                 "source_path": "/svc/fuchsia.logger.LegacyLog",
                 "target": {
                     "collection": {
@@ -1533,6 +1795,36 @@ mod tests {
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.LegacySysLog",
+                "dependency_type": "strong"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "parent": {}
+                },
+                "source_path": "fuchsia.setui.SetUiService",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "fuchsia.setui.SetUiService",
+                "dependency_type": "strong"
+            }
+        },
+        {
+            "protocol": {
+                "source": {
+                    "parent": {}
+                },
+                "source_path": "fuchsia.wlan.service.Wlan",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "fuchsia.wlan.service.Wlan",
                 "dependency_type": "strong"
             }
         },
@@ -1571,6 +1863,21 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
+                "source_path": "assets",
+                "target": {
+                    "child": {
+                        "name": "netstack"
+                    }
+                },
+                "target_path": "assets",
+                "dependency_type": "weak_for_migration"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "parent": {}
+                },
                 "source_path": "/data/assets",
                 "target": {
                     "child": {
@@ -1586,6 +1893,22 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
+                "source_path": "data",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "assets",
+                "subdir": "index/file",
+                "dependency_type": "strong"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "parent": {}
+                },
                 "source_path": "/data/assets",
                 "target": {
                     "collection": {
@@ -1594,6 +1917,21 @@ mod tests {
                 },
                 "target_path": "/data",
                 "subdir": "index/file",
+                "dependency_type": "strong"
+            }
+        },
+        {
+            "directory": {
+                "source": {
+                    "framework": {}
+                },
+                "source_path": "hub",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "hub",
                 "dependency_type": "strong"
             }
         },
@@ -2148,12 +2486,12 @@ mod tests {
                 },
                 "use": [
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
-                    { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
-                    { "protocol": [ "/fonts/ReallyGoodFonts", "/fonts/IWouldNeverUseTheseFonts"]},
+                    { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
+                    { "protocol": [ "ReallyGoodFonts", "IWouldNeverUseTheseFonts"]},
                     { "runner": "elf" },
                 ],
                 "expose": [
-                    { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
+                    { "directory": "blobfs", "from": "self", "rights": ["r*"]},
                 ],
                 "offer": [
                     {
@@ -2162,7 +2500,7 @@ mod tests {
                         "to": [ "#netstack", "#modular" ]
                     },
                     {
-                        "protocol": "/svc/fuchsia.logger.LegacyLog",
+                        "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#netstack", "#modular" ],
                         "dependency": "weak_for_migration"
@@ -2185,6 +2523,11 @@ mod tests {
                     },
                 ],
                 "capabilities": [
+                    {
+                        "directory": "blobfs",
+                        "path": "/volumes/blobfs",
+                        "rights": [ "r*" ],
+                    },
                     {
                         "runner": "myrunner",
                         "path": "/runner",
@@ -2221,7 +2564,7 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/fonts/LegacyCoolFonts",
+                "source_path": "LegacyCoolFonts",
                 "target_path": "/svc/fuchsia.fonts.LegacyProvider"
             }
         },
@@ -2230,8 +2573,8 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/fonts/ReallyGoodFonts",
-                "target_path": "/fonts/ReallyGoodFonts"
+                "source_path": "ReallyGoodFonts",
+                "target_path": "/svc/ReallyGoodFonts"
             }
         },
         {
@@ -2239,8 +2582,8 @@ mod tests {
                 "source": {
                     "parent": {}
                 },
-                "source_path": "/fonts/IWouldNeverUseTheseFonts",
-                "target_path": "/fonts/IWouldNeverUseTheseFonts"
+                "source_path": "IWouldNeverUseTheseFonts",
+                "target_path": "/svc/IWouldNeverUseTheseFonts"
             }
         },
         {
@@ -2255,8 +2598,8 @@ mod tests {
                 "source": {
                     "self": {}
                 },
-                "source_path": "/volumes/blobfs",
-                "target_path": "/volumes/blobfs",
+                "source_path": "blobfs",
+                "target_path": "blobfs",
                 "target": "parent",
                 "rights": [
                     "connect",
@@ -2308,13 +2651,13 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/fuchsia.logger.LegacyLog",
+                "source_path": "fuchsia.logger.LegacyLog",
                 "target": {
                     "child": {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "target_path": "fuchsia.logger.LegacyLog",
                 "dependency_type": "weak_for_migration"
             }
         },
@@ -2325,18 +2668,31 @@ mod tests {
                         "name": "logger"
                     }
                 },
-                "source_path": "/svc/fuchsia.logger.LegacyLog",
+                "source_path": "fuchsia.logger.LegacyLog",
                 "target": {
                     "collection": {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "target_path": "fuchsia.logger.LegacyLog",
                 "dependency_type": "weak_for_migration"
             }
         }
     ],
     "capabilities": [
+        {
+            "directory": {
+                "name": "blobfs",
+                "source_path": "/volumes/blobfs",
+                "rights": [
+                    "connect",
+                    "enumerate",
+                    "traverse",
+                    "read_bytes",
+                    "get_attributes"
+                ]
+            }
+        },
         {
             "runner": {
                 "name": "myrunner",

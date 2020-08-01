@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow, serde_json,
+    anyhow,
+    cm_types::ParseError,
+    serde_json,
     serde_json::Value,
     std::borrow::Cow,
     std::error,
@@ -177,15 +179,25 @@ impl From<serde_json::Error> for Error {
     }
 }
 
+impl From<ParseError> for Error {
+    fn from(err: ParseError) -> Self {
+        match err {
+            ParseError::InvalidValue => Self::internal("invalid value"),
+            ParseError::InvalidLength => Self::internal("invalid length"),
+            ParseError::NotAName => Self::internal("not a name"),
+            ParseError::NotAPath => Self::internal("not a path"),
+        }
+    }
+}
+
 pub fn from_json_str(json: &str, filename: &Path) -> Result<Value, Error> {
-    let v = serde_json::from_str(json).map_err(|e| {
+    serde_json::from_str(json).map_err(|e| {
         Error::parse(
             format!("Couldn't read input as JSON: {}", e),
             Some(Location { line: e.line(), column: e.column() }),
             Some(filename),
         )
-    })?;
-    Ok(v)
+    })
 }
 
 #[cfg(test)]
