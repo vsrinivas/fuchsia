@@ -327,14 +327,14 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("exits early if session creation fails", func(t *testing.T) {
-		client, server, cleanup := setUpClient(ctx, t, nil, nil)
+		conn, server, cleanup := setUpConn(ctx, t, nil, nil)
 		defer cleanup()
 
 		server.stop()
 
 		errs := make(chan error)
 		go func() {
-			errs <- client.Run(ctx, []string{"foo"}, nil, nil)
+			errs <- conn.Run(ctx, []string{"foo"}, nil, nil)
 		}()
 
 		select {
