@@ -64,20 +64,30 @@ impl Joined {
         &self,
         sta: &mut BoundClient<'_>,
         timeout_bcn_count: u16,
+        auth_type: fidl_mlme::AuthenticationTypes,
     ) -> Result<akm::AkmAlgorithm<EventId>, ()> {
-        let mut algorithm =
-            akm::AkmAlgorithm::open_supplicant(TimeUnit(sta.sta.beacon_period * timeout_bcn_count));
+        let timeout = TimeUnit(sta.sta.beacon_period * timeout_bcn_count);
+        let mut algorithm = match auth_type {
+            fidl_mlme::AuthenticationTypes::OpenSystem => {
+                akm::AkmAlgorithm::open_supplicant(timeout)
+            }
+            fidl_mlme::AuthenticationTypes::Sae => akm::AkmAlgorithm::sae_supplicant(timeout),
+            _ => {
+                error!("Unhandled authentication algorithm: {:?}", auth_type);
+                return Err(());
+            }
+        };
         match algorithm.initiate(sta) {
             Ok(akm::AkmState::Failed) | Err(_) => {
                 sta.send_authenticate_conf(
                     algorithm.auth_type(),
                     fidl_mlme::AuthenticateResultCodes::Refused,
                 );
-                return Err(());
+                error!("Failed to initiate authentication");
+                Err(())
             }
-            _ => (),
-        };
-        Ok(algorithm)
+            _ => Ok(algorithm),
+        }
     }
 }
 
@@ -89,36 +99,27 @@ pub struct Authenticating {
 }
 
 impl Authenticating {
-    /// Processes an inbound authentication frame.
-    /// SME will be notified via an MLME-AUTHENTICATE.confirm message whether the authentication
-    /// with the BSS was successful.
-    /// Returns Ok(()) if the authentication was successful, otherwise Err(()).
-    /// Note: The pending authentication timeout will be canceled in any case.
-    fn on_auth_frame(
-        &mut self,
+    fn akm_state_update_notify_sme(
+        &self,
         sta: &mut BoundClient<'_>,
-        auth_hdr: &mac::AuthHdr,
+        state: Result<akm::AkmState, anyhow::Error>,
     ) -> akm::AkmState {
-        // TODO(40006): Take auth_body as input too.
-
-        match self.algorithm.handle_auth_frame(sta, auth_hdr, None) {
-            Ok(state) => {
-                match &state {
-                    akm::AkmState::AuthComplete => sta.send_authenticate_conf(
-                        self.algorithm.auth_type(),
-                        fidl_mlme::AuthenticateResultCodes::Success,
-                    ),
-                    akm::AkmState::Failed => {
-                        error!("authentication with BSS failed");
-                        sta.send_authenticate_conf(
-                            self.algorithm.auth_type(),
-                            fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
-                        );
-                    }
-                    // Authentication is not done yet, so we take no action.
-                    akm::AkmState::InProgress => (),
-                };
-                state
+        match state {
+            Ok(akm::AkmState::AuthComplete) => {
+                sta.send_authenticate_conf(
+                    self.algorithm.auth_type(),
+                    fidl_mlme::AuthenticateResultCodes::Success,
+                );
+                akm::AkmState::AuthComplete
+            }
+            Ok(akm::AkmState::InProgress) => akm::AkmState::InProgress,
+            Ok(akm::AkmState::Failed) => {
+                error!("authentication with BSS failed");
+                sta.send_authenticate_conf(
+                    self.algorithm.auth_type(),
+                    fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
+                );
+                akm::AkmState::Failed
             }
             Err(e) => {
                 error!("Internal error while authenticating: {}", e);
@@ -129,6 +130,44 @@ impl Authenticating {
                 akm::AkmState::Failed
             }
         }
+    }
+
+    /// Processes an inbound authentication frame.
+    /// SME will be notified via an MLME-AUTHENTICATE.confirm message whether the authentication
+    /// with the BSS was successful.
+    /// Returns Ok(()) if the authentication was successful, otherwise Err(()).
+    /// Note: The pending authentication timeout will be canceled in any case.
+    fn on_auth_frame(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        auth_hdr: &mac::AuthHdr,
+        body: &[u8],
+    ) -> akm::AkmState {
+        let state = self.algorithm.handle_auth_frame(sta, auth_hdr, Some(body));
+        self.akm_state_update_notify_sme(sta, state)
+    }
+
+    /// Processes an SAE response from SME.
+    /// This indicates that an SAE handshake has completed, successful or otherwise.
+    /// On success, authentication is complete.
+    fn on_sme_sae_resp(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        resp: fidl_mlme::SaeHandshakeResponse,
+    ) -> akm::AkmState {
+        let state = self.algorithm.handle_sae_resp(sta, resp.result_code);
+        self.akm_state_update_notify_sme(sta, state)
+    }
+
+    /// Processes a request from SME to transmit an SAE authentication frame to a peer.
+    fn on_sme_sae_tx(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        tx: fidl_mlme::SaeFrame,
+    ) -> akm::AkmState {
+        let state =
+            self.algorithm.handle_sme_sae_tx(sta, tx.seq_num, tx.result_code, &tx.sae_fields[..]);
+        self.akm_state_update_notify_sme(sta, state)
     }
 
     /// Processes an inbound deauthentication frame.
@@ -153,7 +192,7 @@ impl Authenticating {
     /// an MLME-AUTHENTICATION.confirm message is reported to MLME's SME peer indicating the
     /// timeout.
     fn on_timeout(&mut self, sta: &mut BoundClient<'_>, event: EventId) {
-        // Timeout may result in a failure.
+        // Timeout may result in a failure, and otherwise has no effect on state.
         match self.algorithm.handle_timeout(sta, event) {
             Ok(akm::AkmState::Failed) => {
                 sta.send_authenticate_conf(
@@ -776,9 +815,6 @@ statemachine!(
     Authenticated => Associating,
     Associating => Associated,
 
-    // Multi-step authentication (SAE):
-    Authenticating => Authenticating,
-
     // Timeout:
     Authenticating => Joined,
     Associating => Authenticated,
@@ -884,8 +920,8 @@ impl States {
 
         match self {
             States::Authenticating(mut state) => match mgmt_body {
-                mac::MgmtBody::Authentication { auth_hdr, .. } => {
-                    match state.on_auth_frame(sta, &auth_hdr) {
+                mac::MgmtBody::Authentication { auth_hdr, elements } => {
+                    match state.on_auth_frame(sta, &auth_hdr, &elements[..]) {
                         akm::AkmState::InProgress => state.into(),
                         akm::AkmState::Failed => state.transition_to(Joined).into(),
                         akm::AkmState::AuthComplete => state.transition_to(Authenticated).into(),
@@ -1039,7 +1075,11 @@ impl States {
         match self {
             States::Joined(state) => match msg {
                 MlmeMsg::AuthenticateReq { req } => {
-                    match state.on_sme_authenticate(sta, req.auth_failure_timeout as u16) {
+                    match state.on_sme_authenticate(
+                        sta,
+                        req.auth_failure_timeout as u16,
+                        req.auth_type,
+                    ) {
                         Ok(algorithm) => state.transition_to(Authenticating { algorithm }).into(),
                         Err(()) => state.into(),
                     }
@@ -1047,6 +1087,16 @@ impl States {
                 _ => state.into(),
             },
             States::Authenticating(mut state) => match msg {
+                MlmeMsg::SaeHandshakeResp { resp } => match state.on_sme_sae_resp(sta, resp) {
+                    akm::AkmState::InProgress => state.into(),
+                    akm::AkmState::Failed => state.transition_to(Joined).into(),
+                    akm::AkmState::AuthComplete => state.transition_to(Authenticated).into(),
+                },
+                MlmeMsg::SaeFrameTx { frame } => match state.on_sme_sae_tx(sta, frame) {
+                    akm::AkmState::InProgress => state.into(),
+                    akm::AkmState::Failed => state.transition_to(Joined).into(),
+                    akm::AkmState::AuthComplete => state.transition_to(Authenticated).into(),
+                },
                 MlmeMsg::DeauthenticateReq { req: _ } => {
                     state.on_sme_deauthenticate(sta);
                     state.transition_to(Joined).into()
@@ -1349,7 +1399,9 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Joined;
-        state.on_sme_authenticate(&mut sta, 10).expect("failed authenticating");
+        state
+            .on_sme_authenticate(&mut sta, 10, fidl_mlme::AuthenticationTypes::OpenSystem)
+            .expect("failed authenticating");
 
         // Verify an event was queued up in the timer.
         assert_eq!(sta.ctx.timer.scheduled_events(TimedEvent::Authenticating).len(), 1);
@@ -1388,7 +1440,9 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = Joined;
-        state.on_sme_authenticate(&mut sta, 10).expect_err("should fail authenticating");
+        state
+            .on_sme_authenticate(&mut sta, 10, fidl_mlme::AuthenticationTypes::OpenSystem)
+            .expect_err("should fail authenticating");
 
         // Verify no event was queued up in the timer.
         assert_eq!(sta.ctx.timer.scheduled_event_count(), 0);
@@ -1423,6 +1477,7 @@ mod tests {
                     auth_txn_seq_num: 2,
                     status_code: mac::StatusCode::SUCCESS,
                 },
+                &[]
             ),
             akm::AkmState::AuthComplete
         );
@@ -1460,6 +1515,7 @@ mod tests {
                     auth_txn_seq_num: 2,
                     status_code: mac::StatusCode::NOT_IN_SAME_BSS,
                 },
+                &[]
             ),
             akm::AkmState::Failed
         );

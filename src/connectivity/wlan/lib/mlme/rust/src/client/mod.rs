@@ -461,8 +461,17 @@ impl<'a> akm_algorithm::AkmAction for BoundClient<'a> {
         self.send_auth_frame(auth_type, seq_num, result_code, auth_content).map_err(|e| e.into())
     }
 
-    fn publish_pmk(&mut self, pmk: fidl_mlme::PmkInfo) {
-        self.send_pmk_info(pmk);
+    fn forward_sme_sae_rx(
+        &mut self,
+        seq_num: u16,
+        result_code: fidl_mlme::AuthenticateResultCodes,
+        sae_fields: Vec<u8>,
+    ) {
+        self.forward_sae_frame_rx(seq_num, result_code, sae_fields)
+    }
+
+    fn forward_sae_handshake_ind(&mut self) {
+        self.forward_sae_handshake_ind()
     }
 
     fn schedule_auth_timeout(&mut self, duration: TimeUnit) -> EventId {
@@ -927,12 +936,34 @@ impl<'a> BoundClient<'a> {
         }
     }
 
-    /// Sends a PmkInfo to SME to indicate that some handshake has produced a PMK.
-    fn send_pmk_info(&mut self, mut pmk_info: fidl_mlme::PmkInfo) {
-        let result =
-            self.ctx.device.access_sme_sender(|sender| sender.send_on_pmk_available(&mut pmk_info));
+    /// Sends an sae frame rx message to the SME.
+    fn forward_sae_frame_rx(
+        &mut self,
+        seq_num: u16,
+        result_code: fidl_mlme::AuthenticateResultCodes,
+        sae_fields: Vec<u8>,
+    ) {
+        let result = self.ctx.device.access_sme_sender(|sender| {
+            sender.send_on_sae_frame_rx(&mut fidl_mlme::SaeFrame {
+                peer_sta_address: self.sta.bssid.0,
+                seq_num,
+                result_code,
+                sae_fields,
+            })
+        });
         if let Err(e) = result {
-            error!("error sending OnPmkInfo: {}", e);
+            error!("error sending OnSaeFrameRx: {}", e);
+        }
+    }
+
+    fn forward_sae_handshake_ind(&mut self) {
+        let result = self.ctx.device.access_sme_sender(|sender| {
+            sender.send_on_sae_handshake_ind(&mut fidl_mlme::SaeHandshakeIndication {
+                peer_sta_address: self.sta.bssid.0,
+            })
+        });
+        if let Err(e) = result {
+            error!("error sending OnSaeHandshakeInd: {}", e);
         }
     }
 

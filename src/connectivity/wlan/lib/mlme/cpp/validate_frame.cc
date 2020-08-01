@@ -338,18 +338,6 @@ static constexpr AllowedElement kProbeRespElements[] = {
     // clang-format on
 };
 
-// IEEE Std 802.11-2016, 9.3.3.12
-static constexpr AllowedElement kAuthElements[] = {
-    // clang-format off
-    kChallengeText,
-    kRsn,
-    kMobilityDomain,
-    kFastBssTransition,
-    kTimeoutInterval
-    // TODO: RIC (can be several elements)
-    // clang-format on
-};
-
 // IEEE Std 802.11-2016, 9.3.3.13
 static constexpr AllowedElement kDeauthElements[] = {kManagementMic};
 
@@ -579,20 +567,13 @@ static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
       ValidateFrameWithElements(r, sizeof(Disassociation), "Disassociation", kDisassocElements,
                                 errors);
       break;
-    case kAuthentication:
-      // This will report a false positive if we attempt to write an auth frame
-      // with trailing non-element fields, e.g. "Finite Cyclic Group".
-      // If we get there one day, we can delete this check (or write a proper
-      // validator, which is probably not worth the effort, given how
-      // complicated the encoding is).
-      ValidateFrameWithElements(r, sizeof(Authentication), "Authentication", kAuthElements, errors);
-      break;
     case kDeauthentication:
       ValidateFrameWithElements(r, sizeof(Deauthentication), "Deauthentication", kDeauthElements,
                                 errors);
       break;
     case kAction:
     case kActionNoAck:
+    case kAuthentication:
       break;
   }
 }
