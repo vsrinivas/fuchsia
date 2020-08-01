@@ -4,6 +4,9 @@
 
 #include <lib/fidl/coding.h>
 
+#include <cstdint>
+#include <cstring>
+
 zx_status_t fidl_validate_string(const char* data, uint64_t size) {
   if (!data) {
     return ZX_ERR_INVALID_ARGS;
@@ -13,9 +16,20 @@ zx_status_t fidl_validate_string(const char* data, uint64_t size) {
   }
 
   uint64_t pos = 0;
-  uint64_t next_pos = 0;
-  uint32_t code_point = 0;
+  // Fast path:
+  // Read ASCII bytes in 8-byte chunks until a non-ASCII byte is encountered.
+  for (; pos < (size & ~7); pos += 8) {
+    uint64_t val;
+    memcpy(&val, &data[pos], 8);
+    if ((val & 0x8080'8080'8080'8080) != 0) {
+      break;
+    }
+  }
+
   while (pos < size) {
+    uint64_t next_pos = 0;
+    uint32_t code_point = 0;
+
     // The following comparison relies on treating the byte as if it was an
     // unsigned 8-bit value. However, both signed and unsigned char are allowed
     // in the C++ spec, with x64 choosing signed, and arm64 choosing unsigned.
