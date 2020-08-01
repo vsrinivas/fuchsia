@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{common_utils::common::macros::with_line, wlan_policy::types::ClientStateSummary},
+    crate::{
+        common_utils::common::macros::with_line,
+        wlan_policy::types::{ClientStateSummary, NetworkConfig},
+    },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_component::client::connect_to_service,
@@ -183,6 +186,12 @@ impl WlanPolicyFacade {
             .controller
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
+        fx_log_info!(
+            tag: &with_line!("WlanPolicyFacade::remove_network"),
+            "Removing network: ({}{:?})",
+            String::from_utf8_lossy(&target_ssid),
+            type_
+        );
 
         let config = fidl_policy::NetworkConfig {
             id: Some(fidl_policy::NetworkIdentifier { ssid: target_ssid, type_ }),
@@ -193,6 +202,26 @@ impl WlanPolicyFacade {
             .await
             .map_err(|err| format_err!("{:?}", err))? // FIDL error
             .map_err(|err| format_err!("{:?}", err)) // network config change error
+    }
+
+    /// Remove all of the client's saved networks.
+    pub async fn remove_all_networks(&self) -> Result<(), Error> {
+        let inner_guard = self.inner.read();
+        let controller = inner_guard
+            .controller
+            .as_ref()
+            .ok_or(format_err!("client controller has not been initialized"))?;
+
+        // Remove each saved network individually.
+        let saved_networks = self.get_saved_networks().await?;
+        for network_config in saved_networks {
+            controller
+                .remove_network(network_config)
+                .await
+                .map_err(|err| format_err!("{:?}", err))? // FIDL error
+                .map_err(|err| format_err!("{:?}", err))?; // network config change error
+        }
+        Ok(())
     }
 
     /// Send the request to the policy layer to start making client connections.
@@ -288,8 +317,15 @@ impl WlanPolicyFacade {
             .map_err(|e| format_err!("{:?}", e))
     }
 
-    // Get a list of the saved networks.
-    pub async fn get_saved_networks(&self) -> Result<Vec<String>, Error> {
+    pub async fn get_saved_networks_json(&self) -> Result<Vec<NetworkConfig>, Error> {
+        let saved_networks = self.get_saved_networks().await?;
+        // Convert FIDL network configs to JSON values that can be passed through SL4F
+        Ok(saved_networks.into_iter().map(|cfg| cfg.into()).collect::<Vec<_>>())
+    }
+
+    /// Get a list of the saved networks. Returns FIDL values to be used directly or converted to
+    /// serializable values that can be passed through SL4F
+    async fn get_saved_networks(&self) -> Result<Vec<fidl_policy::NetworkConfig>, Error> {
         let inner_guard = self.inner.read();
         let controller = inner_guard
             .controller
@@ -313,22 +349,11 @@ impl WlanPolicyFacade {
             }
             networks.extend(cfgs);
         }
-
-        Ok(Self::stringify_networks(networks))
+        Ok(networks)
     }
 
     fn stringify_scan_results(results: Vec<fidl_policy::ScanResult>) -> Vec<String> {
         results
-            .into_iter()
-            .filter_map(|result| result.id)
-            .map(|id| String::from_utf8_lossy(&id.ssid).into_owned())
-            .collect()
-    }
-
-    // Convert a list of network configs to a list of strings to pass back through SL4F. For now
-    // just use the SSIDs.
-    fn stringify_networks(networks: Vec<fidl_policy::NetworkConfig>) -> Vec<String> {
-        networks
             .into_iter()
             .filter_map(|result| result.id)
             .map(|id| String::from_utf8_lossy(&id.ssid).into_owned())

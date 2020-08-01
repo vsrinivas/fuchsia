@@ -67,7 +67,7 @@ impl Facade for WlanPolicyFacade {
             }
             "get_saved_networks" => {
                 fx_log_info!(tag: "WlanPolicyFacade", "attempting to get saved networks");
-                let result = self.get_saved_networks().await?;
+                let result = self.get_saved_networks_json().await?;
                 to_value(result)
                     .map_err(|e| format_err!("error handling get saved networks result: {}", e))
             }
@@ -76,6 +76,12 @@ impl Facade for WlanPolicyFacade {
                 let result = self.create_client_controller()?;
                 to_value(result)
                     .map_err(|e| format_err!("error initializing client controller: {}", e))
+            }
+            "remove_all_networks" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "Removing all saved client network configs");
+                let result = self.remove_all_networks().await?;
+                to_value(result)
+                    .map_err(|e| format_err!("error removing all saved networks: {}", e))
             }
             "get_update" => {
                 fx_log_info!(tag: "WlanPolicyFacade", "getting client update");
@@ -115,7 +121,7 @@ fn parse_security_type(args: &Value) -> Result<fidl_policy::SecurityType, Error>
         "wpa" => Ok(fidl_policy::SecurityType::Wpa),
         "wpa2" => Ok(fidl_policy::SecurityType::Wpa2),
         "wpa3" => Ok(fidl_policy::SecurityType::Wpa3),
-        _ => Err(format_err!("Scan: failed to parse security type (None, WEP, WPA, WPA2, or WPA3")),
+        _ => Err(format_err!("failed to parse security type (None, WEP, WPA, WPA2, or WPA3")),
     }
 }
 
