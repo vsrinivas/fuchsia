@@ -4,8 +4,5 @@
 
 group("tests") {
   testonly = true
-  deps = [
-    "drivers:tests",
-    "lib:tests",
-  ]
+  deps = [ "rtc:tests" ]
 }

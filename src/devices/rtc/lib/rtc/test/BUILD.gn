@@ -5,6 +5,11 @@
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":rtc-lib-package" ]
+}
+
 test("rtc-lib") {
   output_name = "rtc-lib-test"
   configs += [ "//build/unification/config:zircon-migrated" ]

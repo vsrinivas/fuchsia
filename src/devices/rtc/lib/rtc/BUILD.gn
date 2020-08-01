@@ -14,6 +14,11 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
+
 zx_library("rtc") {
   sdk = "source"
   sdk_headers = [ "librtc.h" ]
