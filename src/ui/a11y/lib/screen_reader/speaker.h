@@ -40,6 +40,8 @@ class Speaker {
     bool interrupt = true;
     // Delay before utterance is vocalized.
     zx::duration delay = zx::msec(0);
+    // Whether the utterance of the task is saved for later inspection.
+    bool save_utterance = true;
   };
 
   explicit Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
@@ -61,6 +63,9 @@ class Speaker {
 
   // Returns a promise that cancels pending or in progress tts utterances.
   virtual fit::promise<> CancelTts();
+
+  // Returns a string with the last spoken utterance.
+  virtual const std::string& last_utterance() const { return last_utterance_; }
 
  protected:
   // For mocks.
@@ -86,7 +91,7 @@ class Speaker {
 
   // Prepares the task for execution. If interrupting or at the front of the queue, starts right
   // away, waits  for its turn otherwise.
-  fit::promise<> PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt);
+  fit::promise<> PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt, bool save_utterance);
 
   // Dispatches all utterances of this task to be spoken, respecting their order and time spacing
   // requirements.
@@ -119,6 +124,9 @@ class Speaker {
   // queue of speech tasks. Only the front of the queue is running, while others wait for it to
   // finish.
   std::queue<std::shared_ptr<SpeechTask>> queue_;
+
+  // The last spoken utterance.
+  std::string last_utterance_;
 };
 
 }  // namespace a11y

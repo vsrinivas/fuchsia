@@ -24,6 +24,24 @@ void DelayTask(int64_t delay, fit::suspended_task task) {
   }).detach();
 }
 
+// Concatenates all utterance strings into a single string.
+std::string ConcatenateUtterances(
+    const std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>& utterances) {
+  std::string utterance;
+  if (!utterances.empty()) {
+    auto it = utterances.begin();
+    utterance = it->utterance.has_message() ? it->utterance.message() : "";
+    it++;
+    while (it != utterances.end()) {
+      if (it->utterance.has_message()) {
+        utterance += " " + it->utterance.message();
+      }
+      it++;
+    }
+  }
+  return utterance;
+}
+
 }  // namespace
 
 Speaker::Speaker(fuchsia::accessibility::tts::EnginePtr* tts_engine_ptr,
@@ -38,7 +56,8 @@ fit::promise<> Speaker::SpeakNodePromise(const fuchsia::accessibility::semantics
   auto utterances = screen_reader_message_generator_->DescribeNode(node);
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
 
-  return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
+  return PrepareTask(task, options.interrupt, options.save_utterance)
+      .and_then(DispatchUtterances(task, options.interrupt));
 }
 
 fit::promise<> Speaker::SpeakMessagePromise(Utterance utterance, Options options) {
@@ -48,7 +67,8 @@ fit::promise<> Speaker::SpeakMessagePromise(Utterance utterance, Options options
   utterances.push_back(std::move(utterance_and_context));
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
 
-  return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
+  return PrepareTask(task, options.interrupt, options.save_utterance)
+      .and_then(DispatchUtterances(task, options.interrupt));
 }
 
 fit::promise<> Speaker::SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
@@ -59,11 +79,16 @@ fit::promise<> Speaker::SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds 
   FX_DCHECK(!utterances.empty());
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
 
-  return PrepareTask(task, options.interrupt).and_then(DispatchUtterances(task, options.interrupt));
+  return PrepareTask(task, options.interrupt, options.save_utterance)
+      .and_then(DispatchUtterances(task, options.interrupt));
 }
 
-fit::promise<> Speaker::PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt) {
-  return fit::make_promise([this, task, interrupt]() mutable -> fit::promise<> {
+fit::promise<> Speaker::PrepareTask(std::shared_ptr<SpeechTask> task, bool interrupt,
+                                    bool save_utterance) {
+  return fit::make_promise([this, task, interrupt, save_utterance]() mutable -> fit::promise<> {
+    if (save_utterance) {
+      last_utterance_ = ConcatenateUtterances(task->utterances);
+    }
     if (interrupt) {
       decltype(queue_) empty;
       std::swap(empty, queue_);

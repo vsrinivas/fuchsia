@@ -226,5 +226,34 @@ TEST_F(SpeakerTest, DropsTaskWhenSpeakFails) {
   EXPECT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
 }
 
+TEST_F(SpeakerTest, SpeakerSavesLastUtterance) {
+  std::vector<a11y::ScreenReaderMessageGenerator::UtteranceAndContext> description;
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance1;
+  utterance1.utterance.set_message("foo");
+  a11y::ScreenReaderMessageGenerator::UtteranceAndContext utterance2;
+  utterance2.utterance.set_message("button");
+  utterance2.delay = zx::duration(zx::msec(300));
+  description.push_back(std::move(utterance1));
+  description.push_back(std::move(utterance2));
+  mock_screen_reader_message_generator_ptr_->set_description(std::move(description));
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
+  auto task = speaker_->SpeakNodePromise(&node, {.interrupt = true, .save_utterance = true});
+  executor_.schedule_task(std::move(task));
+  RunLoopUntilIdle();
+  EXPECT_EQ(speaker_->last_utterance(), "foo button");
+}
+
+TEST_F(SpeakerTest, DoesNotSaveUtterance) {
+  fuchsia::accessibility::tts::Utterance message;
+  message.set_message("foo");
+  auto task = speaker_->SpeakMessagePromise(std::move(message),
+                                            {.interrupt = true, .save_utterance = false});
+  executor_.schedule_task(std::move(task));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(speaker_->last_utterance().empty());
+}
+
 }  // namespace
 }  // namespace accessibility_test
