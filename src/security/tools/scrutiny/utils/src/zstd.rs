@@ -8,6 +8,7 @@ use {
     std::ffi::CStr,
 };
 
+/// "C" externs provided from the zstd third_party library.
 #[link(name = "zstd")]
 extern "C" {
     fn ZSTD_compress(
@@ -27,6 +28,8 @@ extern "C" {
     fn ZSTD_getErrorName(code: size_t) -> *const c_char;
 }
 
+/// Attempts to compress the `src` buffer returning a Vec<u8> with a capacity which
+/// is at most `dst_capacity`.
 pub fn compress(src: &[u8], dst_capacity: u32, level: i32) -> Result<Vec<u8>> {
     unsafe {
         let src_len = src.len() as size_t;
@@ -37,18 +40,21 @@ pub fn compress(src: &[u8], dst_capacity: u32, level: i32) -> Result<Vec<u8>> {
         let compression_level = level as c_int;
 
         let code = ZSTD_compress(dst_ptr, dst_len, src_ptr, src_len, compression_level);
+
         if ZSTD_isError(code) != 0 {
             let error: *const c_char = ZSTD_getErrorName(code);
             let error_str = CStr::from_ptr(error).to_str().unwrap().to_owned();
             Err(anyhow!(error_str))
         } else {
-            dst.set_len(code as size_t);
+            dst.set_len(code as usize);
             Ok(dst)
         }
     }
 }
 
-/// Attempts to decompress the payload and returns the result as a vector.
+/// Attempts to decompress the `src` buffer returning a Vec<u8> with a capacity which
+/// is at most `dst_capacity`. This is intended to be used when the dst_capacity
+/// can be predicted (such as through the zbi.extra flag).
 pub fn decompress(src: &[u8], dst_capacity: u32) -> Result<Vec<u8>> {
     unsafe {
         let src_len = src.len() as size_t;
@@ -64,7 +70,7 @@ pub fn decompress(src: &[u8], dst_capacity: u32) -> Result<Vec<u8>> {
             let error_str = CStr::from_ptr(error).to_str().unwrap().to_owned();
             Err(anyhow!(error_str))
         } else {
-            dst.set_len(code as size_t);
+            dst.set_len(code as usize);
             Ok(dst)
         }
     }
