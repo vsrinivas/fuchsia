@@ -17,6 +17,7 @@ use std::{fs::File, vec::Vec};
 
 const SOUNDPLAYER_URL: &str = "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cmx";
 const PAYLOAD_SIZE: usize = 1024;
+const FRAME_SIZE: u32 = 2;
 const USAGE: AudioRenderUsage = AudioRenderUsage::Media;
 
 #[fasync::run_singlethreaded]
@@ -29,15 +30,108 @@ async fn integration_buffer() -> Result<()> {
         sender,
         vec![RendererExpectations {
             vmo_koid: Some(koid),
-            packet: StreamPacket {
-                pts: 0,
+            packets: vec![StreamPacket {
+                pts: NO_TIMESTAMP,
                 payload_buffer_id: 0,
                 payload_offset: 0,
                 payload_size: PAYLOAD_SIZE as u64,
                 flags: 0,
                 buffer_config: 0,
                 stream_segment_id: 0,
-            },
+            }],
+            stream_type: stream_type.clone(),
+            usage: USAGE,
+            block_play: false,
+        }],
+    );
+
+    service
+        .sound_player
+        .add_sound_buffer(0, &mut buffer, &mut stream_type)
+        .expect("Calling add_sound_buffer");
+    service
+        .sound_player
+        .play_sound(0, USAGE)
+        .await
+        .context("Calling play_sound")?
+        .map_err(|err| anyhow::format_err!("Error playing sound: {:?}", err))?;
+    service.sound_player.remove_sound(0).expect("Calling remove_sound");
+
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn integration_max_single_packet_buffer() -> Result<()> {
+    let (sender, receiver) = oneshot::channel::<()>();
+    let (mut buffer, koid, mut stream_type) =
+        test_sound(MAX_FRAMES_PER_RENDERER_PACKET as usize * FRAME_SIZE as usize);
+
+    let service = TestService::new(
+        sender,
+        vec![RendererExpectations {
+            vmo_koid: Some(koid),
+            packets: vec![StreamPacket {
+                pts: NO_TIMESTAMP,
+                payload_buffer_id: 0,
+                payload_offset: 0,
+                payload_size: MAX_FRAMES_PER_RENDERER_PACKET as u64 * FRAME_SIZE as u64,
+                flags: 0,
+                buffer_config: 0,
+                stream_segment_id: 0,
+            }],
+            stream_type: stream_type.clone(),
+            usage: USAGE,
+            block_play: false,
+        }],
+    );
+
+    service
+        .sound_player
+        .add_sound_buffer(0, &mut buffer, &mut stream_type)
+        .expect("Calling add_sound_buffer");
+    service
+        .sound_player
+        .play_sound(0, USAGE)
+        .await
+        .context("Calling play_sound")?
+        .map_err(|err| anyhow::format_err!("Error playing sound: {:?}", err))?;
+    service.sound_player.remove_sound(0).expect("Calling remove_sound");
+
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn integration_large_buffer() -> Result<()> {
+    let (sender, receiver) = oneshot::channel::<()>();
+    let (mut buffer, koid, mut stream_type) =
+        test_sound((MAX_FRAMES_PER_RENDERER_PACKET as usize + 1) * FRAME_SIZE as usize);
+
+    let service = TestService::new(
+        sender,
+        vec![RendererExpectations {
+            vmo_koid: Some(koid),
+            packets: vec![
+                StreamPacket {
+                    pts: NO_TIMESTAMP,
+                    payload_buffer_id: 0,
+                    payload_offset: 0,
+                    payload_size: MAX_FRAMES_PER_RENDERER_PACKET as u64 * FRAME_SIZE as u64,
+                    flags: 0,
+                    buffer_config: 0,
+                    stream_segment_id: 0,
+                },
+                StreamPacket {
+                    pts: NO_TIMESTAMP,
+                    payload_buffer_id: 0,
+                    payload_offset: MAX_FRAMES_PER_RENDERER_PACKET as u64 * FRAME_SIZE as u64,
+                    payload_size: FRAME_SIZE as u64,
+                    flags: 0,
+                    buffer_config: 0,
+                    stream_segment_id: 0,
+                },
+            ],
             stream_type: stream_type.clone(),
             usage: USAGE,
             block_play: false,
@@ -71,15 +165,15 @@ async fn integration_file() -> Result<()> {
         sender,
         vec![RendererExpectations {
             vmo_koid: None,
-            packet: StreamPacket {
-                pts: 0,
+            packets: vec![StreamPacket {
+                pts: NO_TIMESTAMP,
                 payload_buffer_id: 0,
                 payload_offset: 0,
                 payload_size: FILE_PAYLOAD_SIZE,
                 flags: 0,
                 buffer_config: 0,
                 stream_segment_id: 0,
-            },
+            }],
             stream_type: AudioStreamType {
                 sample_format: AudioSampleFormat::Signed16,
                 channels: 1,
@@ -117,15 +211,15 @@ async fn integration_file_twice() -> Result<()> {
         vec![
             RendererExpectations {
                 vmo_koid: None,
-                packet: StreamPacket {
-                    pts: 0,
+                packets: vec![StreamPacket {
+                    pts: NO_TIMESTAMP,
                     payload_buffer_id: 0,
                     payload_offset: 0,
                     payload_size: FILE_PAYLOAD_SIZE,
                     flags: 0,
                     buffer_config: 0,
                     stream_segment_id: 0,
-                },
+                }],
                 stream_type: AudioStreamType {
                     sample_format: AudioSampleFormat::Signed16,
                     channels: 1,
@@ -136,15 +230,15 @@ async fn integration_file_twice() -> Result<()> {
             },
             RendererExpectations {
                 vmo_koid: None,
-                packet: StreamPacket {
-                    pts: 0,
+                packets: vec![StreamPacket {
+                    pts: NO_TIMESTAMP,
                     payload_buffer_id: 0,
                     payload_offset: 0,
                     payload_size: FILE_PAYLOAD_SIZE,
                     flags: 0,
                     buffer_config: 0,
                     stream_segment_id: 0,
-                },
+                }],
                 stream_type: AudioStreamType {
                     sample_format: AudioSampleFormat::Signed16,
                     channels: 1,
@@ -188,15 +282,15 @@ async fn integration_file_stop() -> Result<()> {
         sender,
         vec![RendererExpectations {
             vmo_koid: None,
-            packet: StreamPacket {
-                pts: 0,
+            packets: vec![StreamPacket {
+                pts: NO_TIMESTAMP,
                 payload_buffer_id: 0,
                 payload_offset: 0,
                 payload_size: FILE_PAYLOAD_SIZE,
                 flags: 0,
                 buffer_config: 0,
                 stream_segment_id: 0,
-            },
+            }],
             stream_type: AudioStreamType {
                 sample_format: AudioSampleFormat::Signed16,
                 channels: 1,
@@ -237,15 +331,15 @@ async fn integration_file_stop_second() -> Result<()> {
         vec![
             RendererExpectations {
                 vmo_koid: None,
-                packet: StreamPacket {
-                    pts: 0,
+                packets: vec![StreamPacket {
+                    pts: NO_TIMESTAMP,
                     payload_buffer_id: 0,
                     payload_offset: 0,
                     payload_size: FILE_PAYLOAD_SIZE,
                     flags: 0,
                     buffer_config: 0,
                     stream_segment_id: 0,
-                },
+                }],
                 stream_type: AudioStreamType {
                     sample_format: AudioSampleFormat::Signed16,
                     channels: 1,
@@ -256,15 +350,15 @@ async fn integration_file_stop_second() -> Result<()> {
             },
             RendererExpectations {
                 vmo_koid: None,
-                packet: StreamPacket {
-                    pts: 0,
+                packets: vec![StreamPacket {
+                    pts: NO_TIMESTAMP,
                     payload_buffer_id: 0,
                     payload_offset: 0,
                     payload_size: FILE_PAYLOAD_SIZE,
                     flags: 0,
                     buffer_config: 0,
                     stream_segment_id: 0,
-                },
+                }],
                 stream_type: AudioStreamType {
                     sample_format: AudioSampleFormat::Signed16,
                     channels: 1,
@@ -313,15 +407,15 @@ async fn integration_file_bogus_stops() -> Result<()> {
         sender,
         vec![RendererExpectations {
             vmo_koid: None,
-            packet: StreamPacket {
-                pts: 0,
+            packets: vec![StreamPacket {
+                pts: NO_TIMESTAMP,
                 payload_buffer_id: 0,
                 payload_offset: 0,
                 payload_size: FILE_PAYLOAD_SIZE,
                 flags: 0,
                 buffer_config: 0,
                 stream_segment_id: 0,
-            },
+            }],
             stream_type: AudioStreamType {
                 sample_format: AudioSampleFormat::Signed16,
                 channels: 1,
@@ -420,9 +514,10 @@ impl TestService {
 fn test_sound(size: usize) -> (fidl_fuchsia_mem::Buffer, zx::Koid, AudioStreamType) {
     let vmo = zx::Vmo::create(size as u64).expect("Creating VMO");
     let koid = vmo.get_koid().expect("Getting vmo koid");
+    assert!(FRAME_SIZE % std::mem::size_of::<i16>() as u32 == 0);
     let stream_type = AudioStreamType {
         sample_format: AudioSampleFormat::Signed16,
-        channels: 1,
+        channels: FRAME_SIZE / std::mem::size_of::<i16>() as u32,
         frames_per_second: 44100,
     };
 
@@ -431,7 +526,7 @@ fn test_sound(size: usize) -> (fidl_fuchsia_mem::Buffer, zx::Koid, AudioStreamTy
 
 struct RendererExpectations {
     vmo_koid: Option<zx::Koid>,
-    packet: StreamPacket,
+    packets: Vec<StreamPacket>,
     stream_type: AudioStreamType,
     usage: AudioRenderUsage,
     block_play: bool,
@@ -495,6 +590,7 @@ impl FakeAudioRenderer {
         let mut set_pcm_stream_type_called = false;
         let mut play_called = false;
         let mut set_usage_called = false;
+        let mut packet_index = 0;
 
         while let Some(request) = request_stream.next().await {
             assert!(request.is_ok());
@@ -516,9 +612,35 @@ impl FakeAudioRenderer {
                     assert!(!send_packet_called);
                     send_packet_called = true;
 
-                    assert!(packet == self.renderer_expectations.packet);
+                    // Only the last packet is sent with this method.
+                    assert!(packet_index == self.renderer_expectations.packets.len() - 1);
+                    if packet != self.renderer_expectations.packets[packet_index] {
+                        print!(
+                            "offset {} vs {}",
+                            packet.payload_offset,
+                            self.renderer_expectations.packets[packet_index].payload_offset
+                        );
+                        print!(
+                            "size {} vs {}",
+                            packet.payload_size,
+                            self.renderer_expectations.packets[packet_index].payload_size
+                        );
+                    }
+                    assert!(packet == self.renderer_expectations.packets[packet_index]);
                     assert!(send_packet_responder_option.is_none());
                     send_packet_responder_option.replace(responder);
+                    packet_index += 1;
+                }
+                AudioRendererRequest::SendPacketNoReply { packet, .. } => {
+                    assert!(set_usage_called);
+                    assert!(add_payload_buffer_called);
+                    assert!(set_pcm_stream_type_called);
+
+                    // The last packet is not sent with this method.
+                    assert!(packet_index < self.renderer_expectations.packets.len() - 1);
+                    assert!(packet == self.renderer_expectations.packets[packet_index]);
+                    assert!(send_packet_responder_option.is_none());
+                    packet_index += 1;
                 }
                 AudioRendererRequest::SetPcmStreamType { type_, .. } => {
                     assert!(!set_pcm_stream_type_called);

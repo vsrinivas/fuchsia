@@ -62,11 +62,11 @@ impl SoundPlayer {
                         PlayerRequest::PlaySound { id, usage, responder } => {
                             if let Some(mut sound) = self.sounds_by_id.get_mut(&id) {
                                 if let Ok(renderer) = Renderer::new(usage) {
-                                    match renderer.prepare_packet(&sound) {
-                                        Ok(packet) => {
+                                    match renderer.prepare_packets(&sound) {
+                                        Ok(packets) => {
                                             let (sender, receiver) = oneshot::channel::<()>();
                                             sound.stop_sender.replace(sender);
-                                            futures.push((renderer.play_packet(packet, receiver)
+                                            futures.push((renderer.play_packets(packets, receiver)
                                                 .map(move |mut result| {
                                                     responder.send(&mut result).unwrap_or(());
                                                 })).boxed())
@@ -132,18 +132,24 @@ impl Sound {
         })
     }
 
-    fn duration(&self) -> zx::Duration {
+    fn frame_size(&self) -> u32 {
         let bytes_per_sample = match self.stream_type.sample_format {
             AudioSampleFormat::Unsigned8 => 1,
             AudioSampleFormat::Signed16 => 2,
             AudioSampleFormat::Signed24In32 => 4,
             AudioSampleFormat::Float => 4,
         };
+
+        bytes_per_sample * self.stream_type.channels
+    }
+
+    fn frame_count(&self) -> u64 {
+        self.size / self.frame_size() as u64
+    }
+
+    fn duration(&self) -> zx::Duration {
         zx::Duration::from_nanos(
-            ((self.size * 1000000000)
-                / bytes_per_sample
-                / self.stream_type.channels as u64
-                / self.stream_type.frames_per_second as u64) as i64,
+            ((self.frame_count() * 1000000000) / self.stream_type.frames_per_second as u64) as i64,
         )
     }
 }
@@ -167,7 +173,7 @@ impl Renderer {
         Ok(new_self)
     }
 
-    fn prepare_packet(&self, sound: &Sound) -> Result<StreamPacket> {
+    fn prepare_packets(&self, sound: &Sound) -> Result<Vec<StreamPacket>> {
         self.proxy.set_pcm_stream_type(&mut sound.stream_type.clone())?;
 
         self.proxy.add_payload_buffer(
@@ -175,27 +181,51 @@ impl Renderer {
             sound.vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP)?,
         )?;
 
-        Ok(StreamPacket {
-            pts: 0,
-            payload_buffer_id: sound.id,
-            payload_offset: 0,
-            payload_size: sound.size,
-            flags: 0,
-            buffer_config: 0,
-            stream_segment_id: 0,
-        })
+        let mut result = Vec::new();
+        let mut frames_remaining = sound.frame_count();
+        let mut offset = 0;
+
+        while frames_remaining != 0 {
+            let frames_to_send =
+                std::cmp::min(frames_remaining, MAX_FRAMES_PER_RENDERER_PACKET as u64);
+
+            result.push(StreamPacket {
+                pts: NO_TIMESTAMP,
+                payload_buffer_id: sound.id,
+                payload_offset: offset,
+                payload_size: frames_to_send * sound.frame_size() as u64,
+                flags: 0,
+                buffer_config: 0,
+                stream_segment_id: 0,
+            });
+
+            frames_remaining -= frames_to_send;
+            offset += frames_to_send * sound.frame_size() as u64;
+        }
+
+        Ok(result)
     }
 
-    async fn play_packet(
+    async fn play_packets(
         self,
-        mut packet: StreamPacket,
+        mut packets: Vec<StreamPacket>,
         stop_receiver: oneshot::Receiver<()>,
     ) -> PlayerPlaySoundResult {
         // We're discarding |self| when this method returns, so there's no need
         // to clean up (e.g. remove the payload buffer, pause playback). If
         // we wanted to cache renderers, we'd need to add that.
 
-        let mut send_packet = self.proxy.send_packet(&mut packet).map_err(|e| {
+        let packets_len = packets.len();
+        if packets_len > 1 {
+            for index in 0..packets_len - 1 {
+                self.proxy.send_packet_no_reply(&mut packets[index]).map_err(|e| {
+                    fuchsia_syslog::fx_log_err!("AudioRenderer.SendPacketNoReply failed: {}", e);
+                    PlaySoundError::RendererFailed
+                })?;
+            }
+        }
+
+        let mut send_packet = self.proxy.send_packet(&mut packets[packets_len - 1]).map_err(|e| {
             fuchsia_syslog::fx_log_err!("AudioRenderer.SendPacket failed: {}", e);
             e
         });
