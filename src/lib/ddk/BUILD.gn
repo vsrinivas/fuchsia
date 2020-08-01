@@ -4,6 +4,11 @@
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
+
 zx_library("ddk") {
   sdk = "source"
   sdk_publishable = false
@@ -59,9 +64,9 @@ zx_library("ddk") {
     # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_c",
-    "//zircon/system/ulib/syslog",
     "//zircon/public/lib/ddk-platform-defs",
     "//zircon/public/lib/mmio-ptr",
+    "//zircon/system/ulib/syslog",
 
     # TODO(BLD-353): Exporting this dependency causes problems in the legacy
     # build.  Instead, users of the ddk library that actually use this header

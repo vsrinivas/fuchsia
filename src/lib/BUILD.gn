@@ -60,6 +60,7 @@ group("tests") {
     "component:tests",
     "containers/cpp:tests",
     "cstr:tests",
+    "ddk:tests",
     "directed_graph:tests",
     "elflib:tests",
     "error/clonable_error:tests",
