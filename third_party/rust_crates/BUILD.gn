@@ -214,10 +214,6 @@ if (is_fuchsia) {
     deps = [ ":itoa-v0_4_3" ]
   }
 }
-group("json5") {
-  deps = [ ":json5-v0_2_4" ]
-}
-
 group("json5format") {
   deps = [ ":json5format-v0_1_4" ]
 }
@@ -3549,30 +3545,6 @@ rust_library("itoa-v0_4_3") {
     "-Cextra-filename=-f3a32c9a05744438",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
-  ]
-}
-
-rust_library("json5-v0_2_4") {
-  crate_name = "json5"
-  crate_root = "//third_party/rust_crates/vendor/json5/src/lib.rs"
-  output_name = "json5-1d3fde29e2961c21"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":pest-v2_1_0" ]
-  deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
-  deps += [ ":serde-v1_0_104" ]
-
-  rustenv = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/json5" ]
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=1d3fde29e2961c21",
-    "-Cextra-filename=-1d3fde29e2961c21",
   ]
 }
 

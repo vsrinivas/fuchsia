@@ -725,7 +725,6 @@ dependencies = [
  "indoc 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itoa 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "json5 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "json5format 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.71 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1207,16 +1206,6 @@ dependencies = [
 name = "itoa"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "json5"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "pest 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pest_derive 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "json5format"
@@ -3451,7 +3440,6 @@ version = "0.3.99"
 "checksum inflate 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "1cdb29978cc5797bd8dcc8e5bf7de604891df2a8dc576973d71a281e916db2ff"
 "checksum itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5b8467d9c1cebe26feb08c640139247fac215782d35371ade9a2136ed6085358"
 "checksum itoa 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "1306f3464951f30e30d12373d31c79fbd52d236e5e896fd92f96ec7babbbe60b"
-"checksum json5 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "038d7116122ecb8ad983bf4643b324bdaf5b87d05e8ba2df872e705a287c67c6"
 "checksum json5format 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "c43a96f76cb3b0fa82d7381006a75ca3d5c4e1a6fb3b66d28c6c073507f599e1"
 "checksum jsonway 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "effcb749443c905fbaef49d214f8b1049c240e0adb7af9baa0e201e625e4f9de"
 "checksum kv-log-macro 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "8c54d9f465d530a752e6ebdc217e081a7a614b48cb200f6f0aee21ba6bc9aabb"
