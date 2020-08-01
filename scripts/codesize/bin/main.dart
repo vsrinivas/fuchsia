@@ -523,8 +523,7 @@ Future<void> presentResults(cli.OutputFormat outputFormat, IOSink output,
       renderer = TerminalRenderer(supportsControlCharacters: output == io.out);
       break;
     case cli.OutputFormat.tsv:
-      // renderer = TsvRenderer();
-      throw Exception('TsvRenderer will be added in a follow up CL');
+      renderer = TsvRenderer();
       break;
   }
 
