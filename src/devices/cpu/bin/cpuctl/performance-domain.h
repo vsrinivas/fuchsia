@@ -14,8 +14,8 @@
 #include <variant>
 #include <vector>
 
-namespace cpuctrl = llcpp::fuchsia::hardware::cpu::ctrl;
-namespace fuchsia_device = llcpp::fuchsia::device;
+namespace cpuctrl = ::llcpp::fuchsia::hardware::cpu::ctrl;
+namespace fuchsia_device = ::llcpp::fuchsia::device;
 
 class CpuPerformanceDomain {
  public:
@@ -25,7 +25,7 @@ class CpuPerformanceDomain {
   const std::vector<cpuctrl::CpuPerformanceStateInfo>& GetPerformanceStates();
   zx_status_t SetPerformanceState(uint32_t new_performance_state);
 
- private:
+ protected:
   // Don't allow explicit construction.
   explicit CpuPerformanceDomain(cpuctrl::Device::SyncClient cpu_client,
                                 fuchsia_device::Controller::SyncClient device_client)

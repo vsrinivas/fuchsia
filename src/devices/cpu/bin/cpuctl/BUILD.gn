@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
 executable("cpuctl") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
@@ -19,4 +22,45 @@ executable("cpuctl") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fidl-async",
   ]
+}
+
+test("cpuctl-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "cpuctl-test"
+  sources = [
+    "cpuctl-test.cc",
+    "performance-domain.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
+    "//sdk/lib/fdio",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  ]
+}
+
+unittest_package("cpuctl-test-package") {
+  package_name = "cpuctl-test"
+  deps = [ ":cpuctl-test" ]
+
+  tests = [
+    {
+      name = "cpuctl-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":cpuctl-test-package" ]
 }
