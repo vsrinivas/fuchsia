@@ -4,8 +4,5 @@
 
 group("calibration") {
   testonly = true
-  public_deps = [
-    "algorithms",
-    "factory",
-  ]
+  public_deps = [ "algorithms" ]
 }

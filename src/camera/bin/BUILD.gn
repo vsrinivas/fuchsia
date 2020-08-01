@@ -7,5 +7,6 @@ group("bin") {
     "camera-gym",
     "device",
     "device_watcher",
+    "factory:camera-factory",
   ]
 }

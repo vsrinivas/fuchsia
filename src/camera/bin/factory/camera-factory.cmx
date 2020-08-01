@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "bin/camera-factory"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.camera3.DeviceWatcher",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

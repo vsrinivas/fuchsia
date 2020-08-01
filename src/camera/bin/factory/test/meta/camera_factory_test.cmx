@@ -1,12 +1,8 @@
 {
     "program": {
-        "binary": "test/factory_test"
+        "binary": "test/camera_factory_test"
     },
     "sandbox": {
-        "dev": [
-            "class/camera",
-            "camera-controller"
-        ],
         "features": [
             "isolated-persistent-storage"
         ],

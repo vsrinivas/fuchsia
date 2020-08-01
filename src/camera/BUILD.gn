@@ -46,8 +46,8 @@ test_package("camera_tests") {
     "//src/camera/bin/camera-gym/test",
     "//src/camera/bin/device/test",
     "//src/camera/bin/device_watcher/test",
+    "//src/camera/bin/factory/test",
     "//src/camera/calibration/algorithms/test",
-    "//src/camera/calibration/factory/test",
     "//src/camera/drivers/controller/configs/sherlock/test",
     "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test",
@@ -120,8 +120,8 @@ test_package("camera_tests") {
       environments = basic_envs
     },
     {
-      name = "factory_test"
-      manifest = "//src/camera/calibration/factory/test/meta/factory_test.cmx"
+      name = "camera_factory_test"
+      manifest = "//src/camera/bin/factory/test/meta/camera_factory_test.cmx"
       environments = [ sherlock_env ]
     },
     {
