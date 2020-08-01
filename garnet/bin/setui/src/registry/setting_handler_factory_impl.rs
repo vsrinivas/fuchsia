@@ -33,6 +33,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
         &mut self,
         setting_type: SettingType,
         messenger_factory: message::Factory,
+        notifier_signature: message::Signature,
     ) -> Result<message::Signature, SettingHandlerFactoryError> {
         if !self.environment.settings.contains(&setting_type) {
             return Err(SettingHandlerFactoryError::SettingNotFound(setting_type));
@@ -53,6 +54,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
             setting_type,
             messenger,
             receptor,
+            notifier_signature,
             self.environment.clone(),
             self.next_context_id,
         ))

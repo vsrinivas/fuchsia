@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::internal::handler::{message, reply, Address, Payload};
+use crate::internal::handler::{message, reply, Payload};
 use crate::message::base::{Audience, MessageEvent};
 use crate::registry::base::{Command, Context, SettingHandlerResult, State};
 use crate::registry::device_storage::DeviceStorageFactory;
@@ -79,6 +79,7 @@ impl ClientProxy {
 pub struct ClientImpl {
     notify: bool,
     messenger: message::Messenger,
+    notifier_signature: message::Signature,
     service_context: ServiceContextHandle,
     setting_type: SettingType,
 }
@@ -88,6 +89,7 @@ impl ClientImpl {
         Self {
             messenger: context.messenger.clone(),
             setting_type: context.setting_type,
+            notifier_signature: context.notifier_signature.clone(),
             notify: false,
             service_context: context.environment.service_context_handle.clone(),
         }
@@ -187,7 +189,10 @@ impl ClientImpl {
     async fn notify(&self) {
         if self.notify {
             self.messenger
-                .message(Payload::Changed(self.setting_type), Audience::Address(Address::Registry))
+                .message(
+                    Payload::Changed(self.setting_type),
+                    Audience::Messenger(self.notifier_signature),
+                )
                 .send()
                 .ack();
         }

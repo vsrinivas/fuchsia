@@ -81,6 +81,7 @@ pub trait SettingHandlerFactory {
         &mut self,
         setting_type: SettingType,
         messenger_factory: message::Factory,
+        notifier_signature: message::Signature,
     ) -> Result<message::Signature, SettingHandlerFactoryError>;
 }
 
@@ -116,6 +117,7 @@ pub struct Context<T: DeviceStorageFactory> {
     pub setting_type: SettingType,
     pub messenger: message::Messenger,
     pub receptor: message::Receptor,
+    pub notifier_signature: message::Signature,
     pub environment: Environment<T>,
     pub id: u64,
 }
@@ -125,10 +127,18 @@ impl<T: DeviceStorageFactory> Context<T> {
         setting_type: SettingType,
         messenger: message::Messenger,
         receptor: message::Receptor,
+        notifier_signature: message::Signature,
         environment: Environment<T>,
         id: u64,
     ) -> Context<T> {
-        return Context { setting_type, messenger, receptor, environment: environment.clone(), id };
+        return Context {
+            setting_type,
+            messenger,
+            receptor,
+            notifier_signature,
+            environment: environment.clone(),
+            id,
+        };
     }
 }
 
@@ -143,6 +153,7 @@ pub struct ContextBuilder<T: DeviceStorageFactory> {
     event_messenger_factory: Option<EventMessengerFactory>,
     messenger: message::Messenger,
     receptor: message::Receptor,
+    notifier_signature: message::Signature,
     id: u64,
 }
 
@@ -153,6 +164,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
         storage_factory: Arc<Mutex<T>>,
         messenger: message::Messenger,
         receptor: message::Receptor,
+        notifier_signature: message::Signature,
         id: u64,
     ) -> Self {
         Self {
@@ -163,6 +175,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
             event_messenger_factory: None,
             messenger,
             receptor,
+            notifier_signature,
             id,
         }
     }
@@ -205,6 +218,13 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
         // If it is used in conjunction with Context::new, then a new way of tracking unique Contexts
         // may need to be devised. If it replaces all usages of Context::new, the id creation can
         // be moved to the ContextBuilder struct.
-        Context::new(self.setting_type, self.messenger, self.receptor, environment, self.id)
+        Context::new(
+            self.setting_type,
+            self.messenger,
+            self.receptor,
+            self.notifier_signature,
+            environment,
+            self.id,
+        )
     }
 }

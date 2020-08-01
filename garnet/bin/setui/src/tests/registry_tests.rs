@@ -142,6 +142,7 @@ impl SettingHandlerFactory for FakeFactory {
         &mut self,
         setting_type: SettingType,
         _: handler::message::Factory,
+        _: handler::message::Signature,
     ) -> Result<handler::message::Signature, SettingHandlerFactoryError> {
         let existing_count = self.get_request_count(setting_type);
 

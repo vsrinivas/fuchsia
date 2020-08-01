@@ -188,7 +188,11 @@ impl RegistryImpl {
                 .handler_factory
                 .lock()
                 .await
-                .generate(setting_type, self.controller_messenger_factory.clone())
+                .generate(
+                    setting_type,
+                    self.controller_messenger_factory.clone(),
+                    self.controller_messenger_client.get_signature(),
+                )
                 .await
             {
                 self.active_controllers.insert(setting_type, ControllerState::create(signature));

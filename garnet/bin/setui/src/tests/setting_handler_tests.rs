@@ -128,11 +128,14 @@ async fn test_write_notify() {
     let factory = message::create_hub();
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
+    let (messenger, _) =
+        factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
     let context = ContextBuilder::new(
         SettingType::Accessibility,
         InMemoryStorageFactory::create(),
         handler_messenger,
         handler_receptor,
+        messenger.get_signature(),
         CONTEXT_ID,
     )
     .build();
@@ -290,6 +293,7 @@ async fn test_event_propagation() {
         InMemoryStorageFactory::create(),
         handler_messenger,
         handler_receptor,
+        messenger.get_signature(),
         CONTEXT_ID,
     )
     .build();
@@ -364,6 +368,7 @@ async fn verify_controller_state(state: State, n: u8) {
         InMemoryStorageFactory::create(),
         handler_messenger,
         handler_receptor,
+        messenger.get_signature(),
         CONTEXT_ID,
     )
     .build();
@@ -437,6 +442,7 @@ async fn test_unimplemented_error() {
             InMemoryStorageFactory::create(),
             handler_messenger,
             handler_receptor,
+            messenger.get_signature(),
             CONTEXT_ID,
         )
         .build();
