@@ -11,7 +11,6 @@ group("tests") {
     "//src/bringup/tests/bootfs_test",  # This is a package.
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",
     "//src/devices/block/drivers/ftl/test:ftl-package",
-    "//src/devices/block/lib/scsi/test:scsilib-disk-test-package",
     "//src/devices/nand/drivers/broker/test:nand-broker-package",  # HW-required.
     "//src/devices/rtc/lib/rtc/test:rtc-lib-package",
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",

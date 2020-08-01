@@ -5,9 +5,9 @@
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-group("test") {
+group("tests") {
   testonly = true
-  deps = [ ":scsilib-disk-test" ]
+  deps = [ ":scsilib-disk-test-package" ]
 }
 
 test("scsilib-disk-test") {
