@@ -19,7 +19,6 @@
 #include <string>
 
 #include "src/lib/files/file.h"
-#include "src/ui/bin/root_presenter/safe_presenter.h"
 
 namespace root_presenter {
 
@@ -74,8 +73,7 @@ void App::PresentView(
 
   auto presentation = std::make_unique<Presentation>(
       scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
-      std::move(presentation_request), safe_presenter_.get(), &activity_notifier_,
-      display_startup_rotation_adjustment);
+      std::move(presentation_request), &activity_notifier_, display_startup_rotation_adjustment);
 
   SetPresentation(std::move(presentation));
 }
@@ -103,7 +101,7 @@ void App::SetPresentation(std::unique_ptr<Presentation> presentation) {
     presentation_->RegisterWithMagnifier(magnifier_.get());
   }
 
-  safe_presenter_->QueuePresent([] {});
+  session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 }
 
 void App::ShutdownPresentation() {
@@ -197,9 +195,6 @@ void App::InitializeServices() {
         HandleScenicEvent(event);
       }
     });
-
-    safe_presenter_ = std::make_unique<SafePresenter>(session_.get());
-
     // Globally disable parallel dispatch of input events.
     // TODO(SCN-1047): Enable parallel dispatch.
     {
@@ -213,7 +208,7 @@ void App::InitializeServices() {
     compositor_ = std::make_unique<scenic::DisplayCompositor>(session_.get());
     layer_stack_ = std::make_unique<scenic::LayerStack>(session_.get());
     compositor_->SetLayerStack(*layer_stack_.get());
-    safe_presenter_->QueuePresent([] {});
+    session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 
     scenic_->GetDisplayOwnershipEvent([this](zx::event event) {
       input_reader_.SetOwnershipEvent(std::move(event));
@@ -231,7 +226,7 @@ void App::InitializeServices() {
 
     // Add Color Transform Handler.
     color_transform_handler_ = std::make_unique<ColorTransformHandler>(
-        component_context_.get(), compositor_->id(), session_.get(), safe_presenter_.get());
+        component_context_.get(), compositor_->id(), session_.get());
 
     // If a11y tried to register a Focuser while Scenic wasn't ready yet, bind the request now.
     if (deferred_a11y_focuser_binding_) {

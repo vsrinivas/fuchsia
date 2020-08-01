@@ -16,8 +16,6 @@
 
 #include <memory>
 
-#include "src/ui/bin/root_presenter/safe_presenter.h"
-
 namespace root_presenter {
 class ColorTransformState {
  public:
@@ -54,12 +52,11 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
                               public fuchsia::ui::brightness::ColorAdjustmentHandler {
  public:
   explicit ColorTransformHandler(sys::ComponentContext* component_context,
-                                 scenic::ResourceId compositor_id, scenic::Session* session,
-                                 SafePresenter* safe_presenter);
+                                 scenic::ResourceId compositor_id, scenic::Session* session);
 
   explicit ColorTransformHandler(sys::ComponentContext* component_context,
                                  scenic::ResourceId compositor_id, scenic::Session* session,
-                                 SafePresenter* safe_presenter, ColorTransformState state);
+                                 ColorTransformState state);
 
   ~ColorTransformHandler();
 
@@ -96,7 +93,6 @@ class ColorTransformHandler : public fuchsia::accessibility::ColorTransformHandl
 
   sys::ComponentContext* const component_context_ = nullptr;
   scenic::Session* session_ = nullptr;  // No ownership.
-  SafePresenter* safe_presenter_ = nullptr;
   const scenic::ResourceId compositor_id_;
   fidl::Binding<fuchsia::accessibility::ColorTransformHandler> color_transform_handler_bindings_;
   fidl::BindingSet<fuchsia::ui::brightness::ColorAdjustmentHandler> color_adjustment_bindings_;
