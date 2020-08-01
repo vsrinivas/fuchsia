@@ -5,6 +5,11 @@
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":listnode-package" ]
+}
+
 source_set("listnode") {
   sources = [ "listnode.h" ]
 }

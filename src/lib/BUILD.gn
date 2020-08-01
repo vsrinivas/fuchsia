@@ -84,6 +84,7 @@ group("tests") {
     "isolated_devmgr:tests",
     "json_parser:tests",
     "line_input:tests",
+    "listnode:tests",
     "loader_service:tests",
     "mapped-vmo:tests",
     "mdns:tests",
