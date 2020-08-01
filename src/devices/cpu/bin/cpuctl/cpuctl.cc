@@ -17,6 +17,9 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
+#include <algorithm>
+#include <functional>
+#include <iomanip>
 #include <iostream>
 #include <optional>
 #include <ostream>
@@ -30,11 +33,16 @@
 #include "performance-domain.h"
 
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
-using ListCb = void (*)(const char* path);
+using ListCb = std::function<void(const char*)>;
 
 constexpr char kCpuDevicePath[] = "/dev/class/cpu-ctrl";
 constexpr char kCpuDeviceFormat[] = "/dev/class/cpu-ctrl/%s";
 constexpr size_t kMaxPathLen = 24;  // strlen("/dev/class/cpu-ctrl/000\0")
+
+// TODO(gkalsi): Maybe parameterize these?
+constexpr uint64_t kDefaultStressTestIterations = 1000;
+constexpr uint64_t kDefaultStressTestTimeoutMs =
+    100;  // Milliseconds to wait before issuing another dvfs opp.
 
 void print_frequency(const cpuctrl::CpuPerformanceStateInfo& info) {
   if (info.frequency_hz == cpuctrl::FREQUENCY_UNKNOWN) {
@@ -75,7 +83,27 @@ void usage(const char* cmd) {
           cmd);
   fprintf(stderr, "\t%s                          Returns the current state if `state` is omitted.\n",
           spaces);
+
+  fprintf(stderr, "\t%s stress [-d domains] [-t timeout] [-c count]\n", cmd);
+  fprintf(stderr, "\t%s                          ex: %s stress -d /dev/class/cpu/000,/dev/class/cpu/001 -c 100 -t 10\n", spaces, cmd);
+  fprintf(stderr, "\t%s                          Stress test by rapidly and randomly assigning pstates.\n", spaces);
+  fprintf(stderr, "\t%s                          `domains` is a commas separated list of performance domains to test\n", spaces);
+  fprintf(stderr, "\t%s                          If `domains` is omitted, all domains are tested.\n", spaces);
+  fprintf(stderr, "\t%s                          `timeout` defines the number of milliseconds to wait before assigning a domain\n", spaces);
+  fprintf(stderr, "\t%s                          If `timeout` is omitted, a default value of %lu is used.\n", spaces, kDefaultStressTestTimeoutMs);
+  fprintf(stderr, "\t%s                          `count` defines the number of iterations the stress test should run for\n", spaces);
+  fprintf(stderr, "\t%s                          If `count` is omitted, a default value of %lu is used.\n", spaces, kDefaultStressTestIterations);
   // clang-format on
+}
+
+constexpr long kBadParse = -1;
+long parse_positive_long(const char* number) {
+  char* end;
+  long result = strtol(number, &end, 10);
+  if (end == number || *end != '\0' || result < 0) {
+    return kBadParse;
+  }
+  return result;
 }
 
 // Call `ListCb cb` with all the names of devices in kCpuDevicePath. Each of
@@ -145,10 +173,8 @@ void describe(const char* domain_name) {
 }
 
 void set_performance_state(const char* domain_name, const char* pstate) {
-  char* end;
-  long desired_state_l = strtol(pstate, &end, 10);
-  if (end == pstate || *end != '\0' || desired_state_l < 0 ||
-      desired_state_l > MAX_DEVICE_PERFORMANCE_STATES) {
+  long desired_state_l = parse_positive_long(pstate);
+  if (desired_state_l < 0 || desired_state_l > MAX_DEVICE_PERFORMANCE_STATES) {
     fprintf(stderr, "Bad pstate '%s', must be a positive integer between 0 and %u\n", pstate,
             MAX_DEVICE_PERFORMANCE_STATES);
     return;
@@ -226,6 +252,84 @@ zx_status_t describe_all() {
   return ZX_OK;
 }
 
+void stress(std::vector<std::string> names, const size_t iterations, const uint64_t timeout) {
+  // Default is all domains.
+  if (names.empty()) {
+    list([&names](const char* path) { names.push_back(path); });
+  }
+
+  std::vector<CpuPerformanceDomain> domains;
+  for (const auto& name : names) {
+    std::string device_path = std::string(kCpuDevicePath) + std::string("/") + name;
+
+    auto domain = CpuPerformanceDomain::CreateFromPath(device_path.c_str());
+
+    zx_status_t* st = std::get_if<zx_status_t>(&domain);
+    if (st) {
+      std::cerr << "Failed to connect to performance domain device '" << name << "'"
+                << " st = " << *st << std::endl;
+      continue;
+    }
+
+    domains.push_back(std::move(std::get<CpuPerformanceDomain>(domain)));
+  }
+
+  // Put things back the way they were before the test started.
+  std::vector<fbl::AutoCall<std::function<void(void)>>> autoreset;
+  for (auto& domain : domains) {
+    const auto current_pstate = domain.GetCurrentPerformanceState();
+    if (std::get<0>(current_pstate) != ZX_OK) {
+      std::cerr << "Could not get initial pstate for domain, won't reset when finished"
+                << std::endl;
+      continue;
+    }
+
+    autoreset.emplace_back([&domain, current_pstate]() {
+      uint32_t pstate = static_cast<uint32_t>(std::get<1>(current_pstate));
+      zx_status_t st = domain.SetPerformanceState(pstate);
+      if (st != ZX_OK) {
+        std::cerr << "Failed to reset initial pstate" << std::endl;
+      }
+    });
+  }
+
+  std::cout << "Stress testing " << domains.size() << " domain[s]." << std::endl;
+
+  for (size_t i = 0; i < iterations; i++) {
+    // Pick a random domain.
+    const size_t selected_domain_idx = rand() % domains.size();
+
+    // Pick a random operating point for this domain.
+    auto& selected_domain = domains[selected_domain_idx];
+    const auto& ops = selected_domain.GetPerformanceStates();
+    const uint32_t selected_op_pt = rand() % ops.size();
+    zx_status_t status = selected_domain.SetPerformanceState(selected_op_pt);
+    if (status != ZX_OK) {
+      std::cout << "Stress test failed to drive domain " << selected_domain_idx << " into pstate "
+                << selected_op_pt << std::endl;
+      return;
+    }
+
+    if ((i % 10) == 0) {
+      std::cout << "[" << std::setw(4) << i << "/" << std::setw(4) << iterations << "] "
+                << "Stress tests completed." << std::endl;
+    }
+
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(timeout)));
+  }
+}
+
+char* get_option(char* argv[], const int argc, const std::string& option) {
+  char** end = argv + argc;
+  char** res = std::find(argv, end, option);
+
+  if (res == end || (res + 1) == end) {
+    return nullptr;
+  }
+
+  return *(res + 1);
+}
+
 int main(int argc, char* argv[]) {
   const char* cmd = argv[0];
   if (argc == 1) {
@@ -258,6 +362,40 @@ int main(int argc, char* argv[]) {
       return -1;
     }
   } else if (!strncmp(subcmd, "stress", 6)) {
+    char* timeout_c = get_option(argv, argc, std::string("-t"));
+    char* iterations_c = get_option(argv, argc, std::string("-c"));
+    char* domains_c = get_option(argv, argc, std::string("-d"));
+
+    long timeout = kDefaultStressTestTimeoutMs;
+    long iterations = kDefaultStressTestIterations;
+
+    if (timeout_c != nullptr) {
+      timeout = parse_positive_long(timeout_c);
+      if (timeout < 0) {
+        fprintf(stderr, "'timeout' argument must be a positive integer");
+        usage(cmd);
+        return -1;
+      }
+    }
+
+    if (iterations_c != nullptr) {
+      iterations = parse_positive_long(iterations_c);
+      if (iterations < 0) {
+        fprintf(stderr, "'iterations' argument must be a positive integer");
+        usage(cmd);
+        return -1;
+      }
+    }
+
+    std::vector<std::string> domains;
+    if (domains_c != nullptr) {
+      char* token = strtok(domains_c, ",");
+      do {
+        domains.push_back(token);
+      } while ((token = strtok(nullptr, ",")));
+    }
+
+    stress(domains, iterations, timeout);
   }
 
   return 0;
