@@ -60,6 +60,8 @@ struct MerkleInfo {
     uint64_t blob_size = compressed ? compressed_length : length;
     return fbl::round_up(blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
   }
+
+  uint64_t GetDataSize() const { return compressed ? compressed_length : length; }
 };
 
 // A mapping of a file. Does not own the file.
@@ -67,7 +69,7 @@ class FileMapping {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(FileMapping);
 
-  FileMapping() : data_(nullptr), length_(0) {}
+  FileMapping() = default;
 
   ~FileMapping() { reset(); }
 
@@ -98,14 +100,14 @@ class FileMapping {
   uint64_t length() const { return length_; }
 
  private:
-  void* data_;
-  uint64_t length_;
+  void* data_ = nullptr;
+  uint64_t length_ = 0;
 };
 
-typedef union {
+union info_block_t {
   uint8_t block[kBlobfsBlockSize];
   Superblock info;
-} info_block_t;
+};
 
 // Stores pointer to an inode's metadata and the matching block number
 class InodeBlock {
@@ -133,7 +135,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
                             const fbl::Array<size_t>& extent_lengths, std::unique_ptr<Blobfs>* out);
 
-  ~Blobfs() {}
+  ~Blobfs() override = default;
 
   // Checks to see if a blob already exists, and if not allocates a new node
   zx_status_t NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* out);
@@ -141,7 +143,8 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   // Allocate |nblocks| starting at |*blkno_out| in memory
   zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
-  zx_status_t WriteData(Inode* inode, const void* merkle_data, const void* blob_data);
+  zx_status_t WriteData(Inode* inode, const void* merkle_data, const void* blob_data,
+                        uint64_t data_size);
   zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
   zx_status_t WriteNode(std::unique_ptr<InodeBlock> ino_block);
   zx_status_t WriteInfo();
@@ -178,6 +181,9 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   // If the block cache already contains data from the specified bno, nothing happens.
   // Cannot read while a dirty block is pending.
   zx_status_t ReadBlock(size_t bno);
+
+  // Write |block_count| blocks of |data| at block number starting at |block_number|.
+  zx_status_t WriteBlocks(size_t block_number, uint64_t block_count, const void* data);
 
   // Write |data| into block |bno|
   zx_status_t WriteBlock(size_t bno, const void* data);
@@ -269,7 +275,7 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // |extent_lengths| contains the length (in bytes) of each blobfs extent: currently this includes
 // the superblock, block bitmap, inode table, and data blocks.
 zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
-                                 off_t end, const fbl::Vector<size_t>& extent_lengths);
+                                 off_t end, const fbl::Vector<size_t>& extent_vector);
 }  // namespace blobfs
 
 #endif  // BLOBFS_HOST_H_

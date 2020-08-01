@@ -9,8 +9,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <unistd.h>
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <new>
 #include <optional>
@@ -29,7 +32,9 @@
 #include <fs-host/common.h>
 #include <fs/journal/initializer.h>
 #include <fs/trace.h>
+#include <fs/transaction/transaction_handler.h>
 #include <safemath/checked_math.h>
+#include <safemath/safe_conversions.h>
 
 #include "compression/chunked.h"
 #include "compression/compressor.h"
@@ -63,10 +68,15 @@ zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
   return ZX_OK;
 }
 
-zx_status_t WriteBlockOffset(int fd, uint64_t bno, off_t offset, const void* data) {
-  off_t off = offset + bno * kBlobfsBlockSize;
-  if (pwrite(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
-    FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 "\n", bno);
+zx_status_t WriteBlockOffset(int fd, const void* data, uint64_t block_count, off_t offset,
+                             uint64_t block_number) {
+  off_t off = safemath::checked_cast<off_t>(
+      safemath::CheckAdd(offset, safemath::CheckMul(block_number, kBlobfsBlockSize).ValueOrDie())
+          .ValueOrDie());
+  size_t size = safemath::CheckMul(block_count, kBlobfsBlockSize).ValueOrDie();
+  if (static_cast<ssize_t>(size) != pwrite(fd, data, size, off)) {
+    FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 " (size:%lu off:%lld)\n", block_number,
+                   size,  static_cast<long long>(off));
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -192,7 +202,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
                           kBlobfsBlockSize * inode->block_count);
   }
 
-  if ((status = bs->WriteData(inode, info.merkle.get(), data)) != ZX_OK) {
+  if ((status = bs->WriteData(inode, info.merkle.get(), data, info.GetDataSize())) != ZX_OK) {
     return status;
   }
 
@@ -215,7 +225,7 @@ zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_i
                                    off_t start = 0, std::optional<off_t> end = std::nullopt) {
   info_block_t info_block;
 
-  if (ReadBlockOffset(fd.get(), 0, start, (void*)info_block.block) < 0) {
+  if (ReadBlockOffset(fd.get(), 0, start, reinterpret_cast<void*>(info_block.block)) < 0) {
     return ZX_ERR_IO;
   }
   uint64_t blocks;
@@ -229,7 +239,8 @@ zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_i
       ((blocks * kBlobfsBlockSize) < safemath::checked_cast<uint64_t>(end.value() - start))) {
     FS_TRACE_ERROR("blobfs: Invalid file size\n");
     return ZX_ERR_BAD_STATE;
-  } else if ((status = CheckSuperblock(&info_block.info, blocks)) != ZX_OK) {
+  }
+  if ((status = CheckSuperblock(&info_block.info, blocks)) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Info check failed\n");
     return status;
   }
@@ -296,7 +307,8 @@ int Mkfs(int fd, uint64_t block_count) {
   if (block_bitmap.Reset(block_bitmap_blocks * kBlobfsBlockBits)) {
     FS_TRACE_ERROR("Couldn't allocate blobfs block map\n");
     return -1;
-  } else if (block_bitmap.Shrink(info.data_block_count)) {
+  }
+  if (block_bitmap.Shrink(info.data_block_count)) {
     FS_TRACE_ERROR("Couldn't shrink blobfs block map\n");
     return -1;
   }
@@ -556,7 +568,8 @@ zx_status_t Blobfs::LoadBitmap() {
   zx_status_t status;
   if ((status = block_map_.Reset(block_map_block_count_ * kBlobfsBlockBits)) != ZX_OK) {
     return status;
-  } else if ((status = block_map_.Shrink(info_.data_block_count)) != ZX_OK) {
+  }
+  if ((status = block_map_.Shrink(info_.data_block_count)) != ZX_OK) {
     return status;
   }
   const void* bmstart = block_map_.StorageUnsafe()->GetData();
@@ -582,8 +595,10 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
     size_t bno = (i / kBlobfsInodesPerBlock) + node_map_start_block_;
 
     zx_status_t status;
-    if ((status = ReadBlock(bno)) != ZX_OK) {
-      return status;
+    if ((i % kBlobfsInodesPerBlock) == 0) {
+      if ((status = ReadBlock(bno)) != ZX_OK) {
+        return status;
+      }
     }
 
     auto iblk = reinterpret_cast<const Inode*>(cache_.blk);
@@ -625,7 +640,8 @@ zx_status_t Blobfs::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
   zx_status_t status;
   if ((status = block_map_.Find(false, 0, block_map_.size(), nblocks, blkno_out)) != ZX_OK) {
     return status;
-  } else if ((status = block_map_.Set(*blkno_out, *blkno_out + nblocks)) != ZX_OK) {
+  }
+  if ((status = block_map_.Set(*blkno_out, *blkno_out + nblocks)) != ZX_OK) {
     return status;
   }
 
@@ -638,16 +654,10 @@ zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
   uint64_t block_bitmap_end_block =
       fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
   const void* bmstart = block_map_.StorageUnsafe()->GetData();
-  for (size_t n = block_bitmap_start_block; n < block_bitmap_end_block; n++) {
-    const void* data = fs::GetBlock(kBlobfsBlockSize, bmstart, n);
-    uint64_t bno = block_map_start_block_ + n;
-    zx_status_t status;
-    if ((status = WriteBlock(bno, data)) != ZX_OK) {
-      return status;
-    }
-  }
-
-  return ZX_OK;
+  const void* data = fs::GetBlock(kBlobfsBlockSize, bmstart, block_bitmap_start_block);
+  uint64_t absolute_block_number = block_map_start_block_ + block_bitmap_start_block;
+  uint64_t block_count = block_bitmap_end_block - block_bitmap_start_block;
+  return WriteBlocks(absolute_block_number, block_count, data);
 }
 
 zx_status_t Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
@@ -659,35 +669,45 @@ zx_status_t Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
   return WriteBlock(cache_.bno, cache_.blk);
 }
 
-zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void* blob_data) {
+zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void* blob_data,
+                              uint64_t data_size) {
   const size_t merkle_blocks = ComputeNumMerkleTreeBlocks(*inode);
   const size_t data_blocks = inode->block_count - merkle_blocks;
-  for (size_t n = 0; n < merkle_blocks; n++) {
-    const void* data = fs::GetBlock(kBlobfsBlockSize, merkle_data, n);
-    uint64_t bno = data_start_block_ + inode->extents[0].Start() + n;
-    zx_status_t status;
-    if ((status = WriteBlock(bno, data)) != ZX_OK) {
+  uint64_t merkle_start_block = data_start_block_ + inode->extents[0].Start();
+
+  zx_status_t status;
+  status = WriteBlocks(merkle_start_block, merkle_blocks, merkle_data);
+  if (status != ZX_OK) {
+    fprintf(stderr, "%s:%d %d\n", __func__, __LINE__, status);
+    return status;
+  }
+
+  // We need to zero fill all the bytes in the last block to round up to
+  // block size. But the input buffer need not be large enough to hold
+  // rest of the bytes. So we copy out last valid bytes that needs to be
+  // rounded up into another buffer. This ends up requiring two pwrite()s
+  // to write blob data.
+  bool zero_fill_last_block = (data_size % kBlobfsBlockSize) != 0;
+  size_t aligned_blocks = zero_fill_last_block ? data_blocks - 1 : data_blocks;
+  uint64_t data_start_block = merkle_start_block + merkle_blocks;
+  if (aligned_blocks > 0) {
+    const void* data = fs::GetBlock(kBlobfsBlockSize, blob_data, 0);
+    status = WriteBlocks(data_start_block, aligned_blocks, data);
+    if (status != ZX_OK) {
+      fprintf(stderr, "%s:%d %d\n", __func__, __LINE__, status);
       return status;
     }
   }
 
-  for (size_t n = 0; n < data_blocks; n++) {
-    const void* data = fs::GetBlock(kBlobfsBlockSize, blob_data, n);
-
-    // If we try to write a block, will it be reaching beyond the end of the
-    // mapped file?
-    size_t off = n * kBlobfsBlockSize;
+  uint64_t last_data_block_start = data_start_block + aligned_blocks;
+  if (zero_fill_last_block) {
+    const void* data = fs::GetBlock(kBlobfsBlockSize, blob_data, aligned_blocks);
     uint8_t last_data[kBlobfsBlockSize];
-    if (inode->blob_size < off + kBlobfsBlockSize) {
-      // Read the partial block from a block-sized buffer which zero-pads the data.
-      memset(last_data, 0, kBlobfsBlockSize);
-      memcpy(last_data, data, inode->blob_size - off);
-      data = last_data;
-    }
-
-    uint64_t bno = data_start_block_ + inode->extents[0].Start() + merkle_blocks + n;
-    zx_status_t status;
-    if ((status = WriteBlock(bno, data)) != ZX_OK) {
+    memset(last_data, 0, kBlobfsBlockSize);
+    memcpy(last_data, data, data_size % kBlobfsBlockSize);
+    status = WriteBlock(last_data_block_start, last_data);
+    if (status != ZX_OK) {
+      fprintf(stderr, "%s:%d %d\n", __func__, __LINE__, status);
       return status;
     }
   }
@@ -712,8 +732,12 @@ zx_status_t Blobfs::ReadBlock(size_t bno) {
   return ZX_OK;
 }
 
+zx_status_t Blobfs::WriteBlocks(size_t block_number, uint64_t block_count, const void* data) {
+  return WriteBlockOffset(blockfd_.get(), data, block_count, offset_, block_number);
+}
+
 zx_status_t Blobfs::WriteBlock(size_t bno, const void* data) {
-  return WriteBlockOffset(blockfd_.get(), bno, offset_, data);
+  return WriteBlockOffset(blockfd_.get(), data, 1, offset_, bno);
 }
 
 zx_status_t Blobfs::ResetCache() {
