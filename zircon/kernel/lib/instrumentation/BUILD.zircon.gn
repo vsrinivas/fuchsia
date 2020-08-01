@@ -61,4 +61,12 @@ source_set("sancov") {
     configs -= _sancov_config
     sources = [ "sancov.cc" ]
   }
+
+  # sancov code shouldn't make asan checks.
+  # Annotating the functions with NO_ASAN is not enough, as it doesnt
+  # allow for ktl::atomic operations to be inlined.
+  _asan_config = [ "$zx/public/gn/config/instrumentation:asan" ]
+  if (configs + _asan_config - _asan_config != configs) {
+    configs -= _asan_config
+  }
 }
