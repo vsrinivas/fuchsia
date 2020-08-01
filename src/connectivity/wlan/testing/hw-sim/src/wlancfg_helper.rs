@@ -140,15 +140,6 @@ pub fn init_client_controller(
     (controller_client_end, listener_stream)
 }
 
-/// Creates a listener update stream for getting status updates.
-pub fn init_client_listener() -> fidl_policy::ClientStateUpdatesRequestStream {
-    let listener = connect_to_service::<fidl_policy::ClientListenerMarker>().unwrap();
-    let (client_end, server_end) = fidl::endpoints::create_endpoints().unwrap();
-    listener.get_listener(client_end).unwrap();
-    let listener_stream = server_end.into_stream().unwrap();
-    listener_stream
-}
-
 /// Get the next client update. Will panic if no updates are available.
 pub async fn get_update_from_client_listener(
     update_listener: &mut fidl_policy::ClientStateUpdatesRequestStream,
