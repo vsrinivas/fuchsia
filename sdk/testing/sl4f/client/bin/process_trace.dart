@@ -17,6 +17,7 @@ const _metricsReporters = {
   'scenic_frame_stats': scenicFrameStatsReport,
   'memory': memoryMetricsReport,
   'input_latency': inputLatencyReport,
+  'total_trace_wall_time': totalTraceWallTimeReport,
 };
 
 const _helpText = '''

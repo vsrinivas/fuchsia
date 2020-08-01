@@ -11,6 +11,7 @@ export 'src/trace_processing/metrics/input_latency.dart';
 export 'src/trace_processing/metrics/memory_metrics.dart';
 export 'src/trace_processing/metrics/scenic_frame_stats.dart';
 export 'src/trace_processing/metrics/temperature_metrics.dart';
+export 'src/trace_processing/metrics/total_trace_wall_time.dart';
 export 'src/trace_processing/metrics_results.dart';
 export 'src/trace_processing/metrics_spec.dart';
 export 'src/trace_processing/time_delta.dart';

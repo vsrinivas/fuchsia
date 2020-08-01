@@ -705,4 +705,10 @@ void main(List<String> args) {
             .length,
         2);
   });
+
+  test('Wall time metric', () async {
+    final model = createModelFromJsonString(flutterAppTraceJsonString);
+    final results = totalTraceWallTimeMetricsProcessor(model, {});
+    expect(results[0].values[0], _closeTo(16247.062083));
+  });
 }

@@ -43,6 +43,7 @@ dart_library("client") {
     "src/trace_processing/metrics/memory_metrics.dart",
     "src/trace_processing/metrics/scenic_frame_stats.dart",
     "src/trace_processing/metrics/temperature_metrics.dart",
+    "src/trace_processing/metrics/total_trace_wall_time.dart",
     "src/trace_processing/metrics_results.dart",
     "src/trace_processing/metrics_spec.dart",
     "src/trace_processing/time_delta.dart",

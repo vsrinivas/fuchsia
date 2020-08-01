@@ -12,6 +12,7 @@ import 'metrics/input_latency.dart';
 import 'metrics/memory_metrics.dart';
 import 'metrics/scenic_frame_stats.dart';
 import 'metrics/temperature_metrics.dart';
+import 'metrics/total_trace_wall_time.dart';
 import 'metrics_results.dart';
 import 'trace_model.dart';
 
@@ -51,6 +52,7 @@ const defaultMetricsRegistry = {
   'memory': memoryMetricsProcessor,
   'scenic_frame_stats': scenicFrameStatsMetricsProcessor,
   'temperature': temperatureMetricsProcessor,
+  'total_trace_wall_time': totalTraceWallTimeMetricsProcessor,
 };
 
 List<TestCaseResults> processMetrics(Model model, MetricsSpec metricsSpec,
