@@ -355,11 +355,10 @@ Targets that will be built as mali vulkan ICDS.
 From //src/graphics/lib/magma/gnbuild/magma.gni:37
 
 ### build_libvulkan_goldfish
-This is a list of targets that will be built as goldfish vulkan ICDs.
 
-**Current value (from the default):** `[]`
+**Current value (from the default):** `""`
 
-From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:18
+From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:12
 
 ### build_libvulkan_img_rgx
 Targets that will be built as IMG vulkan ICDS.
@@ -559,7 +558,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/ad4846fb94a2654164efd582e851b4106b6b95ce/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -567,14 +566,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/ad4846fb94a2654164efd582e851b4106b6b95ce/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/ad4846fb94a2654164efd582e851b4106b6b95ce/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -812,7 +811,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/ad4846fb94a2654164efd582e851b4106b6b95ce/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -827,14 +826,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/ad4846fb94a2654164efd582e851b4106b6b95ce/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/ad4846fb94a2654164efd582e851b4106b6b95ce/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1719,12 +1718,6 @@ From //build/dart/dart.gni:8
 **Current value (from the default):** `""`
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:29
-
-### prebuilt_libvulkan_goldfish_path
-
-**Current value (from the default):** `""`
-
-From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:9
 
 ### prebuilt_libvulkan_img_path
 The path to a prebuilt libvulkan.so for an IMG GPU.
