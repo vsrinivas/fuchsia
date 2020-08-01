@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DIAGNOSTICS_LIB_STREAMS_CPP_ENCODE_H_
-#define SRC_DIAGNOSTICS_LIB_STREAMS_CPP_ENCODE_H_
+#ifndef LIB_SYSLOG_STREAMS_CPP_ENCODE_H_
+#define LIB_SYSLOG_STREAMS_CPP_ENCODE_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/stream/cpp/fidl.h>
@@ -17,4 +17,4 @@ zx_status_t log_record(const fuchsia::diagnostics::stream::Record&, std::vector<
 
 }  // namespace streams
 
-#endif  // SRC_DIAGNOSTICS_LIB_STREAMS_CPP_ENCODE_H_
+#endif  // LIB_SYSLOG_STREAMS_CPP_ENCODE_H_

@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include <src/diagnostics/lib/streams/cpp/encode.h>
+#include <sdk/lib/syslog/streams/cpp/encode.h>
 
 #include "src/lib/fsl/vmo/vector.h"
 

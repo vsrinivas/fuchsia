@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/diagnostics/lib/streams/cpp/encode.h"
+#include "sdk/lib/syslog/streams/cpp/encode.h"
 
 TEST(StreamsRecordEncoder, Writable) {
   // Create Buffer

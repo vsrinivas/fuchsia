@@ -8,7 +8,6 @@ group("tests") {
     "diagnostics-schema:tests",
     "inspect-fidl-load:tests",
     "selectors:tests",
-    "streams/cpp:tests",
     "streams/dart:tests",
     "triage:tests",
     "validating-log-listener:tests",

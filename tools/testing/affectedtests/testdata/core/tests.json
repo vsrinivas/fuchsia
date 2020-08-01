@@ -18563,7 +18563,7 @@
     ],
     "test": {
       "cpu": "x64",
-      "label": "//src/diagnostics/lib/streams/cpp:streams-cpp-tests(//build/toolchain/fuchsia:x64)",
+      "label": "//sdk/lib/syslog/streams/cpp:streams-cpp-tests(//build/toolchain/fuchsia:x64)",
       "name": "fuchsia-pkg://fuchsia.com/streams-cpp-tests#meta/streams-encoder-test.cmx",
       "os": "fuchsia",
       "package_url": "fuchsia-pkg://fuchsia.com/streams-cpp-tests#meta/streams-encoder-test.cmx",

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DIAGNOSTICS_LIB_STREAMS_CPP_FIELDS_H_
+#ifndef LIB_SYSLOG_STREAMS_CPP_FIELDS_H_
 
-#define SRC_DIAGNOSTICS_LIB_STREAMS_CPP_FIELDS_H_
+#define LIB_SYSLOG_STREAMS_CPP_FIELDS_H_
 #include <vector>
 
 template <size_t begin, size_t end>
@@ -49,4 +49,4 @@ struct ArgumentFields {
   using ValueRef = Field<32, 47>;
   using Reserved = Field<32, 63>;
 };
-#endif  // SRC_DIAGNOSTICS_LIB_STREAMS_CPP_FIELDS_H_
+#endif  // LIB_SYSLOG_STREAMS_CPP_FIELDS_H_
