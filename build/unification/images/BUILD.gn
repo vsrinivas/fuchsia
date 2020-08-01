@@ -11,8 +11,6 @@
 import("//build/unification/future/data/fini_manifest.gni")
 import("aggregate_manifest.gni")
 import("artifacts.gni")
-import("common_image_contents.gni")
-import("common_test_contents.gni")
 import("zircon_artifact.gni")
 
 foreach(artifact, zircon_artifacts) {
@@ -104,22 +102,19 @@ fini_manifest("migrated-image") {
   # Use the same naming scheme as `aggregate_manifest`.
   outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
 
-  # See common_image_contents.gni to edit the contents of this manifest.
-  deps = common_image_contents
+  deps = []
 }
 
 fini_manifest("migrated-aux") {
   # Use the same naming scheme as `aggregate_manifest`.
   outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
 
-  # See common_test_contents.gni to edit the contents of this manifest.
-  deps = common_test_contents
+  deps = []
 }
 
 fini_manifest("migrated-tests") {
   # Use the same naming scheme as `aggregate_manifest`.
   outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
 
-  # See common_test_contents.gni to edit the contents of this manifest.
-  deps = common_test_contents
+  deps = []
 }
