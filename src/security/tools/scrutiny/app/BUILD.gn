@@ -5,7 +5,6 @@
 import("//build/host.gni")
 
 import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_library.gni")
 
 if (!is_fuchsia) {
   rustc_binary("bin") {
@@ -29,12 +28,12 @@ if (!is_fuchsia) {
     enforce_source_listing = true
 
     sources = [
-      "src/scrutiny.rs",
       "src/builtin.rs",
       "src/error.rs",
       "src/logo.rs",
-      "src/shell.rs",
       "src/main.rs",
+      "src/scrutiny.rs",
+      "src/shell.rs",
     ]
   }
 }
@@ -52,7 +51,5 @@ group("scrutiny") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":bin_test($host_toolchain)",
-  ]
+  public_deps = [ ":bin_test($host_toolchain)" ]
 }
