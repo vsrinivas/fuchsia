@@ -142,7 +142,7 @@ Members are appointed by each functional area of the project:
 | Kernel            | cpu@google.com           |
 | Ledger            | qsr@google.com           |
 | Media             | dalesat@google.com       |
-| Metrics           | rudominer@google.com     |
+| Metrics           | camrdale@google.com      |
 | Netstack          | brunodalbo@google.com    |
 | Security          | jsankey@google.com       |
 | Sessions          | lindkvist@google.com     |
