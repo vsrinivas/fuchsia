@@ -14,6 +14,8 @@
 
 namespace zxdb {
 
+static constexpr uint64_t kMaxAddress = std::numeric_limits<uint64_t>::max();
+
 size_t LineTable::GetNumSequences() const {
   EnsureSequences();
   return sequences_.size();
@@ -107,9 +109,12 @@ void LineTable::EnsureSequences() const {
 
     if (rows[i].EndSequence) {
       // When the linker strips dead code it will mark the sequence as starting at address 0. Strip
-      // these from the table.
+      // these from the table. As of revision
+      // e618ccbf431f6730edb6d1467a127c3a52fd57f7 in Clang, -1 is used to
+      // indicate that a function was removed. Versions of Clang earlier than
+      // this do not support this behavior.
       auto seq_addr = rows[cur_seq_begin_row].Address;
-      if (seq_addr)
+      if (seq_addr && seq_addr != kMaxAddress)
         sequences_.emplace_back(AddressRange(seq_addr, rows[i].Address), cur_seq_begin_row, i);
       cur_seq_begin_row = kNoSeq;
     }
