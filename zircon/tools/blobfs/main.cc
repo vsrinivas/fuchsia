@@ -282,39 +282,10 @@ zx_status_t BlobfsCreator::Add() {
     return status;
   }
 
-  std::vector<std::thread> threads;
-  std::mutex mtx;
-
-  unsigned n_threads = std::thread::hardware_concurrency();
-  if (!n_threads) {
-    n_threads = 4;
-  }
-  unsigned blob_index = 0;
-  for (unsigned j = n_threads; j > 0; j--) {
-    threads.push_back(std::thread([&] {
-      unsigned i = 0;
-      while (true) {
-        mtx.lock();
-        i = blob_index++;
-        if (i >= merkle_list_.size()) {
-          mtx.unlock();
-          return;
-        }
-        mtx.unlock();
-
-        zx_status_t res;
-        if ((res = AddBlob(blobfs.get(), json_recorder(), merkle_list_[i])) < 0) {
-          mtx.lock();
-          status = res;
-          mtx.unlock();
-          return;
-        }
-      }
-    }));
-  }
-
-  for (unsigned i = 0; i < threads.size(); i++) {
-    threads[i].join();
+  for (size_t i = 0; i < merkle_list_.size(); i++) {
+    if ((status = AddBlob(blobfs.get(), json_recorder(), merkle_list_[i])) < 0) {
+      break;
+    }
   }
 
   return status;
