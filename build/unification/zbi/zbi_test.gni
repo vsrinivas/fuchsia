@@ -1,0 +1,52 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/test_spec.gni")
+
+# Declares a test meant to be run out of a ZBI bootfs partition.
+#
+# This template adds the metadata necessary for test runners to handle a test
+# hosted in a ZBI.
+#
+# Example
+# ```
+# test("foo") {
+#   output_name = "bar"
+#   . . .
+# }
+#
+# zbi_test("zbi") {
+#   name = "bar"
+#   deps = [ ":foo" ]
+# }
+# ```
+#
+# Parameters
+#
+#   name
+#     Required: Name of the test binary
+#     Type: string
+#
+#   deps
+#     Required: Singleton list containing the label of the test target.
+#     Type: list(label)
+#
+#   environments
+#     See //build/testing/test_spec.gni.
+
+template("zbi_test") {
+  assert(defined(invoker.name), "Need to specify a test name")
+  assert(defined(invoker.deps), "Need to specify deps")
+  _deps = invoker.deps
+  assert(_deps != [], "Deps should contain exactly one label")
+  _label = _deps[0]
+  assert(_deps == [ _label ], "Deps should contain exactly one label")
+
+  test_spec(target_name) {
+    target = _label
+    deps = _deps
+    path = "/boot/test/${invoker.name}"
+    forward_variables_from(invoker, [ "environments" ])
+  }
+}
