@@ -17,18 +17,40 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
+#include <iostream>
+#include <optional>
+#include <ostream>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 #include <fbl/auto_call.h>
 
-namespace cpuctrl = llcpp::fuchsia::hardware::cpu::ctrl;
-namespace fuchsia_device = llcpp::fuchsia::device;
+#include "performance-domain.h"
 
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
-
 using ListCb = void (*)(const char* path);
 
 constexpr char kCpuDevicePath[] = "/dev/class/cpu-ctrl";
 constexpr char kCpuDeviceFormat[] = "/dev/class/cpu-ctrl/%s";
 constexpr size_t kMaxPathLen = 24;  // strlen("/dev/class/cpu-ctrl/000\0")
+
+void print_frequency(const cpuctrl::CpuPerformanceStateInfo& info) {
+  if (info.frequency_hz == cpuctrl::FREQUENCY_UNKNOWN) {
+    std::cout << "(unknown)";
+  } else {
+    std::cout << info.frequency_hz << "hz";
+  }
+}
+
+void print_voltage(const cpuctrl::CpuPerformanceStateInfo& info) {
+  if (info.voltage_uv == cpuctrl::VOLTAGE_UNKNOWN) {
+    std::cout << "(unknown)";
+  } else {
+    std::cout << info.voltage_uv << "uv";
+  }
+}
 
 // Print help message to stderr.
 void usage(const char* cmd) {
@@ -40,20 +62,20 @@ void usage(const char* cmd) {
   memset(spaces, ' ', kCmdLen);  // Fill buffer with spaces.
   spaces[kCmdLen - 1] = '\0';    // Null terminate.
 
+  // clang-format off
   fprintf(stderr, "\nInteract with the CPU\n");
   fprintf(stderr, "\t%s help                     Print this message and quit.\n", cmd);
   fprintf(stderr, "\t%s list                     List this system's performance domains\n", cmd);
-  fprintf(
-      stderr,
-      "\t%s describe [domain]        Describes a given performance domain's performance states\n",
-      cmd);
+  fprintf(stderr, "\t%s describe [domain]        Describes a given performance domain's performance states\n",
+          cmd);
   fprintf(stderr, "\t%s                          describes all domains if `domain` is omitted.\n",
           spaces);
+  
   fprintf(stderr, "\t%s pstate <domain> [state]  Set the CPU's performance state to `state`. \n",
           cmd);
-  fprintf(stderr,
-          "\t%s                          Returns the current state if `state` is omitted.\n",
+  fprintf(stderr, "\t%s                          Returns the current state if `state` is omitted.\n",
           spaces);
+  // clang-format on
 }
 
 // Call `ListCb cb` with all the names of devices in kCpuDevicePath. Each of
@@ -86,131 +108,122 @@ void print_performance_domain(const char* path) {
   }
 }
 
-void describe(const char* domain) {
+void describe(const char* domain_name) {
   char path[kMaxPathLen];
-  snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain);
+  snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain_name);
 
-  zx::channel channel_local, channel_remote;
-  zx_status_t st = zx::channel::create(0, &channel_local, &channel_remote);
-  if (st != ZX_OK) {
-    fprintf(stderr, "Failed to create channel pair, st = %d\n", st);
+  auto domain = CpuPerformanceDomain::CreateFromPath(path);
+
+  // If status is set, something went wront.
+  zx_status_t* st = std::get_if<zx_status_t>(&domain);
+  if (st) {
+    std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"
+              << " st = " << *st << std::endl;
     return;
   }
 
-  st = fdio_service_connect(path, channel_remote.release());
-  if (st != ZX_OK) {
-    fprintf(stderr, "Failed to connect to service at '%s', st = %d\n", path, st);
-    return;
+  auto client = std::move(std::get<CpuPerformanceDomain>(domain));
+  const auto& [core_count_status, core_count] = client.GetNumLogicalCores();
+
+  std::cout << "Domain " << domain_name << std::endl;
+  if (core_count_status == ZX_OK) {
+    std::cout << core_count << " logical cores" << std::endl;
   }
 
-  auto client = std::make_unique<cpuctrl::Device::SyncClient>(std::move(channel_local));
+  const auto& pstates = client.GetPerformanceStates();
+  for (size_t i = 0; i < pstates.size(); i++) {
+    std::cout << " + pstate: " << i << std::endl;
 
-  printf("Domain %s\n", domain);
+    std::cout << "   - freq: ";
+    print_frequency(pstates[i]);
+    std::cout << std::endl;
 
-  auto resp = client->GetNumLogicalCores();
-  if (resp.status() != ZX_OK) {
-    fprintf(stderr, "Failed to get num logical cores domain '%s'\n", domain);
-  } else {
-    printf("  Num Logical Cores: %lu\n", resp.value().count);
-  }
-
-  for (uint32_t i = 0; i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
-    auto resp = client->GetPerformanceStateInfo(i);
-
-    if (resp.status() != ZX_OK) {
-      fprintf(stderr, "Failed to get performance state %d for domain '%s'\n", i, domain);
-      continue;
-    }
-
-    if (resp->result.is_err()) {
-      // Maybe this performance state is not supported for this performance domain?
-      // Skip silently.
-      continue;
-    }
-
-    printf("  PState %d:\n", i);
-    if (resp.value().result.response().info.frequency_hz == cpuctrl::FREQUENCY_UNKNOWN) {
-      printf("    Freq (hz): unknown\n");
-    } else {
-      printf("    Freq (hz): %lu\n", resp.value().result.response().info.frequency_hz);
-    }
-    if (resp.value().result.response().info.voltage_uv == cpuctrl::VOLTAGE_UNKNOWN) {
-      printf("    Volt (uv): unknown\n");
-    } else {
-      printf("    Volt (uv): %lu\n", resp.value().result.response().info.voltage_uv);
-    }
+    std::cout << "   - volt: ";
+    print_voltage(pstates[i]);
+    std::cout << std::endl;
   }
 }
 
-void set_performance_state(fuchsia_device::Controller::SyncClient& client, const char* domain,
-                           const char* pstate) {
+void set_performance_state(const char* domain_name, const char* pstate) {
   char* end;
-  long desired_state = strtol(pstate, &end, 10);
-  if (end == pstate || *end != '\0' || desired_state < 0 ||
-      desired_state > MAX_DEVICE_PERFORMANCE_STATES) {
+  long desired_state_l = strtol(pstate, &end, 10);
+  if (end == pstate || *end != '\0' || desired_state_l < 0 ||
+      desired_state_l > MAX_DEVICE_PERFORMANCE_STATES) {
     fprintf(stderr, "Bad pstate '%s', must be a positive integer between 0 and %u\n", pstate,
             MAX_DEVICE_PERFORMANCE_STATES);
     return;
   }
 
-  auto result = client.SetPerformanceState(static_cast<uint32_t>(desired_state));
-  if (result.status() != ZX_OK) {
-    fprintf(stderr, "Failed to set pstate, st = %d\n", result.status());
+  uint32_t desired_state = static_cast<uint32_t>(desired_state_l);
+  char path[kMaxPathLen];
+  snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain_name);
+
+  auto domain = CpuPerformanceDomain::CreateFromPath(path);
+
+  zx_status_t* st = std::get_if<zx_status_t>(&domain);
+  if (st) {
+    std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"
+              << " st = " << *st << std::endl;
     return;
   }
 
-  if (!result.ok()) {
-    fprintf(stderr, "Failed to set pstate\n");
+  auto client = std::move(std::get<CpuPerformanceDomain>(domain));
+
+  zx_status_t status = client.SetPerformanceState(static_cast<uint32_t>(desired_state));
+  if (status != ZX_OK) {
+    std::cerr << "Failed to set performance state, st = " << status << std::endl;
     return;
   }
 
-  printf("Set pstate for domain '%s' to %u\n", domain, result.value().out_state);
+  std::cout << "PD: " << domain_name << " set pstate to " << desired_state << std::endl;
+
+  const auto& pstates = client.GetPerformanceStates();
+  if (desired_state < pstates.size()) {
+    std::cout << "freq: ";
+    print_frequency(pstates[desired_state]);
+    std::cout << " ";
+
+    std::cout << "volt: ";
+    print_voltage(pstates[desired_state]);
+    std::cout << std::endl;
+  }
 }
 
-void get_performance_state(fuchsia_device::Controller::SyncClient& client, const char* domain) {
-  auto resp = client.GetCurrentPerformanceState();
+void get_performance_state(const char* domain_name) {
+  char path[kMaxPathLen];
+  snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain_name);
 
-  if (resp.status() != ZX_OK) {
-    fprintf(stderr, "Failed to get pstate for domain = %s, st = %d\n", domain, resp.status());
+  auto domain = CpuPerformanceDomain::CreateFromPath(path);
+
+  // If status is set, something went wront.
+  zx_status_t* st = std::get_if<zx_status_t>(&domain);
+  if (st) {
+    std::cerr << "Failed to connect to performance domain device '" << domain_name << "'"
+              << " st = " << *st << std::endl;
     return;
   }
 
-  printf("Domain %s is currently in pstate %u\n", domain, resp.value().out_state);
+  auto client = std::move(std::get<CpuPerformanceDomain>(domain));
+
+  const auto& [status, ps_index, pstate] = client.GetCurrentPerformanceState();
+
+  if (status != ZX_OK) {
+    std::cout << "Failed to get current performance state, st = " << status << std::endl;
+    return;
+  }
+
+  std::cout << "Current Pstate = " << ps_index << std::endl;
+  std::cout << "  Frequency: ";
+  print_frequency(pstate);
+  std::cout << std::endl;
+  std::cout << "    Voltage: ";
+  print_voltage(pstate);
+  std::cout << std::endl;
 }
 
 zx_status_t describe_all() {
   list(describe);
   return ZX_OK;
-}
-
-void get_set_performance_state(const char* domain, const char* pstate) {
-  if (strnlen(domain, 4) != 3) {
-    fprintf(stderr, "Domain must be 3 characters long (nnn)\n");
-    return;
-  }
-  char path[kMaxPathLen];
-  snprintf(path, kMaxPathLen, kCpuDeviceFormat, domain);
-
-  zx::channel channel_local, channel_remote;
-  zx_status_t st = zx::channel::create(0, &channel_local, &channel_remote);
-  if (st != ZX_OK) {
-    fprintf(stderr, "Failed to create channel pair, st = %d\n", st);
-    return;
-  }
-
-  st = fdio_service_connect(path, channel_remote.release());
-  if (st != ZX_OK) {
-    fprintf(stderr, "Failed to connect to service at '%s', st = %d\n", path, st);
-    return;
-  }
-
-  fuchsia_device::Controller::SyncClient client(std::move(channel_local));
-
-  if (pstate != nullptr) {
-    set_performance_state(client, domain, pstate);
-  } else {
-    get_performance_state(client, domain);
-  }
 }
 
 int main(int argc, char* argv[]) {
@@ -236,14 +249,15 @@ int main(int argc, char* argv[]) {
     }
   } else if (!strncmp(subcmd, "pstate", 6)) {
     if (argc == 4) {
-      get_set_performance_state(argv[2], argv[3]);
+      set_performance_state(argv[2], argv[3]);
     } else if (argc == 3) {
-      get_set_performance_state(argv[2], nullptr);
+      get_performance_state(argv[2]);
     } else {
       fprintf(stderr, "pstate <domain> [pstate]\n");
       usage(cmd);
       return -1;
     }
+  } else if (!strncmp(subcmd, "stress", 6)) {
   }
 
   return 0;
