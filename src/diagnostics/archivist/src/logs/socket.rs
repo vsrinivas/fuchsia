@@ -6,14 +6,8 @@ use super::message::{Message, MAX_DATAGRAM_LEN};
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{
-    io::{self, AsyncRead},
-    ready,
-    task::{Context, Poll},
-    Stream,
-};
+use futures::io::{self, AsyncReadExt};
 use std::marker::PhantomData;
-use std::pin::Pin;
 use std::sync::Arc;
 
 /// An `Encoding` is able to parse a `Message` from raw bytes.
@@ -86,16 +80,18 @@ impl LogMessageSocket<StructuredEncoding> {
     }
 }
 
-impl<E> Stream for LogMessageSocket<E>
+impl<E> LogMessageSocket<E>
 where
     E: Encoding + Unpin,
 {
-    type Item = Result<Message, StreamError>;
+    pub async fn next(&mut self) -> Result<Message, StreamError> {
+        let len = self.socket.read(&mut self.buffer).await?;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let &mut Self { ref mut socket, ref mut buffer, .. } = &mut *self;
-        let len = ready!(Pin::new(socket).poll_read(cx, buffer)?);
-        Poll::Ready(if len > 0 { Some(E::parse_message(&buffer[..len])) } else { None })
+        if len == 0 {
+            return Err(StreamError::Closed);
+        }
+
+        E::parse_message(&self.buffer[..len])
     }
 }
 
@@ -108,7 +104,6 @@ mod tests {
     use diagnostic_streams::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
-    use futures::stream::TryStreamExt;
     use std::io::Cursor;
 
     #[fasync::run_until_stalled(test)]
@@ -141,14 +136,14 @@ mod tests {
         };
         expected_p.contents.sort();
 
-        let mut result_message = ls.try_next().await.unwrap().unwrap();
+        let mut result_message = ls.next().await.unwrap();
         result_message.contents.sort();
         assert_eq!(result_message, expected_p);
 
         // write one more time
         sin.write(packet.as_bytes()).unwrap();
 
-        let mut result_message = ls.try_next().await.unwrap().unwrap();
+        let mut result_message = ls.next().await.unwrap();
         result_message.contents.sort();
         assert_eq!(result_message, expected_p);
     }
@@ -188,13 +183,13 @@ mod tests {
             LogMessageSocket::new_structured(sout, Arc::new(SourceIdentity::empty())).unwrap();
 
         sin.write(encoded).unwrap();
-        let mut result_message = stream.try_next().await.unwrap().unwrap();
+        let mut result_message = stream.next().await.unwrap();
         result_message.contents.sort();
         assert_eq!(result_message, expected_p);
 
         // write again
         sin.write(encoded).unwrap();
-        let mut result_message = stream.try_next().await.unwrap().unwrap();
+        let mut result_message = stream.next().await.unwrap();
         result_message.contents.sort();
         assert_eq!(result_message, expected_p);
     }

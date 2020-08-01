@@ -46,6 +46,9 @@ pub enum StreamError {
         #[from]
         source: std::io::Error,
     },
+
+    #[error("socket was closed and no messages remain")]
+    Closed,
 }
 
 #[cfg(test)]

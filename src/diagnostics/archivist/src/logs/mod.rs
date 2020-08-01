@@ -230,12 +230,13 @@ impl LogManager {
             let inner = self.inner.lock().await;
             inner.stats.get_component_log_stats(log_stream.source()).await
         };
-        while let Some(next) = log_stream.next().await {
-            match next {
+        loop {
+            match log_stream.next().await {
                 Ok(message) => {
                     component_log_stats.lock().await.record_log(&message);
                     self.ingest_message(message, stats::LogSource::LogSink).await;
                 }
+                Err(error::StreamError::Closed) => return,
                 Err(e) => {
                     self.inner.lock().await.stats.record_closed_stream();
                     warn!("closing socket from {:?}: {}", log_stream.source(), e);
