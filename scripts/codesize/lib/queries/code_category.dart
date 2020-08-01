@@ -60,6 +60,8 @@ const List<CodeCategory> _allCategories = [
   HlcppRuntimeCategory(),
   LlcppRuntimeCategory(),
   CFidlCategory(),
+  GoFidlCategory(),
+  RustFidlCategory(),
   UntraceableCategory(),
 ];
 

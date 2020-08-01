@@ -8,4 +8,6 @@
 library categories;
 
 export 'fidl_cpp.dart';
+export 'fidl_go.dart';
+export 'fidl_rust.dart';
 export 'untraceable.dart';

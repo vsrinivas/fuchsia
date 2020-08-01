@@ -44,6 +44,8 @@ class CompileUnitContext
         CppDomainObjectContextMixin,
         CppRuntimeContextMixin,
         CFidlContextMixin,
+        GoFidlContextMixin,
+        RustFidlContextMixin,
         UntraceableContextMixin {
   CompileUnitContext(this.name);
 

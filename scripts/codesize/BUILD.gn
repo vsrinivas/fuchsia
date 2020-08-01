@@ -36,6 +36,8 @@ dart_test("codesize_tests") {
     "io.dart",
     "queries/categories/categories.dart",
     "queries/categories/fidl_cpp.dart",
+    "queries/categories/fidl_go.dart",
+    "queries/categories/fidl_rust.dart",
     "queries/categories/untraceable.dart",
     "queries/code_category.dart",
     "queries/dump_names.dart",
@@ -55,6 +57,7 @@ dart_test("codesize_tests") {
   sources += [
     "cli_test.dart",
     "queries/categories/fidl_cpp_test.dart",
+    "queries/categories/fidl_rust_test.dart",
     "reflect_test.dart",
     "render/terminal_test.dart",
     "run_queries_test.dart",
