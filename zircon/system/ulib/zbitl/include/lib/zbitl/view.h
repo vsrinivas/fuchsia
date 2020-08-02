@@ -10,6 +10,7 @@
 #include <zircon/boot/image.h>
 
 #include <functional>
+#include <optional>
 #include <type_traits>
 #include <variant>
 
@@ -190,9 +191,9 @@ class View {
     uint32_t item_offset = 0;
 
     /// This reflects the underlying error from accessing the Storage object,
-    /// if any.  If storage_error.is_error() is false, then the error is in the
-    /// format of the contents of the ZBI, not in accessing the contents.
-    fitx::result<typename Traits::error_type> storage_error{};
+    /// if any.  If storage_error.has_value() is false, then the error is in
+    /// the format of the contents of the ZBI, not in accessing the contents.
+    std::optional<typename Traits::error_type> storage_error{};
   };
 
   /// Check the container for errors after using iterators.  When begin() or
@@ -252,7 +253,7 @@ class View {
         *this = view_->end();
       } else if (auto header = Traits::Header(view_->storage(), offset_); header.is_error()) {
         // Failed to read the next header.
-        Fail("cannot read item header", fitx::error{std::move(header.error_value())});
+        Fail("cannot read item header", std::move(header.error_value()));
       } else if (auto header_error = CheckHeader<Check>(header.value(), view_->limit_ - offset_);
                  header_error.is_error()) {
         Fail(header_error.error_value());
@@ -261,14 +262,14 @@ class View {
         offset_ += static_cast<uint32_t>(sizeof(zbi_header_t));
         if (auto payload = Traits::Payload(view_->storage(), offset_, header_->length);
             payload.is_error()) {
-          Fail("cannot extract payload view", fitx::error{std::move(payload.error_value())});
+          Fail("cannot extract payload view", std::move(payload.error_value()));
         } else {
           offset_ += ZBI_ALIGN(header_->length);
           payload_ = std::move(payload.value());
           if constexpr (Check == Checking::kCrc) {
             if (auto crc = Traits::Crc32(view_->storage(), offset_, header_->length);
                 crc.is_error()) {
-              Fail("cannot compute payload CRC32", fitx::error{std::move(crc.error_value())});
+              Fail("cannot compute payload CRC32", std::move(crc.error_value()));
             }
           }
         }
@@ -358,7 +359,7 @@ class View {
     }
 
     void Fail(std::string_view sv,
-              fitx::result<typename Traits::error_type> storage_error = fitx::ok()) {
+              std::optional<typename Traits::error_type> storage_error = std::nullopt) {
       view_->Fail({sv, offset_, std::move(storage_error)});
       *this = view_->end();
     }
@@ -374,40 +375,40 @@ class View {
   fitx::result<Error, zbi_header_t> container_header() {
     auto capacity_error = Traits::Capacity(storage());
     if (capacity_error.is_error()) {
-      return fitx::error(Error{"cannot determine storage capacity", 0,
-                               fitx::error{std::move(capacity_error.error_value())}});
+      return fitx::error{
+          Error{"cannot determine storage capacity", 0, std::move(capacity_error.error_value())}};
     }
     uint32_t capacity = capacity_error.value();
 
     // Minimal bounds check before trying to read.
     if (capacity < sizeof(zbi_header_t)) {
       return fitx::error(
-          Error{"storage capacity too small for ZBI container header", capacity, fitx::ok()});
+          Error{"storage capacity too small for ZBI container header", capacity, {}});
     }
 
     // Read and validate the container header.
     auto header_error = Traits::Header(storage(), 0);
     if (header_error.is_error()) {
       // Failed to read the container header.
-      return fitx::error(Error{"cannot read container header", 0,
-                               fitx::error{std::move(header_error.error_value())}});
+      return fitx::error{
+          Error{"cannot read container header", 0, std::move(header_error.error_value())}};
     }
 
     const header_type header(std::move(header_error.value()));
 
     auto check_error = CheckHeader<Check>(*header, capacity);
     if (check_error.is_error()) {
-      return fitx::error(Error{check_error.error_value(), 0, fitx::ok()});
+      return fitx::error(Error{check_error.error_value(), 0, {}});
     }
 
     if constexpr (Check != Checking::kPermissive) {
       if (header->flags & ZBI_FLAG_CRC32) {
-        return fitx::error(Error{"container header has CRC32 flag", 0, fitx::ok()});
+        return fitx::error(Error{"container header has CRC32 flag", 0, {}});
       }
     }
 
     if (header->length % ZBI_ALIGNMENT != 0) {
-      return fitx::error(Error{"container header has misaligned length", 0, fitx::ok()});
+      return fitx::error(Error{"container header has misaligned length", 0, {}});
     }
 
     return fitx::ok(*header);

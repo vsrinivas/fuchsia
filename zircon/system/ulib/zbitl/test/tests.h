@@ -55,9 +55,9 @@ inline void TestDefaultConstructedView(bool expect_storage_error) {
   ASSERT_TRUE(error.is_error(), "no error when header cannot be read??");
   EXPECT_FALSE(error.error_value().zbi_error.empty(), "empty zbi_error string!!");
   if (expect_storage_error) {
-    EXPECT_TRUE(error.error_value().storage_error.is_error());
+    EXPECT_TRUE(error.error_value().storage_error.has_value());
   } else {
-    EXPECT_TRUE(error.error_value().storage_error.is_ok());
+    EXPECT_FALSE(error.error_value().storage_error.has_value());
   }
 }
 
@@ -136,7 +136,7 @@ void TestBadCrcZbi() {
   auto error = view.take_error();
   ASSERT_TRUE(error.is_error());
   // The error shouldn't be one of storage.
-  EXPECT_TRUE(error.error_value().storage_error.is_ok());
+  EXPECT_FALSE(error.error_value().storage_error);
 }
 
 template <typename StorageIo>

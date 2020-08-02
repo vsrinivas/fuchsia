@@ -93,13 +93,12 @@ zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
 
   if (auto check = zbi.take_error(); check.is_error()) {
     auto error = check.error_value();
-    if (error.storage_error.is_ok()) {
+    if (error.storage_error) {
       fail(log, "invalid ZBI: %.*s at offset %#x\n", static_cast<int>(error.zbi_error.size()),
            error.zbi_error.data(), error.item_offset);
     } else {
       fail(log, "invalid ZBI: %.*s at offset %#x: %s\n", static_cast<int>(error.zbi_error.size()),
-           error.zbi_error.data(), error.item_offset,
-           zx_status_get_string(error.storage_error.error_value()));
+           error.zbi_error.data(), error.item_offset, zx_status_get_string(*error.storage_error));
     }
   } else {
     fail(log, "no '/boot' bootfs in bootstrap message\n");

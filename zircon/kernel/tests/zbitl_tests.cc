@@ -80,7 +80,7 @@ bool BadCrcZbiTest() {
   auto error = zbi.take_error();
   ASSERT_TRUE(error.is_error());
   // The error should not be storage-related.
-  EXPECT_TRUE(error.error_value().storage_error.is_ok());
+  EXPECT_FALSE(error.error_value().storage_error);
 
   END_TEST;
 }
