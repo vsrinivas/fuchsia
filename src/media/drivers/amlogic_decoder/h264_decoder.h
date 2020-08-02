@@ -28,6 +28,7 @@ class H264Decoder : public VideoDecoder {
       : VideoDecoder(owner, client, is_secure) {
     constexpr uint32_t kStreamOffsetBitWidth = 28;
     pts_manager_->SetLookupBitWidth(kStreamOffsetBitWidth);
+    power_ref_ = std::make_unique<PowerReference>(owner_->vdec1_core());
   }
 
   ~H264Decoder() override;
@@ -58,6 +59,7 @@ class H264Decoder : public VideoDecoder {
   void TryReturnFrames();
   void OnFatalError();
 
+  std::unique_ptr<PowerReference> power_ref_;
   std::optional<InternalBuffer> codec_data_;
   std::optional<InternalBuffer> sei_data_buffer_;
   std::optional<InternalBuffer> reference_mv_buffer_;

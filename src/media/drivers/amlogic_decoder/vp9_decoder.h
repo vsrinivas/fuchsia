@@ -296,6 +296,7 @@ class Vp9Decoder : public VideoDecoder {
 
   WorkingBuffers working_buffers_;
   DecoderState state_ = DecoderState::kSwappedOut;
+  std::unique_ptr<PowerReference> power_ref_;
 
   // While frames_ always has size() == kMaxFrames, the actual number of valid frames that are fully
   // usable is valid_frames_count_.  For now we don't remove any Frame from frames_ after

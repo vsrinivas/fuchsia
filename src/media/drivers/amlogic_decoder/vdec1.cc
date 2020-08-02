@@ -72,10 +72,7 @@ zx_status_t Vdec1::LoadFirmware(InternalBuffer& buffer) {
 }
 
 void Vdec1::PowerOn() {
-  if (powered_on_) {
-    return;
-  }
-
+  ZX_DEBUG_ASSERT(!powered_on_);
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~0xc);
@@ -144,8 +141,7 @@ void Vdec1::PowerOn() {
 }
 
 void Vdec1::PowerOff() {
-  if (!powered_on_)
-    return;
+  ZX_DEBUG_ASSERT(powered_on_);
   powered_on_ = false;
   DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_vdec(false).WriteTo(mmio()->dmc);
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));

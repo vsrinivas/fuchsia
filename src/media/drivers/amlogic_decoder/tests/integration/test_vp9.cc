@@ -449,7 +449,6 @@ class TestVP9 {
       video->video_decoder_ = video->current_instance_->decoder();
       video->stream_buffer_ = video->current_instance_->stream_buffer();
       video->core_ = video->current_instance_->core();
-      video->core_->PowerOn();
       EXPECT_EQ(ZX_OK, static_cast<Vp9Decoder*>(video->video_decoder_)->InitializeHardware());
     }
 

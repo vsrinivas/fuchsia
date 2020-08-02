@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MPEG12_DECODER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MPEG12_DECODER_H_
 
 #include <lib/device-protocol/platform-device.h>
 
@@ -19,7 +19,9 @@
 class Mpeg12Decoder : public VideoDecoder {
  public:
   explicit Mpeg12Decoder(Owner* owner, Client* client)
-      : VideoDecoder(owner, client, /*is_secure=*/false) {}
+      : VideoDecoder(owner, client, /*is_secure=*/false) {
+    power_ref_ = std::make_unique<PowerReference>(owner_->core());
+  }
 
   ~Mpeg12Decoder() override;
 
@@ -39,10 +41,11 @@ class Mpeg12Decoder : public VideoDecoder {
   zx_status_t InitializeVideoBuffers();
   void ResetHardware();
   void TryReturnFrames();
+  std::unique_ptr<PowerReference> power_ref_;
 
   std::vector<ReferenceFrame> video_frames_;
   std::vector<std::shared_ptr<VideoFrame>> returned_frames_;
   io_buffer_t workspace_buffer_ = {};
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MPEG12_DECODER_H_

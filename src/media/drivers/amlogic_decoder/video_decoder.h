@@ -97,6 +97,8 @@ class VideoDecoder {
         io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height, uint32_t wrap,
         uint32_t blockmode) = 0;
     virtual __WARN_UNUSED_RESULT DecoderCore* core() = 0;
+    [[nodiscard]] virtual DecoderCore* hevc_core() const = 0;
+    [[nodiscard]] virtual DecoderCore* vdec1_core() const = 0;
     [[nodiscard]] virtual Parser* parser() {
       ZX_PANIC("not yet implemented by subclass");
       return nullptr;

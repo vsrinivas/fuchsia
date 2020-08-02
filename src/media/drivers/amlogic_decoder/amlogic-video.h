@@ -133,8 +133,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // Similar to GetStreamBufferEmptySpaceAfterOffset, but uses the current core write offset.
   [[nodiscard]] uint32_t GetStreamBufferEmptySpace() override;
 
-  [[nodiscard]] DecoderCore* hevc_core() const { return hevc_core_.get(); }
-  [[nodiscard]] DecoderCore* vdec1_core() const { return vdec1_core_.get(); }
+  [[nodiscard]] DecoderCore* hevc_core() const override { return hevc_core_.get(); }
+  [[nodiscard]] DecoderCore* vdec1_core() const override { return vdec1_core_.get(); }
 
   // Add the instance as a swapped-out decoder.
   void AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instance)

@@ -21,8 +21,8 @@ class FakeDecoderCore : public DecoderCore {
   }
   zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) override { return ZX_OK; }
   zx_status_t LoadFirmware(InternalBuffer& buffer) override { return ZX_OK; }
-  void PowerOn() override {}
-  void PowerOff() override {}
+  void PowerOn() override { powered_on_ = true; }
+  void PowerOff() override { powered_on_ = false; }
   void StartDecoding() override {}
   void StopDecoding() override {}
   void WaitForIdle() override {}
@@ -33,6 +33,8 @@ class FakeDecoderCore : public DecoderCore {
   void UpdateWritePointer(uint32_t write_pointer) override {}
   uint32_t GetStreamInputOffset() override { return 0; }
   uint32_t GetReadOffset() override { return 0; }
+
+  bool powered_on_ = false;
 };
 
 class FakeOwner : public VideoDecoder::Owner {
@@ -61,6 +63,8 @@ class FakeOwner : public VideoDecoder::Owner {
     return nullptr;
   }
   DecoderCore* core() override { return &core_; }
+  DecoderCore* vdec1_core() const override { return nullptr; }
+  DecoderCore* hevc_core() const override { return &core_; }
   zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size, uint32_t alignment_log2,
                                uint32_t flags, const char* name) override {
     zx_status_t status = io_buffer_init(buffer, ZX_HANDLE_INVALID, size, flags & ~IO_BUFFER_CONTIG);
@@ -95,7 +99,7 @@ class FakeOwner : public VideoDecoder::Owner {
  private:
   DosRegisterIo* dosbus_;
   AmlogicVideo* video_;
-  FakeDecoderCore core_;
+  mutable FakeDecoderCore core_;
   uint64_t phys_map_start_ = 0x1000;
   FirmwareBlob blob_;
   bool have_set_protected_ = false;
@@ -146,6 +150,7 @@ class Vp9UnitTest {
     EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
     EXPECT_EQ(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));
     EXPECT_FALSE(fake_owner.have_set_protected());
+    EXPECT_TRUE(static_cast<FakeDecoderCore*>(fake_owner.hevc_core())->powered_on_);
 
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
     EXPECT_NE(0, memcmp(dosbus_memory.get(), zeroed_memory.get(), kDosbusMemorySize));

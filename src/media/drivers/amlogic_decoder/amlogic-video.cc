@@ -106,8 +106,6 @@ AmlogicVideo::~AmlogicVideo() {
       vdec1_interrupt_thread_.join();
   }
   swapped_out_instances_.clear();
-  if (core_)
-    core_->PowerOff();
   current_instance_.reset();
   core_ = nullptr;
   hevc_core_.reset();
@@ -124,7 +122,6 @@ void AmlogicVideo::SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder, boo
   video_decoder_ = current_instance_->decoder();
   stream_buffer_ = current_instance_->stream_buffer();
   core_ = core;
-  core_->PowerOn();
 }
 
 void AmlogicVideo::AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instance) {
@@ -172,9 +169,6 @@ void AmlogicVideo::ClearDecoderInstance() {
   assert(swapped_out_instances_.size() == 0);
   LOG(DEBUG, "current_instance_.reset()...");
   current_instance_.reset();
-  LOG(DEBUG, "PowerOff()...");
-  core_->PowerOff();
-  LOG(DEBUG, "PowerOff() done.");
   core_ = nullptr;
   video_decoder_ = nullptr;
   stream_buffer_ = nullptr;
@@ -192,7 +186,6 @@ void AmlogicVideo::RemoveDecoderLocked(VideoDecoder* decoder) {
     current_instance_.reset();
     video_decoder_ = nullptr;
     stream_buffer_ = nullptr;
-    core_->PowerOff();
     core_ = nullptr;
     TryToReschedule();
     return;
@@ -448,8 +441,6 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   video_decoder_ = nullptr;
   core_->StopDecoding();
   core_->WaitForIdle();
-  // TODO: Avoid power off if swapping to another instance on the same core.
-  core_->PowerOff();
   core_ = nullptr;
   // Round-robin; place at the back of the line.
   swapped_out_instances_.push_back(std::move(current_instance_));
@@ -498,7 +489,6 @@ void AmlogicVideo::TryToReschedule() {
 
 void AmlogicVideo::PowerOffForError() {
   ZX_DEBUG_ASSERT(core_);
-  core_->PowerOff();
   core_ = nullptr;
   swapped_out_instances_.push_back(std::move(current_instance_));
   VideoDecoder* video_decoder = video_decoder_;
@@ -519,7 +509,6 @@ void AmlogicVideo::SwapInCurrentInstance() {
   video_decoder_ = current_instance_->decoder();
   DLOG("Swapping in %p", video_decoder_);
   stream_buffer_ = current_instance_->stream_buffer();
-  core()->PowerOn();
   {
     zx_status_t status = video_decoder_->SetupProtection();
     if (status != ZX_OK) {

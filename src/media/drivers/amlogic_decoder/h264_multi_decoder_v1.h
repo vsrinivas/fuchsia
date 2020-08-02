@@ -144,6 +144,8 @@ class H264MultiDecoderV1 : public VideoDecoder {
   bool sent_output_eos_to_client_ = false;
   bool use_parser_ = false;
 
+  std::unique_ptr<PowerReference> power_ref_;
+
   std::unique_ptr<media::H264Decoder> media_decoder_;
   std::unique_ptr<media::DecoderBuffer> current_decoder_buffer_;
 

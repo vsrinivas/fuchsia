@@ -171,6 +171,7 @@ Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
   // Compressed output buffers can't yet be allocated in secure memory.
   assert(!is_secure || !use_compressed_output_);
   InitializeLoopFilterData();
+  power_ref_ = std::make_unique<PowerReference>(owner_->hevc_core());
 }
 
 Vp9Decoder::~Vp9Decoder() {

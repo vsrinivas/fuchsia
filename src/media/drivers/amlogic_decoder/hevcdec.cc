@@ -72,6 +72,7 @@ zx_status_t HevcDec::LoadFirmware(InternalBuffer& buffer) {
 }
 
 void HevcDec::PowerOn() {
+  ZX_DEBUG_ASSERT(!powered_on_);
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~0xc0);
@@ -135,8 +136,7 @@ void HevcDec::PowerOn() {
 }
 
 void HevcDec::PowerOff() {
-  if (!powered_on_)
-    return;
+  ZX_DEBUG_ASSERT(powered_on_);
   powered_on_ = false;
   {
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);

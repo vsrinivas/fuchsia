@@ -245,6 +245,7 @@ H264MultiDecoderV1::H264MultiDecoderV1(Owner* owner, Client* client, FrameDataPr
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAcceleratorV1>(this),
                                                         media::H264PROFILE_HIGH);
   use_parser_ = is_secure;
+  power_ref_ = std::make_unique<PowerReference>(owner_->vdec1_core());
 }
 
 H264MultiDecoderV1::~H264MultiDecoderV1() {

@@ -7,6 +7,8 @@
 
 #include <lib/zx/handle.h>
 
+#include <mutex>
+
 #include <ddk/io-buffer.h>
 
 #include "internal_buffer.h"
@@ -66,8 +68,6 @@ class DecoderCore {
                                                                            uint32_t len) = 0;
   [[nodiscard]] virtual zx_status_t LoadFirmware(const uint8_t* data, uint32_t len) = 0;
   [[nodiscard]] virtual zx_status_t LoadFirmware(InternalBuffer& buffer) = 0;
-  virtual void PowerOn() = 0;
-  virtual void PowerOff() = 0;
   virtual void StartDecoding() = 0;
   virtual void StopDecoding() = 0;
   virtual void WaitForIdle() = 0;
@@ -92,6 +92,40 @@ class DecoderCore {
   [[nodiscard]] virtual zx_status_t RestoreInputContext(InputContext* context) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+
+  virtual void PowerOn() __TA_REQUIRES(power_ref_lock_) = 0;
+  virtual void PowerOff() __TA_REQUIRES(power_ref_lock_) = 0;
+  void IncrementPowerRef() {
+    std::lock_guard<std::mutex> lock(power_ref_lock_);
+    if (power_ref_count_++ == 0) {
+      PowerOn();
+    }
+  }
+
+  void DecrementPowerRef() {
+    std::lock_guard<std::mutex> lock(power_ref_lock_);
+    if (--power_ref_count_ == 0) {
+      PowerOff();
+    }
+  }
+
+ private:
+  std::mutex power_ref_lock_;
+  // In practice power_ref_count_ will only be accesses under the video decoder lock, but adding its
+  // own lock makes locking easier to enforce.
+  __TA_GUARDED(power_ref_lock_) uint64_t power_ref_count_ = 0;
+};
+
+// This is an RAII struct used to ensure the core is powered up as long as a client is using it.
+class PowerReference {
+ public:
+  explicit PowerReference(DecoderCore* core) : core_(core) { core_->IncrementPowerRef(); }
+  PowerReference(const PowerReference& ref) = delete;
+
+  ~PowerReference() { core_->DecrementPowerRef(); }
+
+ private:
+  DecoderCore* core_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_CORE_H_
