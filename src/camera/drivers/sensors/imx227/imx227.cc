@@ -27,28 +27,11 @@
 
 namespace camera {
 
-namespace {
-
-constexpr uint8_t kRaw10Bits = 10;
-constexpr uint8_t kRaw12Bits = 12;
-constexpr uint8_t kByteMask = 0xFF;
-constexpr uint16_t kSensorId = 0x0227;
-constexpr uint32_t kAGainPrecision = 12;
-constexpr uint32_t kDGainPrecision = 8;
-constexpr int32_t kLog2GainShift = 18;
-constexpr int32_t kSensorExpNumber = 1;
-constexpr uint32_t kMasterClock = 288000000;
-constexpr uint32_t kMaxIntegrationTime =
-    0x15BC;  // Max allowed for 30fps = 2782 (dec)=0x0ADE (hex) 15fps = 5564 (dec)=0x15BC (hex).
-constexpr uint16_t kEndOfSequence = 0x0000;
-
-}  // namespace
-
 // Gets the register value from the sequence table.
 // |id| : Index of the sequence table.
 // |address| : Address of the register.
-static fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index,
-                                                                      uint16_t address) {
+fit::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(uint8_t index,
+                                                                             uint16_t address) {
   if (index >= kSEQUENCE_TABLE.size()) {
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
@@ -435,6 +418,19 @@ zx_status_t Imx227Device::CameraSensorStopStreaming() {
   ctx_.streaming_flag = 0;
   HwDeInit();
   return ZX_OK;
+}
+
+fit::result<uint32_t, zx_status_t> Imx227Device::GetLinesPerSecond() {
+  auto result_hi =
+      GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg);
+  auto result_lo =
+      GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg + 1);
+  if (result_hi.is_error() || result_lo.is_error()) {
+    return fit::error(ZX_ERR_INTERNAL);
+  }
+  uint16_t line_length_pclk = (result_hi.value() << 8) | result_lo.value();
+  uint32_t lines_per_second = kMasterClock / line_length_pclk;
+  return fit::ok(lines_per_second);
 }
 
 float Imx227Device::AnalogRegValueToTotalGain(uint16_t reg_value) {

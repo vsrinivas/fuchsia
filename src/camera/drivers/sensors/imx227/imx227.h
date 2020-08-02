@@ -83,6 +83,13 @@ struct DigitalGain {
   uint16_t gain_;
 };
 
+// TODO(jsasinowski): Refactor into a class that incorporates relevant methods.
+struct IntegrationTime {
+  // Flag to indicate when an update is needed.
+  bool update_integration_time_;
+  uint16_t coarse_integration_time_;
+};
+
 class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::UnbindableNew>;
 
@@ -225,6 +232,11 @@ class Imx227Device : public DeviceType,
   uint8_t num_modes_;
   uint8_t current_mode_;
 
+  fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index, uint16_t address);
+
+  // Timing data
+  fit::result<uint32_t, zx_status_t> GetLinesPerSecond();
+
   // Exposure data
 
   // Analog gain
@@ -238,6 +250,9 @@ class Imx227Device : public DeviceType,
   zx_status_t ReadDigitalGainConstants() __TA_REQUIRES(lock_);
   float DigitalRegValueToTotalGain(uint16_t);
   uint16_t DigitalTotalGainToRegValue(float);
+
+  // Integration time
+  IntegrationTime integration_time_;
 
   bool gain_constants_valid_ = false;
   zx_status_t ReadGainConstants() __TA_REQUIRES(lock_);

@@ -14,40 +14,6 @@
 
 namespace camera {
 
-namespace {
-// Extension Values
-const int32_t kLog2GainShift = 18;
-const int32_t kSensorExpNumber = 1;
-const uint32_t kMasterClock = 288000000;
-
-const uint32_t kDefaultMaxIntegrationTimeInLines = kMaxCoarseIntegrationTimeFor15fpsInLines;
-const uint16_t kEndOfSequence = 0x0000;
-}  // namespace
-
-// Gets the register value from the sequence table.
-// |id| : Index of the sequence table.
-// |address| : Address of the register.
-static fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index,
-                                                                      uint16_t address) {
-  if (index >= kSEQUENCE_TABLE.size()) {
-    return fit::error(ZX_ERR_INVALID_ARGS);
-  }
-  const InitSeqFmt* sequence = kSEQUENCE_TABLE[index];
-  while (true) {
-    uint16_t register_address = sequence->address;
-    uint16_t register_value = sequence->value;
-    uint16_t register_len = sequence->len;
-    if (register_address == kEndOfSequence && register_value == 0 && register_len == 0) {
-      break;
-    }
-    if (address == register_address) {
-      return fit::ok(register_value);
-    }
-    sequence++;
-  }
-  return fit::error(ZX_ERR_NOT_FOUND);
-}
-
 // |ZX_PROTOCOL_CAMERA_SENSOR2|
 
 zx_status_t Imx227Device::CameraSensor2Init() {
@@ -214,11 +180,34 @@ zx_status_t Imx227Device::CameraSensor2SetDigitalGain(float gain, float* out_gai
 }
 
 zx_status_t Imx227Device::CameraSensor2GetIntegrationTime(float* out_int_time) {
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  auto result_cit = Read16(kCoarseIntegrationTimeReg);
+  auto result_lps = GetLinesPerSecond();
+  if (result_cit.is_error() || result_lps.is_error()) {
+    return ZX_ERR_INTERNAL;
+  }
+  *out_int_time = static_cast<float>(result_cit.value()) / result_lps.value();
+
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetIntegrationTime(float int_time, float* out_int_time) {
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  auto result = GetLinesPerSecond();
+  if (result.is_error()) {
+    return result.error();
+  }
+  uint16_t new_coarse_integration_time = int_time * result.value();
+
+  if (new_coarse_integration_time != integration_time_.coarse_integration_time_) {
+    integration_time_.coarse_integration_time_ = new_coarse_integration_time;
+    integration_time_.update_integration_time_ = true;
+  }
+  *out_int_time = int_time;
+
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2Update() {
@@ -240,6 +229,14 @@ zx_status_t Imx227Device::CameraSensor2Update() {
       return status;
     }
     digital_gain_.update_gain_ = false;
+  }
+
+  if (integration_time_.update_integration_time_) {
+    status = Write16(kCoarseIntegrationTimeReg, integration_time_.coarse_integration_time_);
+    if (status) {
+      return status;
+    }
+    integration_time_.update_integration_time_ = false;
   }
 
   status = SetGroupedParameterHold(false);
@@ -360,12 +357,11 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
       out_value->int_value = 0;
       break;
     case LINES_PER_SECOND: {
-      auto hmax_result =
-          GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg);
-      if (hmax_result.is_error()) {
-        return ZX_ERR_INTERNAL;
+      auto result = GetLinesPerSecond();
+      if (result.is_error()) {
+        return result.error();
       }
-      out_value->uint_value = kMasterClock / hmax_result.value();
+      out_value->uint_value = result.value();
       break;
     }
     case SENSOR_EXP_NUMBER:
