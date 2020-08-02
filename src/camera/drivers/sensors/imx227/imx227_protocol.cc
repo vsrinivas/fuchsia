@@ -10,14 +10,12 @@
 #include "src/camera/drivers/sensors/imx227/imx227_modes.h"
 #include "src/camera/drivers/sensors/imx227/imx227_otp_config.h"
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
+#include "src/camera/drivers/sensors/imx227/mipi_ccs_regs.h"
 
 namespace camera {
 
 namespace {
-const int32_t kModeSelectReg = 0x0100;
 // Extension Values
-const uint16_t kFrameLengthLinesReg = 0x0340;
-const uint16_t kLineLengthPckReg = 0x0342;
 const int32_t kLog2GainShift = 18;
 const int32_t kSensorExpNumber = 1;
 const uint32_t kMasterClock = 288000000;

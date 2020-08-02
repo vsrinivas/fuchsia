@@ -15,6 +15,7 @@
 
 #include "src/camera/drivers/sensors/imx227/constants.h"
 #include "src/camera/drivers/sensors/imx227/imx227_id.h"
+#include "src/camera/drivers/sensors/imx227/mipi_ccs_regs.h"
 
 // The following equality operators are necessary for mocks.
 

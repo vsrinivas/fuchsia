@@ -12,7 +12,6 @@
 namespace camera {
 
 inline const uint8_t kByteShift = 8;
-inline const uint16_t kSensorModelIdReg = 0x0016;
 inline const uint16_t kSensorModelIdDefault = 0x0227;
 // Max allowed for 30fps = 2782 (dec)=0x0ADE (hex)
 inline const uint32_t kMaxCoarseIntegrationTimeFor30fpsInLines = 0x0ADE;

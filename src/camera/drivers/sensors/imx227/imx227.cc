@@ -23,14 +23,12 @@
 #include "src/camera/drivers/sensors/imx227/constants.h"
 #include "src/camera/drivers/sensors/imx227/imx227_modes.h"
 #include "src/camera/drivers/sensors/imx227/imx227_seq.h"
+#include "src/camera/drivers/sensors/imx227/mipi_ccs_regs.h"
 
 namespace camera {
 
 namespace {
 
-constexpr uint16_t kModeSelectReg = 0x0100;
-constexpr uint16_t kFrameLengthLinesReg = 0x0340;
-constexpr uint16_t kLineLengthPckReg = 0x0342;
 constexpr uint8_t kRaw10Bits = 10;
 constexpr uint8_t kRaw12Bits = 12;
 constexpr uint8_t kByteMask = 0xFF;
