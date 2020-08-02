@@ -142,13 +142,33 @@ fit::result<uint8_t, zx_status_t> Imx227Device::Read8(uint16_t addr) {
   return fit::ok(val);
 }
 
+zx_status_t Imx227Device::Write16(uint16_t addr, uint16_t val) {
+  // Convert the arguments to big endian to match the register spec.
+  // First two bytes are the address, third and fourth are the value to be written.
+  addr = htobe16(addr);
+  val = htobe16(val);
+  std::array<uint8_t, 4> buf;
+  buf[0] = static_cast<uint8_t>(addr & kByteMask);
+  buf[1] = static_cast<uint8_t>((addr >> kByteShift) & kByteMask);
+  buf[2] = static_cast<uint8_t>(val & kByteMask);
+  buf[3] = static_cast<uint8_t>((val >> kByteShift) & kByteMask);
+  auto status = i2c_.WriteSync(buf.data(), buf.size());
+  if (status != ZX_OK) {
+    zxlogf(ERROR,
+           "Imx227Device: could not write reg addr/val: 0x%08x/0x%08x status: "
+           "%d\n",
+           addr, val, status);
+  }
+  return status;
+}
+
 zx_status_t Imx227Device::Write8(uint16_t addr, uint8_t val) {
-  // Convert the address to Big Endian format.
-  // The camera sensor expects in this format.
+  // Convert the arguments to big endian to match the register spec.
   // First two bytes are the address, third one is the value to be written.
+  addr = htobe16(addr);
   std::array<uint8_t, 3> buf;
-  buf[0] = static_cast<uint8_t>((addr >> kByteShift) & kByteMask);
-  buf[1] = static_cast<uint8_t>(addr & kByteMask);
+  buf[0] = static_cast<uint8_t>(addr & kByteMask);
+  buf[1] = static_cast<uint8_t>((addr >> kByteShift) & kByteMask);
   buf[2] = val;
 
   auto status = i2c_.WriteSync(buf.data(), buf.size());
@@ -417,6 +437,89 @@ zx_status_t Imx227Device::CameraSensorStopStreaming() {
   return ZX_OK;
 }
 
+float Imx227Device::AnalogRegValueToTotalGain(uint16_t reg_value) {
+  return (static_cast<float>(analog_gain_.m0_ * reg_value + analog_gain_.c0_)) /
+         (static_cast<float>(analog_gain_.m1_ * reg_value + analog_gain_.c1_));
+}
+
+uint16_t Imx227Device::AnalogTotalGainToRegValue(float gain) {
+  float value;
+  uint16_t register_value;
+
+  // Compute the register value.
+  if (analog_gain_.m0_ == 0) {
+    value = ((analog_gain_.c0_ / gain) - analog_gain_.c1_) / analog_gain_.m1_;
+  } else {
+    value = (analog_gain_.c1_ * gain - analog_gain_.c0_) / analog_gain_.m0_;
+  }
+
+  // Round the final result, which is quantized to the gain code step size.
+  value += 0.5f * analog_gain_.gain_code_step_size_;
+
+  // Convert and clamp.
+  register_value = value;
+
+  if (register_value < analog_gain_.gain_code_min_) {
+    register_value = analog_gain_.gain_code_min_;
+  }
+
+  register_value =
+      (register_value - analog_gain_.gain_code_min_) / analog_gain_.gain_code_step_size_;
+  register_value = register_value * analog_gain_.gain_code_step_size_ + analog_gain_.gain_code_min_;
+
+  if (register_value > analog_gain_.gain_code_max_) {
+    register_value = analog_gain_.gain_code_max_;
+  }
+
+  return register_value;
+}
+
+zx_status_t Imx227Device::ReadAnalogGainConstants() {
+  auto result_m0 = Read16(kAnalogGainM0Reg);
+  auto result_m1 = Read16(kAnalogGainM1Reg);
+  auto result_c0 = Read16(kAnalogGainC0Reg);
+  auto result_c1 = Read16(kAnalogGainC1Reg);
+  auto result_amin = Read16(kAnalogGainCodeMinReg);
+  auto result_amax = Read16(kAnalogGainCodeMaxReg);
+  auto result_astep = Read16(kAnalogGainCodeStepSizeReg);
+
+  if (result_m0.is_error() || result_m1.is_error() || result_c0.is_error() ||
+      result_c1.is_error() || result_amin.is_error() || result_amax.is_error() ||
+      result_astep.is_error()) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  analog_gain_.m0_ = result_m0.value();
+  analog_gain_.m1_ = result_m1.value();
+  analog_gain_.c0_ = result_c0.value();
+  analog_gain_.c1_ = result_c1.value();
+  analog_gain_.gain_code_min_ = result_amin.value();
+  analog_gain_.gain_code_max_ = result_amax.value();
+  analog_gain_.gain_code_step_size_ = result_astep.value();
+
+  // Validate the m0,1 constraint
+  if (!(analog_gain_.m0_ == 0) ^ (analog_gain_.m1_ == 0)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
+}
+
+// TODO(jsasinowski): Determine if this can be called less frequently.
+zx_status_t Imx227Device::ReadGainConstants() {
+  if (gain_constants_valid_) {
+    return ZX_OK;
+  }
+
+  auto status = ReadAnalogGainConstants();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  gain_constants_valid_ = true;
+  return ZX_OK;
+}
+
 int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) {
   std::lock_guard guard(lock_);
   return ZX_ERR_NOT_SUPPORTED;
@@ -432,6 +535,11 @@ zx_status_t Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time) {
 
   // TODO(41260): Add support for this.
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Imx227Device::SetGroupedParameterHold(bool enable) {
+  auto status = Write8(kGroupedParameterHoldReg, enable ? 1 : 0);
+  return status;
 }
 
 zx_status_t Imx227Device::CameraSensorUpdate() {

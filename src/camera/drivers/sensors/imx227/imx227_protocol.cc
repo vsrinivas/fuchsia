@@ -144,11 +144,38 @@ void Imx227Device::CameraSensor2StopStreaming() {
 }
 
 zx_status_t Imx227Device::CameraSensor2GetAnalogGain(float* out_gain) {
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  auto status = ReadGainConstants();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto result = Read16(kAnalogGainCodeGlobalReg);
+  if (result.is_error()) {
+    return result.error();
+  }
+
+  *out_gain = AnalogRegValueToTotalGain(result.value());
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetAnalogGain(float gain, float* out_gain) {
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  auto status = ReadGainConstants();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto new_analog_gain = AnalogTotalGainToRegValue(gain);
+  if (new_analog_gain != analog_gain_.gain_code_global_) {
+    analog_gain_.gain_code_global_ = new_analog_gain;
+    analog_gain_.update_gain_ = true;
+  }
+  *out_gain = AnalogRegValueToTotalGain(analog_gain_.gain_code_global_);
+
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetDigitalGain(float* out_gain) {
@@ -167,7 +194,22 @@ zx_status_t Imx227Device::CameraSensor2SetIntegrationTime(float int_time, float*
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Imx227Device::CameraSensor2Update() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Imx227Device::CameraSensor2Update() {
+  std::lock_guard guard(lock_);
+
+  auto status = SetGroupedParameterHold(true);
+
+  if (analog_gain_.update_gain_) {
+    status = Write16(kAnalogGainCodeGlobalReg, analog_gain_.gain_code_global_);
+    if (status != ZX_OK) {
+      return status;
+    }
+    analog_gain_.update_gain_ = false;
+  }
+
+  status = SetGroupedParameterHold(false);
+  return status;
+}
 
 zx_status_t Imx227Device::CameraSensor2GetOtpSize(uint32_t* out_size) {
   *out_size = OTP_TOTAL_SIZE;

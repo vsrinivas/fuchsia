@@ -53,6 +53,25 @@ struct SensorCtx {
   camera_sensor_info_t param;
 };
 
+// TODO(57529): Refactor into a class that incorporates relevant methods.
+// TODO(jsasinowski): Generalize to cover additional gain modes.
+struct AnalogGain {
+  // Analog gain constants queried from the sensor, per the SMIA spec.
+  //     gain = (m0 * x + c0) / (m1 * x + c1)
+  // Exactly one of m0 and m1 must be 0.
+  int16_t m0_;
+  int16_t c0_;
+  int16_t m1_;
+  int16_t c1_;
+  uint16_t gain_code_min_;
+  uint16_t gain_code_max_;
+  uint16_t gain_code_step_size_;
+
+  // Flag to indicate when an update is needed.
+  bool update_gain_;
+  uint16_t gain_code_global_;
+};
+
 class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::UnbindableNew>;
 
@@ -176,6 +195,8 @@ class Imx227Device : public DeviceType,
   // Returns error if the I2C read fails.
   fit::result<uint8_t, zx_status_t> Read8(uint16_t addr) __TA_REQUIRES(lock_);
   // Returns ZX_OK if the write is successful otherwise returns an error.
+  zx_status_t Write16(uint16_t addr, uint16_t val) __TA_REQUIRES(lock_);
+  // Returns ZX_OK if the write is successful otherwise returns an error.
   zx_status_t Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
 
   // Other
@@ -192,6 +213,19 @@ class Imx227Device : public DeviceType,
   bool is_streaming_;
   uint8_t num_modes_;
   uint8_t current_mode_;
+
+  // Exposure data
+
+  // Analog gain
+  AnalogGain analog_gain_;
+  zx_status_t ReadAnalogGainConstants() __TA_REQUIRES(lock_);
+  float AnalogRegValueToTotalGain(uint16_t);
+  uint16_t AnalogTotalGainToRegValue(float);
+
+  bool gain_constants_valid_ = false;
+  zx_status_t ReadGainConstants() __TA_REQUIRES(lock_);
+
+  zx_status_t SetGroupedParameterHold(bool) __TA_REQUIRES(lock_);
 
   // Sensor Status
   bool initialized_ = false;
