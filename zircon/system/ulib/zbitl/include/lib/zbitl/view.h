@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <type_traits>
+#include <variant>
 
 #include "checking.h"
 #include "storage_traits.h"
@@ -66,12 +67,12 @@ class View {
   // moved-from View can be destroyed without checking it.
   View(View&& other)
       : error_(std::move(other.error_)), storage_(std::move(other.storage_)), limit_(other.limit_) {
-    other.error_ = fitx::ok(kUnused);
+    other.error_ = Unused{};
     other.limit_ = 0;
   }
   View& operator=(View&& other) {
     error_ = std::move(other.error_);
-    other.error_ = fitx::ok(kUnused);
+    other.error_ = Unused{};
     storage_ = std::move(other.storage_);
     limit_ = other.limit_;
     other.limit_ = 0;
@@ -81,8 +82,9 @@ class View {
   explicit View(storage_type storage) : storage_(std::move(storage)) {}
 
   ~View() {
-    ZX_ASSERT_MSG(error_.is_ok(), "zbitl::View destroyed after error without check");
-    ZX_ASSERT_MSG(error_.value() != kOk,
+    ZX_ASSERT_MSG(!std::holds_alternative<Error>(error_),
+                  "zbitl::View destroyed after error without check");
+    ZX_ASSERT_MSG(!std::holds_alternative<NoError>(error_),
                   "zbtil::View destroyed after successful iteration without check");
   }
 
@@ -203,12 +205,13 @@ class View {
   /// consumed and take_error() cannot be called again until another begin() or
   /// iterator::operator++() call has been made.
   [[nodiscard]] fitx::result<Error> take_error() {
-    decltype(error_) result{fitx::ok(kTaken)};
-    std::swap(error_, result);
-    if (result.is_error()) {
-      return fitx::error{std::move(result.error_value())};
+    decltype(error_) result = std::move(error_);
+    error_ = Taken{};
+    if (std::holds_alternative<Error>(result)) {
+      return fitx::error{std::move(std::get<Error>(result))};
     }
-    ZX_ASSERT_MSG(result.value() != kTaken, "zbitl::View::take_error() was already called");
+    ZX_ASSERT_MSG(!std::holds_alternative<Taken>(result),
+                  "zbitl::View::take_error() was already called");
     return fitx::ok();
   }
 
@@ -414,7 +417,7 @@ class View {
   /// destroying the View object.  An iteration that encounters an error will
   /// simply end early, i.e. begin() or operator++() will yield an iterator
   /// that equals end().  At the end of a loop, call take_error() to check for
-  /// errors.  It's also acceptable to call take_error() during and iteration
+  /// errors.  It's also acceptable to call take_error() during an iteration
   /// that hasn't reached end() yet, but it cannot be called again before the
   /// next begin() or operator++() call.
 
@@ -434,7 +437,7 @@ class View {
   iterator end() { return {this, true}; }
 
   size_t size_bytes() {
-    if (error_.is_ok() && error_.value() == kUnused) {
+    if (std::holds_alternative<Unused>(error_)) {
       ZX_ASSERT(limit_ == 0);
 
       // Taking the size before doing begin() takes extra work.
@@ -456,26 +459,30 @@ class View {
   }
 
  private:
+  struct Unused {};
+  struct NoError {};
+  struct Taken {};
   enum ErrorState {
     kUnused,
     kOk,
     kTaken,
   };
-  fitx::result<Error, ErrorState> error_{fitx::ok(kUnused)};
+  std::variant<Unused, NoError, Error, Taken> error_;
   storage_type storage_;
   uint32_t limit_ = 0;
 
   void StartIteration() {
-    ZX_ASSERT_MSG(!error_.is_error(), "zbitl:View iterators used without taking prior error");
-    error_ = fitx::success{kOk};
+    ZX_ASSERT_MSG(!std::holds_alternative<Error>(error_),
+                  "zbitl:View iterators used without taking prior error");
+    error_ = NoError{};
   }
 
   void Fail(Error error) {
-    ZX_DEBUG_ASSERT_MSG(error_.is_ok(),
+    ZX_DEBUG_ASSERT_MSG(!std::holds_alternative<Error>(error_),
                         "Fail in error state: missing zbitl::View::StartIteration() call?");
-    ZX_DEBUG_ASSERT_MSG(error_.value() != kUnused,
-                        "Fail in kUnused: missing zbitl::View::StartIteration() call?");
-    error_ = fitx::error{std::move(error)};
+    ZX_DEBUG_ASSERT_MSG(!std::holds_alternative<Unused>(error_),
+                        "Fail in Unused: missing zbitl::View::StartIteration() call?");
+    error_ = std::move(error);
   }
 };
 
