@@ -20,6 +20,20 @@ const char kNonAscii = ' ';  // When printing ASCII and the character is not in 
 
 bool IsPrintableAscii(uint8_t c) { return c >= ' ' && c < 0x7f; }
 
+// Formats the given |address|. The |begin_address| is given so we can compute the offset.
+std::string GetAddressString(MemoryFormatOptions::AddressMode mode, int addr_width,
+                             uint64_t begin_address, uint64_t address) {
+  switch (mode) {
+    case MemoryFormatOptions::kNoAddresses:
+      return std::string();
+    case MemoryFormatOptions::kAddresses:
+      return fxl::StringPrintf("0x%0*" PRIx64 ":  ", addr_width, address);
+    case MemoryFormatOptions::kOffsets:
+      return fxl::StringPrintf("+0x%0*" PRIx64 ":  ", addr_width, address - begin_address);
+  }
+  return std::string();
+}
+
 }  // namespace
 
 // Optimized for simplicity over speed. But this does not use the table output to avoid having giant
@@ -27,6 +41,14 @@ bool IsPrintableAscii(uint8_t c) { return c >= ' ' && c < 0x7f; }
 OutputBuffer FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
                           const MemoryFormatOptions& opts) {
   OutputBuffer out;
+
+  // Special-case 0 size because the "max_addr" computation below doesn't make any sense in that
+  // context.
+  if (size == 0) {
+    out.Append(Syntax::kComment, GetAddressString(opts.address_mode, 0, begin, begin));
+    out.Append("\n");
+    return out;
+  }
 
   // Compute the last address we'll print. Watch for overflow.
   uint64_t max_addr = std::numeric_limits<uint64_t>::max();
@@ -55,17 +77,8 @@ OutputBuffer FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
   bool done = false;
   while (!done) {  // Line loop
     // Compute address at beginning of line.
-    switch (opts.address_mode) {
-      case MemoryFormatOptions::kNoAddresses:
-        break;
-      case MemoryFormatOptions::kAddresses:
-        out.Append(Syntax::kComment, fxl::StringPrintf("0x%0*" PRIx64 ":  ", addr_width, cur));
-        break;
-      case MemoryFormatOptions::kOffsets:
-        out.Append(Syntax::kComment,
-                   fxl::StringPrintf("+0x%0*" PRIx64 ":  ", addr_width, cur - dump.address()));
-        break;
-    }
+    out.Append(Syntax::kComment,
+               GetAddressString(opts.address_mode, addr_width, dump.address(), cur));
 
     values.Clear();
     ascii = "  |";

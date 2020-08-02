@@ -130,4 +130,36 @@ TEST(MemoryFormat, Limits) {
   EXPECT_EQ(expected2, output.AsString());
 }
 
+TEST(MemoryFormat, Empty) {
+  std::vector<debug_ipc::MemoryBlock> block;
+  block.resize(1);
+  block[0].size = 0;
+  block[0].address = 0;
+  block[0].valid = false;
+
+  MemoryDump dump(std::move(block));
+  MemoryFormatOptions opts;
+  opts.address_mode = MemoryFormatOptions::kAddresses;
+
+  OutputBuffer output = FormatMemory(dump, 0, 0, opts);
+  EXPECT_EQ("0x0:  \n", output.AsString());
+
+  // Try a 0-sized one at a different address.
+  block.resize(1);
+  block[0].size = 0x10;
+  block[0].address = 0x100;
+  for (uint32_t i = 0; i < block[0].size; i++)
+    block[0].data.push_back(static_cast<uint8_t>(i));
+  block[0].valid = true;
+
+  dump = MemoryDump(std::move(block));
+  output = FormatMemory(dump, 0x100, 0, opts);
+  EXPECT_EQ("0x100:  \n", output.AsString());
+
+  // Try the same thing with no addresses.
+  opts.address_mode = MemoryFormatOptions::kNoAddresses;
+  output = FormatMemory(dump, 0x100, 0, opts);
+  EXPECT_EQ("\n", output.AsString());
+}
+
 }  // namespace zxdb
