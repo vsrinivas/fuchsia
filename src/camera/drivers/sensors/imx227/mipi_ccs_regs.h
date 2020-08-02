@@ -22,8 +22,12 @@ constexpr uint16_t kAnalogGainC1Reg = 0x0092;
 constexpr uint16_t kModeSelectReg = 0x0100;
 constexpr uint16_t kGroupedParameterHoldReg = 0x104;
 constexpr uint16_t kAnalogGainCodeGlobalReg = 0x0204;
+constexpr uint16_t kDigitalGainGlobalReg = 0x020e;
 constexpr uint16_t kFrameLengthLinesReg = 0x0340;
 constexpr uint16_t kLineLengthPckReg = 0x0342;
+constexpr uint16_t kDigitalGainMinReg = 0x1084;
+constexpr uint16_t kDigitalGainMaxReg = 0x1086;
+constexpr uint16_t kDigitalGainStepSizeReg = 0x1088;
 
 }  // namespace camera
 

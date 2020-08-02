@@ -474,6 +474,36 @@ uint16_t Imx227Device::AnalogTotalGainToRegValue(float gain) {
   return register_value;
 }
 
+float Imx227Device::DigitalRegValueToTotalGain(uint16_t reg_value) {
+  return static_cast<float>(reg_value) / (1 << kDigitalGainShift);
+}
+
+uint16_t Imx227Device::DigitalTotalGainToRegValue(float gain) {
+  float value;
+  uint16_t register_value;
+
+  // Compute the register value.
+  value = gain * (1 << kDigitalGainShift);
+
+  // Round the final result, which is quantized to the gain code step size.
+  value += 0.5f * digital_gain_.gain_step_size_;
+
+  // Convert and clamp.
+  register_value = value;
+
+  if (register_value < digital_gain_.gain_min_) {
+    register_value = digital_gain_.gain_min_;
+  }
+
+  register_value = (register_value - digital_gain_.gain_min_) / digital_gain_.gain_step_size_;
+  register_value = register_value * digital_gain_.gain_step_size_ + digital_gain_.gain_min_;
+
+  if (register_value > digital_gain_.gain_max_) {
+    register_value = digital_gain_.gain_max_;
+  }
+
+  return register_value;
+}
 zx_status_t Imx227Device::ReadAnalogGainConstants() {
   auto result_m0 = Read16(kAnalogGainM0Reg);
   auto result_m1 = Read16(kAnalogGainM1Reg);
@@ -505,6 +535,21 @@ zx_status_t Imx227Device::ReadAnalogGainConstants() {
   return ZX_OK;
 }
 
+zx_status_t Imx227Device::ReadDigitalGainConstants() {
+  auto result_dmin = Read16(kDigitalGainMinReg);
+  auto result_dmax = Read16(kDigitalGainMaxReg);
+  auto result_dstep = Read16(kDigitalGainStepSizeReg);
+
+  if (result_dmin.is_error() || result_dmax.is_error() || result_dstep.is_error()) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  digital_gain_.gain_min_ = result_dmin.value();
+  digital_gain_.gain_max_ = result_dmax.value();
+  digital_gain_.gain_step_size_ = result_dstep.value();
+  return ZX_OK;
+}
+
 // TODO(jsasinowski): Determine if this can be called less frequently.
 zx_status_t Imx227Device::ReadGainConstants() {
   if (gain_constants_valid_) {
@@ -512,6 +557,11 @@ zx_status_t Imx227Device::ReadGainConstants() {
   }
 
   auto status = ReadAnalogGainConstants();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = ReadDigitalGainConstants();
   if (status != ZX_OK) {
     return status;
   }

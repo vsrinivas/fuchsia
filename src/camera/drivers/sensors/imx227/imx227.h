@@ -72,6 +72,17 @@ struct AnalogGain {
   uint16_t gain_code_global_;
 };
 
+// TODO(jsasinowski): Refactor into a class that incorporates relevant methods.
+struct DigitalGain {
+  uint16_t gain_min_;
+  uint16_t gain_max_;
+  uint16_t gain_step_size_;
+
+  // Flag to indicate when an update is needed.
+  bool update_gain_;
+  uint16_t gain_;
+};
+
 class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::UnbindableNew>;
 
@@ -221,6 +232,12 @@ class Imx227Device : public DeviceType,
   zx_status_t ReadAnalogGainConstants() __TA_REQUIRES(lock_);
   float AnalogRegValueToTotalGain(uint16_t);
   uint16_t AnalogTotalGainToRegValue(float);
+
+  // Digital gain
+  DigitalGain digital_gain_;
+  zx_status_t ReadDigitalGainConstants() __TA_REQUIRES(lock_);
+  float DigitalRegValueToTotalGain(uint16_t);
+  uint16_t DigitalTotalGainToRegValue(float);
 
   bool gain_constants_valid_ = false;
   zx_status_t ReadGainConstants() __TA_REQUIRES(lock_);
