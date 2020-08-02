@@ -19,7 +19,7 @@ group("test") {
   testonly = true
   deps = [
     ":zbitl-test-package",
-    ":zbitl-unittests",
+    ":zbitl-unittests($host_toolchain)",
   ]
 }
 
