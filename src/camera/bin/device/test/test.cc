@@ -150,6 +150,7 @@ TEST_F(DeviceTest, GetFrames) {
   stream.set_error_handler(MakeErrorHandler("Stream"));
   constexpr uint32_t kBufferId1 = 42;
   constexpr uint32_t kBufferId2 = 17;
+  constexpr uint32_t kMaxCampingBuffers = 1;
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
   auto stream_impl = std::make_unique<StreamImpl>(
@@ -162,7 +163,7 @@ TEST_F(DeviceTest, GetFrames) {
         legacy_stream_fake = result.take_value();
         token.BindSync()->Close();
         legacy_stream_created = true;
-        callback(1);
+        callback(kMaxCampingBuffers);
       },
       nop);
 
@@ -186,7 +187,7 @@ TEST_F(DeviceTest, GetFrames) {
   allocator_->BindSharedCollection(std::move(received_token), collection.NewRequest());
   constexpr fuchsia::sysmem::BufferCollectionConstraints constraints{
       .usage{.cpu = fuchsia::sysmem::cpuUsageRead},
-      .min_buffer_count_for_camping = 2,
+      .min_buffer_count_for_camping = kMaxCampingBuffers,
       .image_format_constraints_count = 1,
       .image_format_constraints{
           {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
@@ -235,8 +236,10 @@ TEST_F(DeviceTest, GetFrames) {
   // Make sure the stream recycles frames once its camping allocation is exhausted.
   // Also emulate a stuck client that does not return any frames.
   std::set<zx::eventpair> fences;
+  uint32_t last_received_frame = -1;
   fit::function<void(fuchsia::camera3::FrameInfo)> on_next_frame;
   on_next_frame = [&](fuchsia::camera3::FrameInfo info) {
+    last_received_frame = info.buffer_index;
     fences.insert(std::move(info.release_fence));
     stream->GetNextFrame(on_next_frame.share());
   };
@@ -246,10 +249,13 @@ TEST_F(DeviceTest, GetFrames) {
     fuchsia::camera2::FrameAvailableInfo frame_info{.buffer_id = i};
     frame_info.metadata.set_timestamp(0);
     ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame_info)), ZX_OK);
-    if (i > constraints.min_buffer_count_for_camping) {
-      uint32_t recycled_buffer_id = i - constraints.min_buffer_count_for_camping;
-      RunLoopUntil(
-          [&] { return HasFailure() || !legacy_stream_fake->IsOutstanding(recycled_buffer_id); });
+    if (i < constraints.min_buffer_count_for_camping) {
+      // Up to the camping limit, wait until the frames are received.
+      RunLoopUntil([&] { return HasFailure() || last_received_frame == i; });
+    } else {
+      // After the camping limit is reached due to the emulated stuck client, verify that the Stream
+      // recycles the oldest buffers first.
+      RunLoopUntil([&] { return HasFailure() || !legacy_stream_fake->IsOutstanding(i); });
     }
   }
   fences.clear();
