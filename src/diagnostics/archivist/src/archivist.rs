@@ -338,92 +338,15 @@ impl Archivist {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::logs::message::fx_log_packet_t,
-        fidl::endpoints::create_proxy,
-        fidl_fuchsia_diagnostics_test::ControllerMarker,
-        fidl_fuchsia_io as fio,
-        fidl_fuchsia_logger::{
-            LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker, LogSinkProxy,
-        },
-        fio::DirectoryProxy,
-        fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_protocol_at_dir,
-        fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor},
-        futures::channel::oneshot,
-    };
-
-    /// Helper to connect to log sink and make it easy to write logs to socket.
-    struct LogSinkHelper {
-        log_sink: Option<LogSinkProxy>,
-        sock: Option<zx::Socket>,
-    }
-
-    impl LogSinkHelper {
-        fn new(directory: &DirectoryProxy) -> Self {
-            let log_sink = connect_to_protocol_at_dir::<LogSinkMarker>(&directory)
-                .expect("cannot connect to log sink");
-            let mut s = Self { log_sink: Some(log_sink), sock: None };
-            s.sock = Some(s.connect());
-            s
-        }
-
-        fn connect(&self) -> zx::Socket {
-            let (sin, sout) =
-                zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("Cannot create socket");
-            self.log_sink
-                .as_ref()
-                .unwrap()
-                .connect(sin)
-                .expect("unable to send socket to log sink");
-            sout
-        }
-
-        /// kills current sock and creates new connection.
-        fn add_new_connection(&mut self) {
-            self.kill_sock();
-            self.sock = Some(self.connect());
-        }
-
-        fn kill_sock(&mut self) {
-            self.sock.take();
-        }
-
-        fn write_log(&self, msg: &str) {
-            Self::write_log_at(self.sock.as_ref().unwrap(), msg);
-        }
-
-        fn write_log_at(sock: &zx::Socket, msg: &str) {
-            let mut p: fx_log_packet_t = Default::default();
-            p.metadata.pid = 1;
-            p.metadata.tid = 1;
-            p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
-            p.metadata.dropped_logs = 0;
-            p.data[0] = 0;
-            p.add_data(1, msg.as_bytes());
-
-            sock.write(&mut p.as_bytes()).unwrap();
-        }
-
-        fn kill_log_sink(&mut self) {
-            self.log_sink.take();
-        }
-    }
-
-    struct Listener {
-        send_logs: mpsc::UnboundedSender<String>,
-    }
-
-    impl LogProcessor for Listener {
-        fn log(&mut self, message: LogMessage) {
-            self.send_logs.unbounded_send(message.msg).unwrap();
-        }
-
-        fn done(&mut self) {
-            panic!("this should not be called");
-        }
-    }
+    use super::*;
+    use crate::logs::testing::*;
+    use fidl::endpoints::create_proxy;
+    use fidl_fuchsia_diagnostics_test::ControllerMarker;
+    use fidl_fuchsia_io as fio;
+    use fio::DirectoryProxy;
+    use fuchsia_async as fasync;
+    use fuchsia_component::client::connect_to_protocol_at_dir;
+    use futures::channel::oneshot;
 
     fn init_archivist() -> Archivist {
         let config = configs::Config {
@@ -461,30 +384,6 @@ mod tests {
         })
         .detach();
         directory
-    }
-
-    fn start_listener(directory: &DirectoryProxy) -> mpsc::UnboundedReceiver<String> {
-        let log_proxy = connect_to_protocol_at_dir::<LogMarker>(&directory)
-            .expect("cannot connect to log proxy");
-        let (send_logs, recv_logs) = mpsc::unbounded();
-        let mut options = LogFilterOptions {
-            filter_by_pid: false,
-            pid: 0,
-            min_severity: LogLevelFilter::None,
-            verbosity: 0,
-            filter_by_tid: false,
-            tid: 0,
-            tags: vec![],
-        };
-        let l = Listener { send_logs };
-        fasync::Task::spawn(async move {
-            run_log_listener_with_proxy(&log_proxy, l, Some(&mut options), false, None)
-                .await
-                .unwrap();
-        })
-        .detach();
-
-        recv_logs
     }
 
     #[fasync::run_singlethreaded(test)]

@@ -165,104 +165,11 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use super::*;
+    use crate::logs::testing::*;
 
     use futures::stream::TryStreamExt;
-    use parking_lot::Mutex;
-    use std::collections::VecDeque;
-
-    type ReadResponse = Result<Vec<u8>, zx::Status>;
-
-    /// A fake reader that returns enqueued responses on read.
-    pub struct TestDebugLog {
-        read_responses: Mutex<VecDeque<ReadResponse>>,
-    }
-
-    #[async_trait]
-    impl DebugLog for TestDebugLog {
-        async fn read(&self, buffer: &'_ mut Vec<u8>) -> Result<(), zx::Status> {
-            let next_result = self
-                .read_responses
-                .lock()
-                .pop_front()
-                .expect("Got more read requests than enqueued");
-            let buf_contents = next_result?;
-            buffer.clear();
-            buffer.extend_from_slice(&buf_contents);
-            Ok(())
-        }
-
-        async fn ready_signal(&self) -> Result<(), zx::Status> {
-            if self.read_responses.lock().is_empty() {
-                // ready signal should never complete if we have no logs left.
-                futures::future::pending().await
-            }
-            Ok(())
-        }
-    }
-
-    impl TestDebugLog {
-        pub fn new() -> Self {
-            TestDebugLog { read_responses: Mutex::new(VecDeque::new()) }
-        }
-
-        pub fn enqueue_read(&self, response: Vec<u8>) {
-            self.read_responses.lock().push_back(Ok(response));
-        }
-
-        pub fn enqueue_read_entry(&self, entry: &TestDebugEntry) {
-            self.enqueue_read(entry.to_vec());
-        }
-
-        pub fn enqueue_read_fail(&self, error: zx::Status) {
-            self.read_responses.lock().push_back(Err(error))
-        }
-    }
-
-    const TEST_KLOG_HEADER: u32 = 29;
-    const TEST_KLOG_FLAGS: u16 = 47;
-    const TEST_KLOG_TIMESTAMP: i64 = 12345i64;
-    const TEST_KLOG_PID: u64 = 0xad01u64;
-    const TEST_KLOG_TID: u64 = 0xbe02u64;
-
-    pub struct TestDebugEntry {
-        pub header: u32,
-        pub flags: u16,
-        pub timestamp: i64,
-        pub pid: u64,
-        pub tid: u64,
-        pub log: Vec<u8>,
-    }
-
-    impl TestDebugEntry {
-        pub fn new(log: &[u8]) -> Self {
-            TestDebugEntry {
-                header: TEST_KLOG_HEADER,
-                flags: TEST_KLOG_FLAGS,
-                timestamp: TEST_KLOG_TIMESTAMP,
-                pid: TEST_KLOG_PID,
-                tid: TEST_KLOG_TID,
-                log: log.to_vec(),
-            }
-        }
-
-        /// Creates a byte representation of the klog, following format in zircon
-        /// https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/zircon/kernel/lib/debuglog/include/lib/debuglog.h#52
-        pub fn to_vec(&self) -> Vec<u8> {
-            let datalen = self.log.len() as u16;
-
-            let mut klog = vec![0; 32];
-            LittleEndian::write_u32(&mut klog[0..4], self.header);
-            LittleEndian::write_u16(&mut klog[4..6], datalen);
-            LittleEndian::write_u16(&mut klog[6..8], self.flags);
-            LittleEndian::write_i64(&mut klog[8..16], self.timestamp);
-            LittleEndian::write_u64(&mut klog[16..24], self.pid);
-            LittleEndian::write_u64(&mut klog[24..32], self.tid);
-            klog.extend_from_slice(&self.log);
-            klog
-        }
-    }
 
     #[test]
     fn convert_debuglog_to_log_message_test() {
