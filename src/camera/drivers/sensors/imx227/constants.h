@@ -18,7 +18,8 @@ constexpr uint8_t kRaw12Bits = 12;
 constexpr uint16_t kEndOfSequence = 0x0000;
 
 constexpr uint16_t kSensorId = 0x0227;
-inline const uint16_t kSensorModelIdDefault = 0x0227;
+constexpr uint16_t kSensorModelIdDefault = 0x0227;
+constexpr uint8_t kNumTestPatternModes = 4;
 
 constexpr uint32_t kAGainPrecision = 12;
 constexpr uint32_t kDGainPrecision = 8;

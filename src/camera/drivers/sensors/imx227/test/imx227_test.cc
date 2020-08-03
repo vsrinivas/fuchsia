@@ -38,6 +38,9 @@ bool operator==(const mipi_info_t& lhs, const mipi_info_t& rhs) {
 namespace camera {
 namespace {
 
+const uint32_t kTestMode0 = 0;
+const uint32_t kTestMode1 = 1;
+
 std::vector<uint8_t> SplitBytes(uint16_t bytes) {
   return std::vector<uint8_t>{static_cast<uint8_t>(bytes >> 8), static_cast<uint8_t>(bytes & 0xff)};
 }
@@ -84,6 +87,20 @@ class FakeImx227Device : public Imx227Device {
         .ExpectReadStop({kSensorModelIdDefaultByteVec[0]})
         .ExpectWrite({kSensorModelIdLoRegByteVec[1], kSensorModelIdLoRegByteVec[0]})
         .ExpectReadStop({kSensorModelIdDefaultByteVec[1]});
+  }
+
+  void ExpectGetTestPatternMode(const uint16_t mode) {
+    const auto kSensorTestPatternRegByteVec = SplitBytes(htobe16(kTestPatternReg));
+    const auto kSensorTestPatternModeByteVec = SplitBytes(htobe16(mode));
+    mock_i2c_.ExpectWrite({kSensorTestPatternRegByteVec[1], kSensorTestPatternRegByteVec[0]})
+        .ExpectReadStop({kSensorTestPatternModeByteVec[0]});
+  }
+
+  void ExpectSetTestPatternMode(const uint16_t mode) {
+    const auto kSensorTestPatternMode = SplitBytes(htobe16(kTestPatternReg));
+    const auto kSensorTestPatternModeByteVec = SplitBytes(htobe16(mode));
+    mock_i2c_.ExpectWrite({kSensorTestPatternMode[1], kSensorTestPatternMode[0]})
+        .ExpectWriteStop({kSensorTestPatternModeByteVec[0]});
   }
 
   void SetProtocols() {
@@ -164,8 +181,23 @@ TEST_F(Imx227DeviceTest, Sanity) { ASSERT_OK(dut().CameraSensor2Init()); }
 // CameraSensor2GetSensorId.
 TEST_F(Imx227DeviceTest, DISABLED_GetSensorId) {
   dut().ExpectGetSensorId();
+  uint32_t out_id;
   ASSERT_OK(dut().CameraSensor2Init());
-  ASSERT_OK(dut().CameraSensor2GetSensorId(nullptr));
+  ASSERT_OK(dut().CameraSensor2GetSensorId(&out_id));
+  ASSERT_EQ(out_id, kSensorModelIdDefault);
+}
+
+TEST_F(Imx227DeviceTest, DISABLED_GetSetTestPatternMode) {
+  dut().ExpectGetTestPatternMode(kTestMode0);
+  dut().ExpectSetTestPatternMode(kTestMode1);
+  dut().ExpectGetTestPatternMode(kTestMode1);
+  ASSERT_OK(dut().CameraSensor2Init());
+  uint16_t out_mode;
+  ASSERT_OK(dut().CameraSensor2GetTestPatternMode(&out_mode));
+  ASSERT_EQ(out_mode, kTestMode0);
+  ASSERT_OK(dut().CameraSensor2SetTestPatternMode(kTestMode1));
+  ASSERT_OK(dut().CameraSensor2GetTestPatternMode(&out_mode));
+  ASSERT_EQ(out_mode, kTestMode1);
 }
 
 TEST_F(Imx227DeviceTest, GetFrameRateCoarseIntLut) {

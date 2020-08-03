@@ -274,11 +274,30 @@ zx_status_t Imx227Device::CameraSensor2GetOtpData(uint32_t byte_count, uint32_t 
 }
 
 zx_status_t Imx227Device::CameraSensor2GetTestPatternMode(uint16_t* out_value) {
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  auto result = Read16(kTestPatternReg);
+  if (result.is_error()) {
+    zxlogf(ERROR, "%s; Reading the mode failed.", __func__);
+    return result.error();
+  }
+  *out_value = result.value();
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2SetTestPatternMode(uint16_t mode) {
-  return ZX_ERR_NOT_SUPPORTED;
+  std::lock_guard guard(lock_);
+
+  if (mode > kNumTestPatternModes) {
+    zxlogf(ERROR, "%s; Invalid mode entered.", __func__);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_status_t status = Write8(kTestPatternReg, mode);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s; Writing the mode failed.", __func__);
+  }
+  return status;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetTestPatternData(color_val_t* out_data) {
