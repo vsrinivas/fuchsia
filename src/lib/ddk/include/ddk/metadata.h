@@ -117,8 +117,16 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 #define DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS 0x4C4B4342  // BCKL
 
 // list of lights_config_t
-#define DEVICE_METADATA_LIGHTS 0x5448474C             // LGHT
+#define DEVICE_METADATA_LIGHTS 0x5448474C  // LGHT
 #define DEVICE_METADATA_LIGHTS_GROUP_NAME 0x4E505247  // GRPN
+
+// Device metadata fetched from ACPI for Intel HDA audio drivers.  This is an
+// opaque blob of data which us used to configure the Intel SST DSP.
+//
+// TODO(fxb/56832): Remove this when we have a better way to manage driver
+// dependencies on ACPI and no longer need to proactively publish ACPI metadata
+// to drivers.
+#define DEVICE_METADATA_ACPI_HDA_NHLT 0x544C484E  // NHLT
 
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.

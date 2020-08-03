@@ -12,6 +12,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 
 #include "acpi-private.h"
 #include "errors.h"
@@ -131,7 +132,7 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   char path[PATH_MAX];
   snprintf(path, sizeof(path), "/dev/sys/pci/%02x:%02x.%01x", bbn, (unsigned)((adr >> 16) & 0xFFFF),
            (unsigned)(adr & 0xFFFF));
-  status = device_publish_metadata(dev, path, *(uint32_t*)"NHLT", nhlt, size);
+  status = device_publish_metadata(dev, path, DEVICE_METADATA_ACPI_HDA_NHLT, nhlt, size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to publish NHLT metadata (res %d)", status);
   }

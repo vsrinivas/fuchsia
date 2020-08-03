@@ -12,6 +12,7 @@
 #include <map>
 #include <utility>
 
+#include <ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
@@ -70,7 +71,7 @@ IntelDsp::~IntelDsp() {
 
 Status IntelDsp::ParseNhlt() {
   // Get NHLT size.
-  const uint32_t signature = *reinterpret_cast<const uint32_t*>(ACPI_NHLT_SIGNATURE);
+  constexpr uint32_t signature = DEVICE_METADATA_ACPI_HDA_NHLT;
   size_t size;
   zx_status_t res = device_get_metadata_size(codec_device(), signature, &size);
   if (res != ZX_OK) {
