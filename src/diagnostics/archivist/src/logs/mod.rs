@@ -486,7 +486,7 @@ mod tests {
         fifth_packet.metadata.severity = LogLevelFilter::Error.into_primitive().into();
         fifth_message.severity = fifth_packet.metadata.severity;
 
-        let harness = TestHarness::new();
+        let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![
             first_packet,
@@ -535,7 +535,7 @@ mod tests {
     }
 
     async fn attributed_inspect_two_streams_different_identities_by_reader(
-        harness: TestHarness,
+        mut harness: TestHarness,
         log_reader1: Arc<dyn LogReader>,
         log_reader2: Arc<dyn LogReader>,
     ) {
@@ -607,7 +607,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_streams_different_identities() {
-        let harness = TestHarness::new();
+        let harness = TestHarness::with_retained_sinks();
 
         let log_reader1 = harness.create_default_reader(SourceIdentity {
             component_name: Some("foo".into()),
@@ -633,7 +633,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_v2_streams_different_identities() {
-        let harness = TestHarness::new();
+        let harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("foo", "http://foo.com");
         let log_reader2 = harness.create_event_stream_reader("bar", "http://bar.com");
         attributed_inspect_two_streams_different_identities_by_reader(
@@ -646,7 +646,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_mixed_streams_different_identities() {
-        let harness = TestHarness::new();
+        let harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("foo", "http://foo.com");
         let log_reader2 = harness.create_default_reader(SourceIdentity {
             component_name: Some("bar".into()),
@@ -695,7 +695,7 @@ mod tests {
     }
 
     async fn attributed_inspect_two_streams_same_identity_by_reader(
-        harness: TestHarness,
+        mut harness: TestHarness,
         log_reader1: Arc<dyn LogReader>,
         log_reader2: Arc<dyn LogReader>,
     ) {
@@ -758,7 +758,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_streams_same_identity() {
-        let harness = TestHarness::new();
+        let harness = TestHarness::with_retained_sinks();
         let log_reader = harness.create_default_reader(SourceIdentity {
             component_name: Some("foo".into()),
             component_url: Some("http://foo.com".into()),
@@ -775,7 +775,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_v2_streams_same_identity() {
-        let harness = TestHarness::new();
+        let harness = TestHarness::with_retained_sinks();
         let log_reader = harness.create_event_stream_reader("foo", "http://foo.com");
         attributed_inspect_two_streams_same_identity_by_reader(
             harness,
@@ -787,7 +787,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn attributed_inspect_two_mixed_streams_same_identity() {
-        let harness = TestHarness::new();
+        let harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("foo", "http://foo.com");
         let log_reader2 = harness.create_default_reader(SourceIdentity {
             component_name: Some("foo".into()),
@@ -823,7 +823,7 @@ mod tests {
             tags: vec![],
         };
 
-        let harness = TestHarness::new();
+        let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2]);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -854,7 +854,7 @@ mod tests {
             tags: vec![],
         };
 
-        let harness = TestHarness::new();
+        let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2]);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -892,7 +892,7 @@ mod tests {
             tags: vec![],
         };
 
-        let harness = TestHarness::new();
+        let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2, p3, p4, p5]);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -926,7 +926,7 @@ mod tests {
             tags: vec![],
         };
 
-        let harness = TestHarness::new();
+        let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2, p3]);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -974,7 +974,7 @@ mod tests {
             tags: vec![String::from("BBBBB"), String::from("DDDDD")],
         };
 
-        let harness = TestHarness::new();
+        let mut harness = TestHarness::new();
         let mut stream = harness.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(vec![p, p2]);
         harness.filter_test(vec![lm1, lm2], Some(options)).await;
@@ -1054,7 +1054,7 @@ mod tests {
                 tags: vec![String::from("tag-1"), String::from("tag-2")],
             },
         ];
-        let harness = TestHarness::new();
+        let mut harness = TestHarness::new();
         let mut stream = harness.create_structured_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packets(logs);
         harness.filter_test(expected_logs, None).await;

@@ -14,13 +14,22 @@ use fuchsia_component::client::connect_to_protocol_at_dir;
 use fuchsia_inspect_derive::WithInspect;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
-use std::{collections::VecDeque, io::Cursor, marker::PhantomData};
+use std::{
+    collections::VecDeque,
+    io::Cursor,
+    marker::PhantomData,
+    sync::{Arc, Weak},
+};
 use validating_log_listener::{validate_log_dump, validate_log_stream};
 
 pub struct TestHarness {
     inspector: inspect::Inspector,
     log_manager: LogManager,
     log_proxy: LogProxy,
+    /// weak pointers to "pending" TestStreams which haven't dropped yet
+    pending_streams: Vec<Weak<()>>,
+    /// LogSinks to retain for inspect attribution tests
+    sinks: Option<Vec<LogSinkProxy>>,
 }
 
 pub fn create_capability_requested_event(
@@ -46,6 +55,17 @@ pub fn create_capability_requested_event(
 
 impl TestHarness {
     pub fn new() -> Self {
+        Self::make(false)
+    }
+
+    /// Create a new test harness which will keep its LogSinks alive as long as it itself is,
+    /// useful for testing inspect hierarchies for attribution.
+    // TODO(fxb/53932) this will be made unnecessary by historical retention of component stats
+    pub fn with_retained_sinks() -> Self {
+        Self::make(true)
+    }
+
+    fn make(hold_sinks: bool) -> Self {
         let inner = Arc::new(Mutex::new(ManagerInner {
             listeners: Pool::default(),
             interest_dispatcher: InterestDispatcher::default(),
@@ -61,7 +81,13 @@ impl TestHarness {
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
         fasync::Task::spawn(log_manager.clone().handle_log(log_stream)).detach();
 
-        Self { inspector, log_manager, log_proxy }
+        Self {
+            inspector,
+            log_manager,
+            log_proxy,
+            pending_streams: vec![],
+            sinks: if hold_sinks { Some(vec![]) } else { None },
+        }
     }
 
     pub fn create_default_reader(&self, identity: SourceIdentity) -> Arc<dyn LogReader> {
@@ -76,25 +102,26 @@ impl TestHarness {
         EventStreamLogReader::new(self.log_manager.clone(), target_moniker, target_url)
     }
 
+    /// Check to make sure all `TestStream`s have been dropped.
+    fn check_pending_streams(&mut self) {
+        // TODO(fxb/56418) panic if the test hasn't dropped/closed pending streams
+        self.pending_streams.retain(|w| w.upgrade().is_some());
+    }
+
     /// Run a filter test, returning the Inspector to check Inspect output.
     pub async fn filter_test(
-        self,
+        mut self,
         expected: impl IntoIterator<Item = LogMessage>,
         filter_options: Option<LogFilterOptions>,
     ) -> inspect::Inspector {
+        self.check_pending_streams();
         validate_log_stream(expected, self.log_proxy, filter_options).await;
         self.inspector
     }
 
-    pub async fn manager_test(self, test_dump_logs: bool) {
+    pub async fn manager_test(mut self, test_dump_logs: bool) {
         let mut p = setup_default_packet();
-        let mut stream = self.create_stream(Arc::new(SourceIdentity::empty()));
-        stream.write_packet(&mut p);
-
-        p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
-        stream.write_packet(&mut p);
-
-        let mut lm1 = LogMessage {
+        let lm1 = LogMessage {
             time: p.metadata.time,
             pid: p.metadata.pid,
             tid: p.metadata.tid,
@@ -103,14 +130,21 @@ impl TestHarness {
             msg: String::from("BBBBB"),
             tags: vec![String::from("AAAAA")],
         };
-        let lm2 = copy_log_message(&lm1);
-        lm1.severity = LogLevelFilter::Warn.into_primitive().into();
-        let mut lm3 = copy_log_message(&lm2);
-        lm3.pid = 2;
-
-        p.metadata.pid = 2;
+        let mut lm2 = copy_log_message(&lm1);
+        let mut lm3 = copy_log_message(&lm1);
+        // TODO(fxb/56418) drop this stream before validating
+        let mut stream = self.create_stream(Arc::new(SourceIdentity::empty()));
         stream.write_packet(&mut p);
 
+        p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
+        lm2.severity = LogLevelFilter::Info.into_primitive().into();
+        lm3.severity = LogLevelFilter::Info.into_primitive().into();
+        stream.write_packet(&mut p);
+
+        p.metadata.pid = 2;
+        lm3.pid = 2;
+        stream.write_packet(&mut p);
+        self.check_pending_streams();
         if test_dump_logs {
             validate_log_dump(vec![lm1, lm2, lm3], self.log_proxy, None).await;
         } else {
@@ -118,24 +152,51 @@ impl TestHarness {
         }
     }
 
-    pub fn create_stream(&self, identity: Arc<SourceIdentity>) -> TestStream<LogPacketWriter> {
-        let log_reader = DefaultLogReader::new(self.log_manager.clone(), identity);
-        TestStream::new(log_reader)
+    /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
+    /// `manager_test`.
+    pub fn create_stream(&mut self, identity: Arc<SourceIdentity>) -> TestStream<LogPacketWriter> {
+        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity))
     }
 
+    /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
+    /// `manager_test`.
     pub fn create_stream_from_log_reader(
-        &self,
+        &mut self,
         log_reader: Arc<dyn LogReader>,
     ) -> TestStream<LogPacketWriter> {
-        TestStream::new(log_reader)
+        self.make_stream(log_reader)
     }
 
+    /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
+    /// `manager_test`.
     pub fn create_structured_stream(
-        &self,
+        &mut self,
         identity: Arc<SourceIdentity>,
     ) -> TestStream<StructuredMessageWriter> {
-        let log_reader = DefaultLogReader::new(self.log_manager.clone(), identity);
-        TestStream::new(log_reader)
+        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity))
+    }
+
+    fn make_stream<E, P>(&mut self, log_reader: Arc<dyn LogReader>) -> TestStream<E>
+    where
+        E: LogWriter<Packet = P>,
+    {
+        let (log_sender, log_receiver) = mpsc::unbounded();
+        let _log_sink_proxy = log_reader.handle_request(log_sender);
+
+        fasync::Task::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }))
+            .detach();
+
+        let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        E::connect(&_log_sink_proxy, sout);
+
+        let _alive = Arc::new(());
+        self.pending_streams.push(Arc::downgrade(&_alive));
+
+        if let Some(sinks) = self.sinks.as_mut() {
+            sinks.push(_log_sink_proxy.clone());
+        }
+
+        TestStream { _alive, _log_sink_proxy, sin, _encoder: PhantomData }
     }
 }
 
@@ -265,6 +326,7 @@ impl LogReader for EventStreamLogReader {
 
 pub struct TestStream<E> {
     sin: zx::Socket,
+    _alive: Arc<()>,
     _log_sink_proxy: LogSinkProxy,
     _encoder: PhantomData<E>,
 }
@@ -273,20 +335,6 @@ impl<E, P> TestStream<E>
 where
     E: LogWriter<Packet = P>,
 {
-    fn new(log_reader: Arc<dyn LogReader>) -> Self {
-        let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-
-        let (log_sender, log_receiver) = mpsc::unbounded();
-        let _log_sink_proxy = log_reader.handle_request(log_sender);
-
-        fasync::Task::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }))
-            .detach();
-
-        E::connect(&_log_sink_proxy, sout);
-
-        Self { _log_sink_proxy, sin, _encoder: PhantomData }
-    }
-
     pub fn write_packets(&mut self, packets: Vec<P>) {
         for p in packets {
             self.write_packet(&p);
