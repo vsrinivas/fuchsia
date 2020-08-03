@@ -16,7 +16,4 @@ test("backlight-test") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(46866): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
