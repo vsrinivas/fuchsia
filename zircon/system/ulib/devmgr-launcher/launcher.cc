@@ -179,9 +179,6 @@ zx_status_t Launch(Args args, zx::channel svc_client, zx::channel fshost_outgoin
     argv.push_back("--sys-device-driver");
     argv.push_back(args.sys_device_driver);
   }
-  if (args.disable_block_watcher) {
-    argv.push_back("--disable-block-watcher");
-  }
   if (args.disable_netsvc) {
     argv.push_back("--disable-netsvc");
   }

@@ -111,7 +111,6 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
     kLoadDriver,
     kSysDeviceDriver,
     kNoStartSvchost,
-    kDisableBlockWatcher,
     kDisableNetsvc,
     kLogToDebuglog,
     kPathPrefix,
@@ -122,7 +121,6 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
       {"load-driver", required_argument, nullptr, kLoadDriver},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"no-start-svchost", no_argument, nullptr, kNoStartSvchost},
-      {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
       {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
       {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
       {"path-prefix", required_argument, nullptr, kPathPrefix},
@@ -162,9 +160,6 @@ void ParseArgs(int argc, char** argv, DevmgrArgs* out) {
         break;
       case kNoStartSvchost:
         out->start_svchost = false;
-        break;
-      case kDisableBlockWatcher:
-        out->disable_block_watcher = true;
         break;
       case kDisableNetsvc:
         out->disable_netsvc = true;
