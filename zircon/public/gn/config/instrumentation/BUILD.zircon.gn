@@ -38,12 +38,14 @@ declare_args() {
 # to the target that builds the leaky code.  When all leaky tests have been
 # marked that way, the asan_default_options default above will be removed.
 source_set("suppress-lsan.DO-NOT-USE-THIS") {
-  # See asan_default_options.c comments.
-  deps = [ ":asan_default_options" ]
-  if (current_os == "mac") {
-    ldflags = [ "-Wl,-defsym,_FUCHSIA_SUPPRESS_LSAN=1" ]
-  } else {
-    libs = [ "./suppress-lsan.ld" ]
+  if (toolchain.tags + [ "asan" ] - [ "asan" ] != toolchain.tags) {
+    # See asan_default_options.c comments.
+    deps = [ ":asan_default_options" ]
+    if (current_os == "mac") {
+      ldflags = [ "-Wl,-defsym,_FUCHSIA_SUPPRESS_LSAN=1" ]
+    } else {
+      libs = [ "./suppress-lsan.ld" ]
+    }
   }
 }
 
