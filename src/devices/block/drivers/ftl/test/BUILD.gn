@@ -18,6 +18,11 @@ source_set("shared") {
   ]
 }
 
+group("tests") {
+  testonly = true
+  deps = [ ":ftl-package" ]
+}
+
 test("ftl") {
   output_name = "ftl-test"
   if (is_fuchsia) {
