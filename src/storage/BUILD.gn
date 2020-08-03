@@ -15,9 +15,9 @@ group("tests") {
     "conformance:tests",
     "ext4:tests",
     "factory:tests",
-    "fatfs:tests",
     "fs-management-tests:tests",
     "fs_test:tests",
+    "fuchsia-fatfs:tests",
     "lib:tests",
     "volume_image:tests",
   ]
