@@ -157,7 +157,9 @@ class VppGammaAddrPortReg : public hwreg::RegisterBase<VppGammaAddrPortReg, uint
 
 class VppClipMisc1Reg : public hwreg::RegisterBase<VppClipMisc1Reg, uint32_t> {
  public:
-  DEF_FIELD(31, 0, val);
+  DEF_FIELD(29, 20, r_clamp);
+  DEF_FIELD(19, 10, g_clamp);
+  DEF_FIELD(9, 0, b_clamp);
   static auto Get() { return hwreg::RegisterAddr<VppClipMisc1Reg>(VPP_CLIP_MISC1); }
 };
 

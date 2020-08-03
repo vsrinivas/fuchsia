@@ -678,7 +678,15 @@ zx_status_t Osd::SetGamma(GammaChannel channel, const float* data) {
 
 void Osd::SetMinimumRgb(uint8_t minimum_rgb) {
   ZX_DEBUG_ASSERT(initialized_);
-  VppClipMisc1Reg::Get().FromValue(0).set_val(minimum_rgb).WriteTo(&(*vpu_mmio_));
+  // According to spec, minimum rgb should be set as follows:
+  // Shift value by 2bits (8bit -> 10bit) and write new value for
+  // each channel separately.
+  VppClipMisc1Reg::Get()
+      .FromValue(0)
+      .set_r_clamp(minimum_rgb << 2)
+      .set_g_clamp(minimum_rgb << 2)
+      .set_b_clamp(minimum_rgb << 2)
+      .WriteTo(&(*vpu_mmio_));
 }
 
 void Osd::HwInit() {
