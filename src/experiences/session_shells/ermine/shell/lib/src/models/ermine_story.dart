@@ -28,6 +28,8 @@ class ErmineStory {
   @visibleForTesting
   ViewControllerImpl viewController;
 
+  ViewRef viewRef;
+
   // An optional element controller which allows the story to communicate with
   // the element. This will only be available if ermine launched this process.
   ElementControllerProxy _elementController;
@@ -131,12 +133,14 @@ class ErmineStory {
     proxy.ctrl.close();
   }
 
-  void presentView(ViewHolderToken viewHolderToken, ViewControllerImpl vc) {
+  void presentView(
+      ViewHolderToken viewHolderToken, ViewRef viewRef, ViewControllerImpl vc) {
     childViewConnectionNotifier.value = ChildViewConnection(
       viewHolderToken,
       onAvailable: (_) {},
       onUnavailable: (_) {},
     );
+    this.viewRef = viewRef;
     viewController = vc;
     viewController?.didPresent();
   }

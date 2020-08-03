@@ -8,6 +8,7 @@ import 'dart:ui';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
@@ -30,6 +31,7 @@ void main() {
   StatusModel statusModel;
   ClustersModel clustersModel;
   StreamController<PointerEvent> controller;
+  FocusChainListenerBinding focusChainListenerBinding;
 
   setUp(() async {
     keyboardShortcuts = MockKeyboardShortcuts();
@@ -38,6 +40,7 @@ void main() {
     suggestionService = MockSuggestionService();
     statusModel = MockStatusModel();
     clustersModel = MockClustersModel();
+    focusChainListenerBinding = MockFocusChainListenerBinding();
     controller = StreamController<PointerEvent>.broadcast();
 
     when(localeSource.stream()).thenAnswer((_) => Stream<Locale>.empty());
@@ -50,6 +53,7 @@ void main() {
       suggestionService: suggestionService,
       statusModel: statusModel,
       clustersModel: clustersModel,
+      focusChainListenerBinding: focusChainListenerBinding,
     );
     await appModel.onStarted();
   });
@@ -64,6 +68,7 @@ void main() {
     verify(pointerEventsStream.dispose()).called(1);
     verify(suggestionService.dispose()).called(1);
     verify(statusModel.dispose()).called(1);
+    verify(focusChainListenerBinding.close()).called(1);
   });
 
   test('Should start in Overview state', () async {
@@ -202,11 +207,9 @@ void main() {
     appModel.askVisibility.value = true;
 
     final story = MockErmineStory();
-    when(clustersModel.hitTest(Offset(100, 100))).thenReturn(story);
+    when(clustersModel.findStory(any)).thenReturn(story);
 
-    controller.add(_downEvent(100, 100));
-    await Future.delayed(Duration.zero);
-
+    appModel.onFocusChange([]);
     expect(appModel.askVisibility.value, false);
   });
 
@@ -238,6 +241,7 @@ class _TestAppModel extends AppModel {
     SuggestionService suggestionService,
     StatusModel statusModel,
     ClustersModel clustersModel,
+    FocusChainListenerBinding focusChainListenerBinding,
   }) : super(
           keyboardShortcuts: keyboardShortcuts,
           pointerEventsStream: pointerEventsStream,
@@ -245,14 +249,12 @@ class _TestAppModel extends AppModel {
           suggestionService: suggestionService,
           statusModel: statusModel,
           clustersModel: clustersModel,
+          focusChainListenerBinding: focusChainListenerBinding,
         );
 
   @override
   void advertise() {}
 }
-
-PointerEvent _downEvent(double x, double y) =>
-    _pointerEvent(phase: PointerEventPhase.down, x: x, y: y);
 
 PointerEvent _moveEvent(double x, double y) =>
     _pointerEvent(phase: PointerEventPhase.move, x: x, y: y);
@@ -282,3 +284,6 @@ class MockStatusModel extends Mock implements StatusModel {}
 class MockClustersModel extends Mock implements ClustersModel {}
 
 class MockErmineStory extends Mock implements ErmineStory {}
+
+class MockFocusChainListenerBinding extends Mock
+    implements FocusChainListenerBinding {}

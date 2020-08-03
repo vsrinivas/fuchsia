@@ -32,7 +32,11 @@ void main() {
     when(eventPair.isValid).thenReturn(false);
 
     clustersModel.presentStory(
-        ViewHolderToken(value: eventPair), ViewControllerImpl(), 'id');
+      ViewHolderToken(value: eventPair),
+      ViewRef(reference: eventPair),
+      ViewControllerImpl(),
+      'id',
+    );
 
     expect(clustersModel.hasStories, true);
     expect(clustersModel.focusedStory, isNotNull);

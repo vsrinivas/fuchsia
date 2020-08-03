@@ -32,6 +32,9 @@ abstract class ErmineShell {
     /// The view holder token used to connect the view to the process
     ViewHolderToken token,
 
+    /// The [ViewRef] of the view used as a handle for focusing.
+    ViewRef viewRef,
+
     /// A view controller which can be used to communicate with the running process
     /// This value may be null
     ViewControllerImpl viewController,

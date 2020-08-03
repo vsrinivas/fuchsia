@@ -17,7 +17,7 @@ import 'suggestion.dart';
 /// requesting source did not provide a channel. The methods will still be safe
 /// to call even if it is not bound.
 typedef PresentViewCallback = void Function(
-    ViewHolderToken, ViewControllerImpl, String);
+    ViewHolderToken, ViewRef, ViewControllerImpl, String);
 
 /// A service which implements the fuchsia.session.GraphicalPresenter protocol.
 class PresenterService extends fidl.GraphicalPresenter {
@@ -51,7 +51,11 @@ class PresenterService extends fidl.GraphicalPresenter {
     final viewHolderToken = viewSpec.viewHolderToken;
     if (viewHolderToken != null) {
       _onPresent(
-          viewHolderToken, viewController, idAnnotation?.value?.text ?? '');
+        viewHolderToken,
+        viewSpec.viewRef,
+        viewController,
+        idAnnotation?.value?.text ?? '',
+      );
     } else {
       viewController.close(fidl.ViewControllerEpitaph.invalidViewSpec);
     }

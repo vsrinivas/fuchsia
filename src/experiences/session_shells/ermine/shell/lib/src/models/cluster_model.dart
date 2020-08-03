@@ -80,6 +80,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
   @override
   void presentStory(
     ViewHolderToken token,
+    ViewRef viewRef,
     ViewControllerImpl viewController,
     String id,
   ) {
@@ -96,7 +97,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
       _addErmineStory(story);
     }
 
-    story.presentView(token, viewController);
+    story.presentView(token, viewRef, viewController);
   }
 
   /// Creates and adds a [Story] to the current cluster given it's [StoryInfo],
@@ -232,6 +233,29 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
       },
       orElse: () => null,
     );
+  }
+
+  /// Finds the story whose [ViewRef] is present in the focus chain.
+  ///
+  /// Shell view hierarchy places the shell view at the root and all child
+  /// views are siblings of each other. Thus the focus chain should only have
+  /// one child view in it. So if we did a set intersection of the focus chain
+  /// and the set of open child views, a non-empty result will point to the
+  /// child view that received focus.
+  ErmineStory findStory(List<ViewRef> focusChain) {
+    final focusedViews = Set<int>.from(
+        focusChain.map((viewRef) => viewRef.reference.handle.koid));
+    final childViews = Set<int>.from(
+        stories.map((story) => story.viewRef.reference.handle.koid));
+    final result = focusedViews.intersection(childViews);
+    if (result.isNotEmpty) {
+      // Result should find only one childview.
+      assert(result.length == 1);
+      return stories
+          .where((story) => story.viewRef.reference.handle.koid == result.first)
+          .first;
+    }
+    return null;
   }
 }
 

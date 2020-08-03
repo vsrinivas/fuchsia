@@ -7,7 +7,9 @@ import 'dart:io';
 
 import 'package:async/async.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
@@ -15,6 +17,7 @@ import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
     show KeyboardShortcuts;
 
+import '../utils/focus_change_listener.dart';
 import '../utils/pointer_events_stream.dart';
 import '../utils/presenter.dart';
 import '../utils/styles.dart';
@@ -36,6 +39,7 @@ class AppModel {
   final _intl = PropertyProviderProxy();
 
   PresenterService _presenterService;
+  FocusChainListenerBinding _focusChainListenerBinding;
 
   /// The [GlobalKey] associated with [Ask] widget.
   final GlobalKey<AskState> askKey = GlobalKey(debugLabel: 'ask');
@@ -65,10 +69,12 @@ class AppModel {
     PointerEventsStream pointerEventsStream,
     LocaleSource localeSource,
     SuggestionService suggestionService,
+    FocusChainListenerBinding focusChainListenerBinding,
     this.statusModel,
     this.clustersModel,
   })  : _keyboardShortcuts = keyboardShortcuts,
         _pointerEventsStream = pointerEventsStream,
+        _focusChainListenerBinding = focusChainListenerBinding,
         _suggestionService = suggestionService {
     // Setup child models.
     topbarModel = TopbarModel(appModel: this);
@@ -90,10 +96,6 @@ class AppModel {
         PointerEventsStream.fromStartupContext(_startupContext);
     _splitter = StreamSplitter(_pointerEventsStream.stream)
       ..split()
-          .where((event) => event.phase == input.PointerEventPhase.down)
-          .map((event) => Offset(event.x, event.y))
-          .listen(_onPointerDown)
-      ..split()
           .where((event) => event.phase == input.PointerEventPhase.move)
           .map((event) => Offset(event.x, event.y))
           .listen(_onPointerMove);
@@ -110,6 +112,18 @@ class AppModel {
       startupContext: _startupContext,
       onSuggestion: clustersModel.storySuggested,
     );
+
+    // Focus chain registry.
+    if (_focusChainListenerBinding == null) {
+      final focusChainRegistry = FocusChainListenerRegistryProxy();
+      _startupContext.incoming.connectToService(focusChainRegistry);
+
+      final listener = FocusChangeListener(onFocusChange);
+      _focusChainListenerBinding = FocusChainListenerBinding();
+
+      focusChainRegistry.register(_focusChainListenerBinding.wrap(listener));
+      focusChainRegistry.ctrl.close();
+    }
 
     // Expose PresenterService to the environment.
     advertise();
@@ -279,6 +293,7 @@ class AppModel {
     _intl?.ctrl?.close();
     _suggestionService.dispose();
     statusModel.dispose();
+    _focusChainListenerBinding.close();
   }
 
   void _onInspect(inspect.Node node) {
@@ -295,9 +310,9 @@ class AppModel {
     topbarModel.onInspect(node.child('topbar'));
   }
 
-  void _onPointerDown(Offset position) {
-    // Set focus on story under the offset.
-    final story = clustersModel.hitTest(position);
+  void onFocusChange(List<ViewRef> focusedViews) {
+    // Get the story whose [ViewRef] is in [focusedViews].
+    final story = clustersModel.findStory(focusedViews);
     if (story != null) {
       story.focus();
       // Also dismiss any system overlays.
