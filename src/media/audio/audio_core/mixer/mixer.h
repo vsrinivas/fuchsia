@@ -148,23 +148,34 @@ class Mixer {
     }
 
     // From their current values, advance the long-running positions by a number of dest frames.
+    // Advancing by a negative number of frames should be infrequent, but we do support it.
+    // TODO(57516): Fully understand the specifics that lead to occasional back-advance.
     void AdvanceRunningPositionsBy(int32_t dest_frames) {
-      FX_CHECK(dest_frames >= 0);
-
       next_dest_frame += dest_frames;
-      auto frac_src_increment = (dest_frames * step_size);
+      int32_t frac_src_increment = (dest_frames * step_size);
+
       if (denominator) {
-        next_src_pos_modulo += (dest_frames * rate_modulo);
-        frac_src_increment += (next_src_pos_modulo / denominator);
-        next_src_pos_modulo %= denominator;
+        int32_t src_mod_increment = dest_frames * rate_modulo;
+        // mod next_src_pos_modulo back UP into range, if our advance was negative in direction.
+        // This is only a few loops so it is more clear (negative modulo!) and comparable CPU-wise.
+        while (src_mod_increment < 0) {
+          --frac_src_increment;
+          src_mod_increment += denominator;
+        }
+        next_src_pos_modulo += src_mod_increment;
+
+        // mod next_src_pos_modulo back down into range.
+        if (next_src_pos_modulo >= denominator) {
+          frac_src_increment += (next_src_pos_modulo / denominator);
+          next_src_pos_modulo %= denominator;
+        }
       }
       next_frac_source_frame += FractionalFrames<int64_t>::FromRaw(frac_src_increment);
     }
 
     // From current values, advance long-running positions to the specified absolute dest frame num.
+    // Advancing in negative direction should be infrequent, but we do support it.
     void AdvanceRunningPositionsTo(int32_t dest_target_frame) {
-      FX_CHECK(dest_target_frame >= next_dest_frame);
-
       AdvanceRunningPositionsBy(dest_target_frame - next_dest_frame);
     }
 

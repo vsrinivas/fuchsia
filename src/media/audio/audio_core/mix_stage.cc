@@ -211,6 +211,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_r
   while (true) {
     // At this point we know we need to consume some source data, but we don't yet know how much.
     // Here is how many destination frames we still need to produce, for this mix job.
+    FX_DCHECK(cur_mix_job_.buf_frames >= cur_mix_job_.frames_produced);
     uint32_t dest_frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
     if (dest_frames_left == 0) {
       break;
@@ -379,7 +380,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   }
 
   FX_DCHECK(dest_offset_64 >= 0);
-  FX_DCHECK(dest_offset_64 < static_cast<int64_t>(dest_frames_left));
+  FX_DCHECK(dest_offset_64 <= static_cast<int64_t>(dest_frames_left));
   auto dest_offset = static_cast<uint32_t>(dest_offset_64);
 
   FX_DCHECK(frac_source_offset_64 <= std::numeric_limits<int32_t>::max());
@@ -388,8 +389,19 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 
   // Looks like we are ready to go. Mix.
   FX_DCHECK(frac_source_offset + mixer.pos_filter_width() >= FractionalFrames<uint32_t>(0));
-  bool consumed_source = false;
-  if (frac_source_offset + mixer.pos_filter_width() < source_buffer.length()) {
+  bool consumed_source;
+  if (dest_offset >= dest_frames_left) {
+    // We initially needed to source frames from this packet in order to finish this mix. After
+    // realigning our sampling point to the nearest dest frame, that dest frame is now at or beyond
+    // the end of this mix job. We have no need to mix any source material now, just exit.
+    consumed_source = false;
+  } else if (frac_source_offset + mixer.pos_filter_width() >= source_buffer.length()) {
+    // This packet was initially within our mix window. After realigning our sampling point to the
+    // nearest dest frame, it is now entirely in the past. This can only occur when down-sampling
+    // and is made more likely if the rate conversion ratio is very high. We've already reported
+    // a partial underflow when realigning, so just complete the packet and move on to the next.
+    consumed_source = true;
+  } else {
     // When calling Mix(), we communicate the resampling rate with three parameters. We augment
     // step_size with rate_modulo and denominator arguments that capture the remaining rate
     // component that cannot be expressed by a 19.13 fixed-point step_size. Note: step_size and
@@ -399,7 +411,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // For perfect position accuracy, just as we track incoming/outgoing fractional source offset,
     // we also need to track the ongoing subframe_position_modulo. This is now added to Mix() and
     // maintained across calls, but not initially set to any value other than zero. For now, we are
-    // deferring that work, tracking it with MTWN-128.
+    // deferring that work, since any error would be less than 1 fractional frame.
     //
     // Q: Why did we solve this issue for Rate but not for initial Position?
     // A: We solved this issue for *rate* because its effect accumulates over time, causing clearly
@@ -435,30 +447,23 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
       cur_mix_job_.applied_gain_db = std::max(cur_mix_job_.applied_gain_db, stream_gain_db);
     }
 
-    info.AdvanceRunningPositionsBy(dest_offset - prev_dest_offset);
-
-    FX_DCHECK(dest_offset <= dest_frames_left);
-
-    // If src is ramping, advance by delta of dest_offset
+    // If src is ramping, advance that ramp by the amount of dest that was just mixed.
     if (ramping) {
       info.gain.Advance(dest_offset - prev_dest_offset,
                         dest_ref_clock_to_integral_dest_frame.rate());
     }
-  } else {
-    // This packet was initially within our mix window. After realigning our sampling point to the
-    // nearest dest frame, it is now entirely in the past. This can only occur when down-sampling
-    // and is made more likely if the rate conversion ratio is very high. We've already reported
-    // a partial underflow when realigning, so just complete the packet and move on to the next.
-    consumed_source = true;
   }
+
+  FX_DCHECK(dest_offset <= dest_frames_left);
+  info.AdvanceRunningPositionsBy(dest_offset);
 
   if (consumed_source) {
     FX_DCHECK(frac_source_offset + mixer.pos_filter_width() >= source_buffer.length());
   }
 
   cur_mix_job_.frames_produced += dest_offset;
-
   FX_DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
+
   return consumed_source;
 }
 

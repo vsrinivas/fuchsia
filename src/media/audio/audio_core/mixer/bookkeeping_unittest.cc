@@ -107,8 +107,8 @@ TEST(BookkeepingTest, ResetPositions) {
   EXPECT_EQ(info.next_src_pos_modulo, 3u);
 }
 
-// From their current values, this advances running positions for dest, frac_source and
-// frac_source_modulo by given dest frames, based on step_size/rate_modulo/denominator.
+// From current values, AdvanceRunningPositions advances running positions for dest, frac_source and
+// frac_source_modulo by given dest frames, based on the step_size, rate_modulo and denominator.
 TEST(BookkeepingTest, AdvanceRunningPositions) {
   StubMixer mixer;
   auto& info = mixer.bookkeeping();
@@ -138,6 +138,34 @@ TEST(BookkeepingTest, AdvanceRunningPositions) {
   // Thus expect new running src position: 12 frames, 21 subframes, position modulo 4.
   EXPECT_EQ(info.next_frac_source_frame,
             FractionalFrames<int64_t>(12) + FractionalFrames<int64_t>::FromRaw(21));
+  EXPECT_EQ(info.next_src_pos_modulo, 4u);
+}
+
+// Also validate AdvanceRunningPositions for negative offsets.
+TEST(BookkeepingTest, NegativeAdvanceRunningPosition) {
+  StubMixer mixer;
+  auto& info = mixer.bookkeeping();
+
+  info.step_size = Mixer::FRAC_ONE + 2;
+  info.rate_modulo = 2;
+  info.denominator = 5;
+
+  info.next_dest_frame = 12;
+  info.next_frac_source_frame = FractionalFrames<int64_t>(3);
+  info.next_src_pos_modulo = 0;
+
+  info.AdvanceRunningPositionsBy(-3);
+
+  EXPECT_EQ(info.next_dest_frame, 9u);
+
+  // frac_src_pos starts at 3 frames, 0 subframes, with position modulo 0 out of 5.
+  // Advanced by -3 dest frames at a step_size of [1 frame + 2 subframes+ mod 2/5]
+  // For -3 dest frames, this is a src advance of -3 frames, -6 subframes, -6/5 mod.
+  // src_pos_mod was 0/5, plus -6/5, is now -6/5, but negative modulo must be reduced.
+  // 0 subframes + mod -6/5 becomes -2 subframe + mod 4/5.
+  //
+  // frac_src advances by -3f, -8 subframes (-6-2) to become 0 frames -8 subframes.
+  EXPECT_EQ(info.next_frac_source_frame, FractionalFrames<int64_t>::FromRaw(-8));
   EXPECT_EQ(info.next_src_pos_modulo, 4u);
 }
 
