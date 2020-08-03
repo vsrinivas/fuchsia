@@ -253,8 +253,9 @@ group("tests") {
 ### Zircon fuzzers  {#zircon}
 
 Zircon fuzzers are built the same as fuzzers for other code. Add the fuzzer GN template to the same
-BUILD.gn as the code under test, and add the fuzzers to the
-[`//garnet/tests/zircon:zircon-fuzzers`][zircon-fuzzers] target.
+BUILD.gn as the code under test, and add that new fuzzer target to the
+[`_migrated_fuzzers`][zircon-fuzzers] list used by the `//garnet/tests/zircon:zircon_fuzzers`
+target.
 
 ## Build fuzzers with `fx` {#fx-set}
 
