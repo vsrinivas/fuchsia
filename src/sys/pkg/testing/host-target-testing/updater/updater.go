@@ -53,24 +53,14 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 	logger.Infof(ctx, "Triggering OTA")
 
 	startTime := time.Now()
-	basePackages, err := c.ReadBasePackages(ctx)
-	if err != nil {
-		return err
-	}
-	updateBinMerkle, ok := basePackages["update-bin/0"]
-	if !ok {
-		return fmt.Errorf("base packages doesn't include update-bin/0 package")
-	}
-	err = c.ExpectReboot(ctx, func() error {
+	err := c.ExpectReboot(ctx, func() error {
 		server, err := c.ServePackageRepository(ctx, u.repo, "trigger-ota", true)
 		if err != nil {
 			return fmt.Errorf("error setting up server: %w", err)
 		}
 		defer server.Shutdown(ctx)
-		// FIXME: running this out of /pkgfs/versions is unsound WRT using the correct loader service
-		// Adding this as a short-term hack to unblock http://fxb/47213
 		cmd := []string{
-			fmt.Sprintf("/pkgfs/versions/%s/bin/update", updateBinMerkle),
+			"/bin/update",
 			"check-now",
 			"--monitor",
 		}
