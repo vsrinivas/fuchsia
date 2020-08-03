@@ -36,7 +36,7 @@ impl SoundPlayer {
                                 Ok(sound) => {
                                     let duration = sound.duration();
                                     if self.sounds_by_id.insert(id, sound).is_some() {
-                                        fuchsia_syslog::fx_log_err!("AddSound called with id already in use {}", id);
+                                        fuchsia_syslog::fx_log_warn!("AddSound called with id already in use {}", id);
                                         return Err(anyhow::format_err!("Client error, disconnecting"));
                                     } else {
                                         responder.send(&mut Ok(duration.into_nanos())).unwrap_or(());
@@ -50,7 +50,7 @@ impl SoundPlayer {
                         }
                         PlayerRequest::AddSoundBuffer { id, buffer, stream_type, control_handle} => {
                             if self.sounds_by_id.insert(id, Sound::new(id, buffer, stream_type)).is_some() {
-                                fuchsia_syslog::fx_log_err!("AddSound called with id already in use {}", id);
+                                fuchsia_syslog::fx_log_warn!("AddSound called with id already in use {}", id);
                                 return Err(anyhow::format_err!("Client error, disconnecting"));
                             }
                         }
@@ -72,7 +72,7 @@ impl SoundPlayer {
                                                 })).boxed())
                                         }
                                         Err(error) => {
-                                            fuchsia_syslog::fx_log_err!("Unable to play sound {}: {}", id, error);
+                                            fuchsia_syslog::fx_log_warn!("Unable to play sound {}: {}", id, error);
                                             responder.send(&mut Err(PlaySoundError::RendererFailed)).unwrap_or(());
                                         }
                                     }
@@ -219,19 +219,19 @@ impl Renderer {
         if packets_len > 1 {
             for index in 0..packets_len - 1 {
                 self.proxy.send_packet_no_reply(&mut packets[index]).map_err(|e| {
-                    fuchsia_syslog::fx_log_err!("AudioRenderer.SendPacketNoReply failed: {}", e);
+                    fuchsia_syslog::fx_log_warn!("AudioRenderer.SendPacketNoReply failed: {}", e);
                     PlaySoundError::RendererFailed
                 })?;
             }
         }
 
         let mut send_packet = self.proxy.send_packet(&mut packets[packets_len - 1]).map_err(|e| {
-            fuchsia_syslog::fx_log_err!("AudioRenderer.SendPacket failed: {}", e);
+            fuchsia_syslog::fx_log_warn!("AudioRenderer.SendPacket failed: {}", e);
             e
         });
 
         let mut play = self.proxy.play(NO_TIMESTAMP, 0).map_err(|e| {
-            fuchsia_syslog::fx_log_err!("AudioRenderer.Play failed: {}", e);
+            fuchsia_syslog::fx_log_warn!("AudioRenderer.Play failed: {}", e);
             e
         });
 

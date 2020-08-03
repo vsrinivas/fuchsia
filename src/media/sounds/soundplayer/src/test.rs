@@ -614,18 +614,6 @@ impl FakeAudioRenderer {
 
                     // Only the last packet is sent with this method.
                     assert!(packet_index == self.renderer_expectations.packets.len() - 1);
-                    if packet != self.renderer_expectations.packets[packet_index] {
-                        print!(
-                            "offset {} vs {}",
-                            packet.payload_offset,
-                            self.renderer_expectations.packets[packet_index].payload_offset
-                        );
-                        print!(
-                            "size {} vs {}",
-                            packet.payload_size,
-                            self.renderer_expectations.packets[packet_index].payload_size
-                        );
-                    }
                     assert!(packet == self.renderer_expectations.packets[packet_index]);
                     assert!(send_packet_responder_option.is_none());
                     send_packet_responder_option.replace(responder);
