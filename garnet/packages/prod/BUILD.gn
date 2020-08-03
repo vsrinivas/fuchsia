@@ -309,10 +309,6 @@ group("magma-qcom-adreno") {
   ]
 }
 
-# TODO(fxb/53525): this is to allow a soft transition to magma-vsi-vip.
-group("magma-vsl-gc") {
-}
-
 group("magma-vsi-vip") {
   public_deps =
       [ "//src/graphics/lib/magma/gnbuild/magma-vsi-vip:magma-vulkan" ]
