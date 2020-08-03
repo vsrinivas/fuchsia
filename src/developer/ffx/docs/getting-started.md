@@ -8,7 +8,7 @@ Warning: **`ffx` is currently in alpha. Its APIs, command-line surface, and docu
 
 ## Contacting us
 
-If you discover possible bugs or have questions or suggestions, [file a bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?components=Tools%3EFfx).
+If you discover possible bugs or have questions or suggestions, [file a bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=ffx+User+Bug).
 
 ## Prerequisites
 
