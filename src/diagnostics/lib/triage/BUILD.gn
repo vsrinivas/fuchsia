@@ -12,6 +12,8 @@ lib_deps = [
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:lazy_static",
   "//third_party/rust_crates:nom",
+  "//third_party/rust_crates:num-derive",
+  "//third_party/rust_crates:num-traits",
   "//third_party/rust_crates:regex",
   "//third_party/rust_crates:serde",
   "//third_party/rust_crates:serde_derive",

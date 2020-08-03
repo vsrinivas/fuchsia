@@ -12,6 +12,7 @@ use {
         validate::{validate, Trials, TrialsSchema},
     },
     anyhow::{bail, format_err, Context, Error},
+    num_derive::FromPrimitive,
     serde_derive::Deserialize,
     std::{collections::HashMap, convert::TryFrom},
 };
@@ -19,8 +20,9 @@ use {
 pub(crate) mod parse;
 
 // These numbers are used in the wasm-bindgen bridge so they are explicit and
-// permanent. They don't need to be sequential.
-#[derive(Debug, Clone, Copy)]
+// permanent. They don't need to be sequential. This enum must be consistent
+// with the Source enum in //src/diagnostics/lib/triage/wasm/src/lib.rs.
+#[derive(Debug, Clone, Copy, FromPrimitive)]
 pub enum Source {
     Inspect = 0,
     Klog = 1,

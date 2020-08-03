@@ -27,11 +27,18 @@ mod bindings {
     /// Unique identifier to resources too expensive to pass between Rust/JS layer.
     pub type Handle = shim::Handle;
 
-    /// Type of target content.
+    /// Type of target content. This enum's values must be consistent with
+    /// enum Source in fuchsia-mirror/src/diagnostics/lib/triage/src/config.rs,
+    /// so they are listed explicitly and must never be changed. They do not
+    /// have to be sequential.
     #[wasm_bindgen]
-    #[derive(Debug)]
+    #[derive(Debug, Copy)]
     pub enum Source {
-        Inspect,
+        Inspect = 0,
+        Klog = 1,
+        Syslog = 2,
+        Bootlog = 3,
+        Annotations = 4,
     }
 
     /// Object to manage lifetime of objects needed for Triage analysis.
@@ -88,13 +95,15 @@ mod bindings {
             name: &str,
             content: &str,
         ) -> Result<Handle, JsValue> {
-            let mut build_target = match source {
-                Source::Inspect => |name, content| self.shim.build_inspect_target(name, content),
-            };
-
-            match build_target(name, content) {
+            match self.shim.build_target(name, source as u32, content) {
                 Ok(id) => Ok(id),
-                Err(err) => format_js_err!("Failed to parse Inspect tree: {}", err),
+                Err(err) => match source {
+                    Source::Inspect => format_js_err!("Failed to parse Inspect tree: {}", err),
+                    Source::Syslog => format_js_err!("Failed to parse Syslog file: {}", err),
+                    Source::Klog => format_js_err!("Failed to parse Klog file: {}", err),
+                    Source::Bootlog => format_js_err!("Failed to parse Bootlog file: {}", err),
+                    Source::Annotations => format_js_err!("Failed to parse Annotations: {}", err),
+                },
             }
         }
 
