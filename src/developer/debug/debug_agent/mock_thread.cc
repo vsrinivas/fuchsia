@@ -11,7 +11,8 @@
 namespace debug_agent {
 
 MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid)
-    : DebuggedThread(nullptr, process, std::make_unique<MockThreadHandle>(thread_koid)) {}
+    : DebuggedThread(process->debug_agent(), process,
+                     std::make_unique<MockThreadHandle>(thread_koid)) {}
 
 MockThread::~MockThread() {}
 
