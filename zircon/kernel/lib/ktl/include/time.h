@@ -12,6 +12,8 @@
 // The kernel doesn't want this file but some libc++ headers we need
 // wind up including it and they need these declarations.
 
+#ifdef __cplusplus
+
 using time_t = long int;
 using clock_t = long int;
 struct tm {};
@@ -27,5 +29,7 @@ time_t mktime(tm*) noexcept;
 size_t strftime(char*, size_t, const char*, const tm*) noexcept;
 time_t time(time_t*) noexcept;
 int timespec_get(timespec* ts, int) noexcept;
+
+#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_TIME_H_
