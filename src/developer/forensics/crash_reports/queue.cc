@@ -17,10 +17,21 @@ namespace crash_reports {
 using async::PostDelayedTask;
 using async::PostTask;
 using crashpad::FileReader;
+using crashpad::UUID;
 using UploadPolicy = Settings::UploadPolicy;
 
-constexpr char kStorePath[] = "/tmp/reports";
-constexpr StorageSize kStoreMaxSize = StorageSize::Kilobytes(5120u);
+std::unique_ptr<Queue> Queue::TryCreate(async_dispatcher_t* dispatcher,
+                                        std::shared_ptr<sys::ServiceDirectory> services,
+                                        std::shared_ptr<InfoContext> info_context,
+                                        CrashServer* crash_server) {
+  auto database = Database::TryCreate(info_context);
+  if (!database) {
+    return nullptr;
+  }
+
+  return std::unique_ptr<Queue>(
+      new Queue(dispatcher, services, std::move(info_context), std::move(database), crash_server));
+}
 
 void Queue::WatchSettings(Settings* settings) {
   settings->RegisterUploadPolicyWatcher(
@@ -28,24 +39,23 @@ void Queue::WatchSettings(Settings* settings) {
 }
 
 Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-             std::shared_ptr<InfoContext> info_context, CrashServer* crash_server)
+             std::shared_ptr<InfoContext> info_context, std::unique_ptr<Database> database,
+             CrashServer* crash_server)
     : dispatcher_(dispatcher),
       services_(services),
-      store_(info_context, kStorePath, kStoreMaxSize),
+      database_(std::move(database)),
       crash_server_(crash_server),
       info_(std::move(info_context)),
       network_reconnection_backoff_(/*initial_delay=*/zx::min(1), /*retry_factor=*/2u,
                                     /*max_delay=*/zx::hour(1)) {
   FX_CHECK(dispatcher_);
+  FX_CHECK(database_);
 
   ProcessAllEveryHour();
   ProcessAllOnNetworkReachable();
-
-  // TODO(56448): Initialize queue with the reports in the store. We need to be able to distinguish
-  // archived reports from reports that have not been uploaded yet.
 }
 
-bool Queue::Contains(const Store::Uid& uuid) const {
+bool Queue::Contains(const UUID& uuid) const {
   return std::find(pending_reports_.begin(), pending_reports_.end(), uuid) !=
          pending_reports_.end();
 }
@@ -54,34 +64,35 @@ bool Queue::Add(const std::string& program_name,
                 std::map<std::string, fuchsia::mem::Buffer> attachments,
                 std::optional<fuchsia::mem::Buffer> minidump,
                 std::map<std::string, std::string> annotations) {
-  std::optional<Report> report =
-      Report::MakeReport(program_name, annotations, std::move(attachments), std::move(minidump));
-  if (!report.has_value()) {
+  UUID local_report_id;
+  if (!database_->MakeNewReport(attachments, minidump, annotations, &local_report_id)) {
     return false;
   }
 
-  // TODO(57293): Attempt up upload the report before putting it in the store. InspectManager will
-  // need to be altered to support recording metrics on reports without an id.
+  pending_reports_.push_back(local_report_id);
 
-  std::vector<Store::Uid> garbage_collected_reports;
-  std::optional<Store::Uid> local_report_id =
-      store_.Add(std::move(report.value()), &garbage_collected_reports);
-
-  for (const auto& id : garbage_collected_reports) {
-    GarbageCollect(id);
-  }
-
-  if (!local_report_id.has_value()) {
-    return false;
-  }
-
-  pending_reports_.push_back(local_report_id.value());
+  info_.LogReport(program_name, local_report_id.ToString());
   info_.SetSize(pending_reports_.size());
 
-  info_.LogReport(program_name, std::to_string(local_report_id.value()));
+  // We do the processing and garbage collection asynchronously as we don't want to block the
+  // caller.
+  if (const auto status = PostTask(dispatcher_,
+                                   [this] {
+                                     ProcessAll();
+                                     database_->GarbageCollect();
 
-  // We do the processing asynchronously as we don't want to block the caller.
-  if (const auto status = PostTask(dispatcher_, [this] { ProcessAll(); }); status != ZX_OK) {
+                                     // Mark reports that were garbage collected.
+                                     for (const auto& local_report_id : pending_reports_) {
+                                       if (database_->IsGarbageCollected(local_report_id)) {
+                                         info_.MarkReportAsGarbageCollected(
+                                             local_report_id.ToString(),
+                                             upload_attempts_[local_report_id]);
+                                         upload_attempts_.erase(local_report_id);
+                                       }
+                                     }
+                                   });
+
+      status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error posting task to process reports after adding new report";
   }
 
@@ -99,46 +110,36 @@ size_t Queue::ProcessAll() {
   }
 }
 
-bool Queue::Upload(const Store::Uid& local_report_id) {
-  std::optional<Report> report = store_.Get(local_report_id);
-  if (!report.has_value()) {
-    // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the report
-    // is deleted from the store by an external influence, e.g., the filesystem flushes /cache.
+bool Queue::Upload(const UUID& local_report_id) {
+  auto report = database_->GetUploadReport(local_report_id);
+  if (!report) {
+    // The database no longer contains the report (it was most likely pruned).
+    // Return true so the report is not processed again.
     return true;
   }
 
   upload_attempts_[local_report_id]++;
-  info_.RecordUploadAttemptNumber(std::to_string(local_report_id),
-                                  upload_attempts_[local_report_id]);
+  info_.RecordUploadAttemptNumber(local_report_id.ToString(), upload_attempts_[local_report_id]);
 
   std::string server_report_id;
-  if (crash_server_->MakeRequest(report.value(), &server_report_id)) {
+  if (crash_server_->MakeRequest(report->GetAnnotations(), report->GetAttachments(),
+                                 &server_report_id)) {
     FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
                   << server_report_id;
-    info_.MarkReportAsUploaded(std::to_string(local_report_id), server_report_id,
+    info_.MarkReportAsUploaded(local_report_id.ToString(), server_report_id,
                                upload_attempts_[local_report_id]);
     upload_attempts_.erase(local_report_id);
-    store_.Remove(local_report_id);
+    database_->MarkAsUploaded(std::move(report), server_report_id);
     return true;
   }
 
-  FX_LOGS(ERROR) << "Error uploading local report " << std::to_string(local_report_id);
+  FX_LOGS(ERROR) << "Error uploading local report " << local_report_id.ToString();
 
   return false;
 }
 
-void Queue::GarbageCollect(const Store::Uid& local_report_id) {
-  FX_LOGS(INFO) << "Garbage collected local report " << std::to_string(local_report_id);
-  info_.MarkReportAsGarbageCollected(std::to_string(local_report_id),
-                                     upload_attempts_[local_report_id]);
-  upload_attempts_.erase(local_report_id);
-  pending_reports_.erase(
-      std::remove(pending_reports_.begin(), pending_reports_.end(), local_report_id),
-      pending_reports_.end());
-}
-
 size_t Queue::UploadAll() {
-  std::vector<Store::Uid> new_pending_reports;
+  std::vector<UUID> new_pending_reports;
   for (const auto& local_report_id : pending_reports_) {
     if (!Upload(local_report_id)) {
       new_pending_reports.push_back(local_report_id);
@@ -155,9 +156,10 @@ size_t Queue::UploadAll() {
 size_t Queue::ArchiveAll() {
   size_t successful = 0;
   for (const auto& local_report_id : pending_reports_) {
-    FX_LOGS(INFO) << "Archiving local report " << std::to_string(local_report_id)
-                  << " under /tmp/reports";
-    info_.MarkReportAsArchived(std::to_string(local_report_id), upload_attempts_[local_report_id]);
+    if (database_->Archive(local_report_id)) {
+      ++successful;
+      info_.MarkReportAsArchived(local_report_id.ToString(), upload_attempts_[local_report_id]);
+    }
   }
 
   pending_reports_.clear();

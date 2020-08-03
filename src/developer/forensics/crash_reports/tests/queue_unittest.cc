@@ -25,11 +25,14 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/timekeeper/test_clock.h"
+#include "third_party/crashpad/client/crash_report_database.h"
 
 namespace forensics {
 namespace crash_reports {
 namespace {
 
+using crashpad::CrashReportDatabase;
+using crashpad::UUID;
 using inspect::testing::ChildrenMatch;
 using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
@@ -49,7 +52,7 @@ using UploadPolicy = Settings::UploadPolicy;
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
 
-constexpr char kStorePath[] = "/tmp/reports";
+constexpr char kCrashpadDatabasePath[] = "/tmp/crashes";
 
 constexpr char kAttachmentKey[] = "attachment.key";
 constexpr char kAttachmentValue[] = "attachment.value";
@@ -70,29 +73,6 @@ std::map<std::string, fuchsia::mem::Buffer> MakeAttachments() {
   return attachments;
 }
 
-std::optional<std::string> DeleteReportFromStore() {
-  auto RemoveCurDir = [](std::vector<std::string>* contents) {
-    contents->erase(std::remove(contents->begin(), contents->end(), "."), contents->end());
-  };
-
-  std::vector<std::string> program_shortnames;
-  files::ReadDirContents(kStorePath, &program_shortnames);
-  RemoveCurDir(&program_shortnames);
-  for (const auto& program_shortname : program_shortnames) {
-    const std::string path = files::JoinPath(kStorePath, program_shortname);
-
-    std::vector<std::string> report_ids;
-    files::ReadDirContents(path, &report_ids);
-    RemoveCurDir(&report_ids);
-
-    if (!report_ids.empty()) {
-      files::DeletePath(files::JoinPath(path, report_ids.back()), /*recursive=*/true);
-      return report_ids.back();
-    }
-  }
-  return std::nullopt;
-}
-
 std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
@@ -108,7 +88,9 @@ class QueueTest : public UnitTestFixture {
     RunLoopUntilIdle();
   }
 
-  void TearDown() override { ASSERT_TRUE(files::DeletePath(kStorePath, /*recursive=*/true)); }
+  void TearDown() override {
+    ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
+  }
 
  protected:
   void SetUpNetworkReachabilityProvider() {
@@ -124,7 +106,7 @@ class QueueTest : public UnitTestFixture {
     next_upload_attempt_result_ = upload_attempt_results_.cbegin();
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
 
-    queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, crash_server_.get());
+    queue_ = Queue::TryCreate(dispatcher(), services(), info_context_, crash_server_.get());
     ASSERT_TRUE(queue_);
     queue_->WatchSettings(&settings_);
   }
@@ -156,13 +138,12 @@ class QueueTest : public UnitTestFixture {
           break;
         case QueueOps::DeleteOneReport:
           if (!expected_queue_contents_.empty()) {
-            std::optional<std::string> report_id = DeleteReportFromStore();
-            if (report_id.has_value()) {
-              expected_queue_contents_.erase(
-                  std::remove(expected_queue_contents_.begin(), expected_queue_contents_.end(),
-                              std::stoull(report_id.value())),
-                  expected_queue_contents_.end());
-            }
+            // Create a database in order to delete a report.
+            auto database_ = CrashReportDatabase::InitializeWithoutCreating(
+                base::FilePath(kCrashpadDatabasePath));
+            ASSERT_TRUE(database_);
+            database_->DeleteReport(expected_queue_contents_.back());
+            expected_queue_contents_.pop_back();
           }
           SetExpectedQueueContents();
           break;
@@ -208,11 +189,11 @@ class QueueTest : public UnitTestFixture {
   }
 
   std::unique_ptr<Queue> queue_;
-  std::vector<Store::Uid> expected_queue_contents_;
+  std::vector<UUID> expected_queue_contents_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
 
  private:
-  void AddExpectedReport(const Store::Uid& uuid) {
+  void AddExpectedReport(const UUID& uuid) {
     // Add a report to the back of the expected queue contents if and only if it is expected
     // to be in the queue after processing.
     if (state_ != QueueOps::SetStateToUpload) {
@@ -229,7 +210,7 @@ class QueueTest : public UnitTestFixture {
       expected_queue_contents_.clear();
       return old_size;
     } else if (state_ == QueueOps::SetStateToUpload) {
-      std::vector<Store::Uid> new_queue_contents;
+      std::vector<UUID> new_queue_contents;
       for (const auto& uuid : expected_queue_contents_) {
         // We expect the reports we failed to upload to still be pending.
         if (!(*next_upload_attempt_result_)) {
@@ -286,7 +267,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OneGarbageCollected) {
+TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OnePruned) {
   SetUpQueue();
   ApplyQueueOps({
       QueueOps::AddNewReport,
@@ -355,7 +336,7 @@ TEST_F(QueueTest, Check_NotIsEmptyQueue_OnFailedUpload_MultipleReports) {
   EXPECT_FALSE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_OneGarbageCollected) {
+TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_OnePruned) {
   SetUpQueue({kUploadSuccessful});
   ApplyQueueOps({
       QueueOps::AddNewReport,
@@ -369,7 +350,7 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_OneGarbageCollected) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleGarbageCollected_MultipleReports) {
+TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultiplePruned_MultipleReports) {
   SetUpQueue({kUploadSuccessful});
   ApplyQueueOps({
       QueueOps::AddNewReport,
@@ -413,8 +394,7 @@ TEST_F(QueueTest, Check_NotIsEmptyQueue_OnMixedUploadResults_MultipleReports) {
   EXPECT_EQ(queue_->Size(), 2u);
 }
 
-TEST_F(QueueTest,
-       Check_NotIsEmptyQueue_OnMixedUploadResults_MultipleGarbageCollected_MultipleReports) {
+TEST_F(QueueTest, Check_NotIsEmptyQueue_OnMixedUploadResults_MultiplePruned_MultipleReports) {
   SetUpQueue({
       kUploadSuccessful,
       kUploadSuccessful,
@@ -549,6 +529,10 @@ TEST_F(QueueTest, Check_InspectTreeAndCobalt) {
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
+      QueueOps::AddNewReport,
+      QueueOps::AddNewReport,
+      QueueOps::DeleteOneReport,
+      QueueOps::DeleteOneReport,
       QueueOps::SetStateToUpload,
       QueueOps::SetStateToArchive,
   });
@@ -628,6 +612,8 @@ TEST_F(QueueTest, Check_InspectTreeAndCobalt) {
                   cobalt::Event(cobalt::CrashState::kUploaded),
                   cobalt::Event(cobalt::CrashState::kArchived),
                   cobalt::Event(cobalt::CrashState::kArchived),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kGetReportForUploading),
+                  cobalt::Event(cobalt::CrashpadFunctionError::kGetReportForUploading),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),

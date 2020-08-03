@@ -49,6 +49,7 @@ InspectManager::InspectManager(inspect::Node* root_node, const timekeeper::Clock
       crash_register_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReportingProductRegister"),
       crash_reporter_stats_(&node_manager_, "/fidl/fuchsia.feedback.CrashReporter") {
   node_manager_.Get("/config/crash_server");
+  node_manager_.Get("/crash_reporter/database");
   node_manager_.Get("/crash_reporter/queue");
   node_manager_.Get("/crash_reporter/reports");
   node_manager_.Get("/crash_reporter/settings");
@@ -184,9 +185,34 @@ void InspectManager::OnUploadPolicyChange(
   }
 }
 
-void InspectManager::ExposeStore(const StorageSize max_size) {
-  store_.max_size_in_kb = node_manager_.Get("/crash_reporter/store")
-                              .CreateUint("max_size_in_kb", max_size.ToKilobytes());
+void InspectManager::IncreaseReportsCleanedBy(const uint64_t num_cleaned) {
+  if (!database_.num_cleaned) {
+    database_.num_cleaned = node_manager_.Get("/crash_reporter/database")
+                                .CreateUint("num_reports_cleaned", num_cleaned);
+  } else {
+    database_.num_cleaned.Add(num_cleaned);
+  }
+}
+
+void InspectManager::IncreaseReportsPrunedBy(const uint64_t num_pruned) {
+  if (!database_.num_pruned) {
+    database_.num_pruned =
+        node_manager_.Get("/crash_reporter/database").CreateUint("num_reports_pruned", num_pruned);
+  } else {
+    database_.num_pruned.Add(num_pruned);
+  }
+}
+
+void InspectManager::ExposeDatabase(uint64_t max_crashpad_database_size_in_kb) {
+  database_.max_crashpad_database_size_in_kb =
+      node_manager_.Get("/crash_reporter/database")
+          .CreateUint("max_crashpad_database_size_in_kb", max_crashpad_database_size_in_kb);
+}
+
+void InspectManager::ExposeStore(StorageSize max_size) {
+  database_.max_crashpad_database_size_in_kb =
+      node_manager_.Get("/crash_reporter/store")
+          .CreateUint("max_size_in_kb", max_size.ToKilobytes());
 }
 
 void InspectManager::IncreaseReportsGarbageCollectedBy(uint64_t num_reports) {

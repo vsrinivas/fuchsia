@@ -76,6 +76,7 @@ TEST_F(InspectManagerTest, InitialInspectTree) {
               ChildrenMatch(UnorderedElementsAre(NodeMatches(NameMatches("config")),
                                                  AllOf(NodeMatches(NameMatches("crash_reporter")),
                                                        ChildrenMatch(UnorderedElementsAreArray({
+                                                           NodeMatches(NameMatches("database")),
                                                            NodeMatches(NameMatches("queue")),
                                                            NodeMatches(NameMatches("reports")),
                                                            NodeMatches(NameMatches("settings")),
@@ -325,7 +326,8 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
-  inspect_manager_->ExposeConfig(Config{/*crash_server=*/
+  inspect_manager_->ExposeConfig(Config{/*crashpad_database=*/
+                                        /*crash_server=*/
                                         {
                                             /*upload_policy=*/kConfigDisabled,
                                             /*url=*/nullptr,
@@ -393,6 +395,33 @@ TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
           ChildrenMatch(Contains(NodeMatches(AllOf(
               NameMatches("settings"), PropertyList(ElementsAre(StringIs(
                                            "upload_policy", ToString(kSettingsEnabled))))))))))));
+}
+
+TEST_F(InspectManagerTest, IncreaseReportsCleanedBy) {
+  const uint64_t kNumReportsCleaned = 10;
+  for (size_t i = 1; i < 5; ++i) {
+    inspect_manager_->IncreaseReportsCleanedBy(kNumReportsCleaned);
+    EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(
+                                   NodeMatches(NameMatches("crash_reporter")),
+                                   ChildrenMatch(Contains(NodeMatches(AllOf(
+                                       NameMatches("database"),
+                                       PropertyList(ElementsAre(UintIs(
+                                           "num_reports_cleaned", i * kNumReportsCleaned)))))))))));
+  }
+}
+
+TEST_F(InspectManagerTest, IncreaseReportsPrunedBy) {
+  const uint64_t kNumReportsPruned = 10;
+  for (size_t i = 1; i < 5; ++i) {
+    inspect_manager_->IncreaseReportsPrunedBy(kNumReportsPruned);
+    EXPECT_THAT(
+        InspectTree(),
+        ChildrenMatch(Contains(AllOf(
+            NodeMatches(NameMatches("crash_reporter")),
+            ChildrenMatch(Contains(NodeMatches(AllOf(
+                NameMatches("database"), PropertyList(ElementsAre(UintIs(
+                                             "num_reports_pruned", i * kNumReportsPruned)))))))))));
+  }
 }
 
 TEST_F(InspectManagerTest, IncreaseReportsGarbageCollectedBy) {

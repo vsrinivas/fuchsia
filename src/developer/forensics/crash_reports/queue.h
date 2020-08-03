@@ -13,23 +13,24 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/crash_server.h"
+#include "src/developer/forensics/crash_reports/database.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
 #include "src/developer/forensics/crash_reports/settings.h"
-#include "src/developer/forensics/crash_reports/store.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/fxl/macros.h"
+#include "third_party/crashpad/util/misc/uuid.h"
 
 namespace forensics {
 namespace crash_reports {
 
-extern const StorageSize kStoreMaxSize;
-
 // Queues pending reports and processes them according to its internal State.
 class Queue {
  public:
-  Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-        std::shared_ptr<InfoContext> info_context, CrashServer* crash_server);
+  static std::unique_ptr<Queue> TryCreate(async_dispatcher_t* dispatcher,
+                                          std::shared_ptr<sys::ServiceDirectory> services,
+                                          std::shared_ptr<InfoContext> info_context,
+                                          CrashServer* crash_server);
 
   // Allow the queue's functionality to change based on the upload policy.
   void WatchSettings(Settings* settings);
@@ -48,10 +49,14 @@ class Queue {
 
   uint64_t Size() const { return pending_reports_.size(); }
   bool IsEmpty() const { return pending_reports_.empty(); }
-  bool Contains(const Store::Uid& uuid) const;
-  const Store::Uid& LatestReport() { return pending_reports_.back(); }
+  bool Contains(const crashpad::UUID& uuid) const;
+  const crashpad::UUID& LatestReport() { return pending_reports_.back(); }
 
  private:
+  Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+        std::shared_ptr<InfoContext> info_context, std::unique_ptr<Database> database,
+        CrashServer* crash_server);
+
   // How the queue should handle processing existing pending reports and new reports.
   enum class State {
     Archive,
@@ -70,9 +75,7 @@ class Queue {
   // Attempts to upload a report.
   //
   // Returns false if the report needs to be processed again.
-  bool Upload(const Store::Uid& local_report_id);
-
-  void GarbageCollect(const Store::Uid& local_report_id);
+  bool Upload(const crashpad::UUID& local_report_id);
 
   // Callback to update |state_| on upload policy changes.
   void OnUploadPolicyChange(const Settings::UploadPolicy& upload_policy);
@@ -85,7 +88,7 @@ class Queue {
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  Store store_;
+  std::unique_ptr<Database> database_;
   CrashServer* crash_server_;
   QueueInfo info_;
 
@@ -96,11 +99,15 @@ class Queue {
 
   State state_ = State::LeaveAsPending;
 
-  std::vector<Store::Uid> pending_reports_;
+  std::vector<crashpad::UUID> pending_reports_;
 
-  // Number of upload attempts within the current instance of the component. These get reset across
-  // restarts and reboots.
-  std::unordered_map<Store::Uid, uint64_t> upload_attempts_;
+  // Allows for crashpad::UUID to be used as the key in an |std::unordered_{map,set}|.
+  struct UUIDHasher {
+    size_t operator()(const crashpad::UUID& uuid) const {
+      return std::hash<std::string>()(uuid.ToString());
+    }
+  };
+  std::unordered_map<crashpad::UUID, uint64_t, UUIDHasher> upload_attempts_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);
 };

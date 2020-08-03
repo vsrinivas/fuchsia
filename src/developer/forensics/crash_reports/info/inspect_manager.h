@@ -35,6 +35,9 @@ class InspectManager {
   // Exposes the mutable settings of the crash reporter.
   void ExposeSettings(crash_reports::Settings* settings);
 
+  // Exposes the static properties of the crash report database.
+  void ExposeDatabase(uint64_t max_crashpad_database_size_in_kb);
+
   // Exposes the static properties of the report store.
   void ExposeStore(StorageSize max_size);
 
@@ -49,6 +52,12 @@ class InspectManager {
 
   // Upserts the mapping component URL to Product that a client registered.
   void UpsertComponentToProductMapping(const std::string& component_url, const Product& product);
+
+  // Increase the total number of cleaned reports by |num_cleaned|.
+  void IncreaseReportsCleanedBy(uint64_t num_cleaned);
+
+  // Increase the total number of pruned reports by |num_pruned|.
+  void IncreaseReportsPrunedBy(uint64_t num_pruned);
 
   // Increase the total number of garbage collected reports by |num_reports|.
   void IncreaseReportsGarbageCollectedBy(uint64_t num_reports);
@@ -102,6 +111,13 @@ class InspectManager {
     inspect::StringProperty upload_policy;
   };
 
+  // Inspect node containing the database properties.
+  struct Database {
+    inspect::UintProperty max_crashpad_database_size_in_kb;
+    inspect::UintProperty num_pruned;
+    inspect::UintProperty num_cleaned;
+  };
+
   // Inspect node containing the store properties.
   struct Store {
     inspect::UintProperty max_size_in_kb;
@@ -147,6 +163,7 @@ class InspectManager {
 
   Config config_;
   Settings settings_;
+  Database database_;
   Store store_;
   Queue queue_;
   InspectProtocolStats crash_register_stats_;

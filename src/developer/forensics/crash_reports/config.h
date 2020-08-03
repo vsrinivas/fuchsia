@@ -16,10 +16,11 @@ namespace crash_reports {
 struct CrashServerConfig {
   // Policy defining whether to upload pending and future crash reports to a remote crash server.
   enum class UploadPolicy {
-    // Crash reports should not be uploaded and be kept in the store.
+    // Crash reports should (1) not be uploaded and (2) marked as completed in the Crashpad database
+    // to avoid trying to ever upload them in the future.
     DISABLED,
 
-    // Crash reports should be uploaded and on success removed from the store, if present.
+    // Crash reports should be uploaded and on success marked as completed in the Crashpad database.
     // If the upload is unsuccessful and the policy changes to DISABLED, the crash report should
     // follow the DISABLED policy.
     ENABLED,

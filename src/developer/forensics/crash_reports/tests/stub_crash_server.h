@@ -27,6 +27,9 @@ class StubCrashServer : public CrashServer {
   ~StubCrashServer();
 
   bool MakeRequest(const Report& report, std::string* server_report_id) override;
+  bool MakeRequest(const std::map<std::string, std::string>& annotations,
+                   const std::map<std::string, crashpad::FileReader*>& attachments,
+                   std::string* server_report_id) override;
 
   // Whether the crash server expects at least one more call to MakeRequest().
   bool ExpectRequest() { return next_return_value_ != request_return_values_.cend(); }

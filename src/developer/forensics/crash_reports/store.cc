@@ -216,7 +216,7 @@ std::optional<Store::Uid> Store::Add(const Report report,
   }
   for (const auto& [filename, attachment] : report.Attachments()) {
     if (!WriteAttachment(MakeFilepath(filename), attachment)) {
-      FX_LOGS(ERROR) << "Failed to write attachment: " << filename;
+      FX_LOGS(ERROR) << "Failed to write attachment " << filename;
       return std::nullopt;
     }
   }

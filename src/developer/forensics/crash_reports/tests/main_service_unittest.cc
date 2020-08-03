@@ -106,9 +106,10 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
                           }))))))),
           AllOf(NodeMatches(NameMatches("crash_reporter")),
                 ChildrenMatch(UnorderedElementsAreArray({
-                    NodeMatches(AllOf(NameMatches("store"),
-                                      PropertyList(ElementsAre(UintIs(
-                                          "max_size_in_kb", kStoreMaxSize.ToKilobytes()))))),
+                    NodeMatches(AllOf(
+                        NameMatches("database"),
+                        PropertyList(ElementsAre(UintIs("max_crashpad_database_size_in_kb",
+                                                        kCrashpadDatabaseMaxSize.ToKilobytes()))))),
                     NodeMatches(
                         AllOf(NameMatches("settings"),
                               PropertyList(ElementsAre(StringIs(

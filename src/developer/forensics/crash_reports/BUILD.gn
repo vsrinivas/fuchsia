@@ -206,6 +206,35 @@ source_set("crash_server") {
   deps = [ "//src/developer/forensics/utils:sized_data" ]
 }
 
+source_set("database") {
+  public = [ "database.h" ]
+
+  sources = [
+    "database.cc",
+    "database.h",
+    "upload_report.cc",
+    "upload_report.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.mem",
+    "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/utils:storage_size",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fxl",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/util",
+  ]
+
+  deps = [
+    ":constants",
+    ":report_util",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/lib/files",
+  ]
+}
+
 source_set("errors") {
   sources = [ "errors.h" ]
 
@@ -259,12 +288,13 @@ source_set("queue") {
 
   public_deps = [
     ":crash_server",
+    ":database",
     ":settings",
-    ":store",
     "//sdk/fidl/fuchsia.netstack",
     "//src/developer/forensics/crash_reports/info",
     "//src/lib/backoff",
     "//src/lib/fxl",
+    "//third_party/crashpad/util",
     "//zircon/public/lib/async",
   ]
 
@@ -301,6 +331,8 @@ source_set("report_util") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//src/developer/forensics/utils:errors",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/util",
   ]
 
   deps = [
