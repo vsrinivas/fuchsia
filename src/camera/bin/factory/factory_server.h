@@ -38,11 +38,11 @@ class FactoryServer : public fuchsia::factory::camera::Controller {
   void DisplayToScreen(uint32_t stream_index, DisplayToScreenCallback cb) override {}
   void GetOtpData(GetOtpDataCallback cb) override {}
   void GetSensorTemperature(GetSensorTemperatureCallback cb) override {}
-  void SetAWBMode(fuchsia::factory::camera::WhiteBalanceMode mode, int32_t temp,
+  void SetAWBMode(fuchsia::factory::camera::WhiteBalanceMode mode, uint32_t temp,
                   SetAWBModeCallback cb) override {}
   void SetAEMode(fuchsia::factory::camera::ExposureMode mode, SetAEModeCallback cb) override {}
-  void SetConfig(float integration_time, float analog_gain, float digital_gain,
-                 SetConfigCallback cb) override {}
+  void SetExposure(float integration_time, float analog_gain, float digital_gain,
+                 SetExposureCallback cb) override {}
   void SetSensorMode(uint32_t mode, SetSensorModeCallback cb) override {}
   void SetTestPatternMode(uint16_t mode, SetTestPatternModeCallback cb) override {}
 
