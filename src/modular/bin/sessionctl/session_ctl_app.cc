@@ -132,19 +132,6 @@ void SessionCtlApp::ExecuteAddModCommandInternal(std::string mod_url,
 
   auto commands = MakeAddModCommands(mod_url, mod_name);
 
-  // Focus the mod and story by default
-  std::string focus_mod;
-  command_line.GetOptionValue(kFocusModFlagString, &focus_mod);
-  if (focus_mod == "" || focus_mod == "true") {
-    commands.push_back(MakeFocusModCommand(mod_name));
-  }
-
-  std::string focus_story;
-  command_line.GetOptionValue(kFocusStoryFlagString, &focus_story);
-  if (focus_story == "" || focus_story == "true") {
-    commands.push_back(MakeFocusStoryCommand());
-  }
-
   std::map<std::string, std::string> params = {{kModUrlFlagString, mod_url},
                                                {kModNameFlagString, mod_name},
                                                {kStoryNameFlagString, story_name}};
@@ -220,22 +207,6 @@ void SessionCtlApp::ExecuteRestartSessionCommand(CommandDoneCallback done) {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
     done(fit::ok());
   });
-}
-
-fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusStoryCommand() {
-  fuchsia::modular::StoryCommand command;
-  fuchsia::modular::SetFocusState set_focus_state;
-  set_focus_state.focused = true;
-  command.set_set_focus_state(std::move(set_focus_state));
-  return command;
-}
-
-fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusModCommand(const std::string& mod_name) {
-  fuchsia::modular::StoryCommand command;
-  fuchsia::modular::FocusMod focus_mod;
-  focus_mod.mod_name_transitional = mod_name;
-  command.set_focus_mod(std::move(focus_mod));
-  return command;
 }
 
 std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeAddModCommands(

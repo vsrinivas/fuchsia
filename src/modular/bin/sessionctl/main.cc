@@ -47,18 +47,13 @@ std::string GetUsage() {
 Example:
 sessionctl add_mod slider_mod
 
-sessionctl --mod_name=mod1 --story_name=story1 --focus_mod=false
-            --focus_story=false add_mod slider_mod
+sessionctl --mod_name=mod1 --story_name=story1 add_mod slider_mod
 
 sessionctl --story_name=story1 remove_mod slider_mod
 
 <flags>
 --story_name=STORY_NAME
 --mod_name=MOD_NAME
---focus_mod=false
-    Don't focus the mod.
---focus_story=false
-    Don't focus the story.
 --json_out
     If flag is set output json for consuming instead of text.
 --wait_for_session
@@ -66,19 +61,18 @@ sessionctl --story_name=story1 remove_mod slider_mod
 
 <command>
 add_mod
-  Usage: [--story_name=foo] [--mod_name=bar] [--focus_mod=false] [--focus_story=false] add_mod MOD_URL
+  Usage: [--story_name=foo] [--mod_name=bar] add_mod MOD_URL
 
   Add a new mod or update an existing mod if a mod with --mod_name already
   exists in --story_name.
   Defaults --story_name and --mod_name to MOD_URL.
-  Defaults --focus_mod and --focus_story to 'true'.
 
   MOD_URL
     This can be either the mod's full package url or the mod component's name.
     The mod components name will be converted to the following package url
     format: fuchsia-pkg://fuchsia.com/MOD_URL#meta/MOD_URL.cmx.
 
-  optional: --story_name, --mod_name, --focus_mod, --focus_story
+  optional: --story_name, --mod_name
 
 remove_mod
   Usage: [--story_name=foo] remove_mod MOD_NAME
