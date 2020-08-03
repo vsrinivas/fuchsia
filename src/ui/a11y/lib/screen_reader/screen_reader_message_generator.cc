@@ -12,11 +12,13 @@
 namespace a11y {
 namespace {
 
+using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 using fuchsia::accessibility::tts::Utterance;
 using fuchsia::intl::l10n::MessageIds;
 
 static constexpr zx::duration kDefaultDelay = zx::msec(40);
+static constexpr zx::duration kLongDelay = zx::msec(100);
 
 // Returns a message that describes the label and range value of a slider.
 std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantics::Node* node) {
@@ -32,6 +34,19 @@ std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantic
   return message;
 }
 
+// Returns true if the node is clickable in any way (normal click, long click).
+bool NodeIsClickable(const Node* node) {
+  if (!node->has_actions()) {
+    return false;
+  }
+  for (const auto& action : node->actions()) {
+    if (action == fuchsia::accessibility::semantics::Action::DEFAULT) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
@@ -39,7 +54,7 @@ ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
     : message_formatter_(std::move(message_formatter)) {}
 
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeNode(const fuchsia::accessibility::semantics::Node* node) {
+ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
   std::vector<UtteranceAndContext> description;
   {
     Utterance utterance;
@@ -71,6 +86,10 @@ ScreenReaderMessageGenerator::DescribeNode(const fuchsia::accessibility::semanti
       }
     }
   }
+  if (NodeIsClickable(node)) {
+    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::DOUBLE_TAP_HINT, kLongDelay));
+  }
+
   return description;
 }
 

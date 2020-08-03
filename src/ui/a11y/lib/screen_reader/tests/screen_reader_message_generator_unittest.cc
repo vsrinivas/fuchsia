@@ -119,5 +119,25 @@ TEST_F(ScreenReaderMessageGeneratorTest, GenerateByMessageId) {
   ASSERT_EQ(result.utterance.message(), "slider");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, ClickableNode) {
+  Node node;
+  node.mutable_attributes()->set_label("foo");
+  node.mutable_actions()->push_back(fuchsia::accessibility::semantics::Action::DEFAULT);
+  node.set_role(Role::BUTTON);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_BUTTON),
+                                               "button");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::DOUBLE_TAP_HINT),
+                                               "double tap to activate");
+
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 3u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "foo");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "button");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  ASSERT_EQ(result[2].utterance.message(), "double tap to activate");
+}
+
 }  // namespace
 }  // namespace accessibility_test
