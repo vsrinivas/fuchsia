@@ -300,12 +300,6 @@ impl Daemon {
                     Err(e) => log::error!("failed to remove socket file: {}", e),
                 }
 
-                // This is not guaranteed to clean all processes all the time,
-                // but is a best-effort for the time being. In the future this
-                // could do something like prevent new targets from being added,
-                // or from new child processes being spawned.
-                let targets = self.target_collection.targets().await;
-                futures::future::try_join_all(targets.iter().map(|t| t.disconnect())).await?;
                 std::process::exit(0);
             }
         }

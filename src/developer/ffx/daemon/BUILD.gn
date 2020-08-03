@@ -34,6 +34,7 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:simplelog",
@@ -57,6 +58,8 @@ if (host_toolchain == current_toolchain) {
       "src/onet.rs",
       "src/ssh.rs",
       "src/target.rs",
+      "src/target_task.rs",
+      "src/task.rs",
       "src/util.rs",
     ]
   }

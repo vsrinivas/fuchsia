@@ -5,17 +5,21 @@
 use {
     crate::constants::{self, SOCKET},
     crate::ssh::build_ssh_command,
-    crate::target::Target,
-    anyhow::anyhow,
-    anyhow::{Context, Error},
+    crate::target::{TargetAddr, TargetAddrFetcher},
+    anyhow::{anyhow, Context, Result},
     async_std::io::prelude::BufReadExt,
     async_std::prelude::StreamExt,
+    async_std::task,
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
+    fuchsia_async::Task,
     futures::channel::oneshot,
     futures::future::FutureExt,
+    std::collections::HashSet,
+    std::future::Future,
     std::io,
     std::os::unix::io::{FromRawFd, IntoRawFd},
     std::process::{Child, Stdio},
+    std::sync::Weak,
     std::time::Duration,
 };
 
@@ -23,17 +27,7 @@ fn async_from_sync<S: IntoRawFd>(sync: S) -> async_std::fs::File {
     unsafe { async_std::fs::File::from_raw_fd(sync.into_raw_fd()) }
 }
 
-type ThreadHandle = std::thread::JoinHandle<Result<(), Error>>;
-type TaskHandle = async_std::task::JoinHandle<Result<(), Error>>;
-
-pub struct HostPipeConnection {
-    // Uses a std::thread handle for now as hoist::spawn() only returns a
-    // `Future<Output = ()>`, making checking the return value after running
-    // `stop()` difficult.
-    handle: Option<ThreadHandle>,
-    should_close_tx: Option<oneshot::Sender<()>>,
-    closed: bool,
-}
+type TaskHandle = async_std::task::JoinHandle<Result<()>>;
 
 struct HostPipeChild {
     inner: Child,
@@ -45,9 +39,8 @@ struct HostPipeChild {
 }
 
 impl HostPipeChild {
-    pub async fn new(target: Target) -> Result<HostPipeChild, Error> {
-        log::info!("Starting child connection to target: {}", target.nodename());
-        let mut inner = build_ssh_command(target.addrs().await, vec!["remote_control_runner"])
+    pub async fn new(addrs: HashSet<TargetAddr>) -> Result<HostPipeChild> {
+        let mut inner = build_ssh_command(addrs, vec!["remote_control_runner"])
             .await?
             .stdout(Stdio::piped())
             .stdin(Stdio::piped())
@@ -106,10 +99,6 @@ impl HostPipeChild {
     pub fn wait(&mut self) -> io::Result<std::process::ExitStatus> {
         self.inner.wait()
     }
-
-    pub fn try_wait(&mut self) -> io::Result<Option<std::process::ExitStatus>> {
-        self.inner.try_wait()
-    }
 }
 
 impl Drop for HostPipeChild {
@@ -117,6 +106,8 @@ impl Drop for HostPipeChild {
         // Ignores whether the receiver has been closed, this is just to
         // un-stick it from an attempt at reading from Ascendd.
         self.cancel_tx.take().map(|c| c.send(()));
+        let _ = self.kill().map_err(|e| log::warn!("failed to kill HostPipeChild: {:?}", e));
+        let _ = self.wait().map_err(|e| log::warn!("failed to clean up HostPipeChild: {:?}", e));
 
         let reader_result = self.reader_handle.take().map(|rh| futures::executor::block_on(rh));
         let writer_result = self.writer_handle.take().map(|wh| futures::executor::block_on(wh));
@@ -131,94 +122,42 @@ impl Drop for HostPipeChild {
     }
 }
 
+pub struct HostPipeConnection {}
+
 impl HostPipeConnection {
-    pub fn new(target: Target) -> Result<Self, Error> {
-        HostPipeConnection::new_with_cmd(
-            target,
-            HostPipeChild::new,
-            constants::RETRY_DELAY,
-            constants::RETRY_DELAY,
-        )
+    pub fn new(
+        target: Weak<impl TargetAddrFetcher + Sized + 'static>,
+    ) -> impl Future<Output = Result<(), String>> + Send {
+        HostPipeConnection::new_with_cmd(target, HostPipeChild::new, constants::RETRY_DELAY)
     }
 
     fn new_with_cmd<F>(
-        target: Target,
-        cmd_func: impl FnOnce(Target) -> F + Send + Copy + 'static,
-        cmd_poll_delay: Duration,
+        target: Weak<impl TargetAddrFetcher + Sized + 'static>,
+        cmd_func: impl FnOnce(HashSet<TargetAddr>) -> F + Send + Copy + 'static,
         relaunch_command_delay: Duration,
-    ) -> Result<Self, Error>
+    ) -> impl Future<Output = Result<(), String>> + Send
     where
-        F: futures::Future<Output = Result<HostPipeChild, Error>>,
+        F: futures::Future<Output = Result<HostPipeChild>> + Send,
     {
-        let (should_close_tx, mut should_close_rx) = oneshot::channel::<()>();
-        let handle = std::thread::Builder::new()
-            .spawn(move || -> Result<(), Error> {
-                loop {
-                    log::trace!("Spawning new host-pipe instance");
-                    let mut cmd = futures::executor::block_on(cmd_func(target.clone()))?;
+        Task::blocking(async move {
+            loop {
+                log::trace!("Spawning new host-pipe instance");
+                let addrs =
+                    target.upgrade().ok_or("parent Arc<> lost".to_string())?.target_addrs().await;
+                let mut cmd = cmd_func(addrs).await.map_err(|e| e.to_string())?;
+                cmd.wait()
+                    .map_err(|e| format!("host-pipe error running try-wait: {}", e.to_string()))?;
 
-                    loop {
-                        if let Some(_) = should_close_rx
-                            .try_recv()
-                            .context("host-pipe close channel sender dropped")?
-                        {
-                            log::trace!("host-pipe connection received 'stop' message");
-                            cmd.kill().context("killing hostpipe child process")?;
-                            log::trace!(
-                                "host-pipe command exited with code: {:?}",
-                                cmd.wait().context("waiting on process to free resources")?,
-                            );
-                            return Ok(());
-                        }
-
-                        if let Some(status) =
-                            cmd.try_wait().context("host-pipe error running try-wait")?
-                        {
-                            log::info!(
-                                "host-pipe command exited with status {:?}. Restarting",
-                                status
-                            );
-                            break;
-                        }
-
-                        std::thread::sleep(cmd_poll_delay);
-                    }
-
-                    // TODO(fxb/52038): Want an exponential backoff that
-                    // is sync'd with an explicit "try to start this again
-                    // anyway" channel using a select! between the two of them.
-                    std::thread::sleep(relaunch_command_delay);
-                }
-            })
-            .context("spawning host pipe blocking thread")?;
-
-        Ok(Self { handle: Some(handle), should_close_tx: Some(should_close_tx), closed: false })
-    }
-
-    pub fn stop(&mut self) -> Result<(), Error> {
-        if self.closed {
-            return Ok(());
-        }
-        self.closed = true;
-        // It's possible the thread has closed and the receiver will be dropped.
-        // This is just here to un-stick the thread, so the result doesn't
-        // matter.
-        let _ = self.should_close_tx.take().expect("invariant violated").send(());
-        // TODO(awdavies): Come up with a way to do this that doesn't block the
-        // executor, which should be easier to do once there's a spawn function
-        // that accepts an `async move` with a return value other than `()`.
-        self.handle.take().expect("invariant violated").join().unwrap()?;
-        Ok(())
+                // TODO(fxb/52038): Want an exponential backoff that
+                // is sync'd with an explicit "try to start this again
+                // anyway" channel using a select! between the two of them.
+                task::sleep(relaunch_command_delay).await;
+            }
+        })
     }
 }
 
-impl Drop for HostPipeConnection {
-    fn drop(&mut self) {
-        let _ = self.stop().map_err(|e| log::warn!("error dropping host-pipe-connection: {:?}", e));
-    }
-}
-
-pub async fn run_ascendd() -> Result<(), Error> {
+pub async fn run_ascendd() -> Result<()> {
     log::info!("Starting ascendd");
     ascendd_lib::run_ascendd(
         ascendd_lib::Opt { sockpath: Some(SOCKET.to_string()), ..Default::default() },
@@ -230,7 +169,7 @@ pub async fn run_ascendd() -> Result<(), Error> {
     .map_err(|e| e.context("running ascendd"))
 }
 
-fn overnet_pipe() -> Result<fidl::AsyncSocket, Error> {
+fn overnet_pipe() -> Result<fidl::AsyncSocket> {
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
     hoist::connect_as_mesh_controller()?
@@ -241,7 +180,7 @@ fn overnet_pipe() -> Result<fidl::AsyncSocket, Error> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, crate::target::TargetAddrFetcher, async_trait::async_trait, std::sync::Arc};
 
     const ERR_CTX: &'static str = "running fake host-pipe command for test";
 
@@ -269,10 +208,10 @@ mod test {
         }
     }
 
-    async fn start_child_normal_operation(target: Target) -> Result<HostPipeChild, Error> {
+    async fn start_child_normal_operation(_t: HashSet<TargetAddr>) -> Result<HostPipeChild> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
-                .arg(target.nodename())
+                .arg("test-command")
                 .stdout(Stdio::piped())
                 .stdin(Stdio::piped())
                 .spawn()
@@ -280,60 +219,40 @@ mod test {
         ))
     }
 
-    async fn start_child_internal_failure(_target: Target) -> Result<HostPipeChild, Error> {
+    async fn start_child_internal_failure(_t: HashSet<TargetAddr>) -> Result<HostPipeChild> {
         Err(anyhow!(ERR_CTX))
     }
 
-    async fn start_child_cmd_fails(_target: Target) -> Result<HostPipeChild, Error> {
-        Ok(HostPipeChild::fake_new(
-            std::process::Command::new("cat")
-                .arg("/some/file/path/that/is/never/going/to/exist")
-                .spawn()
-                .context(ERR_CTX)?,
-        ))
+    #[derive(Default)]
+    struct FakeTarget {}
+
+    #[async_trait]
+    impl TargetAddrFetcher for FakeTarget {
+        async fn target_addrs(&self) -> HashSet<TargetAddr> {
+            HashSet::new()
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_normal_operation() {
-        let target = Target::new("floop");
-        let mut conn = HostPipeConnection::new_with_cmd(
-            target,
+        let target = Arc::new(FakeTarget::default());
+        let _conn = HostPipeConnection::new_with_cmd(
+            Arc::downgrade(&target),
             start_child_normal_operation,
             Duration::default(),
-            Duration::default(),
-        )
-        .unwrap();
-        assert!(conn.stop().is_ok());
-        assert!(conn.closed);
-        assert!(conn.stop().is_ok());
+        );
+        // Shouldn't panic when dropped.
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_internal_failure() {
         // TODO(awdavies): Verify the error matches.
-        let target = Target::new("boop");
-        let mut conn = HostPipeConnection::new_with_cmd(
-            target,
+        let target = Arc::new(FakeTarget::default());
+        let conn = HostPipeConnection::new_with_cmd(
+            Arc::downgrade(&target),
             start_child_internal_failure,
             Duration::default(),
-            Duration::default(),
-        )
-        .unwrap();
-        assert!(conn.stop().is_err());
-        assert!(conn.closed);
-        assert!(conn.stop().is_ok());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_host_pipe_start_and_stop_cmd_fail() {
-        let target = Target::new("blorp");
-        let mut conn = HostPipeConnection::new_with_cmd(
-            target,
-            start_child_cmd_fails,
-            Duration::default(),
-            Duration::default(),
-        )
-        .unwrap();
-        assert!(conn.stop().is_ok());
+        );
+        assert!(conn.await.is_err());
     }
 }

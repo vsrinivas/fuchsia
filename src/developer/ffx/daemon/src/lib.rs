@@ -28,6 +28,8 @@ mod mdns;
 mod net;
 mod onet;
 mod ssh;
+mod target_task;
+mod task;
 mod util;
 
 pub mod target;

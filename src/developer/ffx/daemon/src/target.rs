@@ -5,8 +5,10 @@
 use {
     crate::events::{self, DaemonEvent, EventSynthesizer},
     crate::net::IsLinkLocal,
-    crate::onet,
-    anyhow::{anyhow, Context, Error},
+    crate::onet::HostPipeConnection,
+    crate::target_task::*,
+    crate::task::{SingleFlight, TaskSnapshot},
+    anyhow::{anyhow, Context, Error, Result},
     async_std::sync::RwLock,
     async_trait::async_trait,
     chrono::{DateTime, Utc},
@@ -24,10 +26,15 @@ use {
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::fmt::{Debug, Display},
+    std::hash::Hash,
     std::net::{IpAddr, SocketAddr},
-    std::sync::atomic::{AtomicBool, Ordering},
     std::sync::Arc,
 };
+
+#[async_trait]
+pub trait TargetAddrFetcher: Send + Sync {
+    async fn target_addrs(&self) -> HashSet<TargetAddr>;
+}
 
 #[async_trait]
 pub trait ToFidlTarget {
@@ -69,7 +76,7 @@ impl Display for RcsConnectionError {
 }
 
 impl RcsConnection {
-    pub async fn new(id: &mut NodeId) -> Result<Self, Error> {
+    pub async fn new(id: &mut NodeId) -> Result<Self> {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
         let _result = RcsConnection::connect_to_service(id, s)?;
         let proxy = RemoteControlProxy::new(
@@ -79,11 +86,11 @@ impl RcsConnection {
         Ok(Self { proxy, overnet_id: id.clone() })
     }
 
-    pub fn copy_to_channel(&mut self, channel: fidl::Channel) -> Result<(), Error> {
+    pub fn copy_to_channel(&mut self, channel: fidl::Channel) -> Result<()> {
         RcsConnection::connect_to_service(&mut self.overnet_id, channel)
     }
 
-    fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<(), Error> {
+    fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<()> {
         let svc = hoist::connect_as_service_consumer()?;
         svc.connect_to_service(overnet_id, RemoteControlMarker::NAME, channel)
             .map_err(|e| anyhow!("Error connecting to Rcs: {}", e))
@@ -107,23 +114,11 @@ impl TargetState {
     }
 }
 
-#[async_trait]
-impl EventSynthesizer<TargetEvent> for TargetInner {
-    async fn synthesize_events(&self) -> Vec<TargetEvent> {
-        match self.state.lock().await.rcs {
-            Some(_) => vec![TargetEvent::RcsActivated],
-            None => vec![],
-        }
-    }
-}
-
 struct TargetInner {
     nodename: String,
     state: Mutex<TargetState>,
     last_response: RwLock<DateTime<Utc>>,
     addrs: RwLock<HashSet<TargetAddr>>,
-    host_pipe: Mutex<Option<onet::HostPipeConnection>>,
-    host_pipe_loop_started: AtomicBool,
 }
 
 impl TargetInner {
@@ -133,8 +128,6 @@ impl TargetInner {
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::new()),
             addrs: RwLock::new(HashSet::new()),
-            host_pipe: Mutex::new(None),
-            host_pipe_loop_started: false.into(),
         }
     }
 
@@ -144,8 +137,6 @@ impl TargetInner {
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::new()),
             addrs: RwLock::new(addrs),
-            host_pipe: Mutex::new(None),
-            host_pipe_loop_started: false.into(),
         }
     }
 
@@ -158,8 +149,23 @@ impl TargetInner {
             last_response: RwLock::new(time),
             state: Mutex::new(TargetState::new()),
             addrs: RwLock::new(HashSet::new()),
-            host_pipe: Mutex::new(None),
-            host_pipe_loop_started: false.into(),
+        }
+    }
+}
+
+#[async_trait]
+impl TargetAddrFetcher for TargetInner {
+    async fn target_addrs(&self) -> HashSet<TargetAddr> {
+        self.addrs.read().await.clone()
+    }
+}
+
+#[async_trait]
+impl EventSynthesizer<TargetEvent> for TargetInner {
+    async fn synthesize_events(&self) -> Vec<TargetEvent> {
+        match self.state.lock().await.rcs {
+            Some(_) => vec![TargetEvent::RcsActivated],
+            None => vec![],
         }
     }
 }
@@ -168,20 +174,32 @@ impl TargetInner {
 pub struct Target {
     pub events: events::Queue<TargetEvent>,
 
+    // TODO(awdavies): This shouldn't need to be behind an Arc<>, but for some
+    // reason (probably something to do with the merge_insert function in the
+    // TargetCollection struct?) this will drop all tasks immediately if this
+    // isn't an Arc<>.
+    task_manager: Arc<SingleFlight<TargetTaskType, Result<(), String>>>,
     inner: Arc<TargetInner>,
 }
 
 impl Target {
+    fn from_inner(inner: Arc<TargetInner>) -> Self {
+        let events = events::Queue::new(&inner);
+        let weak_inner = Arc::downgrade(&inner);
+        let task_manager = Arc::new(SingleFlight::new(move |t| match t {
+            TargetTaskType::HostPipe => HostPipeConnection::new(weak_inner.clone()).boxed(),
+        }));
+        Self { inner, events, task_manager }
+    }
+
     pub fn new(nodename: &str) -> Self {
         let inner = Arc::new(TargetInner::new(nodename));
-        let events = events::Queue::new(&inner);
-        Self { inner, events }
+        Self::from_inner(inner)
     }
 
     pub fn new_with_addrs(nodename: &str, addrs: HashSet<TargetAddr>) -> Self {
         let inner = Arc::new(TargetInner::new_with_addrs(nodename, addrs));
-        let events = events::Queue::new(&inner);
-        Self { inner, events }
+        Self::from_inner(inner)
     }
 
     /// Dependency injection constructor so we can insert a fake time for
@@ -189,14 +207,14 @@ impl Target {
     #[cfg(test)]
     pub fn new_with_time(nodename: &str, time: DateTime<Utc>) -> Self {
         let inner = Arc::new(TargetInner::new_with_time(nodename, time));
-        let events = events::Queue::new(&inner);
-        Self { inner, events }
+        Self::from_inner(inner)
     }
 
     async fn rcs_state(&self) -> bridge::RemoteControlState {
-        let loop_started = self.inner.host_pipe_loop_started.load(Ordering::Relaxed);
+        let loop_running = self.task_manager.task_snapshot(TargetTaskType::HostPipe).await
+            == TaskSnapshot::Running;
         let state = self.inner.state.lock().await;
-        match (loop_started, state.rcs.as_ref()) {
+        match (loop_running, state.rcs.as_ref()) {
             (true, Some(_)) => bridge::RemoteControlState::Up,
             (true, None) => bridge::RemoteControlState::Down,
             (_, _) => bridge::RemoteControlState::Unknown,
@@ -205,14 +223,6 @@ impl Target {
 
     pub fn nodename(&self) -> String {
         self.inner.nodename.clone()
-    }
-
-    /// Attempts to disconnect any active connections to the target.
-    pub async fn disconnect(&self) -> Result<(), Error> {
-        if let Some(child) = self.inner.host_pipe.lock().await.as_mut() {
-            child.stop()?;
-        }
-        Ok(())
     }
 
     pub async fn rcs(&self) -> Option<RcsConnection> {
@@ -262,7 +272,9 @@ impl Target {
         }
     }
 
-    pub async fn from_rcs_connection(r: RcsConnection) -> Result<Self, RcsConnectionError> {
+    pub async fn from_rcs_connection(
+        r: RcsConnection,
+    ) -> std::result::Result<Self, RcsConnectionError> {
         let fidl_target = match r.proxy.identify_host().await {
             Ok(res) => match res {
                 Ok(target) => target,
@@ -288,44 +300,9 @@ impl Target {
     }
 
     pub async fn run_host_pipe(&self) {
-        self.run_host_pipe_with_allocator(onet::HostPipeConnection::new).await
-    }
-
-    async fn run_host_pipe_with_allocator(
-        &self,
-        host_pipe_allocator: impl Fn(Target) -> Result<onet::HostPipeConnection, Error> + 'static,
-    ) {
-        match self.inner.host_pipe_loop_started.compare_exchange(
-            false,
-            true,
-            Ordering::Acquire,
-            Ordering::Relaxed,
-        ) {
-            Ok(false) => (),
-            _ => return,
-        };
-        let mut pipe = self.inner.host_pipe.lock().await;
-        log::info!("Initiating overnet host-pipe");
-
-        // Hack alert: since there's no error returned in this function, this unwraps
-        // the error here and sets that host_pipe_loop_started is false. In order to
-        // accomplish this, since the `?` operator isn't supported in a function that
-        // returns `()` the "error" is returned as a Future that is awaited (as it
-        // returns `()` anyway).
-        //
-        // At the time of implementation this can only happen if there is
-        // an error spawning a thread, so this is pretty unlikely (but it is tested).
-        *pipe = match host_pipe_allocator(self.clone()).map_err(|e| {
-                log::warn!(
-                    "Error starting host pipe connection, setting host_pipe_loop_started to false: {:?}", e
-                );
-                self.inner.host_pipe_loop_started.store(false, Ordering::Relaxed);
-
-                ()
-            }) {
-                Ok(p) => Some(p),
-                Err(()) => return,
-            };
+        // This is a) intended to run forever, and b) implemented using
+        // a task (which polls itself), so just drop the future here.
+        let _ = self.task_manager.spawn(TargetTaskType::HostPipe).await;
     }
 }
 
@@ -587,7 +564,6 @@ impl TargetCollection {
                     to_update.addrs_extend(t.addrs().await),
                     to_update.update_state(TargetState { rcs: t.rcs().await }),
                 );
-
                 to_update.clone()
             }
             None => {
@@ -627,7 +603,7 @@ mod test {
 
     fn clone_target(t: &Target) -> Target {
         let inner = Arc::new(TargetInner::clone(&t.inner));
-        Target { events: events::Queue::new(&inner), inner }
+        Target::from_inner(inner)
     }
 
     impl PartialEq for TargetState {
@@ -655,8 +631,6 @@ mod test {
                 last_response: RwLock::new(block_on(self.last_response.read()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: RwLock::new(block_on(self.addrs.read()).clone()),
-                host_pipe: Mutex::new(None),
-                host_pipe_loop_started: self.host_pipe_loop_started.load(Ordering::SeqCst).into(),
             }
         }
     }
@@ -859,12 +833,7 @@ mod test {
         assert_eq!(tc.get("fooberdoober".into()).await.unwrap(), t);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_disconnect_no_process() {
-        let t = Target::new("fooberdoober");
-        t.disconnect().await.unwrap();
-    }
-
+    // Most of this is now handled in `task.rs`
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_disconnect_multiple_invocations() {
         let t = Arc::new(Target::new("flabbadoobiedoo"));
@@ -876,30 +845,6 @@ mod test {
         // doesn't put it into a bad state that would hang.
         let _: ((), (), ()) =
             futures::join!(t.run_host_pipe(), t.run_host_pipe(), t.run_host_pipe(),);
-        t.disconnect().await.unwrap();
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_run_host_pipe_failure_sets_loop_false() {
-        let t = Arc::new(Target::new("bonanza"));
-        t.run_host_pipe_with_allocator(|_| {
-            Result::<onet::HostPipeConnection, Error>::Err(anyhow!("testing error to check state"))
-        })
-        .await;
-        assert!(!t.inner.host_pipe_loop_started.load(Ordering::SeqCst));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_run_host_pipe_skips_if_started() {
-        let t = Target::new("bloop");
-        t.inner.host_pipe_loop_started.store(true, Ordering::Relaxed);
-        // The error returned in this function should be skipped leaving
-        // the loop state set to true.
-        t.run_host_pipe_with_allocator(|_| {
-            Result::<onet::HostPipeConnection, Error>::Err(anyhow!("testing error to check state"))
-        })
-        .await;
-        assert!(t.inner.host_pipe_loop_started.load(Ordering::SeqCst));
     }
 
     struct RcsStateTest {
@@ -933,17 +878,25 @@ mod test {
             },
         ] {
             let t = Target::new("schlabbadoo");
-            t.inner.host_pipe_loop_started.store(test.loop_started, Ordering::Relaxed);
-            *t.inner.state.lock().await = TargetState {
-                rcs: if test.rcs_is_some {
-                    Some(RcsConnection::new_with_proxy(
-                        setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
-                        &NodeId { id: 123 },
-                    ))
-                } else {
-                    None
-                },
-            };
+            let a2 = IpAddr::V6(Ipv6Addr::new(
+                0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
+            ));
+            t.addrs_insert((a2, 2).into()).await;
+            if test.loop_started {
+                t.run_host_pipe().await;
+            }
+            {
+                *t.inner.state.lock().await = TargetState {
+                    rcs: if test.rcs_is_some {
+                        Some(RcsConnection::new_with_proxy(
+                            setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
+                            &NodeId { id: 123 },
+                        ))
+                    } else {
+                        None
+                    },
+                };
+            }
             assert_eq!(t.rcs_state().await, test.expected);
         }
     }
@@ -1018,7 +971,7 @@ mod test {
 
     #[async_trait]
     impl events::EventHandler<DaemonEvent> for EventPusher {
-        async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
+        async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
             if let DaemonEvent::NewTarget(s) = event {
                 self.got.unbounded_send(s).unwrap();
                 Ok(false)
