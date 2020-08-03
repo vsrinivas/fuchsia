@@ -73,6 +73,8 @@ zx_status_t Vdec1::LoadFirmware(InternalBuffer& buffer) {
 
 void Vdec1::PowerOn() {
   ZX_DEBUG_ASSERT(!powered_on_);
+  // See Vdec1::PowerOff for an explanation of why this delay is needed.
+  zx::nanosleep(powerup_deadline_);
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~0xc);
@@ -123,12 +125,17 @@ void Vdec1::PowerOn() {
 
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
   {
+    // TODO(fxb/43520): Update for SM1.
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() & ~0xc0);
     temp.WriteTo(mmio()->aobus);
   }
   DosVdecMcrccStallCtrl::Get().FromValue(0).WriteTo(mmio()->dosbus);
-  DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_vdec(true).WriteTo(mmio()->dmc);
+  if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
+    DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_g12a_vdec(true).WriteTo(mmio()->dmc);
+  } else {
+    DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_vdec(true).WriteTo(mmio()->dmc);
+  }
 
   MdecPicDcCtrl::Get().ReadFrom(mmio()->dosbus).set_bit31(false).WriteTo(mmio()->dosbus);
 
@@ -143,9 +150,14 @@ void Vdec1::PowerOn() {
 void Vdec1::PowerOff() {
   ZX_DEBUG_ASSERT(powered_on_);
   powered_on_ = false;
-  DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_vdec(false).WriteTo(mmio()->dmc);
+  if (IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)) {
+    DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_g12a_vdec(false).WriteTo(mmio()->dmc);
+  } else {
+    DmcReqCtrl::Get().ReadFrom(mmio()->dmc).set_vdec(false).WriteTo(mmio()->dmc);
+  }
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
   {
+    // TODO(fxb/43520): Update for SM1.
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
     temp.set_reg_value(temp.reg_value() | 0xc0);
     temp.WriteTo(mmio()->aobus);
@@ -159,6 +171,11 @@ void Vdec1::PowerOff() {
     temp.WriteTo(mmio()->aobus);
   }
   owner_->GateClocks();
+
+  // If AoRtiGenPwrSleep0 is cleared (due to poweron) too soon after it's set then the bus will lock
+  // up (causing a watchdog reboot) as soon as VDEC is un-isolated from it. This delay seems to be
+  // long enough to avoid that problem - 1 ms works most of the time, but not always.
+  powerup_deadline_ = zx::deadline_after(zx::msec(2));
 }
 
 void Vdec1::StartDecoding() {

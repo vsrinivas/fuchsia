@@ -90,5 +90,10 @@ TEST(Vdec1UnitTest, PowerOn) {
             HhiVdecClkCntl::Get().ReadFrom(fake_owner.mmio()->hiubus).reg_value() & 0xffff0000);
   EXPECT_EQ(0xfffffc00, DosGclkEn::Get().ReadFrom(fake_owner.mmio()->dosbus).reg_value());
   EXPECT_TRUE(fake_owner.enable_clock_state(ClockType::kGclkVdec));
+
+  auto before_time = zx::clock::get_monotonic();
   decoder->PowerOff();
+  decoder->PowerOn();
+  auto after_time = zx::clock::get_monotonic();
+  EXPECT_LE(zx::msec(2), after_time - before_time);
 }

@@ -535,6 +535,8 @@ REGISTER_NAME(HhiHevcClkCntl, HiuRegisterIo, 0x79)
 
 REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
   DEF_BIT(13, vdec);
+  // The vdec bit is different on G12A and later.
+  DEF_BIT(21, g12a_vdec);
 };
 
 DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101 - 0x1100);
