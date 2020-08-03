@@ -60,7 +60,7 @@ std::map<uint32_t, size_t> Histogram(const fuchsia::ui::scenic::ScreenshotData& 
 }
 
 // Invokes the input tool for input injection.
-// See garnet/bin/ui/input/README.md or `input --help` for usage details.
+// See src/ui/tools/input/README.md or `input --help` for usage details.
 // Commands used here:
 //  * tap <x> <y> (scaled out of 1000)
 // TODO(SCN-1262): Expose as a FIDL service.
