@@ -397,30 +397,28 @@ void PortDispatcher::MaybeReap(PortObserver* observer, PortPacket* port_packet) 
   }
 }
 
-zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint64_t key,
+zx_status_t PortDispatcher::MakeObserver(ktl::unique_ptr<PortObserverPlaceholder> placeholder,
+                                         uint32_t options, Handle* handle, uint64_t key,
                                          zx_signals_t signals) {
   canary_.Assert();
 
   // Called under the handle table lock.
 
   auto dispatcher = handle->dispatcher();
-  if (!dispatcher->is_waitable())
+  if (!dispatcher->is_waitable()) {
     return ZX_ERR_NOT_SUPPORTED;
-
-  fbl::AllocChecker ac;
-  auto observer = new (&ac)
-      PortObserver(options, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
   }
+
+  ktl::unique_ptr<PortObserver> observer{new (&placeholder.release()->observer) PortObserver(
+      options, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals)};
 
   {
     Guard<Mutex> guard{get_lock()};
     DEBUG_ASSERT(!zero_handles_);
-    observers_.push_front(observer);
+    observers_.push_front(observer.get());
   }
 
-  return dispatcher->AddObserver(observer, handle, signals);
+  return dispatcher->AddObserver(observer.release(), handle, signals);
 }
 
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {

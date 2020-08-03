@@ -190,6 +190,19 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // Allocate space for a |PortObserver| before taking any locks.
+  //
+  // |PortDispatcher::MakeObserver| is responsible for constructing the |PortObserver|, however, it
+  // must be called while holding the process's handle table lock and don't want to perform a
+  // potentially blocking allocation while holding that lock.  Allocate a special placeholder that
+  // we'll pass in to |MakeObserver|.
+  fbl::AllocChecker ac;
+  auto placeholder = ktl::make_unique<PortDispatcher::PortObserverPlaceholder>(&ac);
+
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
   auto up = ProcessDispatcher::GetCurrent();
 
   {
@@ -225,6 +238,6 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
       return ZX_ERR_ACCESS_DENIED;
     }
 
-    return port->MakeObserver(options, handle, key, signals);
+    return port->MakeObserver(ktl::move(placeholder), options, handle, key, signals);
   }
 }

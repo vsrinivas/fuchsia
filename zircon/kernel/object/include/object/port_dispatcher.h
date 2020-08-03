@@ -203,8 +203,40 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
   // 3. The observer is left for on_zero_handles to destroyed.
   void MaybeReap(PortObserver* observer, PortPacket* port_packet);
 
+  // The purpose of this type is to decouple memory allocation from object construction.
+  //
+  // Example usage:
+  //
+  //   // Allocate a placeholder.
+  //   fbl::AllocChecker ac;
+  //   ktl::unique_ptr<PortDispatcher::PortObserverPlaceholder> placeholder{
+  //     new (&ac) PortDispatcher::PortObserverPlaceholder{}};
+  //   ASSERT(ac.check());
+  //
+  //   // At this point memory for a PortObserver has been allocated, however, the PortObserver has
+  //   // not been constructed so if we were to call placeholder.reset() the destructor would not be
+  //   // executed.
+  //
+  //   // Construct the PortObserver and release the placeholder.
+  //   ktl::unique_ptr<PortObserver> observer{new (&placeholder.release()->observer)
+  //                                              PortObserver(...)};
+  //
+  //   // At this point |placeholder| is null and we have a fully constructed PortObserver retained
+  //   // by |observer|.  If were to call observer.reset() the destructor would execute.
+  //
+  union PortObserverPlaceholder {
+    PortObserverPlaceholder() {}
+    ~PortObserverPlaceholder() {}
+
+    uint8_t trivially_destructible_default_variant;
+    PortObserver observer;
+  };
+  static_assert(sizeof(PortObserverPlaceholder) == sizeof(PortObserver));
+  static_assert(alignof(PortObserverPlaceholder) == alignof(PortObserver));
+
   // Called under the handle table lock.
-  zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
+  zx_status_t MakeObserver(ktl::unique_ptr<PortObserverPlaceholder> placeholder, uint32_t options,
+                           Handle* handle, uint64_t key, zx_signals_t signals);
 
   // Returns true if at least one packet was removed from the queue.
   // Called under the handle table lock when |handle| is not null.
