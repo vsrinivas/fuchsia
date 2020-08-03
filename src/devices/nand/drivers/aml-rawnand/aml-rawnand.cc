@@ -382,7 +382,7 @@ zx_status_t AmlRawNand::AmlQueueRB() {
   cmd = AML_CMD_RB | AML_CMD_IO6 | (1 << 16) | (0x18 & 0x1f);
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
   AmlCmdIdle(2);
-  status = sync_completion_wait(&req_completion_, ZX_SEC(1));
+  status = sync_completion_wait(&req_completion_, ZX_SEC(20));
   if (status == ZX_ERR_TIMED_OUT) {
     zxlogf(ERROR, "%s: Request timed out, not woken up from irq", __func__);
   }
