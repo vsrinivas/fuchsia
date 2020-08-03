@@ -17,7 +17,7 @@ default_bootfs_labels = [
   "//src/devices:bootfs",
   "//src/power/shutdown-shim:bootfs",
   "//src/sys/bootstrap:root_manifests",
-  "//src/sys/component_manager:bin",
+  "//src/sys/component_manager:bootfs",
   "//build/info:bootfs",
 ]
 

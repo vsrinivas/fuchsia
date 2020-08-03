@@ -110,10 +110,11 @@ impl OpaqueTest {
 
 /// Configures a [`OpaqueTest`].
 pub struct OpaqueTestBuilder {
+    config: String,
     root_component_url: String,
     component_manager_url: Option<String>,
     dir_handles: Vec<(String, zx::Handle)>,
-    config_file: Option<String>,
+    runtime_config: Option<String>,
     extra_args: Vec<String>,
 }
 
@@ -122,10 +123,11 @@ impl OpaqueTestBuilder {
     /// identified by the URL `root_component_url`.
     pub fn new(root_component_url: impl Into<String>) -> Self {
         OpaqueTestBuilder {
+            config: "/pkg/data/component_manager_config".to_string(),
             root_component_url: root_component_url.into(),
             component_manager_url: None,
             dir_handles: Vec::new(),
-            config_file: None,
+            runtime_config: None,
             extra_args: Vec::new(),
         }
     }
@@ -145,9 +147,14 @@ impl OpaqueTestBuilder {
         self
     }
 
+    pub fn config(mut self, config: impl Into<String>) -> Self {
+        self.config = config.into();
+        self
+    }
+
     /// Sets the path to the configuration file for component manager.
-    pub fn config_file(mut self, config_file: impl Into<String>) -> Self {
-        self.config_file = Some(config_file.into());
+    pub fn runtime_config(mut self, runtime_config: impl Into<String>) -> Self {
+        self.runtime_config = Some(runtime_config.into());
         self
     }
 
@@ -180,9 +187,10 @@ impl OpaqueTestBuilder {
         let component_manager_app = launch_component_manager(
             launcher,
             &component_manager_url,
+            &self.config,
             &self.root_component_url,
             self.dir_handles,
-            self.config_file,
+            self.runtime_config,
             self.extra_args,
         )
         .await?;
@@ -252,9 +260,10 @@ async fn create_isolated_environment(
 async fn launch_component_manager(
     launcher: LauncherProxy,
     component_manager_url: &str,
+    config: &str,
     root_component_url: &str,
     dir_handles: Vec<(String, zx::Handle)>,
-    config_file: Option<String>,
+    runtime_config: Option<String>,
     extra_args: Vec<String>,
 ) -> Result<App, Error> {
     let mut options = LaunchOptions::new();
@@ -264,9 +273,14 @@ async fn launch_component_manager(
         options.add_handle_to_namespace(dir.0, dir.1);
     }
 
-    let mut args = vec![root_component_url.to_string(), "--debug".to_string()];
-    if let Some(config_file) = config_file {
-        args.extend(vec!["--config-file".to_string(), config_file]);
+    let mut args = vec![
+        "--config".to_string(),
+        config.to_string(),
+        root_component_url.to_string(),
+        "--debug".to_string(),
+    ];
+    if let Some(runtime_config) = runtime_config {
+        args.extend(vec!["--runtime-config".to_string(), runtime_config]);
     }
     args.extend(extra_args);
 

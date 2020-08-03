@@ -63,6 +63,7 @@ test_package("security-policy-vmex-integration-test") {
     ":protected_ops_util",
     ":security_policy_vmex_integration_test_bin",
     "//src/sys/component_manager:bin",
+    "//src/sys/component_manager:component_manager_config",
   ]
 
   tests = [
@@ -108,6 +109,11 @@ test_package("security-policy-vmex-integration-test") {
     {
       path = "cm_config.json"
       dest = "cm_config.json"
+    },
+    {
+      path =
+          "${root_gen_dir}/src/sys/component_manager/component_manager_config"
+      dest = "component_manager_config"
     },
   ]
 }

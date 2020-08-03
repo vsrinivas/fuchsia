@@ -1,5 +1,9 @@
 {
     "program": {
+        "args": [
+            "--config",
+            "/pkg/data/component_manager_config"
+        ],
         "binary": "bin/component_manager"
     },
     "sandbox": {

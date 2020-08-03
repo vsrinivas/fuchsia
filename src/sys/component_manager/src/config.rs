@@ -8,10 +8,13 @@ use {
         startup,
     },
     anyhow::{Context, Error},
+    fidl_fuchsia_component_internal::Config,
     serde::Deserialize,
     std::{convert::TryFrom, path::PathBuf, sync::Weak},
     thiserror::Error,
 };
+
+// TODO(viktard): Consider translating Config into Rust-native struct and merge with RuntimeConfig.
 
 /// Runtime configuration options.
 /// This configuration intended to be "global", in that the same configuration
@@ -57,6 +60,12 @@ pub struct JobPolicyAllowlists {
     main_process_critical: Vec<AbsoluteMoniker>,
 }
 
+pub async fn load_config_from_args(args: &startup::Arguments) -> Result<Config, Error> {
+    io_util::file::read_in_namespace_to_fidl::<Config>(&args.config)
+        .await
+        .context(format!("Failed to read config file {}", args.config))
+}
+
 fn absolute_monikers_from_strings<'de, D>(deserializer: D) -> Result<Vec<AbsoluteMoniker>, D::Error>
 where
     D: serde::de::Deserializer<'de>,
@@ -87,7 +96,7 @@ impl RuntimeConfig {
     pub async fn load_from_file(
         args: &startup::Arguments,
     ) -> Result<Option<(Self, PathBuf)>, Error> {
-        if let Some(args_path) = &args.config_file {
+        if let Some(args_path) = &args.runtime_config {
             let contents = io_util::file::read_in_namespace_to_string(args_path)
                 .await
                 .context(format!("Failed to read config file {}", args_path))?;
@@ -293,15 +302,17 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn config_from_file_missing() -> Result<(), Error> {
-        let args =
-            startup::Arguments { config_file: Some("/foo/bar".to_string()), ..Default::default() };
+        let args = startup::Arguments {
+            runtime_config: Some("/foo/bar".to_string()),
+            ..Default::default()
+        };
         assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
         Ok(())
     }
 
-    fn install_config_dir_in_namespace(config_dir: &str, config_file: &str, config_str: &str) {
+    fn install_config_dir_in_namespace(config_dir: &str, runtime_config: &str, config_str: &str) {
         let dir = pseudo_directory!(
-            config_file => read_only_static(config_str.to_string()),
+            runtime_config => read_only_static(config_str.to_string()),
         );
         let (dir_server, dir_client) = zx::Channel::create().unwrap();
         dir.open(
@@ -320,16 +331,18 @@ mod tests {
     async fn config_from_file_valid() -> Result<(), Error> {
         // Install a directory containing a test config file in the test process's namespace.
         let config_dir = "/valid_config";
-        let config_file = "test_config";
+        let runtime_config = "test_config";
         install_config_dir_in_namespace(
             config_dir,
-            config_file,
+            runtime_config,
             "{ list_children_batch_size: 42 }",
         );
 
-        let config_path = [config_dir, "/", config_file].concat();
-        let args =
-            startup::Arguments { config_file: Some(config_path.to_string()), ..Default::default() };
+        let config_path = [config_dir, "/", runtime_config].concat();
+        let args = startup::Arguments {
+            runtime_config: Some(config_path.to_string()),
+            ..Default::default()
+        };
         let expected = (
             RuntimeConfig { list_children_batch_size: 42, ..Default::default() },
             PathBuf::from(config_path),
@@ -342,12 +355,14 @@ mod tests {
     async fn config_from_file_invalid() -> Result<(), Error> {
         // Install a directory containing a test config file in the test process's namespace.
         let config_dir = "/invalid_config";
-        let config_file = "test_config";
-        install_config_dir_in_namespace(config_dir, config_file, "{");
+        let runtime_config = "test_config";
+        install_config_dir_in_namespace(config_dir, runtime_config, "{");
 
-        let config_path = [config_dir, "/", config_file].concat();
-        let args =
-            startup::Arguments { config_file: Some(config_path.to_string()), ..Default::default() };
+        let config_path = [config_dir, "/", runtime_config].concat();
+        let args = startup::Arguments {
+            runtime_config: Some(config_path.to_string()),
+            ..Default::default()
+        };
         assert_matches!(RuntimeConfig::load_from_file(&args).await, Err(_));
         Ok(())
     }

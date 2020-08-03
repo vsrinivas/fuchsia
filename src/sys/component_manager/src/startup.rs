@@ -37,7 +37,11 @@ pub struct Arguments {
     pub root_component_url: String,
 
     /// If set, load component_manager's configuration from this path.
-    pub config_file: Option<String>,
+    /// This parameter is deprecated, and will be merged with --config.
+    pub runtime_config: Option<String>,
+
+    /// Load component_manager's configuration from this path.
+    pub config: String,
 }
 
 impl Arguments {
@@ -61,10 +65,15 @@ impl Arguments {
                 args.maintain_utc_clock = true;
             } else if arg == "--debug" {
                 args.debug = true;
-            } else if arg == "--config-file" {
-                args.config_file = iter.next();
-                if args.config_file.is_none() {
-                    return Err(format_err!("No value given for '--config-file'"));
+            } else if arg == "--runtime-config" {
+                args.runtime_config = iter.next();
+                if args.runtime_config.is_none() {
+                    return Err(format_err!("No value given for '--runtime_config'"));
+                }
+            } else if arg == "--config" {
+                args.config = match iter.next() {
+                    Some(config) => config,
+                    None => return Err(format_err!("No value given for '--config'")),
                 }
             } else if arg.starts_with("--") {
                 return Err(format_err!("Unrecognized flag: {}", arg));
@@ -78,6 +87,9 @@ impl Arguments {
 
         if args.root_component_url.is_empty() {
             return Err(format_err!("No root component URL found"));
+        }
+        if args.config.is_empty() {
+            return Err(format_err!("No config file path found"));
         }
         Ok(args)
     }
@@ -93,7 +105,7 @@ impl Arguments {
     /// Returns a usage message for the supported arguments.
     pub fn usage() -> String {
         format!(
-            "Usage: {} [options] <root-component-url>\n\
+            "Usage: {} [options] --config <path-to-config> <root-component-url>\n\
              Options:\n\
              --use-builtin-process-launcher   Provide and use a built-in implementation of\n\
              fuchsia.process.Launcher\n
@@ -111,6 +123,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn parse_arguments() -> Result<(), Error> {
+        let config_filename = || "foo".to_string();
+        let config = || "--config".to_string();
         let dummy_url = || "fuchsia-pkg://fuchsia.com/pkg#meta/component.cm".to_string();
         let dummy_url2 = || "fuchsia-pkg://fuchsia.com/pkg#meta/component2.cm".to_string();
         let unknown_flag = || "--unknown".to_string();
@@ -131,37 +145,56 @@ mod tests {
 
         // Single positional argument with no options is parsed correctly
         assert_eq!(
-            Arguments::new(vec![dummy_url()]).expect("Unexpected error with just URL"),
-            Arguments { root_component_url: dummy_url(), ..Default::default() }
+            Arguments::new(vec![config(), config_filename(), dummy_url()])
+                .expect("Unexpected error with just URL"),
+            Arguments {
+                config: config_filename(),
+                root_component_url: dummy_url(),
+                ..Default::default()
+            }
         );
         assert_eq!(
-            Arguments::new(vec![dummy_url2()]).expect("Unexpected error with just URL"),
-            Arguments { root_component_url: dummy_url2(), ..Default::default() }
+            Arguments::new(vec![config(), config_filename(), dummy_url2()])
+                .expect("Unexpected error with just URL"),
+            Arguments {
+                config: config_filename(),
+                root_component_url: dummy_url2(),
+                ..Default::default()
+            }
         );
 
         // Options are parsed correctly and do not depend on order.
         assert_eq!(
-            Arguments::new(vec![use_builtin_launcher(), dummy_url()])
+            Arguments::new(vec![config(), config_filename(), use_builtin_launcher(), dummy_url()])
                 .expect("Unexpected error with option"),
             Arguments {
+                config: config_filename(),
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
                 ..Default::default()
             }
         );
         assert_eq!(
-            Arguments::new(vec![dummy_url(), use_builtin_launcher()])
+            Arguments::new(vec![config(), config_filename(), dummy_url(), use_builtin_launcher()])
                 .expect("Unexpected error with option"),
             Arguments {
+                config: config_filename(),
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
                 ..Default::default()
             }
         );
         assert_eq!(
-            Arguments::new(vec![dummy_url(), use_builtin_launcher(), debug()])
-                .expect("Unexpected error with option"),
+            Arguments::new(vec![
+                config(),
+                config_filename(),
+                dummy_url(),
+                use_builtin_launcher(),
+                debug()
+            ])
+            .expect("Unexpected error with option"),
             Arguments {
+                config: config_filename(),
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
                 debug: true,
@@ -170,6 +203,8 @@ mod tests {
         );
         assert_eq!(
             Arguments::new(vec![
+                config(),
+                config_filename(),
                 dummy_url(),
                 use_builtin_launcher(),
                 debug(),
@@ -177,6 +212,7 @@ mod tests {
             ])
             .expect("Unexpected error with option"),
             Arguments {
+                config: config_filename(),
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
                 debug: true,

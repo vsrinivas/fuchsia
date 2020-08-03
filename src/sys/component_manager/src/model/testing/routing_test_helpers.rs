@@ -24,6 +24,7 @@ use {
         endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     },
     fidl_fidl_examples_echo::{self as echo},
+    fidl_fuchsia_component_internal::Config,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo, NodeMarker,
@@ -235,7 +236,9 @@ impl RoutingTest {
             root_component_url: format!("test:///{}", builder.root_component),
             ..Default::default()
         };
+        let config = Config { debug: None };
         let mut env_builder = BuiltinEnvironmentBuilder::new()
+            .set_config(config)
             .set_args(args)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());

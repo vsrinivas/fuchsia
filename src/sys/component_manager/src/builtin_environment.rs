@@ -45,6 +45,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     cm_rust::CapabilityName,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
+    fidl_fuchsia_component_internal::Config,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
@@ -71,7 +72,8 @@ pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_sec
 #[derive(Default)]
 pub struct BuiltinEnvironmentBuilder {
     args: Option<Arguments>,
-    config: Option<RuntimeConfig>,
+    config: Option<Config>,
+    runtime_config: Option<RuntimeConfig>,
     runners: Vec<(CapabilityName, Arc<dyn BuiltinRunnerFactory>)>,
     resolvers: ResolverRegistry,
     // This is used to initialize fuchsia_base_pkg_resolver's Model reference. Resolvers must
@@ -90,8 +92,14 @@ impl BuiltinEnvironmentBuilder {
         self
     }
 
-    pub fn set_config(mut self, config: RuntimeConfig) -> Self {
+    pub fn set_config(mut self, config: Config) -> Self {
         self.config = Some(config);
+        self
+    }
+
+    // TODO(viktard): add a method to populate config from Args.
+    pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
+        self.runtime_config = Some(runtime_config);
         self
     }
 
@@ -198,16 +206,27 @@ impl BuiltinEnvironmentBuilder {
         }
 
         // Wrap BuiltinRunnerFactory in BuiltinRunner now that we have the definite RuntimeConfig.
-        let config = Arc::new(self.config.unwrap_or_default());
+        let runtime_config = Arc::new(self.runtime_config.unwrap_or_default());
         let builtin_runners = self
             .runners
             .into_iter()
             .map(|(name, runner)| {
-                Arc::new(BuiltinRunner::new(name, runner, Arc::downgrade(&config)))
+                Arc::new(BuiltinRunner::new(name, runner, Arc::downgrade(&runtime_config)))
             })
             .collect();
 
-        Ok(BuiltinEnvironment::new(model, args, config, builtin_runners, self.utc_clock).await?)
+        let config =
+            self.config.ok_or(format_err!("Config is required for BuiltinEnvironment."))?;
+
+        Ok(BuiltinEnvironment::new(
+            model,
+            config,
+            args,
+            runtime_config,
+            builtin_runners,
+            self.utc_clock,
+        )
+        .await?)
     }
 
     /// Checks if the appmgr loader service is available through our namespace and connects to it if
@@ -264,8 +283,9 @@ pub struct BuiltinEnvironment {
 impl BuiltinEnvironment {
     async fn new(
         model: Arc<Model>,
+        _config: Config,
         args: Arguments,
-        config: Arc<RuntimeConfig>,
+        runtime_config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         utc_clock: Option<Arc<Clock>>,
     ) -> Result<BuiltinEnvironment, ModelError> {
@@ -369,7 +389,8 @@ impl BuiltinEnvironment {
         model.root_realm.hooks.install(work_scheduler.hooks()).await;
 
         // Set up the realm service.
-        let realm_capability_host = Arc::new(RealmCapabilityHost::new(model.clone(), config));
+        let realm_capability_host =
+            Arc::new(RealmCapabilityHost::new(model.clone(), runtime_config));
         model.root_realm.hooks.install(realm_capability_host.hooks()).await;
 
         // Set up the builtin runners.
@@ -402,6 +423,7 @@ impl BuiltinEnvironment {
         };
         model.root_realm.hooks.install(event_registry.hooks()).await;
 
+        // TODO(viktard): use config.debug instead
         let execution_mode = match args.debug {
             false => ExecutionMode::Production,
             true => ExecutionMode::Debug,
@@ -421,6 +443,7 @@ impl BuiltinEnvironment {
         ));
         model.root_realm.hooks.install(event_stream_provider.hooks()).await;
 
+        // TODO(viktard): use config.debug instead
         let event_logger = if args.debug {
             let event_logger = Arc::new(EventLogger::new());
             model.root_realm.hooks.install(event_logger.hooks()).await;

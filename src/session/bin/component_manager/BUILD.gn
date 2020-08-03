@@ -11,6 +11,7 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
@@ -34,7 +35,18 @@ rustc_binary("bin") {
 }
 
 package("component_manager_sfw") {
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//src/sys/component_manager:component_manager_config",
+  ]
+
+  resources = [
+    {
+      path =
+          "${root_gen_dir}/src/sys/component_manager/component_manager_config"
+      dest = "component_manager_config"
+    },
+  ]
 
   binaries = [
     {

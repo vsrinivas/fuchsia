@@ -11,7 +11,7 @@ import("//build/unification/zbi/resource.gni")
 #
 # ```
 # component_config("some_config") {
-#   values = "config.json"
+#   source = "config.json"
 # }
 # ```
 #
@@ -25,7 +25,7 @@ import("//build/unification/zbi/resource.gni")
 #
 # Parameters:
 #
-#   values: (required string), path to json file containing config values.
+#   source: (required string), path to json file containing config values.
 #
 #   output_name: (optional string), path to the binary config destination.
 #     By default, rule name is used as a file name.
@@ -35,10 +35,10 @@ template("component_config") {
                          [
                            "testonly",
                            "visibility",
-                           "values",
+                           "source",
                          ])
 
-  assert(defined(values), "Parameter values=... is required")
+  assert(defined(source), "Parameter source=... is required")
 
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
@@ -47,11 +47,12 @@ template("component_config") {
   }
   output_file_name = "${target_gen_dir}/${output_name}"
 
-  compiled_action("${target_name}_generate_config") {
+  compiled_target = "${target_name}"
+  compiled_action(compiled_target) {
     tool = "//tools/component_manager_config:generate_config_bin"
     tool_output_name = "generate_config"
 
-    inputs = [ values ]
+    inputs = [ source ]
 
     outputs = [ output_file_name ]
 
@@ -59,13 +60,7 @@ template("component_config") {
       "--output",
       rebase_path(output_file_name, root_build_dir),
       "--input",
-      rebase_path(values, root_build_dir),
+      rebase_path(source, root_build_dir),
     ]
-  }
-
-  resource(target_name) {
-    sources = [ output_file_name ]
-    deps = [ ":${target_name}_generate_config" ]
-    outputs = [ "config/${target_name}" ]
   }
 }

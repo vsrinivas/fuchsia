@@ -11,6 +11,7 @@ use {
         builtin_environment::{
             create_and_start_utc_clock, BuiltinEnvironment, BuiltinEnvironmentBuilder,
         },
+        config::load_config_from_args,
         config::RuntimeConfig,
         elf_runner::ElfRunner,
         klog, startup,
@@ -88,7 +89,7 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error> {
-    let config = match RuntimeConfig::load_from_file(&args).await {
+    let runtime_config = match RuntimeConfig::load_from_file(&args).await {
         Ok(Some((config, path))) => {
             info!("Loaded runtime config from {}", path.display());
             config
@@ -114,8 +115,9 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
     let runner = Arc::new(ElfRunner::new(&args, utc_clock.clone()));
 
     let mut builtin_environment_builder = BuiltinEnvironmentBuilder::new()
+        .set_config(load_config_from_args(&args).await?)
         .set_args(args)
-        .set_config(config)
+        .set_runtime_config(runtime_config)
         .add_runner("elf".into(), runner)
         .add_available_resolvers_from_namespace()?;
     if let Some(utc_clock) = utc_clock {

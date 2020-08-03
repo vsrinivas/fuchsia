@@ -49,7 +49,6 @@ test_package("elf-runner-test") {
   deps = [
     ":args_reporter",
     ":elf_runner_test_bin",
-    "//src/sys/component_manager:bin",
   ]
 
   meta = [
@@ -61,18 +60,11 @@ test_package("elf-runner-test") {
       path = rebase_path("meta/reporter_args.cml")
       dest = "reporter_args.cm"
     },
-    {
-      path = rebase_path("meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
   ]
 
   binaries = [
     {
       name = "args_reporter"
-    },
-    {
-      name = "component_manager"
     },
   ]
 

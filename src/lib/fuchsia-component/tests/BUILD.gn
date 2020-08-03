@@ -82,7 +82,6 @@ test_package("fuchsia-component-tests") {
     ":fuchsia-component-v2-test",
     ":realm",
     "//examples/components/routing/echo_server",
-    "//src/sys/component_manager:bin",
   ]
 
   meta = [
@@ -95,11 +94,6 @@ test_package("fuchsia-component-tests") {
               "//examples/components/routing/echo_server/meta/echo_server.cml")
       dest = "echo_server.cm"
     },
-    {
-      path =
-          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
   ]
 
   binaries = [
@@ -108,9 +102,6 @@ test_package("fuchsia-component-tests") {
     },
     {
       name = "realm"
-    },
-    {
-      name = "component_manager"
     },
   ]
 

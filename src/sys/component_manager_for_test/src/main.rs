@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context, Error},
     component_manager_lib::{
         builtin_environment::BuiltinEnvironmentBuilder,
         elf_runner::ElfRunner,
@@ -13,6 +13,7 @@ use {
         startup,
     },
     fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_component_internal::Config,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_test_manager::HarnessMarker,
     fuchsia_component::server::{ServiceFs, ServiceObj},
@@ -57,9 +58,13 @@ async fn main() -> Result<(), Error> {
 
     // Create an ELF runner for the root component.
     let runner = Arc::new(ElfRunner::new(&args, None));
+    let config = io_util::file::read_in_namespace_to_fidl::<Config>(&args.config)
+        .await
+        .context(format!("Failed to read config file {}", args.config))?;
 
     // Set up environment.
     let builtin_environment = BuiltinEnvironmentBuilder::new()
+        .set_config(config)
         .set_args(args)
         .add_runner("elf".into(), runner)
         .add_available_resolvers_from_namespace()?

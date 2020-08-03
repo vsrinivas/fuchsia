@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
@@ -11,10 +12,12 @@ import("//src/sys/build/components.gni")
 
 template("component_manager") {
   deps = [
+    ":component_manager_config_resource",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -324,5 +327,28 @@ group("tests") {
     ":component-manager-tests",
     "src/elf_runner/tests",
     "tests",
+  ]
+}
+
+component_config("component_manager_config") {
+  source = "config.json"
+}
+
+resource("component_manager_config_resource") {
+  sources = [ "$target_gen_dir/component_manager_config" ]
+  outputs = [ "data/component_manager_config" ]
+  deps = [ ":component_manager_config" ]
+}
+
+resource("component_manager_config_bootfs") {
+  sources = [ "$target_gen_dir/component_manager_config" ]
+  outputs = [ "config/component_manager_config" ]
+  deps = [ ":component_manager_config" ]
+}
+
+group("bootfs") {
+  deps = [
+    ":bin",
+    ":component_manager_config_bootfs",
   ]
 }

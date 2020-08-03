@@ -148,7 +148,6 @@ test_package("shutdown_integration_test") {
   deps = [
     ":shutdown_integration_test_bin",
     ":system_controller_client",
-    "//src/sys/component_manager:bin",
   ]
 
   meta = [
@@ -160,19 +159,11 @@ test_package("shutdown_integration_test") {
       path = rebase_path("meta/system_controller_consumer.cml")
       dest = "system_controller_consumer.cm"
     },
-    {
-      path =
-          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
   ]
 
   binaries = [
     {
       name = "system_controller_client"
-    },
-    {
-      name = "component_manager"
     },
   ]
 
@@ -184,28 +175,11 @@ test_package("shutdown_integration_test") {
 }
 
 test_package("component_manager_panic_test") {
-  deps = [
-    ":component_manager_panic_test_bin",
-    "//src/sys/component_manager:bin",
-  ]
+  deps = [ ":component_manager_panic_test_bin" ]
 
   tests = [
     {
       name = "component_manager_panic_test"
-    },
-  ]
-
-  meta = [
-    {
-      path =
-          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "component_manager"
     },
   ]
 }
