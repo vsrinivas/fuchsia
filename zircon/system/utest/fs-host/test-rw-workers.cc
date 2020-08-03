@@ -19,7 +19,7 @@
 static_assert(FBUFSIZE == ((FBUFSIZE / sizeof(uint64_t)) * sizeof(uint64_t)),
               "FBUFSIZE not multiple of uint64_t");
 
-typedef struct worker worker_t;
+using worker_t = struct worker;
 
 struct worker {
   worker_t* next;
@@ -119,9 +119,7 @@ int worker_rw(worker_t* w, bool do_read) {
 
   // fill our content buffer if it's empty
   if (off == 0) {
-    for (unsigned n = 0; n < (FBUFSIZE / sizeof(uint64_t)); n++) {
-      w->u64[n] = rand64(&w->rdata);
-    }
+    std::fill_n(w->u64, FBUFSIZE / sizeof(uint64_t), rand64(&w->rdata));
   }
 
   // data in buffer available to write
@@ -144,7 +142,7 @@ int worker_rw(worker_t* w, bool do_read) {
       return FAIL;
     }
 
-    if (memcmp(buffer, w->u8 + off, r)) {
+    if (memcmp(buffer, w->u8 + off, r) != 0) {
       fprintf(stderr, "worker('%s) verify failed @%u\n", w->name, w->pos);
       return FAIL;
     }
@@ -163,6 +161,7 @@ int worker_rw(worker_t* w, bool do_read) {
 int worker_verify(worker_t* w) {
   int r = worker_rw(w, true);
   if (r == DONE) {
+    ASSERT_EQ(run_fsck(), 0);
     emu_close(w->fd);
   }
   return r;
@@ -179,14 +178,16 @@ int worker_writer(worker_t* w) {
     srand64(&w->rdata, w->name);
     w->pos = 0;
     w->work = worker_verify;
+    ASSERT_EQ(run_fsck(), 0);
     return BUSY;
   }
+  ASSERT_EQ(run_fsck(), 0);
   return r;
 }
 
 bool worker_new(const char* where, const char* fn, int (*work)(worker_t* w), uint32_t size,
                 uint32_t flags) {
-  worker_t* w = (worker_t*)calloc(1, sizeof(worker_t));
+  worker_t* w = static_cast<worker_t*>(calloc(1, sizeof(worker_t)));
   ASSERT_NE(w, nullptr);
 
   snprintf(w->name, sizeof(w->name), "%s%s", where, fn);
@@ -235,7 +236,6 @@ bool do_all_work() {
     if (r == DONE) {
       break;
     }
-    ASSERT_EQ(run_fsck(), 0);
   }
   END_HELPER;
 }
@@ -245,20 +245,20 @@ static bool init_environment() {
 
   // assemble workers
   const char* where = "::";
-  for (unsigned n = 0; n < std::size(WORK); n++) {
-    ASSERT_TRUE(worker_new(where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags));
+  for (auto& n : WORK) {
+    ASSERT_TRUE(worker_new(where, n.name, n.work, n.size, n.flags));
   }
   return true;
 }
 
-bool TestWorkSingleThread(void) {
+bool TestWorkSingleThread() {
   BEGIN_TEST;
 
   ASSERT_TRUE(init_environment());
   ASSERT_TRUE(do_all_work());
   worker_t* w = all_workers;
   worker_t* next;
-  while (w != NULL) {
+  while (w != nullptr) {
     next = w->next;
     free(w);
     w = next;
@@ -267,4 +267,4 @@ bool TestWorkSingleThread(void) {
   END_TEST;
 }
 
-RUN_MINFS_TESTS(rw_workers_test, RUN_TEST_MEDIUM(TestWorkSingleThread))
+RUN_MINFS_TESTS(rw_workers_test, RUN_TEST_LARGE(TestWorkSingleThread))
