@@ -175,7 +175,7 @@ zx_status_t MessageLoopTarget::WatchSocket(WatchMode mode, zx_handle_t socket_ha
     next_watch_id_++;
   }
 
-  zx_signals_t signals = 0;
+  zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
   if (mode == WatchMode::kRead || mode == WatchMode::kReadWrite)
     signals |= ZX_SOCKET_READABLE;
 
@@ -484,6 +484,11 @@ void MessageLoopTarget::OnJobException(const WatchInfo& info, zx::exception exce
 }
 
 void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info, zx_signals_t observed) {
+  if (observed & ZX_SOCKET_PEER_CLOSED) {
+    info.socket_watcher->OnSocketError(info.socket_handle);
+    return;
+  }
+
   // Dispatch readable signal.
   if (observed & ZX_SOCKET_READABLE)
     info.socket_watcher->OnSocketReadable(info.socket_handle);

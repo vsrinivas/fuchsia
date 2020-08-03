@@ -45,8 +45,10 @@ zx_status_t BufferedZxSocket::Stop() {
 }
 
 void BufferedZxSocket::Reset() {
-  socket_.reset();
+  // The watch must be disabled before the socket is reset.
+  watch_handle_.StopWatching();
 
+  socket_.reset();
   callback_ = DataAvailableCallback();
   error_callback_ = ErrorCallback();
 }
