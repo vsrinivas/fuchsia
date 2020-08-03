@@ -5,3 +5,11 @@
 group("drivers") {
   deps = [ "misc" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "aml-gpu:aml-gpu-test",
+    "virtio:tests",
+  ]
+}
