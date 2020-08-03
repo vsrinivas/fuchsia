@@ -10,6 +10,7 @@
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/memory_limit.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>

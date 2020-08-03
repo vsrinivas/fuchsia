@@ -8,6 +8,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/memory_limit.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>

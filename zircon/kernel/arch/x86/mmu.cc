@@ -10,6 +10,7 @@
 #include <err.h>
 #include <lib/cmdline.h>
 #include <lib/counters.h>
+#include <lib/zircon-internal/macros.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/types.h>

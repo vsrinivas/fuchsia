@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
+#include <lib/zircon-internal/macros.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/types.h>

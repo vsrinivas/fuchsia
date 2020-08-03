@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/debuglog.h>
+#include <lib/zircon-internal/macros.h>
 
 #include <object/executor.h>
 #include <object/memory_watchdog.h>

@@ -21,8 +21,4 @@ typedef uintptr_t paddr_t;
 typedef intptr_t ssize_t;
 #define SSIZE_MAX INTPTR_MAX
 
-#define KB (1024UL)
-#define MB (1024UL * KB)
-#define GB (1024UL * MB)
-
 #endif  // ZIRCON_KERNEL_INCLUDE_SYS_TYPES_H_

@@ -9,6 +9,7 @@
 #include <lib/user_copy/internal.h>
 #include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
+#include <lib/zircon-internal/macros.h>
 #include <zircon/syscalls/port.h>
 
 #include <ktl/array.h>

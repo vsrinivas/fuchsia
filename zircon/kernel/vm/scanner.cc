@@ -7,6 +7,7 @@
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <zircon/time.h>
 

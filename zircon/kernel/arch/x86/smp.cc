@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <err.h>
 #include <lib/arch/intrin.h>
+#include <lib/zircon-internal/macros.h>
 #include <stdint.h>
 #include <string.h>
 #include <trace.h>

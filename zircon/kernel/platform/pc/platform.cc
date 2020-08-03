@@ -8,6 +8,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <lib/zircon-internal/macros.h>
 
 #include <arch/mmu.h>
 #include <arch/mp.h>

@@ -7,6 +7,7 @@
 #include <bits.h>
 #include <err.h>
 #include <lib/unittest/unittest.h>
+#include <lib/zircon-internal/macros.h>
 #include <zircon/types.h>
 
 #include <arch/aspace.h>
@@ -92,7 +93,7 @@ static bool x86_arch_vmaspace_usermmu_tests() {
 // Returns the terminal page table entry in |ptep| and amount to increment address to get the next
 // page table entry in |step|.
 static bool check_virtual_address_l1tf_invariant(uint64_t* pml4, vaddr_t va, uint64_t* ptep,
-  size_t* step) {
+                                                 size_t* step) {
   constexpr uint kPageTableLevels = 4;
 
   // Virtual Address is split at [47:39], [38:30], [29:21], [20:12]
@@ -130,8 +131,8 @@ static bool x86_test_l1tf_invariant() {
   BEGIN_TEST;
 
   // Mitigating L1TF requires that no PTE with the present bit set to false points to a page frame.
-  // Check the page tables for the kernel physmap and for the bottom 512 GB of the user address space
-  // of the current address space.
+  // Check the page tables for the kernel physmap and for the bottom 512 GB of the user address
+  // space of the current address space.
   //
   // A complete check would check every valid address of every address space, which could take too
   // long to be included in a kernel unit test; based on examination of code and this unit test,
@@ -140,8 +141,8 @@ static bool x86_test_l1tf_invariant() {
 
   // Check all page tables for the physmap, to make sure there are no page table enties with a valid
   // address but the present bit not set.
-  uint64_t* const pml4 = reinterpret_cast<uint64_t*>(X86_PHYS_TO_VIRT(
-    VmAspace::kernel_aspace()->arch_aspace().pt_phys()));
+  uint64_t* const pml4 = reinterpret_cast<uint64_t*>(
+      X86_PHYS_TO_VIRT(VmAspace::kernel_aspace()->arch_aspace().pt_phys()));
   for (uintptr_t addr = PHYSMAP_BASE; addr < (PHYSMAP_BASE + PHYSMAP_SIZE);) {
     uint64_t pte = 0;
     size_t step = 0;

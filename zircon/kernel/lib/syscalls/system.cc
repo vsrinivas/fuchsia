@@ -11,6 +11,7 @@
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/zbi/zbi-cpp.h>
+#include <lib/zircon-internal/macros.h>
 #include <mexec.h>
 #include <platform.h>
 #include <string.h>

@@ -7,3 +7,7 @@
 #if !defined(countof)
 #define countof(a) (sizeof(a) / sizeof((a)[0]))
 #endif
+
+#define KB (1024UL)
+#define MB (1024UL * KB)
+#define GB (1024UL * MB)
