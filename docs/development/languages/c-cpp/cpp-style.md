@@ -80,9 +80,9 @@ Rationale: [Tip of the Week #130: Namespace Naming][totw-130]
   Guide:
 
   ```cpp
-  #include <zircon/syscalls.h>           # System header
-  #include <fuchsia/io/cpp/fidl.h>       # Global header
-  #include <lib/fdio/fd.h>               # Library header
+  #include <zircon/syscalls.h>           // System header
+  #include <fuchsia/io/cpp/fidl.h>       // Global header
+  #include <lib/fdio/fd.h>               // Library header
   ```
 
 * If the header being included is a implementation header, use `"quotes"` and
@@ -91,15 +91,9 @@ Rationale: [Tip of the Week #130: Namespace Naming][totw-130]
   Google C++ Style Guide:
 
   ```cpp
-  #include "src/ledger/bin/filesystem/detached_path.h"
+  #include "src/ui/scenic/bin/app.h"     // Implementation header
   ```
 
 * Third-party headers can be included using the root-relative path (e.g.
   `#include "third_party/skia/include/core/SkPaint.h"`) or using their canonical header
   names (e.g. `#include <gtest/gtest.h>`).
-
-4. *Exception:* In `//zircon`, headers in the same target can use relative
-   paths (e.g., `#include "private.h"`). This exception exists because Zircon's
-   previous build system did not distinguish between public and private headers.
-   We might revise this rule if we start distinguishing public and private
-   headers in Zircon in the future.
