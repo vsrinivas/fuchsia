@@ -173,7 +173,7 @@ pub trait Driver: Send + Sync {
     async fn send_mfg_command(&self, command: &str) -> ZxResult<String>;
 }
 
-#[async_trait(?Send)]
+#[async_trait()]
 impl<T: Driver> ServeTo<DeviceRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceRequestStream) -> anyhow::Result<()> {
         use futures::lock::Mutex;
@@ -271,7 +271,7 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait()]
 impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceExtraRequestStream) -> anyhow::Result<()> {
         use futures::lock::Mutex;
@@ -477,7 +477,7 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait()]
 impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceTestRequestStream) -> anyhow::Result<()> {
         let closure = |command| async {
@@ -575,7 +575,7 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait()]
 impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
     async fn serve_to(&self, request_stream: FactoryDeviceRequestStream) -> anyhow::Result<()> {
         let closure = |command| async {

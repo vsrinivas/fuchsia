@@ -123,8 +123,8 @@ impl<S: Spawn> LowpanService<S> {
     }
 }
 
-#[async_trait::async_trait(?Send)]
-impl<S> ServeTo<LookupRequestStream> for LowpanService<S> {
+#[async_trait::async_trait()]
+impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
     async fn serve_to(&self, request_stream: LookupRequestStream) -> anyhow::Result<()> {
         use futures::lock::Mutex;
         let last_device_list: Mutex<Option<Vec<String>>> = Mutex::new(None);
@@ -246,8 +246,8 @@ impl<S> ServeTo<LookupRequestStream> for LowpanService<S> {
     }
 }
 
-#[async_trait::async_trait(?Send)]
-impl<S: Spawn> ServeTo<RegisterRequestStream> for LowpanService<S> {
+#[async_trait::async_trait()]
+impl<S: Spawn + Sync> ServeTo<RegisterRequestStream> for LowpanService<S> {
     async fn serve_to(&self, request_stream: RegisterRequestStream) -> anyhow::Result<()> {
         request_stream
             .err_into::<Error>()
@@ -275,7 +275,7 @@ impl<S: Spawn> ServeTo<RegisterRequestStream> for LowpanService<S> {
 mod factory {
     use super::*;
 
-    impl<S: Spawn> LowpanService<S> {
+    impl<S: Spawn + Sync> LowpanService<S> {
         pub fn lookup_factory(&self, name: &str) -> Result<FactoryDriverProxy, ServiceError> {
             let devices = self.devices_factory.lock();
             if let Some(device) = devices.get(name) {
@@ -319,8 +319,8 @@ mod factory {
         }
     }
 
-    #[async_trait::async_trait(?Send)]
-    impl<S: Spawn> ServeTo<FactoryLookupRequestStream> for LowpanService<S> {
+    #[async_trait::async_trait()]
+    impl<S: Spawn + Sync> ServeTo<FactoryLookupRequestStream> for LowpanService<S> {
         async fn serve_to(&self, request_stream: FactoryLookupRequestStream) -> anyhow::Result<()> {
             request_stream
                 .err_into::<Error>()
@@ -346,8 +346,8 @@ mod factory {
         }
     }
 
-    #[async_trait::async_trait(?Send)]
-    impl<S: Spawn> ServeTo<FactoryRegisterRequestStream> for LowpanService<S> {
+    #[async_trait::async_trait()]
+    impl<S: Spawn + Sync> ServeTo<FactoryRegisterRequestStream> for LowpanService<S> {
         async fn serve_to(
             &self,
             request_stream: FactoryRegisterRequestStream,

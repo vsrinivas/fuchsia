@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 /// Trait for serving an object to a given FIDL request stream.
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait()]
 pub trait ServeTo<RS: fidl::endpoints::RequestStream> {
     /// Returns a future which handles requests from the given request stream.
     async fn serve_to(&self, request_stream: RS) -> anyhow::Result<()>;
