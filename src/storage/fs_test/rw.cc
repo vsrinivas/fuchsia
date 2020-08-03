@@ -101,7 +101,9 @@ TEST_P(RwTest, OffsetOperations) {
   }
 }
 
-TEST_P(RwTest, MaxFileSize) {
+using RwSparseTest = FilesystemTest;
+
+TEST_P(RwSparseTest, MaxFileSize) {
   constexpr std::string_view kTestData = "hello";
   off_t offset = fs().GetTraits().max_file_size - kTestData.size();
   const std::string foo = GetPath("foo");
@@ -125,6 +127,19 @@ TEST_P(RwTest, MaxFileSize) {
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RwTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
+
+// These tests will only work on a file system that supports sparse files.
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, RwSparseTest,
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().supports_sparse_files) {
+            return options;
+          } else {
+            return std::nullopt;
+          }
+        })),
+    testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace fs_test
