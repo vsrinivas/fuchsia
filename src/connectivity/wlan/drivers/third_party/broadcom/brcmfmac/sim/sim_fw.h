@@ -298,6 +298,7 @@ class SimFirmware {
 
   // Iovar handlers
   zx_status_t SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr);
+  common::MacAddr GetMacAddr(uint16_t ifidx);
   zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id,
                                 int32_t bsscfgidx);

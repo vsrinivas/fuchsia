@@ -709,10 +709,6 @@ void SimFirmware::AssocInit(std::unique_ptr<AssocOpts> assoc_opts, wlan_channel_
   assoc_state_.opts = std::move(assoc_opts);
   assoc_state_.num_attempts = 0;
 
-  // Values stored in assoc_state_ will be use in authentication step.
-  common::MacAddr srcAddr(mac_addr_);
-  common::MacAddr bssid(assoc_state_.opts->bssid);
-
   uint16_t chanspec = channel_to_chanspec(&d11_inf_, &channel);
   SetIFChanspec(kClientIfidx, chanspec);
   hw_.SetChannel(channel);
@@ -793,7 +789,7 @@ void SimFirmware::AssocHandleFailure() {
 }
 
 void SimFirmware::AuthStart() {
-  common::MacAddr srcAddr(mac_addr_);
+  common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
   common::MacAddr bssid(assoc_state_.opts->bssid);
 
   auto callback = std::make_unique<std::function<void()>>();
@@ -884,7 +880,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
     return;
   }
   // Ignore if this is not intended for us
-  common::MacAddr mac_addr(mac_addr_);
+  common::MacAddr mac_addr(GetMacAddr(kClientIfidx));
   if (frame->dst_addr_ != mac_addr) {
     return;
   }
@@ -930,7 +926,7 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
 
       auth_state_.state = AuthState::EXPECTING_FOURTH;
 
-      common::MacAddr srcAddr(mac_addr_);
+      common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
       common::MacAddr bssid(assoc_state_.opts->bssid);
       simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, frame->seq_num_ + 1,
                                               simulation::AUTH_TYPE_SHARED_KEY,
@@ -1034,7 +1030,7 @@ void SimFirmware::RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> 
 }
 
 void SimFirmware::AssocStart() {
-  common::MacAddr srcAddr(mac_addr_);
+  common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
 
   auto callback = std::make_unique<std::function<void()>>();
   *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
@@ -1102,8 +1098,7 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
   }
 
   // Ignore if this is not intended for us
-  common::MacAddr mac_addr(mac_addr_);
-  if (frame->dst_addr_ != mac_addr) {
+  if (GetIfidxByMac(frame->dst_addr_) == -1) {
     return;
   }
 
@@ -1154,7 +1149,7 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
 void SimFirmware::DisassocLocalClient(uint32_t reason) {
   if (assoc_state_.state == AssocState::ASSOCIATED) {
     common::MacAddr bssid(assoc_state_.opts->bssid);
-    common::MacAddr srcAddr(mac_addr_);
+    common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
 
     // Transmit the disassoc req and since there is no response for it, indicate disassoc done to
     // driver now
@@ -1823,6 +1818,14 @@ zx_status_t SimFirmware::SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr) {
   BRCMF_DBG(SIM, "Setting mac addr ifidx: %d: %02x:%02x:%02x:%02x:%02x:%02x", ifidx, mac_addr[0],
             mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
   return ZX_OK;
+}
+
+common::MacAddr SimFirmware::GetMacAddr(uint16_t ifidx) {
+  if (ifidx < kMaxIfSupported && iface_tbl_[ifidx].allocated && iface_tbl_[ifidx].mac_addr_set) {
+    return iface_tbl_[ifidx].mac_addr;
+  }
+  ZX_ASSERT(mac_addr_set_);
+  return common::MacAddr(mac_addr_);
 }
 
 zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
