@@ -187,6 +187,7 @@ rustc_library("lib") {
     "src/tests/fakes/audio_core_service.rs",
     "src/tests/fakes/base.rs",
     "src/tests/fakes/bluetooth_service.rs",
+    "src/tests/fakes/brightness_service.rs",
     "src/tests/fakes/fake_hanging_get_handler.rs",
     "src/tests/fakes/fake_hanging_get_types.rs",
     "src/tests/fakes/hardware_light_service.rs",

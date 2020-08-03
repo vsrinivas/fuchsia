@@ -5,6 +5,7 @@
 pub mod audio_core_service;
 pub mod base;
 pub mod bluetooth_service;
+pub mod brightness_service;
 pub mod fake_hanging_get_handler;
 pub mod fake_hanging_get_types;
 pub mod hardware_light_service;

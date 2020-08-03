@@ -13,7 +13,7 @@ use {
     crate::audio::audio_controller::AudioController,
     crate::config::base::ControllerFlag,
     crate::device::device_controller::DeviceController,
-    crate::display::display_controller::DisplayController,
+    crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
     crate::display::light_sensor_controller::LightSensorController,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
     crate::input::input_controller::InputController,
@@ -330,7 +330,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     }
 
     fn get_configuration_handlers(
-        _controller_flags: &HashSet<ControllerFlag>,
+        controller_flags: &HashSet<ControllerFlag>,
         factory_handle: &mut SettingHandlerFactoryImpl<T>,
     ) {
         // Power
@@ -359,7 +359,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         register_handler!(
             factory_handle,
             SettingType::Display,
-            DataHandler::<DisplayInfo, DisplayController>::spawn
+            if controller_flags.contains(&ControllerFlag::ExternalBrightnessControl) {
+                DataHandler::<DisplayInfo, DisplayController<ExternalBrightnessControl>>::spawn
+            } else {
+                DataHandler::<DisplayInfo, DisplayController>::spawn
+            }
         );
         // Light
         register_handler!(
