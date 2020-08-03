@@ -7,7 +7,7 @@ use {
         addable_directory::AddableDirectory, error::ModelError, moniker::AbsoluteMoniker,
         realm::WeakRealm,
     },
-    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
+    cm_rust::{CapabilityNameOrPath, CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
     std::collections::HashMap,
     vfs::directory::immutable::simple as pfs,
@@ -103,8 +103,18 @@ impl DirTree {
             cm_rust::ExposeDecl::Service(d) => {
                 d.target_name.to_string().parse().expect("couldn't parse name as path")
             }
-            cm_rust::ExposeDecl::Protocol(d) => d.target_path.clone(),
-            cm_rust::ExposeDecl::Directory(d) => d.target_path.clone(),
+            cm_rust::ExposeDecl::Protocol(d) => match &d.target_path {
+                CapabilityNameOrPath::Path(target_path) => target_path.clone(),
+                CapabilityNameOrPath::Name(target_path) => {
+                    target_path.to_string().parse().expect("couldn't parse name as path")
+                }
+            },
+            cm_rust::ExposeDecl::Directory(d) => match &d.target_path {
+                CapabilityNameOrPath::Path(target_path) => target_path.clone(),
+                CapabilityNameOrPath::Name(target_path) => {
+                    target_path.to_string().parse().expect("couldn't parse name as path")
+                }
+            },
             cm_rust::ExposeDecl::Runner(_) | cm_rust::ExposeDecl::Resolver(_) => {
                 // Runners and resolvers do not add directory entries.
                 return;
@@ -139,9 +149,9 @@ mod tests {
             testing::{mocks, test_helpers, test_helpers::*},
         },
         cm_rust::{
-            CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
-            ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
-            UseProtocolDecl, UseRunnerDecl, UseSource, UseStorageDecl,
+            CapabilityName, CapabilityNameOrPath, CapabilityPath, ExposeDecl, ExposeDirectoryDecl,
+            ExposeProtocolDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl,
+            UseDirectoryDecl, UseProtocolDecl, UseRunnerDecl, UseSource, UseStorageDecl,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
@@ -162,14 +172,14 @@ mod tests {
             uses: vec![
                 UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                     rights: fio2::Operations::Connect,
                     subdir: None,
                 }),
                 UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                 }),
                 UseDecl::Storage(UseStorageDecl::Data(
@@ -229,24 +239,24 @@ mod tests {
             exposes: vec![
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                    target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("/in/data/hippo").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }),
                 ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityPath::try_from("/in/data/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("/in/data/bar").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
                 }),
                 ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                    target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("/in/svc/hippo").unwrap(),
                     target: ExposeTarget::Parent,
                 }),
                 ExposeDecl::Runner(ExposeRunnerDecl {

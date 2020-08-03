@@ -244,6 +244,7 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         decl,
         all_children: HashMap::new(),
         all_collections: HashSet::new(),
+        all_capability_ids: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_services: HashSet::new(),
         all_protocols: HashSet::new(),
@@ -254,8 +255,7 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         all_event_names: HashSet::new(),
         all_event_streams: HashSet::new(),
         strong_dependencies: DirectedGraph::new(),
-        target_paths: HashMap::new(),
-        target_names: HashMap::new(),
+        target_ids: HashMap::new(),
         errors: vec![],
     };
     ctx.validate().map_err(|errs| ErrorList::new(errs))
@@ -283,6 +283,7 @@ struct ValidationContext<'a> {
     decl: &'a fsys::ComponentDecl,
     all_children: HashMap<&'a str, &'a fsys::ChildDecl>,
     all_collections: HashSet<&'a str>,
+    all_capability_ids: HashSet<&'a str>,
     all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_services: HashSet<&'a str>,
     all_protocols: HashSet<&'a str>,
@@ -293,8 +294,7 @@ struct ValidationContext<'a> {
     all_event_names: HashSet<&'a str>,
     all_event_streams: HashSet<&'a str>,
     strong_dependencies: DirectedGraph<DependencyNode<'a>>,
-    target_paths: IdMap<'a>,
-    target_names: IdMap<'a>,
+    target_ids: IdMap<'a>,
     errors: Vec<Error>,
 }
 
@@ -350,26 +350,10 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Validate "capabilities" and build the set of all runners, resolvers, and storage.
+        // Validate "capabilities" and build the set of all capabilities.
         if let Some(capabilities) = self.decl.capabilities.as_ref() {
             for capability in capabilities {
-                match capability {
-                    fsys::CapabilityDecl::Service(service) => self.validate_service_decl(&service),
-                    fsys::CapabilityDecl::Protocol(protocol) => {
-                        self.validate_protocol_decl(&protocol)
-                    }
-                    fsys::CapabilityDecl::Directory(directory) => {
-                        self.validate_directory_decl(&directory)
-                    }
-                    fsys::CapabilityDecl::Storage(storage) => self.validate_storage_decl(&storage),
-                    fsys::CapabilityDecl::Runner(runner) => self.validate_runner_decl(&runner),
-                    fsys::CapabilityDecl::Resolver(resolver) => {
-                        self.validate_resolver_decl(&resolver)
-                    }
-                    fsys::CapabilityDecl::__UnknownVariant { .. } => {
-                        self.errors.push(Error::invalid_field("ComponentDecl", "capability"));
-                    }
-                }
+                self.validate_capability_decl(capability);
             }
         }
 
@@ -380,10 +364,9 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "exposes".
         if let Some(exposes) = self.decl.exposes.as_ref() {
-            let mut target_paths = HashMap::new();
-            let mut target_names = HashMap::new();
+            let mut target_ids = HashMap::new();
             for expose in exposes.iter() {
-                self.validate_expose_decl(&expose, &mut target_paths, &mut target_names);
+                self.validate_expose_decl(&expose, &mut target_ids);
             }
         }
 
@@ -424,6 +407,20 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    fn validate_capability_decl(&mut self, capability: &'a fsys::CapabilityDecl) {
+        match capability {
+            fsys::CapabilityDecl::Service(service) => self.validate_service_decl(&service),
+            fsys::CapabilityDecl::Protocol(protocol) => self.validate_protocol_decl(&protocol),
+            fsys::CapabilityDecl::Directory(directory) => self.validate_directory_decl(&directory),
+            fsys::CapabilityDecl::Storage(storage) => self.validate_storage_decl(&storage),
+            fsys::CapabilityDecl::Runner(runner) => self.validate_runner_decl(&runner),
+            fsys::CapabilityDecl::Resolver(resolver) => self.validate_resolver_decl(&resolver),
+            fsys::CapabilityDecl::__UnknownVariant { .. } => {
+                self.errors.push(Error::invalid_field("ComponentDecl", "capability"));
+            }
+        }
+    }
+
     fn validate_use_decls(&mut self, uses: &'a [fsys::UseDecl]) {
         // Validate individual fields.
         for use_ in uses.iter() {
@@ -453,13 +450,13 @@ impl<'a> ValidationContext<'a> {
             }
             fsys::UseDecl::Protocol(u) => {
                 self.validate_source(u.source.as_ref(), "UseProtocolDecl", "source");
-                check_path(
+                check_name_or_path(
                     u.source_path.as_ref(),
                     "UseProtocolDecl",
                     "source_path",
                     &mut self.errors,
                 );
-                check_path(
+                check_name_or_path(
                     u.target_path.as_ref(),
                     "UseProtocolDecl",
                     "target_path",
@@ -468,13 +465,13 @@ impl<'a> ValidationContext<'a> {
             }
             fsys::UseDecl::Directory(u) => {
                 self.validate_source(u.source.as_ref(), "UseDirectoryDecl", "source");
-                check_path(
+                check_name_or_path(
                     u.source_path.as_ref(),
                     "UseDirectoryDecl",
                     "source_path",
                     &mut self.errors,
                 );
-                check_path(
+                check_name_or_path(
                     u.target_path.as_ref(),
                     "UseDirectoryDecl",
                     "target_path",
@@ -876,9 +873,10 @@ impl<'a> ValidationContext<'a> {
     fn validate_service_decl(&mut self, service: &'a fsys::ServiceDecl) {
         if check_name(service.name.as_ref(), "ServiceDecl", "name", &mut self.errors) {
             let name = service.name.as_ref().unwrap();
-            if !self.all_services.insert(name) {
+            if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("ServiceDecl", "name", name.as_str()));
             }
+            self.all_services.insert(name);
         }
         check_path(service.source_path.as_ref(), "ServiceDecl", "source_path", &mut self.errors);
     }
@@ -886,9 +884,10 @@ impl<'a> ValidationContext<'a> {
     fn validate_protocol_decl(&mut self, protocol: &'a fsys::ProtocolDecl) {
         if check_name(protocol.name.as_ref(), "ProtocolDecl", "name", &mut self.errors) {
             let name = protocol.name.as_ref().unwrap();
-            if !self.all_protocols.insert(name) {
+            if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("ProtocolDecl", "name", name.as_str()));
             }
+            self.all_protocols.insert(name);
         }
         check_path(protocol.source_path.as_ref(), "ProtocolDecl", "source_path", &mut self.errors);
     }
@@ -896,9 +895,10 @@ impl<'a> ValidationContext<'a> {
     fn validate_directory_decl(&mut self, directory: &'a fsys::DirectoryDecl) {
         if check_name(directory.name.as_ref(), "DirectoryDecl", "name", &mut self.errors) {
             let name = directory.name.as_ref().unwrap();
-            if !self.all_directories.insert(name) {
+            if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("DirectoryDecl", "name", name.as_str()));
             }
+            self.all_directories.insert(name);
         }
         check_path(
             directory.source_path.as_ref(),
@@ -930,9 +930,10 @@ impl<'a> ValidationContext<'a> {
         };
         if check_name(storage.name.as_ref(), "StorageDecl", "name", &mut self.errors) {
             let name = storage.name.as_ref().unwrap();
-            if self.all_storage_and_sources.insert(name, source_child_name).is_some() {
+            if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
             }
+            self.all_storage_and_sources.insert(name, source_child_name);
         }
         check_path(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
     }
@@ -955,9 +956,10 @@ impl<'a> ValidationContext<'a> {
         };
         if check_name(runner.name.as_ref(), "RunnerDecl", "name", &mut self.errors) {
             let name = runner.name.as_ref().unwrap();
-            if !self.all_runners.insert(name) {
+            if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("RunnerDecl", "name", name.as_str()));
             }
+            self.all_runners.insert(name);
         }
         check_path(runner.source_path.as_ref(), "RunnerDecl", "source_path", &mut self.errors);
     }
@@ -965,9 +967,10 @@ impl<'a> ValidationContext<'a> {
     fn validate_resolver_decl(&mut self, resolver: &'a fsys::ResolverDecl) {
         if check_name(resolver.name.as_ref(), "ResolverDecl", "name", &mut self.errors) {
             let name = resolver.name.as_ref().unwrap();
-            if !self.all_resolvers.insert(name) {
+            if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("ResolverDecl", "name", name.as_str()));
             }
+            self.all_resolvers.insert(name);
         }
         check_path(resolver.source_path.as_ref(), "ResolverDecl", "source_path", &mut self.errors);
     }
@@ -1000,8 +1003,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose_decl(
         &mut self,
         expose: &'a fsys::ExposeDecl,
-        prev_target_paths: &mut HashMap<&'a str, AllowableIds>,
-        prev_target_names: &mut HashMap<&'a str, AllowableIds>,
+        prev_target_ids: &mut HashMap<&'a str, AllowableIds>,
     ) {
         match expose {
             fsys::ExposeDecl::Service(e) => {
@@ -1013,7 +1015,7 @@ impl<'a> ValidationContext<'a> {
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
                     e.target.as_ref(),
-                    prev_target_names,
+                    prev_target_ids,
                 );
                 // If the expose source is `self`, ensure we have a corresponding ServiceDecl.
                 // TODO: Consider bringing this bit into validate_expose_fields_with_name.
@@ -1024,34 +1026,44 @@ impl<'a> ValidationContext<'a> {
                 }
             }
             fsys::ExposeDecl::Protocol(e) => {
-                self.validate_expose_fields_with_path(
-                    "ExposeProtocolDecl",
+                let decl = "ExposeProtocolDecl";
+                self.validate_expose_fields_with_name_or_path(
+                    decl,
                     AllowableIds::One,
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
                     e.target.as_ref(),
-                    prev_target_paths,
+                    prev_target_ids,
                 );
+                // If the expose source is `self`, ensure we have a corresponding ProtocolDecl.
+                // TODO: Consider bringing this bit into validate_expose_fields_with_name.
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&e.source, &e.source_path) {
+                    if !name.starts_with('/') && !self.all_protocols.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
+                    }
+                }
             }
             fsys::ExposeDecl::Directory(e) => {
-                self.validate_expose_fields_with_path(
-                    "ExposeDirectoryDecl",
+                let decl = "ExposeDirectoryDecl";
+                self.validate_expose_fields_with_name_or_path(
+                    decl,
                     AllowableIds::One,
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
                     e.target.as_ref(),
-                    prev_target_paths,
+                    prev_target_ids,
                 );
-
-                match e.source.as_ref() {
-                    Some(fsys::Ref::Self_(_)) => {
-                        if e.rights.is_none() {
-                            self.errors.push(Error::missing_field("ExposeDirectoryDecl", "rights"));
-                        }
+                // If the expose source is `self`, ensure we have a corresponding DirectoryDecl.
+                // TODO: Consider bringing this bit into validate_expose_fields_with_name.
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&e.source, &e.source_path) {
+                    if !name.starts_with('/') && !self.all_directories.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
                     }
-                    _ => {}
+                    if name.starts_with('/') && e.rights.is_none() {
+                        self.errors.push(Error::missing_field(decl, "rights"));
+                    }
                 }
 
                 // Subdir makes sense when routing, but when exposing to framework the subdirectory
@@ -1059,19 +1071,14 @@ impl<'a> ValidationContext<'a> {
                 match e.target.as_ref() {
                     Some(fsys::Ref::Framework(_)) => {
                         if e.subdir.is_some() {
-                            self.errors.push(Error::invalid_field("ExposeDirectoryDecl", "subdir"));
+                            self.errors.push(Error::invalid_field(decl, "subdir"));
                         }
                     }
                     _ => {}
                 }
 
                 if let Some(subdir) = e.subdir.as_ref() {
-                    check_relative_path(
-                        Some(subdir),
-                        "ExposeDirectoryDecl",
-                        "subdir",
-                        &mut self.errors,
-                    );
+                    check_relative_path(Some(subdir), decl, "subdir", &mut self.errors);
                 }
             }
             fsys::ExposeDecl::Runner(e) => {
@@ -1083,7 +1090,7 @@ impl<'a> ValidationContext<'a> {
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
                     e.target.as_ref(),
-                    prev_target_names,
+                    prev_target_ids,
                 );
                 // If the expose source is `self`, ensure we have a corresponding RunnerDecl.
                 if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&e.source, &e.source_name) {
@@ -1101,7 +1108,7 @@ impl<'a> ValidationContext<'a> {
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
                     e.target.as_ref(),
-                    prev_target_names,
+                    prev_target_ids,
                 );
                 // If the expose source is `self`, ensure we have a corresponding ResolverDecl.
                 if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&e.source, &e.source_name) {
@@ -1116,15 +1123,15 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_expose_fields_with_path(
+    fn validate_expose_fields_with_name_or_path(
         &mut self,
         decl: &str,
-        allowable_paths: AllowableIds,
+        allowable_ids: AllowableIds,
         source: Option<&fsys::Ref>,
-        source_path: Option<&String>,
-        target_path: Option<&'a String>,
+        source_id: Option<&String>,
+        target_id: Option<&'a String>,
         target: Option<&fsys::Ref>,
-        prev_child_target_paths: &mut HashMap<&'a str, AllowableIds>,
+        prev_child_target_ids: &mut HashMap<&'a str, AllowableIds>,
     ) {
         match source {
             Some(r) => match r {
@@ -1157,14 +1164,14 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "target"));
             }
         }
-        check_path(source_path, decl, "source_path", &mut self.errors);
-        if check_path(target_path, decl, "target_path", &mut self.errors) {
+        check_name_or_path(source_id, decl, "source_path", &mut self.errors);
+        if check_name_or_path(target_id, decl, "target_path", &mut self.errors) {
             // TODO: This logic needs to pair the target path with the target before concluding
             // there's a duplicate.
-            let target_path = target_path.unwrap();
-            if let Some(prev_state) = prev_child_target_paths.insert(target_path, allowable_paths) {
-                if prev_state == AllowableIds::One || prev_state != allowable_paths {
-                    self.errors.push(Error::duplicate_field(decl, "target_path", target_path));
+            let target_id = target_id.unwrap();
+            if let Some(prev_state) = prev_child_target_ids.insert(target_id, allowable_ids) {
+                if prev_state == AllowableIds::One || prev_state != allowable_ids {
+                    self.errors.push(Error::duplicate_field(decl, "target_path", target_id));
                 }
             }
         }
@@ -1173,12 +1180,12 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose_fields_with_name(
         &mut self,
         decl: &str,
-        allowable_names: AllowableIds,
+        allowable_ids: AllowableIds,
         source: Option<&fsys::Ref>,
         source_name: Option<&String>,
         target_name: Option<&'a String>,
         target: Option<&fsys::Ref>,
-        prev_child_target_names: &mut HashMap<&'a str, AllowableIds>,
+        prev_child_target_ids: &mut HashMap<&'a str, AllowableIds>,
     ) {
         match source {
             Some(r) => match r {
@@ -1216,8 +1223,8 @@ impl<'a> ValidationContext<'a> {
             // TODO: This logic needs to pair the target name with the target before concluding
             // there's a duplicate.
             let target_name = target_name.unwrap();
-            if let Some(prev_state) = prev_child_target_names.insert(target_name, allowable_names) {
-                if prev_state == AllowableIds::One || prev_state != allowable_names {
+            if let Some(prev_state) = prev_child_target_ids.insert(target_name, allowable_ids) {
+                if prev_state == AllowableIds::One || prev_state != allowable_ids {
                     self.errors.push(Error::duplicate_field(decl, "target_name", target_name));
                 }
             }
@@ -1260,8 +1267,9 @@ impl<'a> ValidationContext<'a> {
                 self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
             }
             fsys::OfferDecl::Protocol(o) => {
-                self.validate_offer_fields_with_path(
-                    "OfferProtocolDecl",
+                let decl = "OfferProtocolDecl";
+                self.validate_offer_fields_with_name_or_path(
+                    decl,
                     AllowableIds::One,
                     o.source.as_ref(),
                     o.source_path.as_ref(),
@@ -1269,14 +1277,22 @@ impl<'a> ValidationContext<'a> {
                     o.target_path.as_ref(),
                 );
                 if o.dependency_type.is_none() {
-                    self.errors.push(Error::missing_field("OfferProtocolDecl", "dependency_type"));
+                    self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
                     self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
+                }
+                // If the offer source is `self`, ensure we have a corresponding ProtocolDecl.
+                // TODO: Consider bringing this bit into validate_offer_fields_with_name.
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_path) {
+                    if !name.starts_with('/') && !self.all_protocols.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
+                    }
                 }
             }
             fsys::OfferDecl::Directory(o) => {
-                self.validate_offer_fields_with_path(
-                    "OfferDirectoryDecl",
+                let decl = "OfferDirectoryDecl";
+                self.validate_offer_fields_with_name_or_path(
+                    decl,
                     AllowableIds::One,
                     o.source.as_ref(),
                     o.source_path.as_ref(),
@@ -1284,17 +1300,19 @@ impl<'a> ValidationContext<'a> {
                     o.target_path.as_ref(),
                 );
                 if o.dependency_type.is_none() {
-                    self.errors.push(Error::missing_field("OfferDirectoryDecl", "dependency_type"));
+                    self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
                     self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
                 }
-                match o.source.as_ref() {
-                    Some(fsys::Ref::Self_(_)) => {
-                        if o.rights.is_none() {
-                            self.errors.push(Error::missing_field("OfferDirectoryDecl", "rights"));
-                        }
+                // If the offer source is `self`, ensure we have a corresponding DirectoryDecl.
+                // TODO: Consider bringing this bit into validate_offer_fields_with_name.
+                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_path) {
+                    if !name.starts_with('/') && !self.all_directories.contains(&name as &str) {
+                        self.errors.push(Error::invalid_capability(decl, "source", name));
                     }
-                    _ => {}
+                    if name.starts_with('/') && o.rights.is_none() {
+                        self.errors.push(Error::missing_field(decl, "rights"));
+                    }
                 }
                 if let Some(subdir) = o.subdir.as_ref() {
                     check_relative_path(
@@ -1392,14 +1410,14 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_offer_fields_with_path(
+    fn validate_offer_fields_with_name_or_path(
         &mut self,
         decl: &str,
-        allowable_paths: AllowableIds,
+        allowable_ids: AllowableIds,
         source: Option<&fsys::Ref>,
-        source_path: Option<&String>,
+        source_id: Option<&String>,
         target: Option<&'a fsys::Ref>,
-        target_path: Option<&'a String>,
+        target_id: Option<&'a String>,
     ) {
         match source {
             Some(fsys::Ref::Parent(_)) => {}
@@ -1409,13 +1427,13 @@ impl<'a> ValidationContext<'a> {
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
-        check_path(source_path, decl, "source_path", &mut self.errors);
+        check_name_or_path(source_id, decl, "source_path", &mut self.errors);
         match target {
             Some(fsys::Ref::Child(c)) => {
-                self.validate_target_child_with_path(decl, allowable_paths, c, source, target_path);
+                self.validate_target_child_with_path(decl, allowable_ids, c, source, target_id);
             }
             Some(fsys::Ref::Collection(c)) => {
-                self.validate_target_collection_with_path(decl, allowable_paths, c, target_path);
+                self.validate_target_collection_with_path(decl, allowable_ids, c, target_id);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "target"));
@@ -1424,7 +1442,7 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "target"));
             }
         }
-        check_path(target_path, decl, "target_path", &mut self.errors);
+        check_name_or_path(target_id, decl, "target_path", &mut self.errors);
     }
 
     fn validate_offer_fields_with_name(
@@ -1510,7 +1528,7 @@ impl<'a> ValidationContext<'a> {
         if let (Some(target_id), Some(target_name)) = (target_id, event.target_name.as_ref()) {
             // Assuming the target_name is valid, ensure the target_name isn't already used.
             if let Some(_) = self
-                .target_names
+                .target_ids
                 .entry(target_id)
                 .or_insert(HashMap::new())
                 .insert(target_name, AllowableIds::One)
@@ -1587,7 +1605,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_target_child_with_path(
         &mut self,
         decl: &str,
-        allowable_paths: AllowableIds,
+        allowable_ids: AllowableIds,
         child: &'a fsys::ChildRef,
         source: Option<&fsys::Ref>,
         target_path: Option<&'a String>,
@@ -1597,9 +1615,9 @@ impl<'a> ValidationContext<'a> {
         }
         if let Some(target_path) = target_path {
             let paths_for_target =
-                self.target_paths.entry(TargetId::Component(&child.name)).or_insert(HashMap::new());
-            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
-                if prev_state == AllowableIds::One || prev_state != allowable_paths {
+                self.target_ids.entry(TargetId::Component(&child.name)).or_insert(HashMap::new());
+            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_ids) {
+                if prev_state == AllowableIds::One || prev_state != allowable_ids {
                     self.errors.push(Error::duplicate_field(
                         decl,
                         "target_path",
@@ -1631,7 +1649,7 @@ impl<'a> ValidationContext<'a> {
         }
         if let Some(target_name) = target_name {
             let names_for_target =
-                self.target_names.entry(TargetId::Component(&child.name)).or_insert(HashMap::new());
+                self.target_ids.entry(TargetId::Component(&child.name)).or_insert(HashMap::new());
             if let Some(prev_state) = names_for_target.insert(target_name, allowable_names) {
                 if prev_state == AllowableIds::One || prev_state != allowable_names {
                     self.errors.push(Error::duplicate_field(
@@ -1655,7 +1673,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_target_collection_with_path(
         &mut self,
         decl: &str,
-        allowable_paths: AllowableIds,
+        allowable_ids: AllowableIds,
         collection: &'a fsys::CollectionRef,
         target_path: Option<&'a String>,
     ) {
@@ -1664,11 +1682,11 @@ impl<'a> ValidationContext<'a> {
         }
         if let Some(target_path) = target_path {
             let paths_for_target = self
-                .target_paths
+                .target_ids
                 .entry(TargetId::Collection(&collection.name))
                 .or_insert(HashMap::new());
-            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_paths) {
-                if prev_state == AllowableIds::One || prev_state != allowable_paths {
+            if let Some(prev_state) = paths_for_target.insert(target_path, allowable_ids) {
+                if prev_state == AllowableIds::One || prev_state != allowable_ids {
                     self.errors.push(Error::duplicate_field(
                         decl,
                         "target_path",
@@ -1691,7 +1709,7 @@ impl<'a> ValidationContext<'a> {
         }
         if let Some(target_name) = target_name {
             let names_for_target = self
-                .target_names
+                .target_ids
                 .entry(TargetId::Collection(&collection.name))
                 .or_insert(HashMap::new());
             if let Some(prev_state) = names_for_target.insert(target_name, allowable_names) {
@@ -1779,6 +1797,25 @@ fn check_path(
             errors.push(Error::invalid_field(decl_type, keyword));
             return false;
         }
+    }
+    start_err_len == errors.len()
+}
+
+fn check_name_or_path(
+    prop: Option<&String>,
+    decl_type: &str,
+    keyword: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    let start_err_len = errors.len();
+    if let Some(prop) = prop {
+        if prop.starts_with('/') {
+            check_path(Some(prop), decl_type, keyword, errors);
+        } else {
+            check_name(Some(prop), decl_type, keyword, errors);
+        }
+    } else {
+        errors.push(Error::missing_field(decl_type, keyword));
     }
     start_err_len == errors.len()
 }
@@ -3107,20 +3144,32 @@ mod tests {
                         target_name: Some("fuchsia.net.Stack".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                     }),
+                    ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("fonts".to_string()),
+                        target_path: Some("fuchsia.fonts.Provider".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                    }),
+                    ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("fonts2".to_string()),
+                        target_path: Some("fuchsia.fonts.Provider".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                    }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/logger".to_string()),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        source_path: Some("assets".to_string()),
+                        target_path: Some("stuff".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: None,
                         subdir: None,
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/svc/logger3".to_string()),
-                        target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        source_path: Some("assets2".to_string()),
+                        target_path: Some("stuff".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: None,
                         subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
@@ -3157,6 +3206,24 @@ mod tests {
                         name: Some("netstack2".to_string()),
                         source_path: Some("/path".to_string()),
                     }),
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: Some("fonts".to_string()),
+                        source_path: Some("/path".to_string()),
+                    }),
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: Some("fonts2".to_string()),
+                        source_path: Some("/path".to_string()),
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("assets".to_string()),
+                        source_path: Some("/path".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("assets2".to_string()),
+                        source_path: Some("/path".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                    }),
                     CapabilityDecl::Runner(RunnerDecl {
                         name: Some("source_elf".to_string()),
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3171,8 +3238,10 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 // Duplicate services are allowed.
+                Error::duplicate_field("ExposeProtocolDecl", "target_path",
+                                       "fuchsia.fonts.Provider"),
                 Error::duplicate_field("ExposeDirectoryDecl", "target_path",
-                                       "/svc/fuchsia.logger.Log"),
+                                       "stuff"),
                 Error::duplicate_field("ExposeRunnerDecl", "target_name",
                                        "elf"),
                 Error::duplicate_field("ExposeResolverDecl", "target_name", "pkg"),
@@ -3188,6 +3257,20 @@ mod tests {
                         source_name: Some("fuchsia.netstack.Netstack".to_string()),
                         target: Some(Ref::Parent(ParentRef {})),
                         target_name: Some("foo".to_string()),
+                    }),
+                    ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("fuchsia.netstack.Netstack".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        target_path: Some("bar".to_string()),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("dir".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        target_path: Some("assets".to_string()),
+                        rights: None,
+                        subdir: None,
                     }),
                     ExposeDecl::Runner(ExposeRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -3206,6 +3289,8 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_capability("ExposeServiceDecl", "source", "fuchsia.netstack.Netstack"),
+                Error::invalid_capability("ExposeProtocolDecl", "source", "fuchsia.netstack.Netstack"),
+                Error::invalid_capability("ExposeDirectoryDecl", "source", "dir"),
                 Error::invalid_capability("ExposeRunnerDecl", "source", "source_elf"),
                 Error::invalid_capability("ExposeResolverDecl", "source", "source_pkg"),
             ])),
@@ -3483,24 +3568,52 @@ mod tests {
         test_validate_offers_rights => {
             input = {
                 let mut decl = new_component_decl();
-                decl.offers = Some(vec![OfferDecl::Directory(OfferDirectoryDecl {
-                    source: Some(Ref::Self_(SelfRef{})),
-                    source_path: Some("/data/assets".to_string()),
-                    target: Some(Ref::Child(
-                       ChildRef {
-                           name: "logger".to_string(),
-                           collection: None,
-                       }
-                    )),
-                    target_path: Some("/data".to_string()),
-                    rights: None,
-                    subdir: None,
-                    dependency_type: Some(DependencyType::Strong),
-                })]);
+                decl.offers = Some(vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("/data/assets".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("/data".to_string()),
+                        rights: None,
+                        subdir: None,
+                        dependency_type: Some(DependencyType::Strong),
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_path: Some("assets".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("assets".to_string()),
+                        rights: None,
+                        subdir: None,
+                        dependency_type: Some(DependencyType::Strong),
+                    }),
+                ]);
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("assets".to_string()),
+                        source_path: Some("/data/assets".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                    }),
+                ]);
+                decl.children = Some(vec![ChildDecl{
+                    name: Some("logger".to_string()),
+                    url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
+                    startup: Some(StartupMode::Lazy),
+                    environment: None,
+                }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_child("OfferDirectoryDecl", "target", "logger"),
                 Error::missing_field("OfferDirectoryDecl", "rights"),
             ])),
         },
@@ -3527,14 +3640,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
-                        source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                        source_path: Some("fuchsia.logger.Log".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
                                 name: "netstack".to_string(),
                                 collection: Some("modular".to_string()),
                             }
                         )),
-                        target_path: Some("/data/realm_assets".to_string()),
+                        target_path: Some("fuchsia.logger.Log".to_string()),
                         dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
@@ -3542,14 +3655,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: Some("modular".to_string()),
                         })),
-                        source_path: Some("/data/assets".to_string()),
+                        source_path: Some("assets".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
                                 name: "netstack".to_string(),
                                 collection: Some("modular".to_string()),
                             }
                         )),
-                        target_path: Some("/data".to_string()),
+                        target_path: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
@@ -3591,6 +3704,17 @@ mod tests {
                             }
                         )),
                         target_name: Some("pkg".to_string()),
+                    }),
+                ]);
+                decl.capabilities = Some(vec![
+                    CapabilityDecl::Protocol(ProtocolDecl {
+                        name: Some("fuchsia.logger.Log".to_string()),
+                        source_path: Some("/svc/logger".to_string()),
+                    }),
+                    CapabilityDecl::Directory(DirectoryDecl {
+                        name: Some("assets".to_string()),
+                        source_path: Some("/data/assets".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                 ]);
                 decl
@@ -3740,14 +3864,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/svc/legacy_logger".to_string()),
+                        source_path: Some("legacy_logger".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "logger".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/legacy_logger".to_string()),
+                        target_path: Some("legacy_logger".to_string()),
                         dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
@@ -3755,14 +3879,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/data/assets".to_string()),
+                        source_path: Some("assets".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "logger".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/data".to_string()),
+                        target_path: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::Strong),
@@ -3875,14 +3999,14 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
+                        source_path: Some("fuchsia.logger.LegacyLog".to_string()),
                         target: Some(Ref::Child(
                            ChildRef {
                                name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/data/legacy_realm_assets".to_string()),
+                        target_path: Some("fuchsia.logger.LegacyLog".to_string()),
                         dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
@@ -3890,11 +4014,11 @@ mod tests {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_path: Some("/data/assets".to_string()),
+                        source_path: Some("assets".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
                         )),
-                        target_path: Some("/data".to_string()),
+                        target_path: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
@@ -3960,24 +4084,48 @@ mod tests {
                         )),
                         target_name: Some("fuchsia.logger.Log".to_string()),
                     }),
+                    OfferDecl::Protocol(OfferProtocolDecl {
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "netstack".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
+                    }),
+                    OfferDecl::Protocol(OfferProtocolDecl {
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "netstack".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
+                    }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/data/assets".to_string()),
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_path: Some("assets".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
                         )),
-                        target_path: Some("/data".to_string()),
+                        target_path: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
-                        source_path: Some("/data/assets".to_string()),
+                        source: Some(Ref::Parent(ParentRef{})),
+                        source_path: Some("assets".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
                         )),
-                        target_path: Some("/data".to_string()),
+                        target_path: Some("assets".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
                         dependency_type: Some(DependencyType::WeakForMigration),
@@ -4046,7 +4194,8 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 // Duplicate services are allowed.
-                Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
+                Error::duplicate_field("OfferProtocolDecl", "target_path", "fuchsia.logger.LegacyLog"),
+                Error::duplicate_field("OfferDirectoryDecl", "target_path", "assets"),
                 Error::duplicate_field("OfferRunnerDecl", "target_name", "duplicated"),
                 Error::duplicate_field("OfferResolverDecl", "target_name", "duplicated"),
                 Error::duplicate_field("OfferEventDecl", "target_name", "started"),
@@ -4914,14 +5063,14 @@ mod tests {
                         source_path: Some("/foo".to_string()),
                     }),
                     CapabilityDecl::Runner(RunnerDecl {
-                        name: Some("foo".to_string()),
+                        name: Some("bar".to_string()),
                         source: Some(Ref::Collection(CollectionRef {
                             name: "invalid".to_string(),
                         })),
                         source_path: Some("/foo".to_string()),
                     }),
                     CapabilityDecl::Resolver(ResolverDecl {
-                        name: Some("foo".to_string()),
+                        name: Some("baz".to_string()),
                         source_path: Some("/foo".to_string()),
                     }),
                 ]);

@@ -9,9 +9,9 @@ use {
         },
     },
     cm_rust::{
-        self, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl, ExposeSource,
-        ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
-        UseProtocolDecl, UseSource,
+        self, CapabilityNameOrPath, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
+        ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget,
+        UseDecl, UseProtocolDecl, UseSource,
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
@@ -141,14 +141,14 @@ async fn use_work_scheduler_with_expose_to_framework() {
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: (*WORKER_CAPABILITY_PATH).clone(),
-                    target_path: (*WORKER_CAPABILITY_PATH).clone(),
+                    source_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
+                    target_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
                     target: ExposeTarget::Framework,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
-                    target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
+                    source_path: CapabilityNameOrPath::Path(WORK_SCHEDULER_CAPABILITY_PATH.clone()),
+                    target_path: WORK_SCHEDULER_CAPABILITY_PATH.clone(),
                 }))
                 .build(),
         ),
@@ -174,8 +174,8 @@ async fn use_work_scheduler_without_expose() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
-                    target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
+                    source_path: CapabilityNameOrPath::Path(WORK_SCHEDULER_CAPABILITY_PATH.clone()),
+                    target_path: WORK_SCHEDULER_CAPABILITY_PATH.clone(),
                 }))
                 .build(),
         ),
@@ -201,14 +201,14 @@ async fn use_work_scheduler_with_expose_to_realm() {
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: (*WORKER_CAPABILITY_PATH).clone(),
-                    target_path: (*WORKER_CAPABILITY_PATH).clone(),
+                    source_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
+                    target_path: CapabilityNameOrPath::Path(WORKER_CAPABILITY_PATH.clone()),
                     target: ExposeTarget::Parent,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
-                    target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
+                    source_path: CapabilityNameOrPath::Path(WORK_SCHEDULER_CAPABILITY_PATH.clone()),
+                    target_path: WORK_SCHEDULER_CAPABILITY_PATH.clone(),
                 }))
                 .build(),
         ),
@@ -233,8 +233,10 @@ async fn use_work_scheduler_control_routed() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
-                    target_path: offer_use_path.clone(),
+                    source_path: CapabilityNameOrPath::Path(
+                        WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
+                    ),
+                    target_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -246,7 +248,7 @@ async fn use_work_scheduler_control_routed() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: offer_use_path.clone(),
+                    source_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
                     target_path: offer_use_path.clone(),
                 }))
                 .build(),
@@ -274,8 +276,10 @@ async fn use_work_scheduler_control_error() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
-                    target_path: offer_use_path.clone(),
+                    source_path: CapabilityNameOrPath::Path(
+                        WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
+                    ),
+                    target_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -287,7 +291,7 @@ async fn use_work_scheduler_control_error() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
-                    source_path: offer_use_path.clone(),
+                    source_path: CapabilityNameOrPath::Path(offer_use_path.clone()),
                     target_path: offer_use_path.clone(),
                 }))
                 .build(),

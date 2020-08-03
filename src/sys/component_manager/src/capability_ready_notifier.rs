@@ -15,7 +15,9 @@ use {
         rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl},
+    cm_rust::{
+        CapabilityNameOrPath, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
+    },
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeEvent, NodeMarker, NodeProxy},
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -138,27 +140,41 @@ impl CapabilityReadyNotifier {
                     target_path,
                     rights,
                     ..
-                }) => {
-                    self.create_event(
-                        &target_realm,
-                        outgoing_dir_result.as_ref(),
-                        fio::MODE_TYPE_DIRECTORY,
-                        Rights::from(rights.unwrap_or(*READ_RIGHTS)),
-                        source_path,
-                        target_path,
-                    )
-                    .await
-                }
+                }) => match (source_path, target_path) {
+                    (
+                        CapabilityNameOrPath::Path(source_path),
+                        CapabilityNameOrPath::Path(target_path),
+                    ) => {
+                        self.create_event(
+                            &target_realm,
+                            outgoing_dir_result.as_ref(),
+                            fio::MODE_TYPE_DIRECTORY,
+                            Rights::from(rights.unwrap_or(*READ_RIGHTS)),
+                            source_path,
+                            target_path,
+                        )
+                        .await
+                    }
+                    _ => continue,
+                },
                 ExposeDecl::Protocol(ExposeProtocolDecl { source_path, target_path, .. }) => {
-                    self.create_event(
-                        &target_realm,
-                        outgoing_dir_result.as_ref(),
-                        fio::MODE_TYPE_SERVICE,
-                        Rights::from(*WRITE_RIGHTS),
-                        source_path,
-                        target_path,
-                    )
-                    .await
+                    match (source_path, target_path) {
+                        (
+                            CapabilityNameOrPath::Path(source_path),
+                            CapabilityNameOrPath::Path(target_path),
+                        ) => {
+                            self.create_event(
+                                &target_realm,
+                                outgoing_dir_result.as_ref(),
+                                fio::MODE_TYPE_SERVICE,
+                                Rights::from(*WRITE_RIGHTS),
+                                source_path,
+                                target_path,
+                            )
+                            .await
+                        }
+                        _ => continue,
+                    }
                 }
                 _ => continue,
             };

@@ -375,8 +375,8 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl,
-            ExposeProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
+            self, CapabilityName, CapabilityNameOrPath, CapabilityPath, ChildDecl, ComponentDecl,
+            ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
         },
         fidl::endpoints,
         fidl_fidl_examples_echo as echo,
@@ -777,8 +777,8 @@ mod tests {
                     ComponentDeclBuilder::new()
                         .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
+                            target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
                             target: ExposeTarget::Parent,
                         }))
                         .add_eager_child("eager")
@@ -834,8 +834,8 @@ mod tests {
                     ComponentDeclBuilder::new()
                         .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                             source: ExposeSource::Self_,
-                            source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                            source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
+                            target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
                             target: ExposeTarget::Parent,
                         }))
                         .build(),

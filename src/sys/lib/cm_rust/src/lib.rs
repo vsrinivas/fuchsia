@@ -409,7 +409,8 @@ impl ComponentDecl {
     pub fn is_protocol_exposed_to_framework(&self, target_path: &CapabilityPath) -> bool {
         self.exposes.iter().any(|expose| match expose {
             ExposeDecl::Protocol(ls) => {
-                ls.target == ExposeTarget::Framework && ls.target_path == *target_path
+                ls.target == ExposeTarget::Framework
+                    && ls.target_path == CapabilityNameOrPath::Path(target_path.clone())
             }
             _ => false,
         })
@@ -418,7 +419,9 @@ impl ComponentDecl {
     /// Indicates whether the capability specified by `source_path` is requested.
     pub fn uses_protocol(&self, source_path: &CapabilityPath) -> bool {
         self.uses.iter().any(|use_decl| match use_decl {
-            UseDecl::Protocol(ls) => ls.source_path == *source_path,
+            UseDecl::Protocol(ls) => {
+                ls.source_path == CapabilityNameOrPath::Path(source_path.clone())
+            }
             _ => false,
         })
     }
@@ -495,14 +498,14 @@ fidl_into_struct!(UseServiceDecl, UseServiceDecl, fsys::UseServiceDecl, fsys::Us
 fidl_into_struct!(UseProtocolDecl, UseProtocolDecl, fsys::UseProtocolDecl, fsys::UseProtocolDecl,
 {
     source: UseSource,
-    source_path: CapabilityPath,
+    source_path: CapabilityNameOrPath,
     target_path: CapabilityPath,
 });
 fidl_into_struct!(UseDirectoryDecl, UseDirectoryDecl, fsys::UseDirectoryDecl,
 fsys::UseDirectoryDecl,
 {
     source: UseSource,
-    source_path: CapabilityPath,
+    source_path: CapabilityNameOrPath,
     target_path: CapabilityPath,
     rights: fio2::Operations,
     subdir: Option<PathBuf>,
@@ -531,17 +534,17 @@ fidl_into_struct!(ExposeProtocolDecl, ExposeProtocolDecl, fsys::ExposeProtocolDe
 fsys::ExposeProtocolDecl,
 {
     source: ExposeSource,
-    source_path: CapabilityPath,
+    source_path: CapabilityNameOrPath,
     target: ExposeTarget,
-    target_path: CapabilityPath,
+    target_path: CapabilityNameOrPath,
 });
 fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
 fsys::ExposeDirectoryDecl,
 {
     source: ExposeSource,
-    source_path: CapabilityPath,
+    source_path: CapabilityNameOrPath,
     target: ExposeTarget,
-    target_path: CapabilityPath,
+    target_path: CapabilityNameOrPath,
     rights: Option<fio2::Operations>,
     subdir: Option<PathBuf>,
 });
@@ -565,18 +568,18 @@ fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
 fsys::OfferProtocolDecl,
 {
     source: OfferServiceSource,
-    source_path: CapabilityPath,
+    source_path: CapabilityNameOrPath,
     target: OfferTarget,
-    target_path: CapabilityPath,
+    target_path: CapabilityNameOrPath,
     dependency_type: DependencyType,
 });
 fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
 fsys::OfferDirectoryDecl,
 {
     source: OfferDirectorySource,
-    source_path: CapabilityPath,
+    source_path: CapabilityNameOrPath,
     target: OfferTarget,
-    target_path: CapabilityPath,
+    target_path: CapabilityNameOrPath,
     rights: Option<fio2::Operations>,
     subdir: Option<PathBuf>,
     dependency_type: DependencyType,
@@ -815,7 +818,43 @@ impl From<String> for CapabilityName {
 
 impl fmt::Display for CapabilityName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <String as fmt::Display>::fmt(&self.0, f)
+        self.0.fmt(f)
+    }
+}
+
+/// A capability identifier that can be either a name or path.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CapabilityNameOrPath {
+    Name(CapabilityName),
+    Path(CapabilityPath),
+}
+
+impl FromStr for CapabilityNameOrPath {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<CapabilityNameOrPath, Error> {
+        if s.starts_with('/') {
+            Ok(Self::Path(s.parse()?))
+        } else {
+            Ok(Self::Name(s.into()))
+        }
+    }
+}
+
+impl TryFrom<&str> for CapabilityNameOrPath {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<CapabilityNameOrPath, Error> {
+        Self::from_str(s)
+    }
+}
+
+impl fmt::Display for CapabilityNameOrPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Name(n) => n.fmt(f),
+            Self::Path(p) => p.fmt(f),
+        }
     }
 }
 
@@ -873,6 +912,19 @@ impl FidlIntoNative<CapabilityName> for Option<String> {
 }
 
 impl NativeIntoFidl<Option<String>> for CapabilityName {
+    fn native_into_fidl(self) -> Option<String> {
+        Some(self.to_string())
+    }
+}
+
+impl FidlIntoNative<CapabilityNameOrPath> for Option<String> {
+    fn fidl_into_native(self) -> CapabilityNameOrPath {
+        let s: &str = &self.unwrap();
+        s.try_into().expect("invalid name or path")
+    }
+}
+
+impl NativeIntoFidl<Option<String>> for CapabilityNameOrPath {
     fn native_into_fidl(self) -> Option<String> {
         Some(self.to_string())
     }

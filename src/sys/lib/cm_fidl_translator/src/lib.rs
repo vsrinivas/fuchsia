@@ -813,7 +813,7 @@ mod tests {
                             "source": {
                                 "parent": {}
                             },
-                            "source_path": "/fonts/CoolFonts",
+                            "source_path": "CoolFonts",
                             "target_path": "/svc/fuchsia.fonts.Provider2"
                         }
                     },
@@ -831,7 +831,7 @@ mod tests {
                             "source": {
                                 "parent": {}
                             },
-                            "source_path": "/data/assets",
+                            "source_path": "assets",
                             "target_path": "/data",
                             "rights": ["connect", "write_bytes"]
                         }
@@ -901,7 +901,7 @@ mod tests {
                     }),
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/fonts/CoolFonts".to_string()),
+                        source_path: Some("CoolFonts".to_string()),
                         target_path: Some("/svc/fuchsia.fonts.Provider2".to_string()),
                     }),
                     fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
@@ -911,7 +911,7 @@ mod tests {
                     }),
                     fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/data/assets".to_string()),
+                        source_path: Some("assets".to_string()),
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect | fio2::Operations::WriteBytes),
                         subdir: None,
@@ -989,6 +989,18 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
+                            "source_path": "fuchsia.logger.LegacyLog",
+                            "target_path": "fuchsia.logger.LegacyLog",
+                            "target": "parent"
+                        }
+                    },
+                    {
+                        "protocol": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
                             "source_path": "/loggers/fuchsia.logger.LegacyLog",
                             "target_path": "/svc/fuchsia.logger.LegacyLog",
                             "target": "parent"
@@ -999,8 +1011,8 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "source_path": "/volumes/blobfs",
-                            "target_path": "/volumes/blobfs",
+                            "source_path": "blobfs",
+                            "target_path": "blobfs",
                             "target": "framework",
                             "rights": ["connect"]
                         }
@@ -1050,6 +1062,13 @@ mod tests {
                             "name": "fuchsia.netstack.Netstack",
                             "source_path": "/svc/fuchsia.netstack.Netstack"
                         }
+                    },
+                    {
+                        "directory": {
+                            "name": "blobfs",
+                            "source_path": "/volumes/blobfs",
+                            "rights": ["connect"]
+                        }
                     }
                 ],
                 "children": [
@@ -1078,6 +1097,15 @@ mod tests {
                         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
+                        source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                        source: Some(fsys::Ref::Child(fsys::ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                    }),
+                    fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
                         source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
@@ -1087,9 +1115,9 @@ mod tests {
                         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     }),
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
-                        source_path: Some("/volumes/blobfs".to_string()),
+                        source_path: Some("blobfs".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                        target_path: Some("/volumes/blobfs".to_string()),
+                        target_path: Some("blobfs".to_string()),
                         target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
@@ -1129,6 +1157,11 @@ mod tests {
                         name: Some("fuchsia.netstack.Netstack".to_string()),
                         source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
                     }),
+                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                        name: Some("blobfs".to_string()),
+                        source_path: Some("/volumes/blobfs".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                    }),
                 ];
                 let children = vec![
                     fsys::ChildDecl{
@@ -1148,38 +1181,6 @@ mod tests {
         test_translate_offers => {
             input = json!({
                 "offers": [
-                    {
-                        "directory": {
-                            "source": {
-                                "parent": {}
-                            },
-                            "source_path": "/data/assets",
-                            "target": {
-                                "child": {
-                                    "name": "logger"
-                                }
-                            },
-                            "target_path": "/data/realm_assets",
-                            "dependency_type": "strong"
-                        },
-                    },
-                    {
-                        "directory": {
-                            "source": {
-                                "self": {}
-                            },
-                            "source_path": "/data/config",
-                            "target": {
-                                "collection": {
-                                    "name": "modular"
-                                }
-                            },
-                            "target_path": "/data/config",
-                            "rights": ["connect"],
-                            "subdir": "fonts",
-                            "dependency_type": "weak_for_migration"
-                        }
-                    },
                     {
                         "service": {
                             "source": {
@@ -1229,13 +1230,13 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "source_path": "/svc/fuchsia.netstack.LegacyNetstack",
+                            "source_path": "fuchsia.netstack.LegacyNetstack",
                             "target": {
                                 "child": {
                                     "name": "logger"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.netstack.LegacyNetstack",
+                            "target_path": "fuchsia.netstack.LegacyNetstack",
                             "dependency_type": "strong"
                         }
                     },
@@ -1253,6 +1254,38 @@ mod tests {
                                 }
                             },
                             "target_path": "/svc/fuchsia.logger.LegacySysLog",
+                            "dependency_type": "weak_for_migration"
+                        }
+                    },
+                    {
+                        "directory": {
+                            "source": {
+                                "parent": {}
+                            },
+                            "source_path": "assets",
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "target_path": "realm_assets",
+                            "dependency_type": "strong"
+                        },
+                    },
+                    {
+                        "directory": {
+                            "source": {
+                                "self": {}
+                            },
+                            "source_path": "/data/config",
+                            "target": {
+                                "collection": {
+                                    "name": "modular"
+                                }
+                            },
+                            "target_path": "/data/config",
+                            "rights": ["connect"],
+                            "subdir": "fonts",
                             "dependency_type": "weak_for_migration"
                         }
                     },
@@ -1366,6 +1399,12 @@ mod tests {
                         }
                     },
                     {
+                        "protocol": {
+                            "name": "fuchsia.netstack.LegacyNetstack",
+                            "source_path": "/svc/fuchsia.netstack.LegacyNetstack",
+                        }
+                    },
+                    {
                         "storage": {
                             "name": "memfs",
                             "source": {
@@ -1396,33 +1435,6 @@ mod tests {
             }),
             output = {
                 let offers = vec![
-                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_path: Some("/data/assets".to_string()),
-                        target: Some(fsys::Ref::Child(
-                           fsys::ChildRef {
-                               name: "logger".to_string(),
-                               collection: None,
-                           }
-                        )),
-                        target_path: Some("/data/realm_assets".to_string()),
-                        rights: None,
-                        subdir: None,
-                        dependency_type: Some(fsys::DependencyType::Strong),
-                    }),
-                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                        source_path: Some("/data/config".to_string()),
-                        target: Some(fsys::Ref::Collection(
-                           fsys::CollectionRef {
-                               name: "modular".to_string(),
-                           }
-                        )),
-                        target_path: Some("/data/config".to_string()),
-                        rights: Some(fio2::Operations::Connect),
-                        subdir: Some("fonts".to_string()),
-                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
-                    }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                         source_name: Some("fuchsia.netstack.Netstack".to_string()),
@@ -1459,14 +1471,14 @@ mod tests {
                     }),
                     fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                        source_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
+                        source_path: Some("fuchsia.netstack.LegacyNetstack".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
                                name: "logger".to_string(),
                                collection: None,
                            }
                         )),
-                        target_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
+                        target_path: Some("fuchsia.netstack.LegacyNetstack".to_string()),
                         dependency_type: Some(fsys::DependencyType::Strong),
                     }),
                     fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
@@ -1481,6 +1493,33 @@ mod tests {
                            }
                         )),
                         target_path: Some("/svc/fuchsia.logger.LegacySysLog".to_string()),
+                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                    }),
+                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        source_path: Some("assets".to_string()),
+                        target: Some(fsys::Ref::Child(
+                           fsys::ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_path: Some("realm_assets".to_string()),
+                        rights: None,
+                        subdir: None,
+                        dependency_type: Some(fsys::DependencyType::Strong),
+                    }),
+                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source_path: Some("/data/config".to_string()),
+                        target: Some(fsys::Ref::Collection(
+                           fsys::CollectionRef {
+                               name: "modular".to_string(),
+                           }
+                        )),
+                        target_path: Some("/data/config".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: Some("fonts".to_string()),
                         dependency_type: Some(fsys::DependencyType::WeakForMigration),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
@@ -1559,6 +1598,10 @@ mod tests {
                     fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                         name: Some("fuchsia.netstack.Netstack".to_string()),
                         source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
+                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                        name: Some("fuchsia.netstack.LegacyNetstack".to_string()),
+                        source_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
                     }),
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),
@@ -1916,28 +1959,28 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
-                            "source_path": "/volumes/blobfs",
-                            "target_path": "/volumes/blobfs",
+                            "source_path": "blobfs",
+                            "target_path": "blobfs",
                             "target": "parent",
-                            "rights": ["connect"]
                         }
                     }
                 ],
                 "offers": [
                     {
-                        "service": {
+                        "protocol": {
                             "source": {
                                 "child": {
                                     "name": "logger"
                                 }
                             },
-                            "source_name": "fuchsia.logger.Log",
+                            "source_path": "fuchsia.logger.Log",
                             "target": {
                                 "child": {
                                     "name": "netstack"
                                 }
                             },
-                            "target_name": "fuchsia.logger.Log"
+                            "target_path": "fuchsia.logger.Log",
+                            "dependency_type": "strong"
                         }
                     }
                 ],
@@ -1946,6 +1989,13 @@ mod tests {
                         "service": {
                             "name": "fuchsia.netstack.Netstack",
                             "source_path": "/svc/fuchsia.netstack.Netstack"
+                        }
+                    },
+                    {
+                        "directory": {
+                            "name": "blobfs",
+                            "source_path": "/volumes/blobfs",
+                            "rights": ["connect"]
                         }
                     },
                     {
@@ -2028,27 +2078,28 @@ mod tests {
                 let exposes = vec![
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
-                        source_path: Some("/volumes/blobfs".to_string()),
-                        target_path: Some("/volumes/blobfs".to_string()),
+                        source_path: Some("blobfs".to_string()),
+                        target_path: Some("blobfs".to_string()),
                         target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        rights: Some(fio2::Operations::Connect),
+                        rights: None,
                         subdir: None,
                     }),
                 ];
                 let offers = vec![
-                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                    fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
                             name: "logger".to_string(),
                             collection: None,
                         })),
-                        source_name: Some("fuchsia.logger.Log".to_string()),
+                        source_path: Some("fuchsia.logger.Log".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
                                name: "netstack".to_string(),
                                collection: None,
                            }
                         )),
-                        target_name: Some("fuchsia.logger.Log".to_string()),
+                        target_path: Some("fuchsia.logger.Log".to_string()),
+                        dependency_type: Some(fsys::DependencyType::Strong),
                     }),
                 ];
                 let children = vec![
@@ -2086,6 +2137,11 @@ mod tests {
                     fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                         name: Some("fuchsia.netstack.Netstack".to_string()),
                         source_path: Some("/svc/fuchsia.netstack.Netstack".to_string()),
+                    }),
+                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                        name: Some("blobfs".to_string()),
+                        source_path: Some("/volumes/blobfs".to_string()),
+                        rights: Some(fio2::Operations::Connect),
                     }),
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),

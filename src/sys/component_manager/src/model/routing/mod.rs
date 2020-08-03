@@ -28,10 +28,10 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{
-        self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferDirectoryDecl, OfferDirectorySource, OfferEventDecl, OfferEventSource,
-        OfferRunnerSource, OfferServiceSource, OfferStorageSource, StorageDirectorySource, UseDecl,
-        UseDirectoryDecl, UseEventDecl, UseStorageDecl,
+        self, CapabilityNameOrPath, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
+        ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferDirectorySource, OfferEventDecl,
+        OfferEventSource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
+        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseStorageDecl,
     },
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -393,6 +393,11 @@ async fn route_storage_capability<'a>(
             let (source, cap_state) = find_capability_source(capability, &source_realm).await?;
             match source {
                 CapabilitySource::Component { capability, realm } => {
+                    if capability.source_path().is_none() {
+                        return Err(ModelError::unsupported(
+                            "Name-based directories are not supported yet",
+                        ));
+                    }
                     (capability.source_path().unwrap().clone(), Some(realm.upgrade()?), cap_state)
                 }
                 CapabilitySource::Framework { .. } => {
@@ -697,7 +702,12 @@ pub async fn find_exposed_root_directory_capability(
             .exposes
             .iter()
             .find_map(|e| match e {
-                ExposeDecl::Directory(dir_decl) if dir_decl.target_path == path => Some(dir_decl),
+                ExposeDecl::Directory(dir_decl) => match &dir_decl.target_path {
+                    CapabilityNameOrPath::Path(target_path) if target_path == &path => {
+                        Some(dir_decl)
+                    }
+                    _ => None,
+                },
                 _ => None,
             })
             .ok_or_else(|| {
@@ -714,7 +724,15 @@ pub async fn find_exposed_root_directory_capability(
                 "find_exposed_root_directory_capability does not support capabilities exposed from framework"));
         }
         ExposeSource::Self_ => {
-            return Ok((expose_dir_decl.source_path.clone(), Arc::clone(root_realm)))
+            let source_path = match expose_dir_decl.source_path {
+                CapabilityNameOrPath::Path(source_path) => source_path.clone(),
+                _ => {
+                    return Err(ModelError::unsupported(
+                        "name-based directory capabilities are not supported yet",
+                    ));
+                }
+            };
+            return Ok((source_path, Arc::clone(root_realm)));
         }
         ExposeSource::Child(_) => {
             let capability =
@@ -736,6 +754,14 @@ pub async fn find_exposed_root_directory_capability(
                         })),
                     realm,
                 } => {
+                    let source_path = match source_path {
+                        CapabilityNameOrPath::Path(source_path) => source_path.clone(),
+                        _ => {
+                            return Err(ModelError::unsupported(
+                                "name-based directory capabilities are not supported yet",
+                            ));
+                        }
+                    };
                     return Ok((source_path, realm.upgrade()?));
                 }
                 CapabilitySource::Framework {
