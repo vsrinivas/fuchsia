@@ -129,10 +129,21 @@ static pbus_dev_t i2c_dev = []() {
 }();
 
 zx_status_t Sherlock::I2cInit() {
+  pdev_board_info_t info;
+  zx_status_t status = pbus_.GetBoardInfo(&info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GetBoardInfo failed %d", __FILE__, status);
+    return status;
+  }
+
   // setup pinmux for our I2C busses
   // i2c_ao_0
   gpio_impl_.SetAltFunction(T931_GPIOAO(2), 1);
   gpio_impl_.SetAltFunction(T931_GPIOAO(3), 1);
+  if (info.pid == PDEV_PID_LUIS) {
+    gpio_impl_.SetDriveStrength(T931_GPIOAO(2), 2);
+    gpio_impl_.SetDriveStrength(T931_GPIOAO(3), 2);
+  }
   // i2c2
   gpio_impl_.SetAltFunction(T931_GPIOZ(14), 3);
   gpio_impl_.SetAltFunction(T931_GPIOZ(15), 3);
@@ -141,9 +152,7 @@ zx_status_t Sherlock::I2cInit() {
   gpio_impl_.SetAltFunction(T931_GPIOA(15), 2);
 
   // Camera sensor for Luis
-  pdev_board_info_t info;
-  zx_status_t status = pbus_.GetBoardInfo(&info);
-  if (status == ZX_OK && info.pid == PDEV_PID_LUIS) {
+  if (info.pid == PDEV_PID_LUIS) {
       i2c_channels[5].address = 0x1a;
   }
 
