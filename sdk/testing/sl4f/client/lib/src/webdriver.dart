@@ -106,7 +106,8 @@ class WebDriverConnector {
     }
 
     for (final session in _webDriverSessions.entries) {
-      await _dropForwardedPort(session.value.openPort);
+      await _sl4f.ssh.cancelPortForward(
+          port: session.value.localPort, remotePort: session.key);
     }
     _webDriverSessions = {};
   }
@@ -123,9 +124,6 @@ class WebDriverConnector {
   /// WebDriver object.
   Future<List<WebDriverSession>> _webDriverSessionsForHost(String host) async {
     await _updateWebDriverSessions();
-    final hosts = List.from(_webDriverSessions.values
-        .map((session) => Uri.parse(session.webDriver.currentUrl).host));
-    _log.fine('All webdriver host urls: $hosts');
     return List.from(_webDriverSessions.values.where(
         (session) => Uri.parse(session.webDriver.currentUrl).host == host));
   }
@@ -171,12 +169,12 @@ class WebDriverConnector {
   Future<List<String>> webSocketDebuggerUrlsForHost(String host,
       {Map<String, dynamic> filters}) async {
     final portsForHost = (await _webDriverSessionsForHost(host))
-        .map((session) => session.openPort);
+        .map((session) => session.localPort);
 
     final devToolsUrls = <String>[];
     for (final port in portsForHost) {
       final request = await io.HttpClient()
-          .getUrl(Uri.parse('http://${_sl4f.target}:$port/json'));
+          .getUrl(Uri.parse('http://localhost:$port/json'));
       final response = await request.close();
       final endpoints = json.decode(await utf8.decodeStream(response));
 
@@ -225,7 +223,7 @@ class WebDriverConnector {
     // Remove port forwarding for any ports that aren't open or shown.
     _webDriverSessions.removeWhere((port, session) {
       if (!ports.contains(port) || !_isSessionDisplayed(session)) {
-        _dropForwardedPort(port);
+        _sl4f.ssh.cancelPortForward(port: session.localPort, remotePort: port);
         return true;
       }
       return false;
@@ -250,45 +248,30 @@ class WebDriverConnector {
 
   /// Creates a `Webdriver` connection using the specified port.  Retries
   /// on errors that may occur due to network issues.
-  Future<WebDriverSession> _createWebDriverSession(int targetPort,
+  Future<WebDriverSession> _createWebDriverSession(int remotePort,
       {int tries = 5}) async {
-    // For a given Chrome context listening on port p on the DuT, we open a
-    // proxy on the DuT that forwards Dut:x to Dut:p. We then create a WebDriver
-    // pointing at Dut:x.
-    final openPort = await _forwardPort(targetPort);
-    try {
-      final webDriver = await retry(
-        () => _webDriverHelper.createDriver(
-            _sl4f.target, openPort, targetPort, _chromedriverPort),
-        maxAttempts: tries,
-      );
-      return WebDriverSession(openPort, webDriver);
-    } on Exception catch (e) {
-      _log.warning('Error creating driver: $e');
-      rethrow;
-    }
-  }
+    // For a given Chrome context listening on
+    // port p on the DuT, we choose an unused local port x, and forward
+    // localhost:x to DuT:p, and create a WebDriver instance pointing to localhost:x.
+    final localPort = await _sl4f.ssh.forwardPort(remotePort: remotePort);
+    final webDriver = await retry(
+      () => _webDriverHelper.createDriver(localPort, _chromedriverPort),
+      maxAttempts: tries,
+    );
 
-  Future<int> _forwardPort(int targetPort) async {
-    final response = await _sl4f.request('proxy_facade.OpenProxy', targetPort);
-    return response;
+    return WebDriverSession(localPort, webDriver);
   }
-
-  /// Indicate to the DUT we no longer need a targetPort. Forwarding stops if
-  /// no other clients are using the proxy.
-  Future<void> _dropForwardedPort(int targetPort) =>
-      _sl4f.request('proxy_facade.DropProxy', targetPort);
 }
 
 /// A representation of a `WebDriver` connection from a host device to a DUT.
 class WebDriverSession {
-  /// The remote port exposed on the DUT.
-  final int openPort;
+  /// The local port forwarded to the DUT.
+  final int localPort;
 
   /// The webdriver connection.
   final WebDriver webDriver;
 
-  WebDriverSession(this.openPort, this.webDriver);
+  WebDriverSession(this.localPort, this.webDriver);
 }
 
 /// A wrapper around static dart:io Process methods.
@@ -307,14 +290,8 @@ class WebDriverHelper {
 
   /// Create a new WebDriver pointing to Chromedriver on the given uri and with
   /// given desired capabilities.
-  WebDriver createDriver(
-      String target, int openPort, int remotePort, int chromedriverPort) {
-    final modTarget = target == '[::1]'
-        ? 'localhost'
-        : target; // chromedriver does not like ipv6.
-    final chromeOptions = {
-      'debuggerAddress': '$modTarget:$openPort',
-    };
+  WebDriver createDriver(int localPort, int chromedriverPort) {
+    final chromeOptions = {'debuggerAddress': 'localhost:$localPort'};
     final capabilities = sync_io.Capabilities.chrome;
     capabilities[sync_io.Capabilities.chromeOptions] = chromeOptions;
     return sync_io.createDriver(
