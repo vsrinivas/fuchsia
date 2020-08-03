@@ -332,5 +332,6 @@ zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp);
 void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* event_packet,
                               uint32_t packet_len);
 void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg, void* data);
+void brcmf_fweh_queue_eapol_frame(struct brcmf_if* ifp, const void* data, size_t datalen);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_

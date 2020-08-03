@@ -45,6 +45,7 @@
 #include "debug.h"
 #include "defs.h"
 #include "feature.h"
+#include "fweh.h"
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
@@ -1915,6 +1916,22 @@ done:
   return err;
 }
 
+// EAPOL frames are queued up along with event notifications to ensure processing order.
+void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, size_t size) {
+  struct net_device* ndev = ifp->ndev;
+  const char* const data_bytes = reinterpret_cast<const char*>(data);
+  wlanif_eapol_indication_t eapol_ind;
+  // IEEE Std. 802.1X-2010, 11.3, Figure 11-1
+  memcpy(&eapol_ind.dst_addr, data_bytes, ETH_ALEN);
+  memcpy(&eapol_ind.src_addr, data_bytes + 6, ETH_ALEN);
+  eapol_ind.data_count = size - 14;
+  eapol_ind.data_list = reinterpret_cast<const uint8_t*>(data_bytes + 14);
+
+  BRCMF_DBG(WLANIF, "Sending EAPOL frame to SME. data_len: %zu", eapol_ind.data_count);
+
+  wlanif_impl_ifc_eapol_ind(&ndev->if_proto, &eapol_ind);
+}
+
 #define EAPOL_ETHERNET_TYPE_UINT16 0x8e88
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
   struct net_device* ndev = ifp->ndev;
@@ -1923,18 +1940,9 @@ void brcmf_cfg80211_rx(struct brcmf_if* ifp, const void* data, size_t size) {
                                   "Data received (%zu bytes, max 64 shown):", size));
   // IEEE Std. 802.3-2015, 3.1.1
   const uint16_t eth_type = ((uint16_t*)(data))[6];
-  const char* const data_bytes = reinterpret_cast<const char*>(data);
   if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
-    wlanif_eapol_indication_t eapol_ind;
-    // IEEE Std. 802.1X-2010, 11.3, Figure 11-1
-    memcpy(&eapol_ind.dst_addr, data_bytes, ETH_ALEN);
-    memcpy(&eapol_ind.src_addr, data_bytes + 6, ETH_ALEN);
-    eapol_ind.data_count = size - 14;
-    eapol_ind.data_list = reinterpret_cast<const uint8_t*>(data_bytes + 14);
-
-    BRCMF_DBG(WLANIF, "Sending EAPOL frame to SME. data_len: %zu", eapol_ind.data_count);
-
-    wlanif_impl_ifc_eapol_ind(&ndev->if_proto, &eapol_ind);
+    // queue up the eapol frame along with events to ensure processing order
+    brcmf_fweh_queue_eapol_frame(ifp, data, size);
   } else {
     wlanif_impl_ifc_data_recv(&ndev->if_proto, data, size, 0);
   }
@@ -4353,6 +4361,33 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
   return ZX_OK;
 }
 
+static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
+                                                 const struct brcmf_event_msg* e, void* data) {
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+  struct net_device* ndev = ifp->ndev;
+  zx_status_t err = ZX_OK;
+
+  BRCMF_DBG(TRACE, "Enter\n");
+  BRCMF_DBG(CONN, "Connect Event %d, status %d reason %d auth %d flags 0x%x\n", e->event_code,
+            e->status, e->reason, e->auth_type, e->flags);
+  BRCMF_DBG(CONN, "Linkup\n");
+  brcmf_bss_connect_done(cfg, ndev, true);
+  brcmf_net_setcarrier(ifp, true);
+
+  BRCMF_DBG(TRACE, "Exit\n");
+  return err;
+}
+
+// Handler for ASSOC event (client only)
+static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                            void* data) {
+  BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+            brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
+            e->status, e->reason, e->auth_type, e->flags);
+  ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
+  return brcmf_indicate_client_connect(ifp, e, data);
+}
+
 // Handler to ASSOC_IND and REASSOC_IND events. These are explicitly meant for SoftAP
 static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
                                           void* data) {
@@ -4361,7 +4396,6 @@ static zx_status_t brcmf_handle_assoc_ind(struct brcmf_if* ifp, const struct brc
   BRCMF_DBG(EVENT, "IF: %d event %s (%u) status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
             brcmf_fweh_event_name(static_cast<brcmf_fweh_event_code>(e->event_code)), e->event_code,
             e->status, e->reason, e->auth_type, e->flags);
-
   ZX_DEBUG_ASSERT(brcmf_is_apmode(ifp->vif));
 
   if (e->reason != BRCMF_E_STATUS_SUCCESS) {
@@ -4469,23 +4503,6 @@ static void brcmf_indicate_no_network(struct brcmf_if* ifp) {
   BRCMF_DBG(CONN, "No network\n");
   brcmf_bss_connect_done(cfg, ndev, false);
   brcmf_disconnect_done(cfg);
-}
-
-static zx_status_t brcmf_indicate_client_connect(struct brcmf_if* ifp,
-                                                 const struct brcmf_event_msg* e, void* data) {
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
-  struct net_device* ndev = ifp->ndev;
-  zx_status_t err = ZX_OK;
-
-  BRCMF_DBG(TRACE, "Enter\n");
-  BRCMF_DBG(CONN, "Connect Event %d, status %d reason %d auth %d flags 0x%x\n", e->event_code,
-            e->status, e->reason, e->auth_type, e->flags);
-  BRCMF_DBG(CONN, "Linkup\n");
-  brcmf_bss_connect_done(cfg, ndev, true);
-  brcmf_net_setcarrier(ifp, true);
-
-  BRCMF_DBG(TRACE, "Exit\n");
-  return err;
 }
 
 static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
@@ -4721,6 +4738,7 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_process_deauth_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC_IND, brcmf_process_disassoc_ind_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC, brcmf_process_disassoc_ind_event);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_ASSOC, brcmf_handle_assoc_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_ASSOC_IND, brcmf_handle_assoc_ind);
   brcmf_fweh_register(cfg->pub, BRCMF_E_REASSOC_IND, brcmf_handle_assoc_ind);
   brcmf_fweh_register(cfg->pub, BRCMF_E_ROAM, brcmf_notify_roaming_status);

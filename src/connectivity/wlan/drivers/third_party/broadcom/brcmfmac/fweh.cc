@@ -29,22 +29,38 @@
 #include "proto.h"
 #include "workqueue.h"
 
+// queue item type
+enum brcmf_fweh_queue_item_type {
+  BRCMF_FWEH_EVENT_INDICATION,
+  BRCMF_FWEH_EAPOL_FRAME,
+};
+/**
+ * struct brcmf_fweh_event_info
+ * @code: event code.
+ * @ifaddr: ethernet address for interface.
+ * @emsg: common parameters of the firmware event message.
+ */
+struct brcmf_fweh_event_info {
+  enum brcmf_fweh_event_code code;
+  uint8_t ifaddr[ETH_ALEN];
+  struct brcmf_event_msg_be emsg;
+};
+
 /**
  * struct brcmf_fweh_queue_item - event item on event queue.
  *
  * @q: list element for queuing.
- * @code: event code.
  * @ifidx: interface index related to this event.
- * @ifaddr: ethernet address for interface.
- * @emsg: common parameters of the firmware event message.
- * @data: event specific data part of the firmware event.
+ * @item_type: of type brcmf_fweh_queue_item_type
+ * @event_info of type brcmf_fweh_event_info.
+ * @datalen: length of the data (below)
+ * @data: event specific data part of the firmware event.ea
  */
 struct brcmf_fweh_queue_item {
   struct list_node q;
-  enum brcmf_fweh_event_code code;
   uint8_t ifidx;
-  uint8_t ifaddr[ETH_ALEN];
-  struct brcmf_event_msg_be emsg;
+  brcmf_fweh_queue_item_type item_type;
+  brcmf_fweh_event_info event_info;
   uint32_t datalen;
   uint8_t data[0];
 };
@@ -78,24 +94,47 @@ const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) {
   }
   return "unknown";
 }
-#else   // !defined(NDEBUG)
+#else  // !defined(NDEBUG)
 const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) { return "nodebug"; }
 #endif  // !defined(NDEBUG)
 
 /**
  * brcmf_fweh_queue_event() - create and queue event.
- *
+ * @drvr: driver context
  * @fweh: firmware event handling info.
  * @event: event queue entry.
  */
 static void brcmf_fweh_queue_event(brcmf_pub* drvr, brcmf_fweh_info* fweh,
                                    brcmf_fweh_queue_item* event) {
-  // spin_lock_irqsave(&fweh->evt_q_lock, flags);
   drvr->irq_callback_lock.lock();
   list_add_tail(&fweh->event_q, &event->q);
-  // spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
   drvr->irq_callback_lock.unlock();
   WorkQueue::ScheduleDefault(&fweh->event_work);
+}
+
+// Add eapol frame to the same queue as events (to ensure processing order).
+void brcmf_fweh_queue_eapol_frame(struct brcmf_if* ifp, const void* data, size_t datalen) {
+  brcmf_pub* drvr = ifp->drvr;
+  // in SIM we do not use the queue - all events are processed inline.
+  if (brcmf_bus_get_bus_type(drvr->bus_if) == BRCMF_BUS_TYPE_SIM) {
+    brcmf_cfg80211_handle_eapol_frame(ifp, data, datalen);
+    return;
+  }
+
+  struct brcmf_fweh_queue_item* event;
+  // Allocate memory for the queue item. This gets released after processing in
+  // brcmf_fweh_event_worker().
+  event = static_cast<decltype(event)>(calloc(1, sizeof(*event) + datalen));
+  if (!event) {
+    BRCMF_ERR("calloc failed for eapol frame: %zu", datalen);
+    return;
+  }
+  event->item_type = BRCMF_FWEH_EAPOL_FRAME;
+  event->ifidx = ifp->ifidx;
+  memcpy(event->data, data, datalen);
+  event->datalen = datalen;
+  // Queue the event item.
+  brcmf_fweh_queue_event(drvr, &drvr->fweh, event);
 }
 
 static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
@@ -190,15 +229,17 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
   zx_status_t err = ZX_OK;
   struct brcmf_event_msg_be* emsg_be;
   struct brcmf_event_msg emsg;
+  brcmf_fweh_event_info* event_info = &event->event_info;
 
-  BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM", brcmf_fweh_event_name(event->code),
-            event->code, event->emsg.ifidx, event->emsg.bsscfgidx, event->emsg.addr);
+  BRCMF_DBG(EVENT, "event %s (%u) ifidx %u bsscfg %u addr %pM",
+            brcmf_fweh_event_name(event_info->code), event_info->code, event_info->emsg.ifidx,
+            event_info->emsg.bsscfgidx, event_info->emsg.addr);
 
   /* convert event message */
-  emsg_be = &event->emsg;
+  emsg_be = &event_info->emsg;
   emsg.version = be16toh(emsg_be->version);
   emsg.flags = be16toh(emsg_be->flags);
-  emsg.event_code = event->code;
+  emsg.event_code = event_info->code;
   emsg.status = be32toh(emsg_be->status);
   emsg.reason = be32toh(emsg_be->reason);
   emsg.auth_type = be32toh(emsg_be->auth_type);
@@ -214,20 +255,19 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
                      "event payload, len=%d", emsg.datalen);
 
   /* special handling of interface event */
-  if (event->code == BRCMF_E_IF) {
+  if (event_info->code == BRCMF_E_IF) {
     brcmf_fweh_handle_if_event(drvr, &emsg, event->data);
     goto event_free;
   }
-
-  if (event->code == BRCMF_E_TDLS_PEER_EVENT) {
+  if (event_info->code == BRCMF_E_TDLS_PEER_EVENT) {
     ifp = drvr->iflist[0];
   } else {
     ifp = drvr->iflist[emsg.bsscfgidx];
   }
 
-  err = brcmf_fweh_call_event_handler(ifp, event->code, &emsg, event->data);
+  err = brcmf_fweh_call_event_handler(ifp, event_info->code, &emsg, event->data);
   if (err != ZX_OK) {
-    BRCMF_ERR("event handler failed (%d)", event->code);
+    BRCMF_ERR("event handler failed (%d)", event_info->code);
     err = ZX_OK;
   }
 event_free:
@@ -243,13 +283,11 @@ static struct brcmf_fweh_queue_item* brcmf_fweh_dequeue_event(brcmf_pub* drvr,
                                                               brcmf_fweh_info* fweh) {
   struct brcmf_fweh_queue_item* event = NULL;
 
-  // spin_lock_irqsave(&fweh->evt_q_lock, flags);
   drvr->irq_callback_lock.lock();
   if (!list_is_empty(&fweh->event_q)) {
     event = list_peek_head_type(&fweh->event_q, struct brcmf_fweh_queue_item, q);
     list_delete(&event->q);
   }
-  // spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
   drvr->irq_callback_lock.unlock();
 
   return event;
@@ -266,7 +304,18 @@ static void brcmf_fweh_event_worker(WorkItem* work) {
   struct brcmf_pub* drvr = containerof(fweh, struct brcmf_pub, fweh);
 
   while ((event = brcmf_fweh_dequeue_event(drvr, fweh))) {
-    brcmf_fweh_handle_event(drvr, event);
+    if (event->item_type == BRCMF_FWEH_EVENT_INDICATION) {
+      // This is an event.
+      brcmf_fweh_handle_event(drvr, event);
+    } else if (event->item_type == BRCMF_FWEH_EAPOL_FRAME) {
+      // This is an eapol frame
+      brcmf_if* ifp = brcmf_get_ifp(drvr, event->ifidx);
+      if (ifp) {
+        brcmf_cfg80211_handle_eapol_frame(ifp, event->data, event->datalen);
+      }
+      // Free the event item memory allocated in brcmf_fweh_queue_eapol_frame().
+      free(event);
+    }
   }
 }
 
@@ -379,6 +428,7 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* 
   enum brcmf_fweh_event_code code;
   struct brcmf_fweh_info* fweh = &drvr->fweh;
   struct brcmf_fweh_queue_item* event;
+  brcmf_fweh_event_info* event_info;
   uint16_t usr_stype;
   const void* data;
   uint32_t datalen;
@@ -428,16 +478,16 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* 
     return;
   }
 
-  event->code = code;
+  event_info = &event->event_info;
+  event->item_type = BRCMF_FWEH_EVENT_INDICATION;
+  event_info->code = code;
   event->ifidx = event_packet->msg.ifidx;
 
   /* use memcpy to get aligned event message */
-  memcpy(&event->emsg, &event_packet->msg, sizeof(event->emsg));
+  memcpy(&event_info->emsg, &event_packet->msg, sizeof(event_info->emsg));
   memcpy(event->data, data, datalen);
   event->datalen = datalen;
-  memcpy(event->ifaddr, event_packet->eth.h_dest, ETH_ALEN);
-
-  // BRCMF_DBG(TEMP, "Queueing event!");
+  memcpy(event_info->ifaddr, event_packet->eth.h_dest, ETH_ALEN);
 
   if (brcmf_bus_get_bus_type(drvr->bus_if) == BRCMF_BUS_TYPE_SIM) {
     // The simulator's behavior is synchronous: we want all events to be processed immediately.

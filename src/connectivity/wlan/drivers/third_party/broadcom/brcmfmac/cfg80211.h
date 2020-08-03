@@ -530,4 +530,5 @@ void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_
 // If the WMM parameter IE (used for QoS) is available from the association response, set its
 // body into the Association Confirm message.
 void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg, wlanif_assoc_confirm_t* confirm);
+void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, size_t size);
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_

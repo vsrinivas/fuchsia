@@ -48,9 +48,11 @@ constexpr zx::duration kAuthTimeout = zx::sec(1);
 constexpr zx::duration kBeaconTimeout = zx::sec(5);
 // Delay between receiving start AP request and sending E_LINK event
 constexpr zx::duration kStartAPConfDelay = zx::msec(10);
+// Delay before sending ASSOC event after client association
+constexpr zx::duration kAssocEventDelay = zx::msec(10);
 // Delay between events E_LINK and E_SSID.
 constexpr zx::duration kSsidEventDelay = zx::msec(100);
-// Delay in sending E_LINK event during disassoc.
+// Delay in sending E_LINK event during assoc & disassoc.
 constexpr zx::duration kLinkEventDelay = zx::msec(1);
 // Delay in sending E_DISASSOC event during disassoc.
 constexpr zx::duration kDisassocEventDelay = zx::msec(1);

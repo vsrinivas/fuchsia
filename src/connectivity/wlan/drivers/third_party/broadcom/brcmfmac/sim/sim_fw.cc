@@ -1135,8 +1135,12 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
     memcpy(assoc_resp_ies_, frame->raw_ies_.data(), frame->raw_ies_.size());
     assoc_resp_ies_len_ = frame->raw_ies_.size();
 
+    // Send the ASSOC event with a delay
+    SendEventToDriver(0, nullptr, BRCMF_E_ASSOC, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
+                      0, assoc_state_.opts->bssid, kAssocEventDelay);
+    // Send the LINK event with a delay
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr,
-                      BRCMF_EVENT_MSG_LINK);
+                      BRCMF_EVENT_MSG_LINK, 0, assoc_state_.opts->bssid, kLinkEventDelay);
     // Send the SSID event after a delay
     SendEventToDriver(0, nullptr, BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr,
                       0, 0, assoc_state_.opts->bssid, kSsidEventDelay);
