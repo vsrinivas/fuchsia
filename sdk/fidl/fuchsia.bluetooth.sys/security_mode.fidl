@@ -1,0 +1,23 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.sys;
+
+/// The LE Security Mode of a BLE device determines the possible security properties of the device.
+/// The security mode does not make specific guarantees about the current security properties of a
+/// device's connections; it sets restrictions on the allowable security properties. See Core Spec
+/// v5.2 Vol. 3, Part C 10.2 for more details.
+enum LeSecurityMode {
+    /// In LE Security Mode 1, communication is secured by encryption, and BLE-based services may
+    /// specify varying requirements for authentication, key size, or Secure Connections protection
+    /// on the encryption keys.
+    MODE_1 = 1;
+
+    /// In Secure Connections Only mode, all secure communication must use 128 bit, authenticated,
+    /// and LE Secure Connections-generated encryption keys. If these encryption key properties
+    /// cannot be satisfied by a device due to system constraints, any connection involving such
+    /// a device will not be able to secure the link at all. This mode does not prevent unencrypted
+    /// communication; it merely enforces stricter policies on all encrypted communication.
+    SECURE_CONNECTIONS_ONLY = 2;
+};

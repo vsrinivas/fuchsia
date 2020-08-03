@@ -151,6 +151,12 @@ protocol Host {
     /// instead (which is the default).
     EnablePrivacy(bool enabled);
 
+    /// Set the GAP LE Security Mode of the host. bt-host only supports encrypted, connection-based
+    /// security modes, i.e. Mode 1 and Secure Connections Only mode. If the security mode is set
+    /// to Secure Connections Only, any existing encrypted connections which do not meet the
+    /// security requirements of Secure Connections Only mode will be disconnected.
+    SetLeSecurityMode(sys.LeSecurityMode le_security_mode);
+
     /// Assigns the pairing delegate that will respond to authentication challenges using the given
     /// I/O capabilities. Calling this method cancels any on-going pairing procedure started
     /// using a previous delegate. Pairing requests will be rejected if no PairingDelegate has been

@@ -21,6 +21,7 @@ fidl("fuchsia.bluetooth.sys") {
     "pairing_delegate.fidl",
     "pairing_options.fidl",
     "peer.fidl",
+    "security_mode.fidl",
   ]
 
   public_deps = [
