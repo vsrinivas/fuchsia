@@ -1222,11 +1222,21 @@ impl Router {
             self.post_transfer(transfer_key, FoundTransfer::Fused(handle)).await?;
             Ok(OpenedTransfer::Fused)
         } else {
-            let (writer, reader) = self
-                .client_peer(target, (peer_with_route, LinkSource::PeerHint), "open_transfer")
-                .await?
-                .send_open_transfer(transfer_key)
-                .await?;
+            let (writer, reader) = loop {
+                if let Some(x) = self
+                    .client_peer(target, (peer_with_route, LinkSource::PeerHint), "open_transfer")
+                    .await?
+                    .send_open_transfer(transfer_key)
+                    .await
+                {
+                    break x;
+                }
+                log::warn!(
+                    "{:?} failed sending open transfer to {:?}; retrying",
+                    self.node_id,
+                    target
+                );
+            };
             Ok(OpenedTransfer::Remote(writer, reader, handle))
         }
     }

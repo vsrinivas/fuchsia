@@ -53,7 +53,7 @@ impl Config {
 #[derive(Debug)]
 enum ClientPeerCommand {
     ConnectToService(ConnectToService),
-    OpenTransfer(u64, TransferKey),
+    OpenTransfer(u64, TransferKey, oneshot::Sender<()>),
     Ping(oneshot::Sender<()>),
 }
 
@@ -291,15 +291,18 @@ impl Peer {
     pub async fn send_open_transfer(
         &self,
         transfer_key: TransferKey,
-    ) -> Result<(AsyncQuicStreamWriter, AsyncQuicStreamReader), Error> {
+    ) -> Option<(AsyncQuicStreamWriter, AsyncQuicStreamReader)> {
         let io = self.conn.alloc_bidi();
+        let (tx, rx) = oneshot::channel();
         self.commands
             .as_ref()
             .unwrap()
             .clone()
-            .send(ClientPeerCommand::OpenTransfer(io.0.id(), transfer_key))
-            .await?;
-        Ok(io)
+            .send(ClientPeerCommand::OpenTransfer(io.0.id(), transfer_key, tx))
+            .await
+            .ok()?;
+        rx.await.ok()?;
+        Some(io)
     }
 
     pub async fn diagnostics(&self, source_node_id: NodeId) -> PeerConnectionDiagnosticInfo {
@@ -558,7 +561,7 @@ async fn client_conn_handle_command(
                 )
                 .await?;
         }
-        ClientPeerCommand::OpenTransfer(stream_id, transfer_key) => {
+        ClientPeerCommand::OpenTransfer(stream_id, transfer_key, sent) => {
             conn_stream_writer
                 .send(
                     FrameType::Data,
@@ -570,6 +573,7 @@ async fn client_conn_handle_command(
                     &conn_stats.open_transfer,
                 )
                 .await?;
+            let _ = sent.send(());
         }
         ClientPeerCommand::Ping(on_ack) => {
             let ping_id = *next_ping_id;
