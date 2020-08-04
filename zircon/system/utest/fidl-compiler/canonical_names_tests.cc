@@ -233,14 +233,13 @@ TEST(CanonicalNamesTests, BadTopLevel) {
       s << "library example;\n\n" << line1 << '\n' << line2 << '\n';
       const auto fidl = s.str();
       TestLibrary library(fidl);
-      // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
-      ASSERT_FALSE(library.Compile());  // << fidl;
+      ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
       const auto& errors = library.errors();
-      ASSERT_EQ(errors.size(), 1);                             // << fidl;
-      ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);  // << fidl;
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar");         // << fidl;
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar");         // << fidl;
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar");        // << fidl;
+      ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
+      ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical, "%s", fidl.c_str());
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), "fooBar", "%s", fidl.c_str());
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), "FooBar", "%s", fidl.c_str());
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), "foo_bar", "%s", fidl.c_str());
     }
   }
 }
@@ -468,19 +467,18 @@ TEST(CanonicalNamesTests, BadVariousCollisions) {
         s << "library example;\n\nstruct " << name1 << " {};\nstruct " << name2 << " {};\n";
         const auto fidl = s.str();
         TestLibrary library(fidl);
-        // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
-        ASSERT_FALSE(library.Compile());  // << fidl;
+        ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
         const auto& errors = library.errors();
-        ASSERT_EQ(errors.size(), 1);  // << fidl;
+        ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
         if (name1 == name2) {
-          ASSERT_ERR(errors[0], fidl::ErrNameCollision);         // << fidl;
-          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str());  // << fidl;
+          ASSERT_ERR(errors[0], fidl::ErrNameCollision, "%s", fidl.c_str());
+          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str(), "%s", fidl.c_str());
         } else {
-          ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical);  // << fidl;
-          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str());    // << fidl;
-          ASSERT_SUBSTR(errors[0]->msg.c_str(), name2.c_str());    // << fidl;
-          ASSERT_SUBSTR(errors[0]->msg.c_str(),
-                        fidl::utils::canonicalize(name1).c_str());  // << fidl;
+          ASSERT_ERR(errors[0], fidl::ErrNameCollisionCanonical, "%s", fidl.c_str());
+          ASSERT_SUBSTR(errors[0]->msg.c_str(), name1.c_str(), "%s", fidl.c_str());
+          ASSERT_SUBSTR(errors[0]->msg.c_str(), name2.c_str(), "%s", fidl.c_str());
+          ASSERT_SUBSTR(errors[0]->msg.c_str(), fidl::utils::canonicalize(name1).c_str(), "%s",
+                        fidl.c_str());
         }
       }
     }
@@ -529,12 +527,11 @@ TEST(CanonicalNamesTests, BadInconsistentTypeSpelling) {
       s << "library example;\n\n" << decl << '\n' << use << '\n';
       const auto fidl = s.str();
       TestLibrary library(fidl);
-      // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
-      ASSERT_FALSE(library.Compile());  // << fidl;
+      ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
       const auto& errors = library.errors();
-      ASSERT_EQ(errors.size(), 1);                      // << fidl;
-      ASSERT_ERR(errors[0], fidl::ErrUnknownType);      // << fidl;
-      ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);  // << fidl;
+      ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
+      ASSERT_ERR(errors[0], fidl::ErrUnknownType, "%s", fidl.c_str());
+      ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
     }
   }
 }
@@ -553,12 +550,11 @@ TEST(CanonicalNamesTests, BadInconsistentConstSpelling) {
       << "const bool EXAMPLE = " << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl);
-    // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
-    ASSERT_FALSE(library.Compile());  // << fidl;
+    ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
     const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);                           // << fidl;
-    ASSERT_ERR(errors[0], fidl::ErrFailedConstantLookup);  // << fidl;
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);       // << fidl;
+    ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
+    ASSERT_ERR(errors[0], fidl::ErrFailedConstantLookup, "%s", fidl.c_str());
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
   }
 }
 
@@ -576,13 +572,12 @@ TEST(CanonicalNamesTests, BadInconsistentEnumMemberSpelling) {
       << "const Enum EXAMPLE = Enum." << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl);
-    // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
-    ASSERT_FALSE(library.Compile());  // << fidl;
+    ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
     const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2);                                 // << fidl;
-    ASSERT_ERR(errors[0], fidl::ErrUnknownEnumMember);           // << fidl;
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);             // << fidl;
-    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);  // << fidl;
+    ASSERT_EQ(errors.size(), 2, "%s", fidl.c_str());
+    ASSERT_ERR(errors[0], fidl::ErrUnknownEnumMember, "%s", fidl.c_str());
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
+    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue, "%s", fidl.c_str());
   }
 }
 
@@ -600,13 +595,12 @@ TEST(CanonicalNamesTests, BadInconsistentBitsMemberSpelling) {
       << "const Bits EXAMPLE = Bits." << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl);
-    // TODO(fxb/49994): Add the `<< fidl` when this is using gtest.
-    ASSERT_FALSE(library.Compile());  // << fidl;
+    ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
     const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2);                                 // << fidl;
-    ASSERT_ERR(errors[0], fidl::ErrUnknownBitsMember);           // << fidl;
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name);             // << fidl;
-    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue);  // << fidl;
+    ASSERT_EQ(errors.size(), 2, "%s", fidl.c_str());
+    ASSERT_ERR(errors[0], fidl::ErrUnknownBitsMember, "%s", fidl.c_str());
+    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
+    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue, "%s", fidl.c_str());
   }
 }
 
