@@ -70,7 +70,7 @@ macro_rules! register_device {
     }};
 }
 
-fn register_touchsreen(
+fn register_touchscreen(
     consumer: impl ServerConsumer,
     width: u32,
     height: u32,
@@ -312,7 +312,7 @@ fn tap_event(
     duration: Duration,
     consumer: impl ServerConsumer,
 ) -> Result<(), Error> {
-    let input_device = register_touchsreen(consumer, width, height)?;
+    let input_device = register_touchscreen(consumer, width, height)?;
     let tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
@@ -358,7 +358,7 @@ fn swipe(
     duration: Duration,
     consumer: impl ServerConsumer,
 ) -> Result<(), Error> {
-    let input_device = register_touchsreen(consumer, width, height)?;
+    let input_device = register_touchscreen(consumer, width, height)?;
 
     let mut delta_x = x1 as f64 - x0 as f64;
     let mut delta_y = y1 as f64 - y0 as f64;
