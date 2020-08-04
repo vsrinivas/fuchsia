@@ -81,6 +81,10 @@ usage () {
   echo "  [--experiment-arm64]"
   echo "    Override FUCHSIA_ARCH to arm64, instead of the default x64."
   echo "    This is required for *-arm64 system images, and is not auto detected."
+  echo "  [--setup-ufw]"
+  echo "    Set up ufw firewall rules needed for Fuchsia device discovery"
+  echo "    and package serving, then exit. Only works on Linux with ufw"
+  echo "    firewall, and requires sudo."
   echo "  [--help] [-h]"
   echo "    Show command line options for femu.sh and emu subscript"
   echo
@@ -114,6 +118,18 @@ case $1 in
     --version)
     shift
     VER_AEMU="${1}"
+    ;;
+    --setup-ufw)
+    set -xv
+    if is-mac; then
+      fx-error "--setup-ufw is only supported on Linux with ufw firewall"
+      exit 1
+    fi
+    sudo ufw allow proto udp from fe80::/10 to any port 33331:33340 comment 'Fuchsia Netboot Protocol'
+    sudo ufw allow proto tcp from fe80::/10 to any port 8083 comment 'Fuchsia Package Server'
+    sudo ufw allow proto udp from fe80::/10 port 33340 comment 'Fuchsia Netboot TFTP Source Port'
+    set +xv
+    exit 0
     ;;
     --help|-h)
     usage

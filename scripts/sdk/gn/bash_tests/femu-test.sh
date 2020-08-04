@@ -222,6 +222,26 @@ INPUT
   fi
 }
 
+# Verifies that the --setup-ufw option runs ufw
+TEST_femu_ufw() {
+
+  PATH_DIR_FOR_TEST="${BT_TEMP_DIR}/_isolated_path_for"
+  export PATH="${PATH_DIR_FOR_TEST}:${PATH}"
+
+  if is-mac; then
+    BT_EXPECT_FAIL gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+      --setup-ufw > femu_ufw_error.txt 2>&1
+  else
+    BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/femu.sh" \
+      --setup-ufw
+
+    # Check that ufw was called via sudo
+    # shellcheck disable=SC1090
+    source "${BT_TEMP_DIR}/_isolated_path_for/sudo.mock_state.1"
+    gn-test-check-mock-args _ANY_ ufw allow proto _ANY_ from _ANY_ to any port _ANY_ comment _ANY_
+  fi
+}
+
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
 # behavior of generate.py by copying these files into scripts/sdk/gn/base/bin/devshell
 # shellcheck disable=SC2034
@@ -251,6 +271,7 @@ BT_MOCKED_TOOLS=(
   mocked/grpcwebproxy-dir/grpcwebproxy
   _isolated_path_for/ip
   _isolated_path_for/kill
+  _isolated_path_for/sudo
   # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
   _isolated_path_for/stty
 )
