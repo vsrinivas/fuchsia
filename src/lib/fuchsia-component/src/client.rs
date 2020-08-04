@@ -46,11 +46,11 @@ pub fn connect_channel_to_service_at<S: DiscoverableService>(
     service_prefix: &str,
 ) -> Result<(), Error> {
     let service_path = format!("{}/{}", service_prefix, S::SERVICE_NAME);
-    connect_channel_to_service_at_path::<S>(server_end, &service_path)
+    connect_channel_to_service_at_path(server_end, &service_path)
 }
 
 /// Connect to a FIDL service using the provided channel and namespace path.
-pub fn connect_channel_to_service_at_path<S: DiscoverableService>(
+pub fn connect_channel_to_service_at_path(
     server_end: zx::Channel,
     service_path: &str,
 ) -> Result<(), Error> {
@@ -78,7 +78,7 @@ pub fn connect_to_service_at_path<S: DiscoverableService>(
     service_path: &str,
 ) -> Result<S::Proxy, Error> {
     let (proxy, server) = zx::Channel::create()?;
-    connect_channel_to_service_at_path::<S>(server, service_path)?;
+    connect_channel_to_service_at_path(server, service_path)?;
     let proxy = fasync::Channel::from_channel(proxy)?;
     Ok(S::Proxy::from_channel(proxy))
 }
