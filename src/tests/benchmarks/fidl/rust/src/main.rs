@@ -8,21 +8,15 @@ use {
     fuchsia_criterion::{criterion::Benchmark, FuchsiaCriterion},
     std::{mem, time::Duration},
 };
-
 fn main() {
     // TODO(fxb/52171): Do not use Criterion.
     let all = &benchmark_suite::ALL_BENCHMARKS;
-    let (first_label, first_function) = all[0][0];
+    let mut benchmark_defs = all.iter().copied().flatten();
+    let (first_label, first_function) = benchmark_defs.next().unwrap();
     let mut benchmark = Benchmark::new(wall_time_label(first_label), first_function);
-    for (label, function) in &all[0][1..] {
+    for (label, function) in benchmark_defs {
         benchmark = benchmark.with_function(wall_time_label(label), function);
     }
-    for v in &all[1..] {
-        for (label, function) in v.iter() {
-            benchmark = benchmark.with_function(wall_time_label(label), function);
-        }
-    }
-
     // FuchsiaCriterion is a wrapper around Criterion. To configure the inner
     // Criterion we have to use a strange, indirect approach. This is because
     // FuchsiaCriterion only provides access to it via DerefMut, and Criterion
@@ -38,7 +32,6 @@ fn main() {
         .sample_size(10);
     fc.bench("fuchsia.fidl_microbenchmarks", benchmark);
 }
-
 fn wall_time_label(base: &str) -> String {
     format!("Rust/{}/WallTime", base)
 }

@@ -12,6 +12,7 @@ import (
 
 	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
+	gidlconfig "gidl/config"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
 )
@@ -158,7 +159,7 @@ type benchmark struct {
 }
 
 // GenerateBenchmarks generates Dart benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) ([]byte, map[string][]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
 	for _, gidlBenchmark := range gidl.Benchmark {

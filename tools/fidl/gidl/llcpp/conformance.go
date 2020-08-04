@@ -11,6 +11,7 @@ import (
 
 	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
+	gidlconfig "gidl/config"
 	gidlir "gidl/ir"
 	libllcpp "gidl/llcpp/lib"
 	gidlmixer "gidl/mixer"
@@ -99,7 +100,7 @@ type decodeFailureCase struct {
 }
 
 // Generate generates Low-Level C++ tests.
-func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root) ([]byte, map[string][]byte, error) {
+func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {

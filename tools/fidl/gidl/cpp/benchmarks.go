@@ -8,6 +8,7 @@ import (
 	"bytes"
 	fidlir "fidl/compiler/backend/types"
 	"fmt"
+	gidlconfig "gidl/config"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
 	"strings"
@@ -75,7 +76,7 @@ type benchmarkTmplInput struct {
 }
 
 // Generate generates High-Level C++ benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root) ([]byte, map[string][]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	files := map[string][]byte{}
 	for _, gidlBenchmark := range gidl.Benchmark {

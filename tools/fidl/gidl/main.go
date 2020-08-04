@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	fidlir "fidl/compiler/backend/types"
+	gidlconfig "gidl/config"
 	gidlcpp "gidl/cpp"
 	gidldart "gidl/dart"
 	gidlgolang "gidl/golang"
@@ -32,7 +33,7 @@ import (
 // added as a suffix to the name of the file before the extension
 // (e.g. my_file.go -> my_file_test_name.go).
 // The first file is the "main output file".
-type Generator func(gidlir.All, fidlir.Root) ([]byte, map[string][]byte, error)
+type Generator func(gidlir.All, fidlir.Root, gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error)
 
 var conformanceGenerators = map[string]Generator{
 	"go":    gidlgolang.GenerateConformanceTests,
@@ -91,9 +92,10 @@ type GIDLFlags struct {
 	Language *string
 	Type     *string
 	// TODO(fxb/52371) It should not be necessary to specify the number of generated files.
-	NumOutputFiles      *int
-	MultipleFilePattern *string
-	Out                 *string
+	NumOutputFiles            *int
+	MultipleFilePattern       *string
+	Out                       *string
+	RustBenchmarksFidlLibrary *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
@@ -115,6 +117,8 @@ var flags = GIDLFlags{
 		`String including a [NUM] substring to be replaced with a number.
 This is used for generating output filenames when there are multiple files`),
 	Out: flag.String("out", "", "optional path to write output to"),
+	RustBenchmarksFidlLibrary: flag.String("rust-benchmarks-fidl-library", "",
+		"name for the fidl library used in the rust benchmarks"),
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -151,6 +155,11 @@ func main() {
 	if !flag.Parsed() || !flags.Valid() {
 		flag.PrintDefaults()
 		os.Exit(1)
+	}
+
+	var config gidlconfig.GeneratorConfig
+	if *flags.RustBenchmarksFidlLibrary != "" {
+		config.RustBenchmarksFidlLibrary = *flags.RustBenchmarksFidlLibrary
 	}
 
 	fidl := parseFidlJSONIr(*flags.JSONPath)
@@ -196,7 +205,7 @@ func main() {
 		log.Fatalf("unknown language for %s: %s", *flags.Type, language)
 	}
 
-	mainFile, otherFiles, err := generator(gidl, fidl)
+	mainFile, otherFiles, err := generator(gidl, fidl, config)
 	if err != nil {
 		log.Fatal(err)
 	}

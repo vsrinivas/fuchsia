@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	fidlir "fidl/compiler/backend/types"
+	gidlconfig "gidl/config"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
 )
@@ -117,7 +118,7 @@ type decodeFailureCase struct {
 }
 
 // GenerateConformanceTests generates Go tests.
-func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root) ([]byte, map[string][]byte, error) {
+func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, map[string][]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {

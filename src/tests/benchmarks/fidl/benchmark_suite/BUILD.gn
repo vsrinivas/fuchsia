@@ -4,38 +4,55 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/go/go_library.gni")
+import("//build/rust/fidl_rust_library.gni")
+import("//build/rust/toolchain.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
-
-benchmark_suite_fidl_files = [
-  "bool_array.gen.test.fidl",
-  "byte_array.gen.test.fidl",
-  "byte_vector.test.fidl",
-  "byte_vector_limit.gen.test.fidl",
-  "enum_array.gen.test.fidl",
-  "float_array.gen.test.fidl",
-  "gpu_magma.test.fidl",
-  "hardware_display.test.fidl",
-  "inline.test.fidl",
-  "int32_array.gen.test.fidl",
-  "int32_vector.test.fidl",
-  "media.test.fidl",
-  "optional_struct_tree.test.fidl",
-  "padded_struct_tree.gen.test.fidl",
-  "result.test.fidl",
-  "socket.test.fidl",
-  "string.test.fidl",
-  "struct_array.gen.test.fidl",
-  "struct_field.gen.test.fidl",
-  "struct_tree.gen.test.fidl",
-  "struct_vector.test.fidl",
-  "table.gen.test.fidl",
-  "table_reserved.gen.test.fidl",
-  "union.gen.test.fidl",
-]
 
 fidl("benchmark_suite_fidl") {
   testonly = true
   name = "benchmarkfidl"
   sources = benchmark_suite_fidl_files
+}
+
+template("benchmark_fidl") {
+  library_name = "benchmarkfidl${invoker.fidl_library_suffix}"
+
+  copy_target = "${target_name}__copy_replace"
+
+  action_foreach(copy_target) {
+    script = "copy_replace_fidl_library.py"
+
+    sources = invoker.sources
+    outputs = [ "{{source_gen_dir}}/${library_name}_{{source_file_part}}" ]
+
+    args = [
+      "{{source}}",
+      "{{source_gen_dir}}/${library_name}_{{source_file_part}}",
+      library_name,
+    ]
+  }
+
+  fidl(target_name) {
+    testonly = true
+    name = library_name
+    sources = get_target_outputs(":${copy_target}")
+    non_fidl_deps = [ ":${copy_target}" ]
+  }
+}
+
+if (current_toolchain != go_toolchain) {
+  seen = []
+  foreach(suite, benchmark_suites) {
+    # Only generate each FIDL library target once.
+    if (seen != seen + [ suite.fidl_target ] - [ suite.fidl_target ] +
+                [ suite.fidl_target ]) {
+      seen += [ suite.fidl_target ]
+
+      benchmark_fidl(get_label_info(suite.fidl_target, "name")) {
+        fidl_library_suffix = suite.fidl_library_suffix
+        sources = suite.fidl
+      }
+    }
+  }
 }

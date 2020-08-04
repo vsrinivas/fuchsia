@@ -49,6 +49,10 @@ template("gidl") {
   if (defined(invoker.num_extra_output_files)) {
     num_extra_output_files = invoker.num_extra_output_files
   }
+  extra_args = []
+  if (defined(invoker.extra_args)) {
+    extra_args += invoker.extra_args
+  }
 
   # All output targets.
   all_outputs = []
@@ -89,7 +93,7 @@ template("gidl") {
              # TODO(fxb/52371) It should not be necessary to specify number of generated files.
              "-num-extra-output-files",
              num_extra_output_files,
-           ] + rebase_path(invoker.inputs)
+           ] + extra_args + rebase_path(invoker.inputs)
     inputs = invoker.inputs
     outputs = all_outputs
     deps = [ fidl_target ]

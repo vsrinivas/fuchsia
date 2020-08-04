@@ -75,16 +75,14 @@ template("fidl_c_target") {
     ]
     public_deps = [ "//zircon/public/lib/fidl" ]
 
-    fidl_deps = []
     if (defined(invoker.deps)) {
-      fidl_deps += invoker.deps
+      public_deps += invoker.deps
     }
     if (defined(invoker.public_deps)) {
-      fidl_deps += invoker.public_deps
-    }
-    foreach(dep, fidl_deps) {
-      public_deps += [ get_label_info(dep, "label_no_toolchain") + "_c_" +
-                       type + "(" + get_label_info(dep, "toolchain") + ")" ]
+      foreach(dep, invoker.public_deps) {
+        public_deps += [ get_label_info(dep, "label_no_toolchain") + "_c_" +
+                         type + "(" + get_label_info(dep, "toolchain") + ")" ]
+      }
     }
 
     libs = [ "zircon" ]
