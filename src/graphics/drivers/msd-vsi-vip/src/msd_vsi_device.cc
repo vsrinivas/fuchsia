@@ -176,6 +176,12 @@ bool MsdVsiDevice::Init(void* device_handle) {
 
 void MsdVsiDevice::HardwareInit() {
   {
+    auto reg = registers::PulseEater::Get().ReadFrom(register_io_.get());
+    reg.disable_internal_dfs().set(1);
+    reg.WriteTo(register_io_.get());
+  }
+
+  {
     auto reg = registers::IrqEnable::Get().FromValue(~0);
     reg.WriteTo(register_io_.get());
   }

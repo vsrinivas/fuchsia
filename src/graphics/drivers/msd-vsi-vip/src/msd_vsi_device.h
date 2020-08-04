@@ -300,6 +300,7 @@ class MsdVsiDevice : public msd_device_t,
   friend class MsdVsiDeviceTest_FetchEngineDma_Test;
   friend class MsdVsiDeviceTest_LoadAddressSpace_Test;
   friend class MsdVsiDeviceTest_RingbufferCanHoldMaxEvents_Test;
+  friend class MsdVsiDeviceTest_PulseEater_Test;
 };
 
 #endif  // MSD_VSI_DEVICE_H

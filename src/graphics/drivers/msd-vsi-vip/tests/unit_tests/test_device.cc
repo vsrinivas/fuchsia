@@ -224,3 +224,8 @@ TEST_F(MsdVsiDeviceTest, RingbufferCanHoldMaxEvents) {
       MsdVsiDevice::kRbMaxInstructionsPerEvent * sizeof(uint64_t) * MsdVsiDevice::kNumEvents;
   ASSERT_GE(available_space, max_used_space);
 }
+
+TEST_F(MsdVsiDeviceTest, PulseEater) {
+  uint32_t pulse_eater = device_->register_io()->Read32(0x10C);
+  EXPECT_TRUE(pulse_eater & (1 << 18)) << "missing performance fix";
+}

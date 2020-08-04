@@ -178,6 +178,13 @@ class Specs4 : public magma::RegisterBase {
   static auto Get() { return magma::RegisterAddr<Specs4>(0x9C); }
 };
 
+class PulseEater : public magma::RegisterBase {
+ public:
+  DEF_BIT(18, disable_internal_dfs);
+
+  static auto Get() { return magma::RegisterAddr<PulseEater>(0x10c); }
+};
+
 class MmuConfig : public magma::RegisterBase {
  public:
   static auto Get() { return magma::RegisterAddr<MmuConfig>(0x184); }
