@@ -55,6 +55,7 @@ pub struct RamdiskClientBuilder {
     block_size: u64,
     block_count: u64,
     dev_root: Option<DevRoot>,
+    guid: Option<[u8; 16]>,
 }
 
 enum DevRoot {
@@ -65,7 +66,7 @@ enum DevRoot {
 impl RamdiskClientBuilder {
     /// Create a new ramdisk builder with the given block_size and block_count.
     pub fn new(block_size: u64, block_count: u64) -> Self {
-        Self { block_size, block_count, dev_root: None }
+        Self { block_size, block_count, dev_root: None, guid: None }
     }
 
     /// Use the given directory as "/dev" instead of opening "/dev" from the environment.
@@ -82,14 +83,20 @@ impl RamdiskClientBuilder {
         self
     }
 
+    /// Initialize the ramdisk with the given GUID, which can be queried from the ramdisk instance.
+    pub fn guid(&mut self, guid: [u8; 16]) -> &mut Self {
+        self.guid = Some(guid);
+        self
+    }
+
     /// Create the ramdisk.
     pub fn build(&mut self) -> Result<RamdiskClient, zx::Status> {
         let block_size = self.block_size;
         let block_count = self.block_count;
 
         let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
-        let status = match &self.dev_root {
-            Some(dev_root) => {
+        let status = match (&self.dev_root, &self.guid) {
+            (Some(dev_root), Some(guid)) => {
                 // If this statement needs to open the dev_root itself, hold onto the File to
                 // ensure dev_root_fd is valid for this block.
                 let (dev_root_fd, _dev_root) = match &dev_root {
@@ -103,6 +110,29 @@ impl RamdiskClientBuilder {
                 // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
                 // The returned ramdisk is valid iff the FFI method returns ZX_OK.
                 unsafe {
+                    ramdevice_sys::ramdisk_create_at_with_guid(
+                        dev_root_fd,
+                        block_size,
+                        block_count,
+                        guid.as_ptr(),
+                        16,
+                        &mut ramdisk,
+                    )
+                }
+            }
+            (Some(dev_root), None) => {
+                // If this statement needs to open the dev_root itself, hold onto the File to
+                // ensure dev_root_fd is valid for this block.
+                let (dev_root_fd, _dev_root) = match &dev_root {
+                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
+                    DevRoot::Isolated => {
+                        let devmgr = open_isolated_devmgr()?;
+                        (devmgr.as_raw_fd(), Some(devmgr))
+                    }
+                };
+                // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
+                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+                unsafe {
                     ramdevice_sys::ramdisk_create_at(
                         dev_root_fd,
                         block_size,
@@ -111,7 +141,19 @@ impl RamdiskClientBuilder {
                     )
                 }
             }
-            None => {
+            (None, Some(guid)) => {
+                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+                unsafe {
+                    ramdevice_sys::ramdisk_create_with_guid(
+                        block_size,
+                        block_count,
+                        guid.as_ptr(),
+                        16,
+                        &mut ramdisk,
+                    )
+                }
+            }
+            (None, None) => {
                 // The returned ramdisk is valid iff the FFI method returns ZX_OK.
                 unsafe { ramdevice_sys::ramdisk_create(block_size, block_count, &mut ramdisk) }
             }
@@ -211,12 +253,41 @@ mod tests {
 
     // Note that if these tests flake, all downstream tests that depend on this crate may too.
 
+    const TEST_GUID: [u8; 16] = [
+        0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+        0x10,
+    ];
+
     #[test]
     fn create_get_path_destroy() {
         // just make sure all the functions are hooked up properly.
         let devmgr = open_isolated_devmgr().expect("failed to open isolated devmgr");
         let ramdisk = RamdiskClient::builder(512, 2048)
             .dev_root(devmgr)
+            .build()
+            .expect("failed to create ramdisk");
+        let _path = ramdisk.get_path();
+        assert_eq!(ramdisk.destroy(), Ok(()));
+    }
+
+    #[test]
+    fn create_with_dev_root_and_guid_get_path_destroy() {
+        let devmgr = open_isolated_devmgr().expect("failed to open isolated devmgr");
+        let ramdisk = RamdiskClient::builder(512, 2048)
+            .dev_root(devmgr)
+            .guid(TEST_GUID)
+            .build()
+            .expect("failed to create ramdisk");
+        let _path = ramdisk.get_path();
+        assert_eq!(ramdisk.destroy(), Ok(()));
+    }
+
+    #[test]
+    fn create_with_guid_get_path_destroy() {
+        let devmgr = open_isolated_devmgr().expect("failed to open isolated devmgr");
+        let ramdisk = RamdiskClient::builder(512, 2048)
+            .dev_root(devmgr)
+            .guid(TEST_GUID)
             .build()
             .expect("failed to create ramdisk");
         let _path = ramdisk.get_path();

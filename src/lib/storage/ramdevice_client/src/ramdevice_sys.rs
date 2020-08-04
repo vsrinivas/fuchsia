@@ -24,6 +24,21 @@ extern "C" {
         blk_count: u64,
         out: *mut *mut ramdisk_client_t,
     ) -> zx_status_t;
+    pub fn ramdisk_create_with_guid(
+        blk_size: u64,
+        blk_count: u64,
+        type_guid: *const u8,
+        guid_len: usize,
+        out: *mut *mut ramdisk_client_t,
+    ) -> zx_status_t;
+    pub fn ramdisk_create_at_with_guid(
+        dev_root_fd: raw::c_int,
+        blk_size: u64,
+        blk_count: u64,
+        type_guid: *const u8,
+        guid_len: usize,
+        out: *mut *mut ramdisk_client_t,
+    ) -> zx_status_t;
     pub fn ramdisk_get_path(client: *const ramdisk_client_t) -> *const raw::c_char;
     pub fn ramdisk_get_block_fd(client: *const ramdisk_client_t) -> raw::c_int;
     pub fn ramdisk_destroy(client: *const ramdisk_client_t) -> zx_status_t;
