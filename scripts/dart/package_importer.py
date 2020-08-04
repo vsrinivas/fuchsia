@@ -73,8 +73,17 @@ def get_deps(package_name, parsed_yaml, dep_type):
 
 def parse_min_sdk_version_and_full_dependencies(yaml_path):
     """ parse the content of a pubspec.yaml """
+    yaml_data = []
+
+    # Some yaml files can be malformed and have an extra tab at the end
+    # of a line. This causes the parser to fail so we strip all tabs off
+    # the end of the lines.
     with open(yaml_path) as yaml_file:
-        parsed = yaml.safe_load(yaml_file)
+        for line in yaml_file.readlines():
+            yaml_data.append(line.rstrip('\t\n'))
+        yaml_doc = "\n".join(yaml_data)
+
+        parsed = yaml.safe_load(yaml_doc)
         if not parsed:
             raise Exception('Could not parse yaml file: %s' % yaml_file)
         package_name = parsed['name']
