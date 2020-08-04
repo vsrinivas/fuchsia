@@ -16,6 +16,10 @@ and the code for each part contains the solution for the previous parts.
 * [Rust Part 1][rust-part1]
 * [Dart Part 1][dart-part1]
 
+Note: For Rust we also have an ergonomic library with a higher level API:
+[fuchsia-inspect-derive][fuchsia-inspect-derive]. However, it's recommended to understand the
+concepts explained in this codelab before using that other library.
+
 When working on this codelab, you may continue adding your solutions to
 "part\_1", or you may skip around by building on the existing solutions.
 
@@ -1587,3 +1591,5 @@ This section is under construction.
 [dart-part3-unittest]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_3/test/reverser_test.dart
 [dart-part4-integration]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_4/test/integration_test.dart
 [dart-part4-integration-meta]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_4/meta/inspect_dart_codelab_part_4_integration_tests.cmx
+
+[fuchsia-inspect-derive]: /docs/development/languages/rust/ergonomic_inspect.md
