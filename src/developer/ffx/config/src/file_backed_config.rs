@@ -4,6 +4,7 @@
 
 use {
     crate::api::{ReadConfig, WriteConfig},
+    crate::environment::Environment,
     crate::persistent_config::Persistent,
     anyhow::{Context, Result},
     ffx_config_plugin_args::ConfigLevel,
@@ -68,12 +69,14 @@ impl FileBacked {
         global: &Option<String>,
         build: &Option<&String>,
         user: &Option<String>,
+        runtime: &Option<String>,
     ) -> Result<Self> {
         Ok(Self {
             data: Persistent::load(
                 FileBacked::reader(global)?,
                 FileBacked::reader_from_ref(build)?,
                 FileBacked::reader(user)?,
+                runtime,
             )?,
         })
     }
@@ -88,6 +91,32 @@ impl FileBacked {
             FileBacked::writer(global)?,
             FileBacked::writer_from_ref(build)?,
             FileBacked::writer(user)?,
+        )
+    }
+
+    pub(crate) fn new(
+        env: &Environment,
+        build_dir: &Option<String>,
+        runtime: &Option<String>,
+    ) -> Result<Self> {
+        Self::load_from_environment(env, build_dir, runtime)
+    }
+
+    fn load_from_environment(
+        env: &Environment,
+        build_dir: &Option<String>,
+        runtime: &Option<String>,
+    ) -> Result<Self> {
+        build_dir.as_ref().map_or_else(
+            || Self::load(&env.global, &None, &env.user, &runtime),
+            |b| {
+                Self::load(
+                    &env.global,
+                    &env.build.as_ref().and_then(|c| c.get(b)),
+                    &env.user,
+                    &runtime,
+                )
+            },
         )
     }
 }

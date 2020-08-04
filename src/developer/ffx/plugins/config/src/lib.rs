@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error},
+    anyhow::{bail, Result},
     ffx_config::{environment::Environment, find_env_file, get, print, remove, set},
     ffx_config_plugin_args::{
         ConfigCommand, ConfigLevel, EnvAccessCommand, EnvCommand, EnvSetCommand, GetCommand,
@@ -16,7 +16,7 @@ use {
 };
 
 #[ffx_plugin()]
-pub async fn exec_config(config: ConfigCommand) -> Result<(), Error> {
+pub async fn exec_config(config: ConfigCommand) -> Result<()> {
     let writer = Box::new(std::io::stdout());
     match &config.sub {
         SubCommand::Env(env) => exec_env(env, writer),
@@ -26,7 +26,7 @@ pub async fn exec_config(config: ConfigCommand) -> Result<(), Error> {
     }
 }
 
-async fn exec_get<W: Write + Sync>(get: &GetCommand, mut writer: W) -> Result<(), Error> {
+async fn exec_get<W: Write + Sync>(get: &GetCommand, mut writer: W) -> Result<()> {
     match get.name.as_ref() {
         Some(name) => {
             if get.substitute {
@@ -48,15 +48,15 @@ async fn exec_get<W: Write + Sync>(get: &GetCommand, mut writer: W) -> Result<()
     Ok(())
 }
 
-async fn exec_set(set: &SetCommand) -> Result<(), Error> {
+async fn exec_set(set: &SetCommand) -> Result<()> {
     set!(&set.level, &set.name, Value::String(format!("{}", set.value)), &set.build_dir).await
 }
 
-async fn exec_remove(set: &RemoveCommand) -> Result<(), Error> {
+async fn exec_remove(set: &RemoveCommand) -> Result<()> {
     remove!(&set.level, &set.name, &set.build_dir).await
 }
 
-fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Result<(), Error> {
+fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Result<()> {
     let file_str = format!("{}", s.file);
     match &s.level {
         ConfigLevel::User => match env.user.as_mut() {
@@ -77,18 +77,18 @@ fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Resul
                     env.build = Some(build);
                 }
             },
-            None => return Err(anyhow!("Missing build-dir flag")),
+            None => bail!("Missing build-dir flag"),
         },
         ConfigLevel::Global => match env.global.as_mut() {
             Some(v) => *v = file_str,
             None => env.global = Some(file_str),
         },
-        ConfigLevel::Defaults => return Err(anyhow!("Cannot overwrite the default config file")),
+        _ => bail!("This configuration is not stored in the enivronment."),
     }
     env.save(&file)
 }
 
-fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<(), Error> {
+fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
     let file = find_env_file()?;
     let mut env = Environment::load(&file)?;
     match &env_command.access {

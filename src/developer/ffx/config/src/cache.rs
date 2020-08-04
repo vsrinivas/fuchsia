@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::Config,
     crate::constants::CONFIG_CACHE_TIMEOUT,
     crate::environment::Environment,
+    crate::file_backed_config::FileBacked as Config,
     anyhow::{anyhow, Result},
     async_std::sync::{Arc, RwLock},
     ffx_lib_args::Ffx,
@@ -73,7 +73,7 @@ async fn load_config_with_instant(
                             config: Arc::new(RwLock::new(Config::new(
                                 &Environment::try_load(env.as_ref().ok()),
                                 build_dir,
-                                ffx,
+                                &ffx.config,
                             )?)),
                         },
                     );
@@ -190,7 +190,7 @@ mod test {
             config: Arc::new(RwLock::new(Config::new(
                 &Environment::try_load(env().as_ref().ok()),
                 &build_dirs[0],
-                Default::default(),
+                &None,
             )?)),
         };
         assert!(!is_cache_item_expired(&item, now));

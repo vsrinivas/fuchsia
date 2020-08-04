@@ -23,10 +23,11 @@ pub enum SubCommand {
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ConfigLevel {
-    Defaults,
+    Default,
     Build,
     Global,
     User,
+    Runtime,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]

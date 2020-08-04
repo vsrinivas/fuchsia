@@ -4,6 +4,7 @@
 
 use {
     crate::api::{ReadConfig, WriteConfig},
+    crate::runtime::populate_runtime_config,
     anyhow::{anyhow, bail, Result},
     config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
@@ -12,10 +13,11 @@ use {
 };
 
 pub(crate) struct Priority {
-    defaults: Option<Value>,
+    default: Option<Value>,
     pub(crate) build: Option<Value>,
     pub(crate) global: Option<Value>,
     pub(crate) user: Option<Value>,
+    pub(crate) runtime: Option<Value>,
 }
 
 struct PriorityIterator<'a> {
@@ -29,10 +31,14 @@ impl<'a> Iterator for PriorityIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match &self.curr {
             None => {
-                self.curr = Some(ConfigLevel::User);
-                Some(&self.config.user)
+                self.curr = Some(ConfigLevel::Runtime);
+                Some(&self.config.runtime)
             }
             Some(level) => match level {
+                ConfigLevel::Runtime => {
+                    self.curr = Some(ConfigLevel::User);
+                    Some(&self.config.user)
+                }
                 ConfigLevel::User => {
                     self.curr = Some(ConfigLevel::Build);
                     Some(&self.config.build)
@@ -42,18 +48,29 @@ impl<'a> Iterator for PriorityIterator<'a> {
                     Some(&self.config.global)
                 }
                 ConfigLevel::Global => {
-                    self.curr = Some(ConfigLevel::Defaults);
-                    Some(&self.config.defaults)
+                    self.curr = Some(ConfigLevel::Default);
+                    Some(&self.config.default)
                 }
-                ConfigLevel::Defaults => None,
+                ConfigLevel::Default => None,
             },
         }
     }
 }
 
 impl Priority {
-    pub(crate) fn new(user: Option<Value>, build: Option<Value>, global: Option<Value>) -> Self {
-        Self { user, build, global, defaults: include_default!() }
+    pub(crate) fn new(
+        user: Option<Value>,
+        build: Option<Value>,
+        global: Option<Value>,
+        runtime: &Option<String>,
+    ) -> Self {
+        Self {
+            user,
+            build,
+            global,
+            runtime: populate_runtime_config(runtime),
+            default: include_default!(),
+        }
     }
 
     fn iter(&self) -> PriorityIterator<'_> {
@@ -73,11 +90,20 @@ impl ReadConfig for Priority {
 
 impl fmt::Display for Priority {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Persistent configuration saved in files in the current environment.\n")?;
+        writeln!(
+            f,
+            "FFX configuration can come from several places and has an inherent priority assigned\n\
+            to the different ways the configuration is gathered. A configuration key can be set\n\
+            in multiple locations but the first value found is returned. The following output\n\
+            shows the locations checked in descending priority order.\n"
+        )?;
         let mut iterator = self.iter();
         while let Some(next) = iterator.next() {
             if let Some(level) = iterator.curr {
                 match level {
+                    ConfigLevel::Runtime => {
+                        write!(f, "Runtime Configuration")?;
+                    }
                     ConfigLevel::User => {
                         write!(f, "User Configuration")?;
                     }
@@ -87,7 +113,7 @@ impl fmt::Display for Priority {
                     ConfigLevel::Global => {
                         write!(f, "Global Configuration")?;
                     }
-                    ConfigLevel::Defaults => {
+                    ConfigLevel::Default => {
                         write!(f, "Default Configuration")?;
                     }
                 };
@@ -106,7 +132,7 @@ impl fmt::Display for Priority {
 
 impl WriteConfig for Priority {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
-        let set = |config_data: &mut Option<Value>| match config_data {
+        let inner_set = |config_data: &mut Option<Value>| match config_data {
             Some(config) => match config.as_object_mut() {
                 Some(map) => match map.get_mut(key) {
                     Some(v) => {
@@ -128,15 +154,16 @@ impl WriteConfig for Priority {
             }
         };
         match level {
-            ConfigLevel::User => set(&mut self.user),
-            ConfigLevel::Build => set(&mut self.build),
-            ConfigLevel::Global => set(&mut self.global),
-            ConfigLevel::Defaults => set(&mut self.defaults),
+            ConfigLevel::Runtime => inner_set(&mut self.runtime),
+            ConfigLevel::User => inner_set(&mut self.user),
+            ConfigLevel::Build => inner_set(&mut self.build),
+            ConfigLevel::Global => inner_set(&mut self.global),
+            ConfigLevel::Default => inner_set(&mut self.default),
         }
     }
 
     fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
-        let remove = |config_data: &mut Option<Value>| -> Result<()> {
+        let inner_remove = |config_data: &mut Option<Value>| -> Result<()> {
             match config_data {
                 Some(config) => match config.as_object_mut() {
                     Some(map) => map
@@ -149,10 +176,11 @@ impl WriteConfig for Priority {
             }
         };
         match level {
-            ConfigLevel::User => remove(&mut self.user),
-            ConfigLevel::Build => remove(&mut self.build),
-            ConfigLevel::Global => remove(&mut self.global),
-            ConfigLevel::Defaults => remove(&mut self.defaults),
+            ConfigLevel::User => inner_remove(&mut self.user),
+            ConfigLevel::Build => inner_remove(&mut self.build),
+            ConfigLevel::Global => inner_remove(&mut self.global),
+            ConfigLevel::Default => inner_remove(&mut self.default),
+            ConfigLevel::Runtime => inner_remove(&mut self.runtime),
         }
     }
 }
@@ -183,10 +211,16 @@ mod test {
             "name": "Global"
         }"#;
 
-    const DEFAULTS: &'static str = r#"
+    const DEFAULT: &'static str = r#"
         {
-            "name": "Defaults"
+            "name": "Default"
         }"#;
+
+    const RUNTIME: &'static str = r#"
+        {
+            "name": "Runtime"
+        }"#;
+
     const MAPPED: &'static str = r#"
         {
             "name": "TEST_MAP"
@@ -198,15 +232,16 @@ mod test {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: Some(serde_json::from_str(RUNTIME)?),
         };
 
         let mut test_iter = test.iter();
+        assert_eq!(test_iter.next(), Some(&test.runtime));
         assert_eq!(test_iter.next(), Some(&test.user));
         assert_eq!(test_iter.next(), Some(&test.build));
         assert_eq!(test_iter.next(), Some(&test.global));
-        assert_eq!(test_iter.next(), Some(&test.defaults));
-        assert_eq!(test_iter.next(), None);
+        assert_eq!(test_iter.next(), Some(&test.default));
         Ok(())
     }
 
@@ -216,15 +251,16 @@ mod test {
             user: Some(serde_json::from_str(USER)?),
             build: None,
             global: None,
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
 
         let mut test_iter = test.iter();
+        assert_eq!(test_iter.next(), Some(&test.runtime));
         assert_eq!(test_iter.next(), Some(&test.user));
         assert_eq!(test_iter.next(), Some(&test.build));
         assert_eq!(test_iter.next(), Some(&test.global));
-        assert_eq!(test_iter.next(), Some(&test.defaults));
-        assert_eq!(test_iter.next(), None);
+        assert_eq!(test_iter.next(), Some(&test.default));
         Ok(())
     }
 
@@ -234,7 +270,8 @@ mod test {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
 
         let value = test.get("name", identity);
@@ -245,7 +282,8 @@ mod test {
             user: None,
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
 
         let value_build = test_build.get("name", identity);
@@ -256,25 +294,28 @@ mod test {
             user: None,
             build: None,
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
 
         let value_global = test_global.get("name", identity);
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("Global")));
 
-        let test_defaults = Priority {
+        let test_default = Priority {
             user: None,
             build: None,
             global: None,
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
 
-        let value_defaults = test_defaults.get("name", identity);
-        assert!(value_defaults.is_some());
-        assert_eq!(value_defaults.unwrap(), Value::String(String::from("Defaults")));
+        let value_default = test_default.get("name", identity);
+        assert!(value_default.is_some());
+        assert_eq!(value_default.unwrap(), Value::String(String::from("Default")));
 
-        let test_none = Priority { user: None, build: None, global: None, defaults: None };
+        let test_none =
+            Priority { user: None, build: None, global: None, default: None, runtime: None };
 
         let value_none = test_none.get("name", identity);
         assert!(value_none.is_none());
@@ -287,7 +328,8 @@ mod test {
             user: Some(serde_json::from_str(ERROR)?),
             build: None,
             global: None,
-            defaults: None,
+            default: None,
+            runtime: None,
         };
         let value = test.set(&ConfigLevel::User, "name", Value::String(String::from("whatever")));
         assert!(value.is_err());
@@ -300,7 +342,8 @@ mod test {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
         let value = test.get("field that does not exist", identity);
         assert!(value.is_none());
@@ -313,7 +356,8 @@ mod test {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
         test.set(&ConfigLevel::User, "name", Value::String(String::from("user-test")))?;
         let value = test.get("name", identity);
@@ -324,13 +368,14 @@ mod test {
 
     #[test]
     fn test_set_build_from_none() -> Result<()> {
-        let mut test = Priority { user: None, build: None, global: None, defaults: None };
+        let mut test =
+            Priority { user: None, build: None, global: None, default: None, runtime: None };
         let value_none = test.get("name", identity);
         assert!(value_none.is_none());
-        test.set(&ConfigLevel::Defaults, "name", Value::String(String::from("defaults")))?;
-        let value_defaults = test.get("name", identity);
-        assert!(value_defaults.is_some());
-        assert_eq!(value_defaults.unwrap(), Value::String(String::from("defaults")));
+        test.set(&ConfigLevel::Default, "name", Value::String(String::from("default")))?;
+        let value_default = test.get("name", identity);
+        assert!(value_default.is_some());
+        assert_eq!(value_default.unwrap(), Value::String(String::from("default")));
         test.set(&ConfigLevel::Global, "name", Value::String(String::from("global")))?;
         let value_global = test.get("name", identity);
         assert!(value_global.is_some());
@@ -352,7 +397,8 @@ mod test {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
         test.remove(&ConfigLevel::User, "name")?;
         let user_value = test.get("name", identity);
@@ -365,16 +411,16 @@ mod test {
         test.remove(&ConfigLevel::Global, "name")?;
         let default_value = test.get("name", identity);
         assert!(default_value.is_some());
-        assert_eq!(default_value.unwrap(), Value::String(String::from("Defaults")));
-        test.remove(&ConfigLevel::Defaults, "name")?;
+        assert_eq!(default_value.unwrap(), Value::String(String::from("Default")));
+        test.remove(&ConfigLevel::Default, "name")?;
         let none_value = test.get("name", identity);
         assert!(none_value.is_none());
         Ok(())
     }
 
     #[test]
-    fn test_defaults() {
-        let test = Priority::new(None, None, None);
+    fn test_default() {
+        let test = Priority::new(None, None, None, &None);
         let default_value = test.get("log-enabled", identity);
         assert_eq!(default_value.unwrap(), Value::String("$FFX_LOG_ENABLED".to_string()));
     }
@@ -385,7 +431,8 @@ mod test {
             user: Some(serde_json::from_str(USER)?),
             build: Some(serde_json::from_str(BUILD)?),
             global: Some(serde_json::from_str(GLOBAL)?),
-            defaults: Some(serde_json::from_str(DEFAULTS)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
         };
         let output = format!("{}", test);
         assert!(output.len() > 0);
@@ -395,8 +442,8 @@ mod test {
         assert_eq!(1, build_reg.find_iter(&output).count());
         let global_reg = Regex::new("\"name\": \"Global\"").expect("test regex");
         assert_eq!(1, global_reg.find_iter(&output).count());
-        let defaults_reg = Regex::new("\"name\": \"Defaults\"").expect("test regex");
-        assert_eq!(1, defaults_reg.find_iter(&output).count());
+        let default_reg = Regex::new("\"name\": \"Default\"").expect("test regex");
+        assert_eq!(1, default_reg.find_iter(&output).count());
         Ok(())
     }
 
@@ -416,7 +463,8 @@ mod test {
             user: Some(serde_json::from_str(MAPPED)?),
             build: None,
             global: None,
-            defaults: None,
+            default: None,
+            runtime: None,
         };
         let test_mapping = "TEST_MAP".to_string();
         let test_passed = "passed".to_string();

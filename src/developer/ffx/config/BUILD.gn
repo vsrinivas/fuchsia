@@ -44,7 +44,6 @@ if (host_toolchain == current_toolchain) {
     sources = [
       "src/api.rs",
       "src/cache.rs",
-      "src/config.rs",
       "src/constants.rs",
       "src/env_var.rs",
       "src/environment.rs",
@@ -54,7 +53,7 @@ if (host_toolchain == current_toolchain) {
       "src/lib.rs",
       "src/persistent_config.rs",
       "src/priority_config.rs",
-      "src/runtime_config.rs",
+      "src/runtime.rs",
     ]
   }
 }

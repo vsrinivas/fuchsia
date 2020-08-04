@@ -52,12 +52,14 @@ impl Persistent {
         global: Option<R>,
         build: Option<R>,
         user: Option<R>,
+        runtime: &Option<String>,
     ) -> Result<Self> {
         Ok(Self {
             data: Priority::new(
                 Persistent::open(user)?,
                 Persistent::open(build)?,
                 Persistent::open(global)?,
+                runtime,
             ),
         })
     }
@@ -90,14 +92,14 @@ impl fmt::Display for Persistent {
 impl WriteConfig for Persistent {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
         match level {
-            ConfigLevel::Defaults => bail!("cannot override defaults"),
+            ConfigLevel::Default => bail!("cannot override defaults"),
             _ => self.data.set(&level, key, value),
         }
     }
 
     fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
         match level {
-            ConfigLevel::Defaults => bail!("cannot override defaults"),
+            ConfigLevel::Default => bail!("cannot override defaults"),
             _ => self.data.remove(&level, key),
         }
     }
@@ -137,6 +139,7 @@ mod test {
             Some(BufReader::new(global_file.as_bytes())),
             Some(BufReader::new(build_file.as_bytes())),
             Some(BufReader::new(user_file.as_bytes())),
+            &None,
         )?;
 
         let value = persistent_config.get("name", identity);

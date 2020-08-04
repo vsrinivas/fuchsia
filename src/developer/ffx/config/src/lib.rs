@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{PersistentConfig, ReadConfig, WriteConfig},
+    crate::api::{ReadConfig, WriteConfig},
     crate::cache::load_config,
-    crate::config::Config,
     crate::constants::ENV_FILE,
     crate::environment::Environment,
+    crate::file_backed_config::FileBacked as Config,
     crate::file_flatten_env_var::file_flatten_env_var,
     crate::flatten_env_var::flatten_env_var,
     anyhow::{bail, Context, Result},
@@ -19,7 +19,6 @@ use {
 
 mod api;
 mod cache;
-mod config;
 pub mod constants;
 mod env_var;
 pub mod environment;
@@ -28,7 +27,7 @@ mod file_flatten_env_var;
 mod flatten_env_var;
 mod persistent_config;
 mod priority_config;
-mod runtime_config;
+mod runtime;
 
 pub use config_macros::{ffx_cmd, ffx_env, get, print, remove, set};
 
