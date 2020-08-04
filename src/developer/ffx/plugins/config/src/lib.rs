@@ -30,7 +30,7 @@ async fn exec_get<W: Write + Sync>(get: &GetCommand, mut writer: W) -> Result<()
     match get.name.as_ref() {
         Some(name) => {
             if get.substitute {
-                match get!(str, name).await? {
+                match get!(sub, name).await? {
                     Some(v) => writeln!(writer, "{}: {}", name, v)?,
                     None => writeln!(writer, "{}: none", name)?,
                 }

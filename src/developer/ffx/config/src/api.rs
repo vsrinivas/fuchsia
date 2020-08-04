@@ -4,8 +4,10 @@
 
 use {anyhow::Result, ffx_config_plugin_args::ConfigLevel, serde_json::Value, std::fmt};
 
+pub type ConfigMapper = fn(Value) -> Option<Value>;
+
 pub trait ReadConfig: fmt::Display {
-    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value>;
+    fn get(&self, key: &str, mapper: ConfigMapper) -> Option<Value>;
 }
 
 pub trait WriteConfig {

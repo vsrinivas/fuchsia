@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, WriteConfig},
+    crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::runtime::populate_runtime_config,
     anyhow::{anyhow, bail, Result},
     config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
-    serde_json::Value,
+    serde_json::{Map, Value},
     std::fmt,
 };
 
@@ -76,15 +76,59 @@ impl Priority {
     fn iter(&self) -> PriorityIterator<'_> {
         PriorityIterator { curr: None, config: self }
     }
+
+    pub fn nested_map(cur: Option<Value>, mapper: ConfigMapper) -> Option<Value> {
+        cur.and_then(|c| {
+            if let Value::Object(map) = c {
+                let mut result = Map::new();
+                for (key, value) in map.iter() {
+                    let new_value = if value.is_object() {
+                        Priority::nested_map(map.get(key).cloned(), mapper)
+                    } else {
+                        map.get(key).cloned().and_then(|v| mapper(v))
+                    };
+                    if let Some(new_value) = new_value {
+                        result.insert(key.to_string(), new_value);
+                    }
+                }
+                if result.len() == 0 {
+                    None
+                } else {
+                    Some(Value::Object(result))
+                }
+            } else {
+                mapper(c)
+            }
+        })
+    }
+
+    fn nested_get(
+        cur: &Option<Value>,
+        key: &str,
+        remaining_keys: Vec<&str>,
+        mapper: ConfigMapper,
+    ) -> Option<Value> {
+        cur.as_ref().and_then(|c| {
+            if remaining_keys.len() == 0 {
+                Priority::nested_map(c.get(key).cloned(), mapper)
+            } else {
+                Priority::nested_get(
+                    &c.get(key).cloned(),
+                    remaining_keys[0],
+                    remaining_keys[1..].to_vec(),
+                    mapper,
+                )
+            }
+        })
+    }
 }
 
 impl ReadConfig for Priority {
-    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
-        self.iter()
-            .filter(|c| c.is_some())
-            .filter_map(|c| c.as_ref().unwrap().as_object())
-            .map(|c| c.get(key).cloned())
-            .find_map(mapper)
+    fn get(&self, key: &str, mapper: ConfigMapper) -> Option<Value> {
+        // Check for nested config values if there's a '.' in the key
+        let mut key_vec: Vec<&str> = key.split('.').collect();
+        let first_key = if key_vec.len() > 0 { key_vec.remove(0) } else { key };
+        self.iter().find_map(|c| Priority::nested_get(c, first_key, key_vec[..].to_vec(), mapper))
     }
 }
 
@@ -191,8 +235,8 @@ impl WriteConfig for Priority {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::identity::identity;
     use regex::Regex;
-    use std::convert::identity;
 
     const ERROR: &'static str = "0";
 
@@ -224,6 +268,24 @@ mod test {
     const MAPPED: &'static str = r#"
         {
             "name": "TEST_MAP"
+        }"#;
+
+    const NESTED: &'static str = r#"
+        {
+            "name": {
+               "nested": "Nested"
+            }
+        }"#;
+
+    const DEEP: &'static str = r#"
+        {
+            "name": {
+               "nested": {
+                    "deep": {
+                        "name": "TEST_MAP"
+                    }
+               }
+            }
         }"#;
 
     #[test]
@@ -421,7 +483,7 @@ mod test {
     #[test]
     fn test_default() {
         let test = Priority::new(None, None, None, &None);
-        let default_value = test.get("log-enabled", identity);
+        let default_value = test.get("log.enabled", identity);
         assert_eq!(default_value.unwrap(), Value::String("$FFX_LOG_ENABLED".to_string()));
     }
 
@@ -447,14 +509,12 @@ mod test {
         Ok(())
     }
 
-    fn test_map(value: Option<Value>) -> Option<Value> {
-        value.map(|v| {
-            if v == "TEST_MAP" {
-                Value::String("passed".to_string())
-            } else {
-                Value::String("failed".to_string())
-            }
-        })
+    fn test_map(value: Value) -> Option<Value> {
+        if value == "TEST_MAP".to_string() {
+            Some(Value::String("passed".to_string()))
+        } else {
+            Some(Value::String("failed".to_string()))
+        }
     }
 
     #[test]
@@ -472,6 +532,62 @@ mod test {
         assert_eq!(mapped_value, Some(Value::String(test_passed)));
         let identity_value = test.get("name", identity);
         assert_eq!(identity_value, Some(Value::String(test_mapping)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested() -> Result<()> {
+        let test = Priority {
+            user: None,
+            build: None,
+            global: None,
+            default: None,
+            runtime: Some(serde_json::from_str(NESTED)?),
+        };
+        let value = test.get("name.nested", identity);
+        assert_eq!(value, Some(Value::String("Nested".to_string())));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_should_return_sub_tree() -> Result<()> {
+        let test = Priority {
+            user: None,
+            build: None,
+            global: None,
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: Some(serde_json::from_str(NESTED)?),
+        };
+        let value = test.get("name", identity);
+        assert_eq!(value, Some(serde_json::from_str("{\"nested\": \"Nested\"}")?));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_should_return_full_match() -> Result<()> {
+        let test = Priority {
+            user: None,
+            build: None,
+            global: None,
+            default: Some(serde_json::from_str(NESTED)?),
+            runtime: Some(serde_json::from_str(RUNTIME)?),
+        };
+        let value = test.get("name.nested", identity);
+        assert_eq!(value, Some(Value::String("Nested".to_string())));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_should_map_values_in_sub_tree() -> Result<()> {
+        let test = Priority {
+            user: None,
+            build: None,
+            global: None,
+            default: Some(serde_json::from_str(NESTED)?),
+            runtime: Some(serde_json::from_str(DEEP)?),
+        };
+        let value = test.get("name.nested", test_map);
+        assert_eq!(value, Some(serde_json::from_str("{\"deep\": {\"name\": \"passed\"}}")?));
         Ok(())
     }
 }

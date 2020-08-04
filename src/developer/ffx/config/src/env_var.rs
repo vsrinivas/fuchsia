@@ -11,15 +11,12 @@ use {
 // configuration.  Insert joke here about how hope is not a strategy.
 const TEMP_REPLACE: &str = "#<#ffx!!replace#>#";
 
-pub(crate) fn environment_variables_mapper(value: Option<Value>) -> Option<Value> {
+pub(crate) fn environment_variables_mapper(value: Value) -> Option<Value> {
     lazy_static! {
         static ref ENV_VAR_REGEX: Regex = Regex::new(r"\$([A-Z][A-Z0-9_]*)").unwrap();
     }
 
-    let env_string = value
-        .map(|v| v.as_str().map(|s| s.to_string()))
-        .flatten()
-        .map(|s| s.replace("$$", TEMP_REPLACE));
+    let env_string = value.as_str().map(|s| s.to_string()).map(|s| s.replace("$$", TEMP_REPLACE));
     if let Some(estring) = env_string.clone() {
         // First verify all environment variables exist.
         // If one does not exist, return none.
@@ -65,6 +62,7 @@ pub(crate) fn environment_variables_mapper(value: Option<Value>) -> Option<Value
             })
         })
         .map(|r| Value::String(r.to_string().replace(TEMP_REPLACE, "$")))
+        .or(Some(value))
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +82,7 @@ mod test {
     fn test_env_var_mapper() {
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_MAPPER", "test")]);
-        let test = Some(Value::String("$FFX_TEST_ENV_VAR_MAPPER".to_string()));
+        let test = Value::String("$FFX_TEST_ENV_VAR_MAPPER".to_string());
         assert_eq!(environment_variables_mapper(test), Some(Value::String("test".to_string())));
         cleanup();
     }
@@ -93,9 +91,9 @@ mod test {
     fn test_env_var_mapper_multiple() {
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_MAPPER_MULTIPLE", "test")]);
-        let test = Some(Value::String(
+        let test = Value::String(
             "$FFX_TEST_ENV_VAR_MAPPER_MULTIPLE/$FFX_TEST_ENV_VAR_MAPPER_MULTIPLE".to_string(),
-        ));
+        );
         assert_eq!(
             environment_variables_mapper(test),
             Some(Value::String(format!("{}/{}", "test", "test")))
@@ -105,7 +103,7 @@ mod test {
 
     #[test]
     fn test_env_var_mapper_returns_none() {
-        let test = Some(Value::String("$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string()));
+        let test = Value::String("$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string());
         assert_eq!(environment_variables_mapper(test), None);
     }
 
@@ -113,15 +111,20 @@ mod test {
     fn test_env_var_mapper_multiple_returns_none_if_one_does_not_exist() {
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_EXISTS", "test")]);
-        let test =
-            Some(Value::String("$HOME/$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string()));
+        let test = Value::String("$HOME/$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string());
         assert_eq!(environment_variables_mapper(test), None);
         cleanup();
     }
 
     #[test]
     fn test_env_var_mapper_escapes_dollar_sign() {
-        let test = Some(Value::String("$$HOME".to_string()));
+        let test = Value::String("$$HOME".to_string());
         assert_eq!(environment_variables_mapper(test), Some(Value::String("$HOME".to_string())));
+    }
+
+    #[test]
+    fn test_env_var_returns_value_if_not_string() {
+        let test = Value::Bool(false);
+        assert_eq!(environment_variables_mapper(test), Some(Value::Bool(false)));
     }
 }

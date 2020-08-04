@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, WriteConfig},
+    crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::priority_config::Priority,
     anyhow::{bail, Result},
     ffx_config_plugin_args::ConfigLevel,
@@ -78,7 +78,7 @@ impl Persistent {
 }
 
 impl ReadConfig for Persistent {
-    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
+    fn get(&self, key: &str, mapper: ConfigMapper) -> Option<Value> {
         self.data.get(key, mapper)
     }
 }
@@ -111,7 +111,7 @@ impl WriteConfig for Persistent {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::convert::identity;
+    use crate::identity::identity;
     use std::io::{BufReader, BufWriter};
 
     const USER: &'static str = r#"

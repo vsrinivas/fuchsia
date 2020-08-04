@@ -50,6 +50,7 @@ if (host_toolchain == current_toolchain) {
       "src/file_backed_config.rs",
       "src/file_flatten_env_var.rs",
       "src/flatten_env_var.rs",
+      "src/identity.rs",
       "src/lib.rs",
       "src/persistent_config.rs",
       "src/priority_config.rs",

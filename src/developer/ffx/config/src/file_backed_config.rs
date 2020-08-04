@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, WriteConfig},
+    crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::environment::Environment,
     crate::persistent_config::Persistent,
     anyhow::{Context, Result},
@@ -122,7 +122,7 @@ impl FileBacked {
 }
 
 impl ReadConfig for FileBacked {
-    fn get(&self, key: &str, mapper: fn(Option<Value>) -> Option<Value>) -> Option<Value> {
+    fn get(&self, key: &str, mapper: ConfigMapper) -> Option<Value> {
         self.data.get(key, mapper)
     }
 }

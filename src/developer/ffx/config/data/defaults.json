@@ -1,17 +1,23 @@
 {
-  "log-dir": [
-    "$FFX_LOG_DIR", 
-    "$HOME"
-  ],
-  "log-enabled": "$FFX_LOG_ENABLED",
-  "package-repo": "$HOME/.local/share/ffx",
-  "ssh-port": "$FUCHSIA_SSH_PORT",
-  "ssh-priv": [
-    "$FUCHSIA_SSH_KEY",
-    "$FUCHSIA_DIR/.ssh/pkey"
-  ],
-  "ssh-pub": [
-    "$FUCHSIA_DIR/.ssh/authorized_keys",
-    "$HOME/.ssh/id_rsa.pub"
-  ]
+  "log": {
+    "dir": [
+      "$FFX_LOG_DIR",
+      "$HOME"
+    ],
+    "enabled": "$FFX_LOG_ENABLED"
+  },
+  "package": {
+    "repo": "$HOME/.local/share/ffx"
+  },
+  "ssh": {
+    "port": "$FUCHSIA_SSH_PORT",
+    "priv": [
+      "$FUCHSIA_SSH_KEY",
+      "$FUCHSIA_DIR/.ssh/pkey"
+    ],
+    "pub": [
+      "$FUCHSIA_DIR/.ssh/authorized_keys",
+      "$HOME/.ssh/id_rsa.pub"
+    ]
+  }
 }

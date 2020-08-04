@@ -3,18 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::api::{ReadConfig, WriteConfig},
+    crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::cache::load_config,
     crate::constants::ENV_FILE,
     crate::environment::Environment,
     crate::file_backed_config::FileBacked as Config,
     crate::file_flatten_env_var::file_flatten_env_var,
     crate::flatten_env_var::flatten_env_var,
+    crate::identity::identity,
     anyhow::{bail, Context, Result},
     ffx_config_plugin_args::ConfigLevel,
     ffx_lib_args::Ffx,
     serde_json::Value,
-    std::{convert::identity, env, fs::File, io::Write, path::PathBuf},
+    std::{env, fs::File, io::Write, path::PathBuf},
 };
 
 mod api;
@@ -25,6 +26,7 @@ pub mod environment;
 mod file_backed_config;
 mod file_flatten_env_var;
 mod flatten_env_var;
+mod identity;
 mod persistent_config;
 mod priority_config;
 mod runtime;
@@ -35,12 +37,16 @@ pub async fn get_config(name: &str, ffx: Ffx, env: Result<String>) -> Result<Opt
     get_config_with_build_dir(name, &None, ffx, env, identity).await
 }
 
+pub async fn get_config_sub(name: &str, ffx: Ffx, env: Result<String>) -> Result<Option<Value>> {
+    get_config_with_build_dir(name, &None, ffx, env, flatten_env_var).await
+}
+
 pub async fn get_config_with_build_dir(
     name: &str,
     build_dir: &Option<String>,
     ffx: Ffx,
     env: Result<String>,
-    mapper: fn(Option<Value>) -> Option<Value>,
+    mapper: ConfigMapper,
 ) -> Result<Option<Value>> {
     let config = load_config(build_dir, ffx, &env).await?;
     let read_guard = config.read().await;
