@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::zstd,
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
     serde::{Deserialize, Serialize},
@@ -21,6 +22,11 @@ const ZBI_CONTAINER_MAGIC: u32 = 0x868cf7e6;
 
 /// LSW of sha256("bootitem")
 const ZBI_ITEM_MAGIC: u32 = 0xb5781729;
+
+/// Set in the flags if the section is compressed. We assume all compression
+/// is ZSTD. If this flag is set ZbiHeader.extra will be the uncompressed
+/// size of the image.
+const ZBI_FLAG_STORAGE_COMPRESSED: u32 = 0x00000001;
 
 /// Defines all of the known ZBI section types. These are used to partition
 /// the Zircon boot image into sections.
@@ -144,7 +150,13 @@ impl ZbiReader {
             let mut section_data = vec![0; data_len];
             self.cursor.read_exact(&mut section_data)?;
 
-            zbi_sections.push(ZbiSection { section_type, buffer: section_data });
+            // Decompress the block.
+            if (section_header.flags & ZBI_FLAG_STORAGE_COMPRESSED) == ZBI_FLAG_STORAGE_COMPRESSED {
+                let decompressed_data = zstd::decompress(&section_data, section_header.extra)?;
+                zbi_sections.push(ZbiSection { section_type, buffer: decompressed_data });
+            } else {
+                zbi_sections.push(ZbiSection { section_type, buffer: section_data });
+            }
 
             // Exit if we have arrived at the end of the container length.
             if self.cursor.position() >= container_end {
@@ -197,7 +209,7 @@ impl ZbiReader {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, std::convert::TryInto};
 
     #[test]
     fn test_zbi_empty_container() {
@@ -218,7 +230,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zbi_secitons() {
+    fn test_zbi_sections() {
         let mut container_header = ZbiHeader {
             zbi_type: ZBI_TYPE_CONTAINER,
             length: 0,
@@ -251,5 +263,44 @@ mod tests {
         let sections = reader.parse().unwrap();
         assert_eq!(sections.len(), 1);
         assert_eq!(sections[0].buffer.len(), 10);
+    }
+
+    #[test]
+    fn test_zbi_compressed_sections() {
+        let mut container_header = ZbiHeader {
+            zbi_type: ZBI_TYPE_CONTAINER,
+            length: 0,
+            extra: 0,
+            flags: 0,
+            reserved_0: 0,
+            reserved_1: 0,
+            magic: ZBI_CONTAINER_MAGIC,
+            crc32: 0,
+        };
+        let uncompressed_len: u32 = 4096;
+        let uncompressed_data: Vec<u8> = vec![0; uncompressed_len.try_into().unwrap()];
+        let section_data = zstd::compress(&uncompressed_data, uncompressed_len, 3).unwrap();
+
+        let section_header = ZbiHeader {
+            zbi_type: ZbiType::Discard as u32,
+            length: u32::try_from(section_data.len()).unwrap(),
+            extra: 4096,
+            flags: ZBI_FLAG_STORAGE_COMPRESSED,
+            reserved_0: 0,
+            reserved_1: 0,
+            magic: ZBI_ITEM_MAGIC,
+            crc32: 0,
+        };
+
+        let mut section_bytes: Vec<u8> = bincode::serialize(&section_header).unwrap();
+        section_bytes.extend(&section_data);
+        container_header.length = u32::try_from(section_bytes.len()).unwrap();
+        let mut zbi_bytes: Vec<u8> = bincode::serialize(&container_header).unwrap();
+        zbi_bytes.extend(&section_bytes);
+
+        let mut reader = ZbiReader::new(zbi_bytes);
+        let sections = reader.parse().unwrap();
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0].buffer.len(), uncompressed_len as usize);
     }
 }
