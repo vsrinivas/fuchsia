@@ -6,6 +6,8 @@ use {
     crate::zstd,
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
+    log::info,
+    scrutiny::model::model::{ZbiSection, ZbiType},
     serde::{Deserialize, Serialize},
     std::convert::TryFrom,
     std::io::{Cursor, Read},
@@ -17,9 +19,6 @@ use {
 /// to inform the reader how far to read into the blob.
 const ZBI_TYPE_CONTAINER: u32 = 0x544f4f42;
 
-/// LSW of sha256("bootdata")
-const ZBI_CONTAINER_MAGIC: u32 = 0x868cf7e6;
-
 /// LSW of sha256("bootitem")
 const ZBI_ITEM_MAGIC: u32 = 0xb5781729;
 
@@ -28,52 +27,9 @@ const ZBI_ITEM_MAGIC: u32 = 0xb5781729;
 /// size of the image.
 const ZBI_FLAG_STORAGE_COMPRESSED: u32 = 0x00000001;
 
-/// Defines all of the known ZBI section types. These are used to partition
-/// the Zircon boot image into sections.
-#[repr(u32)]
-pub enum ZbiType {
-    Discard = 0x50494b53,
-    StorageRamdisk = 0x4b534452,
-    StorageBootfs = 0x42534642,
-    StorageBootfsFactory = 0x46534642,
-    Cmdline = 0x4c444d43,
-    Crashlog = 0x4d4f4f42,
-    Nvram = 0x4c4c564e,
-    NvramDeprecated = 0x4c4c5643,
-    PlatformId = 0x44494C50,
-    DriverBoardInfo = 0x4953426D,
-    CpuConfig = 0x43555043,
-    CpuTopology = 0x544F504F,
-    MemoryConfig = 0x434D454D,
-    KernelDriver = 0x5652444B,
-    AcpiRsdp = 0x50445352,
-    Smbios = 0x49424d53,
-    EfiMemoryMap = 0x4d494645,
-    EfiSystemTable = 0x53494645,
-    E820MemoryTable = 0x30323845,
-    FrameBuffer = 0x42465753,
-    ImageArgs = 0x47524149,
-    BootVersion = 0x53525642,
-    DriverMacAddress = 0x43414D6D,
-    DriverPartitionMap = 0x5452506D,
-    DriverBoardPrivate = 0x524F426D,
-    RebootReason = 0x42525748,
-    SerialNumber = 0x4e4c5253,
-    BootloaderFile = 0x4C465442,
-    Unknown = 0x0,
-}
-
-/// ZbiSection holder that contains the type and an uncompressed buffer
-/// containing the data.
-#[allow(dead_code)]
-pub struct ZbiSection {
-    section_type: ZbiType,
-    buffer: Vec<u8>,
-}
-
 /// Rust clone of zircon/boot/image.h
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct ZbiHeader {
     zbi_type: u32,
     length: u32,
@@ -104,8 +60,8 @@ impl ZbiHeader {
 pub enum ZbiError {
     #[error("Zbi container header type does not match expected value")]
     InvalidContainerHeader,
-    #[error("Zbi container header magic value doesn't match expected value")]
-    InvalidContainerMagic,
+    #[error("Zbi container header magic value doesn't match expected value {0}")]
+    InvalidContainerMagic(u32),
     #[error("Zbi item header magic value doesn't match expected value")]
     InvalidItemMagic,
 }
@@ -127,8 +83,8 @@ impl ZbiReader {
         if container_header.zbi_type != ZBI_TYPE_CONTAINER {
             return Err(Error::new(ZbiError::InvalidContainerHeader {}));
         }
-        if container_header.magic != ZBI_CONTAINER_MAGIC {
-            return Err(Error::new(ZbiError::InvalidContainerMagic {}));
+        if container_header.magic != ZBI_ITEM_MAGIC {
+            return Err(Error::new(ZbiError::InvalidContainerMagic(container_header.magic)));
         }
         let container_end = self.cursor.position() + (container_header.length as u64);
 
@@ -146,6 +102,9 @@ impl ZbiReader {
             }
 
             let section_type = ZbiReader::section_type(section_header.zbi_type);
+            if section_type == ZbiType::Unknown {
+                info!("Unknown zbi section: {}", section_header.zbi_type);
+            }
             let data_len = usize::try_from(section_header.length)?;
             let mut section_data = vec![0; data_len];
             self.cursor.read_exact(&mut section_data)?;
@@ -202,6 +161,8 @@ impl ZbiReader {
             zbi_type if zbi_type == ZbiType::RebootReason as u32 => ZbiType::RebootReason,
             zbi_type if zbi_type == ZbiType::SerialNumber as u32 => ZbiType::SerialNumber,
             zbi_type if zbi_type == ZbiType::BootloaderFile as u32 => ZbiType::BootloaderFile,
+            zbi_type if zbi_type == ZbiType::KernelArm64 as u32 => ZbiType::KernelArm64,
+            zbi_type if zbi_type == ZbiType::KernelX64 as u32 => ZbiType::KernelX64,
             _ => ZbiType::Unknown,
         }
     }
@@ -220,7 +181,7 @@ mod tests {
             flags: 0,
             reserved_0: 0,
             reserved_1: 0,
-            magic: ZBI_CONTAINER_MAGIC,
+            magic: ZBI_ITEM_MAGIC,
             crc32: 0,
         };
         let zbi_bytes = bincode::serialize(&container_header).unwrap();
@@ -238,7 +199,7 @@ mod tests {
             flags: 0,
             reserved_0: 0,
             reserved_1: 0,
-            magic: ZBI_CONTAINER_MAGIC,
+            magic: ZBI_ITEM_MAGIC,
             crc32: 0,
         };
         let section_header = ZbiHeader {
@@ -274,7 +235,7 @@ mod tests {
             flags: 0,
             reserved_0: 0,
             reserved_1: 0,
-            magic: ZBI_CONTAINER_MAGIC,
+            magic: ZBI_ITEM_MAGIC,
             crc32: 0,
         };
         let uncompressed_len: u32 = 4096;

@@ -12,10 +12,12 @@ if (!is_fuchsia) {
     edition = "2018"
     visibility = [ "//src/security/tools/scrutiny/*" ]
     deps = [
+      "//src/security/tools/scrutiny/framework",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:byteorder",
       "//third_party/rust_crates:libc",
+      "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:thiserror",
       "//zircon/third_party/zstd",

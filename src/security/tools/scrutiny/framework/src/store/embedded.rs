@@ -110,8 +110,10 @@ impl Store for EmbeddedStore {
     /// Flushes all the collections to disk.
     fn flush(&self) -> Result<()> {
         info!("Store: flushing to disk {}", self.uri);
-        for collection in self.collections.values() {
+        for (name, collection) in self.collections.iter() {
+            trace!("Flushing collection started: {}", name);
             collection.read().unwrap().flush()?;
+            trace!("Flushing collection finished: {}", name);
         }
         Ok(())
     }
