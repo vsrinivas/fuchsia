@@ -77,7 +77,7 @@ static vk::ImageUsageFlags GetFramebufferImageUsage() {
 
 static vk::Format GetDisplayImageFormat(escher::VulkanDeviceQueues* device_queues) {
   // TODO(42571): replace this with information extracted from fuchsia.hardware.display APIs.
-  return vk::Format::eR8G8B8A8Srgb;
+  return vk::Format::eB8G8R8A8Srgb;
 }
 
 // Create a number of synced tokens that can be imported into collections.
@@ -117,19 +117,11 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
   const uint32_t width_in_px = environment->display->width_in_px();
   const uint32_t height_in_px = environment->display->height_in_px();
   zx_pixel_format_t pixel_format = ZX_PIXEL_FORMAT_NONE;
-  // Pick R8G8B8A8 formats first if supported.
   for (zx_pixel_format_t format : environment->display->pixel_formats()) {
-    if (format == ZX_PIXEL_FORMAT_BGR_888x || format == ZX_PIXEL_FORMAT_ABGR_8888) {
+    // The formats are in priority order, so pick the first usable one.
+    if (format == ZX_PIXEL_FORMAT_RGB_x888 || format == ZX_PIXEL_FORMAT_ARGB_8888) {
       pixel_format = format;
       break;
-    }
-  }
-  if (pixel_format == ZX_PIXEL_FORMAT_NONE) {
-    for (zx_pixel_format_t format : environment->display->pixel_formats()) {
-      if (format == ZX_PIXEL_FORMAT_RGB_x888 || format == ZX_PIXEL_FORMAT_ARGB_8888) {
-        pixel_format = format;
-        break;
-      }
     }
   }
 
