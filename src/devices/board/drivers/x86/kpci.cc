@@ -544,70 +544,59 @@ zx_protocol_device_t acpi_device_proto = [] {
 
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
-zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     AcpiWalker* ctx) {
-  if (!ctx->found_pci()) {
-    // Report current resources to kernel PCI driver
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    zx_status_t status = pci_report_current_resources(get_root_resource());
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!");
-    }
-
-    // Initialize kernel PCI driver
-    zx_pci_init_arg_t* arg;
-    uint32_t arg_size;
-    status = get_pci_init_arg(&arg, &arg_size);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg", status);
-      return AE_ERROR;
-    }
-
-    // Please do not use get_root_resource() in new code. See ZX-1467.
-    status = zx_pci_init(get_root_resource(), arg, arg_size);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "acpi: error %d in zx_pci_init", status);
-      return AE_ERROR;
-    }
-
-    free(arg);
-
-    // Publish PCI root as /dev/sys/ level.
-    // Only publish one PCI root device for all PCI roots
-    // TODO: store context for PCI root protocol
-    std::array<zx_device_prop_t, 4> props;
-    auto args = get_device_add_args("pci", info, &props);
-    auto device = std::make_unique<acpi::Device>(sysdev, object, ctx->platform_bus());
-
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.ctx = device.get();
-    args.ops = &acpi_device_proto;
-    // The acpi::Device implements both the Acpi protocol and the Pciroot protocol. We may find a
-    // better way to do this in the future, but kernel PCI will eventually be removed anyway, at
-    // which point we'll need to refactor it all anyway.
-    args.proto_id = ZX_PROTOCOL_PCIROOT;
-    args.proto_ops = get_pciroot_ops();
-
-    if (zx_status_t status = device_add(sysdev, &args, device->mutable_zxdev()); status != ZX_OK) {
-      zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status, device_get_name(sysdev),
-             sysdev);
-    } else {
-      zxlogf(ERROR, "acpi: published device %s(%p), parent=%s(%p), handle=%p", args.name,
-             device.get(), device_get_name(sysdev), sysdev, device->acpi_handle());
-      ctx->set_found_pci(true);
-      // device_add takes ownership of args.ctx, but only on success.
-      device.release();
-    }
-  }
-  // Get the PCI base bus number
-  zx_status_t status = acpi_bbn_call(object, ctx->mutable_last_pci());
+zx_status_t pci_init(zx_device_t* sysdev, zx_device_t* platform_bus, ACPI_HANDLE object,
+                     ACPI_DEVICE_INFO* info) {
+  // Report current resources to kernel PCI driver
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx_status_t status = pci_report_current_resources(get_root_resource());
   if (status != ZX_OK) {
-    zxlogf(ERROR,
-           "acpi: failed to get PCI base bus number for device '%s' "
-           "(status %u)",
-           (const char*)&info->Name, status);
+    zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!");
   }
 
-  zxlogf(DEBUG, "acpi: found pci root #%u", ctx->last_pci());
+  // Initialize kernel PCI driver
+  zx_pci_init_arg_t* arg;
+  uint32_t arg_size;
+  status = get_pci_init_arg(&arg, &arg_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg", status);
+    return AE_ERROR;
+  }
+
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  status = zx_pci_init(get_root_resource(), arg, arg_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "acpi: error %d in zx_pci_init", status);
+    return AE_ERROR;
+  }
+
+  free(arg);
+
+  // Publish PCI root as /dev/sys/ level.
+  // Only publish one PCI root device for all PCI roots
+  // TODO: store context for PCI root protocol
+  std::array<zx_device_prop_t, 4> props;
+  auto args = get_device_add_args("pci", info, &props);
+  auto device = std::make_unique<acpi::Device>(sysdev, object, platform_bus);
+
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.ctx = device.get();
+  args.ops = &acpi_device_proto;
+  // The acpi::Device implements both the Acpi protocol and the Pciroot protocol. We may find a
+  // better way to do this in the future, but kernel PCI will eventually be removed anyway, at
+  // which point we'll need to refactor it all anyway.
+  args.proto_id = ZX_PROTOCOL_PCIROOT;
+  args.proto_ops = get_pciroot_ops();
+
+  if (zx_status_t status = device_add(sysdev, &args, device->mutable_zxdev()); status != ZX_OK) {
+    zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status, device_get_name(sysdev),
+           sysdev);
+    return status;
+  } else {
+    zxlogf(INFO, "acpi: published device %s(%p), parent=%s(%p), handle=%p", args.name, device.get(),
+           device_get_name(sysdev), sysdev, device->acpi_handle());
+    // device_add takes ownership of args.ctx, but only on success.
+    device.release();
+  }
+
   return ZX_OK;
 }

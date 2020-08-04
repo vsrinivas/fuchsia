@@ -120,47 +120,29 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   ACPI_STATUS AddResource(ACPI_RESOURCE*);
 };
 
-}  // namespace acpi
-
-class AcpiWalker {
- public:
-  AcpiWalker(zx_device_t* sys_root, zx_device_t* acpi_root, zx_device_t* platform_bus)
-      : sys_root_{sys_root},
-        acpi_root_{acpi_root},
-        platform_bus_{platform_bus},
-        found_pci_{false},
-        last_pci_{kNoLastPci} {}
-
-  zx_device_t* platform_bus() const { return platform_bus_; }
-  bool found_pci() const { return found_pci_; }
-  void set_found_pci(bool found_pci) { found_pci_ = found_pci; }
-  uint8_t last_pci() const { return last_pci_; }
-  uint8_t* mutable_last_pci() { return &last_pci_; }
-
-  ACPI_STATUS OnDescent(ACPI_HANDLE object);
-  ACPI_STATUS OnAscent(ACPI_HANDLE object) { return AE_OK; }
-
-  static ACPI_STATUS OnDescentCallback(ACPI_HANDLE object, uint32_t depth, void* context,
-                                       void** return_value) {
-    return reinterpret_cast<AcpiWalker*>(context)->OnDescent(object);
-  }
-
-  static ACPI_STATUS OnAscentCallback(ACPI_HANDLE object, uint32_t depth, void* context,
-                                      void** return_value) {
-    return reinterpret_cast<AcpiWalker*>(context)->OnAscent(object);
-  }
-
- private:
-  zx_device_t* PublishAcpiDevice(const char* name, ACPI_HANDLE handle, ACPI_DEVICE_INFO* info);
-
-  zx_device_t* sys_root_;
-  zx_device_t* acpi_root_;
-  zx_device_t* platform_bus_;
-  bool found_pci_;
-  uint8_t last_pci_;  // bus number of the last PCI root seen
-
-  constexpr static auto kNoLastPci = std::numeric_limits<decltype(last_pci_)>::max();
+// A utility function which can be used to invoke the ACPICA library's
+// AcpiWalkNamespace function, but with an arbitrary Callable instead of needing
+// to use C-style callbacks with context pointers.
+enum class WalkDirection {
+  Descending,
+  Ascending,
 };
+
+template <typename Callable>
+ACPI_STATUS WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object, uint32_t max_depth,
+                          Callable cbk) {
+  auto Descent = [](ACPI_HANDLE object, uint32_t level, void* ctx, void**) -> ACPI_STATUS {
+    return (*static_cast<Callable*>(ctx))(object, level, WalkDirection::Descending);
+  };
+
+  auto Ascent = [](ACPI_HANDLE object, uint32_t level, void* ctx, void**) -> ACPI_STATUS {
+    return (*static_cast<Callable*>(ctx))(object, level, WalkDirection::Ascending);
+  };
+
+  return ::AcpiWalkNamespace(type, start_object, max_depth, Descent, Ascent, &cbk, nullptr);
+}
+
+}  // namespace acpi
 
 struct pci_child_auxdata_ctx_t {
   uint8_t max;

@@ -390,23 +390,6 @@ device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
           .prop_count = static_cast<uint32_t>(propcount)};
 }
 
-zx_device_t* AcpiWalker::PublishAcpiDevice(const char* name, ACPI_HANDLE handle,
-                                           ACPI_DEVICE_INFO* info) {
-  auto device = std::make_unique<acpi::Device>(acpi_root_, handle, platform_bus_);
-  std::array<zx_device_prop_t, 4> props;
-  if (zx_status_t status = device->DdkAdd(name, get_device_add_args(name, info, &props));
-      status != ZX_OK) {
-    zxlogf(ERROR, "acpi: error %d in DdkAdd, parent=%s(%p)", status, device_get_name(acpi_root_),
-           acpi_root_);
-    return nullptr;
-  } else {
-    zxlogf(INFO, "acpi: published device %s(%p), parent=%s(%p), handle=%p", name, device.get(),
-           device_get_name(acpi_root_), acpi_root_, device->acpi_handle());
-    // device_add takes ownership of device, but only on success.
-    return device.release()->zxdev();
-  }
-}
-
 static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   ACPI_STATUS acpi_status;
   // Slate workaround: Turn on the HID controller.
@@ -443,81 +426,6 @@ static void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   }
 }
 
-ACPI_STATUS AcpiWalker::OnDescent(ACPI_HANDLE object) {
-  acpi::UniquePtr<ACPI_DEVICE_INFO> info;
-  if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
-    return res.error_value();
-  } else {
-    info = std::move(res.value());
-  }
-
-  acpi_apply_workarounds(object, info.get());
-
-  // Is this an Intel HDA audio device?  If so, attempt to find the NHLT and publish it as
-  // metadata for the driver to pick up later on.
-  //
-  // TODO(fxb/56832): Remove this when we have a better way to manage driver
-  // dependencies on ACPI.
-  constexpr uint32_t kHDAS_Id = make_fourcc('H', 'D', 'A', 'S');
-  if (info->Name == kHDAS_Id) {
-    // We must have already seen at least one PCI root due to traversal order.
-    if (last_pci_ == kNoLastPci) {
-      zxlogf(ERROR, "acpi: Found HDAS node, but no prior PCI root was discovered!");
-    } else if (!(info->Valid & ACPI_VALID_ADR)) {
-      zxlogf(ERROR, "acpi: no valid ADR found for HDA device");
-    } else {
-      // Attaching metadata to the HDAS device /dev/sys/pci/...
-      zx_status_t status =
-          nhlt_publish_metadata(sys_root_, last_pci_, (uint64_t)info->Address, object);
-      if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
-        zxlogf(ERROR, "acpi: failed to publish NHLT metadata");
-      }
-    }
-  }
-
-  const char* hid = hid_from_acpi_devinfo(info.get());
-  if (hid == nullptr) {
-    return AE_OK;
-  }
-  const char* cid = nullptr;
-  if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
-      // IDs may be 7 or 8 bytes, and Length includes the null byte
-      (info->CompatibleIdList.Ids[0].Length == HID_LENGTH ||
-       info->CompatibleIdList.Ids[0].Length == HID_LENGTH + 1)) {
-    cid = (const char*)info->CompatibleIdList.Ids[0].String;
-  }
-
-  if ((!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
-       !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
-    pci_init(sys_root_, object, info.get(), this);
-  } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
-    battery_init(acpi_root_, object);
-  } else if (!memcmp(hid, LID_HID_STRING, HID_LENGTH)) {
-    lid_init(acpi_root_, object);
-  } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {
-    pwrsrc_init(acpi_root_, object);
-  } else if (!memcmp(hid, EC_HID_STRING, HID_LENGTH)) {
-    ec_init(acpi_root_, object);
-  } else if (!memcmp(hid, GOOGLE_TBMC_HID_STRING, HID_LENGTH)) {
-    tbmc_init(acpi_root_, object);
-  } else if (!memcmp(hid, GOOGLE_CROS_EC_HID_STRING, HID_LENGTH)) {
-    cros_ec_lpc_init(acpi_root_, object);
-  } else if (!memcmp(hid, DPTF_THERMAL_HID_STRING, HID_LENGTH)) {
-    thermal_init(acpi_root_, info.get(), object);
-  } else if (!memcmp(hid, I8042_HID_STRING, HID_LENGTH) ||
-             (cid && !memcmp(cid, I8042_HID_STRING, HID_LENGTH))) {
-    PublishAcpiDevice("i8042", object, info.get());
-  } else if (!memcmp(hid, RTC_HID_STRING, HID_LENGTH) ||
-             (cid && !memcmp(cid, RTC_HID_STRING, HID_LENGTH))) {
-    PublishAcpiDevice("rtc", object, info.get());
-  } else if (!memcmp(hid, GOLDFISH_PIPE_HID_STRING, HID_LENGTH)) {
-    PublishAcpiDevice("goldfish", object, info.get());
-  } else if (!memcmp(hid, SERIAL_HID_STRING, HID_LENGTH)) {
-    PublishAcpiDevice("serial", object, info.get());
-  }
-  return AE_OK;
-}
-
 zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
                          uint8_t* out_state) {
   switch (suspend_reason & DEVICE_MASK_SUSPEND_REASON) {
@@ -546,19 +454,168 @@ zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t susp
   };
 }
 
-zx_status_t publish_acpi_devices(zx_device_t* parent, zx_device_t* sys_root,
-                                 zx_device_t* acpi_root_) {
-  zx_status_t status = pwrbtn_init(acpi_root_);
+zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_root,
+                                 zx_device_t* acpi_root) {
+  zx_status_t status = pwrbtn_init(acpi_root);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d", status);
   }
 
-  // Walk the ACPI namespace for devices and publish them
-  // Only publish a single PCI device
-  AcpiWalker walker{sys_root, acpi_root_, parent};
-  ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT,
-                                              MAX_NAMESPACE_DEPTH, &AcpiWalker::OnDescentCallback,
-                                              &AcpiWalker::OnAscentCallback, &walker, nullptr);
+  struct LastPciInfo {
+    LastPciInfo(uint32_t _level, uint8_t _bbn) : level(_level), bbn(_bbn) {}
+    const uint32_t level;
+    const uint8_t bbn;
+  };
+  std::optional<LastPciInfo> last_pci;
+  bool published_pci_bus = false;
+
+  ACPI_STATUS acpi_status = acpi::WalkNamespace(
+      ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
+      [sys_root, acpi_root, platform_bus, &last_pci, &published_pci_bus](
+          ACPI_HANDLE object, uint32_t level, acpi::WalkDirection dir) -> ACPI_STATUS {
+        // If we are ascending through a PCI node we had previously discovered,
+        // invalidate our last PCI info.
+        if (dir == acpi::WalkDirection::Ascending) {
+          if (last_pci.has_value() && (last_pci.value().level == level)) {
+            last_pci.reset();
+          }
+          return AE_OK;
+        }
+
+        // We are descending.  Grab our object info.
+        acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+        if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+          return res.error_value();
+        } else {
+          info = std::move(res.value());
+        }
+
+        // Apply any workarounds for quirks.
+        acpi_apply_workarounds(object, info.get());
+
+        // Does this device have a hardware ID, and does that hardware ID indicate
+        // a PCI/PCIe bus?  If so, try to extract the base bus number and stash it
+        // as our last seen PCI bus number.
+        const char* hid = hid_from_acpi_devinfo(info.get());
+        if ((hid != nullptr) && (!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
+                                 !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
+          uint8_t bbn;
+          zx_status_t status = acpi_bbn_call(object, &bbn);
+
+          if (status == ZX_ERR_NOT_FOUND) {
+            zxlogf(WARNING, "acpi: PCI bus device \"%s\" missing _BBN entry, defaulting to 0",
+                   fourcc_to_string(info->Name).str);
+            bbn = 0;
+          } else if (status != ZX_OK) {
+            zxlogf(ERROR, "acpi: failed to fetch BBN for PCI/PCIe device \"%s\"",
+                   fourcc_to_string(info->Name).str);
+            return AE_ERROR;
+          }
+
+          if (last_pci.has_value()) {
+            zxlogf(ERROR,
+                   "acpi: Nested PCI roots detected (prev bbn %u at level %u, child bbn %u at "
+                   "level %u",
+                   last_pci.value().bbn, last_pci.value().level, bbn, level);
+            return AE_ERROR;
+          }
+
+          last_pci.emplace(level, bbn);
+        }
+
+        // Is this an Intel HDA audio device?  If so, attempt to find the NHLT and publish it as
+        // metadata for the driver to pick up later on.
+        //
+        // TODO(fxb/56832): Remove this when we have a better way to manage driver
+        // dependencies on ACPI.
+        constexpr uint32_t kHDAS_Id = make_fourcc('H', 'D', 'A', 'S');
+        if (info->Name == kHDAS_Id) {
+          // We must have already seen at least one PCI root due to traversal order.
+          if (!last_pci.has_value()) {
+            zxlogf(ERROR, "acpi: Found HDAS node, but no prior PCI root was discovered!");
+          } else if (!(info->Valid & ACPI_VALID_ADR)) {
+            zxlogf(ERROR, "acpi: no valid ADR found for HDA device");
+          } else {
+            // Attaching metadata to the HDAS device /dev/sys/pci/...
+            zx_status_t status = nhlt_publish_metadata(sys_root, last_pci.value().bbn,
+                                                       (uint64_t)info->Address, object);
+            if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
+              zxlogf(ERROR, "acpi: failed to publish NHLT metadata");
+            }
+          }
+        }
+
+        // If there is no hardware ID, then there is nothing to publish.  Just skip
+        // the device.
+        if (hid == nullptr) {
+          return AE_OK;
+        }
+
+        // Extract pointer to the first compatible ID if present.
+        const char* cid = nullptr;
+        if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
+            // IDs may be 7 or 8 bytes, and Length includes the null byte
+            (info->CompatibleIdList.Ids[0].Length == HID_LENGTH ||
+             info->CompatibleIdList.Ids[0].Length == HID_LENGTH + 1)) {
+          cid = (const char*)info->CompatibleIdList.Ids[0].String;
+        }
+
+        // A small lambda helper we will use in order to publish generic ACPI devices.
+        auto PublishAcpiDevice = [acpi_root, platform_bus](const char* name, ACPI_HANDLE handle,
+                                                           ACPI_DEVICE_INFO* info) -> zx_device_t* {
+          auto device = std::make_unique<acpi::Device>(acpi_root, handle, platform_bus);
+          std::array<zx_device_prop_t, 4> props;
+          if (zx_status_t status = device->DdkAdd(name, get_device_add_args(name, info, &props));
+              status != ZX_OK) {
+            zxlogf(ERROR, "acpi: error %d in DdkAdd, parent=%s(%p)", status,
+                   device_get_name(acpi_root), acpi_root);
+            return nullptr;
+          } else {
+            zxlogf(INFO, "acpi: published device %s(%p), parent=%s(%p), handle=%p", name,
+                   device.get(), device_get_name(acpi_root), acpi_root, device->acpi_handle());
+            // device_add takes ownership of device, but only on success.
+            return device.release()->zxdev();
+          }
+        };
+
+        if ((!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
+             !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
+          if (!published_pci_bus) {
+            if (pci_init(sys_root, platform_bus, object, info.get()) == ZX_OK) {
+              published_pci_bus = true;
+            } else {
+              zxlogf(WARNING, "Skipping extra PCI/PCIe bus \"%s\"",
+                     fourcc_to_string(info->Name).str);
+            }
+          }
+        } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
+          battery_init(acpi_root, object);
+        } else if (!memcmp(hid, LID_HID_STRING, HID_LENGTH)) {
+          lid_init(acpi_root, object);
+        } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {
+          pwrsrc_init(acpi_root, object);
+        } else if (!memcmp(hid, EC_HID_STRING, HID_LENGTH)) {
+          ec_init(acpi_root, object);
+        } else if (!memcmp(hid, GOOGLE_TBMC_HID_STRING, HID_LENGTH)) {
+          tbmc_init(acpi_root, object);
+        } else if (!memcmp(hid, GOOGLE_CROS_EC_HID_STRING, HID_LENGTH)) {
+          cros_ec_lpc_init(acpi_root, object);
+        } else if (!memcmp(hid, DPTF_THERMAL_HID_STRING, HID_LENGTH)) {
+          thermal_init(acpi_root, info.get(), object);
+        } else if (!memcmp(hid, I8042_HID_STRING, HID_LENGTH) ||
+                   (cid && !memcmp(cid, I8042_HID_STRING, HID_LENGTH))) {
+          PublishAcpiDevice("i8042", object, info.get());
+        } else if (!memcmp(hid, RTC_HID_STRING, HID_LENGTH) ||
+                   (cid && !memcmp(cid, RTC_HID_STRING, HID_LENGTH))) {
+          PublishAcpiDevice("rtc", object, info.get());
+        } else if (!memcmp(hid, GOLDFISH_PIPE_HID_STRING, HID_LENGTH)) {
+          PublishAcpiDevice("goldfish", object, info.get());
+        } else if (!memcmp(hid, SERIAL_HID_STRING, HID_LENGTH)) {
+          PublishAcpiDevice("serial", object, info.get());
+        }
+        return AE_OK;
+      });
+
   if (acpi_status != AE_OK) {
     return ZX_ERR_BAD_STATE;
   } else {

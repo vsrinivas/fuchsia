@@ -31,8 +31,8 @@ struct pci_ecam_baas {
   uint32_t reserved0;
 };
 
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     AcpiWalker* ctx);
+zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE object,
+                     ACPI_DEVICE_INFO* info);
 
 zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);

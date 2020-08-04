@@ -280,8 +280,8 @@ zx_status_t pci_root_host_init() {
   return ZX_OK;
 }
 
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     AcpiWalker* ctx) {
+zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE object,
+                     ACPI_DEVICE_INFO* info) {
   pci_root_host_init();
 
   // Build up a context structure for the PCI Root / Host Bridge we've found.
@@ -365,17 +365,12 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   // after device_add in the event that unbind/release are called from the DDK. See
   // the below TODO for more information.
   char name[ZX_DEVICE_NAME_MAX] = {0};
-  uint8_t last_pci_bbn = dev_ctx.info.start_bus_num;
   memcpy(name, dev_ctx.name, ACPI_NAMESEG_SIZE);
 
   status = x64Pciroot::Create(&*RootHost, std::move(dev_ctx), parent, name);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add pciroot device for '%s': %d", name, status);
   } else {
-    // TODO(cja): these support the legacy-ish ACPI nhlt table handling that will need to be
-    // updated in the future.
-    ctx->set_found_pci(true);
-    *ctx->mutable_last_pci() = last_pci_bbn;
     zxlogf(INFO, "published pciroot '%s'", name);
   }
 
