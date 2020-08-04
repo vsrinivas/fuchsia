@@ -136,9 +136,6 @@ test("driver-manager-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mock-boot-arguments",
   ]
-
-  # TODO(fxb/56375): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fuchsia_component("driver-manager-test-component") {
@@ -149,6 +146,7 @@ fuchsia_component("driver-manager-test-component") {
     ":driver-manager-test",
     "testing:ambient_vmex_test_util",
     "testing:new_process_test_util",
+    "//src/devices/bin/driver_host",
     "//src/devices/bus/drivers/platform",
     "//src/devices/internal/drivers/fragment",
     "//src/devices/tests/mock-device",

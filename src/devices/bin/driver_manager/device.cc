@@ -262,12 +262,13 @@ void Device::InitializeInspectValues() {
 }
 
 void Device::DetachFromParent() {
+  // Do this first as we might be deleting the last reference to ourselves.
+  auto parent = std::move(parent_);
   if (this->flags & DEV_CTX_PROXY) {
-    parent_->proxy_ = nullptr;
+    parent->proxy_ = nullptr;
   } else {
-    parent_->children_.erase(*this);
+    parent->children_.erase(*this);
   }
-  parent_ = nullptr;
 }
 
 zx_status_t Device::SignalReadyForBind(zx::duration delay) {

@@ -32,6 +32,7 @@ class AutobindTest : public MultipleDeviceTestCase {
 
     coordinator()->DriverAdded(drv.release(), "0.1");
     coordinator_loop()->RunUntilIdle();
+    coordinator()->root_device()->proxy()->DetachFromParent();
   }
 };
 
