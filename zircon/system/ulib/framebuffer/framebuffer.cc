@@ -11,6 +11,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
+#include <lib/fit/defer.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zx/vmo.h>
@@ -27,7 +28,6 @@
 #include <variant>
 
 #include <ddk/protocol/display/controller.h>
-#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
@@ -243,7 +243,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
 zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
                                  zx::channel dc_client_channel) {
   dc_client = std::make_unique<fhd::Controller::SyncClient>(std::move(dc_client_channel));
-  fbl::AutoCall close_dc_handle([]() {
+  auto close_dc_handle = fit::defer([]() {
     zx_handle_close(device_handle);
     dc_client.reset();
     device_handle = ZX_HANDLE_INVALID;
@@ -263,7 +263,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   }
 
   sysmem_allocator = std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client));
-  fbl::AutoCall close_sysmem_handle([]() { sysmem_allocator.reset(); });
+  auto close_sysmem_handle = fit::defer([]() { sysmem_allocator.reset(); });
 
   zx_pixel_format_t pixel_format;
   bool has_display = false;
@@ -327,7 +327,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
 
   inited = true;
 
-  fbl::AutoCall clear_inited([]() { inited = false; });
+  auto clear_inited = fit::defer([]() { inited = false; });
 
   zx::vmo local_vmo;
 
