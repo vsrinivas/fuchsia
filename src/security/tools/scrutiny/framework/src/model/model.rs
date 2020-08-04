@@ -325,6 +325,8 @@ pub struct ZbiSection {
 pub struct Zbi {
     // Raw section data for each zbi section.
     pub sections: Vec<ZbiSection>,
+    // File names to data contained in bootfs.
+    pub bootfs: HashMap<String, Vec<u8>>,
 }
 
 #[cfg(test)]

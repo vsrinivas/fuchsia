@@ -22,10 +22,10 @@ use {
         engine::plugin::{Plugin, PluginDescriptor},
         model::collector::DataCollector,
         model::controller::DataController,
-        model::model::{Component, DataModel, Manifest, Package, Route, Zbi},
+        model::model::{Component, DataModel, Manifest, Package, Route, Zbi, ZbiType},
         plugin,
     },
-    scrutiny_utils::zbi::*,
+    scrutiny_utils::{bootfs::*, zbi::*},
     std::collections::HashMap,
     std::env,
     std::str,
@@ -199,11 +199,22 @@ impl PackageDataCollector {
                 let zbi_data = getter.read_raw(&format!("/blobs/{}", merkle))?;
                 let mut reader = ZbiReader::new(zbi_data);
                 let sections = reader.parse()?;
+                let mut bootfs = HashMap::new();
                 info!("Extracted {} sections from the ZBI", sections.len());
                 for section in sections.iter() {
                     info!("Extracted sections {:?}", section.section_type);
+                    if section.section_type == ZbiType::StorageBootfs {
+                        let mut bootfs_reader = BootfsReader::new(section.buffer.clone());
+                        let bootfs_result = bootfs_reader.parse();
+                        if let Err(err) = bootfs_result {
+                            warn!("Bootfs parse failed {}", err);
+                        } else {
+                            bootfs = bootfs_result.unwrap();
+                            info!("Bootfs found {} files", bootfs.len());
+                        }
+                    }
                 }
-                return Ok(Zbi { sections });
+                return Ok(Zbi { sections, bootfs });
             }
         }
         return Err(anyhow!("Unable to find a zbi file in the package."));

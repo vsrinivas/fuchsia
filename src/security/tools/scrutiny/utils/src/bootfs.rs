@@ -5,10 +5,11 @@
 use {
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
+    log::trace,
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
-    std::io::{Cursor, Read},
+    std::io::{Cursor, Read, Seek, SeekFrom},
     thiserror::Error,
 };
 
@@ -87,12 +88,28 @@ impl BootfsReader {
         // Read all the directory entries.
         let end_position = self.cursor.position() + u64::try_from(header.dir_size)? - 1;
         while self.cursor.position() < end_position {
+            let start = self.cursor.position();
+
             directory_entries.push(BootfsDirectoryEntry::parse(&mut self.cursor)?);
+
+            let end = self.cursor.position();
+            let diff = end - start;
+            // Directory entries are variable in size but must end up 4 byte aligned.
+            if diff % 4 != 0 {
+                let padding: i64 = (4 - (diff % 4)).try_into().unwrap();
+                self.cursor.seek(SeekFrom::Current(padding))?;
+            }
         }
 
         // Parse all the directory entries and retrieve the files.
         let mut files = HashMap::new();
         for directory in directory_entries.iter() {
+            trace!(
+                "Extracting bootfs file: {}, offset: {}, len: {}",
+                directory.name,
+                directory.data_offset,
+                directory.data_len
+            );
             self.cursor.set_position(directory.data_offset.into());
             let mut file_data = vec![0; directory.data_len.try_into()?];
             self.cursor.read_exact(&mut file_data)?;
