@@ -8,6 +8,9 @@ source_set("semantics") {
     "semantic_tree.h",
     "semantic_tree_service.cc",
     "semantic_tree_service.h",
+    "semantics_event.h",
+    "semantics_event_listener.h",
+    "semantics_event_manager.h",
     "semantics_source.h",
   ]
 
