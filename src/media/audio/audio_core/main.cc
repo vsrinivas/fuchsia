@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/component_context.h>
-
-#include "lib/syslog/logger.h"
-
-#ifndef NTRACE
+#include <lib/syslog/logger.h>
 #include <lib/trace-provider/provider.h>
-#endif
 
 #include "src/lib/fxl/command_line.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
@@ -28,9 +24,7 @@ constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
 
 static int StartAudioCore() {
   auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
-#ifndef NTRACE
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
-#endif
 
   syslog::SetLogSettings({.min_log_level = FX_LOG_INFO}, {"audio_core"});
 

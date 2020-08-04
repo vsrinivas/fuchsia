@@ -7,18 +7,6 @@ import("//build/test/test_package.gni")
 import("//src/media/audio/audio_core_package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
-declare_args() {
-  # Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
-  # tracing overhead.
-  audio_core_trace_enabled = true
-}
-
-config("audio_core_config") {
-  if (!audio_core_trace_enabled) {
-    defines = [ "NTRACE" ]
-  }
-}
-
 action_foreach("json_schema_headers") {
   visibility = [ ":*" ]
 
@@ -54,7 +42,6 @@ audio_core_package("audio_core") {
 }
 
 source_set("audio_core_lib") {
-  public_configs = [ ":audio_core_config" ]
   sources = [
     "activity_dispatcher.cc",
     "activity_dispatcher.h",
@@ -226,10 +213,8 @@ executable("audio_core_bin") {
     "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/fsl",
     "//src/media/audio/lib/logging",
+    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-  if (audio_core_trace_enabled) {
-    deps += [ "//zircon/system/ulib/trace-provider:trace-provider-with-fdio" ]
-  }
 }
 
 executable("unittest_bin") {

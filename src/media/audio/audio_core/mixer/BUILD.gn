@@ -11,7 +11,6 @@ source_set("constants") {
 }
 
 source_set("mixer") {
-  public_configs = [ "..:audio_core_config" ]
   sources = [
     "channel_strip.h",
     "coefficient_table.h",
