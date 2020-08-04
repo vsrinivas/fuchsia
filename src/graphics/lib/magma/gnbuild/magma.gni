@@ -30,6 +30,12 @@ declare_args() {
 
   # The path to a prebuilt libvulkan.so for an IMG GPU.
   prebuilt_libvulkan_img_path = ""
+
+  # The path to OpenVX headers
+  magma_openvx_include = ""
+
+  # The path to an OpenVX implementation
+  magma_openvx_package = ""
 }
 
 declare_args() {

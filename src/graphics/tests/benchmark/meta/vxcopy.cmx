@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/vxcopy"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp",
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

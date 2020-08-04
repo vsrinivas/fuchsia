@@ -5,6 +5,10 @@
 import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
+if (magma_openvx_package != "") {
+  import("$magma_openvx_package/fuchsia/openvx-data.gni")
+}
+
 group("benchmark") {
   testonly = true
 
@@ -13,6 +17,9 @@ group("benchmark") {
     ":vkcopy",
     ":vulkan-benchmark",
   ]
+  if (magma_openvx_package != "") {
+    public_deps += [ ":vxcopy" ]
+  }
 }
 
 test_package("vulkan-benchmark") {
@@ -52,4 +59,47 @@ executable("vkcopy") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
   ]
+}
+
+if (magma_openvx_package != "") {
+  executable("vxcopy_bin") {
+    output_name = "vxcopy"
+    testonly = true
+
+    sources = [ "test_vxcopy.cc" ]
+
+    assert(magma_openvx_include != "")
+    include_dirs = [ "$magma_openvx_include" ]
+
+    deps = [
+      "$magma_openvx_package",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+
+    ldflags = [ "-Wl,-z,stack-size=0x1000000" ]
+  }
+
+  test_package("vxcopy") {
+    deps = [ ":vxcopy_bin" ]
+
+    tests = [
+      {
+        name = "vxcopy"
+        environments = []
+      },
+    ]
+
+    resources = []
+    resource_data = openvx_data
+
+    foreach(file, resource_data) {
+      resources += [
+        {
+          path = rebase_path(file[0])
+          dest = file[1]
+        },
+      ]
+    }
+  }
 }
