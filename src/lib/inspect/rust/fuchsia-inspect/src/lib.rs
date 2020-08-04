@@ -651,6 +651,16 @@ impl Node {
         Self { inner: self.inner.clone_weak() }
     }
 
+    /// Creates and keeps track of a child with the given `name`.
+    pub fn record_child<F>(&self, name: impl AsRef<str>, initialize: F)
+    where
+        F: FnOnce(&mut Node),
+    {
+        let mut child = self.create_child(name);
+        initialize(&mut child);
+        self.record(child);
+    }
+
     /// Add a child to this node.
     #[must_use]
     pub fn create_child(&self, name: impl AsRef<str>) -> Node {
@@ -1820,6 +1830,19 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             b: 2u64,
         });
+    }
+
+    #[test]
+    fn record_child() {
+        let inspector = Inspector::new();
+        inspector.root().record_child("test", |node| {
+            node.record_int("a", 1);
+        });
+        assert_inspect_tree!(inspector, root: {
+            test: {
+                a: 1i64,
+            }
+        })
     }
 
     #[test]
