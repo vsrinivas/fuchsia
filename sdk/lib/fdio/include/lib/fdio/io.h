@@ -16,7 +16,7 @@
 // flag on handle args in processargs
 // instructing that this fd should be dup'd to 0/1/2
 // and be used for all of stdio
-#define FDIO_FLAG_USE_FOR_STDIO 0x8000
+#define FDIO_FLAG_USE_FOR_STDIO ((uint32_t)0x8000)
 
 // events for fdio_wait_fd()
 #define FDIO_EVT_READABLE POLLIN
