@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
+#include "src/developer/forensics/feedback_data/attachments/inspect_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/device_id_provider.h"
@@ -108,13 +109,13 @@ class DatastoreTest : public UnitTestFixture {
             {inspect_chunk},
             {},
         })));
-    InjectServiceProvider(inspect_server_.get());
+    InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
   }
 
   void SetUpInspectServer(std::unique_ptr<stubs::InspectArchiveBase> server) {
     inspect_server_ = std::move(server);
     if (inspect_server_) {
-      InjectServiceProvider(inspect_server_.get());
+      InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
     }
   }
 

@@ -45,9 +45,11 @@ namespace fidl {
 template <typename Interface, typename V = void>
 class OneShotPtr {
  public:
-  OneShotPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
+  OneShotPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+             std::string name = Interface::Name_)
       : services_(services),
-        bridge_(dispatcher, fxl::StringPrintf("call on %s", Interface::Name_)) {}
+        bridge_(dispatcher, fxl::StringPrintf("call on %s", name.c_str())),
+        name_(std::move(name)) {}
 
   bool IsAlreadyDone() const { return bridge_.IsAlreadyDone(); }
 
@@ -72,17 +74,17 @@ class OneShotPtr {
     // We use FXL_ and not FX_ so the messages goes to stderr and can be intercepted by
     // ASSERT_DEATH.
     FX_CHECK(!oneshot_used_) << fxl::StringPrintf(
-        "You've only got one shot to use ->  on a OneShotPtr<%s>", Interface::Name_);
+        "You've only got one shot to use ->  on a OneShotPtr (%s)", name_.c_str());
     oneshot_used_ = true;
 
-    connection_ = services_->Connect<Interface>();
+    connection_ = services_->Connect<Interface>(name_);
 
     connection_.set_error_handler([this](zx_status_t status) {
       if (bridge_.IsAlreadyDone()) {
         return;
       }
 
-      FX_PLOGS(ERROR, status) << "Lost connection to " << Interface::Name_;
+      FX_PLOGS(ERROR, status) << "Lost connection to " << name_;
 
       bridge_.CompleteError(Error::kConnectionError);
     });
@@ -96,6 +98,7 @@ class OneShotPtr {
  private:
   const std::shared_ptr<sys::ServiceDirectory> services_;
   fit::Bridge<V> bridge_;
+  std::string name_;
 
   bool oneshot_used_ = false;
 };

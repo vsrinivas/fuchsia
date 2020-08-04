@@ -22,6 +22,9 @@
 namespace forensics {
 namespace feedback_data {
 
+// The name of the protocol to use to read Feedback data from the Archive.
+constexpr char kArchiveAccessorName[] = "fuchsia.diagnostics.FeedbackArchiveAccessor";
+
 // Collects the Inspect data.
 //
 // fuchsia.diagnostics.Archive is expected to be in |services|.

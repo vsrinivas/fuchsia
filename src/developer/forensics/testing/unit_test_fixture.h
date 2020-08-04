@@ -35,8 +35,13 @@ class UnitTestFixture : public gtest::TestLoopFixture {
   }
 
   template <typename ServiceProvider>
-  void InjectServiceProvider(ServiceProvider* service_provider) {
-    FX_CHECK(service_directory_provider_.AddService(service_provider->GetHandler()) == ZX_OK);
+  void InjectServiceProvider(ServiceProvider* service_provider, const char* name = nullptr) {
+    if (name) {
+      FX_CHECK(service_directory_provider_.AddService(service_provider->GetHandler(), name) ==
+               ZX_OK);
+    } else {
+      FX_CHECK(service_directory_provider_.AddService(service_provider->GetHandler()) == ZX_OK);
+    }
   }
 
   // Inspect related methods.
