@@ -73,6 +73,8 @@ mod power;
 mod privacy;
 mod setup;
 
+pub use display::LightSensorConfig;
+
 pub mod agent;
 pub mod config;
 pub mod fidl_common;

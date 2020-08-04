@@ -112,6 +112,7 @@ rustc_library("lib") {
     "src/display/display_controller.rs",
     "src/display/display_fidl_handler.rs",
     "src/display/light_sensor.rs",
+    "src/display/light_sensor_config.rs",
     "src/display/light_sensor_controller.rs",
     "src/do_not_disturb.rs",
     "src/do_not_disturb/do_not_disturb_controller.rs",
@@ -320,6 +321,8 @@ rustc_binary("setui-config-test") {
   deps = [
     ":lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
 
@@ -345,6 +348,10 @@ unittest_package("sample-setui-config-test") {
       path = rebase_path("src/tests/testdata/service_flags.json")
       dest = "service_flags.json"
     },
+    {
+      path = rebase_path("src/tests/testdata/light_sensor_configuration.json")
+      dest = "light_sensor_configuration.json"
+    },
   ]
 
   tests = [
@@ -353,6 +360,8 @@ unittest_package("sample-setui-config-test") {
       args = [
         "/pkg/data/service_configuration.json",
         "/pkg/data/service_flags.json",
+        "-l",
+        "/pkg/data/light_sensor_configuration.json",
       ]
     },
   ]

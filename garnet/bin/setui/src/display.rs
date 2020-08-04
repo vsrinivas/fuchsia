@@ -8,7 +8,10 @@ pub use self::light_sensor_controller::LIGHT_SENSOR_SERVICE_NAME;
 pub mod display_controller;
 mod display_fidl_handler;
 mod light_sensor;
+mod light_sensor_config;
 pub mod light_sensor_controller;
+
+pub use light_sensor_config::LightSensorConfig;
 
 #[cfg(test)]
 pub use light_sensor::testing as light_sensor_testing;
