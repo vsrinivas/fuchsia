@@ -32,7 +32,7 @@ mod bindings {
     /// so they are listed explicitly and must never be changed. They do not
     /// have to be sequential.
     #[wasm_bindgen]
-    #[derive(Debug, Copy)]
+    #[derive(Debug, Copy, Clone)]
     pub enum Source {
         Inspect = 0,
         Klog = 1,

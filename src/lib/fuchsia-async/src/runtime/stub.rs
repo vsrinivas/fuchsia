@@ -41,14 +41,14 @@ pub mod task {
 
 pub mod executor {
     /// Stub spawn, panics if used.
-    pub fn spawn<T>(_: T) {
-        unimplemented!()
-    }
+    //pub fn spawn<T>(_: T) {
+    //    unimplemented!()
+    //}
 
     /// Stub spawn local, panics if used.
-    pub fn spawn_local<T>(_: T) {
-        unimplemented!()
-    }
+    //pub fn spawn_local<T>(_: T) {
+    //    unimplemented!()
+    //}
 
     /// Stub Executor.
     pub struct Executor {}
