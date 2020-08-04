@@ -42,14 +42,12 @@ void StartupAgentLauncher::SessionAgentData::ConnectOrQueueServiceRequest(
 }
 
 StartupAgentLauncher::StartupAgentLauncher(
-    fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
     fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
     fidl::InterfaceRequestHandler<fuchsia::modular::SessionRestartController>
         session_restart_controller_connector,
     fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
     fit::function<bool()> is_terminating_cb)
-    : focus_provider_connector_(std::move(focus_provider_connector)),
-      puppet_master_connector_(std::move(puppet_master_connector)),
+    : puppet_master_connector_(std::move(puppet_master_connector)),
       session_restart_controller_connector_(std::move(session_restart_controller_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       is_terminating_cb_(std::move(is_terminating_cb)){};
@@ -148,10 +146,6 @@ std::vector<std::string> StartupAgentLauncher::AddAgentServices(
     service_names.push_back(fuchsia::modular::PuppetMaster::Name_);
     agent_host->AddService<fuchsia::modular::PuppetMaster>(
         [this](auto request) { puppet_master_connector_(std::move(request)); });
-
-    service_names.push_back(fuchsia::modular::FocusProvider::Name_);
-    agent_host->AddService<fuchsia::modular::FocusProvider>(
-        [this, url](auto request) { focus_provider_connector_(std::move(request)); });
 
     service_names.push_back(fuchsia::modular::SessionRestartController::Name_);
     agent_host->AddService<fuchsia::modular::SessionRestartController>(

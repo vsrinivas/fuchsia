@@ -27,7 +27,6 @@ class StartupAgentLauncher : public AgentServicesFactory {
  public:
   // |context| is not owned and must outlive this instance.
   StartupAgentLauncher(
-      fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
       fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
       fidl::InterfaceRequestHandler<fuchsia::modular::SessionRestartController>
           session_restart_controller_connector,
@@ -86,11 +85,8 @@ class StartupAgentLauncher : public AgentServicesFactory {
 
   fidl::InterfacePtr<fuchsia::modular::ComponentContext> component_context_;
   fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;
-  fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_;
   fidl::InterfacePtr<fuchsia::intl::PropertyProvider> property_provider_;
 
-  fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
-      focus_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
       puppet_master_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::SessionRestartController>)>

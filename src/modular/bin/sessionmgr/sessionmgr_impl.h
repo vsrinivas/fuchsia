@@ -166,8 +166,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   class PresentationProviderImpl;
   std::unique_ptr<PresentationProviderImpl> presentation_provider_impl_;
 
-  std::unique_ptr<FocusHandler> focus_handler_;
-
   // Component context given to session shell so that it can run agents.
   std::unique_ptr<ComponentContextImpl> session_shell_component_context_impl_;
 

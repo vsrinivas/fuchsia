@@ -204,12 +204,6 @@ void SessionmgrImpl::InitializeIntlPropertyProvider() {
 
 void SessionmgrImpl::InitializeAgentRunner(std::string session_shell_url) {
   startup_agent_launcher_.reset(new StartupAgentLauncher(
-      [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
-        if (terminating_) {
-          return;
-        }
-        focus_handler_->AddProviderBinding(std::move(request));
-      },
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
         if (terminating_) {
           return;
@@ -309,10 +303,6 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig stor
   OnTerminate(Reset(&story_command_executor_));
   OnTerminate(Reset(&puppet_master_impl_));
   OnTerminate(Reset(&session_ctl_));
-
-  focus_handler_ = std::make_unique<FocusHandler>();
-  focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
-  OnTerminate(Reset(&focus_handler_));
 }
 
 void SessionmgrImpl::InitializeSessionShell(
