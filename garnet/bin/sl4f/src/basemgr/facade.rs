@@ -10,7 +10,7 @@ use fidl::endpoints::ServerEnd;
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fidl_fuchsia_modular::{
-    AddMod, FocusMod, Intent, PuppetMasterMarker, PuppetMasterSynchronousProxy, SetFocusState,
+    AddMod, Intent, PuppetMasterMarker, PuppetMasterSynchronousProxy,
     StoryCommand, StoryPuppetMasterMarker, SurfaceArrangement, SurfaceDependency, SurfaceRelation,
 };
 use fidl_fuchsia_modular_internal::BasemgrDebugSynchronousProxy;
@@ -168,33 +168,12 @@ impl BaseManagerFacade {
         }
     }
 
-    /// build FocusMod command
-    /// # Arguments
-    /// * `mod_name`: passed in for mod_name in FocusMod command
-    fn focus_mod_command(&self, modname: String) -> Option<StoryCommand> {
-        let focus_mod = FocusMod {
-            mod_name: vec![modname.clone()],
-            mod_name_transitional: Some(modname.clone()),
-        };
-        let command = StoryCommand::FocusMod(focus_mod);
-        Some(command)
-    }
-
-    /// build SetFocusState command
-    fn set_focus_state_command(&self) -> Option<StoryCommand> {
-        let set_focus_state = SetFocusState { focused: true };
-        let command = StoryCommand::SetFocusState(set_focus_state);
-        Some(command)
-    }
-
     /// Facade to launch mod from Sl4f
     /// # Arguments
     /// * `args`: will be parsed to LaunchModRequest
     /// * `mod_url`: url of the mod
     /// * `mod_name`: same as mod_url if nothing is passed in
     /// * `story_name`: same as mod_url if nothing is passed in
-    /// * `focus_mod`: default to true if nothing is passed in
-    /// * `focus_story`: default to true if nothing is passed in
     pub async fn launch_mod(&self, args: Value) -> Result<BasemgrResult, Error> {
         let req: LaunchModRequest = from_value(args)?;
 
@@ -248,44 +227,6 @@ impl BaseManagerFacade {
             surface_relation: sur_rel,
         };
         commands.push(StoryCommand::AddMod(add_mod));
-
-        // Focus the story by default, only set to false when users pass in "false"
-        match req.focus_story {
-            Some(x) => {
-                match x {
-                    false => {}
-                    true => {
-                        if let Some(command) = self.set_focus_state_command() {
-                            commands.push(command);
-                        }
-                    }
-                };
-            }
-            None => {
-                if let Some(command) = self.set_focus_state_command() {
-                    commands.push(command);
-                }
-            }
-        };
-
-        // Focus the mod by default, only set to false when users pass in "false"
-        match req.focus_mod {
-            Some(x) => {
-                match x {
-                    false => {}
-                    true => {
-                        if let Some(command) = self.focus_mod_command(mod_name.clone()) {
-                            commands.push(command);
-                        }
-                    }
-                };
-            }
-            None => {
-                if let Some(command) = self.focus_mod_command(mod_name.clone()) {
-                    commands.push(command);
-                }
-            }
-        };
 
         let mut puppet_master = match self.discover_puppet_master()? {
             Some(proxy) => proxy,

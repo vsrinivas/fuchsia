@@ -63,15 +63,11 @@ class Modular {
   /// Take custom parameters or launch mod with default value.
   Future<String> launchMod(String modUrl,
       {String modName,
-      String storyName,
-      bool focusMod,
-      bool focusStory}) async {
+      String storyName}) async {
     return await _request('basemgr_facade.LaunchMod', {
       'mod_url': modUrl,
       'mod_name': modName,
-      'story_name': storyName,
-      'focus_mod': focusMod,
-      'focus_story': focusStory
+      'story_name': storyName
     });
   }
 

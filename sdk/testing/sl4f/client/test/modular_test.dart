@@ -98,9 +98,7 @@ void main(List<String> args) {
       expect(body['params'], {
         'mod_url': 'fake_url',
         'mod_name': 'fake_name',
-        'story_name': null,
-        'focus_mod': true,
-        'focus_story': null,
+        'story_name': null
       });
       req.response.write(
           jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
@@ -111,7 +109,7 @@ void main(List<String> args) {
 
     expect(
         Modular(sl4f)
-            .launchMod('fake_url', modName: 'fake_name', focusMod: true),
+            .launchMod('fake_url', modName: 'fake_name'),
         completion(equals('Success')));
   });
 
