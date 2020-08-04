@@ -6,7 +6,8 @@ use {
     super::{merkle_str, *},
     fidl_fuchsia_pkg::PackageUrl,
     fidl_fuchsia_update_installer::{
-        CompleteData, FetchData, InstallerMarker, Options, State, UpdateResult,
+        CompleteData, FetchData, InstallationProgress, InstallerMarker, Options, State, UpdateInfo,
+        UpdateResult,
     },
     pretty_assertions::assert_eq,
     serde_json::json,
@@ -156,7 +157,16 @@ async fn writes_history() {
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/update",
                 "start": 1234567890,
-                "state": "COMPLETE",
+                "state": {
+                    "id": "reboot",
+                    "info": {
+                        "download_size": 0,
+                    },
+                    "progress": {
+                        "bytes_downloaded": 0,
+                        "fraction_completed": 1.0,
+                    },
+                },
             }],
         }))
     );
@@ -201,7 +211,16 @@ async fn replaces_bogus_history() {
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/update",
                 "start": 42,
-                "state": "COMPLETE",
+                "state": {
+                    "id": "reboot",
+                    "info": {
+                        "download_size": 0,
+                    },
+                    "progress": {
+                        "bytes_downloaded": 0,
+                        "fraction_completed": 1.0,
+                    },
+                },
             }],
         }))
     );
@@ -263,7 +282,16 @@ async fn increments_attempts_counter_on_retry() {
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/update",
                 "start": 20,
-                "state": "COMPLETE",
+                "state": {
+                    "id": "reboot",
+                    "info": {
+                        "download_size": 0,
+                    },
+                    "progress": {
+                        "bytes_downloaded": 0,
+                        "fraction_completed": 1.0,
+                    },
+                },
             },
             {
                 "source": {
@@ -283,7 +311,9 @@ async fn increments_attempts_counter_on_retry() {
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/not-found",
                 "start": 10,
-                "state": "COMPLETE",
+                "state": {
+                    "id": "fail_prepare",
+                },
             }
             ],
         }))
@@ -316,7 +346,16 @@ async fn serves_fidl_with_history_present() {
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/second-attempt",
                 "start": 20,
-                "state": "COMPLETE",
+                "state": {
+                    "id": "complete",
+                    "info": {
+                        "download_size": 0,
+                    },
+                    "progress": {
+                        "bytes_downloaded": 0,
+                        "fraction_completed": 1.0,
+                    },
+                },
             },
             {
                 "id": "0",
@@ -337,7 +376,16 @@ async fn serves_fidl_with_history_present() {
                 "options": null,
                 "url": "fuchsia-pkg://fuchsia.com/first-attempt",
                 "start": 10,
-                "state": "DOWNLOAD",
+                "state": {
+                    "id": "fetch",
+                    "info": {
+                        "download_size": 42,
+                    },
+                    "progress": {
+                        "bytes_downloaded": 36,
+                        "fraction_completed": 0.8,
+                    },
+                },
             }
             ],
         }))
@@ -356,7 +404,13 @@ async fn serves_fidl_with_history_present() {
                 allow_attach_to_existing_attempt: None,
                 should_write_recovery: None,
             }),
-            state: Some(State::Complete(CompleteData { info: None, progress: None })),
+            state: Some(State::Complete(CompleteData {
+                info: Some(UpdateInfo { download_size: None }),
+                progress: Some(InstallationProgress {
+                    fraction_completed: Some(1.0),
+                    bytes_downloaded: None,
+                })
+            })),
         }
     );
     assert_eq!(
@@ -369,7 +423,13 @@ async fn serves_fidl_with_history_present() {
                 allow_attach_to_existing_attempt: None,
                 should_write_recovery: None,
             }),
-            state: Some(State::Fetch(FetchData { info: None, progress: None })),
+            state: Some(State::Fetch(FetchData {
+                info: Some(UpdateInfo { download_size: Some(42) }),
+                progress: Some(InstallationProgress {
+                    fraction_completed: Some(0.8),
+                    bytes_downloaded: Some(36),
+                })
+            })),
         }
     );
     assert_eq!(
@@ -382,7 +442,13 @@ async fn serves_fidl_with_history_present() {
                 allow_attach_to_existing_attempt: None,
                 should_write_recovery: None,
             }),
-            state: Some(State::Complete(CompleteData { info: None, progress: None })),
+            state: Some(State::Complete(CompleteData {
+                info: Some(UpdateInfo { download_size: None }),
+                progress: Some(InstallationProgress {
+                    fraction_completed: Some(1.0),
+                    bytes_downloaded: None,
+                })
+            })),
         }
     );
 }

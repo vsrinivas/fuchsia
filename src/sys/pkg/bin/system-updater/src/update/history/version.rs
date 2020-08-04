@@ -31,8 +31,19 @@ pub struct Version {
 
 impl Version {
     #[cfg(test)]
-    pub fn for_hash(update_hash: String) -> Self {
-        Self { update_hash, ..Self::default() }
+    pub fn for_hash(update_hash: impl Into<String>) -> Self {
+        Self { update_hash: update_hash.into(), ..Self::default() }
+    }
+
+    #[cfg(test)]
+    pub fn for_hash_and_empty_paver_hashes(update_hash: impl Into<String>) -> Self {
+        const EMPTY_HASH: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        Self {
+            update_hash: update_hash.into(),
+            vbmeta_hash: EMPTY_HASH.to_owned(),
+            zbi_hash: EMPTY_HASH.to_owned(),
+            ..Self::default()
+        }
     }
 
     /// Returns the Version for the given update package.

@@ -27,6 +27,8 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
+    "//src/sys/pkg/lib/async-generator",
+    "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/update-package",
@@ -37,6 +39,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
@@ -61,13 +64,16 @@ rustc_binary("bin") {
     "src/update/channel.rs",
     "src/update/config.rs",
     "src/update/environment.rs",
+    "src/update/genutil.rs",
     "src/update/history.rs",
     "src/update/history/version.rs",
     "src/update/images.rs",
     "src/update/metrics.rs",
     "src/update/paver.rs",
     "src/update/paver/configuration.rs",
+    "src/update/reboot.rs",
     "src/update/resolver.rs",
+    "src/update/state.rs",
   ]
 }
 

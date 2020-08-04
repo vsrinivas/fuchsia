@@ -108,7 +108,7 @@ impl Installer for FuchsiaInstaller {
                 // TODO: report progress to ProgressObserver
                 info!("Installer entered state: {}", state_to_string(&state));
                 match state {
-                    State::Complete(_) | State::WaitToReboot(_) | State::Reboot(_) => {
+                    State::Complete(_) | State::Reboot(_) | State::DeferReboot(_) => {
                         return Ok(());
                     }
                     State::FailPrepare(_) | State::FailFetch(_) | State::FailStage(_) => {
@@ -150,6 +150,7 @@ fn state_to_string(state: &State) -> &'static str {
         State::Fetch(_) => "Fetch",
         State::Stage(_) => "Stage",
         State::Reboot(_) => "Reboot",
+        State::DeferReboot(_) => "DeferReboot",
         State::WaitToReboot(_) => "WaitToReboot",
         State::Complete(_) => "Complete",
         State::FailPrepare(_) => "FailPrepare",
@@ -197,15 +198,13 @@ mod tests {
                         .unwrap();
                     let monitor = monitor.into_proxy().unwrap();
                     let () = monitor
-                        .on_state(&mut State::WaitToReboot(
-                            fidl_fuchsia_update_installer::WaitToRebootData {
-                                info: Some(UpdateInfo { download_size: None }),
-                                progress: Some(InstallationProgress {
-                                    fraction_completed: Some(1.0),
-                                    bytes_downloaded: None,
-                                }),
-                            },
-                        ))
+                        .on_state(&mut State::Reboot(fidl_fuchsia_update_installer::RebootData {
+                            info: Some(UpdateInfo { download_size: None }),
+                            progress: Some(InstallationProgress {
+                                fraction_completed: Some(1.0),
+                                bytes_downloaded: None,
+                            }),
+                        }))
                         .await
                         .unwrap();
                 }

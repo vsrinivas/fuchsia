@@ -43,31 +43,31 @@ protocol Monitor {
 /// # State Machine Diagram
 ///
 /// ```
-///     +---------+     +----------------+
-///     | prepare |---->|  fail_prepare  |
-///     +---------+     +----------------+
-///          |
-///          v
-///     +---------+     +----------------+
-///     |  fetch  |---->|   fail_fetch   |
-///     +---------+     +----------------+
-///          |
-///          v
-///     +---------+     +----------------+
-///     |  stage  |---->|   fail_stage   |
-///     +---------+     +----------------+
-///          |
-///          |          +----------------+
-///          +--------->|     reboot     |
-///          |          +----------------+
-///          |
-///          |          +----------------+
-///          +--------->| wait_to_reboot |
-///          |          +----------------+
-///          |
-///          |          +----------------+
-///          +--------->|    complete    |
-///                     +----------------+
+///     +----------------+     +----------------+
+///     |    prepare     |---->|  fail_prepare  |
+///     +----------------+     +----------------+
+///             |
+///             v
+///     +----------------+     +----------------+
+///     |     fetch      |---->|   fail_fetch   |
+///     +----------------+     +----------------+
+///             |
+///             v
+///     +----------------+     +----------------+
+///     |     stage      |---->|   fail_stage   |
+///     +----------------+     +----------------+
+///             |
+///             |              +----------------+
+///             +------------->|    complete    |
+///             |              +----------------+
+///             v
+///     +----------------+     +----------------+
+///     | wait_to_reboot |---->|  defer_reboot  |
+///     +----------------+     +----------------+
+///             |
+///             |              +----------------+
+///             +------------->|     reboot     |
+///                            +----------------+
 /// ```
 union State {
     /// Fetching required metadata to begin the update and verifying system
@@ -88,49 +88,56 @@ union State {
     /// Writing kernel images and preparing to switch over to the new system.
     ///
     /// Next States:
-    /// * `reboot` if the installer was instructed to initiate the reboot.
-    /// * `wait_to_reboot` if the installer was instructed to let the initiator
-    ///   perform the reboot.
-    /// * `complete` if no reboot was necessary to complete the update.
+    /// * `wait_to_reboot` if a reboot is necessary to complete the update.
+    /// * `complete` if no reboot is necessary to complete the update.
     /// * `fail_stage` on error.
     3: StageData stage;
+
+    /// The system is configured to boot the updated OS on next boot, and the
+    /// installer is waiting for the trigger to reboot the system.
+    ///
+    /// Next States:
+    /// * `reboot` when the installer decides it is time to initiate the reboot.
+    /// * `defer_reboot` if the initiator specifically requests to not reboot.
+    ///
+    4: WaitToRebootData wait_to_reboot;
 
     /// The installer has initiated a system reboot into the updated OS.
     ///
     /// **This is a terminal state**
     ///
-    4: RebootData reboot;
+    5: RebootData reboot;
 
-    /// The system is configured to boot the updated OS on next boot, and the
-    /// installer is waiting for the initiator to reboot the system.
+    /// The initiator specifically requested to skip the reboot, but a reboot is
+    /// still required to complete the update.
     ///
     /// **This is a terminal state**
     ///
-    5: WaitToRebootData wait_to_reboot;
+    6: DeferRebootData defer_reboot;
 
     /// The update is complete and no reboot was required.
     ///
     /// **This is a terminal state**
     ///
-    6: CompleteData complete;
+    7: CompleteData complete;
 
     /// An error occured while preparing the install.
     ///
     /// **This is a terminal state**
     ///
-    7: FailPrepareData fail_prepare;
+    8: FailPrepareData fail_prepare;
 
     /// An error occured while fetching the required artifacts.
     ///
     /// **This is a terminal state**
     ///
-    8: FailFetchData fail_fetch;
+    9: FailFetchData fail_fetch;
 
     /// An error occured while staging the new OS.
     ///
     /// **This is a terminal state**
     ///
-    9: FailStageData fail_stage;
+    10: FailStageData fail_stage;
 };
 
 /// Data associated with [`State.prepare`].
@@ -149,14 +156,20 @@ table StageData {
     2: InstallationProgress progress;
 };
 
+/// Data associated with [`State.wait_to_reboot`].
+table WaitToRebootData {
+    1: UpdateInfo info;
+    2: InstallationProgress progress;
+};
+
 /// Data associated with [`State.reboot`].
 table RebootData {
     1: UpdateInfo info;
     2: InstallationProgress progress;
 };
 
-/// Data associated with [`State.wait_to_reboot`].
-table WaitToRebootData {
+/// Data associated with [`State.defer_reboot`].
+table DeferRebootData {
     1: UpdateInfo info;
     2: InstallationProgress progress;
 };

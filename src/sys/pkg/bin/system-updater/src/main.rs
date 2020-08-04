@@ -7,6 +7,7 @@ use {
     anyhow::anyhow,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_err, fx_log_info},
+    futures::prelude::*,
     parking_lot::Mutex,
     std::sync::Arc,
 };
@@ -43,9 +44,26 @@ async fn oneshot_update(args: Args, history: Arc<Mutex<UpdateHistory>>) {
         }
     };
 
-    let res = update::update(config, env, history).await;
+    let mut done = false;
+    let mut failed = false;
+    let attempt = update::update(config, env, history, None).await;
+    futures::pin_mut!(attempt);
+    while let Some(state) = attempt.next().await {
+        assert!(!done, "update stream continued after a terminal state");
 
-    if let Err(()) = res {
+        if state.is_terminal() {
+            done = true;
+        }
+        if state.is_failure() {
+            failed = true;
+            // Intentionally don't short circuit on failure.  Dropping attempt before the stream
+            // terminates will drop any pending cleanup work the update attempt hasn't had a chance
+            // to do yet.
+        }
+    }
+    assert!(done, "update stream did not include a terminal state");
+
+    if failed {
         std::process::exit(1);
     }
 }

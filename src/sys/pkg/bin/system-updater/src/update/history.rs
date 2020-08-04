@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::update::{BuildInfo, State},
+    crate::update::BuildInfo,
     anyhow::Error,
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
-    fidl_fuchsia_update_installer as fidl_installer,
+    fidl_fuchsia_update_installer_ext::State,
     fuchsia_url::pkg_url::PkgUrl,
     futures::prelude::*,
     serde::{Deserialize, Serialize},
@@ -20,7 +20,7 @@ const UPDATE_HISTORY_PATH: &str = "/data/update_history.json";
 const MAX_UPDATE_ATTEMPTS: usize = 5;
 
 /// Wrapper for the versioned UpdateAttempt JSON.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
 enum UpdateHistoryJson {
     #[serde(rename = "1")]
@@ -28,7 +28,7 @@ enum UpdateHistoryJson {
 }
 
 /// Persistent metadata for recent update attempt.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateAttempt {
     #[serde(rename = "id")]
@@ -66,13 +66,13 @@ impl UpdateAttempt {
     }
 }
 
-impl From<&UpdateAttempt> for fidl_installer::UpdateResult {
+impl From<&UpdateAttempt> for fidl_fuchsia_update_installer::UpdateResult {
     fn from(attempt: &UpdateAttempt) -> Self {
         Self {
             attempt_id: Some(attempt.attempt_id().to_string()),
             url: Some(fidl_fuchsia_pkg::PackageUrl { url: attempt.update_url().to_string() }),
             options: Some(attempt.options().into()),
-            state: Some(attempt.state().into()),
+            state: Some(attempt.state().clone().into()),
         }
     }
 }
@@ -81,17 +81,17 @@ impl From<&UpdateAttempt> for fidl_installer::UpdateResult {
 #[derive(Clone, Debug)]
 pub struct PendingAttempt {
     attempt_id: String,
-
     source_version: Version,
-
     options: UpdateOptions,
-
     update_url: PkgUrl,
-
     start_time: SystemTime,
 }
 
 impl PendingAttempt {
+    pub fn source_version(&self) -> &Version {
+        &self.source_version
+    }
+
     pub fn finish(self, target_version: Version, state: State) -> UpdateAttempt {
         UpdateAttempt {
             attempt_id: self.attempt_id,
@@ -110,7 +110,7 @@ impl PendingAttempt {
 pub struct UpdateOptions;
 
 // TODO(fxb/55401): move this to fidl-fuchsia-update-installer-ext.
-impl From<&UpdateOptions> for fidl_installer::Options {
+impl From<&UpdateOptions> for fidl_fuchsia_update_installer::Options {
     fn from(_options: &UpdateOptions) -> Self {
         Self {
             initiator: None,
@@ -120,54 +120,61 @@ impl From<&UpdateOptions> for fidl_installer::Options {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct UpdateHistory {
     update_attempts: VecDeque<UpdateAttempt>,
 }
 
 impl UpdateHistory {
-    /// The number of sequential attempts to update from source_version to target_version.
-    pub fn attempts(&self) -> u32 {
-        match self.update_attempts.front() {
-            Some(last_attempt) => self
-                .update_attempts
-                .iter()
-                .take_while(|attempt| {
-                    attempt.source_version == last_attempt.source_version
-                        && attempt.target_version == last_attempt.target_version
-                })
-                .count() as u32,
-            None => 0,
-        }
+    /// The number of sequential attempts to update from source_version to target_version, or 0 if
+    /// the most recent update attempt does not match the given source_version/target_version.
+    pub fn attempts_for(&self, source_version: &Version, target_version: &Version) -> u32 {
+        self.update_attempts
+            .iter()
+            .take_while(|attempt| {
+                &attempt.source_version == source_version
+                    && &attempt.target_version == target_version
+            })
+            .count() as u32
+    }
+
+    /// Returns the target version of the most recent successful update attempt, aka, the version
+    /// that likely corresponds with this running system.
+    fn latest_successful_target_version(&self) -> Option<&Version> {
+        self.update_attempts
+            .iter()
+            .find(|attempt| attempt.state.is_success())
+            .map(|attempt| &attempt.target_version)
     }
 
     /// Start a new update attempt, returns an PendingAttempt with initial information, caller
     /// should fill in additional information and pass it back to `record_update_attempt()`.
     #[must_use]
-    pub async fn start_update_attempt(
+    pub fn start_update_attempt<'a>(
         &self,
         options: UpdateOptions,
         update_url: PkgUrl,
         start_time: SystemTime,
-        data_sink: &DataSinkProxy,
-        boot_manager: &BootManagerProxy,
-        build_info: &impl BuildInfo,
-        pkgfs_system: &Option<pkgfs::system::Client>,
-    ) -> PendingAttempt {
-        // Generate a random UUID like 6fa28c38-d149-4c8b-a1fc-2cdbc714aad2.
-        let attempt_id = uuid::Uuid::new_v4().to_string();
-        let source_version = Version::current(
-            self.update_attempts
-                .iter()
-                .find(|attempt| attempt.state == State::COMPLETE)
-                .map(|attempt| &attempt.target_version),
-            data_sink,
-            boot_manager,
-            build_info,
-            pkgfs_system,
-        )
-        .await;
-        PendingAttempt { attempt_id, source_version, options, update_url, start_time }
+        data_sink: &'a DataSinkProxy,
+        boot_manager: &'a BootManagerProxy,
+        build_info: &'a impl BuildInfo,
+        pkgfs_system: &'a Option<pkgfs::system::Client>,
+    ) -> impl Future<Output = PendingAttempt> + 'a {
+        let latest_target_version = self.latest_successful_target_version().cloned();
+
+        async move {
+            // Generate a random UUID like 6fa28c38-d149-4c8b-a1fc-2cdbc714aad2.
+            let attempt_id = uuid::Uuid::new_v4().to_string();
+            let source_version = Version::current(
+                latest_target_version.as_ref(),
+                data_sink,
+                boot_manager,
+                build_info,
+                pkgfs_system,
+            )
+            .await;
+            PendingAttempt { attempt_id, source_version, options, update_url, start_time }
+        }
     }
 
     /// Record a new update attempt in update history, will drop old attempts if the total
@@ -206,25 +213,27 @@ impl UpdateHistory {
     }
 
     /// Save the update history to disk.
-    pub async fn save(&mut self) {
+    pub fn save(&mut self) -> impl Future<Output = ()> {
         let writer = |bytes| async move {
             let _ = io_util::file::write_in_namespace(UPDATE_HISTORY_PATH, &bytes).await;
         };
-        self.save_to(writer).await;
+        self.save_to(writer)
     }
 
-    async fn save_to<W, F>(&self, writer: W)
+    fn save_to<W, F>(&self, writer: W) -> impl Future<Output = ()>
     where
         W: FnOnce(Vec<u8>) -> F,
         F: Future<Output = ()>,
     {
         let history = UpdateHistoryJson::Version1(self.update_attempts.clone());
-        let bytes = match serde_json::to_vec(&history) {
-            Ok(bytes) => bytes,
-            Err(_) => return,
-        };
+        let bytes = serde_json::to_vec(&history);
 
-        writer(bytes).await
+        async move {
+            match bytes {
+                Ok(bytes) => writer(bytes).await,
+                Err(_) => {}
+            }
+        }
     }
 
     pub fn last_update_attempt(&self) -> Option<&UpdateAttempt> {
@@ -302,15 +311,22 @@ mod serde_system_time {
 #[cfg(test)]
 mod tests {
     use {
-        super::version::mock_pkgfs_system,
-        super::*,
+        super::{version::mock_pkgfs_system, *},
         crate::update::environment::NamespaceBuildInfo,
         anyhow::anyhow,
+        fidl_fuchsia_update_installer_ext::{Progress, UpdateInfo},
         mock_paver::MockPaverServiceBuilder,
         pretty_assertions::assert_eq,
         serde_json::json,
         std::{sync::Arc, time::Duration},
     };
+
+    fn make_reboot_state() -> State {
+        let info = UpdateInfo::builder().download_size(42).build();
+        let progress = Progress::done(&info);
+
+        State::Reboot { info, progress }
+    }
 
     fn make_reader(res: &str) -> impl Future<Output = Result<Vec<u8>, Error>> {
         future::ready(Ok(res.as_bytes().to_owned()))
@@ -333,7 +349,7 @@ mod tests {
             )
             .await;
         history.record_update_attempt(
-            update_attempt.finish(Version::for_hash("new".to_owned()), State::FAIL),
+            update_attempt.finish(Version::for_hash("new".to_owned()), State::FailPrepare),
         );
     }
 
@@ -369,7 +385,7 @@ mod tests {
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-                    state: State::FAIL,
+                    state: State::FailPrepare,
                 },
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
@@ -378,7 +394,7 @@ mod tests {
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-                    state: State::COMPLETE,
+                    state: make_reboot_state(),
                 },
             ]),
         };
@@ -422,7 +438,7 @@ mod tests {
             options: UpdateOptions,
             update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-            state: State::FAIL,
+            state: State::FailPrepare,
         };
         assert_eq!(history.update_attempts, VecDeque::from(vec![update_attempt]));
 
@@ -455,7 +471,9 @@ mod tests {
                     "options": null,
                     "url": "fuchsia-pkg://fuchsia.com/update",
                     "start": 42,
-                    "state": "FAIL",
+                    "state": {
+                        "id": "fail_prepare",
+                    }
                 }]
             }),
         );
@@ -487,7 +505,7 @@ mod tests {
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(i as u64),
-                    state: State::FAIL,
+                    state: State::FailPrepare,
                 })
                 .collect::<VecDeque<_>>()
         );
@@ -496,14 +514,31 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn empty_history_0_attempts() {
         let history = UpdateHistory::default();
-        assert_eq!(history.attempts(), 0);
+        assert_eq!(
+            history.attempts_for(&Version::for_hash("source"), &Version::for_hash("target")),
+            0
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn single_attempt_history_1_attempt() {
+    async fn single_attempt_history_has_1_attempt_to_new_version() {
         let mut history = UpdateHistory::default();
         record_fake_update_attempt(&mut history, 42).await;
-        assert_eq!(history.attempts(), 1);
+
+        assert_eq!(
+            history.attempts_for(
+                &Version::for_hash_and_empty_paver_hashes(""),
+                &Version::for_hash("new")
+            ),
+            1
+        );
+        assert_eq!(
+            history.attempts_for(
+                &Version::for_hash_and_empty_paver_hashes(""),
+                &Version::for_hash("newer")
+            ),
+            0
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -513,7 +548,51 @@ mod tests {
             record_fake_update_attempt(&mut history, i).await;
         }
 
-        assert_eq!(history.attempts(), MAX_UPDATE_ATTEMPTS as u32);
+        assert_eq!(
+            history.attempts_for(
+                &Version::for_hash_and_empty_paver_hashes(""),
+                &Version::for_hash("new")
+            ),
+            MAX_UPDATE_ATTEMPTS as u32
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn attempts_for_only_matches_most_recent_attempts() {
+        let history = UpdateHistory {
+            update_attempts: VecDeque::from(vec![
+                UpdateAttempt {
+                    attempt_id: "id".to_owned(),
+                    source_version: Version::for_hash("old"),
+                    target_version: Version::for_hash("new"),
+                    options: UpdateOptions,
+                    update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
+                    start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
+                    state: make_reboot_state(),
+                },
+                UpdateAttempt {
+                    attempt_id: "id".to_owned(),
+                    source_version: Version::for_hash("old2"),
+                    target_version: Version::for_hash("new2"),
+                    options: UpdateOptions,
+                    update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
+                    start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
+                    state: make_reboot_state(),
+                },
+                UpdateAttempt {
+                    attempt_id: "id".to_owned(),
+                    source_version: Version::for_hash("old"),
+                    target_version: Version::for_hash("new"),
+                    options: UpdateOptions,
+                    update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
+                    start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
+                    state: make_reboot_state(),
+                },
+            ]),
+        };
+
+        assert_eq!(history.attempts_for(&Version::for_hash("old"), &Version::for_hash("new")), 1);
+        assert_eq!(history.attempts_for(&Version::for_hash("old2"), &Version::for_hash("new2")), 0);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -527,7 +606,7 @@ mod tests {
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-                    state: State::COMPLETE,
+                    state: make_reboot_state(),
                 },
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
@@ -536,12 +615,12 @@ mod tests {
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-                    state: State::COMPLETE,
+                    state: make_reboot_state(),
                 },
             ]),
         };
 
-        assert_eq!(history.attempts(), 1);
+        assert_eq!(history.attempts_for(&Version::for_hash("old"), &Version::for_hash("new")), 1);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -555,7 +634,7 @@ mod tests {
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-                    state: State::COMPLETE,
+                    state: make_reboot_state(),
                 },
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
@@ -564,12 +643,12 @@ mod tests {
                     options: UpdateOptions,
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-                    state: State::COMPLETE,
+                    state: make_reboot_state(),
                 },
             ]),
         };
 
-        assert_eq!(history.attempts(), 1);
+        assert_eq!(history.attempts_for(&Version::for_hash("old"), &Version::for_hash("new")), 1);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -581,7 +660,7 @@ mod tests {
             options: UpdateOptions,
             update_url: "fuchsia-pkg://fuchsia.com/first-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-            state: State::COMPLETE,
+            state: make_reboot_state(),
         };
         let second_attempt = UpdateAttempt {
             attempt_id: "1".to_owned(),
@@ -590,7 +669,7 @@ mod tests {
             options: UpdateOptions,
             update_url: "fuchsia-pkg://fuchsia.com/second-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-            state: State::COMPLETE,
+            state: make_reboot_state(),
         };
         let mut history = UpdateHistory::default();
 
@@ -609,7 +688,7 @@ mod tests {
             options: UpdateOptions,
             update_url: "fuchsia-pkg://fuchsia.com/first-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-            state: State::COMPLETE,
+            state: make_reboot_state(),
         };
         let attempt_bar = UpdateAttempt {
             attempt_id: "bar".to_owned(),
@@ -618,7 +697,7 @@ mod tests {
             options: UpdateOptions,
             update_url: "fuchsia-pkg://fuchsia.com/second-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
-            state: State::COMPLETE,
+            state: make_reboot_state(),
         };
         let mut history = UpdateHistory::default();
 

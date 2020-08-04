@@ -34,20 +34,19 @@ pub(super) async fn resolve_update_package(
     Ok(UpdatePackage::new(dir))
 }
 
-/// Resolves each package URL through the package resolver, returning the resolved package
-/// directories. The output order is not guaranteed to match the input order.
-pub(super) async fn resolve_packages<'a, I>(
+/// Resolves each package URL through the package resolver with some concurrency, yielding results
+/// of the resolved package directories. The output order is not guaranteed to match the input
+/// order.
+pub(super) fn resolve_packages<'a, I>(
     pkg_resolver: &'a PackageResolverProxy,
     urls: I,
-) -> Result<Vec<DirectoryProxy>, Error>
+) -> impl Stream<Item = Result<DirectoryProxy, Error>> + 'a
 where
-    I: Iterator<Item = &'a PkgUrl>,
+    I: 'a + Iterator<Item = &'a PkgUrl>,
 {
     stream::iter(urls)
-        .map(|url| resolve_package(pkg_resolver, url))
+        .map(move |url| resolve_package(pkg_resolver, url))
         .buffer_unordered(CONCURRENT_PACKAGE_RESOLVES)
-        .try_collect()
-        .await
 }
 
 async fn resolve_package(
