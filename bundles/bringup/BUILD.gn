@@ -15,7 +15,7 @@ group("tests") {
     # The devcoordinator-namespace-test assumes the root filesystem and can't be
     # migrated as packages are given their own local filesystem.
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
-    "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",
+    "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",  # HW-required.
     "//src/devices/usb/tests/usb:usb-package",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",  # HW-required.
