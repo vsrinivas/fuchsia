@@ -461,18 +461,26 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
     zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d", status);
   }
 
+  // Walk the devices in the ACPI tree, handling any device specific quirks as
+  // we go, and publishing any static metadata we need to publish before
+  // publishing any devices.
+  //
+  // TODO(fxb/56832): Remove this pass when we have a better way to manage
+  // driver dependencies on ACPI.  Once drivers can access their metadata
+  // directly via a connection to the ACPI driver, we will not need to bother
+  // with publishing static metadata before we publish devices.
   struct LastPciInfo {
     LastPciInfo(uint32_t _level, uint8_t _bbn) : level(_level), bbn(_bbn) {}
     const uint32_t level;
     const uint8_t bbn;
   };
   std::optional<LastPciInfo> last_pci;
-  bool published_pci_bus = false;
 
-  ACPI_STATUS acpi_status = acpi::WalkNamespace(
+  ACPI_STATUS acpi_status;
+  acpi_status = acpi::WalkNamespace(
       ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-      [sys_root, acpi_root, platform_bus, &last_pci, &published_pci_bus](
-          ACPI_HANDLE object, uint32_t level, acpi::WalkDirection dir) -> ACPI_STATUS {
+      [sys_root, &last_pci](ACPI_HANDLE object, uint32_t level,
+                            acpi::WalkDirection dir) -> ACPI_STATUS {
         // If we are ascending through a PCI node we had previously discovered,
         // invalidate our last PCI info.
         if (dir == acpi::WalkDirection::Ascending) {
@@ -545,13 +553,40 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
           }
         }
 
-        // If there is no hardware ID, then there is nothing to publish.  Just skip
-        // the device.
-        if (hid == nullptr) {
+        return AE_OK;
+      });
+
+  if (!ACPI_SUCCESS(acpi_status)) {
+    zxlogf(WARNING, "acpi: Error (%d) during fixup and metadata pass", acpi_status);
+  }
+
+  // Now walk the ACPI namespace looking for devices we understand, and publish
+  // them.  For now, publish only the first PCI bus we encounter.
+  bool published_pci_bus = false;
+  acpi_status = acpi::WalkNamespace(
+      ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
+      [sys_root, acpi_root, platform_bus, &published_pci_bus](
+          ACPI_HANDLE object, uint32_t level, acpi::WalkDirection dir) -> ACPI_STATUS {
+        // We don't have anything useful to do during the ascent phase.  Just
+        // skip it.
+        if (dir == acpi::WalkDirection::Ascending) {
           return AE_OK;
         }
 
-        // Extract pointer to the first compatible ID if present.
+        // We are descending.  Grab our object info.
+        acpi::UniquePtr<ACPI_DEVICE_INFO> info;
+        if (auto res = acpi::GetObjectInfo(object); res.is_error()) {
+          return res.error_value();
+        } else {
+          info = std::move(res.value());
+        }
+
+        // Extract pointers to the hardware ID and the compatible ID if present.
+        // If there is no hardware ID, just skip the device.
+        const char* hid = hid_from_acpi_devinfo(info.get());
+        if (hid == nullptr) {
+          return AE_OK;
+        }
         const char* cid = nullptr;
         if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
             // IDs may be 7 or 8 bytes, and Length includes the null byte
@@ -578,6 +613,8 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
           }
         };
 
+        // Now, if we recognize the HID, go ahead and deal with publishing the
+        // device.
         if ((!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
              !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
           if (!published_pci_bus) {
