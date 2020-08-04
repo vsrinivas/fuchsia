@@ -25,6 +25,10 @@ rustc_library("httpdate-hyper") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:webpki",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("httpdate-hyper-tests") {

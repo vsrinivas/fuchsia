@@ -17,6 +17,10 @@ rustc_library("escaped-cstring") {
     "//third_party/rust_crates:memchr",
     "//third_party/rust_crates:smallvec",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("escaped-cstring-tests") {

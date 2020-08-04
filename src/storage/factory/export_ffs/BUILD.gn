@@ -29,6 +29,10 @@ rustc_library("export_ffs") {
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:matches",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }
 
 fuchsia_component("export-ffs-tests-component") {

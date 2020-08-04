@@ -18,4 +18,8 @@ rustc_test("connect_with_bad_password") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:pin-utils",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/lib.rs" ]
 }

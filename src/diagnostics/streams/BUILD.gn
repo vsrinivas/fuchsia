@@ -58,6 +58,10 @@ rustc_fuzzer("parse_record_fuzzer") {
     "//src/lib/fuzzing/rust:fuzz",
   ]
   source_root = "src/fuzzer.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "src/fuzzer.rs" ]
 }
 
 fuzzers_package("diagnostic-stream-fuzzers") {

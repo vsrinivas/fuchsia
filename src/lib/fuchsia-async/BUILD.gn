@@ -83,6 +83,10 @@ rustc_staticlib("fuchsia-async-staticlib") {
     "//third_party/rust_crates:parking_lot",
   ]
   source_root = "src/ffi.rs"
+
+  enforce_source_listing = true
+
+  sources = [ "src/ffi.rs" ]
 }
 
 test_package("fuchsia-async-tests") {

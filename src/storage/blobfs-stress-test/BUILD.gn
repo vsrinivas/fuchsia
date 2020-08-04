@@ -19,6 +19,10 @@ rustc_test("blobfs-stress-test-bin") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rand_core",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "runner.rs" ]
 }
 
 executable("blobfs-mounter") {

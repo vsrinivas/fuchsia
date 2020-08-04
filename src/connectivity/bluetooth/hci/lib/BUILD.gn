@@ -26,6 +26,20 @@ rustc_staticlib("bt-hci") {
   ]
 
   public = [ "bindings.h" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/control_plane.rs",
+    "src/error.rs",
+    "src/ffi.rs",
+    "src/lib.rs",
+    "src/log.rs",
+    "src/snoop.rs",
+    "src/test_utils.rs",
+    "src/transport.rs",
+    "src/worker.rs",
+  ]
 }
 
 unittest_package("bt-hci-lib-tests") {

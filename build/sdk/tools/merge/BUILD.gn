@@ -21,4 +21,27 @@ rustc_binary("merge_sdk") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/app.rs",
+    "src/file_provider.rs",
+    "src/flags.rs",
+    "src/immutable.rs",
+    "src/main.rs",
+    "src/merge_banjo_library.rs",
+    "src/merge_cc_prebuilt_library.rs",
+    "src/merge_cc_source_library.rs",
+    "src/merge_dart_library.rs",
+    "src/merge_data.rs",
+    "src/merge_device_profile.rs",
+    "src/merge_documentation.rs",
+    "src/merge_fidl_library.rs",
+    "src/merge_host_tool.rs",
+    "src/merge_loadable_module.rs",
+    "src/merge_sysroot.rs",
+    "src/tarball.rs",
+    "src/testing.rs",
+  ]
 }

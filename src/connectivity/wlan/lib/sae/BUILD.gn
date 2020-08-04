@@ -21,6 +21,17 @@ rustc_library("wlan-sae") {
     "//third_party/rust_crates:num",
     "//third_party/rust_crates:thiserror",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/boringssl.rs",
+    "src/crypto_utils.rs",
+    "src/ecc.rs",
+    "src/frame.rs",
+    "src/lib.rs",
+    "src/state.rs",
+  ]
 }
 
 unittest_package("wlan-sae-tests") {
