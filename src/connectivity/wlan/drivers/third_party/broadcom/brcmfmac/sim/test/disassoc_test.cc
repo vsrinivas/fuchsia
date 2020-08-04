@@ -39,8 +39,12 @@ TEST_F(SimTest, Disassoc) {
 
   // Verify that we get appropriate notification
   ASSERT_EQ(client_ifc.stats_.deauth_indications.size(), 1U);
-  // TODO (57315) - Notification reason code not propagated
-  // EXPECT_EQ(client_ifc.stats_.deauth_indications.front().reason_code, kDisassocReason);
+  const wlanif_deauth_indication_t& deauth_ind = client_ifc.stats_.deauth_indications.front();
+  // Verify reason code is propagated
+  EXPECT_EQ(deauth_ind.reason_code, kDisassocReason);
+  // Deauthenticated by AP so not locally initiated
+  // TODO(57613): Figure out what |locally_initiated| should be when AP disassociates client
+  // EXPECT_EQ(deauth_ind.locally_initiated, false);
 }
 
 }  // namespace wlan::brcmfmac

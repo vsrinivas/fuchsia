@@ -1159,7 +1159,7 @@ void SimFirmware::DisassocLocalClient(uint32_t reason) {
     // driver now
     simulation::SimDisassocReqFrame disassoc_req_frame(srcAddr, bssid, reason);
     hw_.Tx(disassoc_req_frame);
-    SetStateToDisassociated();
+    SetStateToDisassociated(reason);
   } else {
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, kClientIfidx);
   }
@@ -1169,7 +1169,7 @@ void SimFirmware::DisassocLocalClient(uint32_t reason) {
 // Disassoc/deauth Request from FakeAP for the Client IF.
 void SimFirmware::HandleDisconnectForClientIF(
     std::shared_ptr<const simulation::SimManagementFrame> frame, const common::MacAddr& bssid,
-    const uint16_t reason) {
+    uint32_t reason) {
   // Ignore if this is not intended for us
   common::MacAddr mac_addr(iface_tbl_[kClientIfidx].mac_addr);
   if (frame->dst_addr_ != mac_addr) {
@@ -1196,20 +1196,20 @@ void SimFirmware::HandleDisconnectForClientIF(
     return;
   }
 
-  SetStateToDisassociated();
+  SetStateToDisassociated(reason);
   AssocClearContext();
 }
 
 // precondition: was associated
-void SimFirmware::SetStateToDisassociated() {
+void SimFirmware::SetStateToDisassociated(uint32_t reason) {
   // Disable beacon watchdog that triggers disconnect
   DisableBeaconWatchdog();
 
   // Proprogate disassociation to driver code
   SendEventToDriver(0, nullptr, BRCMF_E_DISASSOC, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
-                    0, assoc_state_.opts->bssid, kDisassocEventDelay);
-  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0, 0,
-                    assoc_state_.opts->bssid, kLinkEventDelay);
+                    reason, assoc_state_.opts->bssid, kDisassocEventDelay);
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
+                    reason, assoc_state_.opts->bssid, kLinkEventDelay);
 }
 
 // Assoc Request from Client for the SoftAP IF

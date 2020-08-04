@@ -974,26 +974,6 @@ scan_out:
 
 static void brcmf_init_prof(struct brcmf_cfg80211_profile* prof) { memset(prof, 0, sizeof(*prof)); }
 
-static uint16_t brcmf_map_fw_linkdown_reason(const struct brcmf_event_msg* e) {
-  uint16_t reason;
-
-  switch (e->event_code) {
-    case BRCMF_E_DEAUTH:
-    case BRCMF_E_DEAUTH_IND:
-      reason = WLAN_DEAUTH_REASON_LEAVING_NETWORK_DEAUTH;
-      break;
-    case BRCMF_E_DISASSOC_IND:
-    case BRCMF_E_DISASSOC:
-      reason = WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC;
-      break;
-    case BRCMF_E_LINK:
-    default:
-      reason = WLAN_DEAUTH_REASON_UNSPECIFIED;
-      break;
-  }
-  return reason;
-}
-
 static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, uint16_t pmk_len) {
   struct brcmf_wsec_pmk_le pmk;
   int i;
@@ -1017,13 +997,13 @@ static zx_status_t brcmf_set_pmk(struct brcmf_if* ifp, const uint8_t* pmk_data, 
   return err;
 }
 
-static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reason,
-                                  uint16_t event_reason, bool locally_initiated) {
+static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,
+                                  bool locally_initiated) {
   struct net_device* ndev = vif->wdev.netdev;
   wlanif_deauth_indication_t ind;
 
   memcpy(ind.peer_sta_address, vif->profile.bssid, ETH_ALEN);
-  ind.reason_code = reason;
+  ind.reason_code = event_reason;
   ind.locally_initiated = locally_initiated;
 
   BRCMF_DBG(WLANIF,
@@ -1037,7 +1017,7 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reaso
   wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
 }
 
-static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason, uint16_t event_reason,
+static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,
                             bool locally_initiated) {
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
@@ -1053,7 +1033,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t reason, uin
                 brcmf_fil_get_errstr(fwerr));
     }
     if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
-      cfg80211_disconnected(vif, reason, event_reason, locally_initiated);
+      cfg80211_disconnected(vif, event_reason, locally_initiated);
     }
   }
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
@@ -4524,7 +4504,7 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
   brcmf_disconnect_done(cfg);
   bool locally_initiated = e->event_code == BRCMF_E_DEAUTH || e->event_code == BRCMF_E_DISASSOC ||
                            e->event_code == BRCMF_E_LINK;
-  brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e), e->reason, locally_initiated);
+  brcmf_link_down(ifp->vif, e->reason, locally_initiated);
   brcmf_init_prof(ndev_to_prof(ndev));
   if (ndev != cfg_to_ndev(cfg)) {
     sync_completion_signal(&cfg->vif_disabled);
@@ -5006,7 +4986,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
    * from AP to save power
    */
   if (check_vif_up(ifp->vif)) {
-    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, 0, true);
+    brcmf_link_down(ifp->vif, WLAN_DEAUTH_REASON_UNSPECIFIED, true);
 
     /* Make sure WPA_Supplicant receives all the event
        generated due to DISASSOC call to the fw to keep

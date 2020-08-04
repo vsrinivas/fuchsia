@@ -309,7 +309,7 @@ class SimFirmware {
   zx_status_t HandleJoinRequest(const void* value, size_t value_len);
   void HandleAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame);
   void HandleDisconnectForClientIF(std::shared_ptr<const simulation::SimManagementFrame> frame,
-                                   const common::MacAddr& bssid, const uint16_t reason);
+                                   const common::MacAddr& bssid, uint32_t reason);
   void HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame);
   void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
   // Generic scan operations
@@ -333,7 +333,7 @@ class SimFirmware {
   void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(uint32_t reason);
-  void SetStateToDisassociated();
+  void SetStateToDisassociated(uint32_t reason);
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
