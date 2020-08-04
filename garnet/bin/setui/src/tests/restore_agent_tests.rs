@@ -98,10 +98,10 @@ async fn test_restore() {
     // Snould succeed when the restore command is explicitly not handled.
     verify_restore_handling(
         Box::new(|| {
-            Err(SwitchboardError::UnimplementedRequest {
-                setting_type: SettingType::Unknown,
-                request: SettingRequest::Restore,
-            })
+            Err(SwitchboardError::UnimplementedRequest(
+                SettingType::Unknown,
+                SettingRequest::Restore,
+            ))
         }),
         true,
     )
@@ -109,14 +109,14 @@ async fn test_restore() {
 
     // Should succeed when the setting is not available.
     verify_restore_handling(
-        Box::new(|| Err(SwitchboardError::UnhandledType { setting_type: SettingType::Unknown })),
+        Box::new(|| Err(SwitchboardError::UnhandledType(SettingType::Unknown))),
         true,
     )
     .await;
 
     // Snould fail when any other error is introduced.
     verify_restore_handling(
-        Box::new(|| Err(SwitchboardError::UnexpectedError { description: "foo".to_string() })),
+        Box::new(|| Err(SwitchboardError::UnexpectedError("foo".to_string()))),
         false,
     )
     .await;

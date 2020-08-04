@@ -111,7 +111,7 @@ async fn process_request(
                     .await
                     .map(|_| ())
                     .map_err(|e| match e {
-                        SwitchboardError::InvalidArgument { argument, .. } => {
+                        SwitchboardError::InvalidArgument(_, argument, _) => {
                             if ARG_NAME == argument {
                                 LightError::InvalidName
                             } else {

@@ -90,11 +90,11 @@ impl LightController {
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
                 // Reject sets if the light name is not known.
-                return Err(SwitchboardError::InvalidArgument {
-                    setting_type: SettingType::Light,
-                    argument: ARG_NAME.into(),
-                    value: name,
-                });
+                return Err(SwitchboardError::InvalidArgument(
+                    SettingType::Light,
+                    ARG_NAME.into(),
+                    name,
+                ));
             }
             Entry::Occupied(entry) => entry,
         };
@@ -104,11 +104,11 @@ impl LightController {
         if state.len() != group.lights.len() {
             // If the number of light states provided doesn't match the number of lights,
             // return an error.
-            return Err(SwitchboardError::InvalidArgument {
-                setting_type: SettingType::Light,
-                argument: "state".into(),
-                value: format!("{:?}", state),
-            });
+            return Err(SwitchboardError::InvalidArgument(
+                SettingType::Light,
+                "state".into(),
+                format!("{:?}", state),
+            ));
         }
 
         if !state.iter().filter_map(|state| state.value.clone()).all(|value| {
@@ -120,11 +120,11 @@ impl LightController {
         }) {
             // If not all the light values match the light type of this light group, return an
             // error.
-            return Err(SwitchboardError::InvalidArgument {
-                setting_type: SettingType::Light,
-                argument: "state".into(),
-                value: format!("{:?}", state),
-            });
+            return Err(SwitchboardError::InvalidArgument(
+                SettingType::Light,
+                "state".into(),
+                format!("{:?}", state),
+            ));
         }
 
         // After the main validations, write the state to the hardware.
@@ -156,11 +156,11 @@ impl LightController {
                 ),
                 Some(LightValue::Rgb(rgb)) => {
                     let mut value = rgb.clone().try_into().or_else(|_| {
-                        Err(SwitchboardError::InvalidArgument {
-                            setting_type: SettingType::Light,
-                            argument: "value".into(),
-                            value: format!("{:?}", rgb),
-                        })
+                        Err(SwitchboardError::InvalidArgument(
+                            SettingType::Light,
+                            "value".into(),
+                            format!("{:?}", rgb),
+                        ))
                     })?;
                     (
                         call_async!(self.light_proxy =>
@@ -175,11 +175,11 @@ impl LightController {
                 ),
             };
             set_result.map(|_| ()).or_else(|_| {
-                Err(SwitchboardError::ExternalFailure {
-                    setting_type: SettingType::Light,
-                    dependency: "fuchsia.hardware.light".to_string(),
-                    request: format!("{} for light {}", method_name, hardware_index),
-                })
+                Err(SwitchboardError::ExternalFailure(
+                    SettingType::Light,
+                    "fuchsia.hardware.light".to_string(),
+                    format!("{} for light {}", method_name, hardware_index),
+                ))
             })?;
 
             // Set was successful, save this light value.
@@ -193,22 +193,22 @@ impl LightController {
         let mut current = self.client.read().await;
         let num_lights =
             self.light_proxy.call_async(LightProxy::get_num_lights).await.or_else(|_| {
-                Err(SwitchboardError::ExternalFailure {
-                    setting_type: SettingType::Light,
-                    dependency: "fuchsia.hardware.light".to_string(),
-                    request: "get_num_lights".to_string(),
-                })
+                Err(SwitchboardError::ExternalFailure(
+                    SettingType::Light,
+                    "fuchsia.hardware.light".to_string(),
+                    "get_num_lights".to_string(),
+                ))
             })?;
 
         for i in 0..num_lights {
             let info = match call_async!(self.light_proxy => get_info(i)).await {
                 Ok(Ok(info)) => info,
                 _ => {
-                    return Err(SwitchboardError::ExternalFailure {
-                        setting_type: SettingType::Light,
-                        dependency: "fuchsia.hardware.light".to_string(),
-                        request: format!("get_info for light {}", i),
-                    });
+                    return Err(SwitchboardError::ExternalFailure(
+                        SettingType::Light,
+                        "fuchsia.hardware.light".to_string(),
+                        format!("get_info for light {}", i),
+                    ));
                 }
             };
             let (name, group) = self.light_info_to_group(i, info).await.or_else(|e| Err(e))?;
@@ -233,11 +233,11 @@ impl LightController {
                 match call_async!(self.light_proxy => get_current_brightness_value(index)).await {
                     Ok(Ok(brightness)) => brightness,
                     _ => {
-                        return Err(SwitchboardError::ExternalFailure {
-                            setting_type: SettingType::Light,
-                            dependency: "fuchsia.hardware.light".to_string(),
-                            request: format!("get_current_brightness_value for light {}", index),
-                        });
+                        return Err(SwitchboardError::ExternalFailure(
+                            SettingType::Light,
+                            "fuchsia.hardware.light".to_string(),
+                            format!("get_current_brightness_value for light {}", index),
+                        ));
                     }
                 },
             ),
@@ -245,11 +245,11 @@ impl LightController {
                 match call_async!(self.light_proxy => get_current_rgb_value(index)).await {
                     Ok(Ok(rgb)) => rgb.into(),
                     _ => {
-                        return Err(SwitchboardError::ExternalFailure {
-                            setting_type: SettingType::Light,
-                            dependency: "fuchsia.hardware.light".to_string(),
-                            request: format!("get_current_rgb_value for light {}", index),
-                        });
+                        return Err(SwitchboardError::ExternalFailure(
+                            SettingType::Light,
+                            "fuchsia.hardware.light".to_string(),
+                            format!("get_current_rgb_value for light {}", index),
+                        ));
                     }
                 }
             }
@@ -257,11 +257,11 @@ impl LightController {
                 match call_async!(self.light_proxy => get_current_simple_value(index)).await {
                     Ok(Ok(on)) => on,
                     _ => {
-                        return Err(SwitchboardError::ExternalFailure {
-                            setting_type: SettingType::Light,
-                            dependency: "fuchsia.hardware.light".to_string(),
-                            request: format!("get_current_simple_value for light {}", index),
-                        });
+                        return Err(SwitchboardError::ExternalFailure(
+                            SettingType::Light,
+                            "fuchsia.hardware.light".to_string(),
+                            format!("get_current_simple_value for light {}", index),
+                        ));
                     }
                 },
             ),

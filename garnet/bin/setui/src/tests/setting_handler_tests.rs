@@ -458,10 +458,10 @@ async fn test_unimplemented_error() {
 
         while let Some(message_event) = receptor.next().await {
             if let MessageEvent::Message(incoming_payload, _) = message_event {
-                if let Payload::Result(Err(SwitchboardError::UnimplementedRequest {
-                    setting_type: incoming_type,
-                    request: _,
-                })) = incoming_payload
+                if let Payload::Result(Err(SwitchboardError::UnimplementedRequest(
+                    incoming_type,
+                    _,
+                ))) = incoming_payload
                 {
                     assert_eq!(incoming_type, setting_type);
                     return;

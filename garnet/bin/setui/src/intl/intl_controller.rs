@@ -101,11 +101,11 @@ impl IntlController {
         if let Some(time_zone_id) = info.time_zone_id {
             // Make sure the given time zone ID is valid.
             if !self.time_zone_ids.contains(time_zone_id.as_str()) {
-                return Err(SwitchboardError::InvalidArgument {
-                    setting_type: SettingType::Intl,
-                    argument: "timezone id".into(),
-                    value: time_zone_id.as_str().to_string(),
-                });
+                return Err(SwitchboardError::InvalidArgument(
+                    SettingType::Intl,
+                    "timezone id".into(),
+                    time_zone_id.as_str().to_string(),
+                ));
             }
         }
 

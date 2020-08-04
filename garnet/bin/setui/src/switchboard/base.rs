@@ -27,30 +27,26 @@ pub trait Merge {
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum SwitchboardError {
-    #[error("Unimplemented Request:{request:?} for setting type: {setting_type:?}")]
-    UnimplementedRequest { setting_type: SettingType, request: SettingRequest },
+    #[error("Unimplemented Request:{0:?} for setting type: {1:?}")]
+    UnimplementedRequest(SettingType, SettingRequest),
 
-    #[error("Storage failure for setting type: {setting_type:?}")]
-    StorageFailure { setting_type: SettingType },
+    #[error("Storage failure for setting type: {0:?}")]
+    StorageFailure(SettingType),
 
-    #[error(
-        "Invalid argument for setting type: {setting_type:?} argument:{argument:?} value:{value:?}"
-    )]
-    InvalidArgument { setting_type: SettingType, argument: Cow<'static, str>, value: String },
+    #[error("Invalid argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
+    InvalidArgument(SettingType, Cow<'static, str>, String),
 
-    #[error(
-    "External failure for setting type:{setting_type:?} dependency: {dependency:?} request:{request:?}"
-    )]
-    ExternalFailure { setting_type: SettingType, dependency: String, request: String },
+    #[error("External failure for setting type:{0:?} dependency: {1:?} request:{2:?}")]
+    ExternalFailure(SettingType, String, String),
 
-    #[error("Unhandled type: {setting_type:?}")]
-    UnhandledType { setting_type: SettingType },
+    #[error("Unhandled type: {0:?}")]
+    UnhandledType(SettingType),
 
-    #[error("Unexpected error: {description:?}")]
-    UnexpectedError { description: String },
+    #[error("Unexpected error: {0}")]
+    UnexpectedError(String),
 
-    #[error("Undeliverable Request:{request:?} for setting type: {setting_type:?}")]
-    UndeliverableError { setting_type: SettingType, request: SettingRequest },
+    #[error("Undeliverable Request:{0:?} for setting type: {1:?}")]
+    UndeliverableError(SettingType, SettingRequest),
 
     #[error("Communication error")]
     CommunicationError,

@@ -50,22 +50,22 @@ async fn schedule_clear_accounts(
         .await;
 
     if connect_result.is_err() {
-        return Err(SwitchboardError::ExternalFailure {
-            setting_type: SettingType::Account,
-            dependency: "device_settings_manager".to_string(),
-            request: "connect".to_string(),
-        });
+        return Err(SwitchboardError::ExternalFailure(
+            SettingType::Account,
+            "device_settings_manager".to_string(),
+            "connect".to_string(),
+        ));
     }
 
     let device_settings_manager = connect_result.unwrap();
 
     if let Err(_) = call_async!(device_settings_manager => set_integer(FACTORY_RESET_FLAG, 1)).await
     {
-        return Err(SwitchboardError::ExternalFailure {
-            setting_type: SettingType::Account,
-            dependency: "device_settings_manager".to_string(),
-            request: "set factory reset integer".to_string(),
-        });
+        return Err(SwitchboardError::ExternalFailure(
+            SettingType::Account,
+            "device_settings_manager".to_string(),
+            "set factory reset integer".to_string(),
+        ));
     }
 
     return Ok(());

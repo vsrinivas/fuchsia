@@ -21,17 +21,19 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Swi
         .connect::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
         .await
         .or_else(|_| {
-            Err(SwitchboardError::ExternalFailure {
-                setting_type: SettingType::Power,
-                dependency: "hardware_power_statecontrol_manager".to_owned(),
-                request: "connect".to_owned(),
-            })
+            Err(SwitchboardError::ExternalFailure(
+                SettingType::Power,
+                "hardware_power_statecontrol_manager".to_owned(),
+                "connect".to_owned(),
+            ))
         })?;
 
-    let build_err = || SwitchboardError::ExternalFailure {
-        setting_type: SettingType::Power,
-        dependency: "hardware_power_statecontrol_manager".to_owned(),
-        request: "reboot".to_owned(),
+    let build_err = || {
+        SwitchboardError::ExternalFailure(
+            SettingType::Power,
+            "hardware_power_statecontrol_manager".to_owned(),
+            "reboot".to_owned(),
+        )
     };
 
     call_async!(hardware_power_statecontrol_admin => reboot(RebootReason::UserRequest))

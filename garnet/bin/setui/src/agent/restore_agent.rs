@@ -77,15 +77,12 @@ impl RestoreAgent {
                             Ok(_) => {
                                 continue;
                             }
-                            Err(SwitchboardError::UnimplementedRequest {
-                                setting_type,
-                                request: _,
-                            }) => {
+                            Err(SwitchboardError::UnimplementedRequest(setting_type, _)) => {
                                 self.event_publisher
                                     .send_event(Event::Restore(restore::Event::NoOp(setting_type)));
                                 continue;
                             }
-                            Err(SwitchboardError::UnhandledType { setting_type }) => {
+                            Err(SwitchboardError::UnhandledType(setting_type)) => {
                                 fx_log_info!(
                                     "setting not available for restore: {:?}",
                                     setting_type

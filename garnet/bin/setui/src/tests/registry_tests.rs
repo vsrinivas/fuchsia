@@ -56,10 +56,7 @@ impl SettingHandler {
             }
         }
 
-        Err(SwitchboardError::UnimplementedRequest {
-            setting_type: self.setting_type,
-            request: request,
-        })
+        Err(SwitchboardError::UnimplementedRequest(self.setting_type, request))
     }
 
     fn create(

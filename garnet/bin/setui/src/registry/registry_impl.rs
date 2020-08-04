@@ -285,7 +285,7 @@ impl RegistryImpl {
                 client
                     .reply(core::Payload::Event(SettingEvent::Response(
                         id,
-                        Err(SwitchboardError::UnhandledType { setting_type: setting_type }),
+                        Err(SwitchboardError::UnhandledType(setting_type)),
                     )))
                     .send();
             }
@@ -326,10 +326,10 @@ impl RegistryImpl {
                                 client
                                     .reply(core::Payload::Event(SettingEvent::Response(
                                         id,
-                                        Err(SwitchboardError::UndeliverableError {
-                                            setting_type: setting_type,
-                                            request: request,
-                                        }),
+                                        Err(SwitchboardError::UndeliverableError(
+                                            setting_type,
+                                            request,
+                                        )),
                                     )))
                                     .send();
                                 return;

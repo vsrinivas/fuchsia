@@ -103,10 +103,7 @@ impl ClientImpl {
         let result = controller.handle(request.clone()).await;
         match result {
             Some(response_result) => response_result,
-            None => Err(SwitchboardError::UnimplementedRequest {
-                setting_type: setting_type,
-                request: request,
-            }),
+            None => Err(SwitchboardError::UnimplementedRequest(setting_type, request)),
         }
     }
 
@@ -328,11 +325,9 @@ pub mod persist {
     ) -> Result<UpdateState, SwitchboardError> {
         client.write(value, write_through).await.map_err(|e| {
             if let ControllerError::WriteFailure { setting_type } = e {
-                SwitchboardError::StorageFailure { setting_type: setting_type }
+                SwitchboardError::StorageFailure(setting_type)
             } else {
-                SwitchboardError::UnexpectedError {
-                    description: "client write failure".to_string(),
-                }
+                SwitchboardError::UnexpectedError("client write failure".to_string())
             }
         })
     }
