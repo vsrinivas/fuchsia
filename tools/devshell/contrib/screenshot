@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -21,8 +21,6 @@
 ##
 ## Example usage:
 ##   fx screenshot --trim --png --landscape
-
-set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
@@ -58,7 +56,16 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-fx-command-run shell "$@" screencap | $png_command > "$OUT"
+set -o pipefail
+
+TMP_FILE="$(mktemp "/tmp/fx_screenshot_XXXXX")"
+fx-command-run shell "$@" screencap | $png_command > "$TMP_FILE"
+if [[ $? -ne 0 ]]; then
+  rm -f "$TMP_FILE"
+  fx-error "Screenshot failed. Scenic is not running or Scenic failed to take screenshot."
+  exit 1
+fi
+
 mog_opts=
 if [[ $enable_trim -ne 0 ]]; then
   mog_opts="$mog_opts -trim +repage"
@@ -69,6 +76,7 @@ fi
 if [[ ! -z $mog_opts ]]; then
   # Also add a black border so it's easier to see the image when
   # pasted into the bug database.
-  mogrify -bordercolor black -border 3 $mog_opts $OUT
+  mogrify -bordercolor black -border 3 $mog_opts “$TMP_FILE”
 fi
 
+mv -f "$TMP_FILE" "$OUT"
