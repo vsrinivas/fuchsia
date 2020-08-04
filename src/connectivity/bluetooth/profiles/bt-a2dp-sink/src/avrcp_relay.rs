@@ -170,6 +170,9 @@ impl AvrcpRelay {
                         sessions2::PlayerRequest::Play { .. } => {
                             let _ = controller.send_command(avrcp::AvcPanelCommand::Play).await;
                         },
+                        sessions2::PlayerRequest::Stop { .. } => {
+                            let _ = controller.send_command(avrcp::AvcPanelCommand::Stop).await;
+                        },
                         sessions2::PlayerRequest::NextItem { .. } => {
                             let _ = controller.send_command(avrcp::AvcPanelCommand::Forward).await;
                         },
@@ -828,6 +831,7 @@ mod tests {
 
         player_client.pause()?;
         player_client.play()?;
+        player_client.stop()?;
         player_client.next_item()?;
         player_client.prev_item()?;
 
@@ -835,6 +839,8 @@ mod tests {
         expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Pause)?;
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
         expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Play)?;
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Stop)?;
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
         expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Forward)?;
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
