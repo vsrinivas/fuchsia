@@ -105,17 +105,7 @@ fxl::WeakPtr<DebuggedThread> DebuggedThread::GetWeakPtr() { return weak_factory_
 void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_handle) {
   exception_handle_ = std::move(exception_handle);
 
-  debug_ipc::NotifyException exception;
-  exception.type = exception_handle_->GetType(*thread_handle_);
-  exception.exception = thread_handle_->GetExceptionRecord();
-
-  auto strategy = exception_handle_->GetStrategy();
-  if (strategy.is_error()) {
-    FX_LOGS(WARNING) << "Could not determine exception strategy: "
-                     << zx_status_get_string(strategy.error_value());
-    return;
-  }
-  exception.exception.strategy = strategy.value();
+  debug_ipc::ExceptionType type = exception_handle_->GetType(*thread_handle_);
 
   std::optional<GeneralRegisters> regs = thread_handle_->GetGeneralRegisters();
   if (!regs) {
@@ -126,10 +116,13 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
   }
 
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception @ 0x" << std::hex << regs->ip()
-                    << std::dec << ": " << debug_ipc::ExceptionTypeToString(exception.type) << " ("
-                    << debug_ipc::ExceptionStrategyToString(strategy.value()) << ")";
+                    << std::dec << ": " << debug_ipc::ExceptionTypeToString(type);
 
-  switch (exception.type) {
+  debug_ipc::NotifyException exception{};
+  exception.type = type;
+  exception.exception = thread_handle_->GetExceptionRecord();
+
+  switch (type) {
     case debug_ipc::ExceptionType::kSingleStep:
       return HandleSingleStep(&exception, *regs);
     case debug_ipc::ExceptionType::kSoftwareBreakpoint:
@@ -148,7 +141,7 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
   }
 
   FX_NOTREACHED() << "Invalid exception notification type: "
-                  << debug_ipc::ExceptionTypeToString(exception.type);
+                  << debug_ipc::ExceptionTypeToString(type);
 
   // The exception was unhandled, so we close it so that the system can run its
   // course. The destructor would've done it anyway, but being explicit helps
@@ -230,7 +223,38 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
 
 void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exception,
                                             const GeneralRegisters& regs) {
-  SendExceptionNotification(exception, regs);
+  auto strategy = exception_handle_->GetStrategy();
+  if (strategy.is_error()) {
+    FX_LOGS(WARNING) << "Failed to determine current exception strategy: "
+                     << zx_status_get_string(strategy.error_value());
+    return;
+  }
+
+  debug_ipc::ExceptionStrategy applied = strategy.value();
+  bool handle_now = true;
+
+  // If the strategy is first-chance, then this is the first that we've seen
+  // this exception. Further, if the applied strategy for this type is
+  // second-chance, update and handle it accordingly.
+  auto applicable_strategy = debug_agent_->GetExceptionStrategy(exception->type);
+  if (strategy.value() == debug_ipc::ExceptionStrategy::kFirstChance &&
+      applicable_strategy == debug_ipc::ExceptionStrategy::kSecondChance) {
+    if (auto status = exception_handle_->SetStrategy(applicable_strategy); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to apply default exception strategy: "
+                       << zx_status_get_string(status);
+      return;
+    }
+    applied = applicable_strategy;
+    handle_now = false;
+  }
+
+  DEBUG_LOG(Thread) << ThreadPreamble(this)
+                    << "Exception strategy: " << debug_ipc::ExceptionStrategyToString(applied);
+
+  if (handle_now) {
+    exception->exception.strategy = applied;
+    SendExceptionNotification(exception, regs);
+  }
 }
 
 void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* exception,

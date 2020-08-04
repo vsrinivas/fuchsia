@@ -44,6 +44,8 @@ class MockExceptionHandle : public ExceptionHandle {
 
   debug_ipc::ExceptionType GetType(const ThreadHandle& thread) const override { return type_; }
 
+  void SetType(debug_ipc::ExceptionType type) { type_ = type; }
+
   fitx::result<zx_status_t, uint32_t> GetState() const override { return fitx::ok(state_); }
 
   zx_status_t SetState(uint32_t state) override {
