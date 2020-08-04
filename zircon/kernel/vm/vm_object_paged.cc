@@ -2077,6 +2077,9 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
       zx_status_t status = ZX_OK;
       guard.CallUnlocked([&page_request, &status]() mutable { status = page_request.Wait(); });
       if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
+          DumpLocked(0, false);
+        }
         return status;
       }
       retry = false;
@@ -3003,6 +3006,9 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
       // Must block on asynchronous page requests whilst not holding the lock.
       guard->CallUnlocked([&status, &page_request]() { status = page_request.Wait(); });
       if (status != ZX_OK) {
+        if (status == ZX_ERR_TIMED_OUT) {
+          DumpLocked(0, false);
+        }
         return status;
       }
       // Recheck properties and if all is good go back to the top of the loop to attempt to fault in

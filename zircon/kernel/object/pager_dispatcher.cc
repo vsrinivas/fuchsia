@@ -8,6 +8,7 @@
 #include <lib/counters.h>
 #include <trace.h>
 
+#include <kernel/thread.h>
 #include <lk/init.h>
 #include <object/pager_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -288,6 +289,7 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
       printf("ERROR Pager source %p has been blocked for %" PRIu64
              " seconds. Page request timed out.\n",
              this, pager_overtime_timeout_seconds);
+      dump_thread(Thread::Current::Get(), false);
       return ZX_ERR_TIMED_OUT;
     }
 
