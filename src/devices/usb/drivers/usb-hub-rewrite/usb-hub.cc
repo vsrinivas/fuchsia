@@ -40,13 +40,11 @@ fit::promise<ReturnType, Error> Fold(fit::promise<std::vector<fit::result<Succes
 
 namespace usb_hub {
 zx_status_t UsbHubDevice::Init() {
-  zx_status_t status =
-      DdkAdd(ddk::DeviceAddArgs("usb-hub").set_inspect_vmo(inspector_.DuplicateVmo()));
-  if (status != ZX_OK) {
-    return status;
-  }
   usb_ = ddk::UsbProtocolClient(parent());
   bus_ = ddk::UsbBusProtocolClient(parent());
+  zx_status_t status =
+      DdkAdd(ddk::DeviceAddArgs("usb-hub").set_inspect_vmo(inspector_.DuplicateVmo()));
+
   return status;
 }
 
