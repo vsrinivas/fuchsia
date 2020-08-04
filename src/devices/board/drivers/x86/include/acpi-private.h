@@ -33,10 +33,8 @@ using UniquePtr = std::unique_ptr<T, UniquePtrDeleter<T>>;
 // to the info object, or an ACPI error code in the case of failure.
 fitx::result<ACPI_STATUS, UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE obj);
 
-}  // namespace acpi
-
-struct AcpiDevicePioResource {
-  explicit AcpiDevicePioResource(const resource_io& io)
+struct DevicePioResource {
+  explicit DevicePioResource(const resource_io& io)
       : base_address{io.minimum}, alignment{io.alignment}, address_length{io.address_length} {}
 
   uint32_t base_address;
@@ -44,16 +42,16 @@ struct AcpiDevicePioResource {
   uint32_t address_length;
 };
 
-struct AcpiDeviceMmioResource {
-  AcpiDeviceMmioResource(bool writeable, uint32_t base_address, uint32_t alignment,
-                         uint32_t address_length)
+struct DeviceMmioResource {
+  DeviceMmioResource(bool writeable, uint32_t base_address, uint32_t alignment,
+                     uint32_t address_length)
       : writeable{writeable},
         base_address{base_address},
         alignment{alignment},
         address_length{address_length} {}
 
-  explicit AcpiDeviceMmioResource(const resource_memory_t& mem)
-      : AcpiDeviceMmioResource{mem.writeable, mem.minimum, mem.alignment, mem.address_length} {}
+  explicit DeviceMmioResource(const resource_memory_t& mem)
+      : DeviceMmioResource{mem.writeable, mem.minimum, mem.alignment, mem.address_length} {}
 
   bool writeable;
   uint32_t base_address;
@@ -61,8 +59,8 @@ struct AcpiDeviceMmioResource {
   uint32_t address_length;
 };
 
-struct AcpiDeviceIrqResource {
-  AcpiDeviceIrqResource(const resource_irq irq, int pin_index)
+struct DeviceIrqResource {
+  DeviceIrqResource(const resource_irq irq, int pin_index)
       : trigger{irq.trigger},
         polarity{irq.polarity},
         sharable{irq.sharable},
@@ -83,14 +81,12 @@ struct AcpiDeviceIrqResource {
   uint8_t pin;
 };
 
-class AcpiDevice;
-using AcpiType = ddk::Device<AcpiDevice>;
-class AcpiDevice : public AcpiType, public ddk::AcpiProtocol<AcpiDevice, ddk::base_protocol> {
+class Device;
+using DeviceType = ddk::Device<::acpi::Device>;
+class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_protocol> {
  public:
-  AcpiDevice(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
-      : AcpiType{parent}, acpi_handle_{acpi_handle}, platform_bus_{platform_bus} {}
-
-  void AcpiDeviceStub() {}
+  Device(zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
+      : DeviceType{parent}, acpi_handle_{acpi_handle}, platform_bus_{platform_bus} {}
 
   // DDK mix-in impls.
   void DdkRelease() { delete this; }
@@ -116,13 +112,15 @@ class AcpiDevice : public AcpiType, public ddk::AcpiProtocol<AcpiDevice, ddk::ba
   bool got_resources_ = false;
 
   // Port, memory, and interrupt resources from _CRS respectively
-  std::vector<AcpiDevicePioResource> pio_resources_;
-  std::vector<AcpiDeviceMmioResource> mmio_resources_;
-  std::vector<AcpiDeviceIrqResource> irqs_;
+  std::vector<DevicePioResource> pio_resources_;
+  std::vector<DeviceMmioResource> mmio_resources_;
+  std::vector<DeviceIrqResource> irqs_;
 
   zx_status_t ReportCurrentResources();
   ACPI_STATUS AddResource(ACPI_RESOURCE*);
 };
+
+}  // namespace acpi
 
 class AcpiWalker {
  public:

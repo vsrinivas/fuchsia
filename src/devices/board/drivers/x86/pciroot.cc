@@ -124,7 +124,7 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object, uint32_t /*nestin
 
 static zx_status_t pciroot_op_get_auxdata(void* context, const char* args, void* data, size_t bytes,
                                           size_t* actual) {
-  auto* dev = static_cast<AcpiDevice*>(context);
+  auto* dev = static_cast<acpi::Device*>(context);
 
   std::array<char, 16> type = {};
   uint32_t bus_id, dev_id, func_id;
@@ -198,7 +198,7 @@ static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t 
 }
 
 static zx_status_t pciroot_op_connect_sysmem(void* context, zx_handle_t handle) {
-  auto* dev = static_cast<AcpiDevice*>(context);
+  auto* dev = static_cast<acpi::Device*>(context);
   sysmem_protocol_t sysmem;
   zx_status_t status = device_get_protocol(dev->platform_bus(), ZX_PROTOCOL_SYSMEM, &sysmem);
   if (status != ZX_OK) {

@@ -577,12 +577,12 @@ zx_status_t pci_init(zx_device_t* sysdev, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
     // TODO: store context for PCI root protocol
     std::array<zx_device_prop_t, 4> props;
     auto args = get_device_add_args("pci", info, &props);
-    auto device = std::make_unique<AcpiDevice>(sysdev, object, ctx->platform_bus());
+    auto device = std::make_unique<acpi::Device>(sysdev, object, ctx->platform_bus());
 
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.ctx = device.get();
     args.ops = &acpi_device_proto;
-    // The AcpiDevice implements both the Acpi protocol and the Pciroot protocol. We may find a
+    // The acpi::Device implements both the Acpi protocol and the Pciroot protocol. We may find a
     // better way to do this in the future, but kernel PCI will eventually be removed anyway, at
     // which point we'll need to refactor it all anyway.
     args.proto_id = ZX_PROTOCOL_PCIROOT;

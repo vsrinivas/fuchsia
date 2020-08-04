@@ -50,9 +50,7 @@ fitx::result<ACPI_STATUS, UniquePtr<ACPI_DEVICE_INFO>> GetObjectInfo(ACPI_HANDLE
   return fitx::error(acpi_status);
 }
 
-}  // namespace acpi
-
-ACPI_STATUS AcpiDevice::AddResource(ACPI_RESOURCE* res) {
+ACPI_STATUS Device::AddResource(ACPI_RESOURCE* res) {
   if (resource_is_memory(res)) {
     resource_memory_t mem;
     zx_status_t st = resource_parse_memory(res, &mem);
@@ -98,7 +96,7 @@ ACPI_STATUS AcpiDevice::AddResource(ACPI_RESOURCE* res) {
   return AE_OK;
 }
 
-zx_status_t AcpiDevice::ReportCurrentResources() {
+zx_status_t Device::ReportCurrentResources() {
   if (got_resources_) {
     return ZX_OK;
   }
@@ -107,7 +105,7 @@ zx_status_t AcpiDevice::ReportCurrentResources() {
   ACPI_STATUS acpi_status = AcpiWalkResources(
       acpi_handle_, (char*)"_CRS",
       [](ACPI_RESOURCE* res, void* ctx) {
-        return reinterpret_cast<AcpiDevice*>(ctx)->AddResource(res);
+        return reinterpret_cast<Device*>(ctx)->AddResource(res);
       },
       this);
   if ((acpi_status != AE_NOT_FOUND) && (acpi_status != AE_OK)) {
@@ -168,7 +166,7 @@ zx_status_t AcpiDevice::ReportCurrentResources() {
   return ZX_OK;
 }
 
-zx_status_t AcpiDevice::AcpiGetPio(uint32_t index, zx::resource* out_pio) {
+zx_status_t Device::AcpiGetPio(uint32_t index, zx::resource* out_pio) {
   fbl::AutoLock<fbl::Mutex> guard{&lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
@@ -179,7 +177,7 @@ zx_status_t AcpiDevice::AcpiGetPio(uint32_t index, zx::resource* out_pio) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  const AcpiDevicePioResource& res = pio_resources_[index];
+  const DevicePioResource& res = pio_resources_[index];
 
   // Please do not use get_root_resource() in new code. See ZX-1467.
   // TODO: figure out what to pass to name here
@@ -188,7 +186,7 @@ zx_status_t AcpiDevice::AcpiGetPio(uint32_t index, zx::resource* out_pio) {
                               out_pio);
 }
 
-zx_status_t AcpiDevice::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
+zx_status_t Device::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
   fbl::AutoLock<fbl::Mutex> guard{&lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
@@ -199,7 +197,7 @@ zx_status_t AcpiDevice::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  const AcpiDeviceMmioResource& res = mmio_resources_[index];
+  const DeviceMmioResource& res = mmio_resources_[index];
   if (((res.base_address & (PAGE_SIZE - 1)) != 0) ||
       ((res.address_length & (PAGE_SIZE - 1)) != 0)) {
     zxlogf(ERROR, "acpi-bus[%s]: memory id=%d addr=0x%08x len=0x%x is not page aligned",
@@ -222,7 +220,7 @@ zx_status_t AcpiDevice::AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) {
   return ZX_OK;
 }
 
-zx_status_t AcpiDevice::AcpiMapInterrupt(int64_t which_irq, zx::interrupt* out_handle) {
+zx_status_t Device::AcpiMapInterrupt(int64_t which_irq, zx::interrupt* out_handle) {
   fbl::AutoLock<fbl::Mutex> guard{&lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
@@ -233,7 +231,7 @@ zx_status_t AcpiDevice::AcpiMapInterrupt(int64_t which_irq, zx::interrupt* out_h
     return ZX_ERR_NOT_FOUND;
   }
 
-  const AcpiDeviceIrqResource& irq = irqs_[which_irq];
+  const DeviceIrqResource& irq = irqs_[which_irq];
   uint32_t mode;
   mode = ZX_INTERRUPT_MODE_DEFAULT;
   st = ZX_OK;
@@ -279,7 +277,7 @@ zx_status_t AcpiDevice::AcpiMapInterrupt(int64_t which_irq, zx::interrupt* out_h
                                ZX_INTERRUPT_REMAP_IRQ | mode, out_handle);
 }
 
-zx_status_t AcpiDevice::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
+zx_status_t Device::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
   // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
   // will only be one BTI per device.
   ZX_ASSERT(index == 0);
@@ -293,7 +291,7 @@ zx_status_t AcpiDevice::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
   return zx::bti::create(*zx::unowned_iommu{iommu_handle}, 0, bdf, bti);
 }
 
-zx_status_t AcpiDevice::AcpiConnectSysmem(zx::channel connection) {
+zx_status_t Device::AcpiConnectSysmem(zx::channel connection) {
   fbl::AutoLock<fbl::Mutex> guard{&lock_};
   sysmem_protocol_t sysmem;
   zx_status_t st = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
@@ -303,7 +301,7 @@ zx_status_t AcpiDevice::AcpiConnectSysmem(zx::channel connection) {
   return sysmem_connect(&sysmem, connection.release());
 }
 
-zx_status_t AcpiDevice::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
+zx_status_t Device::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
   fbl::AutoLock<fbl::Mutex> guard{&lock_};
   sysmem_protocol_t sysmem;
   zx_status_t st = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
@@ -312,6 +310,8 @@ zx_status_t AcpiDevice::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connec
   }
   return sysmem_register_heap(&sysmem, heap, connection.release());
 }
+
+}  // namespace acpi
 
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
   const char* hid = nullptr;
@@ -392,7 +392,7 @@ device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
 
 zx_device_t* AcpiWalker::PublishAcpiDevice(const char* name, ACPI_HANDLE handle,
                                            ACPI_DEVICE_INFO* info) {
-  auto device = std::make_unique<AcpiDevice>(acpi_root_, handle, platform_bus_);
+  auto device = std::make_unique<acpi::Device>(acpi_root_, handle, platform_bus_);
   std::array<zx_device_prop_t, 4> props;
   if (zx_status_t status = device->DdkAdd(name, get_device_add_args(name, info, &props));
       status != ZX_OK) {
