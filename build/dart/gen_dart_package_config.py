@@ -47,7 +47,7 @@ def language_version_from_pubspec(pubspec):
             return DEFAULT_LANGUAGE_VERSION
 
         # If a format like sdk: '>=a.b' or sdk: 'a.b' is found, we'll use a.b.
-        # In all other cases we default to 2.8
+        # In all other cases we default to "2.8"
         env_sdk = parsed.get('environment', {}).get('sdk', 'any')
         match = re.search(r"^(>=)?((0|[1-9]\d*)\.(0|[1-9]\d*))", env_sdk)
         if match:
@@ -102,8 +102,7 @@ def main():
         '--input', help='Path to original package_config', required=True)
     parser.add_argument(
         '--output', help='Path to the updated package_config', required=True)
-    parser.add_argument(
-        '--root', help='Path to fuchsia root', required=True)
+    parser.add_argument('--root', help='Path to fuchsia root', required=True)
     args = parser.parse_args()
 
     sys.path += [os.path.join(args.root, 'third_party', 'pyyaml', 'lib')]

@@ -226,7 +226,9 @@ fuchsia_component("my-other-component-under-test") {
 fuchsia_test_package("my-integration-test") {
   test_components = [ ":my-test-component" ]
   deps = [ ":my-other-component-under-test" ]
-  environments = [ vim2_env ]
+  test_spec = {
+    environments = [ vim2_env ]
+  }
 }
 
 group("tests") {

@@ -1,0 +1,178 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia,
+       "flutter_dart_test_component is only available for Fuchsia targets")
+
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/internal/flutter_dart_component.gni")
+
+# Defines a component which runs tests in the flutter/dart test harness
+#
+# Bundles a set of `package:test` tests into a single Fuchsia application
+# with generated helper code to invoke the tests appropriately. The resulting
+# application can take Dart test arguments; pass --help to see full options.
+# Some options (e.g. Dart test platform selectors) are not supported.
+#
+# Note: this target is intended to be called by the corresponding
+# flutter_test_component and dart_test_component instead of being called
+# directly.
+#
+# Parameters
+#
+#   manifest (required)
+#     The path to the component manifest
+#     Type: path
+#
+#   sources (required)
+#     The list of test sources. These sources must be within the test/ directory.
+#     Type: List of paths
+#
+#   platform_name (required)
+#     One of flutter_runner or dart_runner
+#     Type: string
+#
+#   language_version (optional)
+#     Specify the Dart language version to use for this test.
+#     Defaults to "2.8".
+#
+#   component_name (optional)
+#     The name of the compnonent to test.
+#     Type: String
+#     Default: target_name
+#
+#  deps
+#  visibility
+template("flutter_dart_test_component") {
+  assert(defined(invoker.sources),
+         "flutter_dart_test_component() requires 'sources' be defined")
+  assert(defined(invoker.manifest),
+         "flutter_dart_test_component() requires 'manifest' be defined")
+  assert(defined(invoker.platform_name),
+         "flutter_dart_test_component() requires 'platform_name' be defined")
+
+  _test_files = invoker.sources
+
+  _test_package_name = string_replace(target_name, "-", "_") + "_test_package"
+
+  # Create a package containing all of the original test sources
+  _test_package_target_name = "${target_name}_test_library"
+  dart_library(_test_package_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "language_version",
+                             "deps",
+                           ])
+
+    testonly = true
+    visibility = [ ":*" ]
+
+    sources = _test_files
+    package_name = _test_package_name
+
+    package_root = "test/"
+    source_dir = "."
+    pubspec = "pubspec.yaml"
+    options_file = "analysis_options.yaml"
+  }
+
+  # Generate a main which will call all of the test targets
+  _dart_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+
+  _generate_test_main_target_name = target_name + "_test_main"
+  _generated_test_package = "${_test_package_name}_generated"
+  _generated_package_root =
+      "${_dart_gen_dir}/${target_name}/${_generated_test_package}"
+  _generated_test_main = "${_generated_package_root}/lib/main.dart"
+
+  action(_generate_test_main_target_name) {
+    script = "//build/flutter/internal/gen_test_component_main.py"
+    outputs = [ _generated_test_main ]
+    sources = []
+
+    args = [
+      "--out",
+      rebase_path(_generated_test_main, root_build_dir),
+      "--package",
+      _test_package_name,
+    ]
+    foreach(_source, _test_files) {
+      args += [
+        "--source",
+        _source,
+      ]
+
+      # The source needs to be added relative to the test/ directory since that
+      # is where the build system expects the file to exist whereas the dart
+      # compiler expects the source to be within the test directory since we are
+      # using test/ as the package root.
+      sources += [ "test/${_source}" ]
+    }
+
+    testonly = true
+    visibility = [ ":*" ]
+  }
+
+  # Create a package containing the main
+  _generated_package_target_name = "${target_name}_test_library_generated"
+  dart_library(_generated_package_target_name) {
+    forward_variables_from(invoker, [ "language_version" ])
+
+    testonly = true
+
+    visibility = [ ":*" ]
+
+    sources = [ "main.dart" ]
+    package_name = _generated_test_package
+
+    package_root = _generated_package_root
+    pubspec = "pubspec.yaml"
+    options_file = "analysis_options.yaml"
+
+    # speed up compilation times by skipping these checks
+    disable_analysis = true
+    sources_required = false
+
+    deps = [
+      ":$_test_package_target_name",
+      "//topaz/lib/fuchsia_test_helper",
+    ]
+    non_dart_deps = [ ":$_generate_test_main_target_name($target_toolchain)" ]
+  }
+
+  # TODO(57577) All tests are currently executing in the dart_component because
+  # the flutter runner is not able to run them. This is the legacy behavior so
+  # nothing has regressed but we should update this to switch based on the
+  # type of test we are running.
+  not_needed(invoker, [ "platform_name" ])
+
+  flutter_dart_component(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "visibility",
+                             "language_version",
+                             "component_name",
+                           ])
+
+    main_package = _generated_test_package
+    main_dart = "main.dart"
+
+    platform_name = dart_platform_name
+    runtime_meta = "//build/dart/meta/jit_runtime"
+
+    testonly = true
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    deps += [
+      ":$_generated_package_target_name",
+      "//topaz/runtime/dart_runner:dart_jit_runner",
+    ]
+  }
+}

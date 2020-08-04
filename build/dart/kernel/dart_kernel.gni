@@ -22,7 +22,7 @@ dart_platform_name = "dart_runner"
 #    Path to the kernel manifest
 #    Type: Path
 template("_convert_kernel_manifest") {
-  assert(defined(invoker.manifest), "dart_kerel() requires a manifest")
+  assert(defined(invoker.manifest), "dart_kernel() requires a manifest")
 
   action(target_name) {
     forward_variables_from(invoker,
@@ -132,6 +132,11 @@ template("dart_kernel2") {
 
     _convert_target_name = "${target_name}_convert_kernel_manifest"
     _convert_kernel_manifest(_convert_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       manifest = _kernel_manifest
 
       # must depend on the kernel target so we have the kernel manifest
@@ -257,6 +262,11 @@ template("dart_kernel2") {
   }
 
   group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     deps = _group_deps
   }
 }

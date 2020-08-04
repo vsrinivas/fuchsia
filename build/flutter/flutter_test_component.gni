@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia,
+       "flutter_test_component is only available for Fuchsia targets")
+
+import("//build/dart/kernel/dart_kernel.gni")  # for flutter_platform_name
+import("//build/flutter/internal/flutter_dart_test_component.gni")
+
+# Defines a component which runs tests in the flutter test harness
+#
+# Bundles a set of `package:test` tests into a single Fuchsia component
+# with generated helper code to invoke the tests appropriately. The resulting
+# application can take Dart test arguments; pass --help to see full options.
+#
+# ```
+# dart_library("lib") {
+#   package_name = "my_library"
+#   sources = [
+#     "foo.dart",
+#     "bar.dart"
+#   ]
+# }
+#
+# flutter_test_component("my-test-component") {
+#   manifest = "meta/my-test-component.cmx"
+#   sources = [
+#     "foo_test.dart",
+#     "bar_test.dart",
+#   ]
+#
+#   deps = [
+#     ":lib",
+#     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+#     "//third_party/dart-pkg/pub/test",
+#   ]
+# }
+#
+# fuchsia_test_package("my-integration-test") {
+#   test_components = [ ":my-test-component" ]
+# }
+# ```
+#
+# Parameters
+#
+#   manifest (required)
+#     The path to the component manifest
+#     Type: path
+#
+#   sources (required)
+#     The list of test sources. These sources must be within the test/ directory.
+#     Type: List of paths
+#
+#   language_version (optional)
+#     Specify the Dart language version to use for this test.
+#     Defaults to "2.8".
+#
+#   component_name (optional)
+#     The name of the compnonent to test.
+#     Type: String
+#     Default: target_name
+#
+#  deps
+#  visibility
+template("flutter_test_component") {
+  flutter_dart_test_component(target_name) {
+    forward_variables_from(invoker, "*")
+    platform_name = flutter_platform_name
+  }
+}

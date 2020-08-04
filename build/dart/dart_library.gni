@@ -44,7 +44,7 @@ declare_args() {
 #     Specify the Dart language version to use for this package.
 #     If language_version is not specified but pubspec is then the language
 #     version will be read from the pubspec. If no language version can be
-#     determined then we will default to version 2.8.
+#     determined then we will default to version "2.8".
 #     It is recommended to specify a language_version if it is well known
 #     instead of relying on the pubspec file since this will improve compilation
 #     times.
