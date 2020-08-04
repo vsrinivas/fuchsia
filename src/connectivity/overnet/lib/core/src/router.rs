@@ -1288,7 +1288,9 @@ mod tests {
         let mut frame = [0u8; 2048];
         while let Some(n) = sender.next_send(&mut frame).await? {
             log::trace!("got frame {} bytes", n);
-            receiver.received_packet(&mut frame[..n]).await?;
+            if let Err(e) = receiver.received_packet(&mut frame[..n]).await {
+                log::warn!("error receiving packet: {:?}", e);
+            }
         }
         Ok(())
     }
