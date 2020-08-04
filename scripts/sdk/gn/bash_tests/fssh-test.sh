@@ -18,17 +18,19 @@ BT_INIT_TEMP_DIR() {
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
-  
+
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
+
+  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
 }
 
 # Sets up a device-finder mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
 set_up_device_finder() {
-  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_side_effects" <<"SETVAR"
+  cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"SETVAR"
 while (("$#")); do
   case "$1" in
   --local)
@@ -115,8 +117,8 @@ TEST_fssh_by_name() {
 }
 
 TEST_fssh_name_not_found() {
-  echo 2 > "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_status"
-  echo "2020/02/25 07:42:59 no devices with domain matching 'name-not-found'" >  "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.stderr"
+  echo 2 > "${MOCKED_DEVICE_FINDER}.mock_status"
+  echo "2020/02/25 07:42:59 no devices with domain matching 'name-not-found'" >  "${MOCKED_DEVICE_FINDER}.stderr"
 
   # Add the ssh mock to the path so fssh uses it vs. the real ssh.
   export PATH="${BT_TEMP_DIR}/isolated_path_for:${PATH}"
@@ -134,7 +136,8 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/tools/device-finder
+  scripts/sdk/gn/base/tools/x64/device-finder
+  scripts/sdk/gn/base/tools/arm64/device-finder
   isolated_path_for/ssh
 )
 

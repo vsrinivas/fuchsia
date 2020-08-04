@@ -53,7 +53,7 @@ template("_cmc_tool") {
                              "visibility",
                            ])
     script = "${fuchsia_sdk}/build/gn_run_binary.py"
-    _cmc_tool_path = "${fuchsia_sdk}/tools/cmc"
+    _cmc_tool_path = "${fuchsia_tool_dir}/cmc"
 
     assert(defined(invoker.inputs), "inputs is a required parameter.")
     assert(defined(invoker.outputs), "outputs is a required parameter.")

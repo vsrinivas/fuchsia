@@ -132,7 +132,7 @@ template("fidl_library") {
 
     rebased_response_file = rebase_path(_response_file, root_build_dir)
     args = [
-      rebase_path("${fuchsia_sdk}/tools/fidlc", root_build_dir),
+      rebase_path("${fuchsia_tool_dir}/fidlc", root_build_dir),
       "@$rebased_response_file",
     ]
   }
@@ -156,7 +156,7 @@ template("fidl_library") {
 
     script = "${fuchsia_sdk}/build/gn_run_binary.py"
     args = [
-      rebase_path("${fuchsia_sdk}/tools/fidlgen", root_build_dir),
+      rebase_path("${fuchsia_tool_dir}/fidlgen", root_build_dir),
       "-generators",
       "cpp",
       "-json",

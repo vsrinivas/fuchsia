@@ -15,7 +15,6 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 
 usage () {
@@ -49,4 +48,4 @@ esac
 shift
 done
 
-"${FUCHSIA_SDK_PATH}/tools/pm" publish  -a -r "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" -f "${POSITIONAL[@]}";
+"$(get-fuchsia-sdk-tools-dir)/pm" publish  -a -r "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" -f "${POSITIONAL[@]}";

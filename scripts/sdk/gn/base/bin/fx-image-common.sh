@@ -16,11 +16,11 @@ if [[ "${FUCHSIA_SDK_PATH}" == "" ]]; then
 fi
 
 # Variables expected by fx emu
-ZIRCON_TOOLS_DIR="${FUCHSIA_SDK_PATH}/tools"
+ZIRCON_TOOLS_DIR="$(get-fuchsia-sdk-tools-dir)"
 # shellcheck disable=SC2034
 FUCHSIA_DIR="${FUCHSIA_SDK_PATH}/bin"
 # shellcheck disable=SC2034
-HOST_OUT_DIR="${FUCHSIA_SDK_PATH}/tools"
+HOST_OUT_DIR="$(get-fuchsia-sdk-tools-dir)"
 # shellcheck disable=SC2034
 IMAGE_ZIRCONA_ZBI="zircon-a.zbi"
 # shellcheck disable=SC2034

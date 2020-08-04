@@ -112,3 +112,26 @@ gn-test-check-mock-partial() {
   BT_EXPECT false "Could not find expected:\n${expected[*]}\nin arguments:\n${BT_MOCK_ARGS[*]}"
   return 1
 }
+
+
+# Returns the machine architecture specific subdirectory for tools in the sdk.
+function gn-test-tools-subdir {
+  local machine
+  machine="$(uname -m)"
+  local dir
+  case "${machine}" in
+  x86_64)
+    dir="tools/x64"
+    ;;
+  aarch64*)
+    dir="tools/arm64"
+    ;;
+  armv8*)
+    dir="tools/arm64"
+    ;;
+  *)
+    dir="tools/${machine}"
+    ;;
+  esac
+  echo "${dir}"
+}

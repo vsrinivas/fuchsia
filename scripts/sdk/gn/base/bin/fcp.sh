@@ -96,14 +96,13 @@ fi
 
 # Check for core SDK being present
 if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
-  fx-error "Fuchsia Core SDK not found at ${FUCHSIA_SDK_PATH}."
+  fx-error "Fuchsia SDK not found at ${FUCHSIA_SDK_PATH}."
   exit 2
 fi
 
 # Get the device IP address if not specified.
 if [[ "${target_addr}" == "" ]]; then
-  # explicitly pass the sdk here since the name filter arg must be $2.
-  target_addr=$(get-device-ip-by-name "${FUCHSIA_SDK_PATH}" "${DEVICE_NAME_FILTER}")
+  target_addr=$(get-device-ip-by-name "${DEVICE_NAME_FILTER}")
   if [[ ! "$?" || -z "${target_addr}" ]]; then
     fx-error "Error finding device"
     exit 2

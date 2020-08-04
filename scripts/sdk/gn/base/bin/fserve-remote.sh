@@ -43,7 +43,6 @@ START_SERVE=1
 REMOTE_HOST=""
 REMOTE_DIR=""
 DEVICE_NAME="$(get-fuchsia-property device-name)"
-FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 BUCKET="$(get-fuchsia-property bucket)"
 IMAGE="$(get-fuchsia-property image)"
 
@@ -113,7 +112,7 @@ if [[ "${DEVICE_NAME}" == "" ]]; then
     DEVICE_NAME="$(get-device-name)"
 fi
 # Determine the local device name/address to use.
-if ! DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "${DEVICE_NAME}"); then
+if ! DEVICE_IP=$(get-device-ip-by-name "${DEVICE_NAME}"); then
   fx-error "unable to discover device. Is the target up?"
   exit 1
 fi

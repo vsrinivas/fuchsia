@@ -18,6 +18,14 @@ declare_args() {
   # for some targets in order to cause a rebuild when the version of the
   # SDK is changed.
   fuchsia_sdk_manifest_file = "$fuchsia_sdk/meta/manifest.json"
+
+  # fuchsia_tool_dir is use to specify the directory in the SDK to locate tools for the
+  # host cpu architecture. If the host_cpu is not recognized, then tool dir
+  # defaults to x64.
+  fuchsia_tool_dir = "$fuchsia_sdk/tools/x64"
+  if (host_cpu == "x64" || host_cpu == "arm64") {
+    fuchsia_tool_dir = "${fuchsia_sdk}/tools/${host_cpu}"
+  }
 }
 
 if (fuchsia_sdk_id == "") {

@@ -32,7 +32,7 @@ EOF
 # Sets up a device-finder mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
 set_up_device_finder() {
-  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_side_effects" <<"SETVAR"
+  cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"SETVAR"
 while (("$#")); do
   case "$1" in
   --local)
@@ -121,13 +121,13 @@ TEST_fserve_starts_package_server() {
   BT_EXPECT "${FSERVE_CMD}" --image generic-x64 > "${BT_TEMP_DIR}/fserve_starts_package_server.txt" 2>&1
 
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
+  source "${MOCKED_PM}.mock_state"
 
-  expected=("${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm" serve -repo "${FUCHSIA_WORK_DIR}/packages/amber-files" -l ":8083" )
+  expected=("${MOCKED_PM}" serve -repo "${FUCHSIA_WORK_DIR}/packages/amber-files" -l ":8083" )
   gn-test-check-mock-args "${expected[@]}"
 
   # Verify that pm was only run once.
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state.1"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${MOCKED_PM}.mock_state.1"
 }
 
 # Verifies that the package server has been correctly registered with the
@@ -226,7 +226,7 @@ TEST_fserve_with_props() {
    set_up_ssh
   set_up_device_finder
   set_up_gsutil
-  
+
   BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
 
   BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
@@ -253,19 +253,24 @@ BT_FILE_DEPS=(
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/bin/gsutil
-  scripts/sdk/gn/base/tools/device-finder
-  scripts/sdk/gn/base/tools/pm
+  scripts/sdk/gn/base/tools/x64/device-finder
+  scripts/sdk/gn/base/tools/arm64/device-finder
+  scripts/sdk/gn/base/tools/x64/pm
+  scripts/sdk/gn/base/tools/arm64/pm
   isolated_path_for/ssh
 )
 
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
-  
+
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
+
+  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
+  MOCKED_PM="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/pm"
 }
 
 BT_INIT_TEMP_DIR() {

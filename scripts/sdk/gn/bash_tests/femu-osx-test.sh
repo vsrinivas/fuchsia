@@ -76,7 +76,7 @@ TEST_femu_osx_networking() {
 
   # Verify that fvm resized the disk file by 2x from the input 1024 to 2048.
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/fvm.mock_state"
+  source "${MOCKED_FVM}.mock_state"
   gn-test-check-mock-args _ANY_ _ANY_ extend --length 2048 --length-is-lowerbound
 
   # Check that fpave.sh was called to download the needed system images
@@ -91,7 +91,7 @@ TEST_femu_osx_networking() {
 
   # Verify that zbi was called to add the authorized_keys
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/zbi.mock_state"
+  source "${MOCKED_ZBI}.mock_state"
   gn-test-check-mock-args _ANY_ -o _ANY_ "${FUCHSIA_WORK_DIR}/image/zircon-a.zbi" --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify some of the arguments passed to the emulator binary
@@ -163,8 +163,10 @@ BT_MOCKED_TOOLS=(
   test-home/.fuchsia/emulator/aemu-mac-amd64-"${AEMU_LABEL}"/emulator
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fserve.sh
-  scripts/sdk/gn/base/tools/zbi
-  scripts/sdk/gn/base/tools/fvm
+  scripts/sdk/gn/base/tools/x64/zbi
+  scripts/sdk/gn/base/tools/x64/fvm
+  scripts/sdk/gn/base/tools/arm64/zbi
+  scripts/sdk/gn/base/tools/arm64/fvm
   _isolated_path_for/ip
   # Create fake "stty sane" command so that fx emu test succeeds when < /dev/null is being used
   _isolated_path_for/stty
@@ -178,7 +180,7 @@ BT_SET_UP() {
 
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
-  
+
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
@@ -202,6 +204,10 @@ BT_SET_UP() {
   # Create a small disk image to avoid downloading, and test if it is doubled in size as expected
   mkdir -p "${FUCHSIA_WORK_DIR}/image"
   dd if=/dev/zero of="${FUCHSIA_WORK_DIR}/image/storage-full.blk" bs=1024 count=1  > /dev/null 2>/dev/null
+
+  MOCKED_FVM="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fvm"
+  MOCKED_ZBI="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/zbi"
+
 }
 
 BT_INIT_TEMP_DIR() {

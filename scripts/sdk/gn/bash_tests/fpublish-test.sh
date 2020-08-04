@@ -18,7 +18,7 @@ TEST_fpublish() {
 
   # Verify that pm serve was run correctly.
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
+  source "${MOCKED_PM}.mock_state"
   local PM_ARGS=("${BT_MOCK_ARGS[@]:1}")
 
   # Expected commands to be run by fpublish.sh.
@@ -40,7 +40,7 @@ TEST_fpublish() {
   done
 
   # Verify that pm was only run once.
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state.1"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${MOCKED_PM}.mock_state.1"
 }
 
 # Test initialization.
@@ -52,17 +52,21 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/tools/pm
+  scripts/sdk/gn/base/tools/x64/pm
+  scripts/sdk/gn/base/tools/arm64/pm
 )
 
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
-  
+
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
+
+  MOCKED_PM="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/pm"
+
 }
 
 BT_RUN_TESTS "$@"

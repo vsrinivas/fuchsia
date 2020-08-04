@@ -15,7 +15,6 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 
 DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
@@ -202,8 +201,7 @@ fi
 
 # Get the device IP address.  If we can't find it, it could be at the zedboot
 # page, so it is not fatal.
-# Explicitly pass the sdk path to match the device_filter.
-DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
+DEVICE_IP=$(get-device-ip-by-name "$DEVICE_NAME_FILTER")
 if [[ "$?" && -n "$DEVICE_IP" ]]; then
     SSH_ARGS+=( "${DEVICE_IP}" dm reboot-recovery )
     if ! ssh-cmd "${SSH_ARGS[@]}"; then
@@ -216,7 +214,7 @@ fi
 # The prebuilt images do not have a bootserver for mac, so overwrite the bootserver with the
 # mac bootserver. See fxb/48346.
 if is-mac; then
-  cp -f "${FUCHSIA_SDK_PATH}/tools/bootserver" "${FUCHSIA_IMAGE_WORK_DIR}/image/bootserver.exe.linux-x64"
+  cp -f "$(get-fuchsia-sdk-tools-dir)/bootserver" "${FUCHSIA_IMAGE_WORK_DIR}/image/bootserver.exe.linux-x64"
 fi
 
 

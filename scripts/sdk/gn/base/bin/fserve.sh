@@ -16,7 +16,6 @@ SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 # shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 FUCHSIA_BUCKET="$(get-fuchsia-property bucket)"
 if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
@@ -208,7 +207,7 @@ fi
 if [[ "${DEVICE_IP_ADDR}" != "" ]]; then
   DEVICE_IP="${DEVICE_IP_ADDR}"
 else
-  DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
+  DEVICE_IP=$(get-device-ip-by-name "$DEVICE_NAME_FILTER")
 fi
 
 if [[ ! "$?" || -z "$DEVICE_IP" ]]; then
@@ -244,7 +243,7 @@ echo "** Starting package server in the background**"
 # `:port` syntax is valid for Go programs that intend to serve on every
 # interface on a given port. For example, if $FUCHSIA_SERVER_PORT is 54321,
 # this is similar to serving on [::]:54321 or 0.0.0.0:54321.
-"${FUCHSIA_SDK_PATH}/tools/pm" serve -repo "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" -l ":${FUCHSIA_SERVER_PORT}"&
+"$(get-fuchsia-sdk-tools-dir)/pm" serve -repo "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" -l ":${FUCHSIA_SERVER_PORT}"&
 
 SSH_ARGS=()
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then

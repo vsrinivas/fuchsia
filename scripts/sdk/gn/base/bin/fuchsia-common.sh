@@ -107,7 +107,6 @@ function ssh-cmd {
 }
 
 function get-device-ip {
-  # $1 is the SDK_PATH (optional. defaults to get-fuchsia-sdk-dir)
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
   local device_addr
@@ -116,12 +115,11 @@ function get-device-ip {
     echo "${device_addr}"
     return 0
   else
-    "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -ipv4=false
+    "$(get-fuchsia-sdk-tools-dir)/device-finder" list -netboot -device-limit 1 -ipv4=false
   fi
 }
 
 function get-device-name {
-  # $1 is the SDK_PATH (optional. defaults to get-fuchsia-sdk-dir)
   # Check for a device name being configured.
   local device_name
   if ! device_name="$(get-fuchsia-property device-name)"; then
@@ -131,7 +129,7 @@ function get-device-name {
     echo "${device_name}"
     return 0
   else
-    if device_name="$("${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" list -netboot -device-limit 1 -full)"; then
+    if device_name="$("$(get-fuchsia-sdk-tools-dir)/device-finder" list -netboot -device-limit 1 -full)"; then
       echo "${device_name}"  | cut -d' '  -f2
     fi
   fi
@@ -142,33 +140,28 @@ function get-device-ip-by-name {
   # If no such device is found, this function returns with a non-zero status
   # code.
 
-  # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.
-  # $2 is the hostname of the Fuchsia device. If $2 is empty, this function
+  # $1 is the hostname of the Fuchsia device. If $1 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
 
-  if [[ "${#}" -ge 2 &&  -n "$2" ]]; then
+  if [[ "${#}" -eq 1 &&  -n "$1" ]]; then
     # There should typically only be one device that matches the nodename
     # but we add a device-limit to speed up resolution by exiting when the first
     # candidate is found.
-    "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" resolve -device-limit 1 -ipv4=false -netboot "${2}"
+    "$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false -netboot "${1}"
   else
-    if [[ "${#}" -ge 1 && -n "$1" ]]; then
-      get-device-ip "$1"
-    else
-      get-device-ip
-    fi
+    #shellcheck disable=SC2119
+    get-device-ip
   fi
 }
 
 function get-host-ip {
-  # $1 is the SDK_PATH, if specified else get-fuchsia-sdk-dir value is used.
-  # $2 is the hostname of the Fuchsia device. If $2 is empty, this function
+  # $1 is the hostname of the Fuchsia device. If $1 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
   local DEVICE_NAME
-  if [[ "${#}" -ge 2 &&  "${2}" != "" ]]; then
-    DEVICE_NAME="${2}"
+  if [[ "${#}" -eq 1 &&  "${1}" != "" ]]; then
+    DEVICE_NAME="${1}"
   else
-    DEVICE_NAME="$(get-device-name "${1-$(get-fuchsia-sdk-dir)}")"
+    DEVICE_NAME="$(get-device-name)"
   fi
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
@@ -178,7 +171,7 @@ function get-host-ip {
   #   the development host with a different scope than vice versa), we can
   #   strip this from the IPv6 result. This is reliable as long as the Fuchsia
   #   device only needs link-local networking on one interface.
-  "${1-$(get-fuchsia-sdk-dir)}/tools/device-finder" resolve -local -ipv4=false "${DEVICE_NAME}" | head -1 | cut -d '%' -f1
+  "$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -local -ipv4=false "${DEVICE_NAME}" | head -1 | cut -d '%' -f1
 }
 
 function get-sdk-version {
@@ -435,4 +428,26 @@ function get-fuchsia-auth-keys-file {
 function get-fuchsia-sshconfig-file {
   check-fuchsia-ssh-config
   echo "$(get-fuchsia-sdk-data-dir)/sshconfig"
+}
+
+function get-fuchsia-sdk-tools-dir {
+  local machine
+  machine="$(uname -m)"
+  local dir
+  case "${machine}" in
+  x86_64)
+    dir="$(get-fuchsia-sdk-dir)/tools/x64"
+    ;;
+  aarch64*)
+    dir="$(get-fuchsia-sdk-dir)/tools/arm64"
+    ;;
+  armv8*)
+    dir="$(get-fuchsia-sdk-dir)/tools/arm64"
+    ;;
+  *)
+    dir="$(get-fuchsia-sdk-dir)/tools/${machine}"
+    ;;
+  esac
+
+  echo "${dir}"
 }

@@ -13,8 +13,6 @@ readonly MY_SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2
 # shellcheck disable=SC1090
 source "${MY_SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
-readonly FUCHSIA_SDK_PATH="$(get-fuchsia-sdk-dir)"
-
 function usage {
   echo "Usage: $0"
   echo "  [--device-name <device hostname>]"
@@ -71,8 +69,7 @@ target_device_ip="${DEVICE_IP}"
 
 # Get the device IP address.
 if [[ "${DEVICE_IP}" == "" ]]; then
-  # explicitly pass the sdk dir here.
-  target_device_ip=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
+  target_device_ip=$(get-device-ip-by-name "$DEVICE_NAME_FILTER")
   if [[ ! "$?" || -z "$target_device_ip" ]]; then
     fx-error "Error finding device"
     exit 2

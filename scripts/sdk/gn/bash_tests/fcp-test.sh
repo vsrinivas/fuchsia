@@ -22,7 +22,7 @@ INPUT
 # Sets up a device-finder mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
 setup_device_finder() {
-  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_side_effects" <<"EOF"
+  cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
 while (("$#")); do
   case "$1" in
   --local)
@@ -84,7 +84,7 @@ get \"/config/build-info/version\" \"version.txt\""
 TEST_fcp_with_props() {
   setup_sftp
   setup_device_finder
-  
+
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fconfig.sh" set device-ip "192.1.1.2"
 
  # Run command.
@@ -106,20 +106,24 @@ BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
+
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/tools/device-finder
+  "scripts/sdk/gn/base/tools/x64/device-finder"
+  "scripts/sdk/gn/base/tools/arm64/device-finder"
   _isolated_path_for/sftp
 )
 
 BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
-  
+
   # Make "home" directory in the test dir so the paths are stable."
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
+
+  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
 }
 
 BT_RUN_TESTS "$@"

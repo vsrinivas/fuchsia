@@ -91,7 +91,7 @@ FDT_GN_SSH="$(command -v ssh)"
 export FDT_GN_SSH
 FDT_SSH_CONFIG="$(get-fuchsia-sshconfig-file)"
 export FDT_SSH_CONFIG
-FDT_GN_DEVFIND="$(get-fuchsia-sdk-dir)/tools/device-finder"
+FDT_GN_DEVFIND="$(get-fuchsia-sdk-tools-dir)/device-finder"
 export FDT_GN_DEVFIND
 export FDT_DEBUG="true"
 if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then

@@ -8,29 +8,47 @@
 # shellcheck disable=SC2034
 BT_FILE_DEPS=(
   "scripts/sdk/gn/base/bin/fuchsia-common.sh"
+  "scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
   "scripts/sdk/gn/testdata/meta/manifest.json"
 )
 
 MOCKED_SSH_BIN="mocked/ssh"
-MOCKED_DEVICE_FINDER="scripts/sdk/gn/base/tools/device-finder"
 MOCKED_GSUTIL="mocked/gsutil"
 MOCKED_CIPD="mocked/cipd"
 MOCKED_PGREP="mocked/pgrep"
 MOCKED_KILL="mocked/kill"
+MOCKED_UNAME="mocked/uname"
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
    "${MOCKED_SSH_BIN}"
-   "${MOCKED_DEVICE_FINDER}"
+   "scripts/sdk/gn/base/tools/x64/device-finder"
+   "scripts/sdk/gn/base/tools/arm64/device-finder"
    "${MOCKED_GSUTIL}"
    "${MOCKED_CIPD}"
    "${MOCKED_PGREP}"
    "${MOCKED_KILL}"
+   "${MOCKED_UNAME}"
 )
 
-BT_SET_UP() {
+UNAME_BIN="$(command -v uname)"
 
-    cat > "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_side_effects" <<"EOF"
+
+BT_SET_UP() {
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+
+  # Set the path to the mocked device finder before adding the mocks to the path.
+  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
+
+
+  cat > "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_side_effects" <<"EOF"
       echo "$@"
+EOF
+
+  # set up the uname mock to call the real uname by default.
+  # tests will override the side effects for it as needed.
+  cat > "${BT_TEMP_DIR}/${MOCKED_UNAME}.mock_side_effects" << EOF
+      "${UNAME_BIN}" "\$@"
 EOF
 
   # Add mocked system tools to the path.
@@ -61,10 +79,9 @@ TEST_data-dir-by-env() {
   export FUCHSIA_SDK_DATA_DIR="${BT_TEMP_DIR}/data-dir-by-env"
   mkdir -p "${FUCHSIA_SDK_DATA_DIR}"
 
-    BT_ASSERT_FUNCTION_EXISTS get-fuchsia-sshconfig-file
+  BT_ASSERT_FUNCTION_EXISTS get-fuchsia-sshconfig-file
   FILE_LOCATION="$(get-fuchsia-sshconfig-file)"
   BT_EXPECT_EQ "${FILE_LOCATION}" "${FUCHSIA_SDK_DATA_DIR}/sshconfig"
-
 }
 
 TEST_fx-warn() {
@@ -98,8 +115,8 @@ EOF
 
 
 TEST_get-device-name() {
-     BT_ASSERT_FUNCTION_EXISTS get-device-name
-    cat > "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
+    BT_ASSERT_FUNCTION_EXISTS get-device-name
+    cat > "${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
       echo fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked
 EOF
     DEVICE_NAME="$(get-device-name)"
@@ -109,10 +126,10 @@ EOF
 TEST_get-device-ip-by-name() {
     BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
     MOCK_DEVICE="atom-device-name-mocked"
-    get-device-ip-by-name "$(get-fuchsia-sdk-dir)" "${MOCK_DEVICE}"
+    get-device-ip-by-name "${MOCK_DEVICE}"
     # shellcheck disable=SC1090
-    source "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_state"
-    EXPECTED_DEVICE_FINDER_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}" "resolve" "-device-limit" "1" "-ipv4=false" "-netboot" "${MOCK_DEVICE}")
+    source "${MOCKED_DEVICE_FINDER}.mock_state"
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "resolve" "-device-limit" "1" "-ipv4=false" "-netboot" "${MOCK_DEVICE}")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
@@ -120,8 +137,8 @@ TEST_get-device-ip-by-name-no-args() {
     BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
     BT_EXPECT get-device-ip-by-name > /dev/null
     # shellcheck disable=SC1090
-    source "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_state"
-    EXPECTED_DEVICE_FINDER_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
+    source "${MOCKED_DEVICE_FINDER}.mock_state"
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
@@ -130,14 +147,14 @@ TEST_get-device-ip() {
     MOCK_DEVICE="atom-device-name-mocked"
     BT_EXPECT get-device-ip
     # shellcheck disable=SC1090
-    source "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_state"
-    EXPECTED_DEVICE_FINDER_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
+    source "${MOCKED_DEVICE_FINDER}.mock_state"
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-netboot" "-device-limit" "1" "-ipv4=false")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
 TEST_get-host-ip-any() {
-     BT_ASSERT_FUNCTION_EXISTS get-host-ip
-    cat > "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
+    BT_ASSERT_FUNCTION_EXISTS get-host-ip
+    cat > "${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
     if [[ "${1}" == list ]]; then
       echo "fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked"
     else
@@ -147,13 +164,13 @@ EOF
 
     HOST_IP="$(get-host-ip)"
     # shellcheck disable=SC1090
-    source  "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_state.1"
-    expected_cmd_line=( "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}" list -netboot -device-limit 1 -full )
+    source  "${MOCKED_DEVICE_FINDER}.mock_state.1"
+    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" list -netboot -device-limit 1 -full )
     BT_EXPECT_EQ "${expected_cmd_line[*]}" "${BT_MOCK_ARGS[*]}"
 
     # shellcheck disable=SC1090
-    source  "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_state.2"
-    expected_cmd_line=( "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}" resolve -local "-ipv4=false" atom-device-name-mocked )
+    source  "${MOCKED_DEVICE_FINDER}.mock_state.2"
+    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" resolve -local "-ipv4=false" atom-device-name-mocked )
     BT_EXPECT_EQ "${expected_cmd_line[*]}" "${BT_MOCK_ARGS[*]}"
 
     BT_EXPECT_EQ  "${HOST_IP}" "fe80::4600:fff:fefe:b555"
@@ -161,14 +178,14 @@ EOF
 
 TEST_get-host-ip() {
      BT_ASSERT_FUNCTION_EXISTS get-host-ip
-    cat > "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
+    cat > "${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
       echo "fe80::4600:fff:fefe:b555%enx010101010101"
 EOF
 
-    HOST_IP="$(get-host-ip "$(get-fuchsia-sdk-dir)" "atom-device-name-mocked")"
+    HOST_IP="$(get-host-ip "atom-device-name-mocked")"
     # shellcheck disable=SC1090
-    source  "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}.mock_state"
-    expected_cmd_line=( "${BT_TEMP_DIR}/${MOCKED_DEVICE_FINDER}" resolve -local "-ipv4=false" "atom-device-name-mocked" )
+    source  "${MOCKED_DEVICE_FINDER}.mock_state"
+    expected_cmd_line=( "${MOCKED_DEVICE_FINDER}" resolve -local "-ipv4=false" "atom-device-name-mocked" )
     BT_EXPECT_EQ "${expected_cmd_line[*]}" "${BT_MOCK_ARGS[*]}"
     BT_EXPECT_EQ  "${HOST_IP}" "fe80::4600:fff:fefe:b555"
 }
@@ -332,6 +349,38 @@ TEST_migrate_ssh_key() {
 
   local keyfile="${HOME}/.ssh/fuchsia_ed25519"
   BT_ASSERT_FILE_CONTAINS "${keyfile}" "legacy private key"
+}
+
+TEST_get-fuchsia-sdk-tools-dir() {
+  BT_ASSERT_FUNCTION_EXISTS get-fuchsia-sdk-tools-dir
+     cat > "${BT_TEMP_DIR}/${MOCKED_UNAME}.mock_side_effects" <<"EOF"
+      echo "x86_64"
+EOF
+
+  local dir
+  dir="$(get-fuchsia-sdk-tools-dir)"
+  BT_EXPECT_EQ "${dir}" "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/x64"
+
+  cat > "${BT_TEMP_DIR}/${MOCKED_UNAME}.mock_side_effects" <<"EOF"
+      echo "aarch64"
+EOF
+
+  dir="$(get-fuchsia-sdk-tools-dir)"
+  BT_EXPECT_EQ "${dir}" "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/arm64"
+
+  cat > "${BT_TEMP_DIR}/${MOCKED_UNAME}.mock_side_effects" <<"EOF"
+      echo "armv8b"
+EOF
+
+  dir="$(get-fuchsia-sdk-tools-dir)"
+  BT_EXPECT_EQ "${dir}" "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/arm64"
+
+  cat > "${BT_TEMP_DIR}/${MOCKED_UNAME}.mock_side_effects" <<"EOF"
+      echo "custom-cpu"
+EOF
+
+  dir="$(get-fuchsia-sdk-tools-dir)"
+  BT_EXPECT_EQ "${dir}" "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/custom-cpu"
 }
 
 BT_RUN_TESTS "$@"
