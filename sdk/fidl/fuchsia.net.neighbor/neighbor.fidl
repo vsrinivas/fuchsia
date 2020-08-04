@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// # Overview of fuchsia.net.neighbor
-///
 /// The neighbor table helps decide where to send IP packets. It allows for the
 /// translation between IP addresses and MAC addresses.
 ///
@@ -17,7 +15,7 @@
 ///  * See [`fuchsia.net.neighbor/Controller`] for adding static neighbor table
 ///    entries, removing entries, and updating interface configuration.
 ///
-/// ## Important Concepts
+/// # Important Concepts
 ///
 /// [`InterfaceID`] is an identifier for a network interface. Identifiers are
 /// assigned and managed by the networking stack. They are the same interface
@@ -31,14 +29,14 @@
 /// implementations to operate over links with widely varying performance
 /// characteristics.
 ///
-/// ## Privacy Considerations
+/// # Privacy Considerations
 ///
 /// The Neighbor API deals with MAC addresses, which are device identifiers and
 /// should not be exposed to most applications. There are separate protocols for
 /// inspecting and modifying the neighbor table; this is done to protect
 /// sensitive data.
 ///
-/// ## Security Considerations
+/// # Security Considerations
 ///
 /// The Neighbor API enables clients to view and manipulate the neighbor table,
 /// which should both be privileged actions and granted only to trusted
