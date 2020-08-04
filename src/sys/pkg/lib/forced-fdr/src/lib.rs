@@ -104,12 +104,12 @@ async fn run(fdr: ForcedFDR) -> Result<(), Error> {
 
     let channel_indices = get_channel_indices(&fdr).context("Channel indices not available")?;
 
-    if !is_channel_in_whitelist(&channel_indices, &current_channel) {
-        return Err(format_err!("Not in whitelist"));
+    if !is_channel_in_allowlist(&channel_indices, &current_channel) {
+        return Err(format_err!("Not in forced FDR allowlist"));
     }
 
     let channel_index = get_channel_index(&channel_indices, &current_channel)
-        .ok_or(format_err!("Not in whitelist."))?;
+        .ok_or(format_err!("Not in forced FDR allowlist."))?;
 
     let device_index = match get_device_index(&fdr) {
         Ok(index) => index,
@@ -153,8 +153,8 @@ fn get_device_index(fdr: &ForcedFDR) -> Result<i32, Error> {
     Ok(i32::from_str(&content)?)
 }
 
-fn is_channel_in_whitelist(whitelist: &HashMap<String, i32>, channel: &String) -> bool {
-    whitelist.contains_key(channel)
+fn is_channel_in_allowlist(allowlist: &HashMap<String, i32>, channel: &String) -> bool {
+    allowlist.contains_key(channel)
 }
 
 fn get_channel_index(channel_indices: &HashMap<String, i32>, channel: &String) -> Option<i32> {
