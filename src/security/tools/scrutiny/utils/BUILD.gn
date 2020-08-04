@@ -13,10 +13,12 @@ if (!is_fuchsia) {
     visibility = [ "//src/security/tools/scrutiny/*" ]
     deps = [
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:bincode",
+      "//third_party/rust_crates:byteorder",
       "//third_party/rust_crates:libc",
-
-      # TODO(57392): Move it back to //third_party once unification completes.
       "//zircon/third_party/zstd",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:thiserror",
     ]
     test_deps = [ "//third_party/rust_crates:hex" ]
 
@@ -24,6 +26,7 @@ if (!is_fuchsia) {
 
     sources = [
       "src/lib.rs",
+      "src/zbi.rs",
       "src/zstd.rs",
     ]
   }
