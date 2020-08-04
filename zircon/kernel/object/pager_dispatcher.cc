@@ -19,6 +19,10 @@
 KCOUNTER(dispatcher_pager_create_count, "dispatcher.pager.create")
 KCOUNTER(dispatcher_pager_destroy_count, "dispatcher.pager.destroy")
 KCOUNTER(dispatcher_pager_overtime_wait_count, "dispatcher.pager.overtime_waits")
+KCOUNTER(dispatcher_pager_total_request_count, "dispatcher.pager.total_requests")
+KCOUNTER(dispatcher_pager_succeeded_request_count, "dispatcher.pager.succeeded_requests")
+KCOUNTER(dispatcher_pager_failed_request_count, "dispatcher.pager.failed_requests")
+KCOUNTER(dispatcher_pager_timed_out_request_count, "dispatcher.pager.timed_out_requests")
 
 // Log warnings every |pager_overtime_wait_seconds| a thread is blocked waiting on a page
 // request. If the thread has been waiting for |pager_overtime_timeout_seconds|, return an
@@ -185,6 +189,7 @@ void PagerSource::SwapRequest(page_request_t* old, page_request_t* new_req) {
     active_request_ = new_req;
   }
 }
+
 void PagerSource::OnDetach() {
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
@@ -262,6 +267,7 @@ void PagerSource::OnPacketFreedLocked() {
 
 zx_status_t PagerSource::WaitOnEvent(Event* event) {
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PAGER);
+  kcounter_add(dispatcher_pager_total_request_count, 1);
   uint32_t waited = 0;
   // declare a lambda to calculate our deadline to avoid an excessively large statement in our
   // loop condition.
@@ -290,6 +296,7 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
              " seconds. Page request timed out.\n",
              this, pager_overtime_timeout_seconds);
       dump_thread(Thread::Current::Get(), false);
+      kcounter_add(dispatcher_pager_timed_out_request_count, 1);
       return ZX_ERR_TIMED_OUT;
     }
 
@@ -305,6 +312,16 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
     // Dump out the rest of the state of the oustanding requests.
     Dump();
   }
+
+  if (result == ZX_OK) {
+    kcounter_add(dispatcher_pager_succeeded_request_count, 1);
+  } else {
+    // Only counts failures that are *not* pager timeouts. Timeouts are tracked with
+    // dispatcher_pager_timed_out_request_count, which is updated above when we
+    // return early with ZX_ERR_TIMED_OUT.
+    kcounter_add(dispatcher_pager_failed_request_count, 1);
+  }
+
   return result;
 }
 
