@@ -795,8 +795,7 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(
-      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };

@@ -61,20 +61,24 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
 }
 
 TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
-  class ResponseContext : public Example::TwoWayResponseContext {
+  class ResponseContext final : public Example::TwoWayResponseContext {
    public:
     ResponseContext(sync_completion_t* done, const char* data, size_t size)
         : done_(done), data_(data), size_(size) {}
+
     void OnError() override {
       sync_completion_signal(done_);
       FAIL();
     }
-    void OnReply(fidl::DecodedMessage<Example::TwoWayResponse> msg) override {
-      auto& out = msg.message()->out;
+
+    void OnReply(Example::TwoWayResponse* message) override {
+      auto& out = message->out;
       ASSERT_EQ(size_, out.size());
       EXPECT_EQ(0, strncmp(out.data(), data_, size_));
       sync_completion_signal(done_);
     }
+
+   private:
     sync_completion_t* done_;
     const char* data_;
     size_t size_;

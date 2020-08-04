@@ -7,6 +7,7 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_base.h>
+#include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -47,6 +48,13 @@ class TestProtocol {
       internal::ClientBase::ForgetAsyncTxn(context);
     }
 
+    void EraseTxid(internal::ResponseContext* context) {
+      {
+        std::unique_lock lock(lock_);
+        txids_.erase(context->Txid());
+      }
+    }
+
     std::shared_ptr<internal::AsyncBinding> GetBinding() {
       return internal::ClientBase::GetBinding();
     }
@@ -74,26 +82,9 @@ class TestProtocol {
                internal::TypeErasedOnUnboundFn on_unbound, AsyncEventHandlers handlers)
         : internal::ClientBase(std::move(channel), dispatcher, std::move(on_unbound)) {}
 
-    // For responses, find and remove the entry for the matching txid. For events, increment the
-    // event count.
-    std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg, internal::ResponseContext* context) {
-      auto* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
-      EXPECT_EQ(!hdr->txid, !context);  // hdr->txid == 0 iff context == nullptr.
-      if (!hdr->txid != !context)
-        return {};  // This is a failure, but let the test continue.
-      // On epitaph, invoke Close() on the binding.
-      if (hdr->ordinal == kFidlOrdinalEpitaph)
-        return UnbindInfo{UnbindInfo::kPeerClosed, reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
-      std::unique_lock lock(lock_);
-      if (hdr->txid) {
-        auto txid_it = txids_.find(hdr->txid);
-        EXPECT_TRUE(txid_it != txids_.end());  // the transaction must be found.
-        if (txid_it != txids_.end()) {
-          txids_.erase(txid_it);
-        }
-      } else {
-        event_count_++;
-      }
+    // For each event, increment the event count.
+    std::optional<UnbindInfo> DispatchEvent(fidl_msg_t* msg) {
+      event_count_++;
       return {};
     }
 
@@ -105,8 +96,14 @@ class TestProtocol {
 
 class TestResponseContext : public internal::ResponseContext {
  public:
-  TestResponseContext() = default;
-  void OnError() {}
+  explicit TestResponseContext(TestProtocol::ClientImpl* client)
+      : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0),
+        client_(client) {}
+  void OnReply(uint8_t* reply) override { client_->EraseTxid(this); }
+  void OnError() override {}
+
+ private:
+  TestProtocol::ClientImpl* client_;
 };
 
 TEST(ClientBindingTestCase, AsyncTxn) {
@@ -130,7 +127,7 @@ TEST(ClientBindingTestCase, AsyncTxn) {
 
   // Generate a txid for a ResponseContext. Send a "response" message with the same txid from the
   // remote end of the channel.
-  TestResponseContext context;
+  TestResponseContext context(client.get());
   client->PrepareAsyncTxn(&context);
   EXPECT_TRUE(client->IsPending(context.Txid()));
   fidl_message_header_t hdr;
@@ -163,10 +160,11 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
 
   // In parallel, simulate 10 async transactions and send "response" messages from the remote end of
   // the channel.
-  TestResponseContext contexts[10];
+  std::vector<std::unique_ptr<TestResponseContext>> contexts;
   std::thread threads[10];
   for (int i = 0; i < 10; ++i) {
-    threads[i] = std::thread([context = &contexts[i], &remote, &client] {
+    contexts.emplace_back(std::make_unique<TestResponseContext>(client.get()));
+    threads[i] = std::thread([context = contexts[i].get(), &remote, &client] {
       client->PrepareAsyncTxn(context);
       EXPECT_TRUE(client->IsPending(context->Txid()));
       fidl_message_header_t hdr;
@@ -192,7 +190,7 @@ TEST(ClientBindingTestCase, ForgetAsyncTxn) {
   Client<TestProtocol> client(std::move(local), loop.dispatcher());
 
   // Generate a txid for a ResponseContext.
-  TestResponseContext context;
+  TestResponseContext context(client.get());
   client->PrepareAsyncTxn(&context);
   EXPECT_TRUE(client->IsPending(context.Txid()));
 
@@ -342,8 +340,11 @@ TEST(ClientBindingTestCase, BindingRefPreventsUnbind) {
 TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnDestroy) {
   class ReleaseTestResponseContext : public internal::ResponseContext {
    public:
-    ReleaseTestResponseContext(sync_completion_t* done) : done_(done) {}
-    void OnError() {
+    explicit ReleaseTestResponseContext(sync_completion_t* done)
+        : internal::ResponseContext(&::fidl::_llcpp_coding_AnyZeroArgMessageTable, 0),
+          done_(done) {}
+    void OnReply(uint8_t* reply) override { delete this; }
+    void OnError() override {
       sync_completion_signal(done_);
       delete this;
     }

@@ -356,25 +356,23 @@ struct Top::AsyncEventHandlers {};
 
 class Top::GetFooResponseContext : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~GetFooResponseContext() = default;
-  virtual void OnReply(::fidl::DecodedMessage<GetFooResponse> msg) = 0;
+  GetFooResponseContext();
 
- protected:
-  GetFooResponseContext() = default;
+  virtual void OnReply(Top::GetFooResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 
 class Top::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Top.GetFoo()|. Allocates 16 bytes of request
   // buffer on the stack. The callback is stored on the heap.
-  ::fidl::StatusAndError GetFoo(
-      ::fit::callback<void(::llcpp::bottom::Foo foo)> _cb);
-
+  ::fidl::Result GetFoo(::fit::callback<void(::llcpp::bottom::Foo foo)> _cb);
   // Asynchronous variant of |Top.GetFoo()|. Caller provides the backing storage
-  // for FIDL message via request and response buffers. Ownership of _context is
-  // given unsafely to the binding until OnError() or OnReply() are called on
-  // it.
-  ::fidl::StatusAndError GetFoo(GetFooResponseContext* _context);
+  // for FIDL message via request buffer. Ownership of _context is given
+  // unsafely to the binding until OnError() or OnReply() are called on it.
+  ::fidl::Result GetFoo(GetFooResponseContext* _context);
   // Synchronous variant of |Top.GetFoo()|. Allocates 40 bytes of message buffer
   // on the stack. No heap allocation necessary.
   ResultOf::GetFoo GetFoo_Sync();
@@ -393,8 +391,7 @@ class Top::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(
-      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };

@@ -43,8 +43,16 @@ SecondProtocol::ResultOf::MethodOnSecond SecondProtocol::Call::MethodOnSecond(
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-std::optional<::fidl::UnbindInfo> SecondProtocol::ClientImpl::Dispatch(
-    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+std::optional<::fidl::UnbindInfo> SecondProtocol::ClientImpl::DispatchEvent(
+    fidl_msg_t* msg) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
+  }
   return {};
 }
 
@@ -116,8 +124,16 @@ FirstProtocol::ResultOf::MethodOnFirst FirstProtocol::Call::MethodOnFirst(
   return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
 }
 
-std::optional<::fidl::UnbindInfo> FirstProtocol::ClientImpl::Dispatch(
-    fidl_msg_t*, ::fidl::internal::ResponseContext*) {
+std::optional<::fidl::UnbindInfo> FirstProtocol::ClientImpl::DispatchEvent(
+    fidl_msg_t* msg) {
+  fidl_message_header_t* hdr =
+      reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    default:
+      zx_handle_close_many(msg->handles, msg->num_handles);
+      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
+                                ZX_ERR_NOT_SUPPORTED};
+  }
   return {};
 }
 

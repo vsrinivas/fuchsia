@@ -34,11 +34,12 @@ struct {{ .Name }}::AsyncEventHandlers {
 {{ "" }}
 class {{ $outer.Name }}::{{ .Name }}ResponseContext : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~{{ .Name }}ResponseContext() = default;
-  virtual void OnReply {{- template "AsyncEventHandlerInPlaceMethodSignature" . }} = 0;
+  {{ .Name }}ResponseContext();
 
- protected:
- {{ .Name }}ResponseContext() = default;
+  virtual void OnReply({{ $outer.Name }}::{{ .Name }}Response* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 {{- end }}
 
@@ -49,14 +50,14 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
       {{- range .DocComments }}
   //{{ . }}
       {{- end }}
-  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. {{ template "AsyncClientAllocationComment" . }}
-  ::fidl::StatusAndError {{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }});
 {{ "" }}
+  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. {{ template "AsyncClientAllocationComment" . }}
+  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }});
       {{- range .DocComments }}
   //{{ . }}
       {{- end }}
-  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. Caller provides the backing storage for FIDL message via request and response buffers. Ownership of _context is given unsafely to the binding until OnError() or OnReply() are called on it.
-  ::fidl::StatusAndError {{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }});
+  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|. Caller provides the backing storage for FIDL message via request buffer. Ownership of _context is given unsafely to the binding until OnError() or OnReply() are called on it.
+  ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }});
     {{- end }}
     {{- range .DocComments }}
   //{{ . }}
@@ -81,32 +82,24 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
       : ::fidl::internal::ClientBase(std::move(client_end), dispatcher, std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(fidl_msg_t* msg,
-                                             ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };
 {{- end }}
 
 {{- define "ClientDispatchDefinition" }}
-{{- if FilterMethodsWithoutResps .Methods }}
-std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::Dispatch(
-    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_msg_t* msg) {
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
   {{- range FilterMethodsWithoutResps .Methods }}
+    {{- if not .HasRequest }}
     case {{ .OrdinalName }}:
     {
       auto result = ::fidl::DecodeAs<{{ .Name }}Response>(msg);
       if (result.status != ZX_OK) {
-        {{- if .HasRequest }}
-        context->OnError();
-        {{- end }}
-	return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, result.status};
+        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, result.status};
       }
-      {{- if .HasRequest }}
-      static_cast<{{ .Name }}ResponseContext*>(context)->OnReply({{- if .Response -}} std::move(result.message) {{- end -}});
-      {{- else }}
         {{- if .Response }}
       if (auto* managed = std::get_if<0>(&handlers_.{{ .NameInLowerSnakeCase }})) {
         if (!(*managed))
@@ -120,28 +113,16 @@ std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::Dispatch(
       if (!handlers_.{{ .NameInLowerSnakeCase }})
         return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
       handlers_.{{ .NameInLowerSnakeCase }}();
-	{{- end }}
-      {{- end }}
+        {{- end }}
       break;
     }
+    {{- end }}
   {{- end }}
-    case kFidlOrdinalEpitaph:
-      zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context)
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_INVALID_ARGS};
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
-                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context) context->OnError();
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
   }
   return {};
 }
-{{- else }}
-std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::Dispatch(fidl_msg_t*, ::fidl::internal::ResponseContext*) {
-  return {};
-}
-{{- end }}
 {{- end }}
 `

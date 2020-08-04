@@ -88,96 +88,56 @@ SimpleProtocol::UnownedResultOf::Add SimpleProtocol::ClientImpl::Add_Sync(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-::fidl::StatusAndError SimpleProtocol::ClientImpl::Add(
+SimpleProtocol::AddResponseContext::AddResponseContext()
+    : ::fidl::internal::ResponseContext(AddResponse::Type,
+                                        kSimpleProtocol_Add_Ordinal) {}
+
+void SimpleProtocol::AddResponseContext::OnReply(uint8_t* reply) {
+  OnReply(reinterpret_cast<AddResponse*>(reply));
+}
+
+::fidl::Result SimpleProtocol::ClientImpl::Add(
     int32_t a, int32_t b, ::fit::callback<void(int32_t sum)> _cb) {
-  class ManagedResponseContext : public AddResponseContext {
+  class ResponseContext final : public AddResponseContext {
    public:
-    ManagedResponseContext(::fit::callback<void(int32_t sum)> cb)
+    ResponseContext(::fit::callback<void(int32_t sum)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::DecodedMessage<AddResponse> msg) override {
-      auto message = msg.message();
+    void OnReply(AddResponse* message) override {
       cb_(std::move(message->sum));
+
       delete this;
     }
 
     void OnError() override { delete this; }
 
+   private:
     ::fit::callback<void(int32_t sum)> cb_;
   };
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      AddRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
 
-  auto* _context = new ManagedResponseContext(std::move(_cb));
-  auto status_and_error =
-      Add(_write_bytes_array.view(), std::move(a), std::move(b), _context);
-  if (!status_and_error.ok()) {
-    delete _context;
-  }
-  return status_and_error;
-}
-
-::fidl::StatusAndError SimpleProtocol::ClientImpl::Add(
-    ::fidl::BytePart _request_buffer, int32_t a, int32_t b,
-    AddResponseContext* _context) {
-  if (_request_buffer.capacity() < AddRequest::PrimarySize) {
-    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
-                                  ::fidl::kErrorRequestBufferTooSmall);
-  }
-
+  auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  new (_request_buffer.data()) AddRequest(_context->Txid(), a, b);
-  _request_buffer.set_actual(sizeof(AddRequest));
-  ::fidl::DecodedMessage<AddRequest> _decoded_request(
-      std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-    return ::fidl::DecodeResult<AddResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    zx_status_t _write_status = ::fidl::Write(
-        _binding->channel(), std::move(_encode_request_result.message));
-    if (_write_status != ZX_OK) {
-      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
-    }
-    return ::fidl::StatusAndError(ZX_OK, nullptr);
-  }
-  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  AddOwnedRequest _request(_context->Txid(), a, b);
+  return _request.GetFidlMessage().Write(this, _context);
 }
 
-std::optional<::fidl::UnbindInfo> SimpleProtocol::ClientImpl::Dispatch(
-    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+::fidl::Result SimpleProtocol::ClientImpl::Add(::fidl::BytePart _request_buffer,
+                                               int32_t a, int32_t b,
+                                               AddResponseContext* _context) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+
+  AddUnownedRequest _request(_request_buffer.data(), _request_buffer.capacity(),
+                             _context->Txid(), a, b);
+  return _request.GetFidlMessage().Write(this, _context);
+}
+
+std::optional<::fidl::UnbindInfo> SimpleProtocol::ClientImpl::DispatchEvent(
+    fidl_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kSimpleProtocol_Add_Ordinal: {
-      auto result = ::fidl::DecodeAs<AddResponse>(msg);
-      if (result.status != ZX_OK) {
-        context->OnError();
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
-      }
-      static_cast<AddResponseContext*>(context)->OnReply(
-          std::move(result.message));
-      break;
-    }
-    case kFidlOrdinalEpitaph:
-      zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context)
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_INVALID_ARGS};
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
-                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context) context->OnError();
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                 ZX_ERR_NOT_SUPPORTED};
   }

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_ASYNC_CPP_CLIENT_BASE_H_
-#define LIB_FIDL_ASYNC_CPP_CLIENT_BASE_H_
+#ifndef LIB_FIDL_LLCPP_CLIENT_BASE_H_
+#define LIB_FIDL_LLCPP_CLIENT_BASE_H_
 
-#include <fbl/intrusive_wavl_tree.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/zx/channel.h>
@@ -15,6 +14,8 @@
 
 #include <memory>
 #include <mutex>
+
+#include <fbl/intrusive_wavl_tree.h>
 
 namespace fidl {
 namespace internal {
@@ -27,9 +28,11 @@ namespace internal {
 // on ClientBase destruction while invoking OnError() which can destroy the ResponseContext.
 class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, private list_node_t {
  public:
-  ResponseContext()
+  ResponseContext(const fidl_type_t* type, uint64_t ordinal)
       : fbl::WAVLTreeContainable<ResponseContext*>(),
-        list_node_t(LIST_INITIAL_CLEARED_VALUE) {}
+        list_node_t(LIST_INITIAL_CLEARED_VALUE),
+        type_(type),
+        ordinal_(ordinal) {}
   virtual ~ResponseContext() = default;
 
   // Neither copyable nor movable.
@@ -38,7 +41,12 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
   ResponseContext(ResponseContext&& other) = delete;
   ResponseContext& operator=(ResponseContext&& other) = delete;
 
+  const fidl_type_t* type() const { return type_; }
+  uint64_t ordinal() const { return ordinal_; }
   zx_txid_t Txid() const { return txid_; }
+
+  // Invoked if a response has been received for this context.
+  virtual void OnReply(uint8_t* reply) = 0;
 
   // Invoked if an error occurs handling the response message prior to invoking the user-specified
   // callback or if the ClientBase is destroyed with the transaction outstanding. Note that
@@ -56,7 +64,9 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
     static bool EqualTo(const zx_txid_t& key1, const zx_txid_t& key2) { return key1 == key2; }
   };
 
-  zx_txid_t txid_ = 0;  // Zircon txid of outstanding transaction.
+  const fidl_type_t* const type_;  // Type of a response with ordinal |ordinal_|.
+  const uint64_t ordinal_;         // Expected ordinal for the response.
+  zx_txid_t txid_ = 0;             // Zircon txid of outstanding transaction.
 };
 
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
@@ -101,9 +111,8 @@ class ClientBase {
     return contexts_.size();
   }
 
-  // Generated client dispatch function. If the ResponseContext* is non-null, the message is a
-  // response to an asynchronous transaction. Otherwise, it is an event.
-  virtual std::optional<UnbindInfo> Dispatch(fidl_msg_t* msg, ResponseContext* context) = 0;
+  // Generated client event dispatcher function.
+  virtual std::optional<UnbindInfo> DispatchEvent(fidl_msg_t* msg) = 0;
 
  private:
   // Dispatch function invoked by AsyncBinding on incoming message. Invokes the virtual Dispatch().
@@ -125,4 +134,4 @@ class ClientBase {
 }  // namespace internal
 }  // namespace fidl
 
-#endif  // LIB_FIDL_ASYNC_CPP_CLIENT_BASE_H_
+#endif  // LIB_FIDL_LLCPP_CLIENT_BASE_H_

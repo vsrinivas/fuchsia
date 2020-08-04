@@ -73,88 +73,53 @@ Top::UnownedResultOf::GetFoo Top::ClientImpl::GetFoo_Sync(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-::fidl::StatusAndError Top::ClientImpl::GetFoo(
+Top::GetFooResponseContext::GetFooResponseContext()
+    : ::fidl::internal::ResponseContext(GetFooResponse::Type,
+                                        kTop_GetFoo_Ordinal) {}
+
+void Top::GetFooResponseContext::OnReply(uint8_t* reply) {
+  OnReply(reinterpret_cast<GetFooResponse*>(reply));
+}
+
+::fidl::Result Top::ClientImpl::GetFoo(
     ::fit::callback<void(::llcpp::bottom::Foo foo)> _cb) {
-  class ManagedResponseContext : public GetFooResponseContext {
+  class ResponseContext final : public GetFooResponseContext {
    public:
-    ManagedResponseContext(::fit::callback<void(::llcpp::bottom::Foo foo)> cb)
+    ResponseContext(::fit::callback<void(::llcpp::bottom::Foo foo)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::DecodedMessage<GetFooResponse> msg) override {
-      auto message = msg.message();
+    void OnReply(GetFooResponse* message) override {
       cb_(std::move(message->foo));
+
       delete this;
     }
 
     void OnError() override { delete this; }
 
+   private:
     ::fit::callback<void(::llcpp::bottom::Foo foo)> cb_;
   };
 
-  auto* _context = new ManagedResponseContext(std::move(_cb));
-  auto status_and_error = GetFoo(_context);
-  if (!status_and_error.ok()) {
-    delete _context;
-  }
-  return status_and_error;
-}
-
-::fidl::StatusAndError Top::ClientImpl::GetFoo(
-    GetFooResponseContext* _context) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFooRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-
+  auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  new (_request_buffer.data()) GetFooRequest(_context->Txid());
-  _request_buffer.set_actual(sizeof(GetFooRequest));
-  ::fidl::DecodedMessage<GetFooRequest> _decoded_request(
-      std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-    return ::fidl::DecodeResult<GetFooResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    zx_status_t _write_status = ::fidl::Write(
-        _binding->channel(), std::move(_encode_request_result.message));
-    if (_write_status != ZX_OK) {
-      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
-    }
-    return ::fidl::StatusAndError(ZX_OK, nullptr);
-  }
-  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  GetFooOwnedRequest _request(_context->Txid());
+  return _request.GetFidlMessage().Write(this, _context);
 }
 
-std::optional<::fidl::UnbindInfo> Top::ClientImpl::Dispatch(
-    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+::fidl::Result Top::ClientImpl::GetFoo(GetFooResponseContext* _context) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+
+  GetFooOwnedRequest _request(_context->Txid());
+  return _request.GetFidlMessage().Write(this, _context);
+}
+
+std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
+    fidl_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kTop_GetFoo_Ordinal: {
-      auto result = ::fidl::DecodeAs<GetFooResponse>(msg);
-      if (result.status != ZX_OK) {
-        context->OnError();
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
-      }
-      static_cast<GetFooResponseContext*>(context)->OnReply(
-          std::move(result.message));
-      break;
-    }
-    case kFidlOrdinalEpitaph:
-      zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context)
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_INVALID_ARGS};
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
-                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context) context->OnError();
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                 ZX_ERR_NOT_SUPPORTED};
   }

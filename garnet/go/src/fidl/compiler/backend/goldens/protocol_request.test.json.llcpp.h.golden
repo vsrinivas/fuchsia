@@ -964,34 +964,34 @@ struct Parent::AsyncEventHandlers {};
 class Parent::GetChildResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~GetChildResponseContext() = default;
-  virtual void OnReply(::fidl::DecodedMessage<GetChildResponse> msg) = 0;
+  GetChildResponseContext();
 
- protected:
-  GetChildResponseContext() = default;
+  virtual void OnReply(Parent::GetChildResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 
 class Parent::GetChildRequestResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~GetChildRequestResponseContext() = default;
-  virtual void OnReply(::fidl::DecodedMessage<GetChildRequestResponse> msg) = 0;
+  GetChildRequestResponseContext();
 
- protected:
-  GetChildRequestResponseContext() = default;
+  virtual void OnReply(Parent::GetChildRequestResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 
 class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Parent.GetChild()|. Allocates 16 bytes of request
   // buffer on the stack. The callback is stored on the heap.
-  ::fidl::StatusAndError GetChild(::fit::callback<void(::zx::channel c)> _cb);
-
+  ::fidl::Result GetChild(::fit::callback<void(::zx::channel c)> _cb);
   // Asynchronous variant of |Parent.GetChild()|. Caller provides the backing
-  // storage for FIDL message via request and response buffers. Ownership of
-  // _context is given unsafely to the binding until OnError() or OnReply() are
-  // called on it.
-  ::fidl::StatusAndError GetChild(GetChildResponseContext* _context);
+  // storage for FIDL message via request buffer. Ownership of _context is given
+  // unsafely to the binding until OnError() or OnReply() are called on it.
+  ::fidl::Result GetChild(GetChildResponseContext* _context);
   // Synchronous variant of |Parent.GetChild()|. Allocates 40 bytes of message
   // buffer on the stack. No heap allocation necessary.
   ResultOf::GetChild GetChild_Sync();
@@ -1002,15 +1002,12 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Asynchronous variant of |Parent.GetChildRequest()|. Allocates 16 bytes of
   // request buffer on the stack. The callback is stored on the heap.
-  ::fidl::StatusAndError GetChildRequest(
-      ::fit::callback<void(::zx::channel r)> _cb);
-
+  ::fidl::Result GetChildRequest(::fit::callback<void(::zx::channel r)> _cb);
   // Asynchronous variant of |Parent.GetChildRequest()|. Caller provides the
-  // backing storage for FIDL message via request and response buffers.
-  // Ownership of _context is given unsafely to the binding until OnError() or
-  // OnReply() are called on it.
-  ::fidl::StatusAndError GetChildRequest(
-      GetChildRequestResponseContext* _context);
+  // backing storage for FIDL message via request buffer. Ownership of _context
+  // is given unsafely to the binding until OnError() or OnReply() are called on
+  // it.
+  ::fidl::Result GetChildRequest(GetChildRequestResponseContext* _context);
   // Synchronous variant of |Parent.GetChildRequest()|. Allocates 40 bytes of
   // message buffer on the stack. No heap allocation necessary.
   ResultOf::GetChildRequest GetChildRequest_Sync();
@@ -1047,8 +1044,7 @@ class Parent::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(
-      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };
@@ -1078,8 +1074,7 @@ class Child::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(
-      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };

@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/fidl.h>
@@ -43,15 +44,19 @@ class FidlMessage final : public ::fidl::Result {
   // - both |bytes_| and |handles_| are undefined
   void LinearizeAndEncode(const fidl_type_t* message_type, void* data);
 
-  // For request without a response, uses zx_channel_write to write the linearized message.
+  // Uses zx_channel_write to write the linearized message.
   // Before calling Write, LinearizeAndEncode must be called.
   void Write(zx_handle_t channel);
 
-  // For request with a response, uses zx_channel_call to write the linearized message.
+  // For requests with a response, uses zx_channel_call to write the linearized message.
   // Before calling Call, LinearizeAndEncode must be called.
   // If the call succeed, |result_bytes| contains the decoded linearized result.
   void Call(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
             uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE);
+
+  // For asynchronous clients, writes a request.
+  ::fidl::Result Write(::fidl::internal::ClientBase* client,
+                       ::fidl::internal::ResponseContext* context);
 
  private:
   void ReleaseHandles() { handles_.set_actual(0); }

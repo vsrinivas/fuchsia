@@ -684,27 +684,25 @@ struct super::AsyncEventHandlers {};
 
 class super::fooResponseContext : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~fooResponseContext() = default;
-  virtual void OnReply(::fidl::DecodedMessage<fooResponse> msg) = 0;
+  fooResponseContext();
 
- protected:
-  fooResponseContext() = default;
+  virtual void OnReply(super::fooResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 
 class super::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |super.foo()|. The request and callback are
   // allocated on the heap.
-  ::fidl::StatusAndError foo(::fidl::StringView s,
-                             ::fit::callback<void(int64_t y)> _cb);
-
+  ::fidl::Result foo(::fidl::StringView s,
+                     ::fit::callback<void(int64_t y)> _cb);
   // Asynchronous variant of |super.foo()|. Caller provides the backing storage
-  // for FIDL message via request and response buffers. Ownership of _context is
-  // given unsafely to the binding until OnError() or OnReply() are called on
-  // it.
-  ::fidl::StatusAndError foo(::fidl::BytePart _request_buffer,
-                             ::fidl::StringView s,
-                             fooResponseContext* _context);
+  // for FIDL message via request buffer. Ownership of _context is given
+  // unsafely to the binding until OnError() or OnReply() are called on it.
+  ::fidl::Result foo(::fidl::BytePart _request_buffer, ::fidl::StringView s,
+                     fooResponseContext* _context);
   // Synchronous variant of |super.foo()|. Allocates 24 bytes of response buffer
   // on the stack. Request is heap-allocated.
   ResultOf::foo foo_Sync(::fidl::StringView s);
@@ -725,8 +723,7 @@ class super::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(
-      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };
@@ -746,27 +743,25 @@ struct sub::AsyncEventHandlers {};
 
 class sub::fooResponseContext : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~fooResponseContext() = default;
-  virtual void OnReply(::fidl::DecodedMessage<fooResponse> msg) = 0;
+  fooResponseContext();
 
- protected:
-  fooResponseContext() = default;
+  virtual void OnReply(sub::fooResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 
 class sub::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |sub.foo()|. The request and callback are allocated
   // on the heap.
-  ::fidl::StatusAndError foo(::fidl::StringView s,
-                             ::fit::callback<void(int64_t y)> _cb);
-
+  ::fidl::Result foo(::fidl::StringView s,
+                     ::fit::callback<void(int64_t y)> _cb);
   // Asynchronous variant of |sub.foo()|. Caller provides the backing storage
-  // for FIDL message via request and response buffers. Ownership of _context is
-  // given unsafely to the binding until OnError() or OnReply() are called on
-  // it.
-  ::fidl::StatusAndError foo(::fidl::BytePart _request_buffer,
-                             ::fidl::StringView s,
-                             fooResponseContext* _context);
+  // for FIDL message via request buffer. Ownership of _context is given
+  // unsafely to the binding until OnError() or OnReply() are called on it.
+  ::fidl::Result foo(::fidl::BytePart _request_buffer, ::fidl::StringView s,
+                     fooResponseContext* _context);
   // Synchronous variant of |sub.foo()|. Allocates 24 bytes of response buffer
   // on the stack. Request is heap-allocated.
   ResultOf::foo foo_Sync(::fidl::StringView s);
@@ -787,8 +782,7 @@ class sub::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(
-      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };

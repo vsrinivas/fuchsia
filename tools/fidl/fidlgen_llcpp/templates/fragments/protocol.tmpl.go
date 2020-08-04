@@ -716,8 +716,6 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
   {{- if .HasResponse }}
 {{ "" }}
     {{- template "ClientAsyncRequestManagedMethodDefinition" . }}
-{{ "" }}
-    {{- template "ClientAsyncRequestCallerAllocateMethodDefinition" . }}
   {{- end }}
 {{- end }}
 {{ template "ClientDispatchDefinition" . }}

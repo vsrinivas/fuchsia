@@ -954,38 +954,39 @@ struct Protocol::AsyncEventHandlers {};
 class Protocol::RequestStrictResponseFlexibleResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~RequestStrictResponseFlexibleResponseContext() = default;
-  virtual void OnReply(
-      ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> msg) = 0;
+  RequestStrictResponseFlexibleResponseContext();
 
- protected:
-  RequestStrictResponseFlexibleResponseContext() = default;
+  virtual void OnReply(
+      Protocol::RequestStrictResponseFlexibleResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 
 class Protocol::RequestFlexibleResponseStrictResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
-  virtual ~RequestFlexibleResponseStrictResponseContext() = default;
-  virtual void OnReply(
-      ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> msg) = 0;
+  RequestFlexibleResponseStrictResponseContext();
 
- protected:
-  RequestFlexibleResponseStrictResponseContext() = default;
+  virtual void OnReply(
+      Protocol::RequestFlexibleResponseStrictResponse* message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
 };
 
 class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. The
   // request and callback are allocated on the heap.
-  ::fidl::StatusAndError RequestStrictResponseFlexible(
+  ::fidl::Result RequestStrictResponseFlexible(
       ::llcpp::fidl::test::json::StrictFoo s,
       ::fit::callback<void(::llcpp::fidl::test::json::FlexibleFoo f)> _cb);
-
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers. Ownership of _context is given unsafely to the binding until
-  // OnError() or OnReply() are called on it.
-  ::fidl::StatusAndError RequestStrictResponseFlexible(
+  // provides the backing storage for FIDL message via request buffer. Ownership
+  // of _context is given unsafely to the binding until OnError() or OnReply()
+  // are called on it.
+  ::fidl::Result RequestStrictResponseFlexible(
       ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s,
       RequestStrictResponseFlexibleResponseContext* _context);
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|. Request
@@ -1003,15 +1004,14 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. The
   // request and callback are allocated on the heap.
-  ::fidl::StatusAndError RequestFlexibleResponseStrict(
+  ::fidl::Result RequestFlexibleResponseStrict(
       ::llcpp::fidl::test::json::FlexibleFoo s,
       ::fit::callback<void(::llcpp::fidl::test::json::StrictFoo f)> _cb);
-
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
-  // provides the backing storage for FIDL message via request and response
-  // buffers. Ownership of _context is given unsafely to the binding until
-  // OnError() or OnReply() are called on it.
-  ::fidl::StatusAndError RequestFlexibleResponseStrict(
+  // provides the backing storage for FIDL message via request buffer. Ownership
+  // of _context is given unsafely to the binding until OnError() or OnReply()
+  // are called on it.
+  ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl::BytePart _request_buffer,
       ::llcpp::fidl::test::json::FlexibleFoo s,
       RequestFlexibleResponseStrictResponseContext* _context);
@@ -1038,8 +1038,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
                                      std::move(on_unbound)),
         handlers_(std::move(handlers)) {}
 
-  std::optional<::fidl::UnbindInfo> Dispatch(
-      fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) override;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_msg_t* msg) override;
 
   AsyncEventHandlers handlers_;
 };

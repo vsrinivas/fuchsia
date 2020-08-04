@@ -32,97 +32,53 @@ const ClientAsyncMethods = `
   {{- end -}}
 {{- end }}
 
-{{- define "ClientAsyncRequestCallerAllocateMethodDefinition" }}
-::fidl::StatusAndError {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
-  {{- if not .Request }}
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  {{- else }}
-  if (_request_buffer.capacity() < {{ .Name }}Request::PrimarySize) {
-    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::kErrorRequestBufferTooSmall);
-  }
-  {{- end }}
-
-  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  {{- if .LLProps.LinearizeRequest }}
-  {{ .Name }}Request _request(_context->Txid()
-  {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-  {{- else }}
-  new (_request_buffer.data()) {{ .Name }}Request(_context->Txid()
-  {{- template "CommaPassthroughMessageParams" .Request -}}
-  );
-  {{- end }}
-
-  {{- if .LLProps.LinearizeRequest }}
-  auto _encode_request_result = ::fidl::LinearizeAndEncode<{{ .Name }}Request>(&_request, std::move(_request_buffer));
-  if (_encode_request_result.status != ZX_OK) {
-    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-    return std::move(_encode_request_result);
-  }
-  {{- else }}
-  _request_buffer.set_actual(sizeof({{ .Name }}Request));
-  ::fidl::DecodedMessage<{{ .Name }}Request> _decoded_request(std::move(_request_buffer));
-  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
-  if (_encode_request_result.status != ZX_OK) {
-    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-    return ::fidl::DecodeResult<{{ .Name }}Response>::FromFailure(std::move(_encode_request_result));
-  }
-  {{- end }}
-
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    zx_status_t _write_status =
-        ::fidl::Write(_binding->channel(), std::move(_encode_request_result.message));
-    if (_write_status != ZX_OK) {
-      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
-    }
-    return ::fidl::StatusAndError(ZX_OK, nullptr);
-  }
-  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
-}
-{{- end }}
-
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
-::fidl::StatusAndError {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }}) {
-  class ManagedResponseContext : public {{ .Name }}ResponseContext {
-   public:
-    ManagedResponseContext({{ template "ClientAsyncRequestManagedCallbackSignature" . }} cb) : cb_(std::move(cb)) {}
+{{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::{{ .Name }}ResponseContext()
+    : ::fidl::internal::ResponseContext({{ .Name }}Response::Type, {{ .OrdinalName }}) {}
 
-    void OnReply {{- template "AsyncEventHandlerInPlaceMethodSignature" . }} override {
-      {{- if .Response }}
-      auto message = msg.message();
-      {{- end }}
+void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* reply) {
+  OnReply(reinterpret_cast<{{ .Name }}Response*>(reply));
+}
+
+::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }}) {
+  class ResponseContext final : public {{ .Name }}ResponseContext {
+   public:
+    ResponseContext({{ template "ClientAsyncRequestManagedCallbackSignature" . }} cb) : cb_(std::move(cb)) {}
+
+    void OnReply({{ .Name }}Response* message) override {
       cb_({{ template "SyncEventHandlerMoveParams" .Response }});
+      {{ if and .HasResponse .ResponseIsResource }}
+      fidl_close_handles(type(), message, nullptr);
+      {{ end }}
       delete this;
     }
 
-    void OnError() override { delete this; }
+    void OnError() override {
+      delete this;
+    }
 
+   private:
     {{ template "ClientAsyncRequestManagedCallbackSignature" . }} cb_;
   };
 
-  {{- if .Request }}
-  constexpr uint32_t _kWriteAllocSize =
-      ::fidl::internal::ClampedMessageSize<{{ .Name }}Request,
-                                           ::fidl::MessageDirection::kSending>();
-    {{- if .LLProps.ClientContext.StackAllocRequest }}
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-    {{- else }}
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-    {{- end }}
-  {{- end }}
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  {{ .Name }}OwnedRequest _request(_context->Txid()
+  {{- template "CommaPassthroughMessageParams" .Request -}}
+  );
+  return _request.GetFidlMessage().Write(this, _context);
+}
 
-  auto* _context = new ManagedResponseContext(std::move(_cb));
-  auto status_and_error = {{ .Name }}({{- if .Request -}}
-      _write_bytes_array.view(), {{ template "SyncClientMoveParams" .Request }}, {{ end }}_context);
-  if (!status_and_error.ok()) {
-    delete _context;
-  }
-  return status_and_error;
+::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  {{ if .Request }}
+  {{ .Name }}UnownedRequest _request(_request_buffer.data(), _request_buffer.capacity(), _context->Txid()
+  {{- else }}
+  {{ .Name }}OwnedRequest _request(_context->Txid()
+  {{- end }}
+  {{- template "CommaPassthroughMessageParams" .Request -}}
+  );
+  return _request.GetFidlMessage().Write(this, _context);
 }
 {{- end }}
 `

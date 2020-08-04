@@ -194,73 +194,53 @@ Protocol::ClientImpl::RequestStrictResponseFlexible_Sync(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-::fidl::StatusAndError Protocol::ClientImpl::RequestStrictResponseFlexible(
+Protocol::RequestStrictResponseFlexibleResponseContext::
+    RequestStrictResponseFlexibleResponseContext()
+    : ::fidl::internal::ResponseContext(
+          RequestStrictResponseFlexibleResponse::Type,
+          kProtocol_RequestStrictResponseFlexible_Ordinal) {}
+
+void Protocol::RequestStrictResponseFlexibleResponseContext::OnReply(
+    uint8_t* reply) {
+  OnReply(reinterpret_cast<RequestStrictResponseFlexibleResponse*>(reply));
+}
+
+::fidl::Result Protocol::ClientImpl::RequestStrictResponseFlexible(
     ::llcpp::fidl::test::json::StrictFoo s,
     ::fit::callback<void(::llcpp::fidl::test::json::FlexibleFoo f)> _cb) {
-  class ManagedResponseContext
+  class ResponseContext final
       : public RequestStrictResponseFlexibleResponseContext {
    public:
-    ManagedResponseContext(
+    ResponseContext(
         ::fit::callback<void(::llcpp::fidl::test::json::FlexibleFoo f)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse>
-                     msg) override {
-      auto message = msg.message();
+    void OnReply(RequestStrictResponseFlexibleResponse* message) override {
       cb_(std::move(message->f));
+
       delete this;
     }
 
     void OnError() override { delete this; }
 
+   private:
     ::fit::callback<void(::llcpp::fidl::test::json::FlexibleFoo f)> cb_;
   };
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      RequestStrictResponseFlexibleRequest,
-      ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed =
-      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
 
-  auto* _context = new ManagedResponseContext(std::move(_cb));
-  auto status_and_error = RequestStrictResponseFlexible(
-      _write_bytes_array.view(), std::move(s), _context);
-  if (!status_and_error.ok()) {
-    delete _context;
-  }
-  return status_and_error;
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  RequestStrictResponseFlexibleOwnedRequest _request(_context->Txid(), s);
+  return _request.GetFidlMessage().Write(this, _context);
 }
 
-::fidl::StatusAndError Protocol::ClientImpl::RequestStrictResponseFlexible(
+::fidl::Result Protocol::ClientImpl::RequestStrictResponseFlexible(
     ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::StrictFoo s,
     RequestStrictResponseFlexibleResponseContext* _context) {
-  if (_request_buffer.capacity() <
-      RequestStrictResponseFlexibleRequest::PrimarySize) {
-    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
-                                  ::fidl::kErrorRequestBufferTooSmall);
-  }
-
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  RequestStrictResponseFlexibleRequest _request(_context->Txid(), s);
-  auto _encode_request_result =
-      ::fidl::LinearizeAndEncode<RequestStrictResponseFlexibleRequest>(
-          &_request, std::move(_request_buffer));
-  if (_encode_request_result.status != ZX_OK) {
-    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-    return std::move(_encode_request_result);
-  }
 
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    zx_status_t _write_status = ::fidl::Write(
-        _binding->channel(), std::move(_encode_request_result.message));
-    if (_write_status != ZX_OK) {
-      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
-    }
-    return ::fidl::StatusAndError(ZX_OK, nullptr);
-  }
-  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  RequestStrictResponseFlexibleUnownedRequest _request(
+      _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), s);
+  return _request.GetFidlMessage().Write(this, _context);
 }
 
 Protocol::ResultOf::RequestFlexibleResponseStrict
@@ -286,114 +266,62 @@ Protocol::ClientImpl::RequestFlexibleResponseStrict_Sync(
       ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 
-::fidl::StatusAndError Protocol::ClientImpl::RequestFlexibleResponseStrict(
+Protocol::RequestFlexibleResponseStrictResponseContext::
+    RequestFlexibleResponseStrictResponseContext()
+    : ::fidl::internal::ResponseContext(
+          RequestFlexibleResponseStrictResponse::Type,
+          kProtocol_RequestFlexibleResponseStrict_Ordinal) {}
+
+void Protocol::RequestFlexibleResponseStrictResponseContext::OnReply(
+    uint8_t* reply) {
+  OnReply(reinterpret_cast<RequestFlexibleResponseStrictResponse*>(reply));
+}
+
+::fidl::Result Protocol::ClientImpl::RequestFlexibleResponseStrict(
     ::llcpp::fidl::test::json::FlexibleFoo s,
     ::fit::callback<void(::llcpp::fidl::test::json::StrictFoo f)> _cb) {
-  class ManagedResponseContext
+  class ResponseContext final
       : public RequestFlexibleResponseStrictResponseContext {
    public:
-    ManagedResponseContext(
+    ResponseContext(
         ::fit::callback<void(::llcpp::fidl::test::json::StrictFoo f)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse>
-                     msg) override {
-      auto message = msg.message();
+    void OnReply(RequestFlexibleResponseStrictResponse* message) override {
       cb_(std::move(message->f));
+
       delete this;
     }
 
     void OnError() override { delete this; }
 
+   private:
     ::fit::callback<void(::llcpp::fidl::test::json::StrictFoo f)> cb_;
   };
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<
-      RequestFlexibleResponseStrictRequest,
-      ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed =
-      std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
 
-  auto* _context = new ManagedResponseContext(std::move(_cb));
-  auto status_and_error = RequestFlexibleResponseStrict(
-      _write_bytes_array.view(), std::move(s), _context);
-  if (!status_and_error.ok()) {
-    delete _context;
-  }
-  return status_and_error;
+  auto* _context = new ResponseContext(std::move(_cb));
+  ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
+  RequestFlexibleResponseStrictOwnedRequest _request(_context->Txid(), s);
+  return _request.GetFidlMessage().Write(this, _context);
 }
 
-::fidl::StatusAndError Protocol::ClientImpl::RequestFlexibleResponseStrict(
+::fidl::Result Protocol::ClientImpl::RequestFlexibleResponseStrict(
     ::fidl::BytePart _request_buffer, ::llcpp::fidl::test::json::FlexibleFoo s,
     RequestFlexibleResponseStrictResponseContext* _context) {
-  if (_request_buffer.capacity() <
-      RequestFlexibleResponseStrictRequest::PrimarySize) {
-    return ::fidl::StatusAndError(ZX_ERR_BUFFER_TOO_SMALL,
-                                  ::fidl::kErrorRequestBufferTooSmall);
-  }
-
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  RequestFlexibleResponseStrictRequest _request(_context->Txid(), s);
-  auto _encode_request_result =
-      ::fidl::LinearizeAndEncode<RequestFlexibleResponseStrictRequest>(
-          &_request, std::move(_request_buffer));
-  if (_encode_request_result.status != ZX_OK) {
-    ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-    return std::move(_encode_request_result);
-  }
 
-  if (auto _binding = ::fidl::internal::ClientBase::GetBinding()) {
-    zx_status_t _write_status = ::fidl::Write(
-        _binding->channel(), std::move(_encode_request_result.message));
-    if (_write_status != ZX_OK) {
-      ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-      return ::fidl::StatusAndError(_write_status, ::fidl::kErrorWriteFailed);
-    }
-    return ::fidl::StatusAndError(ZX_OK, nullptr);
-  }
-  ::fidl::internal::ClientBase::ForgetAsyncTxn(_context);
-  return ::fidl::StatusAndError(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  RequestFlexibleResponseStrictUnownedRequest _request(
+      _request_buffer.data(), _request_buffer.capacity(), _context->Txid(), s);
+  return _request.GetFidlMessage().Write(this, _context);
 }
 
-std::optional<::fidl::UnbindInfo> Protocol::ClientImpl::Dispatch(
-    fidl_msg_t* msg, ::fidl::internal::ResponseContext* context) {
+std::optional<::fidl::UnbindInfo> Protocol::ClientImpl::DispatchEvent(
+    fidl_msg_t* msg) {
   fidl_message_header_t* hdr =
       reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kProtocol_RequestStrictResponseFlexible_Ordinal: {
-      auto result =
-          ::fidl::DecodeAs<RequestStrictResponseFlexibleResponse>(msg);
-      if (result.status != ZX_OK) {
-        context->OnError();
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
-      }
-      static_cast<RequestStrictResponseFlexibleResponseContext*>(context)
-          ->OnReply(std::move(result.message));
-      break;
-    }
-    case kProtocol_RequestFlexibleResponseStrict_Ordinal: {
-      auto result =
-          ::fidl::DecodeAs<RequestFlexibleResponseStrictResponse>(msg);
-      if (result.status != ZX_OK) {
-        context->OnError();
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                  result.status};
-      }
-      static_cast<RequestFlexibleResponseStrictResponseContext*>(context)
-          ->OnReply(std::move(result.message));
-      break;
-    }
-    case kFidlOrdinalEpitaph:
-      zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context)
-        return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                                  ZX_ERR_INVALID_ARGS};
-      return ::fidl::UnbindInfo{::fidl::UnbindInfo::kPeerClosed,
-                                reinterpret_cast<fidl_epitaph_t*>(hdr)->error};
     default:
       zx_handle_close_many(msg->handles, msg->num_handles);
-      if (context) context->OnError();
       return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                                 ZX_ERR_NOT_SUPPORTED};
   }

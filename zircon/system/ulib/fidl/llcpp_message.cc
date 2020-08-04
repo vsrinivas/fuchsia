@@ -79,6 +79,21 @@ void FidlMessage::Call(const fidl_type_t* response_type, zx_handle_t channel, ui
   ReleaseHandles();
 }
 
+::fidl::Result FidlMessage::Write(::fidl::internal::ClientBase* client,
+                                  ::fidl::internal::ResponseContext* context) {
+  if (auto binding = client->GetBinding()) {
+    Write(binding->handle());
+  } else {
+    status_ = ZX_ERR_CANCELED;
+    error_ = ::fidl::kErrorChannelUnbound;
+  }
+  if (!ok()) {
+    client->ForgetAsyncTxn(context);
+    delete context;
+  }
+  return ::fidl::Result(status_, error_);
+}
+
 }  // namespace internal
 
 }  // namespace fidl
