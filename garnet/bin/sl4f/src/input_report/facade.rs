@@ -132,7 +132,7 @@ impl InputReportFacade {
                 Ok(serializable_reports)
             }
             Err(e) => {
-                let tag = "InputReportFacade::get_reporta";
+                let tag = "InputReportFacade::get_reports";
                 fx_err_and_bail!(&with_line!(tag), format_err!("ReadInputReports failed: {:?}", e))
             }
         }
