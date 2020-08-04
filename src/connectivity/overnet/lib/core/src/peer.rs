@@ -444,6 +444,12 @@ async fn client_conn_stream(
     let _: ((), (), (), ()) = futures::future::try_join4(
         async move {
             while let Some(command) = commands.next().await {
+                log::trace!(
+                    "[{:?} clipeer:{:?}] handle command: {:?}",
+                    my_node_id,
+                    peer_node_id,
+                    command
+                );
                 client_conn_handle_command(
                     command,
                     &mut *conn_stream_writer.lock().await,

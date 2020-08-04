@@ -268,33 +268,50 @@ impl PeerMaps {
                 let router = Arc::downgrade(router);
                 let ask = {
                     let router = router.clone();
+                    let get_router =
+                        move || Weak::upgrade(&router).ok_or_else(|| format_err!("no router"));
                     let but_why = but_why.to_string();
                     async move {
-                        let peer_client = Weak::upgrade(&router)
-                            .ok_or_else(|| format_err!("no router"))?
-                            .client_peer(peer, NoLinkHint, &but_why)
-                            .await?;
-                        let rtt = peer_client.round_trip_time().await;
-                        let timeout = std::cmp::max(
-                            Duration::from_secs(5),
-                            std::cmp::min(Duration::from_secs(30), 100 * rtt),
-                        );
-                        log::trace!(
-                            "{:?} question peer {:?}: ping with timeout {:?}",
-                            my_node_id,
-                            peer,
-                            timeout
-                        );
-                        peer_client
-                            .ping()
-                            .on_timeout(timeout, || Err(format_err!("ping timeout")))
-                            .await?;
-                        log::trace!(
-                            "{:?} question peer {:?}: pinged successfully",
-                            my_node_id,
-                            peer
-                        );
-                        Ok::<_, Error>(())
+                        let mut peer_client =
+                            get_router()?.client_peer(peer, NoLinkHint, &but_why).await?;
+                        loop {
+                            let ping_result = async {
+                                let rtt = peer_client.round_trip_time().await;
+                                let timeout = std::cmp::max(
+                                    Duration::from_secs(5),
+                                    std::cmp::min(Duration::from_secs(30), 100 * rtt),
+                                );
+                                log::trace!(
+                                    "{:?} question peer {:?}: ping with timeout {:?}",
+                                    my_node_id,
+                                    peer,
+                                    timeout
+                                );
+                                peer_client
+                                    .ping()
+                                    .on_timeout(timeout, || Err(format_err!("ping timeout")))
+                                    .await
+                            }
+                            .await;
+                            if let Err(e) = ping_result {
+                                let current_peer_client =
+                                    get_router()?.client_peer(peer, NoLinkHint, &but_why).await?;
+                                if peer_client.conn_id() != current_peer_client.conn_id() {
+                                    log::warn!("{:?} pinged old client {:?} to determine liveness; retrying with new {:?}", my_node_id, peer_client.conn_id(), current_peer_client.conn_id());
+                                    peer_client = current_peer_client;
+                                    continue;
+                                } else {
+                                    return Err(e);
+                                }
+                            } else {
+                                log::trace!(
+                                    "{:?} question peer {:?}: pinged successfully",
+                                    my_node_id,
+                                    peer
+                                );
+                                return Ok(());
+                            }
+                        }
                     }
                 };
                 current_link.questioning = Some(Questioning(
