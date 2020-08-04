@@ -7,6 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/ultrasound/cpp/fidl.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 #include <vector>
@@ -20,6 +21,9 @@
 #include "src/media/audio/lib/test/vmo_backed_buffer.h"
 
 namespace media::audio::test {
+
+template <class Interface>
+class VirtualDevice;
 
 namespace internal {
 // These IDs are scoped to the lifetime of this process.
@@ -53,12 +57,22 @@ class RendererShimImpl {
   void SetPtsUnits(uint32_t ticks_per_second_numerator, uint32_t ticks_per_second_denominator);
 
   // Send a Play command to the renderer and wait until it is processed.
-  void Play(TestFixture* fixture, int64_t reference_time, int64_t media_time);
+  void Play(TestFixture* fixture, zx::time reference_time, int64_t media_time);
+
+  // Like Play, but aligns the reference_time with the start of output_device's ring buffer.
+  // Returns the reference_time at which the audio will start playing.
+  zx::time PlaySynchronized(TestFixture* fixture,
+                            VirtualDevice<fuchsia::virtualaudio::Output>* output_device,
+                            int64_t media_time);
 
   struct Packet {
-    int64_t start_pts;      // starting frame of the packet (PTS has units frames)
-    int64_t end_pts;        // one past the last frame of the packet
-    bool returned = false;  // set after the packet was returned from AudioCore
+    // The packet spans timestamps [start_pts, end_pts), so end_pts is the start_pts of the
+    // next contiguous packet. By default, unless overriden by SetPtsUnits, 1 PTS = 1 frame.
+    int64_t start_pts;
+    int64_t end_pts;
+    zx::time start_ref_time;  // reference time corresponding to start_pts (set by Play)
+    zx::time end_ref_time;    // reference time corresponding to end_pts (set by Play)
+    bool returned = false;    // set after the packet was returned from AudioCore
   };
 
   using PacketVector = std::vector<std::shared_ptr<Packet>>;
@@ -70,12 +84,9 @@ class RendererShimImpl {
                              int64_t initial_pts = 0);
 
   // Wait until the given packets are rendered. |packets| must be non-empty and must be ordered by
-  // start_pts. The reference_time refers to the time at which the first frame of packets[0] should
-  // be rendered, using the same clock as the reference_time passed to Play().
-  //
-  // If |ring_out_frames| > 0, we wait for all |packets| to be rendered, plus an additional
-  // |ring_out_frames|.
-  void WaitForPackets(TestFixture* fixture, int64_t reference_time, const PacketVector& packets,
+  // start_pts. If |ring_out_frames| > 0, we wait for all |packets| to be rendered, plus an
+  // additional |ring_out_frames|.
+  void WaitForPackets(TestFixture* fixture, const PacketVector& packets,
                       size_t ring_out_frames = 0);
 
   // Reset the payload buffer to all zeros and seek back to the start.
@@ -106,6 +117,7 @@ class RendererShimImpl {
   int64_t min_lead_time_ = -1;
   TimelineRate pts_ticks_per_second_;
   TimelineRate pts_ticks_per_frame_;
+  PacketVector queued_packets_;
 
   ExpectedInspectProperties expected_inspect_properties_;
 };

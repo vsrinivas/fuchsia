@@ -6,7 +6,10 @@
 
 #include <algorithm>
 
+#include "lib/zx/time.h"
+#include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/logging/logging.h"
+#include "src/media/audio/lib/test/virtual_device.h"
 
 namespace media::audio::test {
 
@@ -38,9 +41,27 @@ void RendererShimImpl::SetPtsUnits(uint32_t ticks_per_second_numerator,
       TimelineRate::Product(pts_ticks_per_second_, TimelineRate(1, format_.frames_per_second()));
 }
 
-void RendererShimImpl::Play(TestFixture* fixture, int64_t reference_time, int64_t media_time) {
-  renderer_->Play(reference_time, media_time, fixture->AddCallback("Play"));
+void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64_t media_time) {
+  // Update the reference times for each queued packet.
+  TimelineRate ns_per_pts_tick =
+      TimelineRate::Product(pts_ticks_per_second_.Inverse(), TimelineRate::NsPerSecond);
+  for (auto p : queued_packets_) {
+    p->start_ref_time = reference_time + zx::nsec(ns_per_pts_tick.Scale(p->start_pts - media_time));
+    p->end_ref_time = reference_time + zx::nsec(ns_per_pts_tick.Scale(p->end_pts - media_time));
+  }
+  queued_packets_.clear();
+
+  renderer_->Play(reference_time.get(), media_time, fixture->AddCallback("Play"));
   fixture->ExpectCallback();
+}
+
+zx::time RendererShimImpl::PlaySynchronized(
+    TestFixture* fixture, VirtualDevice<fuchsia::virtualaudio::Output>* output_device,
+    int64_t media_time) {
+  // TODO(46650): Translate to the renderer's reference time.
+  auto mono_time = output_device->NextSynchronizedTimestamp(fixture);
+  Play(fixture, mono_time, media_time);
+  return mono_time;
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -82,19 +103,15 @@ RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
     }
   }
 
+  queued_packets_.insert(queued_packets_.end(), out.begin(), out.end());
   return out;
 }
 
-void RendererShimImpl::WaitForPackets(TestFixture* fixture, int64_t reference_time,
+void RendererShimImpl::WaitForPackets(TestFixture* fixture,
                                       const std::vector<std::shared_ptr<Packet>>& packets,
                                       size_t ring_out_frames) {
   FX_CHECK(!packets.empty());
-  int64_t start_pts = (*packets.begin())->start_pts;
-  int64_t end_pts = (*packets.rbegin())->end_pts + pts_ticks_per_frame_.Scale(ring_out_frames);
-
-  TimelineRate ns_per_tick =
-      TimelineRate::Product(pts_ticks_per_second_.Inverse(), TimelineRate(1'000'000'000, 1));
-  auto end_time = zx::time(reference_time) + zx::nsec(ns_per_tick.Scale(end_pts - start_pts));
+  auto end_time = (*packets.rbegin())->end_ref_time;
   auto timeout = end_time - zx::clock::get_monotonic();
 
   // Wait until all packets are rendered AND the timeout is reached.

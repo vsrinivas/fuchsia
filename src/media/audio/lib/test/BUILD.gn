@@ -74,6 +74,7 @@ source_set("hermetic_audio_test") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/clock",
     "//src/media/audio/lib/format",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav",

@@ -57,11 +57,8 @@ TEST_F(AudioRendererPipelineTest, RenderWithPts) {
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
-  auto start_time = output_->NextSynchronizedTimestamp(this);
-  renderer_->Play(this, start_time, 0);
-
-  // Let all packets play through the system (including the extra silent packet).
-  renderer_->WaitForPackets(this, start_time, packets);
+  renderer_->PlaySynchronized(this, output_, 0);
+  renderer_->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // The ring buffer should match the input buffer for the first num_packets.
@@ -122,9 +119,8 @@ TEST_F(AudioRendererPipelineTest, DiscardDuringPlayback) {
   // Load the renderer with lots of packets, but interrupt after two of them.
   auto first_input = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto first_packets = renderer_->AppendPackets({&first_input}, first_pts);
-  auto first_time = output_->NextSynchronizedTimestamp(this);
-  renderer_->Play(this, first_time, 0);
-  renderer_->WaitForPackets(this, first_time, {first_packets[0], first_packets[1]});
+  renderer_->PlaySynchronized(this, output_, 0);
+  renderer_->WaitForPackets(this, {first_packets[0], first_packets[1]});
 
   renderer_->renderer()->DiscardAllPackets(AddCallback(
       "DiscardAllPackets", []() { AUDIO_LOG(DEBUG) << "DiscardAllPackets #1 complete"; }));
@@ -156,8 +152,7 @@ TEST_F(AudioRendererPipelineTest, DiscardDuringPlayback) {
   auto second_input =
       GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, restart_data_value);
   auto second_packets = renderer_->AppendPackets({&second_input}, restart_pts);
-  auto second_time = first_time + ZX_MSEC(restart_packet * RendererShimImpl::kPacketMs);
-  renderer_->WaitForPackets(this, second_time, second_packets);
+  renderer_->WaitForPackets(this, second_packets);
 
   // The ring buffer should contain first_input for 10ms (one packet), then partially-written data
   // followed by zeros until restart_pts, then second_input (num_packets), then the remaining bytes
@@ -220,11 +215,8 @@ TEST_F(AudioRendererPipelineEffectsTest, RenderWithEffects) {
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
-  auto start_time = output_->NextSynchronizedTimestamp(this);
-  renderer_->Play(this, start_time, 0);
-
-  // Let all packets play through the system (including the extra silent packet).
-  renderer_->WaitForPackets(this, start_time, packets);
+  renderer_->PlaySynchronized(this, output_, 0);
+  renderer_->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // Simulate running the effect on the input buffer.
@@ -275,11 +267,8 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
-  auto start_time = output_->NextSynchronizedTimestamp(this);
-  renderer_->Play(this, start_time, 0);
-
-  // Let all packets play through the system (including an extra silent packet).
-  renderer_->WaitForPackets(this, start_time, packets);
+  renderer_->PlaySynchronized(this, output_, 0);
+  renderer_->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // The ring buffer should match the input buffer for the first num_packets. The remaining bytes
@@ -336,9 +325,8 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   // inversion_filter effect enabled.
   auto first_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto first_packets = renderer_->AppendPackets({&first_buffer});
-  auto first_time = output_->NextSynchronizedTimestamp(this);
-  renderer_->Play(this, first_time, 0);
-  renderer_->WaitForPackets(this, first_time, first_packets);
+  renderer_->PlaySynchronized(this, output_, 0);
+  renderer_->WaitForPackets(this, first_packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // Prepare first buffer for comparison to expected ring buffer.
@@ -401,8 +389,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
 
   auto second_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto second_packets = renderer_->AppendPackets({&second_buffer}, restart_pts);
-  auto second_time = first_time + ZX_MSEC(restart_packet * RendererShimImpl::kPacketMs);
-  renderer_->WaitForPackets(this, second_time, second_packets);
+  renderer_->WaitForPackets(this, second_packets);
   ring_buffer = output_->SnapshotRingBuffer();
 
   // Verify the remaining packets have gone through the updated OutputPipeline and thus been
@@ -438,11 +425,8 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
-  auto start_time = output_->NextSynchronizedTimestamp(this);
-  renderer_->Play(this, start_time, 0);
-
-  // Let all packets play through the system (including an extra silent packet).
-  renderer_->WaitForPackets(this, start_time, packets);
+  renderer_->PlaySynchronized(this, output_, 0);
+  renderer_->WaitForPackets(this, packets);
   auto ring_buffer = output_->SnapshotRingBuffer();
 
   // The ring buffer should match the input buffer for the first num_packets. The remaining bytes

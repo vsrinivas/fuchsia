@@ -130,7 +130,7 @@ void VirtualDevice<Iface>::WatchEvents() {
 }
 
 template <class Iface>
-int64_t VirtualDevice<Iface>::NextSynchronizedTimestamp(TestFixture* fixture) const {
+zx::time VirtualDevice<Iface>::NextSynchronizedTimestamp(TestFixture* fixture) const {
   // Wait for a ring buffer rollover, to give the client enough time before the next one.
   auto min_num_rings_for_measurement = (running_ring_pos_ + rb_.SizeBytes()) / rb_.SizeBytes();
   auto pos_for_measurement = min_num_rings_for_measurement * rb_.SizeBytes();
@@ -142,7 +142,7 @@ int64_t VirtualDevice<Iface>::NextSynchronizedTimestamp(TestFixture* fixture) co
       TimelineRate(zx::sec(1).get(), format_.frames_per_second() * format_.bytes_per_frame());
   int64_t running_pos_for_play = ((running_ring_pos_ / rb_.SizeBytes()) + 1) * rb_.SizeBytes();
   auto running_pos_to_ref_time = TimelineFunction(start_time_, 0, ns_per_byte);
-  return running_pos_to_ref_time.Apply(running_pos_for_play);
+  return zx::time(running_pos_to_ref_time.Apply(running_pos_for_play));
 }
 
 // Only two instantiations are needed.
