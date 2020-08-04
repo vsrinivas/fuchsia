@@ -263,6 +263,14 @@ class RndisFunctionTest : public zxtest::Test {
     ASSERT_EQ(response.status, RNDIS_STATUS_SUCCESS);
   }
 
+  void ReadIndicateStatus(uint32_t expected_status) {
+    rndis_indicate_status status;
+    ReadResponse(&status, sizeof(status));
+    ASSERT_EQ(status.msg_type, RNDIS_INDICATE_STATUS_MSG);
+    ASSERT_EQ(status.msg_length, sizeof(rndis_indicate_status));
+    ASSERT_EQ(status.status, expected_status);
+  }
+
   std::unique_ptr<fake_ddk::Bind> ddk_;
   std::unique_ptr<RndisFunction> device_;
   FakeFunction function_;
@@ -306,6 +314,8 @@ TEST_F(RndisFunctionTest, EthernetStartStop) {
   EXPECT_TRUE(ifc_.LastStatus().has_value());
   EXPECT_EQ(ifc_.LastStatus().value(), 0);
 
+  ReadIndicateStatus(RNDIS_STATUS_MEDIA_CONNECT);
+
   status = device_->EthernetImplStart(ifc_.Protocol());
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
 
@@ -318,6 +328,7 @@ TEST_F(RndisFunctionTest, EthernetStartStop) {
   device_->EthernetImplStop();
   status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
+  ReadIndicateStatus(RNDIS_STATUS_MEDIA_DISCONNECT);
 }
 
 TEST_F(RndisFunctionTest, InvalidSizeCommand) {
@@ -366,12 +377,23 @@ TEST_F(RndisFunctionTest, Send) {
   // Start the interface and bring the device online.
   zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
+  ReadIndicateStatus(RNDIS_STATUS_MEDIA_CONNECT);
+
   uint32_t filter = 0;
   SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
 
   ethernet_info_t info;
   status = device_->EthernetImplQuery(/*options=*/0, &info);
   ASSERT_OK(status);
+
+  uint32_t transmit_ok, transmit_errors, transmit_no_buffer;
+  size_t actual;
+  QueryOid(OID_GEN_RCV_OK, &transmit_ok, sizeof(transmit_ok), &actual);
+  QueryOid(OID_GEN_RCV_ERROR, &transmit_errors, sizeof(transmit_errors), &actual);
+  QueryOid(OID_GEN_RCV_NO_BUFFER, &transmit_no_buffer, sizeof(transmit_no_buffer), &actual);
+  EXPECT_EQ(transmit_ok, 0);
+  EXPECT_EQ(transmit_errors, 0);
+  EXPECT_EQ(transmit_no_buffer, 0);
 
   // Fill the TX queue.
   for (size_t i = 0; i != 8; ++i) {
@@ -390,6 +412,13 @@ TEST_F(RndisFunctionTest, Send) {
     EXPECT_OK(result);
   }
 
+  QueryOid(OID_GEN_RCV_OK, &transmit_ok, sizeof(transmit_ok), &actual);
+  QueryOid(OID_GEN_RCV_ERROR, &transmit_errors, sizeof(transmit_errors), &actual);
+  QueryOid(OID_GEN_RCV_NO_BUFFER, &transmit_no_buffer, sizeof(transmit_no_buffer), &actual);
+  EXPECT_EQ(transmit_ok, 8);
+  EXPECT_EQ(transmit_errors, 0);
+  EXPECT_EQ(transmit_no_buffer, 0);
+
   // One more packet should fail. The other packets haven't completed yet.
   {
     auto buffer = eth::Operation<>::Alloc(info.netbuf_size);
@@ -406,6 +435,13 @@ TEST_F(RndisFunctionTest, Send) {
                                  &result);
     EXPECT_EQ(result, ZX_ERR_SHOULD_WAIT);
   }
+
+  QueryOid(OID_GEN_RCV_OK, &transmit_ok, sizeof(transmit_ok), &actual);
+  QueryOid(OID_GEN_RCV_ERROR, &transmit_errors, sizeof(transmit_errors), &actual);
+  QueryOid(OID_GEN_RCV_NO_BUFFER, &transmit_no_buffer, sizeof(transmit_no_buffer), &actual);
+  EXPECT_EQ(transmit_ok, 8);
+  EXPECT_EQ(transmit_errors, 0);
+  EXPECT_EQ(transmit_no_buffer, 1);
 
   // Drain the queue.
   function_.pending_in_requests_.CompleteAll(ZX_OK, 0);
@@ -426,12 +462,21 @@ TEST_F(RndisFunctionTest, Send) {
                                  &result);
     EXPECT_EQ(result, ZX_OK);
   }
+
+  QueryOid(OID_GEN_RCV_OK, &transmit_ok, sizeof(transmit_ok), &actual);
+  QueryOid(OID_GEN_RCV_ERROR, &transmit_errors, sizeof(transmit_errors), &actual);
+  QueryOid(OID_GEN_RCV_NO_BUFFER, &transmit_no_buffer, sizeof(transmit_no_buffer), &actual);
+  EXPECT_EQ(transmit_ok, 9);
+  EXPECT_EQ(transmit_errors, 0);
+  EXPECT_EQ(transmit_no_buffer, 1);
 }
 
 TEST_F(RndisFunctionTest, Receive) {
   // Start the interface and bring the device online.
   zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
+  ReadIndicateStatus(RNDIS_STATUS_MEDIA_CONNECT);
+
   uint32_t filter = 0;
   SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
 
@@ -457,6 +502,85 @@ TEST_F(RndisFunctionTest, Receive) {
   EXPECT_EQ(ifc_.PacketsReceived(), 1);
 }
 
+TEST_F(RndisFunctionTest, KeepAliveMessage) {
+  rndis_header msg{
+      msg.msg_type = RNDIS_KEEPALIVE_MSG,
+      msg.msg_length = sizeof(rndis_header),
+      msg.request_id = 42,
+  };
+  WriteCommand(&msg, sizeof(msg));
+
+  rndis_header_complete response;
+  ReadResponse(&response, sizeof(response));
+
+  EXPECT_EQ(response.msg_type, RNDIS_KEEPALIVE_CMPLT);
+  EXPECT_EQ(response.msg_length, sizeof(response));
+  EXPECT_EQ(response.request_id, 42);
+  EXPECT_EQ(response.status, RNDIS_STATUS_SUCCESS);
+}
+
+TEST_F(RndisFunctionTest, OidSupportedList) {
+  uint32_t supported_oids[100];
+  size_t actual;
+  QueryOid(OID_GEN_SUPPORTED_LIST, &supported_oids, sizeof(supported_oids), &actual);
+  ASSERT_GE(actual, sizeof(uint32_t));
+  ASSERT_EQ(actual % sizeof(uint32_t), 0);
+
+  // Check that the list at least contains the list OID itself.
+  bool contains_list_oid = false;
+  for (size_t i = 0; i < actual / sizeof(uint32_t); ++i) {
+    if (supported_oids[i] == OID_GEN_SUPPORTED_LIST) {
+      contains_list_oid = true;
+      break;
+    }
+  }
+  EXPECT_TRUE(contains_list_oid);
+}
+
+TEST_F(RndisFunctionTest, OidHardwareStatus) {
+  uint32_t hardware_status;
+  size_t actual;
+  QueryOid(OID_GEN_HARDWARE_STATUS, &hardware_status, sizeof(hardware_status), &actual);
+  ASSERT_EQ(actual, sizeof(hardware_status));
+  EXPECT_EQ(hardware_status, RNDIS_HW_STATUS_READY);
+}
+
+TEST_F(RndisFunctionTest, OidLinkSpeed) {
+  zx_status_t status =
+      device_->UsbFunctionInterfaceSetConfigured(/*configured=*/true, USB_SPEED_FULL);
+  ASSERT_OK(status);
+
+  uint32_t speed;
+  size_t actual;
+  QueryOid(OID_GEN_LINK_SPEED, &speed, sizeof(speed), &actual);
+  ASSERT_EQ(actual, sizeof(speed));
+  EXPECT_EQ(speed, 120'000);
+}
+
+TEST_F(RndisFunctionTest, OidMediaConnectStatus) {
+  uint32_t status;
+  size_t actual;
+  QueryOid(OID_GEN_MEDIA_CONNECT_STATUS, &status, sizeof(status), &actual);
+  ASSERT_EQ(actual, sizeof(status));
+  EXPECT_EQ(status, RNDIS_STATUS_MEDIA_CONNECT);
+}
+
+TEST_F(RndisFunctionTest, OidPhysicalMedium) {
+  uint32_t medium;
+  size_t actual;
+  QueryOid(OID_GEN_PHYSICAL_MEDIUM, &medium, sizeof(medium), &actual);
+  ASSERT_EQ(actual, sizeof(medium));
+  EXPECT_EQ(medium, RNDIS_MEDIUM_802_3);
+}
+
+TEST_F(RndisFunctionTest, OidMaximumSize) {
+  uint32_t size;
+  size_t actual;
+  QueryOid(OID_GEN_MAXIMUM_TOTAL_SIZE, &size, sizeof(size), &actual);
+  ASSERT_EQ(actual, sizeof(size));
+  EXPECT_EQ(size, RNDIS_MAX_DATA_SIZE);
+}
+
 TEST_F(RndisFunctionTest, OidMacAddress) {
   std::array<uint8_t, ETH_MAC_SIZE> mac_addr;
   size_t actual;
@@ -467,4 +591,11 @@ TEST_F(RndisFunctionTest, OidMacAddress) {
   expected[5] ^= 1;
 
   ASSERT_EQ(mac_addr, expected);
+}
+
+TEST_F(RndisFunctionTest, OidVendorDescription) {
+  char description[100];
+  size_t actual;
+  QueryOid(OID_GEN_VENDOR_DESCRIPTION, &description, sizeof(description), &actual);
+  EXPECT_STR_EQ(description, "Google");
 }

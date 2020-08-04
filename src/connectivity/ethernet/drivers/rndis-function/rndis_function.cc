@@ -26,23 +26,185 @@ void RndisFunction::UsbFunctionInterfaceGetDescriptors(void* out_descriptors_buf
   *out_descriptors_actual = UsbFunctionInterfaceGetDescriptorsSize();
 }
 
-std::optional<std::vector<uint8_t>> RndisFunction::QueryOid(uint32_t oid, void* input,
-                                                            size_t length) {
+std::optional<std::vector<uint8_t>> RndisFunction::QueryOidLocked(uint32_t oid, void* input,
+                                                                  size_t length) {
+  zxlogf(INFO, "Query OID %x", oid);
   std::optional<std::vector<uint8_t>> response;
   switch (oid) {
-    case OID_802_3_PERMANENT_ADDRESS: {
-      std::vector<uint8_t> buffer;
-      buffer.insert(buffer.end(), mac_addr_.begin(), mac_addr_.end());
+    case OID_GEN_SUPPORTED_LIST: {
+      static constexpr uint32_t supported[] = {
+          // General OIDs.
+          OID_GEN_SUPPORTED_LIST,
+          OID_GEN_HARDWARE_STATUS,
+          OID_GEN_MEDIA_SUPPORTED,
+          OID_GEN_MEDIA_IN_USE,
+          OID_GEN_MAXIMUM_FRAME_SIZE,
+          OID_GEN_LINK_SPEED,
+          OID_GEN_TRANSMIT_BLOCK_SIZE,
+          OID_GEN_RECEIVE_BLOCK_SIZE,
+          OID_GEN_VENDOR_ID,
+          OID_GEN_VENDOR_DESCRIPTION,
+          OID_GEN_VENDOR_DRIVER_VERSION,
+          OID_GEN_CURRENT_PACKET_FILTER,
+          OID_GEN_MAXIMUM_TOTAL_SIZE,
+          OID_GEN_PHYSICAL_MEDIUM,
+          OID_GEN_MEDIA_CONNECT_STATUS,
 
-      // Make the host and device addresses different so packets are routed correctly.
-      buffer[5] ^= 1;
+          // General statistic OIDs.
+          OID_GEN_XMIT_OK,
+          OID_GEN_RCV_OK,
+          OID_GEN_XMIT_ERROR,
+          OID_GEN_RCV_ERROR,
+          OID_GEN_RCV_NO_BUFFER,
 
+          // 802.3 OIDs.
+          OID_802_3_PERMANENT_ADDRESS,
+          OID_802_3_CURRENT_ADDRESS,
+          OID_802_3_MULTICAST_LIST,
+          OID_802_3_MAXIMUM_LIST_SIZE,
+      };
+      std::vector<uint8_t> buffer(sizeof(supported));
+      memcpy(buffer.data(), &supported, sizeof(supported));
       response.emplace(buffer);
       break;
     }
-    default:
-      zxlogf(WARNING, "Unhandled OID query %x", oid);
+    case OID_GEN_HARDWARE_STATUS: {
+      uint32_t status = RNDIS_HW_STATUS_READY;
+      std::vector<uint8_t> buffer(sizeof(status));
+      memcpy(buffer.data(), &status, sizeof(status));
+      response.emplace(buffer);
       break;
+    }
+    case OID_GEN_TRANSMIT_BLOCK_SIZE:
+    case OID_GEN_RECEIVE_BLOCK_SIZE:
+    case OID_GEN_MAXIMUM_FRAME_SIZE: {
+      uint32_t frame_size = kMtu - sizeof(rndis_packet_header);
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&frame_size),
+                               reinterpret_cast<uint8_t*>(&frame_size) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_LINK_SPEED: {
+      static_assert(sizeof(link_speed_) == sizeof(uint32_t));
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&link_speed_),
+                               reinterpret_cast<uint8_t*>(&link_speed_) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_VENDOR_ID: {
+      static_assert(sizeof(kVendorId) == sizeof(uint32_t));
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(&kVendorId),
+                               reinterpret_cast<const uint8_t*>(&kVendorId) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_VENDOR_DESCRIPTION: {
+      std::vector<uint8_t> buffer(sizeof(kVendorDescription));
+      memcpy(buffer.data(), &kVendorDescription, sizeof(kVendorDescription));
+      response.emplace(buffer);
+      break;
+    }
+    case OID_GEN_VENDOR_DRIVER_VERSION: {
+      static_assert(sizeof(kVendorDriverVersionMajor) == sizeof(uint16_t));
+      static_assert(sizeof(kVendorDriverVersionMinor) == sizeof(uint16_t));
+      uint32_t version = (kVendorDriverVersionMajor << 16) | kVendorDriverVersionMinor;
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&version),
+                               reinterpret_cast<uint8_t*>(&version) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_MEDIA_CONNECT_STATUS: {
+      uint32_t status = RNDIS_STATUS_MEDIA_CONNECT;
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&status),
+                               reinterpret_cast<uint8_t*>(&status) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_MEDIA_SUPPORTED:
+    case OID_GEN_MEDIA_IN_USE:
+    case OID_GEN_PHYSICAL_MEDIUM: {
+      uint32_t medium = RNDIS_MEDIUM_802_3;
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&medium),
+                               reinterpret_cast<uint8_t*>(&medium) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_MAXIMUM_TOTAL_SIZE: {
+      uint32_t total_size = RNDIS_MAX_DATA_SIZE;
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&total_size),
+                               reinterpret_cast<uint8_t*>(&total_size) + sizeof(uint32_t)));
+      break;
+    }
+
+    case OID_802_3_PERMANENT_ADDRESS:
+    case OID_802_3_CURRENT_ADDRESS: {
+      std::vector<uint8_t> buffer;
+      buffer.insert(buffer.end(), mac_addr_.begin(), mac_addr_.end());
+      // Make the host and device addresses different so packets are routed correctly.
+      buffer[5] ^= 1;
+      response.emplace(buffer);
+      break;
+    }
+    case OID_802_3_MULTICAST_LIST: {
+      static constexpr uint32_t list[] = {0xE0000000};
+      std::vector<uint8_t> buffer(sizeof(list));
+      memcpy(buffer.data(), &list, sizeof(list));
+      response.emplace(buffer);
+      break;
+    }
+    case OID_802_3_MAXIMUM_LIST_SIZE: {
+      uint32_t list_size = 1;
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&list_size),
+                               reinterpret_cast<uint8_t*>(&list_size) + sizeof(uint32_t)));
+      break;
+    }
+
+    // These stats are from the perspective of the host, so transmit and receive are flipped.
+    case OID_GEN_XMIT_OK: {
+      static_assert(sizeof(receive_ok_) == sizeof(uint32_t));
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&receive_ok_),
+                               reinterpret_cast<uint8_t*>(&receive_ok_) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_RCV_OK: {
+      zxlogf(ERROR, "RCV OK with %u.", transmit_ok_);
+      static_assert(sizeof(transmit_ok_) == sizeof(uint32_t));
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&transmit_ok_),
+                               reinterpret_cast<uint8_t*>(&transmit_ok_) + sizeof(uint32_t)));
+
+      break;
+    }
+    case OID_GEN_XMIT_ERROR: {
+      static_assert(sizeof(receive_errors_) == sizeof(uint32_t));
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&receive_errors_),
+                               reinterpret_cast<uint8_t*>(&receive_errors_) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_RCV_ERROR: {
+      static_assert(sizeof(transmit_errors_) == sizeof(uint32_t));
+      response.emplace(
+          std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&transmit_errors_),
+                               reinterpret_cast<uint8_t*>(&transmit_errors_) + sizeof(uint32_t)));
+      break;
+    }
+    case OID_GEN_RCV_NO_BUFFER: {
+      static_assert(sizeof(transmit_no_buffer_) == sizeof(uint32_t));
+      response.emplace(std::vector<uint8_t>(
+          reinterpret_cast<uint8_t*>(&transmit_no_buffer_),
+          reinterpret_cast<uint8_t*>(&transmit_no_buffer_) + sizeof(uint32_t)));
+      break;
+    }
+
+    default:
+      break;
+  }
+  if (!response.has_value()) {
+    zxlogf(WARNING, "Did not generate a response to OID query %x.", oid);
   }
   return response;
 }
@@ -62,6 +224,11 @@ zx_status_t RndisFunction::SetOid(uint32_t oid, const uint8_t* buffer, size_t le
         function_.RequestQueue(pending_request->take(), &read_request_complete_);
       }
 
+      return ZX_OK;
+    }
+    case OID_802_3_MULTICAST_LIST: {
+      // Ignore
+      zxlogf(WARNING, "Host set multicast list (buffer len %zd).", length);
       return ZX_OK;
     }
     default:
@@ -164,6 +331,19 @@ std::vector<uint8_t> SetResponse(uint32_t request_id, uint32_t status) {
   return buffer;
 }
 
+std::vector<uint8_t> KeepaliveResponse(uint32_t request_id, uint32_t status) {
+  rndis_header_complete response{
+      .msg_type = RNDIS_KEEPALIVE_CMPLT,
+      .msg_length = sizeof(rndis_header_complete),
+      .request_id = request_id,
+      .status = status,
+  };
+
+  std::vector<uint8_t> buffer(sizeof(rndis_header_complete));
+  memcpy(buffer.data(), &response, sizeof(rndis_header_complete));
+  return buffer;
+}
+
 zx_status_t RndisFunction::HandleCommand(const void* buffer, size_t size) {
   if (size < sizeof(rndis_header)) {
     fbl::AutoLock lock(&lock_);
@@ -203,7 +383,8 @@ zx_status_t RndisFunction::HandleCommand(const void* buffer, size_t size) {
       }
 
       auto query = static_cast<const rndis_query*>(buffer);
-      auto oid_response = QueryOid(query->oid, nullptr, 0);
+      fbl::AutoLock lock(&lock_);
+      auto oid_response = QueryOidLocked(query->oid, nullptr, 0);
       response.emplace(QueryResponse(query->request_id, oid_response));
       break;
     }
@@ -237,6 +418,9 @@ zx_status_t RndisFunction::HandleCommand(const void* buffer, size_t size) {
       response.emplace(SetResponse(set->request_id, rndis_status));
       break;
     }
+    case RNDIS_KEEPALIVE_MSG:
+      response.emplace(KeepaliveResponse(header->request_id, RNDIS_STATUS_SUCCESS));
+      break;
     case RNDIS_HALT_MSG:
       zxlogf(WARNING, "Host sent a halt message, which we do not support yet.");
       break;
@@ -249,6 +433,7 @@ zx_status_t RndisFunction::HandleCommand(const void* buffer, size_t size) {
       zxlogf(WARNING, "Host sent a data packet on the control channel.");
       break;
     default:
+      zxlogf(WARNING, "Host sent an unrecognised message: %x.", header->msg_type);
       response.emplace(InvalidMessageResponse(buffer, size));
       break;
   }
@@ -348,6 +533,27 @@ zx_status_t RndisFunction::UsbFunctionInterfaceSetConfigured(bool configured, us
       zxlogf(ERROR, "Failed to configure bulk out endpoint: %s", zx_status_get_string(status));
       return status;
     }
+
+    fbl::AutoLock lock(&lock_);
+    // Set the speed optimistically to roughly the capacity of the bus. We report link speed in
+    // units of 100bps.
+    switch (speed) {
+      case USB_SPEED_LOW:
+        link_speed_ = 15'000;
+        break;
+      case USB_SPEED_FULL:
+        link_speed_ = 120'000;
+        break;
+      case USB_SPEED_HIGH:
+        link_speed_ = 4'800'000;
+        break;
+      case USB_SPEED_SUPER:
+        link_speed_ = 50'000'000;
+        break;
+      default:
+        link_speed_ = 0;
+        break;
+    }
   } else {
     zx_status_t status = function_.DisableEp(NotificationAddress());
     if (status != ZX_OK) {
@@ -364,8 +570,10 @@ zx_status_t RndisFunction::UsbFunctionInterfaceSetConfigured(bool configured, us
       zxlogf(ERROR, "Failed to disable data out endpoint: %s", zx_status_get_string(status));
       return status;
     }
+
     fbl::AutoLock lock(&lock_);
     rndis_ready_ = false;
+    link_speed_ = 0;
     if (ifc_.is_valid()) {
       ifc_.Status(0);
     }
@@ -394,18 +602,22 @@ zx_status_t RndisFunction::EthernetImplQuery(uint32_t options, ethernet_info_t* 
 }
 
 void RndisFunction::EthernetImplStop() {
+  IndicateConnectionStatus(false);
   fbl::AutoLock lock(&lock_);
   ifc_.clear();
 }
 
 zx_status_t RndisFunction::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
-  fbl::AutoLock lock(&lock_);
-  if (ifc_.is_valid()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
+  {
+    fbl::AutoLock lock(&lock_);
+    if (ifc_.is_valid()) {
+      return ZX_ERR_ALREADY_BOUND;
+    }
 
-  ifc_ = ddk::EthernetIfcProtocolClient(ifc);
-  ifc_.Status(Online() ? ETHERNET_STATUS_ONLINE : 0);
+    ifc_ = ddk::EthernetIfcProtocolClient(ifc);
+    ifc_.Status(Online() ? ETHERNET_STATUS_ONLINE : 0);
+  }
+  IndicateConnectionStatus(true);
   return ZX_OK;
 }
 
@@ -414,14 +626,14 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
                                         void* cookie) {
   eth::BorrowedOperation<> op(netbuf, completion_cb, cookie, sizeof(ethernet_netbuf_t));
 
+  fbl::AutoLock lock(&lock_);
+
   size_t length = op.operation()->data_size;
   if (length > kMtu - sizeof(rndis_packet_header)) {
-    zxlogf(ERROR, "Unsupported packet length %zu", length);
     op.Complete(ZX_ERR_INVALID_ARGS);
+    transmit_errors_ += 1;
     return;
   }
-
-  fbl::AutoLock lock(&lock_);
 
   if (!Online()) {
     op.Complete(ZX_ERR_SHOULD_WAIT);
@@ -434,6 +646,7 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
   if (!request) {
     zxlogf(DEBUG, "No available TX requests");
     op.Complete(ZX_ERR_SHOULD_WAIT);
+    transmit_no_buffer_ += 1;
     return;
   }
 
@@ -448,6 +661,7 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
   if (copied < 0) {
     zxlogf(ERROR, "Failed to copy TX header: %zd", copied);
     op.Complete(ZX_ERR_INTERNAL);
+    transmit_errors_ += 1;
     return;
   }
   offset += copied;
@@ -456,12 +670,14 @@ void RndisFunction::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* net
   if (copied < 0) {
     zxlogf(ERROR, "Failed to copy TX data: %zd", copied);
     op.Complete(ZX_ERR_INTERNAL);
+    transmit_errors_ += 1;
     return;
   }
   request->request()->header.length = sizeof(header) + length;
 
   function_.RequestQueue(request->take(), &write_request_complete_);
   op.Complete(ZX_OK);
+  transmit_ok_ += 1;
 }
 
 zx_status_t RndisFunction::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
@@ -476,6 +692,7 @@ void RndisFunction::ReceiveLocked(usb::Request<>& request) {
   zx_status_t status = request.Mmap(reinterpret_cast<void**>(&data));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to map RX data: %s", zx_status_get_string(status));
+    receive_errors_ += 1;
     return;
   }
 
@@ -488,27 +705,32 @@ void RndisFunction::ReceiveLocked(usb::Request<>& request) {
       zxlogf(WARNING, "actual size %lu.", response.actual);
       zxlogf(WARNING, "header->msg_length %u.", header->msg_length);
       zxlogf(WARNING, "header->data_offset %x.", header->data_offset);
+      receive_errors_ += 1;
       return;
     }
     if (header->msg_length > remaining) {
       zxlogf(WARNING, "Received packet with invalid length %u: only %zd bytes left in frame.",
              header->msg_length, remaining);
+      receive_errors_ += 1;
       return;
     }
     if (header->msg_length < sizeof(rndis_packet_header)) {
       zxlogf(WARNING, "Received packet with invalid length %u: less than header length.",
              header->msg_length);
+      receive_errors_ += 1;
       return;
     }
     if (header->data_offset > header->msg_length - offsetof(rndis_packet_header, data_offset) ||
         header->data_length >
             header->msg_length - offsetof(rndis_packet_header, data_offset) - header->data_offset) {
       zxlogf(WARNING, "Received packet with invalid data.");
+      receive_errors_ += 1;
       return;
     }
 
     size_t offset = offsetof(rndis_packet_header, data_offset) + header->data_offset;
     ifc_.Recv(data + offset, header->data_length, /*flags=*/0);
+    receive_ok_ += 1;
 
     if (header->oob_data_offset != 0) {
       zxlogf(WARNING, "Packet contained unsupported out of band data.");
@@ -568,6 +790,26 @@ void RndisFunction::NotifyLocked() {
   request->request()->header.length = sizeof(notification);
 
   function_.RequestQueue(request->take(), &notification_request_complete_);
+}
+
+void RndisFunction::IndicateConnectionStatus(bool connected) {
+  rndis_indicate_status status;
+  status.msg_type = RNDIS_INDICATE_STATUS_MSG;
+  status.msg_length = static_cast<uint32_t>(sizeof(rndis_indicate_status));
+  if (connected) {
+    status.status = RNDIS_STATUS_MEDIA_CONNECT;
+  } else {
+    status.status = RNDIS_STATUS_MEDIA_DISCONNECT;
+  }
+  status.status_buffer_length = 0;
+  status.status_buffer_offset = 0;
+
+  std::vector<uint8_t> buffer(sizeof(rndis_indicate_status));
+  memcpy(buffer.data(), &status, sizeof(rndis_indicate_status));
+
+  fbl::AutoLock lock(&lock_);
+  control_responses_.push(std::move(buffer));
+  NotifyLocked();
 }
 
 void RndisFunction::WriteComplete(usb_request_t* usb_request) {

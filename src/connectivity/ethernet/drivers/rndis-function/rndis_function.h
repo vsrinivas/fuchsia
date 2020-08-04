@@ -62,7 +62,8 @@ class RndisFunction : public RndisFunctionType,
   zx_status_t HandleCommand(const void* buffer, size_t size);
   zx_status_t HandleResponse(void* buffer, size_t size, size_t* actual);
 
-  std::optional<std::vector<uint8_t>> QueryOid(uint32_t oid, void* input, size_t length);
+  std::optional<std::vector<uint8_t>> QueryOidLocked(uint32_t oid, void* input, size_t length)
+      __TA_REQUIRES(lock_);
   zx_status_t SetOid(uint32_t oid, const uint8_t* input, size_t length);
 
   void Shutdown();
@@ -74,6 +75,8 @@ class RndisFunction : public RndisFunctionType,
   void ReceiveLocked(usb::Request<>& request) __TA_REQUIRES(lock_);
   void NotifyLocked() __TA_REQUIRES(lock_);
 
+  void IndicateConnectionStatus(bool connected);
+
   uint8_t NotificationAddress() { return descriptors_.notification_ep.bEndpointAddress; }
   uint8_t BulkInAddress() { return descriptors_.in_ep.bEndpointAddress; }
   uint8_t BulkOutAddress() { return descriptors_.out_ep.bEndpointAddress; }
@@ -84,13 +87,26 @@ class RndisFunction : public RndisFunctionType,
   static constexpr size_t kRequestPoolSize = 8;
   static constexpr size_t kMtu = RNDIS_MAX_XFER_SIZE;
 
+  static constexpr uint32_t kVendorId = 0x44070b00;
+  static constexpr char kVendorDescription[] = "Google";
+  static constexpr uint16_t kVendorDriverVersionMajor = 1;
+  static constexpr uint16_t kVendorDriverVersionMinor = 0;
+
   ddk::EthernetIfcProtocolClient ifc_ __TA_GUARDED(lock_);
   ddk::UsbFunctionProtocolClient function_;
   size_t usb_request_size_;
 
   fbl::Mutex lock_;
   bool rndis_ready_ __TA_GUARDED(lock_) = false;
+  uint32_t link_speed_ __TA_GUARDED(lock_) = 0;
   std::array<uint8_t, ETH_MAC_SIZE> mac_addr_;
+
+  // Stats.
+  uint32_t transmit_ok_ __TA_GUARDED(lock_) = 0;
+  uint32_t receive_ok_ __TA_GUARDED(lock_) = 0;
+  uint32_t transmit_errors_ __TA_GUARDED(lock_) = 0;
+  uint32_t receive_errors_ __TA_GUARDED(lock_) = 0;
+  uint32_t transmit_no_buffer_ __TA_GUARDED(lock_) = 0;
 
   std::queue<std::vector<uint8_t>> control_responses_ __TA_GUARDED(lock_);
 
