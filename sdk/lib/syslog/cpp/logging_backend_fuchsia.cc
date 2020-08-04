@@ -168,6 +168,11 @@ void SetLogSettings(const syslog::LogSettings& settings,
 
 syslog::LogSeverity GetMinLogLevel() { return LogState::Get().min_severity(); }
 
+void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+                   const char* condition, const syslog::LogValue& msg) {
+  WriteLog(severity, file, line, tag, condition, msg.ToString());
+}
+
 void WriteLog(syslog::LogSeverity severity, const char* fname, int line, const char* tag,
               const char* condition, const std::string& msg) {
   const LogState& state = LogState::Get();

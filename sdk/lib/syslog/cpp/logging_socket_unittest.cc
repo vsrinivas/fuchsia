@@ -224,7 +224,7 @@ TEST_F(LoggingSocketTest, TooManyTags) {
 
 TEST_F(LoggingSocketTest, Structured) {
   FX_SLOG(INFO)("tag", {"one"_k = 2, "three"_k = {4, 5}});
-  ReadPacketAndCompare(FX_LOG_INFO, "tag: {\"one\": 2, \"three\": [4, 5]}");
+  ReadPacketAndCompare(FX_LOG_INFO, "{\"one\": 2, \"three\": [4, 5]}", {"tag"});
   CheckSocketEmpty();
 }
 

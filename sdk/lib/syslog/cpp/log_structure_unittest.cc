@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/logging_backend.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
@@ -12,6 +13,14 @@ namespace syslog {
 TEST(StructuredLogging, Log) {
   FX_SLOG(WARNING)("test_log", {"foo"_k = "bar"});
 
+  // TODO(57482): Figure out how to verify this appropriately.
+}
+
+TEST(StructuredLogging, BackendDirect) {
+  syslog_backend::WriteLog(syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition",
+                           "Log message");
+  syslog_backend::WriteLogValue(syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition",
+                                {"foo"_k = 42});
   // TODO(57482): Figure out how to verify this appropriately.
 }
 

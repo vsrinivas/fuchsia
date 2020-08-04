@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/logging_backend.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
@@ -288,17 +289,38 @@ TEST_F(LoggingFixture, SLog) {
   std::string log;
   ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
 
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line1) + ")] tag: String log"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line2) + ")] tag: 42"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line3) + ")] tag: [42, \"string\"]"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+  EXPECT_THAT(log, testing::HasSubstr("tag] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line1) + ")] String log"));
+  EXPECT_THAT(log, testing::HasSubstr("tag] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line2) + ")] 42"));
+  EXPECT_THAT(log, testing::HasSubstr("tag] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                      std::to_string(line3) + ")] [42, \"string\"]"));
+  EXPECT_THAT(log, testing::HasSubstr("tag] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
                                       std::to_string(line4) +
-                                      ")] tag: {\"first\": 42, \"second\": \"string\"}"));
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line5) + ")] String log"));
+                                      ")] {\"first\": 42, \"second\": \"string\"}"));
+  EXPECT_THAT(log,
+              testing::HasSubstr("String log] ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
+                                 std::to_string(line5) + ")]"));
+}
+
+TEST_F(LoggingFixture, BackendDirect) {
+  LogSettings new_settings;
+  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
+
+  syslog_backend::WriteLog(syslog::LOG_ERROR, "foo.cc", 42, "fake tag", "condition", "Log message");
+  syslog_backend::WriteLogValue(syslog::LOG_ERROR, "foo.cc", 42, "fake tag", "condition",
+                                {"foo"_k = 42});
+
+  std::string log;
+  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
+
+  EXPECT_THAT(log,
+              testing::HasSubstr("ERROR: [foo.cc(42)] Check failed: condition. Log message\n"));
+  EXPECT_THAT(log,
+              testing::HasSubstr("ERROR: [foo.cc(42)] Check failed: condition. {\"foo\": 42}\n"));
 }
 
 }  // namespace

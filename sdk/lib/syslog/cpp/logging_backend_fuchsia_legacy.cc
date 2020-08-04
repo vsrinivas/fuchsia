@@ -54,6 +54,11 @@ void SetLogSettings(const syslog::LogSettings& settings,
 
 syslog::LogSeverity GetMinLogLevel() { return fx_logger_get_min_severity(fx_log_get_logger()); }
 
+void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+                   const char* condition, const syslog::LogValue& msg) {
+  WriteLog(severity, file, line, tag, condition, msg.ToString());
+}
+
 void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
               const char* condition, const std::string& msg) {
   std::ostringstream stream;

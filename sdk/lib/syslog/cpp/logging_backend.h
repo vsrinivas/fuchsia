@@ -6,6 +6,7 @@
 #define LIB_SYSLOG_CPP_LOGGING_BACKEND_H_
 
 #include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace syslog_backend {
 
@@ -18,6 +19,9 @@ syslog::LogSeverity GetMinLogLevel();
 
 void WriteLog(syslog::LogSeverity severity, const char* file, int line, const char* tag,
               const char* condition, const std::string& msg);
+
+void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+                   const char* condition, const syslog::LogValue& msg);
 
 }  // namespace syslog_backend
 
