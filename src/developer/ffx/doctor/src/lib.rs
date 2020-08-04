@@ -20,7 +20,7 @@ mod constants;
 mod daemon_manager;
 
 fn format_err(e: Error) -> String {
-    format!("{} {:?}", FAILED_WITH_ERROR, e)
+    format!("{}\n\t{:?}", FAILED_WITH_ERROR, e)
 }
 
 fn print_status_line(writer: &mut impl Write, s: &str) {
@@ -563,9 +563,10 @@ mod test {
                 format!(
                     // TODO(jwing): Print error on a new line so that this
                     // doesn't have to match the entire error message.
-                    "{}{} A FIDL client's channel to the service fuchsia.developer.bridge.Daemon was closed: PEER_CLOSED",
+                    "{}{}",
                     LISTING_TARGETS, FAILED_WITH_ERROR
                 ),
+                String::from("PEER_CLOSED"),
                 String::default(),
                 String::default(),
                 String::from("PEER_CLOSED"),
@@ -573,6 +574,7 @@ mod test {
                 String::default(),
                 String::from("Attempt 2 of 2"),
                 String::default(),
+                String::from("PEER_CLOSED"),
                 String::default(),
                 String::default(),
                 String::from("PEER_CLOSED"),
