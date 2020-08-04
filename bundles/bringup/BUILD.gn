@@ -17,7 +17,6 @@ group("tests") {
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",
     "//src/devices/usb/tests/usb:usb-package",  # HW-required.
-    "//src/lib/ddktl/test:ddktl-unittest-package",
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-package",  # HW-required.
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-package",  # HW-required.
     "//src/zircon/tests/entropy:entropy-package",
