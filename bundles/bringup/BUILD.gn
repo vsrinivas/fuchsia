@@ -11,6 +11,9 @@ group("tests") {
     "//src/bringup/tests/bootfs_test",  # This is a package.
     "//src/devices/block/drivers/ftl/test:ftl-integration-package",  # HW-required.
     "//src/devices/nand/drivers/broker/test:nand-broker-package",  # HW-required.
+
+    # The devcoordinator-namespace-test assumes the root filesystem and can't be
+    # migrated as packages are given their own local filesystem.
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-package",
     "//src/devices/thermal/drivers/mtk-thermal:mtk-thermal-integration-test-package",
     "//src/devices/usb/tests/usb:usb-package",  # HW-required.
