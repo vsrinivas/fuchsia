@@ -136,9 +136,7 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
       command_runners_(std::move(command_runners)),
       story_command_tag_strings_{
           {fuchsia::modular::StoryCommand::Tag::kAddMod, "StoryCommand::AddMod"},
-          {fuchsia::modular::StoryCommand::Tag::kFocusMod, "StoryCommand::FocusMod"},
-          {fuchsia::modular::StoryCommand::Tag::kRemoveMod, "StoryCommand::RemoveMod"},
-          {fuchsia::modular::StoryCommand::Tag::kSetFocusState, "StoryCommand::SetFocusState"}} {
+          {fuchsia::modular::StoryCommand::Tag::kRemoveMod, "StoryCommand::RemoveMod"}} {
   FX_DCHECK(session_storage_ != nullptr);
 }
 

@@ -299,26 +299,7 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig stor
       presentation_provider_impl_.get(), &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
-  fuchsia::modular::FocusProviderPtr focus_provider_puppet_master;
-  auto focus_provider_request_puppet_master = focus_provider_puppet_master.NewRequest();
-
-  // Initialize the PuppetMaster.
-  //
-  // There's no clean runtime interface we can inject to
-  // puppet master. Hence, for now we inject this function to be able to focus
-  // mods. Capturing a pointer to |story_provider_impl_| is safe because PuppetMaster
-  // is destroyed before StoryProviderImpl.
-  auto module_focuser = [story_provider_impl = story_provider_impl_.get()](
-                            std::string story_id, std::vector<std::string> mod_name) {
-    auto story_controller_ptr = story_provider_impl->GetStoryControllerImpl(story_id);
-    if (story_controller_ptr == nullptr) {
-      return;
-    }
-    story_controller_ptr->FocusModule(std::move(mod_name));
-  };
-
-  story_command_executor_ = MakeProductionStoryCommandExecutor(
-      session_storage_.get(), std::move(focus_provider_puppet_master), std::move(module_focuser));
+  story_command_executor_ = MakeProductionStoryCommandExecutor(session_storage_.get());
   puppet_master_impl_ =
       std::make_unique<PuppetMasterImpl>(session_storage_.get(), story_command_executor_.get());
 
@@ -331,7 +312,6 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig stor
 
   focus_handler_ = std::make_unique<FocusHandler>();
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_story_provider));
-  focus_handler_->AddProviderBinding(std::move(focus_provider_request_puppet_master));
   OnTerminate(Reset(&focus_handler_));
 }
 

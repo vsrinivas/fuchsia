@@ -7,9 +7,7 @@
 #include <memory>
 
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/add_mod_command_runner.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/focus_mod_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/remove_mod_command_runner.h"
-#include "src/modular/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
 #include "src/modular/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
 namespace modular {
@@ -20,17 +18,9 @@ using StoryControllerFactory =
     fit::function<fuchsia::modular::StoryControllerPtr(fidl::StringPtr story_id)>;
 
 std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
-    SessionStorage* const session_storage, fuchsia::modular::FocusProviderPtr focus_provider,
-    // TODO(miguelfrde): we shouldn't create this dependency here. Instead
-    // an interface similar to StoryStorage should be created for Runtime
-    // use cases.
-    fit::function<void(std::string, std::vector<std::string>)> module_focuser) {
+    SessionStorage* const session_storage) {
   std::map<fuchsia::modular::StoryCommand::Tag, std::unique_ptr<CommandRunner>> command_runners;
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetFocusState,
-                          new SetFocusStateCommandRunner(std::move(focus_provider)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kAddMod, new AddModCommandRunner());
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
-                          new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
                           new RemoveModCommandRunner());
 

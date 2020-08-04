@@ -13,8 +13,8 @@ library fuchsia.modular;
 ///       operations to watchers of a story (through SessionWatcher) as are used
 ///       to control a story.
 union StoryCommand {
-    /// Sets the focus state of the story to `set_focus_state.focused`.
-    1: SetFocusState set_focus_state;
+    // Deprecated operation: set_focus_state.
+    1: reserved;
 
     /// Adds a Mod.
     2: AddMod add_mod;
@@ -25,15 +25,11 @@ union StoryCommand {
     // Deprecated operation: set_link_value.
     4: reserved;
 
-    /// Brings focus to a mod.
-    5: FocusMod focus_mod;
+    // Deprecated operation: focus_mod.
+    5: reserved;
 
     // Deprecated operation: set_kind_of_proto_story_option.
     6: reserved;
-};
-
-struct SetFocusState {
-    bool focused;
 };
 
 /// Adds a mod described by `intent` to the story with name `mod_name`. If
@@ -69,24 +65,6 @@ struct AddMod {
 
 /// Removes the mod under `mod_name` from the story.
 struct RemoveMod {
-    /// The name of the mod within the story.
-    ///
-    /// Clients should provide `mod_name_transitional` instead.
-    /// If both are provided, `mod_name` is ignored.
-    ///
-    // TODO(MF-148): Convert to string
-    vector<string:MAX>:MAX mod_name;
-
-    /// The name of the mod within the story. This should be used instead of
-    /// `mod_name`. If provided, it is equivalent to passing `mod_name` with
-    /// a single item. If both are provided, `mod_name` is ignored.
-    ///
-    // TODO(MF-148): Remove
-    string:MAX? mod_name_transitional;
-};
-
-/// Instructs the session shell to focus the mod under `mod_name`.
-struct FocusMod {
     /// The name of the mod within the story.
     ///
     /// Clients should provide `mod_name_transitional` instead.

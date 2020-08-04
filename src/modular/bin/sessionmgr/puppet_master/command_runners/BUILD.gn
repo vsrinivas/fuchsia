@@ -8,12 +8,8 @@ group("command_runners") {
     ":add_mod_command_runner",
     ":add_mod_command_runner_unittest",
     ":command_runner",
-    ":focus_mod_command_runner",
-    ":focus_mod_command_runner_unittest",
     ":remove_mod_command_runner",
     ":remove_mod_command_runner_unittest",
-    ":set_focus_state_command_runner",
-    ":set_focus_state_command_runner_unittest",
     "operation_calls",
   ]
 }
@@ -90,55 +86,5 @@ executable("remove_mod_command_runner_unittest") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/testing:test_with_session_storage",
-  ]
-}
-
-source_set("set_focus_state_command_runner") {
-  sources = [
-    "set_focus_state_command_runner.cc",
-    "set_focus_state_command_runner.h",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-  ]
-
-  public_deps = [ ":command_runner" ]
-}
-
-executable("set_focus_state_command_runner_unittest") {
-  testonly = true
-
-  sources = [ "set_focus_state_command_runner_unittest.cc" ]
-
-  deps = [
-    ":set_focus_state_command_runner",
-    "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-source_set("focus_mod_command_runner") {
-  sources = [
-    "focus_mod_command_runner.cc",
-    "focus_mod_command_runner.h",
-  ]
-
-  public_deps = [
-    ":command_runner",
-    "//sdk/fidl/fuchsia.modular",
-  ]
-}
-
-executable("focus_mod_command_runner_unittest") {
-  testonly = true
-
-  sources = [ "focus_mod_command_runner_unittest.cc" ]
-
-  deps = [
-    ":focus_mod_command_runner",
-    "//garnet/public/lib/gtest",
-    "//src/lib/fxl/test:gtest_main",
   ]
 }

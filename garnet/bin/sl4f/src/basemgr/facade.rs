@@ -10,8 +10,8 @@ use fidl::endpoints::ServerEnd;
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fidl_fuchsia_modular::{
-    AddMod, Intent, PuppetMasterMarker, PuppetMasterSynchronousProxy,
-    StoryCommand, StoryPuppetMasterMarker, SurfaceArrangement, SurfaceDependency, SurfaceRelation,
+    AddMod, Intent, PuppetMasterMarker, PuppetMasterSynchronousProxy, StoryCommand,
+    StoryPuppetMasterMarker, SurfaceArrangement, SurfaceDependency, SurfaceRelation,
 };
 use fidl_fuchsia_modular_internal::BasemgrDebugSynchronousProxy;
 use fidl_fuchsia_sys::ComponentControllerEvent;

@@ -95,8 +95,7 @@ TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
   // command.
   int actual_execute_count{0};
   for (auto tag : {fuchsia::modular::StoryCommand::Tag::kAddMod,
-                   fuchsia::modular::StoryCommand::Tag::kRemoveMod,
-                   fuchsia::modular::StoryCommand::Tag::kSetFocusState}) {
+                   fuchsia::modular::StoryCommand::Tag::kRemoveMod}) {
     AddCommandRunner(tag, [tag, &actual_execute_count, expected_story_id](
                               fidl::StringPtr story_id, fuchsia::modular::StoryCommand command) {
       ++actual_execute_count;
@@ -109,10 +108,9 @@ TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
   Reset();
 
   std::vector<fuchsia::modular::StoryCommand> commands;
-  commands.resize(3);
+  commands.resize(2);
   commands[0].set_add_mod(fuchsia::modular::AddMod());
   commands[1].set_remove_mod(fuchsia::modular::RemoveMod());
-  commands[2].set_set_focus_state(fuchsia::modular::SetFocusState());
 
   fuchsia::modular::ExecuteResult result;
   bool done{false};
@@ -125,7 +123,7 @@ TEST_F(DispatchStoryCommandExecutorTest, Dispatching) {
   RunLoopUntil([&]() { return done; });
   EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
   EXPECT_EQ(expected_story_id, result.story_id.value());
-  EXPECT_EQ(3, actual_execute_count);
+  EXPECT_EQ(2, actual_execute_count);
 }
 
 TEST_F(DispatchStoryCommandExecutorTest, Sequential) {

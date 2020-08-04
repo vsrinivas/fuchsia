@@ -95,11 +95,8 @@ void main(List<String> args) {
       expect(req.contentLength, greaterThan(0));
       final body = jsonDecode(await utf8.decoder.bind(req).join());
       expect(body['method'], 'basemgr_facade.LaunchMod');
-      expect(body['params'], {
-        'mod_url': 'fake_url',
-        'mod_name': 'fake_name',
-        'story_name': null
-      });
+      expect(body['params'],
+          {'mod_url': 'fake_url', 'mod_name': 'fake_name', 'story_name': null});
       req.response.write(
           jsonEncode({'id': body['id'], 'result': 'Success', 'error': null}));
       await req.response.close();
@@ -107,9 +104,7 @@ void main(List<String> args) {
 
     fakeServer.listen(handler);
 
-    expect(
-        Modular(sl4f)
-            .launchMod('fake_url', modName: 'fake_name'),
+    expect(Modular(sl4f).launchMod('fake_url', modName: 'fake_name'),
         completion(equals('Success')));
   });
 
