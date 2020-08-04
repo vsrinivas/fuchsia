@@ -268,7 +268,7 @@ void VmObjectPaged::HarvestAccessedBits() {
     // attributed to this vmo. If we cannot find it, or it isn't the page we expect, then something
     // has gone horribly wrong.
     DEBUG_ASSERT(result == ZX_OK);
-    DEBUG_ASSERT(out = p);
+    DEBUG_ASSERT(out == p);
     return true;
   };
   for (auto& m : mapping_list_) {
