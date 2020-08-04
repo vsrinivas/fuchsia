@@ -5,7 +5,7 @@
 use {
     crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::runtime::populate_runtime_config,
-    anyhow::{anyhow, bail, Result},
+    anyhow::{anyhow, Result},
     config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
     serde_json::{Map, Value},
@@ -121,14 +121,43 @@ impl Priority {
             }
         })
     }
+
+    fn nested_set(
+        cur: &mut Map<String, Value>,
+        key: &str,
+        remaining_keys: Vec<&str>,
+        value: Value,
+    ) {
+        if remaining_keys.len() == 0 {
+            cur.insert(key.to_string(), value);
+        } else {
+            match cur.get(key) {
+                Some(value) => {
+                    if !value.is_object() {
+                        // Any literals will be overridden.
+                        cur.insert(key.to_string(), Value::Object(Map::new()));
+                    }
+                }
+                None => {
+                    cur.insert(key.to_string(), Value::Object(Map::new()));
+                }
+            }
+            // Just ensured this would be the case.
+            let next_map = cur
+                .get_mut(key)
+                .expect("unable to get configuration")
+                .as_object_mut()
+                .expect("Unable to set configuration value as map");
+            Priority::nested_set(next_map, remaining_keys[0], remaining_keys[1..].to_vec(), value);
+        }
+    }
 }
 
 impl ReadConfig for Priority {
     fn get(&self, key: &str, mapper: ConfigMapper) -> Option<Value> {
         // Check for nested config values if there's a '.' in the key
-        let mut key_vec: Vec<&str> = key.split('.').collect();
-        let first_key = if key_vec.len() > 0 { key_vec.remove(0) } else { key };
-        self.iter().find_map(|c| Priority::nested_get(c, first_key, key_vec[..].to_vec(), mapper))
+        let key_vec: Vec<&str> = key.split('.').collect();
+        self.iter().find_map(|c| Priority::nested_get(c, key_vec[0], key_vec[1..].to_vec(), mapper))
     }
 }
 
@@ -176,34 +205,33 @@ impl fmt::Display for Priority {
 
 impl WriteConfig for Priority {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
-        let inner_set = |config_data: &mut Option<Value>| match config_data {
-            Some(config) => match config.as_object_mut() {
-                Some(map) => match map.get_mut(key) {
-                    Some(v) => {
-                        *v = value;
-                        Ok(())
-                    }
-                    None => {
-                        map.insert(key.to_string(), value);
-                        Ok(())
-                    }
-                },
-                _ => bail!("Configuration already exists but it is is a JSON literal - not a map"),
-            },
-            None => {
-                let mut config = serde_json::Map::new();
-                config.insert(key.to_string(), value);
-                *config_data = Some(Value::Object(config));
-                Ok(())
-            }
+        let config = match level {
+            ConfigLevel::Runtime => &mut self.runtime,
+            ConfigLevel::User => &mut self.user,
+            ConfigLevel::Build => &mut self.build,
+            ConfigLevel::Global => &mut self.global,
+            ConfigLevel::Default => &mut self.default,
         };
-        match level {
-            ConfigLevel::Runtime => inner_set(&mut self.runtime),
-            ConfigLevel::User => inner_set(&mut self.user),
-            ConfigLevel::Build => inner_set(&mut self.build),
-            ConfigLevel::Global => inner_set(&mut self.global),
-            ConfigLevel::Default => inner_set(&mut self.default),
+        // Ensure current value is always a map.
+        match config {
+            Some(v) => {
+                if !v.is_object() {
+                    // This must be a map.  Will override any literals or arrays.
+                    *config = Some(Value::Object(Map::new()));
+                }
+            }
+            None => *config = Some(Value::Object(Map::new())),
         }
+
+        let key_vec: Vec<&str> = key.split('.').collect();
+        // Ok to expect as this is ensured above.
+        let mut map = config
+            .as_mut()
+            .expect("uninitialzed configuration")
+            .as_object_mut()
+            .expect("unable to initialize configuration map");
+        Priority::nested_set(&mut map, key_vec[0], key_vec[1..].to_vec(), value);
+        Ok(())
     }
 
     fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
@@ -237,6 +265,7 @@ mod test {
     use super::*;
     use crate::identity::identity;
     use regex::Regex;
+    use serde_json::json;
 
     const ERROR: &'static str = "0";
 
@@ -393,8 +422,9 @@ mod test {
             default: None,
             runtime: None,
         };
-        let value = test.set(&ConfigLevel::User, "name", Value::String(String::from("whatever")));
-        assert!(value.is_err());
+        test.set(&ConfigLevel::User, "name", Value::String(String::from("whatever")))?;
+        let value = test.get("name", identity);
+        assert_eq!(value, Some(Value::String(String::from("whatever"))));
         Ok(())
     }
 
@@ -536,7 +566,7 @@ mod test {
     }
 
     #[test]
-    fn test_nested() -> Result<()> {
+    fn test_nested_get() -> Result<()> {
         let test = Priority {
             user: None,
             build: None,
@@ -550,7 +580,7 @@ mod test {
     }
 
     #[test]
-    fn test_nested_should_return_sub_tree() -> Result<()> {
+    fn test_nested_get_should_return_sub_tree() -> Result<()> {
         let test = Priority {
             user: None,
             build: None,
@@ -564,7 +594,7 @@ mod test {
     }
 
     #[test]
-    fn test_nested_should_return_full_match() -> Result<()> {
+    fn test_nested_get_should_return_full_match() -> Result<()> {
         let test = Priority {
             user: None,
             build: None,
@@ -578,7 +608,7 @@ mod test {
     }
 
     #[test]
-    fn test_nested_should_map_values_in_sub_tree() -> Result<()> {
+    fn test_nested_get_should_map_values_in_sub_tree() -> Result<()> {
         let test = Priority {
             user: None,
             build: None,
@@ -588,6 +618,56 @@ mod test {
         };
         let value = test.get("name.nested", test_map);
         assert_eq!(value, Some(serde_json::from_str("{\"deep\": {\"name\": \"passed\"}}")?));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_set_from_none() -> Result<()> {
+        let mut test =
+            Priority { user: None, build: None, global: None, default: None, runtime: None };
+        test.set(&ConfigLevel::User, "name.nested", Value::Bool(false))?;
+        let nested_value = test.get("name", identity);
+        assert_eq!(nested_value, Some(serde_json::from_str("{\"nested\": false}")?));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_set_from_already_populated_tree() -> Result<()> {
+        let mut test = Priority {
+            user: Some(serde_json::from_str(NESTED)?),
+            build: None,
+            global: None,
+            default: None,
+            runtime: None,
+        };
+        test.set(&ConfigLevel::User, "name.updated", Value::Bool(true))?;
+        let expected = json!({
+           "nested": "Nested",
+           "updated": true
+        });
+        let nested_value = test.get("name", identity);
+        assert_eq!(nested_value, Some(expected));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_set_override_literals() -> Result<()> {
+        let mut test = Priority {
+            user: Some(json!([])),
+            build: None,
+            global: None,
+            default: None,
+            runtime: None,
+        };
+        test.set(&ConfigLevel::User, "name.updated", Value::Bool(true))?;
+        let expected = json!({
+           "updated": true
+        });
+        let nested_value = test.get("name", identity);
+        assert_eq!(nested_value, Some(expected));
+        test.set(&ConfigLevel::User, "name.updated", serde_json::from_str(NESTED)?)?;
+        let nested_value = test.get("name.updated.name.nested", identity);
+        assert_eq!(nested_value, Some(Value::String(String::from("Nested"))));
         Ok(())
     }
 }
