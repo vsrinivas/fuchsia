@@ -57,14 +57,6 @@ the empty string to support this.
 
 From //build/config/sanitizers/BUILD.gn:20
 
-### audio_core_trace_enabled
-Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
-tracing overhead.
-
-**Current value (from the default):** `true`
-
-From //src/media/audio/audio_core/BUILD.gn:13
-
 ### auto_login_to_guest
 Whether basemgr should use a random identifier for sessions, leading to
 a different persistent data location for every session.
@@ -525,13 +517,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9cd1a4dadb51b31665f5e50c5ffc25bb9d10571a/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/94b7e45210a74b1eeb2cff981540312c9aaf58ed/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9cd1a4dadb51b31665f5e50c5ffc25bb9d10571a/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/94b7e45210a74b1eeb2cff981540312c9aaf58ed/util/net/tls.gni#22)
 
 ### current_cpu
 
