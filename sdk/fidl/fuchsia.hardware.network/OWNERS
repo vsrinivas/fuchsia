@@ -1,0 +1,2 @@
+include /src/connectivity/network/OWNERS
+include /src/connectivity/network/drivers/network-device/OWNERS
