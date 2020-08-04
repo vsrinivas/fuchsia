@@ -4,7 +4,7 @@
 
 //! Tests for the lazy directory.
 
-use super::{lazy, lazy_with_watchers, WatcherEvent};
+use super::{lazy, lazy_with_watchers, LazyDirectory, WatcherEvent};
 
 // Macros are exported into the root of the crate.
 use crate::{
@@ -15,10 +15,10 @@ use crate::{
 
 use crate::{
     directory::{
-        dirents_sink,
+        dirents_sink::{self, AppendResult},
         entry::{DirectoryEntry, EntryInfo},
         test_utils::{run_server_client, test_server_client, DirentsSameInodeBuilder},
-        traversal_position::AlphabeticalTraversal,
+        traversal_position::TraversalPosition::{self, End, Name, Start},
     },
     execution_scope::ExecutionScope,
     file::pcb::asynchronous::{read_only, read_only_static},
@@ -26,6 +26,7 @@ use crate::{
 };
 
 use {
+    async_trait::async_trait,
     fidl_fuchsia_io::{
         DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
@@ -39,9 +40,12 @@ use {
         lock::Mutex,
     },
     proc_macro_hack::proc_macro_hack,
-    std::sync::{
-        atomic::{AtomicU8, Ordering},
-        Arc,
+    std::{
+        marker::{Send, Sync},
+        sync::{
+            atomic::{AtomicU8, Ordering},
+            Arc,
+        },
     },
 };
 
@@ -52,65 +56,76 @@ use {
 #[proc_macro_hack(support_nested)]
 use vfs_macros::{mut_pseudo_directory, pseudo_directory};
 
-type AsyncGetEntryNames = BoxFuture<'static, Result<Box<dyn dirents_sink::Sealed>, Status>>;
+struct Entries {
+    entries: Box<[(TraversalPosition, EntryInfo)]>,
+    get_entry_fn:
+        Box<dyn Fn(String) -> Result<Arc<dyn DirectoryEntry>, Status> + Send + Sync + 'static>,
+}
 
-/// A helper to generate `get_entry_names` callbacks for the lazy directories.  This helper
-/// generates callbacks that return the same content every time and the entries are
-/// alphabetically sorted (the later is convenient when traversal position need to be
-/// remembered).
-// I wish I would be able to move the impl type declaration into a where clause, but that would
-// require me to add generic arguments to build_sorted_static_get_entry_names() and that breaks
-// inference, as the return type is not specific enough.
-//
-// In other words, I would better write this function as
-//
-//     build_sorted_static_get_entry_names<Res>(...) -> impl Res
-//     where
-//         Res: FnMut(...) -> (...)
-//
-// but if I do that, then the variance of `Res` is incorrect - it becomes "for all", instead of
-// "exists".  Meaning now the caller controlls what `Res` might be.
-fn build_sorted_static_get_entry_names(
-    mut entries: Vec<(u8, &'static str)>,
-) -> (impl Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames + Send + Sync)
-{
-    use dirents_sink::AppendResult;
-    use AlphabeticalTraversal::{Dot, End, Name};
+fn not_found(_name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+    Err(Status::NOT_FOUND)
+}
 
-    entries.sort_unstable_by_key(|&(_, name)| name);
+const DOT: (u8, &'static str) = (DIRENT_TYPE_DIRECTORY, ".");
 
-    let entries = {
-        let mut res = vec![(Dot, EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY))];
-        res.extend(entries.into_iter().map(|(dirent_type, name)| {
-            (Name(name.to_string()), EntryInfo::new(INO_UNKNOWN, dirent_type))
-        }));
-        res
-    };
+impl Entries {
+    fn new<F: Fn(String) -> Result<Arc<dyn DirectoryEntry>, Status> + Send + Sync + 'static>(
+        mut entries: Vec<(u8, &'static str)>,
+        get_entry_fn: F,
+    ) -> Self {
+        entries.sort_unstable_by_key(|&(_, name)| name);
+        let entries = entries
+            .into_iter()
+            .map(|(dirent_type, name)| {
+                let pos = if name == "." {
+                    TraversalPosition::Start
+                } else {
+                    TraversalPosition::Name(name.to_string())
+                };
+                (pos, EntryInfo::new(INO_UNKNOWN, dirent_type))
+            })
+            .collect::<Box<[(TraversalPosition, EntryInfo)]>>();
+        Entries { entries, get_entry_fn: Box::new(get_entry_fn) }
+    }
+}
 
-    move |start_pos, mut sink| {
-        let candidate = entries.binary_search_by(|(entry_pos, _)| entry_pos.cmp(&start_pos));
+#[async_trait]
+impl LazyDirectory for Entries {
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
+        mut sink: Box<dyn dirents_sink::Sink>,
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
+        let candidate = self.entries.binary_search_by(|(entry_pos, _)| entry_pos.cmp(pos));
         let mut i = match candidate {
             Ok(i) => i,
             Err(i) => i,
         };
 
-        while i < entries.len() {
-            let (pos, entry_info) = &entries[i];
-            let name = match &pos {
-                Dot => ".",
+        while i < self.entries.len() {
+            let (entry_pos, entry_info) = &self.entries[i];
+            let name = match entry_pos {
+                Start => ".",
                 Name(name) => name,
                 End => panic!("`entries` does not contain End"),
+                _ => unreachable!(),
             };
 
-            sink = match sink.append(&entry_info, name, &|| pos.clone()) {
+            sink = match sink.append(&entry_info, name) {
                 AppendResult::Ok(sink) => sink,
-                AppendResult::Sealed(done) => return Box::pin(async move { Ok(done) }),
+                AppendResult::Sealed(done) => {
+                    return Ok((entry_pos.clone(), done));
+                }
             };
 
             i += 1;
         }
 
-        Box::pin(async move { Ok(sink.seal(AlphabeticalTraversal::End)) })
+        Ok((TraversalPosition::End, sink.seal()))
+    }
+
+    async fn get_entry(&self, name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+        (self.get_entry_fn)(name)
     }
 }
 
@@ -118,10 +133,7 @@ fn build_sorted_static_get_entry_names(
 fn empty() {
     run_server_client(
         OPEN_RIGHT_READABLE,
-        lazy(
-            |_p, sink| future::ready(Ok(sink.seal(AlphabeticalTraversal::End))),
-            |_name| future::ready(Err(Status::NOT_FOUND)),
-        ),
+        lazy(Entries::new(vec![], not_found)),
         |root| async move {
             assert_close!(root);
         },
@@ -135,12 +147,8 @@ fn empty_with_watchers() {
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let server = lazy_with_watchers(
-        scope.clone(),
-        |_p, sink| future::ready(Ok(sink.seal(AlphabeticalTraversal::End))),
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_events_consumer,
-    );
+    let server =
+        lazy_with_watchers(scope.clone(), Entries::new(vec![], not_found), watcher_events_consumer);
 
     test_server_client(OPEN_RIGHT_READABLE, server, |root| async move {
         assert_close!(root);
@@ -152,404 +160,312 @@ fn empty_with_watchers() {
 
 #[test]
 fn static_listing() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
+    let entries = vec![
+        DOT,
         (DIRENT_TYPE_FILE, "one"),
         (DIRENT_TYPE_FILE, "two"),
         (DIRENT_TYPE_FILE, "three"),
-    ]);
+    ];
+
+    run_server_client(OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
+        async move {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                // Note that the build_sorted_static_get_entry_names() will sort entries
+                // alphabetically when returning them, so we see a different order here.
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"one")
+                    .add(DIRENT_TYPE_FILE, b"three")
+                    .add(DIRENT_TYPE_FILE, b"two");
+
+                assert_read_dirents!(root, 1000, expected.into_vec());
+            }
+
+            assert_close!(root);
+        }
+    });
+}
+
+#[test]
+fn static_entries() {
+    let entries = vec![
+        DOT,
+        (DIRENT_TYPE_FILE, "one"),
+        (DIRENT_TYPE_FILE, "two"),
+        (DIRENT_TYPE_FILE, "three"),
+    ];
+
+    let get_entry = |name: String| {
+        Ok(read_only(move || {
+            let name = name.clone();
+            async move {
+                let content = format!("File {} content", name);
+                Ok(content.into_bytes())
+            }
+        }) as Arc<dyn DirectoryEntry>)
+    };
 
     run_server_client(
         OPEN_RIGHT_READABLE,
-        lazy(get_entry_names, |_name| future::ready(Err(Status::NOT_FOUND))),
-        |root| {
-            async move {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    // Note that the build_sorted_static_get_entry_names() will sort entries
-                    // alphabetically when returning them, so we see a different order here.
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_FILE, b"one")
-                        .add(DIRENT_TYPE_FILE, b"three")
-                        .add(DIRENT_TYPE_FILE, b"two");
+        lazy(Entries::new(entries, get_entry)),
+        |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_content!(&root, flags, "one", "File one content");
+            open_as_file_assert_content!(&root, flags, "two", "File two content");
+            open_as_file_assert_content!(&root, flags, "three", "File three content");
 
-                    assert_read_dirents!(root, 1000, expected.into_vec());
-                }
-
-                assert_close!(root);
-            }
+            assert_close!(root);
         },
     );
 }
 
 #[test]
-fn static_entries() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
-        (DIRENT_TYPE_FILE, "one"),
-        (DIRENT_TYPE_FILE, "two"),
-        (DIRENT_TYPE_FILE, "three"),
-    ]);
-
-    let get_entry = |name: String| {
-        Box::pin(async move {
-            Ok(read_only(move || {
-                let name = name.clone();
-                async move {
-                    let content = format!("File {} content", name);
-                    Ok(content.into_bytes())
-                }
-            }) as Arc<dyn DirectoryEntry>)
-        })
-    };
-
-    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| async move {
-        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_file_assert_content!(&root, flags, "one", "File one content");
-        open_as_file_assert_content!(&root, flags, "two", "File two content");
-        open_as_file_assert_content!(&root, flags, "three", "File three content");
-
-        assert_close!(root);
-    });
-}
-
-#[test]
 fn static_entries_with_traversal() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
-        (DIRENT_TYPE_DIRECTORY, "etc"),
-        (DIRENT_TYPE_FILE, "files"),
-    ]);
+    let entries = vec![DOT, (DIRENT_TYPE_DIRECTORY, "etc"), (DIRENT_TYPE_FILE, "files")];
 
-    let get_entry = |name: String| {
-        Box::pin(async move {
-            match &*name {
-                "etc" => {
-                    let etc = pseudo_directory! {
-                        "fstab" => read_only_static(b"/dev/fs /"),
-                        "ssh" => pseudo_directory! {
-                            "sshd_config" => read_only_static(b"# Empty"),
-                        },
-                    };
-                    Ok(etc as Arc<dyn DirectoryEntry>)
-                }
-                "files" => Ok(read_only_static(b"Content") as Arc<dyn DirectoryEntry>),
-                _ => Err(Status::NOT_FOUND),
-            }
-        })
+    let get_entry = |name: String| match &*name {
+        "etc" => {
+            let etc = pseudo_directory! {
+                "fstab" => read_only_static(b"/dev/fs /"),
+                "ssh" => pseudo_directory! {
+                    "sshd_config" => read_only_static(b"# Empty"),
+                },
+            };
+            Ok(etc as Arc<dyn DirectoryEntry>)
+        }
+        "files" => Ok(read_only_static(b"Content") as Arc<dyn DirectoryEntry>),
+        _ => Err(Status::NOT_FOUND),
     };
 
-    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| async move {
-        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        {
-            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-            expected
-                .add(DIRENT_TYPE_DIRECTORY, b".")
-                .add(DIRENT_TYPE_DIRECTORY, b"etc")
-                .add(DIRENT_TYPE_FILE, b"files");
+    run_server_client(
+        OPEN_RIGHT_READABLE,
+        lazy(Entries::new(entries, get_entry)),
+        |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_FILE, b"files");
 
-            assert_read_dirents!(root, 1000, expected.into_vec());
-        }
+                assert_read_dirents!(root, 1000, expected.into_vec());
+            }
 
-        {
-            let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+            {
+                let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
-            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-            expected
-                .add(DIRENT_TYPE_DIRECTORY, b".")
-                .add(DIRENT_TYPE_FILE, b"fstab")
-                .add(DIRENT_TYPE_DIRECTORY, b"ssh");
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"fstab")
+                    .add(DIRENT_TYPE_DIRECTORY, b"ssh");
 
-            assert_read_dirents!(etc_dir, 1000, expected.into_vec());
-            assert_close!(etc_dir);
-        }
+                assert_read_dirents!(etc_dir, 1000, expected.into_vec());
+                assert_close!(etc_dir);
+            }
 
-        {
-            let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
+            {
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-            expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
 
-            assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
-            assert_close!(ssh_dir);
-        }
+                assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
+                assert_close!(ssh_dir);
+            }
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-        open_as_file_assert_content!(&root, flags, "files", "Content");
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_content!(&root, flags, "files", "Content");
 
-        assert_close!(root);
-    });
+            assert_close!(root);
+        },
+    );
 }
 
-/// This module holds a helper utility - an implementaion of a `dirents_sink` that remembers the
-/// traversal position when the sink is sealed, but otherwise forwards all the operations to into a
-/// wrapped sink instance.
-mod pos_remembering_proxy_sink {
-    use crate::directory::{
-        dirents_sink::{AppendResult, Sealed, Sink},
-        entry::EntryInfo,
-        traversal_position::AlphabeticalTraversal,
-    };
+// DynamicEntries is a helper that will return a different set of entries for each iteration.
+struct DynamicEntries {
+    entries: Box<[Entries]>,
+    index: Mutex<usize>,
+}
 
-    use std::any::Any;
-
-    pub(super) fn new(sink: Box<dyn Sink>) -> Box<Proxy> {
-        Box::new(Proxy { wrapped: AppendResult::Ok(sink), pos: Default::default() })
+impl DynamicEntries {
+    fn new(entries: Box<[Entries]>) -> Self {
+        DynamicEntries { entries, index: Mutex::new(0) }
     }
+}
 
-    pub(super) struct Proxy {
-        wrapped: AppendResult,
-        pos: AlphabeticalTraversal,
-    }
-
-    impl Proxy {
-        pub(super) fn pos(&self) -> AlphabeticalTraversal {
-            self.pos.clone()
-        }
-
-        pub(super) fn wrapped(self) -> Box<dyn Sealed> {
-            match self.wrapped {
-                AppendResult::Ok(_) => panic!("Sink has not been sealed"),
-                AppendResult::Sealed(sealed) => sealed,
+#[async_trait]
+impl LazyDirectory for DynamicEntries {
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
+        sink: Box<dyn dirents_sink::Sink>,
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
+        let mut index = self.index.lock().await;
+        let result = self.entries[*index].read_dirents(pos, sink).await;
+        // If we finished an iteration, move on to the next set of entries.
+        if let Ok((TraversalPosition::End, _)) = result {
+            if *index + 1 < self.entries.len() {
+                *index += 1;
             }
         }
+        result
     }
 
-    impl Sink for Proxy {
-        fn append(
-            self: Box<Self>,
-            entry: &EntryInfo,
-            name: &str,
-            pos: &dyn Fn() -> AlphabeticalTraversal,
-        ) -> AppendResult {
-            let sink = match self.wrapped {
-                AppendResult::Ok(sink) => sink,
-                AppendResult::Sealed(_) => panic!("Sink has been already selaed."),
-            };
-
-            match sink.append(entry, name, pos) {
-                wrapped @ AppendResult::Ok(_) => {
-                    AppendResult::Ok(Box::new(Self { wrapped, pos: Default::default() }))
-                }
-                wrapped @ AppendResult::Sealed(_) => {
-                    AppendResult::Sealed(Box::new(Self { wrapped, pos: pos() }))
-                }
-            }
-        }
-
-        fn seal(self: Box<Self>, pos: AlphabeticalTraversal) -> Box<dyn Sealed> {
-            let sink = match self.wrapped {
-                AppendResult::Ok(sink) => sink,
-                AppendResult::Sealed(_) => panic!("Sink has been already selaed."),
-            };
-
-            Box::new(Self { wrapped: AppendResult::Sealed(sink.seal(pos.clone())), pos })
-        }
-    }
-
-    impl Sealed for Proxy {
-        fn open(self: Box<Self>) -> Box<dyn Any> {
-            self
-        }
+    async fn get_entry(&self, _name: String) -> Result<Arc<dyn DirectoryEntry>, Status> {
+        Err(Status::NOT_FOUND)
     }
 }
 
 #[test]
 fn dynamic_listing() {
-    let listing1 = Arc::new(build_sorted_static_get_entry_names(vec![
-        (DIRENT_TYPE_FILE, "one"),
-        (DIRENT_TYPE_FILE, "two"),
-    ]));
-    let listing2 = Arc::new(build_sorted_static_get_entry_names(vec![
-        (DIRENT_TYPE_FILE, "two"),
-        (DIRENT_TYPE_FILE, "three"),
-    ]));
+    let listing1 = vec![DOT, (DIRENT_TYPE_FILE, "one"), (DIRENT_TYPE_FILE, "two")];
+    let listing2 = vec![DOT, (DIRENT_TYPE_FILE, "two"), (DIRENT_TYPE_FILE, "three")];
 
-    let get_entry_names = {
-        #[derive(Clone)]
-        enum Stage {
-            One,
-            Two,
-        };
-        let stage = Arc::new(Mutex::new(Stage::One));
-        move |start_pos, sink| {
-            let stage = stage.clone();
-            let listing1 = listing1.clone();
-            let listing2 = listing2.clone();
-            async move {
-                let stage = &mut *stage.lock().await;
-                match stage {
-                    Stage::One => {
-                        let proxy = pos_remembering_proxy_sink::new(sink);
-                        let proxy = listing1(start_pos, proxy)
-                            .await
-                            .unwrap()
-                            .open()
-                            .downcast::<pos_remembering_proxy_sink::Proxy>()
-                            .unwrap();
-                        if let AlphabeticalTraversal::End = proxy.pos() {
-                            *stage = Stage::Two;
-                        }
-                        Ok(proxy.wrapped())
-                    }
-                    Stage::Two => listing2(start_pos, sink).await,
-                }
-            }
-        }
-    };
-
-    run_server_client(
-        OPEN_RIGHT_READABLE,
-        lazy(get_entry_names, |_name| future::ready(Err(Status::NOT_FOUND))),
-        |root| {
-            async move {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    // Note that the build_sorted_static_get_entry_names() will sort entries
-                    // alphabetically when returning them, so we see a different order here.
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_FILE, b"one")
-                        .add(DIRENT_TYPE_FILE, b"two");
-
-                    assert_read_dirents!(root, 1000, expected.into_vec());
-                }
-
-                assert_rewind!(root);
-
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    // Note that the build_sorted_static_get_entry_names() will sort entries
-                    // alphabetically when returning them, so we see a different order here.
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_FILE, b"three")
-                        .add(DIRENT_TYPE_FILE, b"two");
-
-                    assert_read_dirents!(root, 1000, expected.into_vec());
-                }
-
-                assert_close!(root);
-            }
-        },
+    let entries = DynamicEntries::new(
+        vec![Entries::new(listing1, not_found), Entries::new(listing2, not_found)].into(),
     );
-}
 
-#[test]
-fn dynamic_entries() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
-        (DIRENT_TYPE_FILE, "file1"),
-        (DIRENT_TYPE_FILE, "file2"),
-    ]);
+    run_server_client(OPEN_RIGHT_READABLE, lazy(entries), |root| {
+        async move {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                // Note that the build_sorted_static_get_entry_names() will sort entries
+                // alphabetically when returning them, so we see a different order here.
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"one")
+                    .add(DIRENT_TYPE_FILE, b"two");
 
-    let get_entry = {
-        let count = Arc::new(AtomicU8::new(0));
-
-        move |name: String| {
-            let count = count.clone();
-            async move {
-                let entry = |count: u8| {
-                    Ok(read_only(move || async move {
-                        let content = format!("Content: {}", count);
-                        Ok(content.into_bytes())
-                    }) as Arc<dyn DirectoryEntry>)
-                };
-
-                match &*name {
-                    "file1" => {
-                        let count = count.fetch_add(1, Ordering::Relaxed) + 1;
-                        entry(count)
-                    }
-                    "file2" => {
-                        let count = count.fetch_add(10, Ordering::Relaxed) + 10;
-                        entry(count)
-                    }
-                    _ => Err(Status::NOT_FOUND),
-                }
+                assert_read_dirents!(root, 1000, expected.into_vec());
             }
+
+            assert_rewind!(root);
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                // Note that the build_sorted_static_get_entry_names() will sort entries
+                // alphabetically when returning them, so we see a different order here.
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"three")
+                    .add(DIRENT_TYPE_FILE, b"two");
+
+                assert_read_dirents!(root, 1000, expected.into_vec());
+            }
+
+            assert_close!(root);
         }
-    };
-
-    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| async move {
-        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-
-        open_as_file_assert_content!(&root, flags, "file1", "Content: 1");
-        open_as_file_assert_content!(&root, flags, "file1", "Content: 2");
-        open_as_file_assert_content!(&root, flags, "file2", "Content: 12");
-        open_as_file_assert_content!(&root, flags, "file2", "Content: 22");
-        open_as_file_assert_content!(&root, flags, "file1", "Content: 23");
-
-        assert_close!(root);
     });
 }
 
 #[test]
-fn read_dirents_small_buffer() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
-        (DIRENT_TYPE_DIRECTORY, "etc"),
-        (DIRENT_TYPE_FILE, "files"),
-        (DIRENT_TYPE_FILE, "more"),
-        (DIRENT_TYPE_FILE, "uname"),
-    ]);
+fn dynamic_entries() {
+    let entries = vec![DOT, (DIRENT_TYPE_FILE, "file1"), (DIRENT_TYPE_FILE, "file2")];
+
+    let count = Arc::new(AtomicU8::new(0));
+    let get_entry = move |name: String| {
+        let entry = |count: u8| {
+            Ok(read_only(move || async move {
+                let content = format!("Content: {}", count);
+                Ok(content.into_bytes())
+            }) as Arc<dyn DirectoryEntry>)
+        };
+
+        match &*name {
+            "file1" => {
+                let count = count.fetch_add(1, Ordering::Relaxed) + 1;
+                entry(count)
+            }
+            "file2" => {
+                let count = count.fetch_add(10, Ordering::Relaxed) + 10;
+                entry(count)
+            }
+            _ => Err(Status::NOT_FOUND),
+        }
+    };
 
     run_server_client(
         OPEN_RIGHT_READABLE,
-        lazy(get_entry_names, |_name| future::ready(Err(Status::NOT_FOUND))),
-        |root| {
-            async move {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    // Entry header is 10 bytes + length of the name in bytes.
-                    // (10 + 1) = 11
-                    expected.add(DIRENT_TYPE_DIRECTORY, b".");
-                    assert_read_dirents!(root, 11, expected.into_vec());
-                }
+        lazy(Entries::new(entries, get_entry)),
+        |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected
-                        // (10 + 3) = 13
-                        .add(DIRENT_TYPE_DIRECTORY, b"etc")
-                        // 13 + (10 + 5) = 28
-                        .add(DIRENT_TYPE_FILE, b"files");
-                    assert_read_dirents!(root, 28, expected.into_vec());
-                }
+            open_as_file_assert_content!(&root, flags, "file1", "Content: 1");
+            open_as_file_assert_content!(&root, flags, "file1", "Content: 2");
+            open_as_file_assert_content!(&root, flags, "file2", "Content: 12");
+            open_as_file_assert_content!(&root, flags, "file2", "Content: 22");
+            open_as_file_assert_content!(&root, flags, "file1", "Content: 23");
 
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected.add(DIRENT_TYPE_FILE, b"more").add(DIRENT_TYPE_FILE, b"uname");
-                    assert_read_dirents!(root, 100, expected.into_vec());
-                }
-
-                assert_read_dirents!(root, 100, vec![]);
-
-                assert_close!(root);
-            }
+            assert_close!(root);
         },
     );
 }
 
 #[test]
-fn read_dirents_very_small_buffer() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![(DIRENT_TYPE_FILE, "file")]);
+fn read_dirents_small_buffer() {
+    let entries = vec![
+        DOT,
+        (DIRENT_TYPE_DIRECTORY, "etc"),
+        (DIRENT_TYPE_FILE, "files"),
+        (DIRENT_TYPE_FILE, "more"),
+        (DIRENT_TYPE_FILE, "uname"),
+    ];
 
-    run_server_client(
-        OPEN_RIGHT_READABLE,
-        lazy(get_entry_names, |_name| future::ready(Err(Status::NOT_FOUND))),
-        |root| {
-            async move {
-                // Entry header is 10 bytes, so this read should not be able to return a single
-                // entry.
-                assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
-
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"file");
-                    assert_read_dirents!(root, 100, expected.into_vec());
-                }
-
-                assert_close!(root);
+    run_server_client(OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
+        async move {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                // Entry header is 10 bytes + length of the name in bytes.
+                // (10 + 1) = 11
+                expected.add(DIRENT_TYPE_DIRECTORY, b".");
+                assert_read_dirents!(root, 11, expected.into_vec());
             }
-        },
-    );
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    // (10 + 3) = 13
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    // 13 + (10 + 5) = 28
+                    .add(DIRENT_TYPE_FILE, b"files");
+                assert_read_dirents!(root, 28, expected.into_vec());
+            }
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_FILE, b"more").add(DIRENT_TYPE_FILE, b"uname");
+                assert_read_dirents!(root, 100, expected.into_vec());
+            }
+
+            assert_read_dirents!(root, 100, vec![]);
+
+            assert_close!(root);
+        }
+    });
+}
+
+#[test]
+fn read_dirents_very_small_buffer() {
+    let entries = vec![DOT, (DIRENT_TYPE_FILE, "file")];
+
+    run_server_client(OPEN_RIGHT_READABLE, lazy(Entries::new(entries, not_found)), |root| {
+        async move {
+            // Entry header is 10 bytes, so this read should not be able to return a single
+            // entry.
+            assert_read_dirents_err!(root, 8, Status::BUFFER_TOO_SMALL);
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"file");
+                assert_read_dirents!(root, 100, expected.into_vec());
+            }
+
+            assert_close!(root);
+        }
+    });
 }
 
 #[test]
@@ -559,12 +475,7 @@ fn watch_empty() {
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        |_p, sink| future::ready(Ok(sink.seal(AlphabeticalTraversal::End))),
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(vec![], not_found), watcher_stream);
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
         let watcher_client = assert_watch!(root, mask);
@@ -580,22 +491,18 @@ fn watch_empty() {
 
 #[test]
 fn watch_non_empty() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
+    let entries = vec![
+        DOT,
         (DIRENT_TYPE_FILE, "one"),
         (DIRENT_TYPE_FILE, "two"),
         (DIRENT_TYPE_FILE, "three"),
-    ]);
+    ];
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        get_entry_names,
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
@@ -619,22 +526,18 @@ fn watch_non_empty() {
 
 #[test]
 fn watch_two_watchers() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
+    let entries = vec![
+        DOT,
         (DIRENT_TYPE_FILE, "one"),
         (DIRENT_TYPE_FILE, "two"),
         (DIRENT_TYPE_FILE, "three"),
-    ]);
+    ];
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        get_entry_names,
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
@@ -670,22 +573,18 @@ fn watch_two_watchers() {
 
 #[test]
 fn watch_with_mask() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
+    let entries = vec![
+        DOT,
         (DIRENT_TYPE_FILE, "one"),
         (DIRENT_TYPE_FILE, "two"),
         (DIRENT_TYPE_FILE, "three"),
-    ]);
+    ];
     let (_watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        get_entry_names,
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
@@ -702,19 +601,14 @@ fn watch_with_mask() {
 
 #[test]
 fn watch_addition() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![(DIRENT_TYPE_FILE, "one")]);
+    let entries = vec![DOT, (DIRENT_TYPE_FILE, "one")];
 
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        get_entry_names,
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
@@ -744,24 +638,20 @@ fn watch_addition() {
 
 #[test]
 fn watch_removal() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
+    let entries = vec![
+        DOT,
         (DIRENT_TYPE_FILE, "one"),
         (DIRENT_TYPE_FILE, "two"),
         (DIRENT_TYPE_FILE, "three"),
         (DIRENT_TYPE_FILE, "four"),
-    ]);
+    ];
 
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        get_entry_names,
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
@@ -791,23 +681,19 @@ fn watch_removal() {
 
 #[test]
 fn watch_watcher_stream_closed() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
+    let entries = vec![
+        DOT,
         (DIRENT_TYPE_FILE, "one"),
         (DIRENT_TYPE_FILE, "two"),
         (DIRENT_TYPE_FILE, "three"),
-    ]);
+    ];
     // Dropping the sender will close the receiver end.
     let (_, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        get_entry_names,
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE;
@@ -821,22 +707,18 @@ fn watch_watcher_stream_closed() {
 
 #[test]
 fn watch_close_watcher_stream() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![
+    let entries = vec![
+        DOT,
         (DIRENT_TYPE_FILE, "one"),
         (DIRENT_TYPE_FILE, "two"),
         (DIRENT_TYPE_FILE, "three"),
-    ]);
+    ];
     let (watcher_sender, watcher_stream) = mpsc::unbounded::<WatcherEvent>();
 
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::from_executor(Box::new(exec.ehandle()));
 
-    let root = lazy_with_watchers(
-        scope.clone(),
-        get_entry_names,
-        |_name| future::ready(Err(Status::NOT_FOUND)),
-        watcher_stream,
-    );
+    let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
@@ -859,27 +741,21 @@ fn watch_close_watcher_stream() {
 
 #[test]
 fn link_from_lazy_into_mutable() {
-    let get_entry_names = build_sorted_static_get_entry_names(vec![(DIRENT_TYPE_FILE, "passwd")]);
+    let entries = vec![DOT, (DIRENT_TYPE_FILE, "passwd")];
 
-    let get_entry = {
-        let count = Arc::new(AtomicU8::new(0));
+    let count = Arc::new(AtomicU8::new(0));
+    let get_entry = move |name: String| {
+        assert_eq!(name, "passwd");
 
-        move |name: String| {
-            assert_eq!(name, "passwd");
-
-            let count = count.clone();
-            async move {
-                let count = count.fetch_add(1, Ordering::Relaxed) + 1;
-                Ok(read_only(move || async move {
-                    let content = format!("Connection {}", count);
-                    Ok(content.into_bytes())
-                }) as Arc<dyn DirectoryEntry>)
-            }
-        }
+        let count = count.fetch_add(1, Ordering::Relaxed) + 1;
+        Ok(read_only(move || async move {
+            let content = format!("Connection {}", count);
+            Ok(content.into_bytes())
+        }) as Arc<dyn DirectoryEntry>)
     };
 
     let root = pseudo_directory! {
-        "etc" => lazy(get_entry_names, get_entry),
+        "etc" => lazy(Entries::new(entries, get_entry)),
         "tmp" => mut_pseudo_directory! {}
     };
 

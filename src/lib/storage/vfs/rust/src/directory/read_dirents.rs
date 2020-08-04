@@ -9,7 +9,6 @@ use crate::directory::{
     common::encode_dirent,
     dirents_sink::{self, AppendResult},
     entry::EntryInfo,
-    traversal_position::AlphabeticalTraversal,
 };
 
 use {fuchsia_zircon::Status, std::any::Any};
@@ -27,7 +26,6 @@ pub struct Sink {
 /// more values.
 pub struct Done {
     pub(super) buf: Vec<u8>,
-    pub(super) pos: AlphabeticalTraversal,
     pub(super) status: Status,
 }
 
@@ -46,17 +44,12 @@ impl Sink {
 }
 
 impl dirents_sink::Sink for Sink {
-    fn append(
-        mut self: Box<Self>,
-        entry: &EntryInfo,
-        name: &str,
-        pos: &dyn Fn() -> AlphabeticalTraversal,
-    ) -> AppendResult {
+    fn append(mut self: Box<Self>, entry: &EntryInfo, name: &str) -> AppendResult {
         if !encode_dirent(&mut self.buf, self.max_bytes, entry, name) {
             if self.state == SinkState::NotCalled {
                 self.state = SinkState::DidNotFit;
             }
-            AppendResult::Sealed(self.seal(pos()))
+            AppendResult::Sealed(self.seal())
         } else {
             if self.state == SinkState::NotCalled {
                 self.state = SinkState::FitOne;
@@ -65,10 +58,9 @@ impl dirents_sink::Sink for Sink {
         }
     }
 
-    fn seal(self: Box<Self>, pos: AlphabeticalTraversal) -> Box<dyn dirents_sink::Sealed> {
+    fn seal(self: Box<Self>) -> Box<dyn dirents_sink::Sealed> {
         Box::new(Done {
             buf: self.buf,
-            pos,
             status: match self.state {
                 SinkState::NotCalled | SinkState::FitOne => Status::OK,
                 SinkState::DidNotFit => Status::BUFFER_TOO_SMALL,

@@ -15,27 +15,27 @@ use crate::{
         connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{self, AsyncReadDirents, Directory},
+        entry_container::{self, Directory},
         immutable::connection::io1::ImmutableConnection,
-        traversal_position::AlphabeticalTraversal,
+        traversal_position::TraversalPosition,
     },
     execution_scope::ExecutionScope,
     path::Path,
 };
 
 use {
+    async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::{
         channel::mpsc::{self, UnboundedSender},
-        future::Future,
         stream::Stream,
+        FutureExt,
     },
     std::{
         fmt::{self, Debug, Formatter},
-        marker::PhantomData,
         sync::Arc,
     },
 };
@@ -56,57 +56,39 @@ pub enum WatcherEvent {
     Removed(Vec<String>),
 }
 
-pub type GetEntryNamesResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
+#[async_trait]
+pub trait LazyDirectory: Sync + Send + 'static {
+    // The lifetimes here are because of https://github.com/rust-lang/rust/issues/63033.
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
+        sink: Box<dyn dirents_sink::Sink>,
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status>;
 
-pub type GetEntryResult = Result<Arc<dyn DirectoryEntry>, Status>;
+    async fn get_entry(&self, name: String) -> Result<Arc<dyn DirectoryEntry>, Status>;
+}
 
 /// Creates a lazy directory, with no watcher stream attached.  Watchers will not be able to attach
 /// to this directory.  See [`lazy_with_watchers`].
 ///
 /// See [`Lazy`] for additional details.
-pub fn lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>(
-    get_entry_names: GetEntryNames,
-    get_entry: GetEntry,
-) -> Arc<Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
-where
-    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
-        + Send
-        + Sync
-        + 'static,
-    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
-    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
-    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
-{
-    Lazy::new(get_entry_names, get_entry)
+pub fn lazy<T: LazyDirectory>(inner: T) -> Arc<Lazy<T>> {
+    Lazy::new(inner)
 }
 
 /// Creates a lazy directory that can support watchers.  In order to process events from the
 /// `watcher_events` stream the directory needs an execution `scope`.
 ///
 /// See [`Lazy`] for additional details.
-pub fn lazy_with_watchers<
-    GetEntryNames,
-    AsyncGetEntryNames,
-    GetEntry,
-    AsyncGetEntry,
-    WatcherEvents,
->(
+pub fn lazy_with_watchers<T: LazyDirectory, WatcherEvents>(
     scope: ExecutionScope,
-    get_entry_names: GetEntryNames,
-    get_entry: GetEntry,
+    inner: T,
     watcher_events: WatcherEvents,
-) -> Arc<Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>>
+) -> Arc<Lazy<T>>
 where
-    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
-        + Send
-        + Sync
-        + 'static,
-    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
-    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
-    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
     WatcherEvents: Stream<Item = WatcherEvent> + Send + 'static,
 {
-    Lazy::new_with_watchers(scope, get_entry_names, get_entry, watcher_events)
+    Lazy::new_with_watchers(scope, inner, watcher_events)
 }
 
 /// An implementation of a pseudo directory that generates nested entries only when they are
@@ -117,15 +99,13 @@ where
 ///
 /// A lazy directory contains two callbacks and a stream.  One callback, called `get_entry_names`,
 /// which is used when a directory listing is requested.  Another callback, called `get_entry`, is
-/// used to construct and actual entry when it is accessed.  A stream, called `watcher_events` is
+/// used to construct an actual entry when it is accessed.  A stream, called `watcher_events` is
 /// used to send notifications to the currently connected watchers.
 ///
 /// `get_entry_names` is provided with a position and a sink.  The position allows the caller to
-/// retrieve entry names starting at a point other then the very first entry.  The sink is use to
+/// retrieve entry names starting at a point other then the very first entry.  The sink is used to
 /// consume entry names and it may not be able to consume the whole directory content at once as it
-/// is backed by a limited size buffer.  "sink" will remember the last provided possition, allowing
-/// the caller to resume the list operation.  See [`traversal_position::AlphabeticalTraversal`] for
-/// an example of a type designed to be used as a traversal position.
+/// is backed by a limited size buffer.
 ///
 /// `get_entry` is expected to return a reference to a [`DirectoryEntry`] instance backing an
 /// individual entry.  Notice that currently there is no caching or sharing of entry objects.
@@ -140,40 +120,10 @@ where
 /// watchers.  They are values of type [`WatcherEvent`].  If this stream reaches it's end existing
 /// watcher connections will be closed and any new watchers will not be able to connect to the node
 /// - they will receive a NOT_SUPPORTED error.
-pub struct Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-where
-    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
-        + Send
-        + Sync
-        + 'static,
-    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
-    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
-    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
-{
-    /// This callback is invoked to get names of the entries inside the directory.  The first
-    /// argument specifies the starting point.  The second argument is a "sink" that is used to
-    /// collect entry names and their attributes.
-    ///
-    /// The first argument allows traversal to resume when there are more entries in the directory
-    /// that can fit in one `Directory::ReadDirents` `io.fidl` request.  `AlphabeticalTraversal` is
-    /// used to allow different directories to use different state to track the traveral progress.
-    /// Different directories may also list entries in different order - alphabetical, insertion
-    /// order, random.
-    get_entry_names: GetEntryNames,
-
-    /// This callback is invoked to get an actual directory entry object that corresponds to the
-    /// specified name.  Note that this is never going to be called with ".", but otherwise might
-    /// be called with names that has not been necessarily returned by the get_entry_names()
-    /// callback.
-    get_entry: GetEntry,
+pub struct Lazy<T: LazyDirectory> {
+    inner: T,
 
     watchers: UnboundedSender<WatcherCommand>,
-
-    // TODO For some reason I need to have PhantomData fields for AlphabeticalTraversal and
-    // AsyncGetEntryNames.  But not for AsyncGetEntry?  This is quite confusing - possibly a bug in
-    // the compiler?  I would not expect the compiler to require a PhantomData for any of these
-    // types.
-    _async_get_entry_names: PhantomData<fn() -> AsyncGetEntryNames>,
 }
 
 enum WatcherCommand {
@@ -197,34 +147,18 @@ impl Debug for WatcherCommand {
     }
 }
 
-impl<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-    Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-where
-    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
-        + Send
-        + Sync
-        + 'static,
-    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
-    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
-    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
-{
-    fn new(get_entry_names: GetEntryNames, get_entry: GetEntry) -> Arc<Self> {
+impl<T: LazyDirectory> Lazy<T> {
+    fn new(inner: T) -> Arc<Self> {
         // We will create a channel that would be immediately closed, as we need a sender even when
         // no watcher support is present.
         let (command_sender, _) = mpsc::unbounded();
 
-        Arc::new(Lazy {
-            get_entry_names,
-            get_entry,
-            watchers: command_sender,
-            _async_get_entry_names: PhantomData,
-        })
+        Arc::new(Lazy { inner, watchers: command_sender })
     }
 
     fn new_with_watchers<WatcherEvents>(
         scope: ExecutionScope,
-        get_entry_names: GetEntryNames,
-        get_entry: GetEntry,
+        inner: T,
         watcher_events: WatcherEvents,
     ) -> Arc<Self>
     where
@@ -232,12 +166,7 @@ where
     {
         let (command_sender, command_receiver) = mpsc::unbounded();
 
-        let dir = Arc::new(Lazy {
-            get_entry_names,
-            get_entry,
-            watchers: command_sender,
-            _async_get_entry_names: PhantomData,
-        });
+        let dir = Arc::new(Lazy { inner, watchers: command_sender });
 
         let task = watchers_task::run(dir.clone(), command_receiver, watcher_events);
 
@@ -250,17 +179,7 @@ where
     }
 }
 
-impl<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry> DirectoryEntry
-    for Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-where
-    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
-        + Send
-        + Sync
-        + 'static,
-    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
-    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
-    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
-{
+impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -280,7 +199,7 @@ where
         let task = Box::pin({
             let scope = scope.clone();
             async move {
-                match (self.get_entry)(name).await {
+                match self.inner.get_entry(name).await {
                     Ok(entry) => entry.open(scope, flags, mode, path, server_end),
                     Err(status) => send_on_open_with_error(flags, server_end, status),
                 }
@@ -300,30 +219,22 @@ where
     }
 }
 
-impl<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry> Directory
-    for Lazy<GetEntryNames, AsyncGetEntryNames, GetEntry, AsyncGetEntry>
-where
-    GetEntryNames: Fn(AlphabeticalTraversal, Box<dyn dirents_sink::Sink>) -> AsyncGetEntryNames
-        + Send
-        + Sync
-        + 'static,
-    AsyncGetEntryNames: Future<Output = GetEntryNamesResult> + Send + 'static,
-    GetEntry: Fn(String) -> AsyncGetEntry + Send + Sync + 'static,
-    AsyncGetEntry: Future<Output = GetEntryResult> + Send + 'static,
-{
+#[async_trait]
+impl<T: LazyDirectory> Directory for Lazy<T> {
     fn get_entry(self: Arc<Self>, name: String) -> entry_container::AsyncGetEntry {
         // Can not use `into()` here.  Could not find a good `From` definition to be provided in
         // `directory/entry_container.rs` so that just a plain `.into()` would work here.
-        let task = (self.get_entry)(name);
-        entry_container::AsyncGetEntry::Future(Box::pin(task))
+        entry_container::AsyncGetEntry::Future(
+            async move { self.inner.get_entry(name).await }.boxed(),
+        )
     }
 
-    fn read_dirents(
-        self: Arc<Self>,
-        pos: AlphabeticalTraversal,
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
         sink: Box<dyn dirents_sink::Sink>,
-    ) -> AsyncReadDirents {
-        AsyncReadDirents::Future(Box::pin((self.get_entry_names)(pos, sink)))
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
+        self.inner.read_dirents(pos, sink).await
     }
 
     fn register_watcher(

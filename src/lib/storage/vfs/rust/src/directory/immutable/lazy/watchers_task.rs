@@ -10,7 +10,8 @@ use super::{WatcherCommand, WatcherEvent};
 
 use crate::{
     directory::{
-        entry_container::{AsyncReadDirents, Directory},
+        entry_container::Directory,
+        traversal_position::TraversalPosition,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
             Watchers,
@@ -107,16 +108,16 @@ async fn handle_register_watcher(
     // this way is to allow `read_dirents` to be async, while the `send_event` method that is
     // consuming the event producer is not async.
 
-    let mut pos = Default::default();
+    let mut pos = TraversalPosition::Start;
     loop {
         let directory = directory.clone();
-        let res = match directory.read_dirents(pos, single_buffer::existing()) {
-            AsyncReadDirents::Immediate(res) => res,
-            AsyncReadDirents::Future(fut) => fut.await,
-        };
+        let res = directory.read_dirents(&pos, single_buffer::existing()).await;
 
         let sealed_or_err = match res {
-            Ok(sealed) => sealed.open().downcast::<single_buffer::Sealed>(),
+            Ok((new_pos, sealed)) => {
+                pos = new_pos;
+                sealed.open().downcast::<single_buffer::Sealed>()
+            }
             Err(_status) => {
                 controller.disconnect();
                 return;
@@ -137,8 +138,7 @@ async fn handle_register_watcher(
         };
 
         match sealed.unpack() {
-            Some((new_pos, mut existing_event)) => {
-                pos = new_pos;
+            Some(mut existing_event) => {
                 controller.send_event(&mut existing_event);
             }
             None => break,
@@ -153,7 +153,6 @@ mod single_buffer {
     use crate::directory::{
         dirents_sink,
         entry::EntryInfo,
-        traversal_position::AlphabeticalTraversal,
         watchers::event_producers::{encode_name, SingleBufferEventProducer},
     };
 
@@ -180,37 +179,35 @@ mod single_buffer {
             mut self: Box<Self>,
             _entry: &EntryInfo,
             name: &str,
-            pos: &dyn Fn() -> AlphabeticalTraversal,
         ) -> dirents_sink::AppendResult {
             use dirents_sink::AppendResult;
 
             if encode_name(&mut self.buffer, WATCH_EVENT_EXISTING, name) {
                 AppendResult::Ok(self)
             } else {
-                AppendResult::Sealed(Sealed::new(self.buffer, pos()))
+                AppendResult::Sealed(Sealed::new(self.buffer))
             }
         }
 
-        fn seal(self: Box<Self>, pos: AlphabeticalTraversal) -> Box<dyn dirents_sink::Sealed> {
-            Sealed::new(self.buffer, pos)
+        fn seal(self: Box<Self>) -> Box<dyn dirents_sink::Sealed> {
+            Sealed::new(self.buffer)
         }
     }
 
     pub(super) struct Sealed {
         buffer: Vec<u8>,
-        pos: AlphabeticalTraversal,
     }
 
     impl Sealed {
-        fn new(buffer: Vec<u8>, pos: AlphabeticalTraversal) -> Box<Self> {
-            Box::new(Self { buffer, pos })
+        fn new(buffer: Vec<u8>) -> Box<Self> {
+            Box::new(Self { buffer })
         }
 
-        pub(super) fn unpack(self) -> Option<(AlphabeticalTraversal, SingleBufferEventProducer)> {
+        pub(super) fn unpack(self) -> Option<SingleBufferEventProducer> {
             if self.buffer.is_empty() {
                 None
             } else {
-                Some((self.pos, SingleBufferEventProducer::existing(self.buffer)))
+                Some(SingleBufferEventProducer::existing(self.buffer))
             }
         }
     }

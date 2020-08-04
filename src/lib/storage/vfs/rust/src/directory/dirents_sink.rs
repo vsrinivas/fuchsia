@@ -4,11 +4,11 @@
 
 //! Types that help describe `get_entry_names` callback for the lazy directories.
 
-use crate::directory::{entry::EntryInfo, traversal_position::AlphabeticalTraversal};
+use crate::directory::entry::EntryInfo;
 
 use std::any::Any;
 
-/// Every sink that can consume directory entries information implements this trait.
+/// Every sink that can consume directory entry information implements this trait.
 pub trait Sink: Send {
     /// Try to append an entry with the specified entry name and attributes into this sink.
     /// If the entry was successfully added, `pos` is not invoked and the result is
@@ -16,19 +16,12 @@ pub trait Sink: Send {
     /// current traversal position and an [`AppendResult::Sealed`] value is returned.
     ///
     /// `entry` is the [`EntryInfo`] attributes of the next entry.  `name` is the name of the next
-    /// entry.  `pos` is a method that returns the position of the next entry when invoked.  `pos`
-    /// is a method as this position is not needed unless the sink needs to be sealed, and
-    /// constructing a position object might not be completely free.  So it is an optimization.
-    fn append(
-        self: Box<Self>,
-        entry: &EntryInfo,
-        name: &str,
-        pos: &dyn Fn() -> AlphabeticalTraversal,
-    ) -> AppendResult;
+    /// entry.
+    fn append(self: Box<Self>, entry: &EntryInfo, name: &str) -> AppendResult;
 
     /// If the producer has reached the end of the list of entries, it should call this method to
     /// produce a "sealed" sink.
-    fn seal(self: Box<Self>, pos: AlphabeticalTraversal) -> Box<dyn Sealed>;
+    fn seal(self: Box<Self>) -> Box<dyn Sealed>;
 }
 
 /// When a sink has reached it's full capacity or when the producer has exhausted all the values it
@@ -58,8 +51,6 @@ pub trait Sealed: Send {
 pub enum AppendResult {
     /// Sink have consumed the value and may consume more.
     Ok(Box<dyn Sink>),
-    /// Sink could not consume the last value provided.  It should have remembered the traversal
-    /// position given to the most recent [`Sink::append()`] call, allowing the sink owner to
-    /// resume the operation later from the same standpoint.
+    /// Sink could not consume the last value provided.
     Sealed(Box<dyn Sealed>),
 }

@@ -10,6 +10,7 @@ use {
         types::{Dir, DirEntry},
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
     },
+    async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
@@ -32,10 +33,10 @@ use {
         common::send_on_open_with_error,
         directory::{
             connection::io1::DerivedConnection,
-            dirents_sink::{AppendResult, Sink},
+            dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
-            entry_container::{AsyncGetEntry, AsyncReadDirents, Directory, MutableDirectory},
-            traversal_position::AlphabeticalTraversal,
+            entry_container::{AsyncGetEntry, Directory, MutableDirectory},
+            traversal_position::TraversalPosition,
             watchers::{
                 event_producers::{SingleNameEventProducer, StaticVecEventProducer},
                 Watchers,
@@ -545,6 +546,7 @@ impl DirectoryEntry for FatDirectory {
     }
 }
 
+#[async_trait]
 impl Directory for FatDirectory {
     fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
         match self.clone().open_child(&name, 0, 0) {
@@ -558,51 +560,52 @@ impl Directory for FatDirectory {
         }
     }
 
-    fn read_dirents(
-        self: Arc<Self>,
-        pos: AlphabeticalTraversal,
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
         sink: Box<dyn Sink>,
-    ) -> AsyncReadDirents {
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
         if self.is_deleted() {
-            return AsyncReadDirents::Immediate(Ok(sink.seal(AlphabeticalTraversal::End)));
+            return Ok((TraversalPosition::End, sink.seal()));
         }
 
         let fs_lock = self.filesystem.lock().unwrap();
-        let dir = match self.borrow_dir(&fs_lock) {
-            Ok(dir) => dir,
-            Err(e) => return AsyncReadDirents::Immediate(Err(e)),
-        };
-        // Figure out where to start from.
-        // TODO(fxb/57087): there's a subtle bug here.
-        let next_name = match pos {
-            AlphabeticalTraversal::Dot => ".".to_owned(),
-            AlphabeticalTraversal::Name(name) => name,
-            AlphabeticalTraversal::End => {
-                return AsyncReadDirents::Immediate(Ok(sink.seal(AlphabeticalTraversal::End)))
-            }
+        let dir = self.borrow_dir(&fs_lock)?;
+
+        if let TraversalPosition::End = pos {
+            return Ok((TraversalPosition::End, sink.seal()));
+        }
+
+        let filter = |name: &str| match pos {
+            TraversalPosition::Start => true,
+            TraversalPosition::Name(next_name) => name >= next_name.as_str(),
+            _ => false,
         };
 
         // Get all the entries in this directory.
         let mut entries: Vec<_> = dir
             .iter()
-            .filter_map(|entry| {
-                // TODO handle errors.
-                let entry = entry.unwrap();
-                let name = entry.file_name();
-                if &name == ".." {
-                    None
-                } else if &next_name == "." || &next_name <= &name {
-                    let entry_type =
-                        if entry.is_dir() { DIRENT_TYPE_DIRECTORY } else { DIRENT_TYPE_FILE };
-                    Some((name, EntryInfo::new(INO_UNKNOWN, entry_type)))
-                } else {
-                    None
-                }
+            .filter_map(|maybe_entry| {
+                maybe_entry
+                    .map(|entry| {
+                        let name = entry.file_name();
+                        if &name == ".." || !filter(&name) {
+                            None
+                        } else {
+                            let entry_type = if entry.is_dir() {
+                                DIRENT_TYPE_DIRECTORY
+                            } else {
+                                DIRENT_TYPE_FILE
+                            };
+                            Some((name, EntryInfo::new(INO_UNKNOWN, entry_type)))
+                        }
+                    })
+                    .transpose()
             })
-            .collect();
+            .collect::<std::io::Result<Vec<_>>>()?;
 
         // If it's the root directory, we need to synthesize a "." entry if appropriate.
-        if self.data.read().unwrap().parent.is_none() && next_name.as_str() <= "." {
+        if self.data.read().unwrap().parent.is_none() && filter(".") {
             entries.push((".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)));
         }
 
@@ -612,16 +615,17 @@ impl Directory for FatDirectory {
         // Iterate through the entries, adding them one by one to the sink.
         let mut cur_sink = sink;
         for (name, info) in entries.into_iter() {
-            let result = cur_sink
-                .append(&info, &name.clone(), &|| AlphabeticalTraversal::Name(name.clone()));
+            let result = cur_sink.append(&info, &name.clone());
 
             match result {
                 AppendResult::Ok(new_sink) => cur_sink = new_sink,
-                AppendResult::Sealed(sealed) => return AsyncReadDirents::Immediate(Ok(sealed)),
+                AppendResult::Sealed(sealed) => {
+                    return Ok((TraversalPosition::Name(name.clone()), sealed));
+                }
             }
         }
 
-        return AsyncReadDirents::Immediate(Ok(cur_sink.seal(AlphabeticalTraversal::End)));
+        return Ok((TraversalPosition::End, cur_sink.seal()));
     }
 
     fn register_watcher(
@@ -697,7 +701,6 @@ mod tests {
     use {
         super::*,
         crate::tests::{TestDiskContents, TestFatDisk},
-        std::sync::Mutex,
         vfs::directory::dirents_sink::{AppendResult, Sealed},
     };
 
@@ -721,62 +724,49 @@ mod tests {
         }
     }
 
-    struct SinkInner {
-        max_size: usize,
-        entries: Vec<(String, EntryInfo)>,
-        sealed_pos: AlphabeticalTraversal,
-    }
-
     #[derive(Clone)]
     struct DummySink {
-        inner: Arc<Mutex<SinkInner>>,
+        max_size: usize,
+        entries: Vec<(String, EntryInfo)>,
+        sealed: bool,
     }
 
     impl DummySink {
         pub fn new(max_size: usize) -> Self {
-            DummySink {
-                inner: Arc::new(Mutex::new(SinkInner {
-                    max_size,
-                    entries: Vec::with_capacity(max_size),
-                    sealed_pos: AlphabeticalTraversal::Dot,
-                })),
-            }
+            DummySink { max_size, entries: Vec::with_capacity(max_size), sealed: false }
         }
 
-        pub fn reset(&self) {
-            self.inner.lock().unwrap().entries.clear();
+        fn from_sealed(sealed: Box<dyn dirents_sink::Sealed>) -> Box<DummySink> {
+            sealed.into()
+        }
+    }
+
+    impl From<Box<dyn dirents_sink::Sealed>> for Box<DummySink> {
+        fn from(sealed: Box<dyn dirents_sink::Sealed>) -> Self {
+            sealed.open().downcast::<DummySink>().unwrap()
         }
     }
 
     impl Sink for DummySink {
-        fn append(
-            self: Box<Self>,
-            entry: &EntryInfo,
-            name: &str,
-            pos: &dyn Fn() -> AlphabeticalTraversal,
-        ) -> AppendResult {
-            let inner_arc = self.inner.clone();
-            let mut inner = inner_arc.lock().unwrap();
-            inner.entries.push((name.to_owned(), entry.clone()));
-
-            if inner.entries.len() == inner.max_size {
-                // seal the sink
-                inner.sealed_pos = pos();
-                AppendResult::Sealed(self)
+        fn append(mut self: Box<Self>, entry: &EntryInfo, name: &str) -> AppendResult {
+            assert!(!self.sealed);
+            if self.entries.len() == self.max_size {
+                AppendResult::Sealed(self.seal())
             } else {
+                self.entries.push((name.to_owned(), entry.clone()));
                 AppendResult::Ok(self)
             }
         }
 
-        fn seal(self: Box<Self>, pos: AlphabeticalTraversal) -> Box<dyn Sealed> {
-            self.inner.lock().unwrap().sealed_pos = pos;
+        fn seal(mut self: Box<Self>) -> Box<dyn Sealed> {
+            self.sealed = true;
             self
         }
     }
 
     impl Sealed for DummySink {
         fn open(self: Box<Self>) -> Box<dyn Any> {
-            todo!();
+            self
         }
     }
 
@@ -794,46 +784,28 @@ mod tests {
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
 
-        let sink = Box::new(DummySink::new(4));
-        let mut pos = AlphabeticalTraversal::Dot;
-        match dir.clone().read_dirents(pos, sink.clone()) {
-            AsyncReadDirents::Immediate(Ok(_)) => {
-                let inner = sink.inner.lock().unwrap();
-                assert_eq!(
-                    inner.entries,
-                    vec![
-                        (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                        ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                        (
-                            "directory".to_owned(),
-                            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
-                        ),
-                        ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                    ]
-                );
-                pos = inner.sealed_pos.clone();
-                assert_eq!(pos, AlphabeticalTraversal::Name("qwerty".to_owned()));
-            }
-            _ => panic!("Unexpected result"),
-        }
+        let (pos, sealed) = futures::executor::block_on(
+            dir.clone().read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(4))),
+        )
+        .expect("read_dirents failed");
+        assert_eq!(
+            DummySink::from_sealed(sealed).entries,
+            vec![
+                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+                ("directory".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+            ]
+        );
 
         // Read the next two entries.
-        sink.reset();
-        match dir.clone().read_dirents(pos, sink.clone()) {
-            AsyncReadDirents::Immediate(Ok(_)) => {
-                let inner = sink.inner.lock().unwrap();
-                assert_eq!(
-                    inner.entries,
-                    vec![
-                        ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                        ("test_file".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                    ]
-                );
-                pos = inner.sealed_pos.clone();
-                assert_eq!(pos, AlphabeticalTraversal::End);
-            }
-            _ => panic!("Unexpected result"),
-        }
+        let (_, sealed) =
+            futures::executor::block_on(dir.read_dirents(&pos, Box::new(DummySink::new(4))))
+                .expect("read_dirents failed");
+        assert_eq!(
+            DummySink::from_sealed(sealed).entries,
+            vec![("test_file".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),]
+        );
     }
 
     #[test]
@@ -850,28 +822,45 @@ mod tests {
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
 
-        let sink = Box::new(DummySink::new(30));
-        let mut pos = AlphabeticalTraversal::Dot;
-        match dir.clone().read_dirents(pos, sink.clone()) {
-            AsyncReadDirents::Immediate(Ok(_)) => {
-                let inner = sink.inner.lock().unwrap();
-                assert_eq!(
-                    inner.entries,
-                    vec![
-                        (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                        ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                        (
-                            "directory".to_owned(),
-                            EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)
-                        ),
-                        ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                        ("test_file".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
-                    ]
-                );
-                pos = inner.sealed_pos.clone();
-                assert_eq!(pos, AlphabeticalTraversal::End);
-            }
-            _ => panic!("Unexpected result"),
-        }
+        let (_, sealed) = futures::executor::block_on(
+            dir.read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(30))),
+        )
+        .expect("read_dirents failed");
+        assert_eq!(
+            DummySink::from_sealed(sealed).entries,
+            vec![
+                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                ("aaa".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+                ("directory".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
+                ("qwerty".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+                ("test_file".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE)),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_read_dirents_with_entry_that_sorts_before_dot() {
+        let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
+        let structure = TestDiskContents::dir().add_child("!", "!".into());
+        structure.create(&disk.root_dir());
+
+        let fs = disk.into_fatfs();
+        let dir = fs.get_fatfs_root();
+        let (pos, sealed) = futures::executor::block_on(
+            dir.clone().read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(1))),
+        )
+        .expect("read_dirents failed");
+        assert_eq!(
+            DummySink::from_sealed(sealed).entries,
+            vec![("!".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE))]
+        );
+
+        let (_, sealed) =
+            futures::executor::block_on(dir.read_dirents(&pos, Box::new(DummySink::new(1))))
+                .expect("read_dirents failed");
+        assert_eq!(
+            DummySink::from_sealed(sealed).entries,
+            vec![(".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),]
+        );
     }
 }

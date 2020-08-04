@@ -7,9 +7,9 @@ use crate::{
     directory::{
         common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
         entry::DirectoryEntry,
-        entry_container::{AsyncGetEntry, AsyncReadDirents, Directory},
+        entry_container::{AsyncGetEntry, Directory},
         read_dirents,
-        traversal_position::AlphabeticalTraversal,
+        traversal_position::TraversalPosition,
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -34,7 +34,7 @@ use {
         Status,
     },
     futures::{future::BoxFuture, stream::StreamExt},
-    std::{default::Default, mem::replace, sync::Arc},
+    std::{default::Default, sync::Arc},
 };
 
 /// Return type for [`BaseConnection::handle_request`] and [`DerivedConnection::handle_request`].
@@ -116,7 +116,7 @@ where
     ///
     /// but, as, I think, at least for the pseudo directories, this approach is fine, and it simple
     /// enough.
-    seek: AlphabeticalTraversal,
+    seek: TraversalPosition,
 }
 
 /// Subset of the [`DirectoryRequest`] protocol that is handled by the
@@ -448,27 +448,18 @@ where
             return responder(Status::BAD_HANDLE, &[]);
         }
 
-        let res = {
-            let directory = self.directory.clone();
-            match directory.read_dirents(
-                replace(&mut self.seek, Default::default()),
-                read_dirents::Sink::new(max_bytes),
-            ) {
-                AsyncReadDirents::Immediate(res) => res,
-                AsyncReadDirents::Future(fut) => fut.await,
-            }
-        };
-
-        let done_or_err = match res {
-            Ok(sealed) => sealed.open().downcast::<read_dirents::Done>(),
-            Err(status) => return responder(status, &[]),
-        };
+        let done_or_err =
+            match self.directory.read_dirents(&self.seek, read_dirents::Sink::new(max_bytes)).await
+            {
+                Ok((new_pos, sealed)) => {
+                    self.seek = new_pos;
+                    sealed.open().downcast::<read_dirents::Done>()
+                }
+                Err(status) => return responder(status, &[]),
+            };
 
         match done_or_err {
-            Ok(done) => {
-                self.seek = done.pos;
-                responder(done.status, &done.buf)
-            }
+            Ok(done) => responder(done.status, &done.buf),
             Err(_) => {
                 debug_assert!(
                     false,

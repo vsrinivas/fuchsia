@@ -11,11 +11,11 @@ use crate::{
         connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::{AsyncGetEntry, AsyncReadDirents, Directory},
+        entry_container::{AsyncGetEntry, Directory},
         helper::DirectlyMutable,
         immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
         mutable::connection::io1::{MutableConnection, MutableConnectionClient},
-        traversal_position::AlphabeticalTraversal,
+        traversal_position::TraversalPosition,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
             Watchers,
@@ -28,6 +28,7 @@ use crate::{
 };
 
 use {
+    async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, OPEN_FLAG_CREATE_IF_ABSENT,
@@ -195,6 +196,7 @@ where
     }
 }
 
+#[async_trait]
 impl<Connection> Directory for Simple<Connection>
 where
     Connection: DerivedConnection + 'static,
@@ -212,23 +214,18 @@ where
         }
     }
 
-    fn read_dirents(
-        self: Arc<Self>,
-        pos: AlphabeticalTraversal,
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
         sink: Box<dyn dirents_sink::Sink>,
-    ) -> AsyncReadDirents {
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
         use dirents_sink::AppendResult;
 
         let this = self.inner.lock();
 
         let (mut sink, entries_iter) = match pos {
-            AlphabeticalTraversal::Dot => {
-                // Lazy position retrieval.
-                let pos = &|| match this.entries.keys().next() {
-                    None => AlphabeticalTraversal::End,
-                    Some(first_name) => AlphabeticalTraversal::Name(first_name.clone()),
-                };
-                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".", pos) {
+            TraversalPosition::Start => {
+                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
                     AppendResult::Ok(sink) => {
                         // I wonder why, but rustc can not infer T in
                         //
@@ -246,27 +243,35 @@ where
                         // below.
                         (sink, this.entries.range::<String, _>(..))
                     }
-                    AppendResult::Sealed(sealed) => return sealed.into(),
+                    AppendResult::Sealed(sealed) => {
+                        let new_pos = match this.entries.keys().next() {
+                            None => TraversalPosition::End,
+                            Some(first_name) => TraversalPosition::Name(first_name.clone()),
+                        };
+                        return Ok((new_pos, sealed.into()));
+                    }
                 }
             }
 
-            AlphabeticalTraversal::Name(next_name) => {
-                (sink, this.entries.range::<String, _>(next_name..))
+            TraversalPosition::Name(next_name) => {
+                (sink, this.entries.range::<String, _>(next_name.to_owned()..))
             }
 
-            AlphabeticalTraversal::End => return sink.seal(AlphabeticalTraversal::End).into(),
+            TraversalPosition::Index(_) => unreachable!(),
+
+            TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal().into())),
         };
 
         for (name, entry) in entries_iter {
-            match sink
-                .append(&entry.entry_info(), &name, &|| AlphabeticalTraversal::Name(name.clone()))
-            {
+            match sink.append(&entry.entry_info(), &name) {
                 AppendResult::Ok(new_sink) => sink = new_sink,
-                AppendResult::Sealed(sealed) => return sealed.into(),
+                AppendResult::Sealed(sealed) => {
+                    return Ok((TraversalPosition::Name(name.clone()), sealed.into()));
+                }
             }
         }
 
-        sink.seal(AlphabeticalTraversal::End).into()
+        Ok((TraversalPosition::End, sink.seal().into()))
     }
 
     fn register_watcher(

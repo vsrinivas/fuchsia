@@ -178,13 +178,10 @@ impl TokenRegistry for Simple {
 
 #[cfg(test)]
 mod tests {
-    use super::Simple;
-
-    use self::mocks::MockDirectory;
-
-    use crate::registry::{TokenRegistry, TokenRegistryClient, DEFAULT_TOKEN_RIGHTS};
-
     use {
+        self::mocks::MockDirectory,
+        super::Simple,
+        crate::registry::{TokenRegistry, TokenRegistryClient, DEFAULT_TOKEN_RIGHTS},
         fuchsia_zircon::{AsHandleRef, HandleBased, Rights},
         std::sync::Arc,
     };
@@ -273,8 +270,8 @@ mod tests {
             directory::{
                 dirents_sink,
                 entry::{DirectoryEntry, EntryInfo},
-                entry_container::{AsyncGetEntry, AsyncReadDirents, Directory, MutableDirectory},
-                traversal_position::AlphabeticalTraversal,
+                entry_container::{AsyncGetEntry, Directory, MutableDirectory},
+                traversal_position::TraversalPosition,
             },
             execution_scope::ExecutionScope,
             filesystem::Filesystem,
@@ -282,6 +279,7 @@ mod tests {
         };
 
         use {
+            async_trait::async_trait,
             fidl::endpoints::ServerEnd,
             fidl_fuchsia_io::{NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
             fuchsia_async::Channel,
@@ -317,16 +315,17 @@ mod tests {
             }
         }
 
+        #[async_trait]
         impl Directory for MockDirectory {
             fn get_entry(self: Arc<Self>, _name: String) -> AsyncGetEntry {
                 panic!("Not implemented!")
             }
 
-            fn read_dirents(
-                self: Arc<Self>,
-                _pos: AlphabeticalTraversal,
+            async fn read_dirents<'a>(
+                &'a self,
+                _pos: &'a TraversalPosition,
                 _sink: Box<dyn dirents_sink::Sink>,
-            ) -> AsyncReadDirents {
+            ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
                 panic!("Not implemented!")
             }
 

@@ -6,13 +6,14 @@
 //! content.
 
 use crate::{
-    directory::{dirents_sink, entry::DirectoryEntry, traversal_position::AlphabeticalTraversal},
+    directory::{dirents_sink, entry::DirectoryEntry, traversal_position::TraversalPosition},
     execution_scope::ExecutionScope,
     filesystem::Filesystem,
     path::Path,
 };
 
 use {
+    async_trait::async_trait,
     fidl_fuchsia_io::NodeAttributes,
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
@@ -45,32 +46,21 @@ impl From<BoxFuture<'static, GetEntryResult>> for AsyncGetEntry {
     }
 }
 
-pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
-
-pub enum AsyncReadDirents {
-    Immediate(ReadDirentsResult),
-    Future(BoxFuture<'static, ReadDirentsResult>),
-}
-
-impl From<Box<dyn dirents_sink::Sealed>> for AsyncReadDirents {
-    fn from(done: Box<dyn dirents_sink::Sealed>) -> AsyncReadDirents {
-        AsyncReadDirents::Immediate(Ok(done))
-    }
-}
-
 /// All directories implement this trait.  If a directory can be modified it should
 /// also implement the `MutableDirectory` trait.
+#[async_trait]
 pub trait Directory: Any + Send + Sync {
     /// Returns a reference to a contained directory entry.  Used when linking entries.
     fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry;
 
     /// Reads directory entries starting from `pos` by adding them to `sink`.
     /// Once finished, should return a sealed sink.
-    fn read_dirents(
-        self: Arc<Self>,
-        pos: AlphabeticalTraversal,
+    // The lifetimes here are because of https://github.com/rust-lang/rust/issues/63033.
+    async fn read_dirents<'a>(
+        &'a self,
+        pos: &'a TraversalPosition,
         sink: Box<dyn dirents_sink::Sink>,
-    ) -> AsyncReadDirents;
+    ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status>;
 
     /// Register a watcher for this directory.
     /// Implementations will probably want to use a `Watcher` to manage watchers.

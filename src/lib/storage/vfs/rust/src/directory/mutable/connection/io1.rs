@@ -316,12 +316,13 @@ mod tests {
                 dirents_sink,
                 entry::{DirectoryEntry, EntryInfo},
                 entry_container::*,
-                traversal_position::AlphabeticalTraversal,
+                traversal_position::TraversalPosition,
             },
             filesystem::{Filesystem, FilesystemRename},
             path::Path,
             registry::token_registry,
         },
+        async_trait::async_trait,
         fidl::Channel,
         fidl_fuchsia_io::{
             DirectoryProxy, NodeAttributes, DIRENT_TYPE_DIRECTORY,
@@ -329,7 +330,7 @@ mod tests {
             OPEN_RIGHT_READABLE,
         },
         fuchsia_async as fasync,
-        std::{any::Any, sync::Mutex},
+        std::{any::Any, sync::Arc, sync::Mutex},
     };
 
     #[derive(Debug, PartialEq)]
@@ -382,16 +383,17 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl Directory for MockDirectory {
         fn get_entry(self: Arc<Self>, _name: String) -> AsyncGetEntry {
             AsyncGetEntry::Immediate(Ok(self))
         }
 
-        fn read_dirents(
-            self: Arc<Self>,
-            _pos: AlphabeticalTraversal,
+        async fn read_dirents<'a>(
+            &'a self,
+            _pos: &'a TraversalPosition,
             _sink: Box<dyn dirents_sink::Sink>,
-        ) -> AsyncReadDirents {
+        ) -> Result<(TraversalPosition, Box<dyn dirents_sink::Sealed>), Status> {
             panic!("Not implemented");
         }
 
