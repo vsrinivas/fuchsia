@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{Context, Result},
     ffx_core::ffx_plugin,
     ffx_select_args::SelectCommand,
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, ServiceMatch},
@@ -17,7 +17,7 @@ Example: 'remote-control:out:*' would return all services in 'out' for the compo
 Note that moniker wildcards are not recursive: 'a/*/c' will only match components named 'c' running in some sub-realm directly below 'a', and no further.";
 
 #[ffx_plugin()]
-pub async fn select_cmd(remote_proxy: RemoteControlProxy, cmd: SelectCommand) -> Result<(), Error> {
+pub async fn select_cmd(remote_proxy: RemoteControlProxy, cmd: SelectCommand) -> Result<()> {
     let writer = Box::new(stdout());
     select(remote_proxy, writer, &cmd.selector).await
 }
@@ -26,7 +26,7 @@ async fn select<W: Write>(
     remote_proxy: RemoteControlProxy,
     mut write: W,
     selector: &str,
-) -> Result<(), Error> {
+) -> Result<()> {
     let writer = &mut write;
     let selector = match selectors::parse_selector(selector) {
         Ok(s) => s,
@@ -52,19 +52,19 @@ async fn select<W: Write>(
     }
 }
 
-fn format_subdir<W: Write>(writer: &mut W, subdir: &str) -> Result<(), Error> {
+fn format_subdir<W: Write>(writer: &mut W, subdir: &str) -> Result<()> {
     writeln!(writer, "|")?;
     writeln!(writer, "--{}", subdir)?;
     writeln!(writer, "   |")?;
     Ok(())
 }
 
-fn format_service<W: Write>(writer: &mut W, service: &str) -> Result<(), Error> {
+fn format_service<W: Write>(writer: &mut W, service: &str) -> Result<()> {
     writeln!(writer, "   --{}", service)?;
     Ok(())
 }
 
-fn format_matches<W: Write>(writer: &mut W, matches: Vec<ServiceMatch>) -> Result<(), Error> {
+fn format_matches<W: Write>(writer: &mut W, matches: Vec<ServiceMatch>) -> Result<()> {
     let mut sorted_paths = matches.iter().collect::<Vec<&ServiceMatch>>();
     sorted_paths.sort();
 
@@ -138,7 +138,7 @@ core/test
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_select_invalid_selector() -> Result<(), Error> {
+    async fn test_select_invalid_selector() -> Result<()> {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server();
@@ -148,7 +148,7 @@ core/test
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_select_formats_rcs_response() -> Result<(), Error> {
+    async fn test_select_formats_rcs_response() -> Result<()> {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server();
@@ -159,7 +159,7 @@ core/test
     }
 
     #[test]
-    fn test_format_matches_complex() -> Result<(), Error> {
+    fn test_format_matches_complex() -> Result<()> {
         let mut output = String::new();
 
         let expected = "\

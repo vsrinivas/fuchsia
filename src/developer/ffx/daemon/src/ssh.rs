@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::target::TargetAddr,
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Result},
     ffx_config::constants::{SSH_PORT, SSH_PRIV},
     ffx_config::get,
     std::collections::HashSet,
@@ -19,10 +19,7 @@ static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
     "-o LogLevel=ERROR",
 ];
 
-pub async fn build_ssh_command(
-    addrs: HashSet<TargetAddr>,
-    command: Vec<&str>,
-) -> Result<Command, Error> {
+pub async fn build_ssh_command(addrs: HashSet<TargetAddr>, command: Vec<&str>) -> Result<Command> {
     if command.is_empty() {
         return Err(anyhow!("missing SSH command"));
     }

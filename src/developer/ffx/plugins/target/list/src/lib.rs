@@ -4,7 +4,7 @@
 
 use {
     crate::target_formatter::TargetFormatter,
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Result},
     ffx_core::ffx_plugin,
     ffx_list_args::ListCommand,
     fidl_fuchsia_developer_bridge::DaemonProxy,
@@ -15,7 +15,7 @@ use {
 mod target_formatter;
 
 #[ffx_plugin()]
-pub async fn list_targets(daemon_proxy: DaemonProxy, cmd: ListCommand) -> Result<(), Error> {
+pub async fn list_targets(daemon_proxy: DaemonProxy, cmd: ListCommand) -> Result<()> {
     list_impl(daemon_proxy, cmd, Box::new(stdout())).await
 }
 
@@ -23,7 +23,7 @@ async fn list_impl<W: Write>(
     daemon_proxy: DaemonProxy,
     cmd: ListCommand,
     mut writer: W,
-) -> Result<(), Error> {
+) -> Result<()> {
     match daemon_proxy
         .list_targets(match cmd.nodename {
             Some(ref t) => t,
@@ -124,14 +124,14 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_with_no_devices_and_no_nodename() -> Result<(), Error> {
+    async fn test_list_with_no_devices_and_no_nodename() -> Result<()> {
         let output = run_list_test(0, ListCommand { nodename: None }).await;
         assert_eq!("No devices found.\n".to_string(), output);
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_with_one_device_and_no_nodename() -> Result<(), Error> {
+    async fn test_list_with_one_device_and_no_nodename() -> Result<()> {
         let output = run_list_test(1, ListCommand { nodename: None }).await;
         let value = format!("Test {}", 0);
         let node_listing = Regex::new(&value).expect("test regex");
@@ -146,7 +146,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_with_multiple_devices_and_no_nodename() -> Result<(), Error> {
+    async fn test_list_with_multiple_devices_and_no_nodename() -> Result<()> {
         let num_tests = 10;
         let output = run_list_test(num_tests, ListCommand { nodename: None }).await;
         for x in 0..num_tests {
@@ -164,7 +164,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_with_one_device_and_matching_nodename() -> Result<(), Error> {
+    async fn test_list_with_one_device_and_matching_nodename() -> Result<()> {
         let output = run_list_test(1, ListCommand { nodename: Some("Test 0".to_string()) }).await;
         let value = format!("Test {}", 0);
         let node_listing = Regex::new(&value).expect("test regex");
@@ -179,7 +179,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_with_one_device_and_not_matching_nodename() -> Result<(), Error> {
+    async fn test_list_with_one_device_and_not_matching_nodename() -> Result<()> {
         let output = run_list_test(1, ListCommand { nodename: Some("blarg".to_string()) }).await;
         let value = format!("Test {}", 0);
         let node_listing = Regex::new(&value).expect("test regex");
@@ -188,7 +188,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_with_multiple_devices_and_not_matching_nodename() -> Result<(), Error> {
+    async fn test_list_with_multiple_devices_and_not_matching_nodename() -> Result<()> {
         let num_tests = 25;
         let output =
             run_list_test(num_tests, ListCommand { nodename: Some("blarg".to_string()) }).await;
@@ -201,7 +201,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_with_multiple_devices_and_matching_nodename() -> Result<(), Error> {
+    async fn test_list_with_multiple_devices_and_matching_nodename() -> Result<()> {
         let output = run_list_test(25, ListCommand { nodename: Some("Test 19".to_string()) }).await;
         let value = format!("Test {}", 0);
         let node_listing = Regex::new(&value).expect("test regex");

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::Result,
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
@@ -33,7 +33,7 @@ fn extract_serial_number(info: &InterfaceInfo) -> String {
     (*String::from_utf8_lossy(&info.serial_number[..null_pos])).to_string()
 }
 
-fn open_interface<F>(mut cb: F) -> Result<Interface, Error>
+fn open_interface<F>(mut cb: F) -> Result<Interface>
 where
     F: FnMut(&InterfaceInfo) -> bool,
 {
@@ -104,7 +104,7 @@ pub fn find_devices() -> Vec<FastbootDevice> {
 ///
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Error};
+    use super::*;
 
     #[test]
     fn test_fastboot_enumeration() {
@@ -113,7 +113,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_find_devices() -> Result<(), Error> {
+    pub fn test_find_devices() -> Result<()> {
         let devices = find_devices();
         assert_eq!(devices.len(), 1, "Host should have exactly one fastboot device connected");
         Ok(())

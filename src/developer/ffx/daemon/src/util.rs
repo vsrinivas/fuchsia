@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Attempts to run an operation that has a Result<T, Error> inside of a
+/// Attempts to run an operation that has a Result<T> inside of a
 /// loop which intends not to exit/crash when errors are encountered,
 /// instead logging a warning and continuing the loop.
 ///
@@ -47,7 +47,7 @@ macro_rules! ok_or_continue {
     };
 }
 
-/// Attempts to run an operation that has a Result<T, Error> inside a function
+/// Attempts to run an operation that has a Result<T> inside a function
 /// that isn't intended to return an error, instead returning after failure with
 /// a warning log.
 ///

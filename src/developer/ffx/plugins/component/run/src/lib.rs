@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Error},
+    anyhow::{anyhow, Context, Result},
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     fidl::endpoints::create_proxy,
@@ -26,7 +26,7 @@ const HANDLE_TYPE_FILE_DESCRIPTOR: i32 = 0x30;
 pub async fn run_component(
     remote_proxy: RemoteControlProxy,
     run: RunComponentCommand,
-) -> Result<(), Error> {
+) -> Result<()> {
     let (control_proxy, control_server_end) = create_proxy::<ComponentControllerMarker>()?;
     let (sout, cout) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
@@ -225,7 +225,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_run_component() -> Result<(), Error> {
+    async fn test_run_component() -> Result<()> {
         let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx".to_string();
         let args = vec!["test1".to_string(), "test2".to_string()];
         let run_cmd = RunComponentCommand { url, args };

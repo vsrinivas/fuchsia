@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_echo_args::EchoCommand,
     fidl_fuchsia_developer_bridge::DaemonProxy,
@@ -11,7 +11,7 @@ use {
 };
 
 #[ffx_plugin()]
-pub async fn echo(daemon_proxy: DaemonProxy, cmd: EchoCommand) -> Result<(), Error> {
+pub async fn echo(daemon_proxy: DaemonProxy, cmd: EchoCommand) -> Result<()> {
     echo_impl(daemon_proxy, cmd, Box::new(stdout())).await
 }
 
@@ -19,7 +19,7 @@ async fn echo_impl<W: Write>(
     daemon_proxy: DaemonProxy,
     cmd: EchoCommand,
     mut writer: W,
-) -> Result<(), Error> {
+) -> Result<()> {
     let echo_text = cmd.text.unwrap_or("Ffx".to_string());
     match daemon_proxy.echo_string(&echo_text).await {
         Ok(r) => {
@@ -78,14 +78,14 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_echo_with_no_text() -> Result<(), Error> {
+    async fn test_echo_with_no_text() -> Result<()> {
         let output = run_echo_test(EchoCommand { text: None }).await;
         assert_eq!("SUCCESS: received \"Ffx\"\n".to_string(), output);
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_echo_with_text() -> Result<(), Error> {
+    async fn test_echo_with_text() -> Result<()> {
         let output = run_echo_test(EchoCommand { text: Some("test".to_string()) }).await;
         assert_eq!("SUCCESS: received \"test\"\n".to_string(), output);
         Ok(())

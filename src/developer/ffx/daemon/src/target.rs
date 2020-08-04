@@ -272,9 +272,7 @@ impl Target {
         }
     }
 
-    pub async fn from_rcs_connection(
-        r: RcsConnection,
-    ) -> std::result::Result<Self, RcsConnectionError> {
+    pub async fn from_rcs_connection(r: RcsConnection) -> Result<Self, RcsConnectionError> {
         let fidl_target = match r.proxy.identify_host().await {
             Ok(res) => match res {
                 Ok(target) => target,

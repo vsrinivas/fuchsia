@@ -8,7 +8,7 @@ use {
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::mdns::MdnsTargetFinder,
     crate::target::{RcsConnection, Target, TargetCollection, TargetEvent, ToFidlTarget},
-    anyhow::{anyhow, Context, Error},
+    anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
     fidl::endpoints::ServiceMarker,
@@ -40,7 +40,7 @@ pub struct DaemonEventHandler {
 
 #[async_trait]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
-    async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
+    async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
         let tc = match self.target_collection.upgrade() {
             Some(t) => t,
             None => return Ok(true), // We're done, as the parent has been dropped.
@@ -78,7 +78,7 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
 }
 
 impl Daemon {
-    pub async fn new() -> Result<Daemon, Error> {
+    pub async fn new() -> Result<Daemon> {
         log::info!("Starting daemon overnet server");
         let target_collection = Arc::new(TargetCollection::new());
         let queue = events::Queue::new(&target_collection);
@@ -106,10 +106,7 @@ impl Daemon {
         Daemon { target_collection, event_queue }
     }
 
-    pub async fn handle_requests_from_stream(
-        &self,
-        mut stream: DaemonRequestStream,
-    ) -> Result<(), Error> {
+    pub async fn handle_requests_from_stream(&self, mut stream: DaemonRequestStream) -> Result<()> {
         while let Some(req) = stream.try_next().await? {
             self.handle_request(req).await?;
         }
@@ -190,7 +187,7 @@ impl Daemon {
     /// devices.
     /// TODO(fxb/47843): Implement target lookup for commands to deprecate this
     /// function, and as a result remove the inner_lock() function.
-    async fn target_from_cache(&self, target_selector: String) -> Result<Target, Error> {
+    async fn target_from_cache(&self, target_selector: String) -> Result<Target> {
         let targets = self.target_collection.inner_lock().await;
 
         if targets.len() == 0 {
@@ -218,7 +215,7 @@ impl Daemon {
         }
     }
 
-    pub async fn handle_request(&self, req: DaemonRequest) -> Result<(), Error> {
+    pub async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
         log::debug!("daemon received request: {:?}", req);
         match req {
             DaemonRequest::EchoString { value, responder } => {
@@ -359,7 +356,7 @@ mod test {
 
     #[async_trait]
     impl EventHandler<DaemonEvent> for TestHookFakeRcs {
-        async fn on_event(&self, event: DaemonEvent) -> Result<bool, Error> {
+        async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
             let tc = match self.tc.upgrade() {
                 Some(t) => t,
                 None => return Ok(true),
@@ -452,8 +449,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_getting_rcs_multiple_targets_mdns_with_no_selector_should_err(
-    ) -> Result<(), Error> {
+    async fn test_getting_rcs_multiple_targets_mdns_with_no_selector_should_err() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
@@ -467,7 +463,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_getting_rcs_multiple_targets_mdns_with_correct_selector_should_not_err(
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
@@ -482,7 +478,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_getting_rcs_multiple_targets_mdns_with_incorrect_selector_should_err(
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
@@ -495,7 +491,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_list_targets_mdns_discovery() -> Result<(), Error> {
+    async fn test_list_targets_mdns_discovery() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
@@ -535,7 +531,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_quit() -> Result<(), Error> {
+    async fn test_quit() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 

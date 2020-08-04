@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, ffx_core::ffx_plugin, ffx_daemon_stop_args::StopCommand,
+    anyhow::Result, ffx_core::ffx_plugin, ffx_daemon_stop_args::StopCommand,
     fidl_fuchsia_developer_bridge::DaemonProxy,
 };
 
 #[ffx_plugin()]
-async fn stop(daemon_proxy: DaemonProxy, _cmd: StopCommand) -> Result<(), Error> {
+async fn stop(daemon_proxy: DaemonProxy, _cmd: StopCommand) -> Result<()> {
     daemon_proxy.quit().await?;
     println!("Stopped daemon.");
     Ok(())

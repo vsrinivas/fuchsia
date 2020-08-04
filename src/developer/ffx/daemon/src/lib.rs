@@ -167,7 +167,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_daemonize() -> Result<(), anyhow::Error> {
+    fn test_daemonize() -> Result<()> {
         let started = std::time::Instant::now();
         // TODO(raggi): this technically leaks a sleep process, which is
         // not ideal, but the much better approach would be a

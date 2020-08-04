@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{Context, Result},
     ffx_core::ffx_plugin,
     ffx_knock_args::KnockCommand,
     fidl::handle::Channel,
@@ -18,7 +18,7 @@ Example: 'remote-control:out:*' would return all services in 'out' for the compo
 Note that moniker wildcards are not recursive: 'a/*/c' will only match components named 'c' running in some sub-realm directly below 'a', and no further.";
 
 #[ffx_plugin()]
-pub async fn knock_cmd(remote_proxy: RemoteControlProxy, cmd: KnockCommand) -> Result<(), Error> {
+pub async fn knock_cmd(remote_proxy: RemoteControlProxy, cmd: KnockCommand) -> Result<()> {
     let writer = Box::new(stdout());
     knock(remote_proxy, writer, &cmd.selector).await
 }
@@ -27,7 +27,7 @@ async fn knock<W: Write>(
     remote_proxy: RemoteControlProxy,
     mut write: W,
     selector: &str,
-) -> Result<(), Error> {
+) -> Result<()> {
     let writer = &mut write;
     let selector = match selectors::parse_selector(selector) {
         Ok(s) => s,
@@ -147,7 +147,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_knock_invalid_selector() -> Result<(), Error> {
+    async fn test_knock_invalid_selector() -> Result<()> {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server(false);
@@ -157,7 +157,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_knock_working_service() -> Result<(), Error> {
+    async fn test_knock_working_service() -> Result<()> {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server(true);
@@ -168,7 +168,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_knock_no_service_connected() -> Result<(), Error> {
+    async fn test_knock_no_service_connected() -> Result<()> {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server(false);

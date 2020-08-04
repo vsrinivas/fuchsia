@@ -4,7 +4,7 @@
 use {
     crate::ok_or_return,
     crate::target,
-    anyhow::{anyhow, Context, Error},
+    anyhow::{anyhow, Context, Result},
     async_std::future::timeout,
     async_trait::async_trait,
     fuchsia_async::Task,
@@ -60,7 +60,7 @@ pub trait TryIntoTargetInfo: Sized {
 /// Implements a general event handler for any inbound events.
 #[async_trait]
 pub trait EventHandler<T: EventTrait>: Send + Sync {
-    async fn on_event(&self, event: T) -> Result<bool, Error>;
+    async fn on_event(&self, event: T) -> Result<bool>;
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -122,7 +122,7 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
         }
     }
 
-    fn push(&self, e: T) -> Result<(), Error> {
+    fn push(&self, e: T) -> Result<()> {
         let inner = match self.inner.upgrade() {
             Some(i) => i,
             None => return Err(anyhow!("done")),
@@ -160,7 +160,7 @@ where
     T: EventTrait,
     F: Future<Output = bool> + Send + Sync,
 {
-    async fn on_event(&self, event: T) -> Result<bool, Error> {
+    async fn on_event(&self, event: T) -> Result<bool> {
         if (self.predicate)(event).await {
             self.predicate_matched.unbounded_send(()).context("sending 'done' signal to waiter")?;
             return Ok(true);
@@ -249,7 +249,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         &self,
         timeout: Option<Duration>,
         predicate: impl Fn(T) -> bool + Send + Sync + 'static,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         self.wait_for_async(timeout, move |e| future::ready(predicate(e))).await
     }
 
@@ -258,7 +258,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         &self,
         timeout_opt: Option<Duration>,
         predicate: impl Fn(T) -> F + Send + Sync + 'static,
-    ) -> Result<(), Error>
+    ) -> Result<()>
     where
         F: Future<Output = bool> + Send + Sync + 'static,
     {
@@ -277,7 +277,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         }
     }
 
-    pub async fn push(&self, event: T) -> Result<(), Error> {
+    pub async fn push(&self, event: T) -> Result<()> {
         self.inner_tx.unbounded_send(event).context("enqueueing")
     }
 }
@@ -317,7 +317,7 @@ mod test {
 
     #[async_trait]
     impl EventHandler<i32> for TestHookFirst {
-        async fn on_event(&self, event: i32) -> Result<bool, Error> {
+        async fn on_event(&self, event: i32) -> Result<bool> {
             assert_eq!(event, 5);
             self.callbacks_done.unbounded_send(true).unwrap();
             Ok(false)
@@ -330,7 +330,7 @@ mod test {
 
     #[async_trait]
     impl EventHandler<i32> for TestHookSecond {
-        async fn on_event(&self, event: i32) -> Result<bool, Error> {
+        async fn on_event(&self, event: i32) -> Result<bool> {
             assert_eq!(event, 5);
             self.callbacks_done.unbounded_send(true).unwrap();
             Ok(false)
@@ -449,7 +449,7 @@ mod test {
 
     #[async_trait]
     impl EventHandler<EventFailerInput> for EventFailer {
-        async fn on_event(&self, event: EventFailerInput) -> Result<bool, Error> {
+        async fn on_event(&self, event: EventFailerInput) -> Result<bool> {
             match event {
                 EventFailerInput::Fail => Err(anyhow!("test told to fail")),
                 EventFailerInput::Complete => Ok(true),

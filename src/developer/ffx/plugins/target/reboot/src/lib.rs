@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Result},
     ffx_core::ffx_plugin,
     ffx_reboot_args::RebootCommand,
     fidl_fuchsia_hardware_power_statecontrol as fpower,
 };
 
 #[ffx_plugin(fpower::AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
-pub async fn reboot(admin_proxy: fpower::AdminProxy, cmd: RebootCommand) -> Result<(), Error> {
+pub async fn reboot(admin_proxy: fpower::AdminProxy, cmd: RebootCommand) -> Result<()> {
     if cmd.bootloader && cmd.recovery {
         println!("Cannot specify booth bootloader and recovery switches at the same time.");
         return Err(anyhow!("Invalid options"));
@@ -73,23 +73,23 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_reboot() -> Result<(), Error> {
+    async fn test_reboot() -> Result<()> {
         run_reboot_test(RebootCommand { bootloader: false, recovery: false }).await;
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_bootloader() -> Result<(), Error> {
+    async fn test_bootloader() -> Result<()> {
         Ok(run_reboot_test(RebootCommand { bootloader: true, recovery: false }).await)
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_recovery() -> Result<(), Error> {
+    async fn test_recovery() -> Result<()> {
         Ok(run_reboot_test(RebootCommand { bootloader: false, recovery: true }).await)
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_error() -> Result<(), Error> {
+    async fn test_error() -> Result<()> {
         let cmd = RebootCommand { bootloader: true, recovery: true };
         let admin_proxy = setup_fake_admin_server(cmd);
         let result = reboot(admin_proxy, cmd).await;

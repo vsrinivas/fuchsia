@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, ffx_core::ffx_plugin, ffx_off_args::OffCommand,
+    anyhow::Result, ffx_core::ffx_plugin, ffx_off_args::OffCommand,
     fidl_fuchsia_hardware_power_statecontrol as fpower,
 };
 
 #[ffx_plugin(fpower::AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
-pub async fn off(admin_proxy: fpower::AdminProxy, _cmd: OffCommand) -> Result<(), Error> {
+pub async fn off(admin_proxy: fpower::AdminProxy, _cmd: OffCommand) -> Result<()> {
     admin_proxy.poweroff().await?.unwrap();
     Ok(())
 }
@@ -43,7 +43,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_off() -> Result<(), Error> {
+    async fn test_off() -> Result<()> {
         let admin_proxy = setup_fake_admin_server();
 
         let result = off(admin_proxy, OffCommand {}).await.unwrap();
