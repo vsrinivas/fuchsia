@@ -131,7 +131,7 @@ ordinal-member-field-body = member-field | "reserved";
 
 type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
 
-resource-declaration = ( attribute-list ) , "resource" , IDENTIFIER , ":",
+resource-declaration = ( attribute-list ) , "resource_definition" , IDENTIFIER , ":",
                        "uint32" , "{" , resource-properties ,  "}" ; [NOTE 7]
 
 resource-properties = "properties" , "{" , ( type-constructor , IDENTIFIER  , ";" )* , "}" , ";"

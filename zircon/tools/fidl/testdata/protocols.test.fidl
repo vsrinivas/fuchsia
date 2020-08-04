@@ -8,7 +8,7 @@ enum obj_type : uint32 {
     SOCKET = 14;
 };
 
-resource handle : uint32 {
+resource_definition handle : uint32 {
     properties {
         obj_type subtype;
     };

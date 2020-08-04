@@ -231,7 +231,7 @@ protocol Example {
 };
 
 
-resource     SomeRes    :uint32 {
+resource_definition     SomeRes    :uint32 {
 properties {
              Enum2 subtype;
              };

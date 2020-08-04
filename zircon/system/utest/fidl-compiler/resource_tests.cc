@@ -22,7 +22,7 @@ enum MyEnum : uint32 {
   NONE = 0;
 };
 
-resource SomeResource : uint32 {
+resource_definition SomeResource : uint32 {
   properties {
     MyEnum subtype;
   };
@@ -46,7 +46,7 @@ TEST(Resource, InvalidEmpty) {
   TestLibrary library(R"FIDL(
 library example;
 
-resource SomeResource : uint32 {
+resource_definition SomeResource : uint32 {
 };
 
 )FIDL");
@@ -61,7 +61,7 @@ TEST(Resource, InvalidNoProperties) {
   TestLibrary library(R"FIDL(
 library example;
 
-resource SomeResource : uint32 {
+resource_definition SomeResource : uint32 {
   properties {
   };
 };
@@ -82,7 +82,7 @@ enum MyEnum {
   X = 0;
 };
 
-resource SomeResource : uint32 {
+resource_definition SomeResource : uint32 {
   properties {
     MyEnum stuff;
     MyEnum stuff;

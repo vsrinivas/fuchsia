@@ -404,9 +404,9 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
          R"FIDL(library x; «using y = int32»;)FIDL",
      }},
     {ElementType::ResourceDeclaration, {R"FIDL(
-     library example; «resource Res : uint32 { properties { Enum subtype; }; }»;)FIDL"}},
+     library example; «resource_definition Res : uint32 { properties { Enum subtype; }; }»;)FIDL"}},
     {ElementType::ResourceProperty, {R"FIDL(
-     library example; resource Res : uint32 { properties { «Enum subtype»; }; };)FIDL"}},
+     library example; resource_definition Res : uint32 { properties { «Enum subtype»; }; };)FIDL"}},
     {ElementType::ProtocolDeclaration,
      {
          R"FIDL(library x; «protocol X {}»;)FIDL",

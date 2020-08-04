@@ -994,7 +994,7 @@ std::unique_ptr<raw::ResourceDeclaration> Parser::ParseResourceDeclaration(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
   std::vector<std::unique_ptr<raw::ResourceProperty>> properties;
 
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResource));
+  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResourceDefinition));
   if (!Ok())
     return Fail();
 
@@ -1482,7 +1482,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return More;
       }
 
-      case CASE_IDENTIFIER(Token::Subkind::kResource): {
+      case CASE_IDENTIFIER(Token::Subkind::kResourceDefinition): {
         done_with_library_imports = true;
         add(&resource_declaration_list,
             [&] { return ParseResourceDeclaration(std::move(attributes), scope); });

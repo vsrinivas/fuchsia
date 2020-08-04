@@ -117,7 +117,7 @@ enum obj_type : uint32 {
     VMO = 3;
 };
 
-resource handle : uint32 {
+resource_definition handle : uint32 {
     properties {
         obj_type subtype;
     };
@@ -149,10 +149,10 @@ struct MyStruct {
   EXPECT_TRUE(c->handle_subtype_identifier.has_value());
   ASSERT_TRUE(c->handle_subtype_identifier.value().span()->data() == "VMO");
   ASSERT_NOT_NULL(c->handle_rights);
-  ASSERT_EQ(static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(
-                c->handle_rights->Value())
-                .value,
-            45);
+  ASSERT_EQ(
+      static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(c->handle_rights->Value())
+          .value,
+      45);
 }
 
 TEST(HandleTests, invalid_fidl_defined_handle_subtype) {
@@ -166,7 +166,7 @@ enum obj_type : uint32 {
     NONE = 0;
 };
 
-resource handle : uint32 {
+resource_definition handle : uint32 {
     properties {
         obj_type subtype;
     };

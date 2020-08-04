@@ -70,7 +70,7 @@
       "location": {
         "filename": "example.test.fidl",
         "line": 13,
-        "column": 10,
+        "column": 21,
         "length": 6
       },
       "type": {
