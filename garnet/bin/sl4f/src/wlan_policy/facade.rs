@@ -14,29 +14,29 @@ use {
     futures::TryStreamExt,
     parking_lot::RwLock,
     std::{
+        cell::Cell,
         collections::HashSet,
         fmt::{self, Debug},
     },
 };
 
-struct InnerWlanPolicyFacade {
-    controller: Option<fidl_policy::ClientControllerProxy>,
-    update_listener: Option<fidl_policy::ClientStateUpdatesRequestStream>,
+pub struct WlanPolicyFacade {
+    controller: RwLock<InnerController>,
+    update_listener: Cell<Option<fidl_policy::ClientStateUpdatesRequestStream>>,
 }
 
 #[derive(Debug)]
-pub struct WlanPolicyFacade {
-    inner: RwLock<InnerWlanPolicyFacade>,
+pub struct InnerController {
+    inner: Option<fidl_policy::ClientControllerProxy>,
 }
 
-impl Debug for InnerWlanPolicyFacade {
+impl Debug for WlanPolicyFacade {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let update_listener = if self.update_listener.is_some() {
-            "Some(ClientStateUpdatesRequestStream)"
-        } else {
-            "None"
-        }
-        .to_string();
+        let listener = self.update_listener.take();
+        let update_listener =
+            if listener.is_some() { "Some(ClientStateUpdatesRequestStream)" } else { "None" }
+                .to_string();
+        self.update_listener.set(listener);
 
         f.debug_struct("InnerWlanPolicyFacade")
             .field("controller", &self.controller)
@@ -48,7 +48,8 @@ impl Debug for InnerWlanPolicyFacade {
 impl WlanPolicyFacade {
     pub fn new() -> Result<WlanPolicyFacade, Error> {
         Ok(Self {
-            inner: RwLock::new(InnerWlanPolicyFacade { controller: None, update_listener: None }),
+            controller: RwLock::new(InnerController { inner: None }),
+            update_listener: Cell::new(None),
         })
     }
 
@@ -57,8 +58,8 @@ impl WlanPolicyFacade {
     /// has been initialize it does nothing.
     pub fn create_client_controller(&self) -> Result<(), Error> {
         let tag = "WlanPolicyFacade::create_client_controller";
-        let mut inner = self.inner.write();
-        if let Some(controller) = inner.controller.as_ref() {
+        let mut controller_guard = self.controller.write();
+        if let Some(controller) = controller_guard.inner.as_ref() {
             fx_log_info!(tag: &with_line!(tag), "Current client controller: {:?}", controller);
         } else {
             // Get controller
@@ -67,17 +68,20 @@ impl WlanPolicyFacade {
                 fx_log_info!(tag: &with_line!(tag), "Error getting client controller: {}", e);
                 format_err!("Error getting client,controller: {}", e)
             })?;
-            inner.controller = Some(controller);
+            controller_guard.inner = Some(controller);
             // Do not set value if it has already been set by getting updates.
-            if inner.update_listener.is_none() {
-                inner.update_listener = Some(update_stream);
+            let update_listener = self.update_listener.take();
+            if update_listener.is_none() {
+                self.update_listener.set(Some(update_stream));
+            } else {
+                self.update_listener.set(update_listener);
             }
         }
         Ok(())
     }
 
-    /// This also returns the stream for listener updates that is created in the process of
-    /// creating the client controller.
+    /// Creates and returns a client controller. This also returns the stream for listener updates
+    /// that is created in the process of creating the client controller.
     fn init_client_controller() -> Result<
         (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream),
         Error,
@@ -91,22 +95,29 @@ impl WlanPolicyFacade {
         Ok((controller, update_stream))
     }
 
-    /// Creates a listener update stream for getting status updates. This might be used to set the
-    /// facade's listener update stream if it wasn't set by creating the client controller.
+    /// Creates a listener update stream for getting status updates.
     fn init_listener() -> Result<fidl_policy::ClientStateUpdatesRequestStream, Error> {
         let listener = connect_to_service::<fidl_policy::ClientListenerMarker>()?;
         let (client_end, server_end) =
             fidl::endpoints::create_endpoints::<fidl_policy::ClientStateUpdatesMarker>().unwrap();
         listener.get_listener(client_end)?;
-        let server_stream = server_end.into_stream()?;
-        Ok(server_stream)
+        Ok(server_end.into_stream()?)
+    }
+
+    /// This function will set a new listener even if there is one because new listeners will get
+    /// the most recent update immediately without waiting. This might be used to set the facade's
+    /// listener update stream if it wasn't set by creating the client controller or to set a clean
+    /// state for a new test.
+    pub fn set_new_listener(&self) -> Result<(), Error> {
+        self.update_listener.set(Some(Self::init_listener()?));
+        Ok(())
     }
 
     /// Request a scan and return the list of network names found, or an error if one occurs.
     pub async fn scan_for_networks(&self) -> Result<Vec<String>, Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
 
@@ -143,15 +154,14 @@ impl WlanPolicyFacade {
     /// * `type`: Security type should be a string of the security type, either "none", "wep",
     ///           "wpa", "wpa2" or "wpa3", matching the policy API's defined security types, case
     ///           doesn't matter.
-    /// TODO(46928): Use listener upates
     pub async fn connect(
         &self,
         target_ssid: Vec<u8>,
         type_: fidl_policy::SecurityType,
     ) -> Result<bool, Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
 
@@ -181,9 +191,9 @@ impl WlanPolicyFacade {
         type_: fidl_policy::SecurityType,
         credential: fidl_policy::Credential,
     ) -> Result<(), Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
         fx_log_info!(
@@ -206,9 +216,9 @@ impl WlanPolicyFacade {
 
     /// Remove all of the client's saved networks.
     pub async fn remove_all_networks(&self) -> Result<(), Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
 
@@ -226,9 +236,9 @@ impl WlanPolicyFacade {
 
     /// Send the request to the policy layer to start making client connections.
     pub async fn start_client_connections(&self) -> Result<(), Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
 
@@ -240,22 +250,23 @@ impl WlanPolicyFacade {
         }
     }
 
-    /// Wait for and return a client update. If this is the first update gotten from the facade,
-    /// it will get an immedate status. After that, it will wait for a change and return a status
-    /// when there has been a change since the last call to get_update. This call will hang if
-    /// if there are no updates.
+    /// Wait for and return a client update. If this is the first update gotten from the facade
+    /// since the client controller or a new update listener has been created, it will get an
+    /// immediate status. After that, it will wait for a change and return a status when there has
+    /// been a change since the last call to get_update. This call will hang if there are no
+    /// updates.
+    /// This function is not thread safe, so there should not be multiple get_update calls at the
+    /// same time unless a new listener is set between them. There is no lock around the
+    /// update_listener field of the facade in order to prevent a hanging get_update from blocking
+    /// all future get_updates.
     pub async fn get_update(&self) -> Result<ClientStateSummary, Error> {
         // Initialize the update listener if it has not been initialized.
-        let mut inner_guard = self.inner.write();
-        if inner_guard.update_listener.is_none() {
-            inner_guard.update_listener = Some(Self::init_listener()?);
-        }
-
-        // Listener should be set above if not already set.
-        let update_listener = inner_guard
-            .update_listener
-            .as_mut()
-            .ok_or(format_err!("failed to set update listener of facade"))?;
+        let listener = self.update_listener.take();
+        let mut update_listener = if listener.is_none() {
+            Self::init_listener()
+        } else {
+            listener.ok_or(format_err!("failed to set update listener of facade"))
+        }?;
 
         if let Some(update_request) = update_listener.try_next().await? {
             let update = update_request.into_on_client_state_update();
@@ -265,17 +276,20 @@ impl WlanPolicyFacade {
             };
             // Ack the update.
             responder.send().map_err(|e| format_err!("failed to ack update: {}", e))?;
+            // Put the update listener back in the facade
+            self.update_listener.set(Some(update_listener));
             Ok(update.into())
         } else {
+            self.update_listener.set(Some(update_listener));
             Err(format_err!("update listener's next update is None"))
         }
     }
 
     /// Send the request to the policy layer to stop making client connections.
     pub async fn stop_client_connections(&self) -> Result<(), Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
 
@@ -300,9 +314,9 @@ impl WlanPolicyFacade {
         type_: fidl_policy::SecurityType,
         credential: fidl_policy::Credential,
     ) -> Result<(), Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
 
@@ -326,9 +340,9 @@ impl WlanPolicyFacade {
     /// Get a list of the saved networks. Returns FIDL values to be used directly or converted to
     /// serializable values that can be passed through SL4F
     async fn get_saved_networks(&self) -> Result<Vec<fidl_policy::NetworkConfig>, Error> {
-        let inner_guard = self.inner.read();
-        let controller = inner_guard
-            .controller
+        let controller_guard = self.controller.read();
+        let controller = controller_guard
+            .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
 

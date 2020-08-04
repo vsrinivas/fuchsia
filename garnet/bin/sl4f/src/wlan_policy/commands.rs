@@ -88,6 +88,12 @@ impl Facade for WlanPolicyFacade {
                 let result = self.get_update().await?;
                 to_value(result).map_err(|e| format_err!("error handling listener update: {}", e))
             }
+            "set_new_update_listener" => {
+                fx_log_info!(tag: "WlanPolicyFacade", "initializing new update listener");
+                let result = self.set_new_listener()?;
+                to_value(result)
+                    .map_err(|e| format_err!("error initializing new update listener: {}", e))
+            }
             _ => return Err(format_err!("unsupported command!")),
         }
     }
