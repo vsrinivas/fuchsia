@@ -8,7 +8,6 @@ fidl("fuchsia.net") {
   sdk_category = "partner"
   api = "fuchsia.net.api"
   sources = [
-    "connectivity.fidl",
     "namelookup.fidl",
     "net.fidl",
     "socket.fidl",

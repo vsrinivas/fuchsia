@@ -13,7 +13,6 @@ import (
 	"syscall/zx"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/connectivity"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
@@ -445,11 +444,9 @@ func (ns *Netstack) onInterfacesChanged() {
 	// We must hold a lock through the entire process of preparing the event so
 	// we guarantee events cannot be reordered.
 	ns.netstackService.mu.Lock()
-	interfaces2 := ns.getNetInterfaces2()
-	connectivity.InferAndNotify(interfaces2)
 	// TODO(NET-2078): Switch to the new NetInterface struct once Chromium stops
 	// using netstack.fidl.
-	interfaces := interfaces2ListToInterfacesList(interfaces2)
+	interfaces := interfaces2ListToInterfacesList(ns.getNetInterfaces2())
 	for pxy := range ns.netstackService.mu.proxies {
 		if err := pxy.OnInterfacesChanged(interfaces); err != nil {
 			_ = syslog.Warnf("OnInterfacesChanged failed: %s", err)

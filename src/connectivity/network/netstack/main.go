@@ -23,7 +23,6 @@ import (
 
 	networking_metrics "networking_metrics_golib"
 
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/connectivity"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof"
@@ -470,8 +469,6 @@ func Main() {
 			}
 		}()
 	}
-
-	connectivity.AddOutgoingService(appCtx)
 
 	ns.filter = filter.New(stk.PortManager)
 	filter.AddOutgoingService(appCtx, ns.filter)

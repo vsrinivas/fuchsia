@@ -53,7 +53,6 @@ metrics_registry("networking_metrics") {
 test_package("netstack_gotests") {
   deps = [
     ":netstack_bench_test",
-    ":netstack_connectivity_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
     ":netstack_link_eth_test",
@@ -74,10 +73,6 @@ test_package("netstack_gotests") {
   tests = [
     {
       name = "netstack_bench_test"
-      environments = [ emu_env ]
-    },
-    {
-      name = "netstack_connectivity_test"
       environments = [ emu_env ]
     },
     {
@@ -180,13 +175,6 @@ go_library("netstack_lib") {
 go_test("netstack_bench_test") {
   gopackages =
       [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/bench" ]
-  deps = [ ":netstack_lib" ]
-}
-
-go_test("netstack_connectivity_test") {
-  gopackages = [
-    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/connectivity",
-  ]
   deps = [ ":netstack_lib" ]
 }
 

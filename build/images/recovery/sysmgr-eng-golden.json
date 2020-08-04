@@ -4,7 +4,6 @@
     "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx"
   ],
   "services": {
-    "fuchsia.net.Connectivity": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
     "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
     "fuchsia.net.dhcpv6.ClientProvider": "fuchsia-pkg://fuchsia.com/dhcpv6-client#meta/dhcpv6-client.cmx",
     "fuchsia.net.filter.Filter": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
