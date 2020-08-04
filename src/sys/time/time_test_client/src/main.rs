@@ -8,20 +8,20 @@
 //! receives from the system to aid in debugging and (potentially in the future) automated testing.
 
 use {
-    anyhow::Context as _,
+    anyhow::{Context as _, Error},
     chrono::prelude::*,
     fuchsia_async as fasync, fuchsia_runtime as runtime, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
     log::{info, warn},
-    std::time::Duration,
 };
+
+/// Delay between polls of system and userspace clocks.
+const POLL_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 
 lazy_static! {
    /// Rights to request when duplicating handles to userspace clocks.
    static ref CLOCK_RIGHTS: zx::Rights = zx::Rights::READ | zx::Rights::DUPLICATE;
-   /// Delay between polls of system and userspace clocks.
-   static ref POLL_DELAY: zx::Duration = Duration::from_secs(2).into();
 }
 
 #[fasync::run_singlethreaded]
@@ -29,11 +29,14 @@ async fn main() {
     fuchsia_syslog::init_with_tags(&["time"]).context("initializing logging").unwrap();
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
 
-    let runtime_future = RuntimeUtcMonitor::new().execute();
-    let clock_future = ClockMonitor::new().execute();
+    let mut futures = vec![];
+    futures.push(RuntimeUtcMonitor::new().execute().boxed());
+    match ClockMonitor::new() {
+        Ok(clock_monitor) => futures.push(clock_monitor.execute().boxed()),
+        Err(err) => warn!("{}", err),
+    }
     // TODO(jsankey): Add a monitor for the fuchsia.time.Utc FIDL interface.
-
-    future::join(runtime_future, clock_future).await;
+    future::join_all(futures).await;
 }
 
 /// A monitor for UTC as reported by the runtime.
@@ -54,7 +57,7 @@ impl RuntimeUtcMonitor {
     async fn execute(self) {
         let mut last_logged = self.initial;
         loop {
-            fasync::Timer::new(fasync::Time::after(*POLL_DELAY)).await;
+            fasync::Timer::new(fasync::Time::after(POLL_DELAY)).await;
             // Only log UTC when we reach a new minute.
             let current = Utc::now();
             if current.hour() != last_logged.hour() || current.minute() != last_logged.minute() {
@@ -66,29 +69,20 @@ impl RuntimeUtcMonitor {
 }
 
 /// A monitor for a UTC `zx::Clock` to log changes in clock details.
-enum ClockMonitor {
-    /// A `ClockMonitor` that was able to find a userspace clock to monitor.
-    Valid {
-        /// The `zx::Clock` to be monitored.
-        clock: zx::Clock,
-        /// The generation counter that was present during initialization.
-        initial_generation: u32,
-    },
-    /// A `ClockMonitor` that was not able to find a userspace clock to monitor.
-    Invalid,
+struct ClockMonitor {
+    /// The `zx::Clock` to be monitored.
+    clock: zx::Clock,
+    /// The generation counter that was present during initialization.
+    initial_generation: u32,
 }
 
 impl ClockMonitor {
-    /// Creates a new `ClockMonitor`, logging the initial state.
-    pub fn new() -> Self {
+    /// Creates a new `ClockMonitor`, logging the initial state, or returns an error if a clock
+    /// could not be found.
+    pub fn new() -> Result<Self, Error> {
         // Retrieve a handle to the UTC clock.
-        let clock = match runtime::duplicate_utc_clock_handle(*CLOCK_RIGHTS) {
-            Ok(clock) => clock,
-            Err(stat) => {
-                warn!("Error retreiving UTC clock handle: {}", stat);
-                return ClockMonitor::Invalid;
-            }
-        };
+        let clock = runtime::duplicate_utc_clock_handle(*CLOCK_RIGHTS)
+            .map_err(|stat| anyhow::anyhow!("Error retreiving UTC clock handle: {}", stat))?;
 
         // Log the time reported by the clock.
         match clock.read() {
@@ -107,36 +101,32 @@ impl ClockMonitor {
                     Utc.timestamp_nanos(details.backstop.into_nanos()).to_rfc2822()
                 );
                 info!("Details at initialization: {}", Self::describe_clock_details(&details));
-                ClockMonitor::Valid { clock, initial_generation: details.generation_counter }
+                Ok(ClockMonitor { clock, initial_generation: details.generation_counter })
             }
             Err(stat) => {
                 warn!("Error reading clock details {}", stat);
-                ClockMonitor::Valid { clock, initial_generation: 0 }
+                Ok(ClockMonitor { clock, initial_generation: 0 })
             }
         }
     }
 
     /// Async function to operate this monitor, returning immediately if the clock was not found.
     async fn execute(self) {
-        let (clock, initial_generation) = match self {
-            ClockMonitor::Valid { clock, initial_generation } => (clock, initial_generation),
-            ClockMonitor::Invalid => return,
-        };
-
         // Future to log when the clock started signal is observed.
         let clock_start_fut = async {
-            match fasync::OnSignals::new(&clock, zx::Signals::CLOCK_STARTED).await {
+            match fasync::OnSignals::new(&self.clock, zx::Signals::CLOCK_STARTED).await {
                 Ok(_) => info!("UTC zx:Clock has started"),
                 Err(err) => warn!("Error waiting for clock start: {}", err),
             }
         };
+
         // Future to log every time a new generation_counter is seen (note we don't print errors on
         // failing to read details, such a failure is likely persistent and would be spammy).
         let generation_change_fut = async {
-            let mut last_logged = initial_generation;
+            let mut last_logged = self.initial_generation;
             loop {
-                fasync::Timer::new(fasync::Time::after(*POLL_DELAY)).await;
-                if let Ok(details) = clock.get_details() {
+                fasync::Timer::new(fasync::Time::after(POLL_DELAY)).await;
+                if let Ok(details) = self.clock.get_details() {
                     if details.generation_counter != last_logged {
                         info!("Updated details: {}", Self::describe_clock_details(&details));
                         last_logged = details.generation_counter;
@@ -144,6 +134,7 @@ impl ClockMonitor {
                 }
             }
         };
+
         future::join(clock_start_fut, generation_change_fut).await;
     }
 
