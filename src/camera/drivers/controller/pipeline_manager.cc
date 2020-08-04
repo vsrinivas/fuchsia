@@ -208,6 +208,13 @@ void PipelineManager::ConfigureStreamPipeline(
         current_node = current_node->parent_node();
       }
     } else {
+      status =
+          isp_.SetFrameRateRange(reinterpret_cast<const frame_rate_t*>(&info.frame_rate_range.min),
+                                 reinterpret_cast<const frame_rate_t*>(&info.frame_rate_range.max));
+      if (status != ZX_OK) {
+        FX_PLOGST(ERROR, kTag, status) << "Failed to SetFrameRateRange";
+        return;
+      }
       shutdown_graph_on_error.cancel();
       streams_[info.node.input_stream_type] = std::move(graph_head);
     }

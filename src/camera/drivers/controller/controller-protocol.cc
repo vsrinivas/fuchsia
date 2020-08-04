@@ -128,6 +128,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   info.image_format_index = image_format_index;
   info.node = *stream_config_node;
   info.stream_config = fidl::Clone(stream_config);
+  info.frame_rate_range = internal_config->frame_rate_range;
 
   cleanup.cancel();
 

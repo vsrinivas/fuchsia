@@ -14,6 +14,7 @@ class FakeIsp {
  public:
   FakeIsp() {
     isp_protocol_ops_.create_output_stream = IspCreateOutputStream;
+    isp_protocol_ops_.set_frame_rate_range = IspSetFrameRateRange;
     isp_protocol_.ctx = this;
     isp_protocol_.ops = &isp_protocol_ops_;
   }
@@ -64,6 +65,11 @@ class FakeIsp {
     return ZX_OK;
   }
 
+  zx_status_t IspSetFrameRateRange(const frame_rate_t* /*min_rate*/,
+                                   const frame_rate_t* /*max_rate*/) {
+    return ZX_OK;
+  }
+
   bool frame_released() const { return frame_released_; }
   uint32_t start_stream_counter() const { return start_stream_counter_; }
   uint32_t stop_stream_counter() const { return stop_stream_counter_; }
@@ -77,6 +83,11 @@ class FakeIsp {
                                            output_stream_protocol_t* out_st) {
     return static_cast<FakeIsp*>(ctx)->IspCreateOutputStream(buffer_collection, image_format, rate,
                                                              type, frame_callback, out_st);
+  }
+
+  static zx_status_t IspSetFrameRateRange(void* ctx, const frame_rate_t* min_rate,
+                                          const frame_rate_t* max_rate) {
+    return static_cast<FakeIsp*>(ctx)->IspSetFrameRateRange(min_rate, max_rate);
   }
 
   static zx_status_t Start(void* ctx) { return static_cast<FakeIsp*>(ctx)->Start(); }

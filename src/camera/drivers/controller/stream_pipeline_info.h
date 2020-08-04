@@ -28,6 +28,8 @@ struct StreamCreationData {
   uint32_t image_format_index;
   // Ouput buffers received from the client.
   fuchsia::sysmem::BufferCollectionInfo_2 output_buffers;
+  // Allowed frame rate range for a particular configuration.
+  camera::FrameRateRange frame_rate_range;
 
   // Returns the stream type of the requested stream.
   fuchsia::camera2::CameraStreamType stream_type() const {
