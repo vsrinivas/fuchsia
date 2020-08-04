@@ -10,7 +10,9 @@ use {
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
-    fidl_fuchsia_bluetooth_sys::{AccessMarker, BootstrapMarker, HostWatcherMarker},
+    fidl_fuchsia_bluetooth_sys::{
+        AccessMarker, BootstrapMarker, ConfigurationMarker, HostWatcherMarker,
+    },
     fuchsia_async as fasync,
     fuchsia_component::{client, fuchsia_single_component_package_url, server},
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
@@ -49,6 +51,7 @@ fn main() -> Result<(), Error> {
     fs.dir("svc")
         .add_service_at(AccessMarker::NAME, |chan| Some((AccessMarker::NAME, chan)))
         .add_service_at(BootstrapMarker::NAME, |chan| Some((BootstrapMarker::NAME, chan)))
+        .add_service_at(ConfigurationMarker::NAME, |chan| Some((ConfigurationMarker::NAME, chan)))
         .add_service_at(ControlMarker::NAME, |chan| Some((ControlMarker::NAME, chan)))
         .add_service_at(CentralMarker::NAME, |chan| Some((CentralMarker::NAME, chan)))
         .add_service_at(HostWatcherMarker::NAME, |chan| Some((HostWatcherMarker::NAME, chan)))

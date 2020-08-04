@@ -20,3 +20,6 @@ should only be granted to components that have sufficient privilege.
 * [Access](./access.fidl): Abstracts the procedures defined in the Generic
   Access Profile including device discovery, connection establishment, and
   pairing. This protocol is intended to build system-level user interfaces.
+
+* [Configuration](./configuration.fidl): Set system-level configuration parameters
+  which apply to the core Bluetooth system.

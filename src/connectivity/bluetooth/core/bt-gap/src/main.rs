@@ -121,6 +121,7 @@ async fn run() -> Result<(), Error> {
     let gatt_hd = hd.clone();
     let bootstrap_hd = hd.clone();
     let access_hd = hd.clone();
+    let config_hd = hd.clone();
     let hostwatcher_hd = hd.clone();
 
     let host_watcher_task = async {
@@ -203,6 +204,14 @@ async fn run() -> Result<(), Error> {
             fasync::Task::spawn(
                 services::access::run(access_hd.clone(), request_stream)
                     .unwrap_or_else(|e| fx_log_warn!("Access service failed: {:?}", e)),
+            )
+            .detach();
+        })
+        .add_fidl_service(move |request_stream| {
+            fx_log_info!("Serving Configuration Service");
+            fasync::Task::spawn(
+                services::configuration::run(config_hd.clone(), request_stream)
+                    .unwrap_or_else(|e| fx_log_warn!("Configuration service failed: {:?}", e)),
             )
             .detach();
         })

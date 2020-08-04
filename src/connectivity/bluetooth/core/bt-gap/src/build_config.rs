@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    parking_lot::RwLock,
+    fidl_fuchsia_bluetooth_sys as sys,
+    futures::Future,
     serde::{Deserialize, Serialize},
     serde_json,
-    std::{cmp::PartialEq, fs::OpenOptions, path::Path, sync::Arc},
+    std::{cmp::PartialEq, convert::Into, fs::OpenOptions, path::Path},
 };
 
 use crate::{host_device::HostDevice, types};
@@ -47,12 +48,29 @@ pub struct BrEdrConfig {
 }
 
 impl Config {
-    pub async fn apply(&self, host: Arc<RwLock<HostDevice>>) -> types::Result<()> {
-        let host = host.read();
-        host.enable_privacy(self.le.privacy_enabled)?;
-        host.enable_background_scan(self.le.background_scan_enabled)?;
-        host.set_connectable(self.bredr.connectable).await?;
-        Ok(())
+    pub fn apply(&self, host: &HostDevice) -> impl Future<Output = types::Result<()>> {
+        let equivalent_settings = self.clone().into();
+        host.apply_sys_settings(&equivalent_settings)
+    }
+
+    pub fn update_with_sys_settings(&self, new_settings: &sys::Settings) -> Self {
+        let mut new_config = self.clone();
+        new_config.le.privacy_enabled = new_settings.le_privacy.unwrap_or(self.le.privacy_enabled);
+        new_config.le.background_scan_enabled =
+            new_settings.le_background_scan.unwrap_or(self.le.background_scan_enabled);
+        new_config.bredr.connectable =
+            new_settings.bredr_connectable_mode.unwrap_or(self.bredr.connectable);
+        new_config
+    }
+}
+
+impl Into<sys::Settings> for Config {
+    fn into(self) -> sys::Settings {
+        sys::Settings {
+            le_privacy: Some(self.le.privacy_enabled),
+            le_background_scan: Some(self.le.background_scan_enabled),
+            bredr_connectable_mode: Some(self.bredr.connectable),
+        }
     }
 }
 
@@ -73,6 +91,7 @@ mod tests {
     use super::*;
     use crate::host_device;
     use {
+        fidl::encoding::Decodable,
         fidl_fuchsia_bluetooth_host::{HostMarker, HostRequest},
         fuchsia_bluetooth::types::{Address, HostId},
         futures::{future, join, stream::TryStreamExt},
@@ -81,18 +100,19 @@ mod tests {
         tempfile::NamedTempFile,
     };
 
+    static BASIC_CONFIG: Config = Config {
+        le: LeConfig { privacy_enabled: true, background_scan_enabled: true },
+        bredr: BrEdrConfig { connectable: true },
+    };
+
     #[test]
     fn prefer_overridden_config() {
-        let default_config = Config {
-            le: LeConfig { privacy_enabled: true, background_scan_enabled: true },
-            bredr: BrEdrConfig { connectable: true },
-        };
         let default_file = NamedTempFile::new().unwrap();
-        serde_json::to_writer(&default_file, &default_config).unwrap();
+        serde_json::to_writer(&default_file, &BASIC_CONFIG).unwrap();
         // There should be no file at OVERRIDE_CONFIG_FILE_PATH; `config_data` templates should not
         // target this test package. This means config will load from the (existing) default path.
         assert_eq!(
-            default_config,
+            BASIC_CONFIG,
             load_internal(Path::new(OVERRIDE_CONFIG_FILE_PATH), default_file.path())
         );
 
@@ -108,15 +128,15 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_apply_config() {
+    async fn apply_config() {
         let (host_proxy, host_server) =
             fidl::endpoints::create_proxy_and_stream::<HostMarker>().unwrap();
-        let host_device = Arc::new(RwLock::new(host_device::test::new_mock(
+        let host_device = host_device::test::new_mock(
             HostId(42),
             Address::Public([1, 2, 3, 4, 5, 6]),
             Path::new("/dev/host"),
             host_proxy,
-        )));
+        );
         let test_config = Config {
             le: LeConfig { privacy_enabled: true, background_scan_enabled: false },
             bredr: BrEdrConfig { connectable: false },
@@ -151,8 +171,27 @@ mod tests {
             assert_eq!(expected_reqs.into_iter().collect::<Vec<String>>(), Vec::<String>::new());
         };
         let apply_config = async {
-            test_config.apply(host_device).await.unwrap();
+            test_config.apply(&host_device).await.unwrap();
+            // Drop `host_device` so the host server request stream terminates
+            drop(host_device)
         };
         join!(run_host, apply_config);
+    }
+
+    #[test]
+    fn update_with_sys_settings() {
+        let partial_settings = sys::Settings {
+            le_privacy: Some(false),
+            bredr_connectable_mode: Some(false),
+            ..sys::Settings::new_empty()
+        };
+        let expected_config = Config {
+            le: LeConfig { privacy_enabled: false, ..BASIC_CONFIG.le },
+            bredr: BrEdrConfig { connectable: false, ..BASIC_CONFIG.bredr },
+        };
+        assert_eq!(
+            expected_config,
+            BASIC_CONFIG.clone().update_with_sys_settings(&partial_settings)
+        );
     }
 }

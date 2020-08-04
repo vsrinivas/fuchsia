@@ -3,5 +3,6 @@
 // found in the LICENSE file.
 
 mod access;
+mod configuration;
 mod control;
 mod host_device;

@@ -477,6 +477,23 @@ impl HostDispatcher {
         }
     }
 
+    pub async fn apply_sys_settings(&self, new_settings: sys::Settings) -> build_config::Config {
+        let (host_devices, new_config) = {
+            let mut state = self.state.write();
+            state.config_settings = state.config_settings.update_with_sys_settings(&new_settings);
+            (state.host_devices.clone(), state.config_settings.clone())
+        };
+        for (host_id, device) in host_devices {
+            let fut = device.read().apply_sys_settings(&new_settings);
+            if let Err(e) = fut.await {
+                fx_log_warn!("Unable to apply new settings to host {}: {:?}", host_id, e);
+                let failed_host_path = device.read().path.clone();
+                self.rm_adapter(&failed_host_path).await;
+            }
+        }
+        new_config
+    }
+
     pub async fn set_discoverable(&self) -> types::Result<Arc<DiscoverableRequestToken>> {
         let strong_current_token =
             self.state.read().discoverable.as_ref().and_then(|token| token.upgrade());
@@ -763,7 +780,7 @@ impl HostDispatcher {
         //   - LE background scan for auto-connection
         //   - BR/EDR connectable mode
 
-        self.state.read().config_settings.apply(host_device.clone()).await?;
+        self.state.read().config_settings.apply(&host_device.clone().read()).await?;
         let address = host_device.read().get_info().address.clone();
         assign_host_data(host_device.clone(), self.clone(), &address).await?;
         try_restore_bonds(host_device.clone(), self.clone(), &address)
@@ -1032,13 +1049,22 @@ async fn assign_host_data(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        build_config::{BrEdrConfig, Config},
+        host_dispatcher::test as hd_test,
+        store::stash::Stash,
+    };
     use {
-        crate::store::stash::Stash,
+        fidl::encoding::Decodable,
         fidl_fuchsia_bluetooth::Appearance,
+        fidl_fuchsia_bluetooth_host::HostRequest,
         fidl_fuchsia_bluetooth_sys::TechnologyType,
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::{Peer, PeerId},
         fuchsia_inspect::{self as inspect, assert_inspect_tree},
+        futures::stream::TryStreamExt,
+        matches::assert_matches,
+        std::collections::HashSet,
     };
 
     fn peer(id: PeerId) -> Peer {
@@ -1156,13 +1182,51 @@ mod tests {
         // sure that the function actually returns and doesn't deadlock.
         dispatcher.set_name("test-change".to_string()).await.unwrap_err();
     }
+
+    async fn host_is_in_dispatcher(id: &HostId, dispatcher: &HostDispatcher) -> bool {
+        dispatcher.get_adapters().await.iter().map(|i| i.id).collect::<HashSet<_>>().contains(id)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn apply_settings_fails_host_removed() {
+        let dispatcher = hd_test::make_simple_test_dispatcher().unwrap();
+        let host_id = HostId(42);
+        let mut host_server =
+            hd_test::create_and_add_test_host_to_dispatcher(host_id, &dispatcher).unwrap();
+        assert!(host_is_in_dispatcher(&host_id, &dispatcher).await);
+        let run_host = async move {
+            if let Ok(Some(HostRequest::SetConnectable { responder, .. })) =
+                host_server.try_next().await
+            {
+                responder.send(&mut Err(sys::Error::Failed)).unwrap();
+            } else {
+                panic!("Unexpected request");
+            }
+        };
+        let disable_connectable_fut = async {
+            let updated_config = dispatcher
+                .apply_sys_settings(sys::Settings {
+                    bredr_connectable_mode: Some(false),
+                    ..sys::Settings::new_empty()
+                })
+                .await;
+            assert_matches!(updated_config, Config { bredr: BrEdrConfig { connectable: false, ..}, ..});
+        };
+        futures::future::join(run_host, disable_connectable_fut).await;
+        assert!(!host_is_in_dispatcher(&host_id, &dispatcher).await);
+    }
 }
 
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
 
-    use fuchsia_bluetooth::inspect::placeholder_node;
+    use {
+        fidl::endpoints,
+        fidl_fuchsia_bluetooth_host::{HostMarker, HostRequestStream},
+        fuchsia_bluetooth::inspect::placeholder_node,
+        futures::future::join,
+    };
 
     pub(crate) fn make_test_dispatcher(
         watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
@@ -1182,5 +1246,42 @@ pub(crate) mod test {
             watch_hosts_publisher,
             watch_hosts_registrar,
         ))
+    }
+
+    pub(crate) fn make_simple_test_dispatcher() -> Result<HostDispatcher, Error> {
+        let watch_peers_broker = hanging_get::HangingGetBroker::new(
+            HashMap::new(),
+            |_, _| true,
+            hanging_get::DEFAULT_CHANNEL_SIZE,
+        );
+        let watch_hosts_broker = hanging_get::HangingGetBroker::new(
+            Vec::new(),
+            |_, _| true,
+            hanging_get::DEFAULT_CHANNEL_SIZE,
+        );
+
+        let dispatcher = make_test_dispatcher(
+            watch_peers_broker.new_publisher(),
+            watch_peers_broker.new_registrar(),
+            watch_hosts_broker.new_publisher(),
+            watch_hosts_broker.new_registrar(),
+        );
+
+        let watchers_fut = join(watch_peers_broker.run(), watch_hosts_broker.run()).map(|_| ());
+        fasync::Task::spawn(watchers_fut).detach();
+        dispatcher
+    }
+
+    pub(crate) fn create_and_add_test_host_to_dispatcher(
+        id: HostId,
+        dispatcher: &HostDispatcher,
+    ) -> types::Result<HostRequestStream> {
+        let (host_proxy, host_server) = endpoints::create_proxy_and_stream::<HostMarker>()?;
+        let id_val = id.0 as u8;
+        let address = Address::Public([id_val; 6]);
+        let path = format!("/dev/host{}", id_val);
+        let host_device = host_device::test::new_mock(id, address, Path::new(&path), host_proxy);
+        dispatcher.add_test_host(id, host_device);
+        Ok(host_server)
     }
 }

@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
     fidl_fuchsia_bluetooth_control::{self as control, PairingOptions},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
+    fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::{
         inspect::Inspectable,
         types::{BondingData, HostData, HostInfo, Peer, PeerId},
@@ -156,6 +157,28 @@ impl HostDevice {
 
     pub fn enable_background_scan(&self, enable: bool) -> types::Result<()> {
         self.host.enable_background_scan(enable).map_err(Error::from)
+    }
+
+    /// `apply_sys_settings` applies each field present in `settings` to the host device, leaving
+    /// omitted parameters unchanged. If present, the `Err` arm of the returned future's output
+    /// is the error associated with the first failure to apply a setting to the host device.
+    pub fn apply_sys_settings(
+        &self,
+        settings: &sys::Settings,
+    ) -> impl Future<Output = types::Result<()>> {
+        let mut error_occurred = settings.le_privacy.map(|en| self.enable_privacy(en)).transpose();
+        if let Ok(_) = error_occurred {
+            error_occurred =
+                settings.le_background_scan.map(|en| self.enable_background_scan(en)).transpose()
+        }
+        let connectable_fut = error_occurred
+            .map(|_| settings.bredr_connectable_mode.map(|c| self.set_connectable(c)));
+        async move {
+            match connectable_fut {
+                Ok(Some(fut)) => fut.await,
+                res => res.map(|_| ()),
+            }
+        }
     }
 }
 
