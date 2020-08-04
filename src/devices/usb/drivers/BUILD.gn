@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "aml-usb-phy-v2:tests",
     "dwc2:tests",
     "usb-hub-rewrite:tests",
     "usb-virtual-bus:tests",
