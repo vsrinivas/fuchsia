@@ -136,7 +136,20 @@ void TestBadCrcZbi() {
   auto error = view.take_error();
   ASSERT_TRUE(error.is_error());
   // The error shouldn't be one of storage.
-  EXPECT_FALSE(error.error_value().storage_error);
+  EXPECT_FALSE(error.error_value().storage_error, "%.*s",
+               static_cast<int>(error.error_value().zbi_error.size()),
+               error.error_value().zbi_error.data());
+
+  // For the file types with errno for error_type, print the storage error.
+  if constexpr (std::is_same_v<std::decay_t<decltype(error.error_value().storage_error.value())>,
+                               int>) {
+    EXPECT_FALSE(error.error_value().storage_error, "%d (%s)", *error.error_value().storage_error,
+                 strerror(*error.error_value().storage_error));
+  }
+
+  // This matches the exact error text, so it has to be kept in sync.
+  // But otherwise we're not testing that the right error is diagnosed.
+  EXPECT_STR_EQ(error.error_value().zbi_error, "payload CRC32 mismatch");
 }
 
 template <typename StorageIo>

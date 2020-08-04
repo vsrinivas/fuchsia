@@ -5,6 +5,7 @@
 #ifndef LIB_ZBITL_VIEW_H_
 #define LIB_ZBITL_VIEW_H_
 
+#include <lib/cksum.h>
 #include <lib/fitx/result.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
@@ -267,9 +268,23 @@ class View {
           offset_ += ZBI_ALIGN(header_->length);
           payload_ = std::move(payload.value());
           if constexpr (Check == Checking::kCrc) {
-            if (auto crc = Traits::Crc32(view_->storage(), offset_, header_->length);
-                crc.is_error()) {
-              Fail("cannot compute payload CRC32", std::move(crc.error_value()));
+            if (header_->flags & ZBI_FLAG_CRC32) {
+              uint32_t payload_crc32 = 0;
+              auto compute_crc32 = [&payload_crc32](ByteView chunk) -> fitx::result<fitx::failed> {
+                payload_crc32 = crc32(payload_crc32, reinterpret_cast<const uint8_t*>(chunk.data()),
+                                      chunk.size());
+                return fitx::ok();
+              };
+              if (auto result =
+                      Traits::Read(view_->storage(), payload_, header_->length, compute_crc32);
+                  result.is_error()) {
+                Fail("cannot compute payload CRC32", std::move(result.error_value()));
+              } else {
+                ZX_DEBUG_ASSERT(result.value().is_ok());
+                if (payload_crc32 != header_->crc32) {
+                  Fail("payload CRC32 mismatch");
+                }
+              }
             }
           }
         }

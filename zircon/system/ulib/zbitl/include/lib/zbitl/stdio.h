@@ -16,7 +16,8 @@
 namespace zbitl {
 
 template <>
-struct StorageTraits<FILE*> {
+class StorageTraits<FILE*> {
+ public:
   /// File I/O errors are represented by an errno value.
   using error_type = int;
 
@@ -31,9 +32,32 @@ struct StorageTraits<FILE*> {
     return fitx::ok(offset);
   }
 
+  template <typename Callback>
+  static auto Read(FILE* f, payload_type payload, uint32_t length, Callback&& callback)
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+    decltype(callback(ByteView{})) result = fitx::ok();
+    auto cb = [&](ByteView chunk) -> bool {
+      result = callback(chunk);
+      return result.is_ok();
+    };
+    using CbType = decltype(cb);
+    if (auto read_error = DoRead(
+            f, payload, length,
+            [](void* cb, ByteView chunk) { return (*static_cast<CbType*>(cb))(chunk); }, &cb);
+        read_error.is_error()) {
+      return fitx::error{read_error.error_value()};
+    } else {
+      return fitx::ok(result);
+    }
+  }
+
   static fitx::result<error_type, uint32_t> Crc32(FILE*, uint32_t offset, uint32_t length);
 
   static fitx::result<error_type> Write(FILE*, uint32_t offset, ByteView data);
+
+ private:
+  static fitx::result<error_type> DoRead(FILE*, payload_type offset, uint32_t length,
+                                         bool (*)(void*, ByteView), void*);
 };
 
 }  // namespace zbitl

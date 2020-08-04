@@ -7,6 +7,8 @@
 
 #include <cerrno>
 #include <cstdio>
+#include <memory>
+#include <new>
 
 namespace zbitl {
 namespace {
@@ -37,27 +39,33 @@ fitx::result<error_type, zbi_header_t> StorageTraits<FILE*>::Header(FILE* f, uin
   return fitx::ok(header);
 }
 
-fitx::result<error_type, uint32_t> StorageTraits<FILE*>::Crc32(FILE* f, uint32_t offset,
-                                                               uint32_t length) {
+fitx::result<error_type> StorageTraits<FILE*>::DoRead(FILE* f, payload_type offset, uint32_t length,
+                                                      bool (*cb)(void*, ByteView), void* arg) {
+  if (length == 0) {
+    cb(arg, {});
+    return fitx::ok();
+  }
+
   if (fseek(f, offset, SEEK_SET) != 0) {
     return fitx::error{errno};
   }
 
   auto size = [&]() { return std::min(static_cast<size_t>(length), kBufferSize); };
-  auto buf = std::make_unique<uint8_t[]>(size());
+  std::unique_ptr<std::byte[]> buf{new std::byte[size()]};
 
-  uint32_t crc = 0;
   while (length > 0) {
     size_t n = fread(buf.get(), 1, size(), f);
     if (n == 0) {
       return fitx::error{ferror(f) ? errno : ESPIPE};
     }
     ZX_ASSERT(n <= kBufferSize);
-    crc = crc32(crc, buf.get(), n);
+    if (!cb(arg, {buf.get(), n})) {
+      break;
+    }
     length -= static_cast<uint32_t>(n);
   }
 
-  return fitx::ok(crc);
+  return fitx::ok();
 }
 
 fitx::result<error_type> StorageTraits<FILE*>::Write(FILE* f, uint32_t offset, ByteView data) {

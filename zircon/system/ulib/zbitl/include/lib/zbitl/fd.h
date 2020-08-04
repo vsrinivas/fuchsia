@@ -15,7 +15,8 @@ namespace zbitl {
 
 /// zbitl::View<fbl::unique_fd> is a move-only type that owns the fd.
 template <>
-struct StorageTraits<fbl::unique_fd> {
+class StorageTraits<fbl::unique_fd> {
+ public:
   /// File I/O errors are represented by an errno value.
   using error_type = int;
 
@@ -31,10 +32,31 @@ struct StorageTraits<fbl::unique_fd> {
     return fitx::ok(offset);
   }
 
-  static fitx::result<error_type, uint32_t> Crc32(const fbl::unique_fd&, uint32_t offset,
-                                                  uint32_t length);
+  template <typename Callback>
+  static auto Read(const fbl::unique_fd& zbi, payload_type payload, uint32_t length,
+                   Callback&& callback)
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+    decltype(callback(ByteView{})) result = fitx::ok();
+    auto cb = [&](ByteView chunk) -> bool {
+      result = callback(chunk);
+      return result.is_ok();
+    };
+    using CbType = decltype(cb);
+    if (auto read_error = DoRead(
+            zbi, payload, length,
+            [](void* cb, ByteView chunk) { return (*static_cast<CbType*>(cb))(chunk); }, &cb);
+        read_error.is_error()) {
+      return fitx::error{read_error.error_value()};
+    } else {
+      return fitx::ok(result);
+    }
+  }
 
   static fitx::result<error_type> Write(const fbl::unique_fd&, uint32_t offset, ByteView data);
+
+ private:
+  static fitx::result<error_type> DoRead(const fbl::unique_fd& zbi, off_t offset, uint32_t length,
+                                         bool (*)(void*, ByteView), void*);
 };
 
 /// zbitl::View<const fbl::unique_fd&> is an unmovable, uncopyable type that

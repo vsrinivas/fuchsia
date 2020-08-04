@@ -8,6 +8,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <memory>
+#include <new>
+
 namespace zbitl {
 namespace {
 
@@ -40,16 +43,21 @@ fitx::result<error_type, zbi_header_t> StorageTraits<fbl::unique_fd>::Header(
   return fitx::ok(header);
 }
 
-fitx::result<error_type, uint32_t> StorageTraits<fbl::unique_fd>::Crc32(const fbl::unique_fd& fd,
-                                                                        uint32_t offset,
-                                                                        uint32_t length) {
+fitx::result<error_type> StorageTraits<fbl::unique_fd>::DoRead(const fbl::unique_fd& fd,
+                                                               off_t offset, uint32_t length,
+                                                               bool (*cb)(void*, ByteView),
+                                                               void* arg) {
+  if (length == 0) {
+    cb(arg, {});
+    return fitx::ok();
+  }
+
   // This always copies, when mmap'ing might be better for large sizes.  But
   // address space is cheap, so users concerned with large sizes can just mmap
   // the whole ZBI in and use View<std::span> instead.
   auto size = [&]() { return std::min(static_cast<size_t>(length), kBufferSize); };
-  auto buf = std::make_unique<uint8_t[]>(size());
+  std::unique_ptr<std::byte[]> buf{new std::byte[size()]};
 
-  uint32_t crc = 0;
   while (length > 0) {
     ssize_t n = pread(fd.get(), buf.get(), size(), offset);
     if (n < 0) {
@@ -59,12 +67,14 @@ fitx::result<error_type, uint32_t> StorageTraits<fbl::unique_fd>::Crc32(const fb
       return fitx::error{ESPIPE};
     }
     ZX_ASSERT(static_cast<size_t>(n) <= kBufferSize);
-    crc = crc32(crc, buf.get(), n);
-    offset += static_cast<uint32_t>(n);
+    if (!cb(arg, {buf.get(), static_cast<size_t>(n)})) {
+      break;
+    }
+    offset += n;
     length -= static_cast<uint32_t>(n);
   }
 
-  return fitx::ok(crc);
+  return fitx::ok();
 }
 
 fitx::result<error_type> StorageTraits<fbl::unique_fd>::Write(const fbl::unique_fd& fd,

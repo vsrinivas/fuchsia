@@ -5,7 +5,6 @@
 #ifndef LIB_ZBITL_STORAGE_TRAITS_H_
 #define LIB_ZBITL_STORAGE_TRAITS_H_
 
-#include <lib/cksum.h>
 #include <lib/fitx/result.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
@@ -84,10 +83,21 @@ struct StorageTraits {
     return fitx::error<error_type>{};
   }
 
-  /// This computes a payload's CRC32 checksum (the header is combined
-  /// separately to finalize the zbi_header_t.crc32 value).  This of necessity
-  /// entails reading all the contents; it's only used in Checking::kCrc mode.
-  static fitx::result<error_type, uint32_t> Crc32(Storage& zbi, uint32_t offset, uint32_t length) {
+  /// This reads the payload indicated by a payload_type as returned by Payload
+  /// and feeds it to the callback in chunks sized for the convenience of the
+  /// storage backend.  The length is guaranteed to match that passed to
+  /// Payload to fetch this payload_type value.
+  ///
+  /// The callback returns some type fitx::result<E>.  Read returns
+  /// fitx::result<error_type, fitx::result<E>>>, yielding a storage error or
+  /// the result of the callback.  If a callback returns an error, its return
+  /// value is used immediately.  If a callback returns success, another
+  /// callback may be made for another chunk of the payload.  If the payload is
+  /// empty (`length` == 0), there will always be a single callback made with
+  /// an empty data argument.
+  template <typename Callback>
+  static auto Read(Storage& zbi, payload_type payload, uint32_t length, Callback&& callback)
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
     return fitx::error<error_type>{};
   }
 
@@ -135,10 +145,14 @@ struct StorageTraits<std::basic_string_view<T>> {
     return fitx::ok(std::move(payload));
   }
 
-  static fitx::result<error_type, uint32_t> Crc32(Storage& zbi, uint32_t offset, uint32_t length) {
-    auto payload = zbi.substr(offset, length);
+  template <typename Callback>
+  static auto Read(Storage& zbi, payload_type payload, uint32_t length, Callback&& callback)
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
     ZX_DEBUG_ASSERT(payload.size() == length);
-    return fitx::ok(crc32(0, reinterpret_cast<const uint8_t*>(payload.data()), payload.size()));
+    auto result = callback(AsBytes(payload.data(), payload.size()));
+    static_assert(std::is_same_v<bool, decltype(result.is_error())>);
+    static_assert(std::is_same_v<bool, decltype(result.is_ok())>);
+    return fitx::ok(std::move(result));
   }
 };
 
@@ -146,6 +160,12 @@ struct StorageTraits<std::basic_string_view<T>> {
 // same type as Storage, just yielding the subspan of the original whole-ZBI
 // span.
 #if __cpp_lib_span
+template <typename T, size_t Extent>
+inline ByteView AsBytes(std::span<T, Extent> payload) {
+  auto bytes = std::as_bytes(payload);
+  return {const_cast<const std::byte*>(bytes.data()), bytes.size()};
+}
+
 inline std::span<std::byte> AsWritableBytes(void* ptr, size_t len) {
   return {reinterpret_cast<std::byte*>(ptr), len};
 }
@@ -184,10 +204,12 @@ struct StorageTraits<std::span<T, Extent>> {
     return fitx::ok(payload_type{reinterpret_cast<T*>(payload.data()), payload.size() / sizeof(T)});
   }
 
-  static fitx::result<error_type, uint32_t> Crc32(Storage& zbi, uint32_t offset, uint32_t length) {
-    auto payload = std::as_bytes(zbi).subspan(offset, length);
-    ZX_DEBUG_ASSERT(payload.size() == length);
-    return fitx::ok(crc32(0, reinterpret_cast<const uint8_t*>(payload.data()), payload.size()));
+  template <typename Callback>
+  static auto Read(Storage& zbi, payload_type payload, uint32_t length, Callback&& callback)
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+    auto bytes = AsBytes(std::as_bytes(payload));
+    ZX_DEBUG_ASSERT(bytes.size() == length);
+    return fitx::ok(callback(bytes));
   }
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>

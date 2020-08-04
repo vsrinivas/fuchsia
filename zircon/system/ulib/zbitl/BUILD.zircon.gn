@@ -49,7 +49,7 @@ library("zbitl") {
 
     if (is_fuchsia) {
       sources += [
-        "vmo-crc32.cc",
+        "vmo-read.cc",
         "vmo.cc",
       ]
       deps += [ "$zx/system/ulib/zx" ]
