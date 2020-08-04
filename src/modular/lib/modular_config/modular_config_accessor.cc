@@ -9,16 +9,6 @@
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 
-namespace {
-
-#ifdef AUTO_LOGIN_TO_GUEST
-constexpr bool kStableSessionId = true;
-#else
-constexpr bool kStableSessionId = false;
-#endif
-
-}  // namespace
-
 namespace modular {
 
 ModularConfigAccessor::ModularConfigAccessor(fuchsia::modular::session::ModularConfig config)
@@ -26,7 +16,7 @@ ModularConfigAccessor::ModularConfigAccessor(fuchsia::modular::session::ModularC
 
 bool ModularConfigAccessor::use_random_session_id() const {
   // If the |auto_login_to_guest| build flag is set, ensure stable session IDs.
-  if (kStableSessionId) {
+  if (kUseStableSessionId) {
     FX_LOGS(INFO) << "Requesting stable session ID based on build flag";
     return false;
   }
@@ -40,7 +30,8 @@ bool ModularConfigAccessor::use_random_session_id() const {
   if (app_config.has_args()) {
     const auto& args = app_config.args();
 
-    return std::find(args.begin(), args.end(), modular_config::kPersistUserArg) != args.end();
+    // Use a random session ID if the args do not contain `--persist-user`.
+    return std::find(args.begin(), args.end(), modular_config::kPersistUserArg) == args.end();
   }
 
   return true;

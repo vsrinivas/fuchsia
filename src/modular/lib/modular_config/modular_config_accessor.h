@@ -14,6 +14,13 @@
 
 namespace modular {
 
+// Set with the |auto_login_to_guest| build flag.
+#ifdef AUTO_LOGIN_TO_GUEST
+constexpr bool kUseStableSessionId = true;
+#else
+constexpr bool kUseStableSessionId = false;
+#endif
+
 class ModularConfigAccessor {
  public:
   explicit ModularConfigAccessor(fuchsia::modular::session::ModularConfig config);

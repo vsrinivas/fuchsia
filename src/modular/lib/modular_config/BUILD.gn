@@ -65,6 +65,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "modular_config_accessor_unittest.cc",
     "modular_config_unittest.cc",
     "modular_config_xdr_unittest.cc",
   ]
@@ -72,6 +73,7 @@ source_set("unittests") {
   deps = [
     ":json_xdr",
     ":modular_config",
+    ":modular_config_accessor",
     ":modular_config_constants",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
