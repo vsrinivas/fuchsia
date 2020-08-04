@@ -241,7 +241,8 @@ void InterceptionWorkflow::Initialize(
 
 void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
                                    const SimpleErrorFunction& and_then) {
-  session_->Connect(host, port, [and_then](const zxdb::Err& err) { and_then(err); });
+  zxdb::SessionConnectionInfo connect_info = {zxdb::SessionConnectionType::kNetwork, host, port};
+  session_->Connect(connect_info, [and_then](const zxdb::Err& err) { and_then(err); });
 }
 
 // Helper function that finds a target for fidlcat to attach itself to. The

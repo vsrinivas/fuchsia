@@ -26,6 +26,10 @@ const char kBuildDirHelp[] = R"(  --build-dir=<path>
       There can be multiple ones which will be searched in order.
       It populates the "build-dirs" setting (see "get build-dirs").)";
 
+const char kUnixConnectHelp[] = R"(  --unix-connect=<filepath>
+  -u <filepath>
+      Attempts to connect to a debug_agent through a unix socket.)";
+
 const char kConnectHelp[] = R"(  --connect=<host>:<port>
   -c <host>:<port>
       Attempts to connect to a debug_agent running on the given host/port.)";
@@ -105,6 +109,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 
   parser.AddSwitch("build-dir", 'b', kBuildDirHelp, &CommandLineOptions::build_dirs);
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
+  parser.AddSwitch("unix-connect", 'u', kUnixConnectHelp, &CommandLineOptions::unix_connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
   parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExit,

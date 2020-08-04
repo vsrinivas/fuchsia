@@ -108,7 +108,7 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
   FRIEND_REF_COUNTED_THREAD_SAFE(PendingConnection);
   FRIEND_MAKE_REF_COUNTED(PendingConnection);
 
-  PendingConnection(const std::string& host, uint16_t port) : host_(host), port_(port) {}
+  PendingConnection(const SessionConnectionInfo& info) : connection_info_(info) {}
   ~PendingConnection() {}
 
   // These are the steps of connection, in order. They each take a RefPtr to |this| to ensure the
@@ -122,8 +122,7 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
   // Creates the connection (called on the background thread). On success the socket_ is populated.
   Err DoConnectBackgroundThread();
 
-  std::string host_;
-  uint16_t port_;
+  SessionConnectionInfo connection_info_;
 
   // Only non-null when in the process of connecting.
   std::unique_ptr<std::thread> thread_;
@@ -257,7 +256,14 @@ void Session::PendingConnection::HelloCompleteMainThread(fxl::RefPtr<PendingConn
 }
 
 Err Session::PendingConnection::DoConnectBackgroundThread() {
-  return ConnectToHost(host_, port_, &socket_);
+  switch (connection_info_.type) {
+    case SessionConnectionType::kNetwork:
+      return ConnectToHost(connection_info_.host, connection_info_.port, &socket_);
+    case SessionConnectionType::kUnix:
+      return ConnectToUnixSocket(connection_info_.host, &socket_);
+  }
+  FX_NOTREACHED();
+  return Err("Unsupported Connection type");
 }
 
 // Session ---------------------------------------------------------------------
@@ -388,25 +394,23 @@ bool Session::ConnectCanProceed(fit::callback<void(const Err&)>& callback, bool 
 
 bool Session::IsConnected() const { return stream_ != nullptr; }
 
-void Session::Connect(const std::string& host, uint16_t port, fit::callback<void(const Err&)> cb) {
+void Session::Connect(const SessionConnectionInfo& info, fit::callback<void(const Err&)> cb) {
   if (!ConnectCanProceed(cb, false))
     return;
 
-  if (host.empty() && last_host_.empty()) {
+  if (info.host.empty() && last_connection_.host.empty()) {
     debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb)]() mutable {
       cb(Err("No previous destination to reconnect to."));
     });
     return;
   }
 
-  connected_host_ = host;
-  connected_port_ = port;
-  if (!host.empty() && port != 0) {
-    last_host_ = host;
-    last_port_ = port;
+  connected_info_ = info;
+  if (!connected_info_.host.empty()) {
+    last_connection_ = info;
   }
 
-  pending_connection_ = fxl::MakeRefCounted<PendingConnection>(last_host_, last_port_);
+  pending_connection_ = fxl::MakeRefCounted<PendingConnection>(last_connection_);
   pending_connection_->Initiate(weak_factory_.GetWeakPtr(), std::move(cb));
 }
 
@@ -498,8 +502,8 @@ bool Session::ClearConnectionData() {
     return false;
 
   stream_ = nullptr;
-  connected_host_.clear();
-  connected_port_ = 0;
+  connected_info_.host.clear();
+  connected_info_.port = 0;
   arch_info_.reset();
   connection_storage_.reset();
   arch_ = debug_ipc::Arch::kUnknown;

@@ -37,6 +37,23 @@ class TargetObserver;
 class ThreadImpl;
 class ThreadObserver;
 
+enum class SessionConnectionType : uint32_t {
+  kNetwork = 1,
+  kUnix = 2,
+};
+
+struct SessionConnectionInfo {
+  SessionConnectionType type = SessionConnectionType::kNetwork;
+
+  // If the connection type is `Network` then `host` is the IP address or URL.
+  // If the connection type is `Unix` then `host` is the file path to the socket.
+  std::string host;
+
+  // If the connection type is `Network` then `port` is the port address.
+  // If the connection type is `Unix` then `port` is unused.
+  uint16_t port = 0;
+};
+
 // The session object manages the connection with the remote debug agent.
 class Session : public SettingStoreObserver {
  public:
@@ -83,12 +100,12 @@ class Session : public SettingStoreObserver {
 
   // Information about the current connection.
   const std::string minidump_path() const { return minidump_path_; }
-  const std::string connected_host() const { return connected_host_; }
-  uint16_t connected_port() const { return connected_port_; }
+  const std::string connected_host() const { return connected_info_.host; }
+  uint16_t connected_port() const { return connected_info_.port; }
 
   // Call with an empty host and 0 port to reconnect to the last attempted connection destination.
   // If there is no previous destination, this will be issue an error.
-  void Connect(const std::string& host, uint16_t port, fit::callback<void(const Err&)> cb);
+  void Connect(const SessionConnectionInfo& info, fit::callback<void(const Err&)> cb);
 
   // Disconnects from the remote system. Calling when there is no connection connection will issue
   // the callback with an error.
@@ -230,8 +247,7 @@ class Session : public SettingStoreObserver {
 
   // Stores what the session is currently connected to.
   std::string minidump_path_;
-  std::string connected_host_;
-  uint16_t connected_port_ = 0;
+  SessionConnectionInfo connected_info_;
 
   // When a connection has been requested but is being connected on the background thread, this will
   // hold the pointer.
@@ -249,13 +265,9 @@ class Session : public SettingStoreObserver {
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
   std::unique_ptr<ArchInfo> arch_info_;
 
-  // The last host:port that a connection was made to. Will be empty/0 if there has never been a
-  // connection or if using an internal connection.
-  //
-  // Note: if we support more types in the future, there should probably be a ConnectionDest struct
-  // that contains all the different parameters so this can be passed to Connect() and stored here.
-  std::string last_host_;
-  uint64_t last_port_ = 0;
+  // The last connection that was made by the session. Will have an empty host and a 0 port
+  // if there has never been a connection.
+  SessionConnectionInfo last_connection_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 };

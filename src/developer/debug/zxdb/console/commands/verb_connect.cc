@@ -18,6 +18,8 @@ namespace zxdb {
 
 namespace {
 
+constexpr int kUnixSwitch = 1;
+
 const char kConnectShortHelp[] = R"(connect: Connect to a remote system for debugging.)";
 const char kConnectHelp[] =
     R"(connect [ <remote_address> ]
@@ -33,6 +35,12 @@ Addresses
   the latter form, IPv6 addresses must be [bracketed]. Otherwise the brackets
   are optional.
 
+Options
+
+  --unix-socket
+  -u
+      Attempt to connect to a unix socket. In this case <host> is a filesystem path.
+
 Examples
 
   connect mystem.localnetwork 1234
@@ -42,36 +50,47 @@ Examples
   connect [1234:5678::9abc] 1234
   connect 1234:5678::9abc 1234
   connect [1234:5678::9abc]:1234
+  connect -u /path/to/socket
 )";
 
 Err RunVerbConnect(ConsoleContext* context, const Command& cmd,
                    CommandCallback callback = nullptr) {
-  // Can accept either one or two arg forms.
-  std::string host;
-  uint16_t port = 0;
+  SessionConnectionInfo connection_info;
 
-  // 0 args means pass empty string and 0 port to try to reconnect.
-  if (cmd.args().size() == 1) {
-    const std::string& host_port = cmd.args()[0];
-    // Provide an additional assist to users if they forget to wrap an IPv6 address in [].
-    if (Ipv6HostPortIsMissingBrackets(host_port)) {
-      return Err(ErrType::kInput,
-                 "For IPv6 addresses use either: \"[::1]:1234\"\n"
-                 "or the two-parameter form: \"::1 1234.");
+  if (cmd.HasSwitch(kUnixSwitch)) {
+    connection_info.type = SessionConnectionType::kUnix;
+    if (cmd.args().size() == 1) {
+      connection_info.host = cmd.args()[0];
+    } else {
+      return Err(ErrType::kInput, "Too many arguments.");
     }
-    Err err = ParseHostPort(host_port, &host, &port);
-    if (err.has_error())
-      return err;
-  } else if (cmd.args().size() == 2) {
-    Err err = ParseHostPort(cmd.args()[0], cmd.args()[1], &host, &port);
-    if (err.has_error())
-      return err;
-  } else if (cmd.args().size() > 2) {
-    return Err(ErrType::kInput, "Too many arguments.");
+  } else {
+    // 0 args means pass empty string and 0 port to try to reconnect.
+    if (cmd.args().size() == 1) {
+      const std::string& host_port = cmd.args()[0];
+      // Provide an additional assist to users if they forget to wrap an IPv6 address in [].
+      if (Ipv6HostPortIsMissingBrackets(host_port)) {
+        return Err(ErrType::kInput,
+                   "For IPv6 addresses use either: \"[::1]:1234\"\n"
+                   "or the two-parameter form: \"::1 1234.");
+      }
+      Err err = ParseHostPort(host_port, &connection_info.host, &connection_info.port);
+      if (err.has_error())
+        return err;
+      connection_info.type = SessionConnectionType::kNetwork;
+    } else if (cmd.args().size() == 2) {
+      Err err =
+          ParseHostPort(cmd.args()[0], cmd.args()[1], &connection_info.host, &connection_info.port);
+      if (err.has_error())
+        return err;
+      connection_info.type = SessionConnectionType::kNetwork;
+    } else if (cmd.args().size() > 2) {
+      return Err(ErrType::kInput, "Too many arguments.");
+    }
   }
 
   context->session()->Connect(
-      host, port, [callback = std::move(callback), cmd](const Err& err) mutable {
+      connection_info, [callback = std::move(callback), cmd](const Err& err) mutable {
         if (err.has_error()) {
           // Don't display error message if they canceled the connection.
           if (err.type() != ErrType::kCanceled)
@@ -102,8 +121,11 @@ Err RunVerbConnect(ConsoleContext* context, const Command& cmd,
 }  // namespace
 
 VerbRecord GetConnectVerbRecord() {
-  return VerbRecord(&RunVerbConnect, {"connect"}, kConnectShortHelp, kConnectHelp,
-                    CommandGroup::kGeneral);
+  SwitchRecord unix_switch(kUnixSwitch, false, "unix-socket", 'u');
+  VerbRecord connect_record = VerbRecord(&RunVerbConnect, {"connect"}, kConnectShortHelp,
+                                         kConnectHelp, CommandGroup::kGeneral);
+  connect_record.switches.push_back(unix_switch);
+  return connect_record;
 }
 
 }  // namespace zxdb

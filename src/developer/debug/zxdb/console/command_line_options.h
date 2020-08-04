@@ -15,6 +15,7 @@ namespace zxdb {
 
 struct CommandLineOptions {
   std::optional<std::string> connect;
+  std::optional<std::string> unix_connect;
   bool debug_mode = false;
   bool quit_agent_on_quit = false;
   std::optional<std::string> core;

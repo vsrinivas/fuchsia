@@ -49,6 +49,13 @@ Err SetupActions(const CommandLineOptions& options, std::vector<Action>* actions
     }));
   }
 
+  if (options.unix_connect) {
+    std::string cmd = "connect -u " + *options.unix_connect;
+    actions->push_back(Action("Connect", [cmd](const Action&, const Session&, Console* console) {
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+    }));
+  }
+
   if (options.run) {
     std::string cmd = "run " + *options.run;
     actions->push_back(Action("Run", [cmd](const Action&, const Session&, Console* console) {

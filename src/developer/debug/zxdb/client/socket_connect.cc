@@ -65,6 +65,10 @@ Err ResolveTargetAddress(const std::string& host, uint16_t port, SockAddrVariant
 
 }  // namespace
 
+Err ConnectToUnixSocket(const std::string& path, fbl::unique_fd* socket_out) {
+  return Err("Unix sockets are currently not implemented on Mac");
+}
+
 Err ConnectToHost(const std::string& host, uint16_t port, fbl::unique_fd* socket_out) {
   SockAddrVariant addr_variant;
   Err err = ResolveTargetAddress(host, port, &addr_variant);
@@ -146,6 +150,26 @@ Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
 }
 
 }  // namespace
+
+Err ConnectToUnixSocket(const std::string& path, fbl::unique_fd* socket_out) {
+  int fd;
+  if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    return Err("Socket error");
+  }
+  fcntl(fd, F_SETFL, O_NONBLOCK);
+
+  std::vector<uint8_t> sockaddr_data(path.size() + sizeof(sockaddr));
+  auto addr = reinterpret_cast<struct sockaddr*>(sockaddr_data.data());
+  addr->sa_family = AF_UNIX;
+  strcpy(addr->sa_data, path.c_str());
+
+  if (connect(fd, addr, sockaddr_data.size()) == -1) {
+    return Err("Connect error");
+  }
+
+  *socket_out = fbl::unique_fd(fd);
+  return Err();
+}
 
 Err ConnectToHost(const std::string& host, uint16_t port, fbl::unique_fd* socket_out) {
   addrinfo addr;

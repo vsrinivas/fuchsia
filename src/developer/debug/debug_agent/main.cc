@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/cmdline/args_parser.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/zx/thread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@
 #include <thread>
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
+#include "src/developer/debug/debug_agent/fidl_server.h"
 #include "src/developer/debug/debug_agent/socket_connection.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
@@ -34,6 +36,7 @@ const char kNgUnwinder[] = "ng";
 struct CommandLineOptions {
   int port = 0;
   bool debug_mode = false;
+  bool channel_mode = false;
   std::string unwind = kAospUnwinder;
 };
 
@@ -59,6 +62,10 @@ const char kDebugModeHelp[] = R"(  --debug-mode
       Run the agent on debug mode. This will enable conditional logging
       messages and timing profiling. Mainly useful for people developing zxdb.)";
 
+const char kChannelModeHelp[] = R"(  --channel-mode
+      Run the agent on in channel mode. The agent will listen for channels through the
+      fuchsia.debugger.DebugAgent API. This is necessary for overnet.)";
+
 const char kUnwindHelp[] = R"(  --unwind=[aosp|ng]
       Force using either the AOSP or NG unwinder for generating stack traces.)";
 
@@ -67,6 +74,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 
   parser.AddSwitch("port", 0, kPortHelp, &CommandLineOptions::port);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
+  parser.AddSwitch("channel-mode", 0, kChannelModeHelp, &CommandLineOptions::channel_mode);
   parser.AddSwitch("unwind", 0, kUnwindHelp, &CommandLineOptions::unwind);
 
   // Special --help switch which doesn't exist in the options structure.
@@ -114,7 +122,9 @@ int main(int argc, const char* argv[]) {
     debug_ipc::SetDebugMode(true);
   }
 
-  if (options.port) {
+  if (options.channel_mode || options.port) {
+    auto services = sys::ServiceDirectory::CreateFromNamespace();
+
     zx::channel exception_channel;
     auto message_loop = std::make_unique<PlatformMessageLoop>();
     std::string init_error_message;
@@ -139,15 +149,26 @@ int main(int argc, const char* argv[]) {
       // The following loop will attempt to patch a stream to the debug agent in order to enable
       // communication.
       while (true) {
-        // Start a new thread that will listen on a socket from an incoming connection from a
-        // client. In the meantime, the main thread will block waiting for something to be posted
-        // to the main thread.
-        //
-        // When the connection thread effectively receives a connection, it will post a task to the
-        // loop to create the agent and begin normal debugger operation. Once the application quits
-        // the loop, the code will clean the connection thread and create another or exit the loop,
-        // according to the current agent's configuration.
-        {
+        if (options.channel_mode) {
+          // Connect to FIDL service which will wait for an incoming connection from a client.
+          // This happens within the message_loop so it does not need a new thread.
+          debug_agent::DebugAgentImpl fidl_agent(&debug_agent);
+          fidl::BindingSet<fuchsia::debugger::DebugAgent> bindings;
+          auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+          context->outgoing()->AddPublicService(bindings.GetHandler(&fidl_agent));
+
+          message_loop->Run();
+
+          DEBUG_LOG(Agent) << "Joining connection thread.";
+        } else {
+          // Start a new thread that will listen on a socket from an incoming connection from a
+          // client. In the meantime, the main thread will block waiting for something to be posted
+          // to the main thread.
+          //
+          // When the connection thread effectively receives a connection, it will post a task to
+          // the loop to create the agent and begin normal debugger operation. Once the application
+          // quits the loop, the code will clean the connection thread and create another or exit
+          // the loop, according to the current agent's configuration.
           debug_agent::SocketServer::ConnectionConfig conn_config;
           conn_config.message_loop = message_loop.get();
           conn_config.debug_agent = &debug_agent;

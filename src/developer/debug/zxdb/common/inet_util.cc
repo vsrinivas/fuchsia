@@ -51,8 +51,7 @@ Err ParseHostPort(const std::string& input, std::string* out_host, uint16_t* out
   }
   if (host.find(':') != std::string::npos) {
     if (host.front() != '[' || host.back() != ']') {
-      return Err(ErrType::kInput,
-                 "Missing brackets enclosing IPv6 address, e.g., \"[::1]:1234\".");
+      return Err(ErrType::kInput, "Missing brackets enclosing IPv6 address, e.g., \"[::1]:1234\".");
     }
   }
 

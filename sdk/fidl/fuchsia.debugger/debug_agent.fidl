@@ -1,0 +1,14 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.debugger;
+
+using zx;
+
+[Discoverable]
+protocol DebugAgent {
+    /// Hand the debug agent a socket that connects it to the debugger. This
+    /// will return ZX_ERR_ALREADY_BOUND if a connection already exists.
+    Connect(zx.handle:SOCKET socket) -> (zx.status status);
+};
