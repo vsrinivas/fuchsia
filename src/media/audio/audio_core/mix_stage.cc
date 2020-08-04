@@ -74,11 +74,9 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
 
   FX_LOGS(DEBUG) << "AddInput " << (stream->reference_clock().is_adjustable() ? "" : "non-")
                  << "adjustable "
-                 << (stream->reference_clock().is_device_clock() ? "device " : "client ")
-                 << std::hex << stream->reference_clock().clock().get_handle() << ", self "
+                 << (stream->reference_clock().is_device_clock() ? "device" : "client") << ", self "
                  << (reference_clock().is_adjustable() ? "" : "non-") << "adjustable "
-                 << (reference_clock().is_device_clock() ? "device " : "client ")
-                 << reference_clock().clock().get_handle();
+                 << (reference_clock().is_device_clock() ? "device" : "client");
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     streams_.emplace_back(StreamHolder{std::move(stream), mixer});
@@ -100,11 +98,9 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
 
   FX_LOGS(DEBUG) << "RemoveInput " << (it->stream->reference_clock().is_adjustable() ? "" : "non-")
                  << "adjustable "
-                 << (it->stream->reference_clock().is_device_clock() ? "device " : "client ")
-                 << std::hex << it->stream->reference_clock().clock().get_handle() << ", self "
-                 << (reference_clock().is_adjustable() ? "" : "non-") << "adjustable "
-                 << (reference_clock().is_device_clock() ? "device " : "client ")
-                 << reference_clock().clock().get_handle();
+                 << (it->stream->reference_clock().is_device_clock() ? "device" : "client")
+                 << ", self " << (reference_clock().is_adjustable() ? "" : "non-") << "adjustable "
+                 << (reference_clock().is_device_clock() ? "device" : "client");
 
   streams_.erase(it);
 }
@@ -478,11 +474,10 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 // step_size etc. These are the only deliverables for this method.
 void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& stream) {
   constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
-  constexpr zx::duration kMinErrorThresholdDuration = zx::usec(50);
 
   TRACE_DURATION("audio", "MixStage::ReconcileClocksAndSetStepSize");
 
-  Mixer::Bookkeeping& bk = mixer.bookkeeping();
+  auto& bk = mixer.bookkeeping();
 
   // UpdateSourceTrans
   //
@@ -552,9 +547,13 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
   // SynchronizeClocks
   //
   // If client clock and device clock differ, reconcile them.
-  // For start dest frame, measure [predicted - actual] error (in frac_src) since last mix.
+  // For start dest frame, measure [predicted - actual] error (in frac_src) since last mix. Do this
+  // even if clocks are same on both sides, as this allows us to perform an initial sync-up between
+  // running position accounting and the initial clock transforms (even those with offsets).
   auto curr_dest_frame = cur_mix_job_.start_pts_of;
-  if (bk.next_dest_frame != curr_dest_frame) {
+  if (bk.next_dest_frame != curr_dest_frame || !bk.running_pos_established) {
+    bk.running_pos_established = true;
+
     // Set new running positions, based on the E2E clock (not just from step_size)
     auto prev_running_dest_frame = bk.next_dest_frame;
     auto prev_running_frac_src_frame = bk.next_frac_source_frame;
@@ -565,11 +564,12 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
                    << prev_running_frac_src_frame.raw_value() << " to "
                    << bk.next_frac_source_frame.raw_value();
 
-    // Also should reset the PID control, in the relevant clock
+    // Also should reset the PID controls in the relevant clocks.
+    reference_clock().ResetRateAdjustmentTuning(curr_dest_frame);
+    stream.reference_clock().ResetRateAdjustmentTuning(curr_dest_frame);
   } else if (reference_clock() == stream.reference_clock()) {
     // Same clock on both sides can occur when multiple MixStages are connected serially (should
     // both be device clocks). Don't synchronize: use frac_src_frames_per_dest_frame as-is.
-
   } else if (reference_clock().is_device_clock() && stream.reference_clock().is_device_clock()) {
     // We are synchronizing two device clocks. Unfortunately, we know they aren't the same.
     // To enable this scenario in the future, at least one must be adjustable in hardware (it will
@@ -585,11 +585,11 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
     FX_DCHECK(reference_clock().is_device_clock() || stream.reference_clock().is_device_clock())
         << "Cannot reconcile two client clocks. No device clock: clock routing error";
 
+    // MeasureClockError
+    //
     // Measure the error in src_frac_pos
     auto max_error_frac =
         bk.source_ref_clock_to_frac_source_frames.rate().Scale(kMaxErrorThresholdDuration.get());
-    auto min_error_frac =
-        bk.source_ref_clock_to_frac_source_frames.rate().Scale(kMinErrorThresholdDuration.get());
 
     auto curr_src_frac_pos =
         FractionalFrames<int64_t>::FromRaw(bk.dest_frames_to_frac_source_frames(curr_dest_frame));
@@ -607,17 +607,19 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
     AudioClock& client_clock =
         stream.reference_clock().is_device_clock() ? reference_clock() : stream.reference_clock();
 
-    if (std::abs(bk.frac_source_error.raw_value()) >= max_error_frac) {
+    if (std::abs(bk.frac_source_error.raw_value()) > max_error_frac) {
       // Source error exceeds our threshold
-
       // Reset the rate adjustment process altogether and allow a discontinuity
       bk.next_frac_source_frame = curr_src_frac_pos;
       FX_LOGS(DEBUG) << "frac_source_error: out of bounds (" << bk.frac_source_error.raw_value()
                      << " vs. limit +/-" << max_error_frac << "), resetting next_frac_src to "
                      << bk.next_frac_source_frame.raw_value();
 
-      // Reset the PID control, in the relevant clock
-    } else if (std::abs(bk.frac_source_error.raw_value()) >= min_error_frac) {
+      // Reset the PID controls, in the relevant clocks.
+      client_clock.ResetRateAdjustmentTuning(curr_dest_frame);
+      device_clock.ResetRateAdjustmentTuning(curr_dest_frame);
+    } else {
+      // No error is too small to worry about; handle them all.
       FX_LOGS(TRACE) << "frac_source_error: tuning reference clock at dest " << curr_dest_frame
                      << " for " << bk.frac_source_error.raw_value();
       if (client_clock.is_adjustable()) {
@@ -625,14 +627,16 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
       } else if (device_clock.is_adjustable() && client_clock.controls_hardware_clock()) {
         // Adjust device_clock's hardware clock rate based on the frac_source_error
       } else {
-        // Feed the frac_source_error to this (non-adjustable) clock, and retrieve the rate
-        // adjustment factor that it has calculated must be applied in software as "micro-SRC".
+        client_clock.TuneRateForError(bk.frac_source_error, curr_dest_frame);
 
         // Using this rate adjustment factor, adjust step_size, so future src_positions will
-        // converge to what these two clocks require
+        // converge to what these two clocks require.
+        // Multiplying these factors can exceed TimelineRate's uint32/uint32 resolution so we allow
+        // reduced precision, if required.
+        TimelineRate micro_src_factor = client_clock.rate_adjustment();
+        frac_src_frames_per_dest_frame =
+            TimelineRate::Product(frac_src_frames_per_dest_frame, micro_src_factor, false);
       }
-    } else {
-      // Error is too small to worry about: do nothing; just let it ride
     }
   }
 
@@ -647,9 +651,23 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
   FX_DCHECK(tmp_step_size >= 0);
   FX_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
 
+  auto old_denominator = bk.denominator;
   bk.step_size = static_cast<uint32_t>(tmp_step_size);
   bk.denominator = frac_src_frames_per_dest_frame.reference_delta();
   bk.rate_modulo = frac_src_frames_per_dest_frame.subject_delta() - (bk.denominator * bk.step_size);
+
+  // Update the source position modulos, if the denominator is changing.
+  if (old_denominator != bk.denominator) {
+    if (old_denominator) {
+      bk.src_pos_modulo *= bk.denominator;
+      bk.next_src_pos_modulo *= bk.denominator;
+      bk.src_pos_modulo /= old_denominator;
+      bk.next_src_pos_modulo /= old_denominator;
+    } else {
+      bk.src_pos_modulo = bk.next_src_pos_modulo = 0;
+    }
+  }
+  // Else preserve the previous source position modulo values from before
 }
 
 }  // namespace media::audio

@@ -54,7 +54,7 @@ class MixStage : public ReadableStream {
     StreamUsageMask usages_mixed;
     float applied_gain_db;
 
-    // Per-stream job state, set up for each renderer during SetupMix.
+    // Per-stream job state, maintained for each renderer.
     uint32_t frames_produced;
   };
 
@@ -64,7 +64,6 @@ class MixStage : public ReadableStream {
   };
 
   enum class TaskType { Mix, Trim };
-
   void ForEachSource(TaskType task_type, zx::time dest_ref_time);
   void ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& stream);
 

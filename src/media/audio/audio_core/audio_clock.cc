@@ -6,7 +6,22 @@
 
 #include <zircon/syscalls.h>
 
+#include "src/media/audio/lib/clock/pid_control.h"
+
 namespace media::audio {
+
+// These values were determined empirically based on one accepted rule-of-thumb for setting PID
+// factors. First discover the P factor (without I or D factors) that leads to steady-state
+// oscillation, then half that value. Set the I factor to approximately (2P)/OscillationPeriod.
+// Set the D factor to approximately (P/8)*OscillationPeriod.
+constexpr double kMicroSrcTypicalOscillationPeriod = 6000;  // 480
+                                                            // (frames in typical oscillation cycle)
+constexpr double kMicroSrcPFactor = -0.0000000312;
+constexpr double kMicroSrcIFactor = kMicroSrcPFactor * 2 / kMicroSrcTypicalOscillationPeriod;
+constexpr double kMicroSrcDFactor = kMicroSrcPFactor * kMicroSrcTypicalOscillationPeriod / 8;
+
+constexpr clock::PidControl::Coefficients kPidFactorsMicroSrc = {kMicroSrcPFactor, kMicroSrcIFactor,
+                                                                 kMicroSrcDFactor};
 
 // static methods
 AudioClock AudioClock::CreateAsDeviceAdjustable(zx::clock clock, uint32_t domain) {
@@ -34,6 +49,7 @@ AudioClock AudioClock::CreateAsCustom(zx::clock clock) {
   auto audio_clock = AudioClock(std::move(clock), Source::Client, Type::NonAdjustable);
 
   // Next: set micro-SRC PID coefficients approprately for a software-tuned clock.
+  audio_clock.ConfigureAdjustment(kPidFactorsMicroSrc);
 
   return audio_clock;
 }
@@ -56,7 +72,23 @@ AudioClock::AudioClock(zx::clock clock, Source source, Type type, uint32_t domai
 
   // Check here whether an Adjustable|Client zx::clock has write privileges (can be rate-adjusted)?
   // If it doesn't, would we change the type to Invalid, or NonAdjustable?
-  // Depending on how we handle such a failure, we could defer the check until RateAdjust is called.
+  // Depending on how we handle the failure, we could defer the check until TuneForError is called.
+}
+
+// Set the PID coefficients for this clock.
+void AudioClock::ConfigureAdjustment(const clock::PidControl::Coefficients& pid_coefficients) {
+  rate_adjuster_ = clock::PidControl(pid_coefficients);
+}
+
+zx::clock AudioClock::DuplicateClock() const {
+  if (!is_valid()) {
+    return zx::clock();
+  }
+
+  auto result = audio::clock::DuplicateClock(clock_);
+  FX_CHECK(result.is_ok());  // We pre-qualify the clock, so this should never fail.
+
+  return result.take_value();
 }
 
 bool AudioClock::SetAsHardwareControlling(bool controls_hardware_clock) {
@@ -105,15 +137,49 @@ zx::time AudioClock::MonotonicTimeFromReferenceTime(zx::time ref_time) const {
   return result.take_value();
 }
 
-zx::clock AudioClock::DuplicateClock() const {
-  if (!is_valid()) {
-    return zx::clock();
+// The time units here are dest frames, the error factor is a difference in frac_src frames.
+// This method is periodically called, to incorporate the current source position error (in
+// fractional frames) into a feedback control that tunes the rate-adjustment factor for this clock.
+void AudioClock::TuneRateForError(FractionalFrames<int64_t> frac_src_error, int64_t dest_frame) {
+  FX_CHECK(type_ != Type::Invalid) << "Invalid clock cannot be rate-adjusted";
+  FX_CHECK((type_ == Type::Adjustable) || (source_ == Source::Client))
+      << "Cannot rate-adjust a static device clock";
+
+  FX_LOGS(TRACE) << __func__ << "(" << frac_src_error.raw_value() << ", " << dest_frame
+                 << ") for clock type "
+                 << (type_ == Type::Adjustable
+                         ? "Adjustable"
+                         : (type_ == Type::NonAdjustable ? "Non-adjustable" : "Invalid"));
+
+  // Feed into the PID
+  rate_adjuster_.TuneForError(dest_frame, frac_src_error.raw_value());
+
+  // This is a zero-centric adjustment factor, relative to current rate.
+  auto adjustment = rate_adjuster_.Read();
+
+  if (source_ == Source::Device) {
+    // TODO(46648): adjust hardware clock rate by rate_adjustment
+    // Return value from rate_adjuster_.Read is a double rate ratio centered on 1.0
+    // Convert this to a (truncated) PPM value, set_rate_adjust and update the device clock
+  } else if (type_ == Type::Adjustable) {
+    // TODO(46651): adjust clock by rate_adjustment
+    // Return value from rate_adjuster_.Read is a double rate ratio centered on 1.0
+    // Convert this to a (truncated) PPM value, set_rate_adjust and update the client clock
+  } else {
+    // Else if custom: we've already absorbed the rate adjustment; it can be retrieved now.
+    auto adjustment_rate = 1.0 + adjustment;
+    rate_adjustment_ = TimelineRate(static_cast<float>(adjustment_rate));
+
+    FX_LOGS(TRACE) << "Micro-SRC adjustment: adjustment " << adjustment << ", adjustment_rate "
+                   << adjustment_rate << " (" << rate_adjustment_.subject_delta() << "/"
+                   << rate_adjustment_.reference_delta() << "), error "
+                   << frac_src_error.raw_value();
   }
+}
 
-  auto result = audio::clock::DuplicateClock(clock_);
-  FX_CHECK(result.is_ok());  // We pre-qualify the clock, so this should never fail.
-
-  return result.take_value();
+void AudioClock::ResetRateAdjustmentTuning(int64_t time) {
+  rate_adjustment_ = TimelineRate(1u);
+  rate_adjuster_.Start(time);
 }
 
 }  // namespace media::audio

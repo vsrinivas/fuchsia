@@ -26,7 +26,8 @@ fbl::RefPtr<Packet> PacketFactory::CreatePacket(float val, zx::duration duration
   size_t payload_size = format().bytes_per_frame() * frame_count;
   buffer_offset_ += payload_size;
 
-  FX_CHECK(payload_offset + payload_size <= vmo_ref_->size());
+  FX_CHECK(payload_offset + payload_size <= vmo_ref_->size())
+      << "Payload offset + size cannot exceed " << vmo_ref_->size();
 
   // Write the data to the packet buffer.
   float* samples =

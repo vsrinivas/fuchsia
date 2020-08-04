@@ -12,21 +12,29 @@
 namespace media::audio::clock {
 
 zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock) {
+  auto result = GetClockDetails(ref_clock);
+  if (result.is_error()) {
+    return result.error();
+  }
+
+  DisplayClockDetails(result.take_value());
+  return ZX_OK;
+}
+
+fit::result<zx_clock_details_v1_t, zx_status_t> GetClockDetails(const zx::clock& ref_clock) {
   if (!ref_clock.is_valid()) {
     FX_LOGS(INFO) << "Clock is invalid";
-    return ZX_OK;
+    return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   zx_clock_details_v1_t clock_details;
   zx_status_t status = ref_clock.get_details(&clock_details);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Error calling zx::clock::get_details";
-    return status;
+    return fit::error(status);
   }
 
-  DisplayClockDetails(clock_details);
-
-  return ZX_OK;
+  return fit::ok(clock_details);
 }
 
 // Only called by custom code when debugging, so can remain at INFO severity.
@@ -52,6 +60,12 @@ void DisplayClockDetails(const zx_clock_details_v1_t& clock_details) {
   FX_LOGS(INFO) << "      reference_ticks:\t\t"
                 << clock_details.mono_to_synthetic.rate.reference_ticks;
   FX_LOGS(INFO) << "******************************************";
+}
+
+// Only called by custom code when debugging, so can remain at INFO severity.
+void DisplayTimelineRate(const TimelineRate& rate, std::string tag) {
+  FX_LOGS(INFO) << tag << ": sub_delta " << rate.subject_delta() << ", ref_delta "
+                << rate.reference_delta();
 }
 
 // Only called by custom code when debugging, so can remain at INFO severity.

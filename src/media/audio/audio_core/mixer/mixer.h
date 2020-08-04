@@ -114,6 +114,8 @@ class Mixer {
     // This field sets the direction and magnitude of any steps taken for clock reconciliation.
     FractionalFrames<int64_t> frac_source_error{0};
 
+    bool running_pos_established = false;
+
     // This method resets the local position accounting (including gain ramping), but not the
     // long-running positions. This is called upon a source discontinuity.
     void Reset() {
@@ -121,7 +123,7 @@ class Mixer {
       gain.ClearSourceRamp();
     }
 
-    // Reset the long-running and per-Mix position counters. This is generally called upon a
+    // This method resets the long-running and per-Mix position counters and is called upon a
     // destination discontinuity. If a next_dest_frame value is provided, set next_frac_source_frame
     // based on the dest_frames_to_frac_source_frames transform. Pre-setting next_src_pos_modulo
     // here is only helpful for very high resolution scenarios (and is speculative at best); we base
@@ -140,10 +142,9 @@ class Mixer {
 
     // Only called by custom code when debugging, so can remain at INFO severity.
     void DisplayPositions(std::string tag = "") {
-      FX_LOGS(INFO) << "0x" << std::hex << this << std::dec << " " << tag << ": next_dest_frame "
-                    << next_dest_frame << ", next_frac_source_frame "
-                    << next_frac_source_frame.raw_value() << ", next_src_pos_modulo "
-                    << next_src_pos_modulo << ", frac_source_error "
+      FX_LOGS(INFO) << "0x" << std::hex << this << std::dec << " " << tag << ": next_dst "
+                    << next_dest_frame << ", next_frac_src " << next_frac_source_frame.raw_value()
+                    << ", next_src_pos_mod " << next_src_pos_modulo << ", frac_src_err "
                     << frac_source_error.raw_value();
     }
 

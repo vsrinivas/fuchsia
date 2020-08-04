@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
+#include <zircon/errors.h>
 
 #include <gtest/gtest.h>
 
@@ -129,12 +130,16 @@ TEST(ClockUtilsTest, DuplicateClockCanBeDuplicated) {
   EXPECT_GT(now, 0);
 }
 
-// Even with an uninitialized clock, GetAndDisplayClockDetails should succeed
+// With an uninitialized clock, GetAndDisplayClockDetails should not succeed
 TEST(ClockUtilsTest, GetAndDisplayClockDetailsBadHandle) {
-  zx::clock clock;
-  auto status = GetAndDisplayClockDetails(clock);
+  zx::clock uninitialized_clock;
 
-  EXPECT_EQ(status, ZX_OK);
+  auto result = GetClockDetails(uninitialized_clock);
+  EXPECT_TRUE(result.is_error());
+  EXPECT_EQ(result.error(), ZX_ERR_INVALID_ARGS);
+
+  auto status = GetAndDisplayClockDetails(uninitialized_clock);
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
 }
 
 // SnapshotClock wraps clock::get_details and converts to a TimelineFunction

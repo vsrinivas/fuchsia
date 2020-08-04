@@ -7,12 +7,17 @@
 
 #include <zircon/time.h>
 
+#include <array>
+
 namespace media::audio::clock {
 
 class PidControl {
   friend class PidControlTest;
 
  public:
+  using Coefficients = std::array<double, 3>;
+
+  explicit PidControl(const Coefficients& vals) : PidControl(vals[0], vals[1], vals[2]) {}
   PidControl(double p_val, double i_val, double d_val)
       : proportional_factor_(p_val), integral_factor_(i_val), derivative_factor_(d_val) {
     Start(0);

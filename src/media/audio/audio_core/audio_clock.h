@@ -11,7 +11,9 @@
 
 #include <limits>
 
+#include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/clock/utils.h"
+#include "src/media/audio/lib/format/frames.h"
 
 namespace media::audio {
 
@@ -84,6 +86,19 @@ class AudioClock {
   // might overshoot or undershoot our intention; thus we must track POSITION (not just rate), and
   // eliminate any error over time with a feedback control loop.
 
+  // Results
+  // Based on current PID coefficients (thus may need adjusting as we tune coefficients), our
+  // worst-case position error deviation for each ppm of rate change is ~16 frac frames on the
+  // "major" (immediate response) side, and ~8 frac frames on the "minor" (correct for overshoot)
+  // side. This equates to about 40nsec per ppm and 20nsec per ppm at 48khz, so a sudden change of
+  // 1000ppm in clock rate would cause a worst-case desync position error of about 16000 frac
+  // frames, or about 2 frames, or about 40 usec.
+  //
+  // For very low-magnitude rate adjustment (1-2 ppm), we are slightly worse than linear and might
+  // experience desync of up to +/-40nsec (16 fractional frames).
+  //
+  // Once we've settled back to steady state, our desync ripple is +/-20nsec (8 fractional frames).
+
   static constexpr uint32_t kMonotonicDomain = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
 
   friend const zx::clock& audio_clock_helper::get_underlying_zx_clock(const AudioClock&);
@@ -122,6 +137,8 @@ class AudioClock {
   // provided to it, and 3) handle values are unique across the system, and 4) even duplicate
   // handles have different values, this all means that the clock handle is essentially the unique
   // ID for this AudioClock object.
+  // However, we also want to know whether two unique AudioClocks are based on the same underlying
+  // zx::clock (and thus respond identically to rate-adjustment), so we compare the root KOIDs.
   bool operator==(const AudioClock& comparable) const {
     return (audio::clock::GetKoid(clock_) == audio::clock::GetKoid(comparable.clock_));
   }
@@ -134,7 +151,23 @@ class AudioClock {
   zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
   zx::time MonotonicTimeFromReferenceTime(zx::time ref_time) const;
 
-  const zx::clock& clock() { return clock_; }
+  // Audio clocks use a PID control so that across a series of external rate adjustments, we
+  // smoothly track position (not just rate). The inputs to this feedback loop are destination frame
+  // as the "time" or X-axis component, and source position error (in frac frames) as the process
+  // variable which we intend to tune to zero. We regularly tune the feedback loop by reporting our
+  // current position error at the given time; the PID provides the rate adjustment to be applied.
+  //
+  // At a given dest_frame, the source position error is provided (in fractional frames). This is
+  // used to maintain a rate_adjustment() factor that eliminates the error over time.
+  void TuneRateForError(FractionalFrames<int64_t> frac_src_error, int64_t dest_frame);
+
+  // This returns the current rate adjustment factor (a rate close to 1.0) that should be applied,
+  // to chase the actual source in an optimal manner.
+  const TimelineRate& rate_adjustment() const { return rate_adjustment_; }
+
+  // Clear any internal running state (except the PID coefficients themselves), and restart the
+  // feedback loop at the given destination frame.
+  void ResetRateAdjustmentTuning(int64_t dest_frame);
 
  private:
   enum class Source { Device, Client };
@@ -143,6 +176,9 @@ class AudioClock {
   AudioClock(zx::clock clock, Source source, Type type, uint32_t domain);
   AudioClock(zx::clock clock, Source source, Type type)
       : AudioClock(std::move(clock), source, type, kMonotonicDomain) {}
+
+  // This sets the PID coefficients for this clock, depending on the clock type.
+  void ConfigureAdjustment(const clock::PidControl::Coefficients& pid_coefficients);
 
   zx::clock clock_;
   Source source_;
@@ -153,6 +189,9 @@ class AudioClock {
   bool controls_hardware_clock_ = false;
 
   TimelineFunction ref_clock_to_clock_mono_;
+
+  TimelineRate rate_adjustment_;
+  audio::clock::PidControl rate_adjuster_;
 };
 
 }  // namespace media::audio
