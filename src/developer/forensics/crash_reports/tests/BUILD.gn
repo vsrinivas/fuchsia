@@ -245,6 +245,21 @@ executable("report_util_unittest_exe") {
   ]
 }
 
+executable("sized_data_reader_unittest_exe") {
+  testonly = true
+
+  sources = [ "sized_data_reader_unittest.cc" ]
+
+  deps = [
+    ":test_data",
+    "//src/developer/forensics/crash_reports:sized_data_reader",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/crashpad/util",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("store_unittest_exe") {
   testonly = true
 
@@ -287,6 +302,12 @@ resource("test_configs") {
   ]
 
   outputs = [ "data/configs/{{source_file_part}}" ]
+}
+
+resource("test_data") {
+  sources = [ "resources/test_data.zip" ]
+
+  outputs = [ "data/test_data.zip" ]
 }
 
 ###############################################################################
@@ -416,6 +437,14 @@ fuchsia_component("report_util_unittest") {
   deps = [ ":report_util_unittest_exe" ]
 }
 
+fuchsia_component("sized_data_reader_unittest") {
+  testonly = true
+
+  manifest = "meta/sized_data_reader_unittest.cmx"
+
+  deps = [ ":sized_data_reader_unittest_exe" ]
+}
+
 fuchsia_component("store_unittest") {
   testonly = true
 
@@ -441,6 +470,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":privacy_settings_ptr_unittest",
     ":queue_unittest",
     ":report_util_unittest",
+    ":sized_data_reader_unittest",
     ":store_unittest",
   ]
 }

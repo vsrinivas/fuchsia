@@ -195,9 +195,11 @@ source_set("crash_server") {
 
   public_deps = [
     ":report",
+    ":sized_data_reader",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/developer/forensics/utils:sized_data",
     "//src/lib/fxl",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//third_party/crashpad/util",
@@ -362,6 +364,21 @@ source_set("settings") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
+}
+
+source_set("sized_data_reader") {
+  sources = [
+    "sized_data_reader.cc",
+    "sized_data_reader.h",
+  ]
+
+  public_deps = [
+    "//src/developer/forensics/utils:sized_data",
+    "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
+    "//third_party/crashpad/util",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("store") {

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/sized_data_reader_unittest_exe"
+    }
+}

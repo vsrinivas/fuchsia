@@ -8,6 +8,8 @@
 
 #include <memory>
 
+#include "src/developer/forensics/crash_reports/sized_data_reader.h"
+#include "src/developer/forensics/utils/sized_data.h"
 #include "third_party/crashpad/util/net/http_body.h"
 #include "third_party/crashpad/util/net/http_headers.h"
 #include "third_party/crashpad/util/net/http_multipart_builder.h"
@@ -16,53 +18,6 @@
 
 namespace forensics {
 namespace crash_reports {
-namespace {
-
-// Wrapper around SizedData that allows crashpad::HTTPMultipartBuilder to upload
-// attachments.
-class SizedDataReader : public crashpad::FileReaderInterface {
- public:
-  SizedDataReader(const SizedData& data) : data_(data) {}
-
-  // crashpad::FileReaderInterface
-  crashpad::FileOperationResult Read(void* data, size_t size) override;
-
-  // crashpad::FileSeekerInterface
-  crashpad::FileOffset Seek(crashpad::FileOffset offset, int whence) override;
-
- private:
-  const SizedData& data_;
-  size_t offset_{};
-};
-
-crashpad::FileOperationResult SizedDataReader::Read(void* data, size_t size) {
-  if (offset_ >= data_.size()) {
-    return 0;
-  }
-
-  // Can't read beyond the end of the buffer.
-  const auto read_size = std::min(size, data_.size() - offset_);
-  memcpy(data, const_cast<uint8_t*>(data_.data()), read_size);
-  Seek(read_size, SEEK_CUR);
-
-  return read_size;
-}
-
-crashpad::FileOffset SizedDataReader::Seek(crashpad::FileOffset offset, int whence) {
-  if (whence == SEEK_SET) {
-    offset_ = offset;
-  } else if (whence == SEEK_CUR) {
-    offset_ += offset;
-  } else if (whence == SEEK_END) {
-    offset_ = data_.size() + offset;
-  } else {
-    return -1;
-  }
-
-  return offset_;
-}
-
-}  // namespace
 
 CrashServer::CrashServer(const std::string& url) : url_(url) {}
 
