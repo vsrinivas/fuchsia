@@ -12,6 +12,10 @@ group("overnet") {
   ]
 }
 
+group("runtime") {
+  deps = [ "overnetstack" ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [

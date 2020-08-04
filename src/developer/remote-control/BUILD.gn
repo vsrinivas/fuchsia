@@ -155,8 +155,11 @@ package("pkg") {
   ]
 }
 
-# This group is included in core base. Only add dependencies to this
-# if they belong in base.
+# This group is cached in core. Only add dependencies to this
+# if they belong in core.
 group("runtime") {
-  deps = [ ":pkg" ]
+  deps = [
+    ":pkg",
+    "//src/connectivity/overnet:runtime",
+  ]
 }
