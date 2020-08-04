@@ -119,8 +119,8 @@ struct xhci_t {
   // interface for calling back to usb bus driver
   usb_bus_interface_protocol_t bus = {};
 
-  xhci_mode_t mode;
-  std::atomic<bool> suspended;
+  xhci_mode_t mode = XHCI_PCI;
+  std::atomic<bool> suspended = false;
 
   // Desired number of interrupters. This may be greater than what is
   // supported by hardware. The actual number of interrupts configured
@@ -128,7 +128,7 @@ struct xhci_t {
   thrd_t completer_threads[INTERRUPTER_COUNT];
   zx::interrupt irq_handles[INTERRUPTER_COUNT];
   // actual number of interrupts we are using
-  uint32_t num_interrupts;
+  uint32_t num_interrupts = 0;
 
   std::optional<ddk::MmioBuffer> mmio;
 
@@ -136,14 +136,14 @@ struct xhci_t {
   pci_protocol_t pci = {};
 
   // MMIO data structures
-  xhci_cap_regs_t* cap_regs;
-  xhci_op_regs_t* op_regs;
-  volatile uint32_t* doorbells;
-  xhci_runtime_regs_t* runtime_regs;
+  xhci_cap_regs_t* cap_regs = nullptr;
+  xhci_op_regs_t* op_regs = nullptr;
+  volatile uint32_t* doorbells = nullptr;
+  xhci_runtime_regs_t* runtime_regs = nullptr;
 
   // DMA data structures
-  uint64_t* dcbaa;
-  zx_paddr_t dcbaa_phys;
+  uint64_t* dcbaa = nullptr;
+  zx_paddr_t dcbaa_phys = 0;
 
   xhci_transfer_ring_t command_ring = {};
   fbl::Mutex command_ring_lock;
@@ -155,14 +155,14 @@ struct xhci_t {
   erst_entry_t* erst_arrays[INTERRUPTER_COUNT] = {};
   zx_paddr_t erst_arrays_phys[INTERRUPTER_COUNT] = {};
 
-  size_t page_size;
-  uint32_t max_slots;
-  size_t context_size;
+  size_t page_size = 0;
+  uint32_t max_slots = 0;
+  size_t context_size = 0;
   // true if controller supports large ESIT payloads
   bool large_esit = false;
 
   // total number of ports for the root hub
-  uint8_t rh_num_ports;
+  uint8_t rh_num_ports = 0;
 
   // state for virtual root hub devices
   // one for USB 2.0 and the other for USB 3.0
@@ -178,7 +178,7 @@ struct xhci_t {
   xhci_usb_legacy_support_cap_t* usb_legacy_support_cap = nullptr;
 
   // device thread stuff
-  thrd_t device_thread;
+  thrd_t device_thread = 0;
   fbl::Array<xhci_slot_t> slots;
 
   // for command processing in xhci-device-manager.c
@@ -187,16 +187,16 @@ struct xhci_t {
   sync_completion_t command_queue_completion;
 
   // DMA buffers used by xhci_device_thread in xhci-device-manager.c
-  uint8_t* input_context;
-  zx_paddr_t input_context_phys;
+  uint8_t* input_context = nullptr;
+  zx_paddr_t input_context_phys = 0;
   fbl::Mutex input_context_lock;
 
   // for xhci_get_current_frame()
   fbl::Mutex mfindex_mutex;
   // number of times mfindex has wrapped
-  uint64_t mfindex_wrap_count;
+  uint64_t mfindex_wrap_count = 0;
   // time of last mfindex wrap
-  zx_time_t last_mfindex_wrap;
+  zx_time_t last_mfindex_wrap = 0;
 
   // VMO buffer for DCBAA and ERST array
   ddk::IoBuffer dcbaa_erst_buffer;
