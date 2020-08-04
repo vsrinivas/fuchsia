@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io' show Directory, File, FileSystemException, Platform, IOSink;
+import 'dart:io';
 
 /// Supports dumping a trace of data received in various facades as
 /// timestamped files into a directory in the filesystem.
@@ -15,24 +15,20 @@ class Dump {
   /// passed nor set in the environment, in which case no dumps are written.
   final String _dumpDirectory;
 
-  /// Not supplying a dumpDirectory parameter, or supplying null, or
-  /// supplying an empty string, means the dump directory specification
-  /// is taken from the environment. If that's not specified, or is
-  /// specified to be the empty string, dump is disabled.
+  /// Not supplying a [dumpDirectory] parameter, or supplying null, or an empty
+  /// string, means the dump directory specification is taken from the
+  /// environment. If that's not specified, or is specified to be the empty
+  /// string, dump is disabled.
   ///
   /// If dump is not disabled, then the dump directory specification
-  /// must be valid in that it designates a directory that exists by an
-  /// absolute path name. It's asserted below; invalid specification
-  /// causes to crash.
+  /// must be valid in that it designates a directory by an absolute path name
+  /// that must either already exist, or be amenable to be created by this
+  /// constructor.
   ///
-  /// The dump directory must be given by an absolute path. A relative
-  /// path is ambiguous, because it's not clear relative to what. It
-  /// would normally be the current working directory, but other
-  /// relative paths in this library are resolved relative to the
-  /// location of the binary.
-  ///
-  /// To easily supply a path relative to the current working directory
-  /// on the command line, use $(pwd).
+  /// The [dumpDirectory] must be an absolute path. A relative path is
+  /// ambiguous, because it's not clear relative to what. It would normally be
+  /// the current working directory, but other relative paths in this library
+  /// are resolved relative to the location of the binary.
   Dump([String dumpDirectory])
       : _dumpDirectory = _notEmptyString(dumpDirectory)
             ? dumpDirectory
@@ -43,10 +39,12 @@ class Dump {
         throw ArgumentError.value(_dumpDirectory, 'Must be absolute path');
       }
 
-      // Has to be sync because this is a constructor.
-      if (!Directory(_dumpDirectory).existsSync()) {
-        throw FileSystemException(
-            'Not found or not a directory', _dumpDirectory);
+      // Has to use sync operations because this is a constructor.
+      final directory = Directory(_dumpDirectory);
+      if (!directory.existsSync()) {
+        // Try to create the directory. This will throw if it fails to create
+        // the directory.
+        directory.createSync(recursive: true);
       }
     }
   }
