@@ -140,7 +140,10 @@ important configurations to be familiar with:
   [paved](#what-is-paving) fashion), and is great for working on very
   low-level facilities, such as the Zircon kernel or board-specific drivers
   and configurations. It lacks most network capabilities, and therefore is
-  not able to add new software at runtime or upgrade itself.
+  not able to add new software at runtime or upgrade itself. This also means
+  some `fx` commands such as <code>[fx serve](#serve-a-build)</code> and
+  <code>[fx shell](#connect-to-a-target-shell)</code> cannot be used with
+  the `bringup` product.
 * `core` is a minimal feature set that can install additional software (such as
   items added to the "universe" dependency set). It is the starting point for
   all higher-level product configurations. It has common network capabilities

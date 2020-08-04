@@ -6,41 +6,47 @@ Note: The Fuchsia source includes Zircon. See Fuchsia's
 [Getting Started](/docs/getting_started.md) documentation.
 
 
-This guide assumes that the Fuchsia project is checked out into $FUCHSIA_DIR,
+This guide assumes that the Fuchsia project is checked out into `$FUCHSIA_DIR`,
 and `fx` has been configured.
 
 ## Build Zircon with the default toolchain
 
 The `fx` command wraps the various tools used to configure, build and interact with Fuchsia.
-The `fx set` is used to specify the "bringup" product and the board architecture. The "bringup"
-product identifies the Zircon components and excludes all other Fuchsia components from the build.
-For example, to build Zircon for arm64:
+The `fx set` command is used to specify the product and the board architecture. For example,
+to set your build target to be Zircon for `arm64`, run the following command:
 
 ```sh
 fx set bringup.arm64
 ```
 
-Fuchsia uses the concept of [products](/docs/concepts/build_system/boards_and_products.md#products) to
-create a collection of build targets. The "bringup" product is the smallest product,
-other product configurations can be listed by running:
+Fuchsia uses the concept of [products](/docs/concepts/build_system/boards_and_products.md#products)
+to create a collection of build targets. The `bringup` product is the smallest product
+with a minimal feature set. The `bringup` product identifies only the Zircon components and
+excludes all other Fuchsia components from the build. For instance, becasue it lacks most
+network capabilities, the `bringup` product cannot use the `fx` commands, such as
+<code>[fx serve](/docs/development/build/fx.md#serve-a-build)</code>
+and <code>[fx shell](/docs/development/build/fx.md#connect-to-a-target-shell)</code>,
+that require network connectivity.
+
+The following command prints a list of other product configurations:
 
 ```sh
 fx list-products
 ```
 
-The defined board architectures are listed by running:
+The following command prints a list of the defined board architectures:
 
 ```sh
 fx list-boards
 ```
 
-To execute the build:
+To execute the build, run the following command:
 
 ```sh
 fx build
 ```
 
-The build results are saved in $FUCHSIA_DIR/out/default.zircon.
+The build results are saved in `$FUCHSIA_DIR/out/default.zircon`.
 
 ## Explicitly set the target toolchain
 
@@ -58,8 +64,8 @@ You can also enable asan by using the variant flag.
 
 You can build for all targets with `fx multi` and using
 a file that contains all the specifications to build. The output
-for each target is found in $FUCHSIA_DIR/out/<product>.<board>.variant.
-An example of a multi build spec is [bringup-cq](/tools/devshell/lib/multi-specs/bringup-cq)
+for each target is found in `$FUCHSIA_DIR/out/<product>.<board>.variant`.
+An example of a multi build spec is <code>[bringup-cq](/tools/devshell/lib/multi-specs/bringup-cq)</code>
 which approximates what is built for a CQ test.
 
 Please build for all targets before submitting to ensure builds work
@@ -164,7 +170,7 @@ the build.  It can assemble a bootfs image for either source directories (in whi
 case every file in the specified directory and its subdirectories are included) or
 via a manifest file which specifies on a file-by-file basis which files to include.
 
-```
+```none
 $BUILDDIR/tools/zbi -o extra.bootfs @/path/to/directory
 
 echo "issue.txt=/etc/issue" > manifest
@@ -195,7 +201,7 @@ it and send a system image to it.
 If you have a device (for example a Broadwell or Skylake Intel NUC) running
 GigaBoot20x6, first [create a USB drive](/docs/development/hardware/usb_setup.md).
 
-```
+```none
 $BUILDDIR/tools/bootserver $BUILDDIR/zircon.bin
 
 # if you have an extra bootfs image (see above):
@@ -226,7 +232,7 @@ For now, if you're running Zircon on QEMU with the -N flag or running on hardwar
 with a supported ethernet interface (ASIX USB Dongle or Intel Ethernet on NUC),
 the loglistener tool will observe logs broadcast over the local link:
 
-```
+```none
 $BUILDDIR/tools/loglistener
 ```
 
@@ -237,3 +243,4 @@ For random tips on debugging in the zircon environment see
 
 ## Contribute changes
 * See [CONTRIBUTING.md](/CONTRIBUTING.md#contributing-patches-to-zircon)
+

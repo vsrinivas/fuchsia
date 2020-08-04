@@ -77,7 +77,9 @@ important configurations to be familiar with:
   fashion), and is great for working on very low-level facilities, such as
   the Zircon kernel or board-specific drivers and configurations. It lacks
   most network capabilities, and therefore is not able to add new software at
-  runtime or upgrade itself.
+  runtime or upgrade itself. This also means some `fx` commands such as
+  <code>[fx serve][fx-serve]</code> and <code>[fx shell][fx-shell]</code>
+  cannot be used with the `bringup` product.
 * `core` is a minimal feature set that can install additional software (such as
   items added to the "universe" dependency set). It is the starting point for
   all higher-level product configurations. It has common network capabilities
@@ -91,3 +93,6 @@ important configurations to be familiar with:
 [fx]: /docs/development/build/fx.md
 [fx-netboot]: /docs/development/build/fx.md#what-is-netbooting
 [fx-paving]: /docs/development/build/fx.md#what-is-paving
+[fx-serve]: /docs/development/build/fx.md#serve-a-build
+[fx-shell]: /docs/development/build/fx.md#connect-to-a-target-shell
+
