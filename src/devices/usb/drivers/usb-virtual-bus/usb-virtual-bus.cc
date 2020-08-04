@@ -80,21 +80,20 @@ zx_status_t UsbVirtualBus::CreateHost() {
   return ZX_OK;
 }
 
-zx_status_t UsbVirtualBus::Init() {
-  auto status = DdkAdd("usb-virtual-bus", DEVICE_ADD_NON_BINDABLE);
-  if (status != ZX_OK) {
-    return status;
-  }
+zx_status_t UsbVirtualBus::Init() { return DdkAdd("usb-virtual-bus", DEVICE_ADD_NON_BINDABLE); }
+
+void UsbVirtualBus::DdkInit(ddk::InitTxn txn) {
+  device_thread_started_ = true;
 
   int rc = thrd_create_with_name(
       &device_thread_,
       [](void* arg) -> int { return reinterpret_cast<UsbVirtualBus*>(arg)->DeviceThread(); },
       reinterpret_cast<void*>(this), "usb-virtual-bus-device-thread");
   if (rc != thrd_success) {
-    DdkRemoveDeprecated();
-    return ZX_ERR_INTERNAL;
+    device_thread_started_ = false;
+    return txn.Reply(ZX_ERR_INTERNAL);
   }
-  return ZX_OK;
+  return txn.Reply(ZX_OK);
 }
 
 int UsbVirtualBus::DeviceThread() {
@@ -116,6 +115,14 @@ int UsbVirtualBus::DeviceThread() {
             complete_reqs_pending.push(std::move(req.value()));
           }
         }
+        // We need to wait for all control requests to complete before completing the unbind.
+        if (num_pending_control_reqs_ > 0) {
+          complete_unbind_signal_.Wait(&device_lock_);
+        }
+        // At this point, all pending control requests have been completed,
+        // and any queued requests wil be immediately completed with an error.
+        ZX_DEBUG_ASSERT(unbind_txn_.has_value());
+        unbind_txn_->Reply();
         return 0;
       }
       usb::BorrowedRequestQueue<void> aborted_requests;
@@ -193,6 +200,15 @@ void UsbVirtualBus::HandleControl(Request request) {
     status = ZX_ERR_UNAVAILABLE;
   }
 
+  {
+    fbl::AutoLock device_lock(&device_lock_);
+    num_pending_control_reqs_--;
+    if (unbinding_ && num_pending_control_reqs_ == 0) {
+      // The worker thread is waiting for the control request to complete.
+      complete_unbind_signal_.Signal();
+    }
+  }
+
   request.Complete(status, actual);
 }
 
@@ -267,26 +283,35 @@ zx_status_t UsbVirtualBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void UsbVirtualBus::DdkUnbindDeprecated() {
+void UsbVirtualBus::DdkUnbindNew(ddk::UnbindTxn txn) {
+  if (!device_thread_started_) {
+    // Initialization failed, nothing to shut down.
+    return txn.Reply();
+  }
   {
     fbl::AutoLock lock(&lock_);
     fbl::AutoLock lock2(&device_lock_);
     unbinding_ = true;
-    thread_signal_.Signal();
+    // The device thread will reply to the unbind txn when ready.
+    unbind_txn_ = std::move(txn);
+    device_signal_.Signal();
   }
-  thrd_join(device_thread_, nullptr);
-
   auto* host = host_.release();
   if (host) {
-    host->DdkRemoveDeprecated();
+    host->DdkAsyncRemove();
   }
   auto* device = device_.release();
   if (device) {
-    device->DdkRemoveDeprecated();
+    device->DdkAsyncRemove();
   }
 }
 
-void UsbVirtualBus::DdkRelease() { delete this; }
+void UsbVirtualBus::DdkRelease() {
+  if (device_thread_started_) {
+    thrd_join(device_thread_, nullptr);
+  }
+  delete this;
+}
 
 zx_status_t UsbVirtualBus::UsbDciCancelAll(uint8_t endpoint) {
   uint8_t index = EpAddressToIndex(endpoint);
@@ -323,6 +348,10 @@ void UsbVirtualBus::UsbDciRequestQueue(usb_request_t* req,
   // The same is not true for the host side, which is why these are different.
 
   fbl::AutoLock lock(&device_lock_);
+  if (unbinding_) {
+    request.Complete(ZX_ERR_IO_REFUSED, 0);
+    return;
+  }
   eps_[index].device_reqs.push(std::move(request));
 
   device_signal_.Signal();
@@ -375,8 +404,9 @@ void UsbVirtualBus::UsbHciRequestQueue(usb_request_t* req,
   }
   bool connected;
   fbl::AutoLock l(&connection_lock_);
+  fbl::AutoLock device_lock(&device_lock_);
   connected = connected_;
-  if (!connected) {
+  if (!connected || unbinding_) {
     request.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
     return;
   }
@@ -388,14 +418,15 @@ void UsbVirtualBus::UsbHciRequestQueue(usb_request_t* req,
     return;
   }
   if (index) {
-    fbl::AutoLock l(&device_lock_);
     ep->host_reqs.push(std::move(request));
     device_signal_.Signal();
   } else {
+    num_pending_control_reqs_++;
     // Control messages are a VERY special case.
     // They are synchronous; so we shouldn't dispatch them
     // to an I/O thread.
     // We can't hold a lock when responding to a control request
+    device_lock.release();
     l.release();
     HandleControl(std::move(request));
   }
@@ -498,10 +529,10 @@ void UsbVirtualBus::Disable(DisableCompleter::Sync completer) {
     device = device_.release();
   }
   if (host) {
-    host->DdkRemoveDeprecated();
+    host->DdkAsyncRemove();
   }
   if (device) {
-    device->DdkRemoveDeprecated();
+    device->DdkAsyncRemove();
   }
   completer.Reply(ZX_OK);
 }

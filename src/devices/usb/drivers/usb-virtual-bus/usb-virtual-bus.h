@@ -10,6 +10,7 @@
 #include <threads.h>
 
 #include <memory>
+#include <optional>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -28,7 +29,8 @@ namespace usb_virtual_bus {
 class UsbVirtualBus;
 class UsbVirtualDevice;
 class UsbVirtualHost;
-using UsbVirtualBusType = ddk::Device<UsbVirtualBus, ddk::UnbindableDeprecated, ddk::Messageable>;
+using UsbVirtualBusType =
+    ddk::Device<UsbVirtualBus, ddk::Initializable, ddk::UnbindableNew, ddk::Messageable>;
 
 // This is the main class for the USB virtual bus.
 class UsbVirtualBus : public UsbVirtualBusType,
@@ -39,8 +41,9 @@ class UsbVirtualBus : public UsbVirtualBusType,
   static zx_status_t Create(zx_device_t* parent);
 
   // Device protocol implementation.
+  void DdkInit(ddk::InitTxn txn);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
   // USB device controller protocol implementation.
@@ -78,6 +81,9 @@ class UsbVirtualBus : public UsbVirtualBusType,
   void Connect(ConnectCompleter::Sync completer);
   void Disconnect(DisconnectCompleter::Sync completer);
 
+  // Public for unit tests.
+  void SetConnected(bool connected);
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbVirtualBus);
 
@@ -95,7 +101,6 @@ class UsbVirtualBus : public UsbVirtualBusType,
   zx_status_t Init();
   zx_status_t CreateDevice();
   zx_status_t CreateHost();
-  void SetConnected(bool connected);
   int DeviceThread();
   void HandleControl(Request req);
   zx_status_t SetStall(uint8_t ep_address, bool stall);
@@ -113,9 +118,9 @@ class UsbVirtualBus : public UsbVirtualBusType,
   usb_virtual_ep_t eps_[USB_MAX_EPS];
 
   thrd_t device_thread_;
+  bool device_thread_started_ = false;
   // Host-side lock
   fbl::Mutex lock_;
-  fbl::ConditionVariable thread_signal_ __TA_GUARDED(lock_);
 
   // Device-side lock
   fbl::Mutex device_lock_ __TA_ACQUIRED_AFTER(lock_);
@@ -125,6 +130,13 @@ class UsbVirtualBus : public UsbVirtualBusType,
   bool connected_ __TA_GUARDED(connection_lock_) = false;
   // Used to shut down our thread when this driver is unbinding.
   bool unbinding_ __TA_GUARDED(device_lock_) = false;
+  std::optional<ddk::UnbindTxn> unbind_txn_;
+  // Tracks the number of control requests currently in progress.
+  size_t num_pending_control_reqs_ __TA_GUARDED(device_lock_) = 0;
+  // Signalled once the device is ready to complete unbinding.
+  // This is once all pending control requests have completed,
+  // and any newly queued requests would be immediately completed with an error.
+  fbl::ConditionVariable complete_unbind_signal_ __TA_GUARDED(device_lock_);
 };
 
 }  // namespace usb_virtual_bus
