@@ -27,6 +27,7 @@ group("tests") {
     "//src/tests/fidl_go_conformance:tests",
     "//third_party/go:go_fidl_tests",
     "//tools/fidl:tests",
+    "//topaz/bin/fidl_bindings_test/test:fidl_bindings_test",
     "//topaz/tests/dart_fidl_benchmarks",
     "//zircon/system/ulib/fidl-async-2/test",
     "//zircon/system/utest/fidl-compiler($host_toolchain)",
