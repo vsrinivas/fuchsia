@@ -140,8 +140,11 @@ protocol RemoteService {
     /// supported.
     ///
     /// This operation fails if the characteristic does not have the "notify" or
-    /// "indicate" property or does not contain a Client Characteristic
-    /// Configuration descriptor.
+    /// "indicate" property.
+    ///
+    /// A write request will be issued to configure the characteristic for notifications/indications
+    /// if it contains a Client Characteristic Configuration descriptor. This method fails if an
+    /// error occurs while writing to the descriptor.
     ///
     /// On success, the OnCharacteristicValueUpdated event will be sent whenever
     /// the peer sends a notification or indication. The local host will
