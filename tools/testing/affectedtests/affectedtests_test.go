@@ -17,28 +17,46 @@ import (
 
 var testDataFlag = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
 
-func TestCoreDot(t *testing.T) {
-	srcs := []string{"garnet/bin/log_listener/src/main.rs"}
-	testsJSONContents, err := ioutil.ReadFile(filepath.Join(*testDataFlag, "core", "tests.json"))
+func TestCoreDOT(t *testing.T) {
+	jsonPath := filepath.Join(*testDataFlag, "core", "tests.json")
+	testsJSONContents, err := ioutil.ReadFile(jsonPath)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to read file %q: %s", jsonPath, err)
 	}
 	var testSpecs []build.TestSpec
 	if err = json.Unmarshal(testsJSONContents, &testSpecs); err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to unmarshal test JSON: %s", err)
 	}
-	dotFileContents, err := ioutil.ReadFile(filepath.Join(*testDataFlag, "core", "ninja.dot"))
+	dotPath := filepath.Join(*testDataFlag, "core", "ninja.dot")
+	dotFileContents, err := ioutil.ReadFile(dotPath)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to read file %q: %s", dotPath, err)
 	}
 
-	want := []string{
-		"fuchsia-pkg://fuchsia.com/log_listener_tests#meta/log_listener_bin_test.cmx",
-		"fuchsia-pkg://fuchsia.com/log_listener_tests#meta/log_listener_return_code_test.cmx",
-	}
-
-	actual := AffectedTests(srcs, testSpecs, dotFileContents)
-	if !reflect.DeepEqual(want, actual) {
-		t.Errorf("AffectedTests(...) = %v; want %v`", actual, want)
+	for _, tc := range []struct {
+		desc string
+		srcs []string
+		want []string
+	}{
+		{
+			desc: "multiple affected tests",
+			srcs: []string{"garnet/bin/log_listener/src/main.rs"},
+			want: []string{
+				"fuchsia-pkg://fuchsia.com/log_listener_tests#meta/log_listener_bin_test.cmx",
+				"fuchsia-pkg://fuchsia.com/log_listener_tests#meta/log_listener_return_code_test.cmx",
+			},
+		},
+		{
+			desc: "change to node from the bottom of the DOT file",
+			srcs: []string{"src/sys/component_index/src/main.rs"},
+			want: []string{"fuchsia-pkg://fuchsia.com/component_index_tests#meta/component_index_tests.cmx"},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			actual := AffectedTests(tc.srcs, testSpecs, dotFileContents)
+			if !reflect.DeepEqual(tc.want, actual) {
+				t.Errorf("AffectedTests(%v, _, _) = %v; want %v", tc.srcs, actual, tc.want)
+			}
+		})
 	}
 }

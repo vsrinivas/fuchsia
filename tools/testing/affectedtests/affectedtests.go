@@ -36,6 +36,9 @@ func AffectedTests(srcs []string, testSpecs []build.TestSpec, dotBytes []byte) [
 	dotLines := strings.Split(string(dotBytes), "\n")
 	const chunkSize = 10_000
 	chunksCount := len(dotLines) / chunkSize
+	if len(dotLines)%chunkSize > 0 {
+		chunksCount++
+	}
 
 	// Parse nodes
 	nodeToOutputCh := make(chan map[int64]string)
