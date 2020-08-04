@@ -280,7 +280,7 @@ See what the reverser definition is:
    In [reverser.dart][dart-part1-reverser]:
 
    ```dart
-   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/src/reverser.dart" region_tag="reverser_impl" adjust_indentation="auto" %}
+   {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_1/lib/reverser.dart" region_tag="reverser_impl" adjust_indentation="auto" %}
    ```
 
    This class implements the `Reverser` protocol. A helper method called `getDefaultBinder` returns
@@ -621,8 +621,8 @@ is even being handled by your component.
       and [reverser.cc][part1-reverser-cc]:
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_import" adjust_indentation="auto" %}
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_import" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_update_reverser" adjust_indentation="auto" %}
       ```
 
 3. Add a property to keep track of the number of connections:
@@ -653,7 +653,7 @@ is even being handled by your component.
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_add_connection_count" adjust_indentation="auto" %}
       ```
 
    This snippet demonstrates creating a new `UintProperty` (containing a 64
@@ -723,7 +723,7 @@ implementation itself. In particular, it will be helpful to know:
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_connection_child" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_connection_child" adjust_indentation="auto" %}
       ```
 
    This will create unique names starting with "connection".
@@ -810,7 +810,7 @@ The output above shows that the connection is still open and it received one req
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/src/reverser.dart" region_tag="part_1_result" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/src/reverser.dart" region_tag="part_1_result" adjust_indentation="auto" %}
       ```
 
 2. Run the client again:
@@ -1580,7 +1580,7 @@ This section is under construction.
 [inspect-dart-codelab]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab
 [dart-part1]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1
 [dart-part1-main]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/lib/main.dart
-[dart-part1-reverser]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/lib/src/reverser.dart
+[dart-part1-reverser]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/lib/reverser.dart
 [dart-part1-build]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_1/BUILD.gn
 [dart-client-main]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/client/lib/main.dart#9
 [dart-part2-meta]: https://fuchsia.googlesource.com/topaz/+/master/public/dart/fuchsia_inspect/codelab/part_2/meta/inspect_dart_codelab_part_2.cmx
