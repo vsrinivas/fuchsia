@@ -59,22 +59,6 @@ executable("agent_session_restart_test") {
     "//third_party/googletest:gmock",
   ]
 }
-executable("last_focus_time_test") {
-  testonly = true
-
-  output_name = "last_focus_time_test"
-
-  sources = [ "last_focus_time_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//src/modular/lib/testing:session_shell_impl",
-    "//third_party/googletest:gmock",
-  ]
-}
 
 executable("sessionctl_test") {
   testonly = true
@@ -330,10 +314,6 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "last_focus_time_test"
-      environments = basic_envs
-    },
-    {
       name = "session_shell_test"
       environments = basic_envs
     },
@@ -387,7 +367,6 @@ test_package("modular_integration_tests") {
     ":inspect_session_test",
     ":intents_test",
     ":intl_property_provider_test",
-    ":last_focus_time_test",
     ":module_context_test",
     ":session_shell_test",
     ":sessionctl_test",
