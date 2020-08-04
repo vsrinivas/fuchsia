@@ -235,6 +235,11 @@ class FuchsiaTestCommand {
           requiresPadding: false,
         ));
       }
+    } else {
+      emitEvent(TestInfo(
+        'Make sure this test is transitively in your \'fx set\' arguments. See https://fuchsia.dev/fuchsia-src/development/testing/faq for more information.',
+        requiresPadding: false,
+      ));
     }
   }
 
