@@ -38,6 +38,7 @@
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
+            "fuchsia.feedback.DataProvider",
             "fuchsia.fonts.Provider",
             "fuchsia.hardware.camera.Device",
             "fuchsia.hardware.gpio.Gpio",

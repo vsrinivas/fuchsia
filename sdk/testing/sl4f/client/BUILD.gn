@@ -22,6 +22,7 @@ dart_library("client") {
     "src/dump.dart",
     "src/exceptions.dart",
     "src/factory_store.dart",
+    "src/feedback_data_provider.dart",
     "src/input.dart",
     "src/inspect.dart",
     "src/modular.dart",
@@ -56,6 +57,7 @@ dart_library("client") {
   ]
 
   deps = [
+    "//third_party/dart-pkg/pub/archive",
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/logging",
@@ -74,6 +76,7 @@ dart_test("sl4f_client_tests") {
     "device_test.dart",
     "dump_test.dart",
     "factory_store_test.dart",
+    "feedback_data_provider_test.dart",
     "input_test.dart",
     "inspect_test.dart",
     "modular_test.dart",

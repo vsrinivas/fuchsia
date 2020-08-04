@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+
+dart_test("bugreport_test") {
+  sources = [ "bugreport_test.dart" ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  environments = []
+  if (is_host && target_cpu == "x64") {
+    environments = [ emu_env ]
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":bugreport_test($host_toolchain)" ]
+}

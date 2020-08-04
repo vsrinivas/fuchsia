@@ -71,6 +71,9 @@ use crate::factory_reset::facade::FactoryResetFacade;
 // Factory related includes
 use crate::factory_store::facade::FactoryStoreFacade;
 
+// Feedback related includes
+use crate::feedback_data_provider::facade::FeedbackDataProviderFacade;
+
 // File related includes
 use crate::file::facade::FileFacade;
 
@@ -208,6 +211,7 @@ impl Sl4f {
                 "device_facade" => DeviceFacade::new(),
                 "factory_reset_facade" => FactoryResetFacade::new(),
                 "factory_store_facade" => FactoryStoreFacade::new(),
+                "feedback_data_provider_facade" => FeedbackDataProviderFacade::new(),
                 "file_facade" => FileFacade::new(),
                 "gatt_client_facade" => GattClientFacade::new(),
                 "gatt_server_facade" => GattServerFacade::new(),
@@ -273,12 +277,12 @@ impl Sl4f {
                         | Err(fidl::Error::ClientRead(zx::Status::PEER_CLOSED))
                             if proxied_facades.is_empty() =>
                         {
-                            break
+                            break;
                         }
                         Err(error) => {
                             fx_log_err!("Failed to get proxied facade list: {}", error);
                             proxied_facades.clear();
-                            break
+                            break;
                         }
                     };
                 }
