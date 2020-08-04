@@ -61,6 +61,10 @@
          "max_severity": "ERROR"
       },
       {
+         "url": "fuchsia-pkg://fuchsia.com/audio_core_hardware_tests#meta/audio_core_hardware_tests.cmx",
+         "max_severity": "ERROR"
+      },
+      {
          "url": "fuchsia-pkg://fuchsia.com/audio_core_unittests#meta/audio_core_unittests.cmx",
          "max_severity": "FATAL"
       },
