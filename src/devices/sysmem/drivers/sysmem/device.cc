@@ -111,21 +111,18 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
 class ExternalMemoryAllocator : public MemoryAllocator {
  public:
   ExternalMemoryAllocator(zx::channel connection, std::unique_ptr<async::Wait> wait_for_close)
-      : connection_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {}
+      : heap_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {}
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
-    zx::vmo result_vmo;
-    zx_status_t status2 = ZX_OK;
-    zx_status_t status = fuchsia_sysmem_HeapAllocateVmo(connection_.get(), size, &status2,
-                                                        result_vmo.reset_and_get_address());
-    if (status != ZX_OK || status2 != ZX_OK) {
-      DRIVER_ERROR("HeapAllocate() failed - status: %d status2: %d", status, status2);
+    auto result = heap_.AllocateVmo(size);
+    if (!result.ok() || result.value().s != ZX_OK) {
+      DRIVER_ERROR("HeapAllocate() failed - status: %d status2: %d", result.status(),
+                   result.value().s);
       // sanitize to ZX_ERR_NO_MEMORY regardless of why.
-      status = ZX_ERR_NO_MEMORY;
-      return status;
+      return ZX_ERR_NO_MEMORY;
     }
-
+    zx::vmo result_vmo = std::move(result.value().vmo);
     constexpr const char vmo_name[] = "Sysmem-external-heap";
     result_vmo.set_property(ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
     *parent_vmo = std::move(result_vmo);
@@ -142,18 +139,14 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return status;
     }
 
-    zx_status_t status2;
-    uint64_t id;
-    status = fuchsia_sysmem_HeapCreateResource(connection_.get(), child_vmo_copy.release(),
-                                               &status2, &id);
-    if (status != ZX_OK || status2 != ZX_OK) {
-      DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", status, status2);
+    auto result = heap_.CreateResource(std::move(child_vmo_copy));
+    if (!result.ok() || result.value().s != ZX_OK) {
+      DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", result.status(),
+                   result.value().s);
       // sanitize to ZX_ERR_NO_MEMORY regardless of why.
-      status = ZX_ERR_NO_MEMORY;
-      return status;
+      return ZX_ERR_NO_MEMORY;
     }
-
-    allocations_[parent_vmo.get()] = id;
+    allocations_[parent_vmo.get()] = result.value().id;
     return ZX_OK;
   }
 
@@ -164,9 +157,9 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return;
     }
     auto id = it->second;
-    zx_status_t status = fuchsia_sysmem_HeapDestroyResource(connection_.get(), id);
-    if (status != ZX_OK) {
-      DRIVER_ERROR("HeapDestroyResource() failed - status: %d", status);
+    auto result = heap_.DestroyResource(id);
+    if (!result.ok()) {
+      DRIVER_ERROR("HeapDestroyResource() failed - status: %d", result.status());
       // fall-through - this can only fail because resource has
       // already been destroyed.
     }
@@ -180,7 +173,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
   }
 
  private:
-  zx::channel connection_;
+  llcpp::fuchsia::sysmem::Heap::SyncClient heap_;
   std::unique_ptr<async::Wait> wait_for_close_;
   // From parent vmo handle to ID.
   std::map<zx_handle_t, uint64_t> allocations_;

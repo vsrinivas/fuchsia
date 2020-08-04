@@ -7,9 +7,6 @@ library fuchsia.sysmem;
 using zx;
 
 /// Manages resources on a specific sysmem heap.
-///
-/// Needs ForDeprecatedCBindings because used with "FIDL Simple C Bindings".
-[ForDeprecatedCBindings]
 protocol Heap {
     /// Request a new memory allocation of `size` on heap.
     /// For heaps which don't permit CPU access to the buffer data, this
