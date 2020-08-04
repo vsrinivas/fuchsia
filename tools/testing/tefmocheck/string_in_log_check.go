@@ -114,6 +114,10 @@ func driverHostCrash(hostName, exceptHost string) *stringInLogCheck {
 
 // StringInLogsChecks returns checks to detect bad strings in certain logs.
 func StringInLogsChecks() (ret []FailureModeCheck) {
+	// For fxbug.dev/57548.
+	// Hardware watchdog tripped, should not happen.
+	// This string is specified in u-boot.
+	ret = append(ret, &stringInLogCheck{String: "reboot_mode=watchdog_reboot", Type: serialLogType})
 	// For fxbug.dev/47649.
 	ret = append(ret, &stringInLogCheck{String: "kvm run failed Bad address", Type: swarmingOutputType})
 	// For fxbug.dev/44779.
@@ -132,9 +136,9 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/57463.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/43355
+	// For fxbug.dev/43355.
 	ret = append(ret, &stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: swarmingOutputType})
-	// For fxbug.dev/53854
+	// For fxbug.dev/53854.
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
 	// For fxbug.dev/56494.
