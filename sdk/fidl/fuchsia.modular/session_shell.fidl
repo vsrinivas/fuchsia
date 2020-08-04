@@ -55,8 +55,6 @@ struct ViewIdentifier {
 [Discoverable]
 protocol SessionShellContext {
     GetComponentContext(request<ComponentContext> request);
-    GetFocusController(request<FocusController> request);
-    GetFocusProvider(request<FocusProvider> request);
     GetPresentation(request<fuchsia.ui.policy.Presentation> request);
     GetStoryProvider(request<StoryProvider> request);
 

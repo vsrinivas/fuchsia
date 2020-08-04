@@ -75,9 +75,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // |fuchsia::modular::SessionShellContext|
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
-  void GetFocusController(
-      fidl::InterfaceRequest<fuchsia::modular::FocusController> request) override;
-  void GetFocusProvider(fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) override;
   void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) override;
   void Logout() override;

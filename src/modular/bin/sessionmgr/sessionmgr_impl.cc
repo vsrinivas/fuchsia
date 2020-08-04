@@ -410,16 +410,6 @@ void SessionmgrImpl::GetComponentContext(
   session_shell_component_context_impl_->Connect(std::move(request));
 }
 
-void SessionmgrImpl::GetFocusController(
-    fidl::InterfaceRequest<fuchsia::modular::FocusController> request) {
-  focus_handler_->AddControllerBinding(std::move(request));
-}
-
-void SessionmgrImpl::GetFocusProvider(
-    fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
-  focus_handler_->AddProviderBinding(std::move(request));
-}
-
 void SessionmgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
   session_context_->GetPresentation(std::move(request));

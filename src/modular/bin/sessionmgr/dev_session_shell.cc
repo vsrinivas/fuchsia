@@ -49,7 +49,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     component_context->svc()->Connect(puppet_master_.NewRequest());
     component_context->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    session_shell_context_->GetFocusController(focus_controller_.NewRequest());
 
     component_context->outgoing()->AddPublicService(session_shell_bindings_.GetHandler(this));
 
@@ -114,7 +113,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     FX_LOGS(INFO) << "DevSessionShell Starting story with id: " << story_id;
 
     story_controller_->RequestStart();
-    focus_controller_->Set(story_id);
   }
 
   // |SessionShell|
@@ -159,7 +157,6 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
   fuchsia::modular::StoryPuppetMasterPtr story_puppet_master_;
   fuchsia::modular::StoryProviderPtr story_provider_;
   fuchsia::modular::StoryControllerPtr story_controller_;
-  fuchsia::modular::FocusControllerPtr focus_controller_;
 
   fidl::Binding<fuchsia::modular::StoryWatcher> story_watcher_binding_;
 
