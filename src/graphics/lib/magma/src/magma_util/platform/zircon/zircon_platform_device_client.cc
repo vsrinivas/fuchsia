@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include "magma_util/dlog.h"
@@ -22,11 +22,13 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
 
     uint32_t device_handle;
     uint32_t device_notification_handle;
-    zx_status_t status =
-        fuchsia_gpu_magma_DeviceConnect(channel_.get(), magma::PlatformThreadId().id(),
-                                        &device_handle, &device_notification_handle);
-    if (status != ZX_OK)
-      return DRETP(nullptr, "magma_DeviceConnect failed: %d", status);
+    auto result = llcpp::fuchsia::gpu::magma::Device::Call::Connect(channel_.borrow(),
+                                                                    magma::PlatformThreadId().id());
+    if (result.status() != ZX_OK)
+      return DRETP(nullptr, "magma_DeviceConnect failed: %d", result.status());
+
+    device_handle = result->primary_channel.release();
+    device_notification_handle = result->notification_channel.release();
 
     uint64_t max_inflight_messages = magma::upper_32_bits(inflight_params);
     uint64_t max_inflight_bytes = magma::lower_32_bits(inflight_params) * 1024 * 1024;
@@ -36,20 +38,28 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
   }
 
   bool Query(uint64_t query_id, uint64_t* result_out) {
-    zx_status_t status = fuchsia_gpu_magma_DeviceQuery(channel_.get(), query_id, result_out);
+    auto result = llcpp::fuchsia::gpu::magma::Device::Call::Query2(channel_.borrow(), query_id);
 
-    if (status != ZX_OK)
-      return DRETF(false, "magma_DeviceQuery failed: %d", status);
+    if (result.status() != ZX_OK)
+      return DRETF(false, "magma_DeviceQuery failed: %d", result.status());
+    if (result->result.is_err())
+      return DRETF(false, "Got error response: %d", result->result.err());
 
+    *result_out = result->result.response().result;
     return true;
   }
 
   bool QueryReturnsBuffer(uint64_t query_id, magma_handle_t* buffer_out) {
     *buffer_out = ZX_HANDLE_INVALID;
-    zx_status_t status =
-        fuchsia_gpu_magma_DeviceQueryReturnsBuffer(channel_.get(), query_id, buffer_out);
-    if (status != ZX_OK)
-      return DRETF(false, "magma_DeviceQueryReturnsBuffer failed: %d", status);
+    auto result =
+        llcpp::fuchsia::gpu::magma::Device::Call::QueryReturnsBuffer(channel_.borrow(), query_id);
+    if (result.status() != ZX_OK)
+      return DRETF(false, "magma_DeviceQueryReturnsBuffer failed: %d", result.status());
+    if (result->result.is_err())
+      return DRETF(false, "Got error response: %d", result->result.err());
+
+    zx::vmo buffer = std::move(result->result.mutable_response().buffer);
+    *buffer_out = buffer.release();
 
     return true;
   }

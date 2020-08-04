@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,12 +50,12 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  zx_status_t status =
-      fuchsia_gpu_magma_DeviceDumpState(fdio_unsafe_borrow_channel(fdio), dump_type);
+  auto result = llcpp::fuchsia::gpu::magma::Device::Call::DumpState(
+      zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)), dump_type);
   fdio_unsafe_release(fdio);
 
-  if (status != ZX_OK) {
-    printf("magma_DeviceDumpStatus failed: %d", status);
+  if (result.status() != ZX_OK) {
+    printf("magma_DeviceDumpStatus failed: %d", result.status());
     return -1;
   }
   printf("Dumping system driver status to system log\n");

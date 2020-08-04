@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -331,7 +331,9 @@ bool VkLoopTest::Exec(bool kill_driver, zx_handle_t magma_device_channel) {
 
   if (kill_driver) {
     // TODO: Unbind and rebind driver once that supports forcibly tearing down client connections.
-    EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(magma_device_channel));
+    auto result = llcpp::fuchsia::gpu::magma::Device::Call::TestRestart(
+        zx::unowned_channel(magma_device_channel));
+    EXPECT_EQ(ZX_OK, result.status());
   }
 
   constexpr int kReps = 5;

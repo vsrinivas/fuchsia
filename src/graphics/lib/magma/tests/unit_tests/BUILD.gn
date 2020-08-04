@@ -80,10 +80,15 @@ source_set("magma_util_tests") {
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/tests/mock:address_space",
     "$magma_build_root/tests/mock:bus_mapper",
-    "$zircon_build_root/public/lib/zx",
     "//sdk/lib/fdio",
     "//third_party/googletest:gtest",
   ]
+  if (is_fuchsia) {
+    deps += [
+      "$zircon_build_root/public/lib/zx",
+      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+    ]
+  }
 }
 
 source_set("magma_platform_tests") {

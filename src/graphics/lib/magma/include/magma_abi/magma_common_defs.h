@@ -44,6 +44,7 @@ extern "C" {
 #define MAGMA_STATUS_CONNECTION_LOST (-6)
 #define MAGMA_STATUS_TIMED_OUT (-7)
 #define MAGMA_STATUS_UNIMPLEMENTED (-8)
+#define MAGMA_STATUS_ALIAS_FOR_LAST MAGMA_STATUS_UNIMPLEMENTED
 
 // possible values for magma_cache_operation_t
 #define MAGMA_CACHE_OPERATION_CLEAN 0

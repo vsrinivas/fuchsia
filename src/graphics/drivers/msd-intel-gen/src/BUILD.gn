@@ -68,8 +68,9 @@ source_set("src") {
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/src/magma_util/platform:trace",
-    "$zircon_build_root/system/ulib/ddk",
     "../include",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
   ]
 
   public_deps = [ "//sdk/banjo/ddk.protocol.intelgpucore" ]

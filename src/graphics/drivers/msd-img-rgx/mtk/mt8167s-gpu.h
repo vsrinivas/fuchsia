@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MSD_IMG_RGX_MTK_MT8167S_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_MSD_IMG_RGX_MTK_MT8167S_GPU_H_
 
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
@@ -63,7 +63,8 @@ using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable>;
 
 class Mt8167sGpu : public DeviceType,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_GPU>,
-                   public ImgSysDevice {
+                   public ImgSysDevice,
+                   public llcpp::fuchsia::gpu::magma::Device::Interface {
  public:
   Mt8167sGpu(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -74,11 +75,13 @@ class Mt8167sGpu : public DeviceType,
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-  zx_status_t Query(uint64_t query_id, fidl_txn_t* transaction);
-  zx_status_t QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction);
-  zx_status_t Connect(uint64_t client_id, fidl_txn_t* transaction);
-  zx_status_t DumpState(uint32_t dump_type);
-  zx_status_t Restart();
+  void Query(uint64_t query_id, QueryCompleter::Sync _completer) override {}  // Deprecated
+  void Query2(uint64_t query_id, Query2Completer::Sync _completer) override;
+  void QueryReturnsBuffer(uint64_t query_id, QueryReturnsBufferCompleter::Sync _completer) override;
+  void Connect(uint64_t client_id, ConnectCompleter::Sync _completer) override;
+  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) override;
+  void TestRestart(TestRestartCompleter::Sync _completer) override;
+  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) override;
 
   zx_status_t PowerUp() override;
   zx_status_t PowerDown() override;

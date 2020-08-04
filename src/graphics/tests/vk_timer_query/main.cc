@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/vmo.h>
 

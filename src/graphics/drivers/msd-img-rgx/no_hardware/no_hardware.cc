@@ -4,7 +4,7 @@
 
 #include "no_hardware.h"
 
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 
 #include <memory>
@@ -16,6 +16,7 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <hw/reg.h>
 
 #include "img-sys-device.h"
@@ -25,17 +26,8 @@
 #include "platform_logger.h"
 #include "sys_driver/magma_driver.h"
 
-namespace {
-static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
-    .Query = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::Query>,
-    .QueryReturnsBuffer =
-        fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::QueryReturnsBuffer>,
-    .Connect = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::Connect>,
-    .DumpState = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::DumpState>,
-    .TestRestart = fidl::Binder<NoHardwareGpu>::BindMember<&NoHardwareGpu::Restart>,
-};
+using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
 
-}  // namespace
 NoHardwareGpu::~NoHardwareGpu() {
   std::lock_guard<std::mutex> lock(magma_mutex_);
   StopMagma();
@@ -55,8 +47,10 @@ void NoHardwareGpu::StopMagma() {
 
 void NoHardwareGpu::DdkRelease() { delete this; }
 
-zx_status_t NoHardwareGpu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_gpu_magma_Device_dispatch(this, txn, msg, &device_fidl_ops);
+zx_status_t NoHardwareGpu::DdkMessage(fidl_msg_t* message, fidl_txn_t* transaction) {
+  DdkTransaction ddk_transaction(transaction);
+  llcpp::fuchsia::gpu::magma::Device::Dispatch(this, message, &ddk_transaction);
+  return ddk_transaction.Status();
 }
 
 zx_status_t NoHardwareGpu::PowerUp() {
@@ -87,7 +81,7 @@ zx_status_t NoHardwareGpu::Bind() {
   return DdkAdd("msd-img-rgx-no-hardware");
 }
 
-zx_status_t NoHardwareGpu::Query(uint64_t query_id, fidl_txn_t* transaction) {
+void NoHardwareGpu::Query2(uint64_t query_id, Query2Completer::Sync _completer) {
   DLOG("NoHardwareGpu::Query");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -99,19 +93,21 @@ zx_status_t NoHardwareGpu::Query(uint64_t query_id, fidl_txn_t* transaction) {
     case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
       result = 1;
       break;
-    default:
-      if (!magma_system_device_->Query(query_id, &result))
-        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, result);
+    default: {
+      magma::Status status = magma_system_device_->Query(query_id, &result);
+      if (!status.ok()) {
+        _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+        return;
+      }
+    }
   }
   DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
 
-  zx_status_t status = fuchsia_gpu_magma_DeviceQuery_reply(transaction, result);
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQuery_reply failed: %d", status);
-  return ZX_OK;
+  _completer.ReplySuccess(result);
 }
 
-zx_status_t NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction) {
+void NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id,
+                                       QueryReturnsBufferCompleter::Sync _completer) {
   DLOG("NoHardwareGpu::QueryReturnsBuffer");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -119,65 +115,76 @@ zx_status_t NoHardwareGpu::QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* tra
   switch (query_id) {
     case no_hardware_testing::kDummyQueryId: {
       auto buffer = magma::PlatformBuffer::Create(4096, "query-buffer");
-      if (!buffer)
-        return DRET(ZX_ERR_NO_MEMORY);
+      if (!buffer) {
+        _completer.ReplyError(FidlStatus::MEMORY_ERROR);
+        return;
+      }
       if (!buffer->Write(&no_hardware_testing::kDummyQueryResult, 0,
-                         sizeof(no_hardware_testing::kDummyQueryResult)))
-        return DRET(ZX_ERR_INTERNAL);
-      if (!buffer->duplicate_handle(&result))
-        return DRET(ZX_ERR_INTERNAL);
+                         sizeof(no_hardware_testing::kDummyQueryResult))) {
+        _completer.ReplyError(FidlStatus::INTERNAL_ERROR);
+        return;
+      }
+      if (!buffer->duplicate_handle(&result)) {
+        _completer.ReplyError(FidlStatus::INTERNAL_ERROR);
+        return;
+      }
       break;
     }
-    default:
-      if (!magma_system_device_->QueryReturnsBuffer(query_id, &result))
-        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, query_id);
+    default: {
+      magma::Status status = magma_system_device_->QueryReturnsBuffer(query_id, &result);
+      if (!status.ok()) {
+        _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+        return;
+      }
+    }
   }
   DLOG("query query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
 
-  zx_status_t status = fuchsia_gpu_magma_DeviceQueryReturnsBuffer_reply(transaction, result);
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQueryReturnsBuffer_reply failed: %d", status);
-  return ZX_OK;
+  _completer.ReplySuccess(zx::vmo(result));
 }
 
-zx_status_t NoHardwareGpu::Connect(uint64_t client_id, fidl_txn_t* transaction) {
+void NoHardwareGpu::Connect(uint64_t client_id, ConnectCompleter::Sync _completer) {
   DLOG("NoHardwareGpu::Connect");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
   auto connection =
       MagmaSystemDevice::Open(magma_system_device_, client_id, /*thread_profile*/ nullptr);
-  if (!connection)
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
 
-  zx_status_t status = fuchsia_gpu_magma_DeviceConnect_reply(
-      transaction, connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceConnect_reply failed: %d", status);
+  if (!connection) {
+    _completer.Close(ZX_ERR_INTERNAL);
+    return;
+  }
+
+  _completer.Reply(zx::channel(connection->GetClientEndpoint()),
+                   zx::channel(connection->GetClientNotificationEndpoint()));
 
   magma_system_device_->StartConnectionThread(std::move(connection));
-  return ZX_OK;
 }
 
-zx_status_t NoHardwareGpu::DumpState(uint32_t dump_type) {
+void NoHardwareGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) {
   DLOG("NoHardwareGpu::DumpState");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                    MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE))
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "Invalid dump type %x", dump_type);
+                    MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+    DLOG("Invalid dump type %x", dump_type);
+    return;
+  }
 
   if (magma_system_device_)
     magma_system_device_->DumpStatus(dump_type);
-  return ZX_OK;
 }
 
-zx_status_t NoHardwareGpu::Restart() {
-  DLOG("NoHardwareGpu::Restart");
+void NoHardwareGpu::TestRestart(TestRestartCompleter::Sync _completer) {
+  DLOG("NoHardwareGpu::TestRestart");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   StopMagma();
   if (!StartMagma()) {
-    return DRET_MSG(ZX_ERR_INTERNAL, "StartMagma failed\n");
+    DLOG("StartMagma failed");
   }
-  return ZX_OK;
+}
+
+void NoHardwareGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) {
+  _completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 extern "C" zx_status_t no_hardware_gpu_bind(void* ctx, zx_device_t* parent) {

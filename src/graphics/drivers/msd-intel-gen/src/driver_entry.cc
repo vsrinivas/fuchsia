@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,6 +19,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/intelgpucore.h>
+#include <ddktl/fidl.h>
 
 #include "magma_util/dlog.h"
 #include "msd_intel_pci_device.h"
@@ -32,7 +33,109 @@
 void magma_indriver_test(magma::PlatformPciDevice* platform_device);
 #endif
 
-struct sysdrv_device_t {
+struct sysdrv_device_t;
+static int magma_start(sysdrv_device_t* dev);
+#if MAGMA_TEST_DRIVER
+static int magma_stop(sysdrv_device_t* dev);
+#endif
+
+using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
+
+struct sysdrv_device_t : public llcpp::fuchsia::gpu::magma::Device::Interface {
+ public:
+  void Query(uint64_t query_id, QueryCompleter::Sync _completer) override {}  // Deprecated
+
+  void Query2(uint64_t query_id, Query2Completer::Sync _completer) override {
+    DLOG("sysdrv_device_t::Query2");
+    DASSERT(this->magma_system_device);
+
+    uint64_t result;
+    switch (query_id) {
+      case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
+#if MAGMA_TEST_DRIVER
+        result = 1;
+#else
+        result = 0;
+#endif
+        break;
+      default:
+        magma::Status status = this->magma_system_device->Query(query_id, &result);
+        if (!status.ok()) {
+          _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+          return;
+        }
+    }
+    DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
+
+    _completer.ReplySuccess(result);
+  }
+
+  void QueryReturnsBuffer(uint64_t query_id,
+                          QueryReturnsBufferCompleter::Sync _completer) override {
+    DLOG("sysdrv_device_t::QueryReturnsBuffer");
+
+    zx_handle_t result;
+    magma::Status status = this->magma_system_device->QueryReturnsBuffer(query_id, &result);
+    if (!status.ok()) {
+      _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+      return;
+    }
+    DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
+    _completer.ReplySuccess(zx::vmo(result));
+  }
+
+  void Connect(uint64_t client_id, ConnectCompleter::Sync _completer) override {
+    DLOG("sysdrv_device_t::Connect");
+
+    auto connection =
+        MagmaSystemDevice::Open(this->magma_system_device, client_id, /*thread_profile*/ nullptr);
+
+    if (!connection) {
+      DLOG("MagmaSystemDevice::Open failed");
+      _completer.Close(ZX_ERR_INTERNAL);
+      return;
+    }
+
+    _completer.Reply(zx::channel(connection->GetClientEndpoint()),
+                     zx::channel(connection->GetClientNotificationEndpoint()));
+
+    this->magma_system_device->StartConnectionThread(std::move(connection));
+  }
+
+  void DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) override {
+    DLOG("sysdrv_device_t::DumpState");
+    if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
+                      MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+      DLOG("Invalid dump type %d", dump_type);
+      return;
+    }
+
+    std::unique_lock<std::mutex> lock(this->magma_mutex);
+    if (this->magma_system_device)
+      this->magma_system_device->DumpStatus(dump_type);
+  }
+
+  void TestRestart(TestRestartCompleter::Sync _completer) override {
+#if MAGMA_TEST_DRIVER
+    DLOG("sysdrv_device_t::TestRestart");
+    std::unique_lock<std::mutex> lock(this->magma_mutex);
+    zx_status_t status = magma_stop(this);
+    if (status != ZX_OK) {
+      DLOG("magma_stop failed: %d", status);
+      return;
+    }
+    status = magma_start(this);
+    if (status != ZX_OK) {
+      DLOG("magma_start failed: %d", status);
+    }
+#endif
+  }
+
+  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) override {
+    DLOG("sysdrv_device_t::GetUnitTestStatus");
+    _completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+
   zx_device_t* parent_device;
   zx_device_t* zx_device_gpu;
 
@@ -43,12 +146,6 @@ struct sysdrv_device_t {
   std::mutex magma_mutex;
   zx_koid_t perf_count_access_token_id = 0;
 };
-
-static int magma_start(sysdrv_device_t* dev);
-
-#if MAGMA_TEST_DRIVER
-static int magma_stop(sysdrv_device_t* dev);
-#endif
 
 sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*>(context); }
 
@@ -64,104 +161,11 @@ static void sysdrv_gpu_init(void* context) {
   device_init_reply(gpu->zx_device_gpu, ZX_OK, nullptr);
 }
 
-// implement device protocol
-
-static zx_status_t device_fidl_query(void* context, uint64_t query_id, fidl_txn_t* transaction) {
-  DLOG("device_fidl_query");
-  sysdrv_device_t* device = get_device(context);
-
-  uint64_t result;
-  switch (query_id) {
-    case MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED:
-#if MAGMA_TEST_DRIVER
-      result = 1;
-#else
-      result = 0;
-#endif
-      break;
-    default:
-      if (!device->magma_system_device->Query(query_id, &result))
-        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, result);
-  }
-  DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
-
-  zx_status_t status = fuchsia_gpu_magma_DeviceQuery_reply(transaction, result);
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQuery_reply failed: %d", status);
-  return ZX_OK;
-}
-
-static zx_status_t device_fidl_query_returns_buffer(void* context, uint64_t query_id,
-                                                    fidl_txn_t* transaction) {
-  DLOG("device_fidl_query_returns_buffer");
-  sysdrv_device_t* device = get_device(context);
-
-  zx_handle_t result;
-  if (!device->magma_system_device->QueryReturnsBuffer(query_id, &result))
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, query_id);
-  DLOG("query returns buffer query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
-
-  zx_status_t status = fuchsia_gpu_magma_DeviceQueryReturnsBuffer_reply(transaction, result);
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQueryReturnsBuffer_reply failed: %d", status);
-  return ZX_OK;
-}
-
-static zx_status_t device_fidl_connect(void* context, uint64_t client_id, fidl_txn_t* transaction) {
-  DLOG("magma_DeviceConnectOrdinal");
-  sysdrv_device_t* device = get_device(context);
-
-  auto connection =
-      MagmaSystemDevice::Open(device->magma_system_device, client_id, /*thread_profile*/ nullptr);
-  if (!connection)
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
-
-  zx_status_t status = fuchsia_gpu_magma_DeviceConnect_reply(
-      transaction, connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceConnect_reply failed: %d", status);
-
-  device->magma_system_device->StartConnectionThread(std::move(connection));
-  return ZX_OK;
-}
-
-static zx_status_t device_fidl_dump_state(void* context, uint32_t dump_type) {
-  DLOG("device_fidl_dump_state");
-  if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                    MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE))
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "Invalid dump type %d", dump_type);
-
-  sysdrv_device_t* device = get_device(context);
-  std::unique_lock<std::mutex> lock(device->magma_mutex);
-  if (device->magma_system_device)
-    device->magma_system_device->DumpStatus(dump_type);
-  return ZX_OK;
-}
-
-static zx_status_t device_fidl_test_restart(void* context) {
-#if MAGMA_TEST_DRIVER
-  DLOG("device_fidl_test_restart");
-  sysdrv_device_t* device = get_device(context);
-  std::unique_lock<std::mutex> lock(device->magma_mutex);
-  zx_status_t status = magma_stop(device);
-  if (status != ZX_OK)
-    return DRET_MSG(status, "magma_stop failed");
-  return magma_start(device);
-#else
-  return ZX_ERR_NOT_SUPPORTED;
-#endif
-}
-
-static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
-    .Query = device_fidl_query,
-    .QueryReturnsBuffer = device_fidl_query_returns_buffer,
-    .Connect = device_fidl_connect,
-    .DumpState = device_fidl_dump_state,
-    .TestRestart = device_fidl_test_restart,
-};
-
 static zx_status_t sysdrv_gpu_message(void* context, fidl_msg_t* message, fidl_txn_t* transaction) {
-  return fuchsia_gpu_magma_Device_dispatch(context, transaction, message, &device_fidl_ops);
+  sysdrv_device_t* device = get_device(context);
+  DdkTransaction ddk_transaction(transaction);
+  llcpp::fuchsia::gpu::magma::Device::Dispatch(device, message, &ddk_transaction);
+  return ddk_transaction.Status();
 }
 
 static void sysdrv_gpu_release(void* ctx) {

@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
@@ -33,10 +33,11 @@ TEST(UnitTests, UnitTests) {
   magma::TestDeviceBase::BindDriver(parent_device, kTestDriverPath);
 
   test_base = std::make_unique<magma::TestDeviceBase>(MAGMA_VENDOR_ID_MALI);
-  zx_status_t status, status2 = ZX_OK;
-  status = fuchsia_gpu_magma_DeviceGetUnitTestStatus(test_base->channel()->get(), &status2);
-  EXPECT_EQ(ZX_OK, status) << "Device connection lost, check syslog for any errors.";
-  EXPECT_EQ(ZX_OK, status2) << "Tests reported errors, check syslog.";
+
+  auto result =
+      llcpp::fuchsia::gpu::magma::Device::Call::GetUnitTestStatus(test_base->channel()->borrow());
+  EXPECT_EQ(ZX_OK, result.status()) << "Device connection lost, check syslog for any errors.";
+  EXPECT_EQ(ZX_OK, result->status) << "Tests reported errors, check syslog.";
 
   test_base->ShutdownDevice();
   test_base.reset();

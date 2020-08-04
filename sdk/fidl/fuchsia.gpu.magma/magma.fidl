@@ -16,13 +16,26 @@ enum QueryId {
     MAXIMUM_INFLIGHT_PARAMS = 5;
 };
 
-[ForDeprecatedCBindings]
+enum Status {
+    INTERNAL_ERROR = 1;
+    INVALID_ARGS = 2;
+    ACCESS_DENIED = 3;
+    MEMORY_ERROR = 4;
+    CONTEXT_KILLED = 5;
+    CONNECTION_LOST = 6;
+    TIMED_OUT = 7;
+    UNIMPLEMENTED = 8;
+};
+
 protocol Device {
-    /// Get a parameter.
+    /// Deprecated(fxb/54105)
     Query(uint64 query_id) -> (uint64 result);
 
-    /// Get a parameter and store it in a new vmo.
-    QueryReturnsBuffer(uint64 query_id) -> (zx.handle:VMO result);
+    /// Returns a parameter, or an error.
+    Query2(uint64 query_id) -> (uint64 result) error Status;
+
+    /// Returns a buffer, or an error.
+    QueryReturnsBuffer(uint64 query_id) -> (zx.handle:VMO buffer) error Status;
 
     /// Get the magma ipc channels.
     Connect(uint64 client_id) -> (zx.handle:CHANNEL primary_channel, zx.handle:CHANNEL notification_channel);

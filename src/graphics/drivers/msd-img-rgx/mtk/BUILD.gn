@@ -34,7 +34,7 @@ template("driver_source_template") {
       "//sdk/banjo/ddk.protocol.clock",
       "//sdk/banjo/ddk.protocol.composite",
       "//sdk/banjo/ddk.protocol.platform.device",
-      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
       "//src/devices/bus/lib/device-protocol-pdev",
       "//src/devices/bus/lib/device-protocol-platform-device",
       "//src/devices/lib/driver",

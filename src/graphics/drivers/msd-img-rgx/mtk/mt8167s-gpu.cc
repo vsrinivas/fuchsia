@@ -4,7 +4,7 @@
 
 #include "mt8167s-gpu.h"
 
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
@@ -21,6 +21,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -39,6 +40,8 @@
 #if MAGMA_TEST_DRIVER
 void magma_indriver_test(zx_device_t* device, void* driver_device_handle);
 #endif
+
+using FidlStatus = llcpp::fuchsia::gpu::magma::Status;
 
 namespace {
 struct FragmentDescription {
@@ -156,16 +159,10 @@ void Mt8167sGpu::StopMagma() {
 
 void Mt8167sGpu::DdkRelease() { delete this; }
 
-static fuchsia_gpu_magma_Device_ops_t device_fidl_ops = {
-    .Query = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Query>,
-    .QueryReturnsBuffer = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::QueryReturnsBuffer>,
-    .Connect = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Connect>,
-    .DumpState = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::DumpState>,
-    .TestRestart = fidl::Binder<Mt8167sGpu>::BindMember<&Mt8167sGpu::Restart>,
-};
-
-zx_status_t Mt8167sGpu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_gpu_magma_Device_dispatch(this, txn, msg, &device_fidl_ops);
+zx_status_t Mt8167sGpu::DdkMessage(fidl_msg_t* message, fidl_txn_t* transaction) {
+  DdkTransaction ddk_transaction(transaction);
+  llcpp::fuchsia::gpu::magma::Device::Dispatch(this, message, &ddk_transaction);
+  return ddk_transaction.Status();
 }
 // Power on the asynchronous memory interface between the GPU and the DDR controller.
 zx_status_t Mt8167sGpu::PowerOnMfgAsync() {
@@ -395,7 +392,7 @@ zx_status_t Mt8167sGpu::Bind() {
   return DdkAdd("mt8167s-gpu");
 }
 
-zx_status_t Mt8167sGpu::Query(uint64_t query_id, fidl_txn_t* transaction) {
+void Mt8167sGpu::Query2(uint64_t query_id, Query2Completer::Sync _completer) {
   DLOG("Mt8167sGpu::Query");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
@@ -412,73 +409,74 @@ zx_status_t Mt8167sGpu::Query(uint64_t query_id, fidl_txn_t* transaction) {
 #endif
       break;
     default:
-      if (!magma_system_device_->Query(query_id, &result))
-        return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, result);
+      magma::Status status = magma_system_device_->Query(query_id, &result);
+      if (!status.ok()) {
+        _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+        return;
+      }
   }
   DLOG("query query_id 0x%" PRIx64 " returning 0x%" PRIx64, query_id, result);
 
-  zx_status_t status = fuchsia_gpu_magma_DeviceQuery_reply(transaction, result);
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQuery_reply failed: %d", status);
-  return ZX_OK;
+  _completer.ReplySuccess(result);
 }
 
-zx_status_t Mt8167sGpu::QueryReturnsBuffer(uint64_t query_id, fidl_txn_t* transaction) {
+void Mt8167sGpu::QueryReturnsBuffer(uint64_t query_id,
+                                    QueryReturnsBufferCompleter::Sync _completer) {
   DLOG("Mt8167sGpu::QueryReturnsBuffer");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   zx_handle_t result;
-  if (!magma_system_device_->QueryReturnsBuffer(query_id, &result))
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "unhandled query param 0x%" PRIx64, query_id);
+  magma::Status status = magma_system_device_->QueryReturnsBuffer(query_id, &result);
+  if (!status.ok()) {
+    _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+    return;
+  }
   DLOG("query exteneded query_id 0x%" PRIx64 " returning 0x%x", query_id, result);
 
-  zx_status_t status = fuchsia_gpu_magma_DeviceQueryReturnsBuffer_reply(transaction, result);
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceQueryReturnsBuffer_reply failed: %d", status);
-  return ZX_OK;
+  _completer.ReplySuccess(zx::vmo(result));
 }
 
-zx_status_t Mt8167sGpu::Connect(uint64_t client_id, fidl_txn_t* transaction) {
+void Mt8167sGpu::Connect(uint64_t client_id, ConnectCompleter::Sync _completer) {
   DLOG("Mt8167sGpu::Connect");
   std::lock_guard<std::mutex> lock(magma_mutex_);
 
   auto connection =
       MagmaSystemDevice::Open(magma_system_device_, client_id, /*thread_profile*/ nullptr);
-  if (!connection)
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "MagmaSystemDevice::Open failed");
+  if (!connection) {
+    _completer.Close(ZX_ERR_INTERNAL);
+    return;
+  }
 
-  zx_status_t status = fuchsia_gpu_magma_DeviceConnect_reply(
-      transaction, connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
-  if (status != ZX_OK)
-    return DRET_MSG(ZX_ERR_INTERNAL, "magma_DeviceConnect_reply failed: %d", status);
+  _completer.Reply(zx::channel(connection->GetClientEndpoint()),
+                   zx::channel(connection->GetClientNotificationEndpoint()));
 
   magma_system_device_->StartConnectionThread(std::move(connection));
-  return ZX_OK;
 }
 
-zx_status_t Mt8167sGpu::DumpState(uint32_t dump_type) {
+void Mt8167sGpu::DumpState(uint32_t dump_type, DumpStateCompleter::Sync _completer) {
   DLOG("Mt8167sGpu::DumpState");
   std::lock_guard<std::mutex> lock(magma_mutex_);
   if (dump_type & ~(MAGMA_DUMP_TYPE_NORMAL | MAGMA_DUMP_TYPE_PERF_COUNTERS |
-                    MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE))
-    return DRET_MSG(ZX_ERR_INVALID_ARGS, "Invalid dump type %x", dump_type);
-
+                    MAGMA_DUMP_TYPE_PERF_COUNTER_ENABLE)) {
+    DLOG("Invalid dump type %x", dump_type);
+    return;
+  }
   if (magma_system_device_)
     magma_system_device_->DumpStatus(dump_type);
-  return ZX_OK;
 }
 
-zx_status_t Mt8167sGpu::Restart() {
-  DLOG("Mt8167sGpu::Restart");
+void Mt8167sGpu::TestRestart(TestRestartCompleter::Sync _completer) {
+  DLOG("Mt8167sGpu::TestRestart");
 #if MAGMA_TEST_DRIVER
   std::lock_guard<std::mutex> lock(magma_mutex_);
   StopMagma();
   if (!StartMagma()) {
-    return DRET_MSG(ZX_ERR_INTERNAL, "StartMagma failed\n");
+    DLOG("StartMagma failed");
   }
-  return ZX_OK;
-#else
-  return ZX_ERR_NOT_SUPPORTED;
 #endif
+}
+
+void Mt8167sGpu::GetUnitTestStatus(GetUnitTestStatusCompleter::Sync _completer) {
+  _completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 extern "C" zx_status_t mt8167s_gpu_bind(void* ctx, zx_device_t* parent) {

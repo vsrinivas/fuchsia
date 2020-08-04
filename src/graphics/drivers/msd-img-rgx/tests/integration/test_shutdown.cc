@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/gpu/magma/c/fidl.h>
+#include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
@@ -83,7 +83,9 @@ static void test_shutdown(uint32_t iters) {
     while (complete_count < kMaxCount) {
       if (complete_count > count) {
         // Should replace this with a request to devmgr to restart the driver
-        EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(test_base.channel()->get()));
+        auto result =
+            llcpp::fuchsia::gpu::magma::Device::Call::TestRestart(test_base.channel()->borrow());
+        EXPECT_EQ(ZX_OK, result.status());
 
         count += kRestartCount;
       }

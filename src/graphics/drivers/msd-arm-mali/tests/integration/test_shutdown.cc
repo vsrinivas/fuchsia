@@ -4,7 +4,6 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
-#include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 

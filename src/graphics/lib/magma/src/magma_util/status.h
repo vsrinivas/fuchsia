@@ -15,6 +15,8 @@ class Status {
 
   magma_status_t get() const { return status_; }
 
+  uint32_t getFidlStatus() const { return -status_; }
+
   bool ok() const { return status_ == MAGMA_STATUS_OK; }
 
   explicit operator bool() const { return ok(); }
