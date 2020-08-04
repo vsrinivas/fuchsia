@@ -286,7 +286,7 @@ pub fn handle_set_channel_event(
     bssid: &mac::Bssid,
     protection: &Protection,
 ) {
-    debug!("channel: {:?}", args.chan);
+    debug!("Handling set channel event on channel {:?}", args.chan);
     if args.chan.primary == CHANNEL.primary {
         send_beacon(&args.chan, bssid, ssid, protection, &phy, 0).unwrap();
     }
@@ -298,6 +298,7 @@ pub fn handle_tx_event(
     bssid: &mac::Bssid,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
 ) {
+    debug!("Handling tx event.");
     match mac::MacFrame::parse(&args.packet.data[..], false) {
         Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
             match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
@@ -469,5 +470,9 @@ pub async fn loop_until_iface_is_found() {
 
 pub fn init_syslog() {
     syslog::init().unwrap();
-    syslog::set_severity(syslog::levels::DEBUG);
+
+    // Change the severity to DEBUG in order to increase the verbosity of hw-sim logging.
+    // For example, DEBUG level logging prints more information about the internal state of
+    // the main_future polled by TestHelper::run_until_complete_or_timeout during a test.
+    syslog::set_severity(syslog::levels::INFO);
 }
