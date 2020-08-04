@@ -288,7 +288,7 @@ zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE obj
   // If we find _BBN / _SEG we will use those, but if we don't we can fall
   // back on having an ecam from mcfg allocations.
   x64Pciroot::Context dev_ctx = {};
-  dev_ctx.platform_bus = ctx->platform_bus();
+  dev_ctx.platform_bus = parent;
   dev_ctx.acpi_object = object;
   dev_ctx.acpi_device_info = *info;
   // ACPI names are stored as 4 bytes in a u32
