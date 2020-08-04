@@ -306,7 +306,7 @@ static zx_status_t reboot() {
 
 static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                             const ip6_addr_t* saddr, uint16_t sport) {
-  nbmsg* msg = reinterpret_cast<nbmsg*>(data);
+  nbmsg msg_header;
   nbmsg ack;
 
   bool do_transmit = true;
@@ -316,11 +316,19 @@ static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uin
   if (dport != NB_SERVER_PORT)
     return;
 
+  // Not enough bytes to be a message
   if (len < sizeof(nbmsg))
     return;
+
+  // Must be copied to stack structure rather than interpreted in place for
+  // UBSan, see fxbug.dev/45621.
+  memcpy(&msg_header, data, sizeof(msg_header));
+  char* msg_data = reinterpret_cast<char*>(data) + sizeof(msg_header);
+
   len -= sizeof(nbmsg);
 
-  if ((last_cookie == msg->cookie) && (last_cmd == msg->cmd) && (last_arg == msg->arg)) {
+  if ((last_cookie == msg_header.cookie) && (last_cmd == msg_header.cmd) &&
+      (last_arg == msg_header.arg)) {
     // host must have missed the ack. resend
     ack.magic = NB_MAGIC;
     ack.cookie = last_cookie;
@@ -332,36 +340,36 @@ static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uin
   ack.cmd = NB_ACK;
   ack.arg = 0;
 
-  switch (msg->cmd) {
+  switch (msg_header.cmd) {
     case NB_COMMAND:
       if (len == 0)
         return;
-      msg->data[len - 1] = 0;
+      msg_data[len - 1] = 0;
       break;
     case NB_SEND_FILE:
       xfer_active = true;
       if (len == 0)
         return;
-      msg->data[len - 1] = 0;
+      msg_data[len - 1] = 0;
       for (size_t i = 0; i < (len - 1); i++) {
-        if ((msg->data[i] < ' ') || (msg->data[i] > 127)) {
-          msg->data[i] = '.';
+        if ((msg_data[i] < ' ') || (msg_data[i] > 127)) {
+          msg_data[i] = '.';
         }
       }
-      active = netboot_get_buffer(reinterpret_cast<const char*>(msg->data), msg->arg);
+      active = netboot_get_buffer(msg_data, msg_header.arg);
       if (active) {
         active->offset = 0;
-        ack.arg = msg->arg;
+        ack.arg = msg_header.arg;
         size_t prefix_len = strlen(NB_FILENAME_PREFIX);
         const char* filename;
-        if (!strncmp(reinterpret_cast<char*>(msg->data), NB_FILENAME_PREFIX, prefix_len)) {
-          filename = &(reinterpret_cast<const char*>(msg->data))[prefix_len];
+        if (!strncmp(msg_data, NB_FILENAME_PREFIX, prefix_len)) {
+          filename = &(reinterpret_cast<const char*>(msg_data))[prefix_len];
         } else {
-          filename = reinterpret_cast<const char*>(msg->data);
+          filename = reinterpret_cast<const char*>(msg_data);
         }
         printf("netboot: Receive File '%s'...\n", filename);
       } else {
-        printf("netboot: Rejected File '%s'...\n", reinterpret_cast<char*>(msg->data));
+        printf("netboot: Rejected File '%s'...\n", msg_data);
         ack.cmd = NB_ERROR_BAD_FILE;
       }
       break;
@@ -373,19 +381,19 @@ static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uin
         printf("netboot: > received chunk before NB_FILE\n");
         return;
       }
-      if (msg->arg != active->offset) {
+      if (msg_header.arg != active->offset) {
         // printf("netboot: < received chunk at offset %d but current offset is %zu\n",
-        // msg->arg, active->offset);
+        // msg_header.arg, active->offset);
         ack.arg = static_cast<uint32_t>(active->offset);
         ack.cmd = NB_ACK;
       } else if ((active->offset + len) > active->size) {
         ack.cmd = NB_ERROR_TOO_LARGE;
-        ack.arg = msg->arg;
+        ack.arg = msg_header.arg;
       } else {
-        memcpy(active->data + active->offset, msg->data, len);
+        memcpy(active->data + active->offset, msg_data, len);
         active->offset += len;
-        ack.cmd = msg->cmd == NB_LAST_DATA ? NB_FILE_RECEIVED : NB_ACK;
-        if (msg->cmd != NB_LAST_DATA) {
+        ack.cmd = msg_header.cmd == NB_LAST_DATA ? NB_FILE_RECEIVED : NB_ACK;
+        if (msg_header.cmd != NB_LAST_DATA) {
           do_transmit = false;
         } else {
           xfer_active = false;
@@ -423,13 +431,13 @@ static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uin
       do_transmit = false;
   }
 
-  last_cookie = msg->cookie;
-  last_cmd = msg->cmd;
-  last_arg = msg->arg;
+  last_cookie = msg_header.cookie;
+  last_cmd = msg_header.cmd;
+  last_arg = msg_header.arg;
   last_ack_cmd = ack.cmd;
   last_ack_arg = ack.arg;
 
-  ack.cookie = msg->cookie;
+  ack.cookie = msg_header.cookie;
   ack.magic = NB_MAGIC;
 transmit:
   if (do_transmit) {
