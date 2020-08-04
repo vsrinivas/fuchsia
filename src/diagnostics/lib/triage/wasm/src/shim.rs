@@ -245,6 +245,7 @@ mod test {
         let boot_target =
             manager.build_target("bootlog", Source::Bootlog as u32, BOOTLOG_CONTENT).unwrap();
         let t = targets_without_boot(manager);
+        assert_eq!(t.len(), 4);
         Box::new([t[0], t[1], t[2], t[3], boot_target])
     }
 

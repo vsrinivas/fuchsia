@@ -181,7 +181,6 @@ if [ -z "${select_filters}" ]; then
     fx-command-run build triage
   fi
 
-  echo "${triage_exe} ${flags}"
   $triage_exe ${flags}
 
 else
