@@ -5,7 +5,7 @@
 use {
     crate::api::{ConfigMapper, ReadConfig, WriteConfig},
     crate::runtime::populate_runtime_config,
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, bail, Result},
     config_macros::include_default,
     ffx_config_plugin_args::ConfigLevel,
     serde_json::{Map, Value},
@@ -151,6 +151,60 @@ impl Priority {
             Priority::nested_set(next_map, remaining_keys[0], remaining_keys[1..].to_vec(), value);
         }
     }
+
+    fn nested_remove(
+        cur: &mut Map<String, Value>,
+        key: &str,
+        remaining_keys: Vec<&str>,
+    ) -> Result<()> {
+        if remaining_keys.len() == 0 {
+            cur.remove(&key.to_string()).ok_or(anyhow!("Config key not found")).map(|_| ())
+        } else {
+            match cur.get(key) {
+                Some(value) => {
+                    if !value.is_object() {
+                        bail!("Configuration literal found when expecting a map.")
+                    }
+                }
+                None => {
+                    bail!("Configuration key not found.");
+                }
+            }
+            // Just ensured this would be the case.
+            let next_map = cur
+                .get_mut(key)
+                .expect("unable to get configuration")
+                .as_object_mut()
+                .expect("Unable to set configuration value as map");
+            Priority::nested_remove(next_map, remaining_keys[0], remaining_keys[1..].to_vec())
+        }
+    }
+
+    fn get_level_map(&mut self, level: &ConfigLevel) -> &mut Map<String, Value> {
+        let config = match level {
+            ConfigLevel::Runtime => &mut self.runtime,
+            ConfigLevel::User => &mut self.user,
+            ConfigLevel::Build => &mut self.build,
+            ConfigLevel::Global => &mut self.global,
+            ConfigLevel::Default => &mut self.default,
+        };
+        // Ensure current value is always a map.
+        match config {
+            Some(v) => {
+                if !v.is_object() {
+                    // This must be a map.  Will override any literals or arrays.
+                    *config = Some(Value::Object(Map::new()));
+                }
+            }
+            None => *config = Some(Value::Object(Map::new())),
+        }
+        // Ok to expect as this is ensured above.
+        config
+            .as_mut()
+            .expect("uninitialzed configuration")
+            .as_object_mut()
+            .expect("unable to initialize configuration map")
+    }
 }
 
 impl ReadConfig for Priority {
@@ -205,55 +259,19 @@ impl fmt::Display for Priority {
 
 impl WriteConfig for Priority {
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<()> {
-        let config = match level {
-            ConfigLevel::Runtime => &mut self.runtime,
-            ConfigLevel::User => &mut self.user,
-            ConfigLevel::Build => &mut self.build,
-            ConfigLevel::Global => &mut self.global,
-            ConfigLevel::Default => &mut self.default,
-        };
-        // Ensure current value is always a map.
-        match config {
-            Some(v) => {
-                if !v.is_object() {
-                    // This must be a map.  Will override any literals or arrays.
-                    *config = Some(Value::Object(Map::new()));
-                }
-            }
-            None => *config = Some(Value::Object(Map::new())),
-        }
-
         let key_vec: Vec<&str> = key.split('.').collect();
-        // Ok to expect as this is ensured above.
-        let mut map = config
-            .as_mut()
-            .expect("uninitialzed configuration")
-            .as_object_mut()
-            .expect("unable to initialize configuration map");
-        Priority::nested_set(&mut map, key_vec[0], key_vec[1..].to_vec(), value);
+        Priority::nested_set(
+            &mut self.get_level_map(level),
+            key_vec[0],
+            key_vec[1..].to_vec(),
+            value,
+        );
         Ok(())
     }
 
     fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<()> {
-        let inner_remove = |config_data: &mut Option<Value>| -> Result<()> {
-            match config_data {
-                Some(config) => match config.as_object_mut() {
-                    Some(map) => map
-                        .remove(&key.to_string())
-                        .ok_or_else(|| anyhow!("No config found matching {}", key))
-                        .map(|_| ()),
-                    None => Err(anyhow!("Config file parsing error")),
-                },
-                None => Ok(()),
-            }
-        };
-        match level {
-            ConfigLevel::User => inner_remove(&mut self.user),
-            ConfigLevel::Build => inner_remove(&mut self.build),
-            ConfigLevel::Global => inner_remove(&mut self.global),
-            ConfigLevel::Default => inner_remove(&mut self.default),
-            ConfigLevel::Runtime => inner_remove(&mut self.runtime),
-        }
+        let key_vec: Vec<&str> = key.split('.').collect();
+        Priority::nested_remove(&mut self.get_level_map(level), key_vec[0], key_vec[1..].to_vec())
     }
 }
 
@@ -668,6 +686,59 @@ mod test {
         test.set(&ConfigLevel::User, "name.updated", serde_json::from_str(NESTED)?)?;
         let nested_value = test.get("name.updated.name.nested", identity);
         assert_eq!(nested_value, Some(Value::String(String::from("Nested"))));
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_remove_from_none() -> Result<()> {
+        let mut test =
+            Priority { user: None, build: None, global: None, default: None, runtime: None };
+        let result = test.remove(&ConfigLevel::User, "name.nested");
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_remove_throws_error_if_key_not_found() -> Result<()> {
+        let mut test = Priority {
+            user: Some(serde_json::from_str(NESTED)?),
+            build: None,
+            global: None,
+            default: None,
+            runtime: None,
+        };
+        let result = test.remove(&ConfigLevel::User, "name.unknown");
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_remove_deletes_literals() -> Result<()> {
+        let mut test = Priority {
+            user: Some(serde_json::from_str(DEEP)?),
+            build: None,
+            global: None,
+            default: None,
+            runtime: None,
+        };
+        test.remove(&ConfigLevel::User, "name.nested.deep.name")?;
+        let value = test.get("name", identity);
+        assert_eq!(value, None);
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_remove_deletes_subtrees() -> Result<()> {
+        let mut test = Priority {
+            user: Some(serde_json::from_str(DEEP)?),
+            build: None,
+            global: None,
+            default: None,
+            runtime: None,
+        };
+        test.remove(&ConfigLevel::User, "name.nested")?;
+        let value = test.get("name", identity);
+        assert_eq!(value, None);
         Ok(())
     }
 }
