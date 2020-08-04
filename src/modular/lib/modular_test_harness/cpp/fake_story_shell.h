@@ -47,7 +47,7 @@ class FakeStoryShell : public modular_testing::FakeComponent, fuchsia::modular::
   void set_on_destroy(fit::function<void()> on_destroy) { on_destroy_ = std::move(on_destroy); }
 
   void set_on_add_surface(
-      fit::function<void(fuchsia::modular::ViewConnection, fuchsia::modular::SurfaceInfo)>
+      fit::function<void(fuchsia::modular::ViewConnection, fuchsia::modular::SurfaceInfo2)>
           on_add_surface) {
     on_add_surface_ = std::move(on_add_surface);
   }
@@ -99,7 +99,7 @@ class FakeStoryShell : public modular_testing::FakeComponent, fuchsia::modular::
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
   fidl::BindingSet<fuchsia::modular::StoryShell> bindings_;
-  fit::function<void(fuchsia::modular::ViewConnection, fuchsia::modular::SurfaceInfo)>
+  fit::function<void(fuchsia::modular::ViewConnection, fuchsia::modular::SurfaceInfo2)>
       on_add_surface_;
   fit::function<void()> on_destroy_;
 };

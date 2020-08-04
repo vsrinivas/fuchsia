@@ -40,11 +40,15 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
   sys::ComponentContext* component_context() const { return component_context_; }
 
  private:
-  // |ViewProvider| -- Derived classes should override this method.
-  void CreateView(
-      zx::eventpair /*view_token*/,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {}
+  // |ViewProvider| -- Derived classes should override these methods.
+  void CreateView(zx::eventpair view_handle,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
+  }
+
+  void CreateViewWithViewRef(zx::eventpair view_handle,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {}
 
   sys::ComponentContext* const component_context_;
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;

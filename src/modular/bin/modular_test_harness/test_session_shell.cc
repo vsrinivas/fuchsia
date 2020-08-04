@@ -46,11 +46,11 @@ class TestSessionShellApp : public modular::ViewApp,
  private:
   // |ViewApp|
   void CreateView(
-      zx::eventpair view_event_pair,
+      zx::eventpair view_handle,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
     fuchsia::ui::views::ViewToken view_token;
-    view_token.value = std::move(view_event_pair);
+    view_token.value = std::move(view_handle);
     auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic::ViewContext context = {
         .session_and_listener_request =
@@ -60,6 +60,23 @@ class TestSessionShellApp : public modular::ViewApp,
     };
     view_ = std::make_unique<modular::ViewHost>(std::move(context));
   }
+
+  // |ViewApp|
+  void CreateViewWithViewRef(zx::eventpair view_handle,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {
+    fuchsia::ui::views::ViewToken view_token;
+    view_token.value = std::move(view_handle);
+    auto scenic = component_context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+    scenic::ViewContext context = {
+        .session_and_listener_request =
+            scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
+        .view_token = std::move(view_token),
+        .component_context = component_context_.get(),
+    };
+    view_ = std::make_unique<modular::ViewHost>(std::move(context));
+ }
+
 
   // |fuchsia::modular::StoryProviderWatcher|
   void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,

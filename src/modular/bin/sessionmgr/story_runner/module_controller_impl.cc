@@ -23,7 +23,8 @@ ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_cont
                                            fuchsia::modular::session::AppConfig module_config,
                                            const fuchsia::modular::ModuleData* const module_data,
                                            fuchsia::sys::ServiceListPtr service_list,
-                                           fuchsia::ui::views::ViewToken view_token)
+                                           fuchsia::ui::views::ViewToken view_token,
+                                           scenic::ViewRefPair view_ref_pair)
     : story_controller_impl_(story_controller_impl),
       app_client_(launcher, CloneStruct(module_config),
                   /*data_origin=*/"", std::move(service_list)),
@@ -32,8 +33,10 @@ ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_cont
 
   fuchsia::ui::app::ViewProviderPtr view_provider;
   app_client_.services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_token.value), nullptr /* incoming_services */,
-                            nullptr /* outgoing_services */);
+
+  view_provider->CreateViewWithViewRef(std::move(view_token.value),
+                                       std::move(view_ref_pair.control_ref),
+                                       std::move(view_ref_pair.view_ref));
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}

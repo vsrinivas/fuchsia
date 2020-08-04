@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <vector>
 
@@ -34,7 +35,7 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
                        fuchsia::modular::session::AppConfig module_config,
                        const fuchsia::modular::ModuleData* module_data,
                        fuchsia::sys::ServiceListPtr service_list,
-                       fuchsia::ui::views::ViewToken view_token);
+                       fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair);
   ~ModuleControllerImpl() override;
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::ModuleController> request);

@@ -388,7 +388,10 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::session::AppConfig sessio
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   fuchsia::ui::app::ViewProviderPtr view_provider;
   session_shell_app->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
+  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+  view_provider->CreateViewWithViewRef(std::move(view_token.value),
+                                       std::move(view_ref_pair.control_ref),
+                                       std::move(view_ref_pair.view_ref));
   session_shell_view_host_->ConnectView(std::move(view_holder_token));
 
   agent_runner_->AddRunningAgent(session_shell_url_, std::move(session_shell_app));

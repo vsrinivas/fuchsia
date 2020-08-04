@@ -19,6 +19,7 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <map>
 #include <memory>
@@ -137,6 +138,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     // The module's view (surface ID and view token) that was connected to the story shell.
     // Only set for non-embedded, non-pending modules.
     std::optional<fuchsia::modular::ViewConnection> view_connection;
+
+    // A reference to the module's view.
+    std::optional<fuchsia::ui::views::ViewRef> view_ref;
 
     // Metadata for the module's surface that was connected to the story shell.
     // Only set for non-embedded, non-pending modules.
