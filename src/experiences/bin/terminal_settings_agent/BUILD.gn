@@ -30,6 +30,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/main.rs",
+    "src/profiles_service.rs",
+  ]
 }
 
 package("terminal_settings_agent") {

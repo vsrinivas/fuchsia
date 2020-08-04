@@ -47,6 +47,20 @@ rustc_binary("bin") {
   ]
 
   test_deps = []
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/element_repository/element_manager_server.rs",
+    "src/element_repository/event_handler.rs",
+    "src/element_repository/mod.rs",
+    "src/element_repository/testing_utils.rs",
+    "src/main.rs",
+    "src/mouse_pointer_hack.rs",
+    "src/pointer_hack_server.rs",
+    "src/touch_pointer_hack.rs",
+    "src/workstation_input_pipeline.rs",
+  ]
 }
 
 package("workstation_session") {
