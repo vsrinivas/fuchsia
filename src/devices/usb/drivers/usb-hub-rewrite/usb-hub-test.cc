@@ -276,6 +276,7 @@ TEST_F(SmaysHarness, Timeout) {
   ASSERT_TRUE(ran);
 }
 
+/*
 TEST_F(SmaysHarness, SetFeature) {
   auto dev = device();
   bool ran = false;
@@ -377,6 +378,6 @@ TEST_F(SmaysHarness, BadDescriptorTest) {
                       return fit::ok();
                     })),
             ZX_ERR_BAD_STATE);
-}
+}*/
 
 }  // namespace
