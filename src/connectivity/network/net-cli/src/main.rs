@@ -80,6 +80,7 @@ async fn main() -> Result<(), Error> {
         CommandEnum::Filter(cmd) => do_filter(cmd.filter_cmd, filter).await,
         CommandEnum::Log(cmd) => do_log(cmd.log_cmd, log).await,
         CommandEnum::Stat(cmd) => do_stat(cmd.stat_cmd).await,
+        CommandEnum::Metric(cmd) => do_metric(cmd.metric_cmd, netstack).await,
     }
 }
 
@@ -416,6 +417,20 @@ async fn do_stat(cmd: opts::StatEnum) -> Result<(), Error> {
     Ok(())
 }
 
+async fn do_metric(cmd: opts::MetricEnum, netstack: NetstackProxy) -> Result<(), Error> {
+    match cmd {
+        MetricEnum::Set(MetricSet { id, metric }) => {
+            let result = netstack.set_interface_metric(id, metric).await?;
+            if result.status != fidl_fuchsia_netstack::Status::Ok {
+                Err(anyhow::anyhow!("{:?}: {}", result.status, result.message))
+            } else {
+                info!("interface {} metric set to {}", id, metric);
+                Ok(())
+            }
+        }
+    }
+}
+
 fn visit_inspect_object(
     t: &mut Table,
     prefix: &str,
@@ -448,7 +463,7 @@ mod tests {
     use fidl_fuchsia_net as net;
     use fuchsia_async as fasync;
     use futures::prelude::*;
-    use {super::*, fidl_fuchsia_net_stack::*};
+    use {super::*, fidl_fuchsia_net_stack::*, fidl_fuchsia_netstack::*};
 
     fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
         InterfaceInfo {
@@ -578,5 +593,42 @@ mod tests {
             .downcast_ref::<fidl_fuchsia_net_stack_ext::NetstackError>()
             .expect("fidl_err should downcast to NetstackError");
         assert_eq!(*underlying_error, fidl_fuchsia_net_stack::Error::NotFound);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_metric_set() {
+        async fn next_request(
+            requests: &mut NetstackRequestStream,
+        ) -> (u32, u32, NetstackSetInterfaceMetricResponder) {
+            requests
+                .try_next()
+                .await
+                .expect("set interface metric FIDL error")
+                .expect("request stream should not have ended")
+                .into_set_interface_metric()
+                .expect("request should be of type SetInterfaceMetric")
+        }
+
+        let (netstack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+
+        // both test values have been arbitrarily selected
+        let expected_id = 1;
+        let expected_metric = 64;
+        let succeeds = do_metric(
+            MetricEnum::Set(MetricSet { id: expected_id, metric: expected_metric }),
+            netstack,
+        );
+        let response = async move {
+            // Verify that the request is as expected and return OK.
+            let (id, metric, responder) = next_request(&mut requests).await;
+            assert_eq!(id, expected_id);
+            assert_eq!(metric, expected_metric);
+            responder
+                .send(&mut NetErr { status: Status::Ok, message: String::from("") })
+                .map_err(anyhow::Error::new)
+        };
+        let ((), ()) =
+            futures::future::try_join(succeeds, response).await.expect("metric set should succeed");
     }
 }

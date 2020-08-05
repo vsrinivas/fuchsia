@@ -33,6 +33,7 @@ pub enum CommandEnum {
     Log(Log),
     Route(Route),
     Stat(Stat),
+    Metric(Metric),
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -359,3 +360,31 @@ pub enum StatEnum {
 #[argh(subcommand, name = "show")]
 /// shows classified netstack stats
 pub struct StatShow {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "metric")]
+/// commands for interface route metrics
+pub struct Metric {
+    #[argh(subcommand)]
+    pub metric_cmd: MetricEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum MetricEnum {
+    Set(MetricSet),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "set")]
+/// assigns a route metric to the network interface
+pub struct MetricSet {
+    #[argh(positional)]
+    /// id of the network interface to assign the route metric to
+    // NOTE: id is a u32 because fuchsia.netstack interfaces take u32 interface ids.
+    // TODO: change id to u64 once fuchsia.netstack is no longer in use.
+    pub id: u32,
+    #[argh(positional)]
+    /// route metric to be assigned
+    pub metric: u32,
+}
