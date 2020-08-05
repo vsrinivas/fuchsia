@@ -238,7 +238,7 @@ zx_status_t Device::VerifyAllMsisFreed() {
 }
 
 zx_status_t Device::DisableMsi() {
-  ZX_DEBUG_ASSERT(irqs_.mode = PCI_IRQ_MODE_MSI);
+  ZX_DEBUG_ASSERT(irqs_.mode == PCI_IRQ_MODE_MSI);
   ZX_DEBUG_ASSERT(caps_.msi);
   if (zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
     return st;
@@ -254,7 +254,7 @@ zx_status_t Device::DisableMsi() {
 }
 
 zx_status_t Device::DisableMsix() {
-  ZX_DEBUG_ASSERT(irqs_.mode = PCI_IRQ_MODE_MSI_X);
+  ZX_DEBUG_ASSERT(irqs_.mode == PCI_IRQ_MODE_MSI_X);
   ZX_DEBUG_ASSERT(caps_.msix);
   if (zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
     return st;
