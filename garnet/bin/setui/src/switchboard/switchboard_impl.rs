@@ -233,7 +233,7 @@ impl SwitchboardImpl {
                         if let Some(MessageEvent::Message(payload, client)) = switchboard_event {
                             match payload {
                                 switchboard::Payload::Action(switchboard::Action::Request(setting_type, request)) => {
-                                    switchboard_clone.lock().await.process_action_request(setting_type, request, client);
+                                    switchboard_clone.lock().await.process_action_request(setting_type, request, client).ok();
                                 }
                                 switchboard::Payload::Listen(switchboard::Listen::Request(setting_type)) => {
                                     switchboard_clone.lock().await.process_listen_request(setting_type, client).await;
@@ -333,23 +333,24 @@ impl SwitchboardImpl {
         setting_type: SettingType,
         request: SettingRequest,
         reply_client: switchboard::message::Client,
-    ) {
+    ) -> Result<(), SwitchboardError> {
         let messenger = self.registry_messenger.clone();
         let action_id = self.get_next_action_id();
 
         self.record_request(setting_type.clone(), request.clone());
 
-        if !self.setting_proxies.contains_key(&setting_type) {
-            reply_client
-                .reply(switchboard::Payload::Action(switchboard::Action::Response(Err(
-                    SwitchboardError::UnhandledType(setting_type),
-                ))))
-                .send();
-            return;
-        }
+        let signature = match self.setting_proxies.entry(setting_type) {
+            Entry::Vacant(_) => {
+                reply_client
+                    .reply(switchboard::Payload::Action(switchboard::Action::Response(Err(
+                        SwitchboardError::UnhandledType(setting_type),
+                    ))))
+                    .send();
+                return Err(SwitchboardError::UnhandledType(setting_type));
+            }
+            Entry::Occupied(occupied) => occupied.get().clone(),
+        };
 
-        // We can safely unwrap here since we've checked previously if the
-        // map contains the setting type as a key.
         let mut receptor = messenger
             .message(
                 core::Payload::Action(SettingAction {
@@ -357,7 +358,7 @@ impl SwitchboardImpl {
                     setting_type,
                     data: SettingActionData::Request(request),
                 }),
-                Audience::Messenger(*self.setting_proxies.get(&setting_type).unwrap()),
+                Audience::Messenger(signature),
             )
             .send();
 
@@ -379,6 +380,8 @@ impl SwitchboardImpl {
             }
         })
         .detach();
+
+        Ok(())
     }
 
     async fn notify_registry_listen(
@@ -585,11 +588,10 @@ mod tests {
         // Ensure response is received.
         let (response, _) = message_receptor.next_payload().await.unwrap();
 
-        if let switchboard::Payload::Action(switchboard::Action::Response(result)) = response {
-            assert!(result.is_err());
-        } else {
-            panic!("should have received a switchboard::Action::Response");
-        }
+        assert!(
+            matches!(response, switchboard::Payload::Action(switchboard::Action::Response(Err(_)))),
+            "should have received a switchboard::Action::Response"
+        );
     }
 
     #[fuchsia_async::run_until_stalled(test)]

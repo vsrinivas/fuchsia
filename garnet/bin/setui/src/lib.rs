@@ -449,7 +449,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // Creates registry, used to register handlers for setting types.
     let registry_signature = RegistryImpl::create(
-        handler_factory.clone(),
+        handler_factory,
         registry_messenger_factory.clone(),
         setting_handler_messenger_factory,
     )
@@ -465,7 +465,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
     SwitchboardBuilder::create()
-        .registry_messenger_factory(registry_messenger_factory.clone())
+        .registry_messenger_factory(registry_messenger_factory)
         .switchboard_messenger_factory(switchboard_messenger_factory.clone())
         .add_setting_proxies(proxies)
         .build()
