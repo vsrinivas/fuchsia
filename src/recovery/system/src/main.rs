@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use argh::FromArgs;
 use carnelian::{
     color::Color,
-    drawing::{path_for_rounded_rectangle, FontFace, GlyphMap, Text},
+    drawing::{
+        path_for_rounded_rectangle, DisplayAligned, DisplayRotation, FontFace, GlyphMap, Text,
+    },
+    geometry::IntVector,
     input, make_message,
     render::{
         BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
@@ -42,6 +46,25 @@ use fdr::{FactoryResetState, ResetEvent};
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 
+fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
+    match s {
+        "0" => Ok(DisplayRotation::Deg0),
+        "90" => Ok(DisplayRotation::Deg90),
+        "180" => Ok(DisplayRotation::Deg180),
+        "270" => Ok(DisplayRotation::Deg270),
+        _ => Err(format!("Invalid DisplayRotation {}", s)),
+    }
+}
+
+/// FDR
+#[derive(Debug, FromArgs)]
+#[argh(name = "recovery")]
+struct Args {
+    /// rotate
+    #[argh(option, from_str_fn(display_rotation_from_str))]
+    rotation: Option<DisplayRotation>,
+}
+
 enum RecoveryMessages {
     #[cfg(feature = "http_setup_server")]
     EventReceived,
@@ -72,8 +95,10 @@ impl AppAssistant for RecoveryAppAssistant {
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        let args: Args = argh::from_env();
         Ok(Box::new(RecoveryViewAssistant::new(
             &self.app_context,
+            args.rotation.unwrap_or(DisplayRotation::Deg0),
             view_key,
             "Fuchsia System Recovery",
             "Waiting...",
@@ -83,22 +108,30 @@ impl AppAssistant for RecoveryAppAssistant {
 
 fn raster_for_rounded_rectangle(
     bounds: &Rect,
+    target_size: Size,
     corner_radius: Coord,
+    display_rotation: &DisplayRotation,
     render_context: &mut RenderContext,
 ) -> Raster {
+    let rotation_transform =
+        display_rotation.transform(&target_size).and_then(|transform| Some(transform.to_untyped()));
     let path = path_for_rounded_rectangle(bounds, corner_radius, render_context);
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-    raster_builder.add(&path, None);
+    raster_builder.add(&path, rotation_transform.as_ref());
     raster_builder.build()
+}
+
+fn to_raster_translation_vector(pt: euclid::Point2D<Coord, DisplayAligned>) -> IntVector {
+    pt.cast_unit::<euclid::UnknownUnit>().to_vector().to_i32()
 }
 
 struct DataResetOverlay {
     headline_text: Text,
     headline_text_size: f32,
     headline_wrap: usize,
-    headline_position: Point,
+    display_headline_position: euclid::Point2D<Coord, DisplayAligned>,
     body_text: Text,
-    body_position: Point,
+    display_body_position: euclid::Point2D<Coord, DisplayAligned>,
     background: Raster,
 }
 
@@ -107,12 +140,15 @@ const MARGIN: f32 = 20.0;
 impl DataResetOverlay {
     fn new(
         render_context: &mut RenderContext,
+        display_rotation: DisplayRotation,
         size: Size,
         face: &FontFace<'_>,
         glyphs: &mut GlyphMap,
         small_glyphs: &mut GlyphMap,
     ) -> Self {
-        let headline_text_size = size.height / 12.0;
+        let transform = display_rotation.transform(&size);
+        let min_dimension = size.width.min(size.height);
+        let headline_text_size = min_dimension / 12.0;
         let inset = size * 0.25;
         let bounds = Rect::from_size(size).inner_rect(SideOffsets2D::new(
             inset.height,
@@ -134,8 +170,13 @@ impl DataResetOverlay {
         );
 
         let headline_position = bounds.origin + vec2(MARGIN, MARGIN);
+        let display_headline_position = if let Some(transform) = transform {
+            transform.transform_point(headline_position)
+        } else {
+            headline_position.cast_unit::<DisplayAligned>()
+        };
 
-        let overlay_body_text_size = size.height / 18.0;
+        let overlay_body_text_size = min_dimension / 18.0;
         let overlay_body_wrap = (bounds.size.width - MARGIN * 2.0) / overlay_body_text_size * 2.5;
 
         let body_text = Text::new(
@@ -149,16 +190,22 @@ impl DataResetOverlay {
 
         let body_position = point2(bounds.origin.x, bounds.max_y())
             + vec2(MARGIN, -body_text.bounding_box.size.height - MARGIN * 2.0);
+        let display_body_position = if let Some(transform) = transform {
+            transform.transform_point(body_position)
+        } else {
+            body_position.cast_unit::<DisplayAligned>()
+        };
 
-        let background = raster_for_rounded_rectangle(&bounds, 14.0, render_context);
+        let background =
+            raster_for_rounded_rectangle(&bounds, size, 14.0, &display_rotation, render_context);
 
         Self {
             headline_text,
             headline_text_size,
             headline_wrap,
-            headline_position,
+            display_headline_position,
             body_text,
-            body_position,
+            display_body_position,
             background,
         }
     }
@@ -204,7 +251,7 @@ impl DataResetOverlay {
                 .headline_text
                 .raster
                 .clone()
-                .translate(self.headline_position.to_vector().to_i32()),
+                .translate(to_raster_translation_vector(self.display_headline_position)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(Color::new()),
@@ -217,7 +264,7 @@ impl DataResetOverlay {
                 .body_text
                 .raster
                 .clone()
-                .translate(self.body_position.to_vector().to_i32()),
+                .translate(to_raster_translation_vector(self.display_body_position)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(Color::new()),
@@ -237,6 +284,7 @@ impl DataResetOverlay {
 }
 
 struct RecoveryViewAssistant<'a> {
+    display_rotation: DisplayRotation,
     face: FontFace<'a>,
     bg_color: Color,
     composition: Composition,
@@ -257,6 +305,7 @@ struct RecoveryViewAssistant<'a> {
 impl<'a> RecoveryViewAssistant<'a> {
     fn new(
         app_context: &AppContext,
+        display_rotation: DisplayRotation,
         view_key: ViewKey,
         heading: &str,
         body: &str,
@@ -268,11 +317,12 @@ impl<'a> RecoveryViewAssistant<'a> {
         let face = FontFace::new(FONT_DATA)?;
 
         Ok(RecoveryViewAssistant {
+            display_rotation,
             face,
             bg_color,
             composition,
-            glyphs: GlyphMap::new(),
-            small_glyphs: GlyphMap::new(),
+            glyphs: GlyphMap::new_with_rotation(display_rotation),
+            small_glyphs: GlyphMap::new_with_rotation(display_rotation),
             heading: heading.to_string(),
             heading_label: None,
             body: body.to_string(),
@@ -340,6 +390,13 @@ impl<'a> RecoveryViewAssistant<'a> {
             }
         };
     }
+
+    fn target_size(&self, size: Size) -> Size {
+        match self.display_rotation {
+            DisplayRotation::Deg90 | DisplayRotation::Deg270 => Size::new(size.height, size.width),
+            DisplayRotation::Deg0 | DisplayRotation::Deg180 => size,
+        }
+    }
 }
 
 impl ViewAssistant for RecoveryViewAssistant<'_> {
@@ -354,19 +411,28 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
+        // Emulate the size that Carnelian passes when the display is rotated
+        let target_size = self.target_size(context.size);
+
+        // Create a presentation to display tranformation
+        let transform = self.display_rotation.transform(&target_size);
+
+        let min_dimension = target_size.width.min(target_size.height);
+
         if self.data_reset_overlay.is_none() && self.reset_state_machine.is_counting_down() {
             // since a render context is needed to create an overlay, this
             // creation must be done lazily.
             self.data_reset_overlay = Some(DataResetOverlay::new(
                 render_context,
-                context.size,
+                self.display_rotation,
+                target_size,
                 &self.face,
                 &mut self.glyphs,
                 &mut self.small_glyphs,
             ));
         }
 
-        let text_size = context.size.height / 12.0;
+        let text_size = min_dimension / 12.0;
 
         let fg_color = Color { r: 255, g: 255, b: 255, a: 255 };
 
@@ -381,15 +447,22 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
 
         let heading_label = self.heading_label.as_ref().expect("label");
         let heading_label_size = heading_label.bounding_box.size;
-        let heading_label_offet = Point::new(
-            (context.size.width / 2.0) - (heading_label_size.width / 2.0),
-            (context.size.height / 4.0) - (heading_label_size.height / 2.0),
+        let heading_label_offset = Point::new(
+            (target_size.width / 2.0) - (heading_label_size.width / 2.0),
+            (target_size.height / 4.0) - (heading_label_size.height / 2.0),
         );
 
-        let heading_label_offet = heading_label_offet.to_i32().to_vector();
+        let display_heading_label_offset = if let Some(transform) = transform {
+            transform.transform_point(heading_label_offset)
+        } else {
+            heading_label_offset.cast_unit::<DisplayAligned>()
+        };
 
         let heading_label_layer = Layer {
-            raster: heading_label.raster.clone().translate(heading_label_offet),
+            raster: heading_label
+                .raster
+                .clone()
+                .translate(to_raster_translation_vector(display_heading_label_offset)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(fg_color),
@@ -408,15 +481,21 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
 
         let body_label = self.body_label.as_ref().expect("body_label");
         let body_label_size = body_label.bounding_box.size;
-        let body_label_offet = Point::new(
-            (context.size.width / 2.0) - (body_label_size.width / 2.0),
-            (context.size.height * 0.75) - (body_label_size.height / 2.0),
+        let body_label_offset = Point::new(
+            (target_size.width / 2.0) - (body_label_size.width / 2.0),
+            (target_size.height * 0.75) - (body_label_size.height / 2.0),
         );
-
-        let body_label_offet = body_label_offet.to_i32().to_vector();
+        let display_body_label_offset = if let Some(transform) = transform {
+            transform.transform_point(body_label_offset)
+        } else {
+            body_label_offset.cast_unit::<DisplayAligned>()
+        };
 
         let body_label_layer = Layer {
-            raster: body_label.raster.clone().translate(body_label_offet),
+            raster: body_label
+                .raster
+                .clone()
+                .translate(to_raster_translation_vector(display_body_label_offset)),
             style: Style {
                 fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(fg_color),
