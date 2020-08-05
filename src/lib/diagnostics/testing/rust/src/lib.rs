@@ -4,7 +4,7 @@
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::{EnvironmentControllerProxy, LauncherMarker};
-use fuchsia_async as fasync;
+use fuchsia_async::Task;
 use fuchsia_component::{
     client::{connect_to_service, launch_with_options, App, ExitStatus, LaunchOptions},
     server::{ServiceFs, ServiceObj},
@@ -14,14 +14,14 @@ use futures::{channel::mpsc, StreamExt};
 use std::ops::Deref;
 
 /// An instance of [`fuchsia_component::client::App`] which will have all its logs and inspect
-/// collected. Not recommended for production use since the intended use case of ergonomic tests
-/// biases the implementation towards convenience and e.g. spawns multiple tasks when launching the
-/// app.
+/// collected.
 pub struct AppWithDiagnostics {
     app: App,
     observer: App,
     recv_logs: mpsc::UnboundedReceiver<LogMessage>,
     env_proxy: EnvironmentControllerProxy,
+    _env_task: Task<()>,
+    _listen_task: Task<()>,
 }
 
 impl AppWithDiagnostics {
@@ -61,12 +61,11 @@ impl AppWithDiagnostics {
             tags: vec![],
         };
         let (send_logs, recv_logs) = mpsc::unbounded();
-        fasync::Task::spawn(async move {
+        let _listen_task = Task::spawn(async move {
             run_log_listener_with_proxy(&log_proxy, send_logs, Some(&mut options), false, None)
                 .await
                 .unwrap();
-        })
-        .detach();
+        });
 
         // start the component
         let dir_req = observer.directory_request().clone();
@@ -80,12 +79,11 @@ impl AppWithDiagnostics {
                 "logged",
             )
             .unwrap();
-        fasync::Task::spawn(Box::pin(async move {
+        let _env_task = Task::spawn(Box::pin(async move {
             fs.collect::<()>().await;
-        }))
-        .detach();
+        }));
 
-        Self { app, observer, recv_logs, env_proxy }
+        Self { app, observer, recv_logs, env_proxy, _env_task, _listen_task }
     }
 
     /// Kill the running component. Differs from [`fuchsia_component::client::App`] in that it also
