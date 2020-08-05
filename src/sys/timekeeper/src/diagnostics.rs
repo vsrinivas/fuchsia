@@ -97,8 +97,9 @@ pub fn init(utc_clock: Arc<zx::Clock>) {
 pub struct CobaltMetrics {
     /// The wrapped CobaltSender used to log metrics.
     sender: CobaltSender,
-    /// A spawned future that should be retained while the CobaltSender is in use.
-    _task: Option<fasync::Task<()>>,
+    // TODO(57677): Move back to an owned fasync::Task instead of detaching the spawned Task
+    // once the lifecycle of timekeeper ensures CobaltMetrics objects will last long enough
+    // to finish their logging.
 }
 
 impl CobaltMetrics {
@@ -106,7 +107,8 @@ impl CobaltMetrics {
     pub fn new() -> Self {
         let (sender, fut) = CobaltConnector::default()
             .serve(ConnectionType::project_id(time_metrics_registry::PROJECT_ID));
-        Self { sender, _task: Some(fasync::Task::spawn(fut)) }
+        fasync::Task::spawn(fut).detach();
+        Self { sender }
     }
 
     #[cfg(test)]
@@ -118,7 +120,7 @@ impl CobaltMetrics {
     pub fn new_mock() -> (Self, futures::channel::mpsc::Receiver<CobaltEvent>) {
         let (mpsc_sender, mpsc_receiver) = futures::channel::mpsc::channel(1);
         let sender = CobaltSender::new(mpsc_sender);
-        (CobaltMetrics { sender, _task: None }, mpsc_receiver)
+        (CobaltMetrics { sender }, mpsc_receiver)
     }
 
     /// Records a Timekeeper lifecycle event.
