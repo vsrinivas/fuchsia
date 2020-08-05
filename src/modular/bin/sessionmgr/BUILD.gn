@@ -57,7 +57,6 @@ source_set("sessionmgr_lib") {
 
   deps = [
     ":component_context",
-    ":focus",
     ":presentation_provider",
     ":session_ctl",
     ":startup_agent_launcher",
@@ -142,25 +141,6 @@ source_set("component_context") {
   ]
 }
 
-source_set("focus") {
-  sources = [
-    "focus.cc",
-    "focus.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.internal",
-    "//sdk/fidl/fuchsia.modular.session",
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/fsl",
-    "//src/modular/lib/async/cpp:operation",
-    "//src/modular/lib/fidl:array_to_string",
-    "//src/modular/lib/fidl:clone",
-    "//src/modular/lib/fidl:json_xdr",
-  ]
-}
-
 source_set("presentation_provider") {
   sources = [
     "presentation_provider.cc",
@@ -194,7 +174,6 @@ source_set("startup_agent_launcher") {
 
   deps = [
     ":agent_services_factory",
-    ":focus",
     ":rate_limited_retry",
     "agent_runner",
     "//sdk/fidl/fuchsia.bluetooth.le",

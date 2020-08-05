@@ -18,7 +18,6 @@
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
-#include "src/modular/bin/sessionmgr/focus.h"
 #include "src/modular/bin/sessionmgr/presentation_provider.h"
 #include "src/modular/bin/sessionmgr/puppet_master/make_production_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"

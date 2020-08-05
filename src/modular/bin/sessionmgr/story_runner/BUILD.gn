@@ -40,7 +40,6 @@ source_set("story_runner") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/bin/sessionmgr:component_context",
-    "//src/modular/bin/sessionmgr:focus",
     "//src/modular/bin/sessionmgr:presentation_provider",
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
