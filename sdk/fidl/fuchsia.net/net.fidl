@@ -25,17 +25,6 @@ union IpAddress {
     2: Ipv6Address ipv6;
 };
 
-/// Endpoint describes an IP address and port. The network protocol associated
-/// with the Endpoint will be known from context or communicated through
-/// additional structures.
-struct Endpoint {
-    /// The IP address of the endpoint.
-    IpAddress addr;
-
-    /// The port number of the endpoint.
-    uint16 port;
-};
-
 // TODO(https://fxbug.dev/54163): rename Subnet to AddressWithPrefix when
 // binding support is ready, so we don't have to recursively fix all users.
 /// An IP address with its subnet prefix length.
