@@ -130,7 +130,7 @@ mod test {
                 format!("@{}", tmp.join("entries.rsp").to_string_lossy()),
             ],
             source_dir: Some(tmp.to_str().unwrap().into()),
-            hash_out: None,
+            ..Default::default()
         })
     }
     // These hashes should not change unless the package input changes
@@ -173,7 +173,7 @@ mod test {
     fn test_manifest_syntax_error() -> Result<()> {
         let (_tmpdir, repo) = make_test_repo()?;
         let res = crate::cmd_package_build(
-            BuildCommand { entries: vec!["bad entry".into()], source_dir: None, hash_out: None },
+            BuildCommand { entries: vec!["bad entry".into()], ..Default::default() },
             &mut std::io::stdout(),
             &repo,
         );

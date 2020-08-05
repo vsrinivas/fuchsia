@@ -21,7 +21,7 @@ pub enum SubCommand {
     Import(ImportCommand),
 }
 
-#[derive(FromArgs, PartialEq, Debug)]
+#[derive(FromArgs, PartialEq, Debug, Default)]
 #[argh(
     subcommand,
     name = "build",
