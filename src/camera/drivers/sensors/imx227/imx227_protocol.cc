@@ -20,8 +20,6 @@ zx_status_t Imx227Device::CameraSensor2Init() {
   std::lock_guard guard(lock_);
 
   HwInit();
-
-  initialized_ = true;
   return ZX_OK;
 }
 
@@ -34,7 +32,6 @@ void Imx227Device::CameraSensor2DeInit() {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
   is_streaming_ = false;
-  initialized_ = false;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetSensorId(uint32_t* out_id) {
@@ -89,9 +86,6 @@ zx_status_t Imx227Device::CameraSensor2StartStreaming() {
   }
 
   std::lock_guard guard(lock_);
-  if (!IsSensorInitialized()) {
-    return ZX_ERR_BAD_STATE;
-  }
   zxlogf(DEBUG, "%s Camera Sensor Start Streaming", __func__);
   is_streaming_ = true;
   Write8(kModeSelectReg, 0x01);
@@ -99,7 +93,7 @@ zx_status_t Imx227Device::CameraSensor2StartStreaming() {
 }
 
 void Imx227Device::CameraSensor2StopStreaming() {
-  if (!IsSensorInitialized() || !is_streaming_) {
+  if (!is_streaming_) {
     return;
   }
 

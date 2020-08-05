@@ -24,35 +24,6 @@
 
 namespace camera {
 
-struct SensorCtx {
-  // TODO(55045): Add details for each one of these and also remove unused ones.
-  uint32_t again_limit;
-  uint32_t int_max;
-  uint32_t dgain_limit;
-  uint32_t wdr_mode;
-  uint32_t gain_cnt;
-  uint32_t t_height;
-  uint32_t int_time_limit;
-  uint32_t t_height_old;
-  uint16_t int_time;
-  uint16_t VMAX;
-  uint16_t HMAX;
-  uint16_t dgain_old;
-  uint16_t int_time_min;
-  uint16_t again_old;
-  std::array<uint16_t, 2> dgain;
-  std::array<uint16_t, 2> again;
-  uint8_t seq_width;
-  uint8_t streaming_flag;
-  uint8_t again_delay;
-  uint8_t again_change;
-  uint8_t dgain_delay;
-  uint8_t dgain_change;
-  uint8_t change_flag;
-  uint8_t hdr_flag;
-  camera_sensor_info_t param;
-};
-
 // TODO(57529): Refactor into a class that incorporates relevant methods.
 // TODO(jsasinowski): Generalize to cover additional gain modes.
 struct AnalogGain {
@@ -126,23 +97,10 @@ class Imx227Device : public DeviceType,
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // Testing interface will need to use this to check the status of the sensor.
-  bool IsSensorInitialized() const { return initialized_; }
-
-  // |ZX_PROTOCOL_CAMERA_SENSOR|
-  zx_status_t CameraSensorInit();
-  void CameraSensorDeInit();
-  zx_status_t CameraSensorSetMode(uint8_t mode);
-  zx_status_t CameraSensorStartStreaming();
-  zx_status_t CameraSensorStopStreaming();
-  int32_t CameraSensorSetAnalogGain(int32_t gain);
-  int32_t CameraSensorSetDigitalGain(int32_t gain);
-  zx_status_t CameraSensorSetIntegrationTime(int32_t int_time);
-  zx_status_t CameraSensorUpdate();
-  zx_status_t CameraSensorGetInfo(camera_sensor_info_t* out_info);
-  zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
-                                            size_t modes_count, size_t* out_modes_actual);
-  bool CameraSensorIsPoweredUp();
+  bool IsSensorOutOfReset() {
+    std::lock_guard guard(lock_);
+    return ValidateSensorID();
+  }
 
   // OTP
 
@@ -224,10 +182,7 @@ class Imx227Device : public DeviceType,
   void HwDeInit() __TA_REQUIRES(lock_);
   void ShutDown();
   bool ValidateSensorID() __TA_REQUIRES(lock_);
-  bool IsSensorOutOfReset() __TA_REQUIRES(lock_) { return ValidateSensorID(); }
 
-  // Sensor Context
-  SensorCtx ctx_ __TA_GUARDED(lock_);
   bool is_streaming_;
   uint8_t num_modes_;
   uint8_t current_mode_;
@@ -258,9 +213,6 @@ class Imx227Device : public DeviceType,
   zx_status_t ReadGainConstants() __TA_REQUIRES(lock_);
 
   zx_status_t SetGroupedParameterHold(bool) __TA_REQUIRES(lock_);
-
-  // Sensor Status
-  bool initialized_ = false;
 
   std::mutex lock_;
 };

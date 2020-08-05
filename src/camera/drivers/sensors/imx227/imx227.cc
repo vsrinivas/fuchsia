@@ -164,11 +164,6 @@ zx_status_t Imx227Device::Write8(uint16_t addr, uint8_t val) {
   return status;
 }
 
-bool Imx227Device::CameraSensorIsPoweredUp() {
-  std::lock_guard guard(lock_);
-  return ValidateSensorID();
-}
-
 bool Imx227Device::ValidateSensorID() {
   auto result = Read16(kSensorModelIdReg);
   if (result.is_error()) {
@@ -237,149 +232,6 @@ void Imx227Device::HwDeInit() {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 }
 
-zx_status_t Imx227Device::CameraSensorInit() {
-  std::lock_guard guard(lock_);
-
-  HwInit();
-
-  // Initialize Sensor Context.
-  ctx_.seq_width = 1;
-  ctx_.streaming_flag = 0;
-  ctx_.again_old = 0;
-  ctx_.change_flag = 0;
-  ctx_.again_limit = 8 << kAGainPrecision;
-  ctx_.dgain_limit = 15 << kDGainPrecision;
-
-  // Initialize Sensor Parameters.
-  ctx_.param.again_accuracy = 1 << kLog2GainShift;
-  ctx_.param.sensor_exp_number = kSensorExpNumber;
-  ctx_.param.again_log2_max = 3 << kLog2GainShift;
-  ctx_.param.dgain_log2_max = 3 << kLog2GainShift;
-  ctx_.param.integration_time_apply_delay = 2;
-  ctx_.param.isp_exposure_channel_delay = 0;
-
-  initialized_ = true;
-  return ZX_OK;
-}
-
-void Imx227Device::CameraSensorDeInit() {
-  std::lock_guard guard(lock_);
-  mipi_.DeInit();
-  // Reference code has it, mostly likely needed for the clock to
-  // stabalize. No other way of knowing for sure if sensor is now off.
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-  initialized_ = false;
-}
-
-zx_status_t Imx227Device::CameraSensorGetInfo(camera_sensor_info_t* out_info) {
-  std::lock_guard guard(lock_);
-  memcpy(out_info, &ctx_.param, sizeof(camera_sensor_info_t));
-  return ZX_OK;
-}
-
-zx_status_t Imx227Device::CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
-                                                        size_t modes_count,
-                                                        size_t* out_modes_actual) {
-  std::lock_guard guard(lock_);
-  if (modes_count > supported_modes.size()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  memcpy(out_modes_list, &supported_modes, sizeof(camera_sensor_mode_t) * supported_modes.size());
-  *out_modes_actual = supported_modes.size();
-  return ZX_OK;
-}
-
-// TODO(braval): Update the Banjo documentation to indicate that SensorSetMode() will
-//               return ZX_OK even when the sensor is powered down and not
-//               initialized into the requested mode.
-zx_status_t Imx227Device::CameraSensorSetMode(uint8_t mode) {
-  std::lock_guard guard(lock_);
-  zxlogf(DEBUG, "%s IMX227 Camera Sensor Mode Set request to %d", __func__, mode);
-
-  HwInit();
-
-  if (!IsSensorInitialized()) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  if (mode >= supported_modes.size()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  switch (supported_modes[mode].wdr_mode) {
-    case CAMERASENSOR_WDR_MODE_LINEAR: {
-      if (IsSensorOutOfReset()) {
-        InitSensor(supported_modes[mode].idx);
-      }
-
-      ctx_.again_delay = 0;
-      ctx_.dgain_delay = 0;
-      ctx_.param.integration_time_apply_delay = 2;
-      ctx_.param.isp_exposure_channel_delay = 0;
-      ctx_.hdr_flag = 0;
-      break;
-    }
-    // TODO(41260) : Support other modes.
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  ctx_.param.active.width = supported_modes[mode].resolution.width;
-  ctx_.param.active.height = supported_modes[mode].resolution.height;
-  auto hmax_result = GetRegisterValueFromSequence(supported_modes[mode].idx, kLineLengthPckReg);
-  auto vmax_result = GetRegisterValueFromSequence(supported_modes[mode].idx, kFrameLengthLinesReg);
-  if (hmax_result.is_error() || vmax_result.is_error()) {
-    return ZX_ERR_INTERNAL;
-  }
-  ctx_.HMAX = hmax_result.value();
-  ctx_.VMAX = vmax_result.value();
-  ctx_.int_max = kMaxIntegrationTime;
-  ctx_.int_time_min = 1;
-  ctx_.int_time_limit = ctx_.int_max;
-  ctx_.param.total.height = ctx_.VMAX;
-  ctx_.param.total.width = ctx_.HMAX;
-  ctx_.param.pixels_per_line = ctx_.param.total.width;
-
-  uint32_t master_clock = kMasterClock;
-  ctx_.param.lines_per_second = master_clock / ctx_.HMAX;
-
-  ctx_.param.integration_time_min = ctx_.int_time_min;
-  ctx_.param.integration_time_limit = ctx_.int_time_limit;
-  ctx_.param.integration_time_max = ctx_.int_time_limit;
-  ctx_.param.integration_time_long_max = ctx_.int_time_limit;
-  ctx_.param.mode = mode;
-  ctx_.param.bayer = supported_modes[mode].bayer;
-  ctx_.wdr_mode = supported_modes[mode].wdr_mode;
-
-  mipi_info_t mipi_info;
-  mipi_adap_info_t adap_info;
-
-  mipi_info.lanes = supported_modes[mode].lanes;
-  mipi_info.ui_value = 1000 / supported_modes[mode].mbps;
-  if ((1000 % supported_modes[mode].mbps) != 0) {
-    mipi_info.ui_value += 1;
-  }
-
-  switch (supported_modes[mode].bits) {
-    case kRaw10Bits:
-      adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
-      break;
-    case kRaw12Bits:
-      adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW12;
-      break;
-    default:
-      adap_info.format = MIPI_IMAGE_FORMAT_AM_RAW10;
-  }
-
-  adap_info.resolution.width = supported_modes[mode].resolution.width;
-  adap_info.resolution.height = supported_modes[mode].resolution.height;
-  adap_info.path = MIPI_PATH_PATH0;
-  adap_info.mode = MIPI_MODES_DIR_MODE;
-  auto status = mipi_.Init(&mipi_info, &adap_info);
-  return status;
-}
-
 zx_status_t Imx227Device::InitMipiCsi(uint8_t mode) {
   mipi_info_t mipi_info;
   mipi_adap_info_t adap_info;
@@ -397,27 +249,6 @@ zx_status_t Imx227Device::InitMipiCsi(uint8_t mode) {
   adap_info.mode = MIPI_MODES_DIR_MODE;
   auto status = mipi_.Init(&mipi_info, &adap_info);
   return status;
-}
-
-zx_status_t Imx227Device::CameraSensorStartStreaming() {
-  std::lock_guard guard(lock_);
-  if (!IsSensorInitialized() || ctx_.streaming_flag) {
-    return ZX_ERR_BAD_STATE;
-  }
-  zxlogf(DEBUG, "%s Camera Sensor Start Streaming", __func__);
-  ctx_.streaming_flag = 1;
-  Write8(kModeSelectReg, 0x01);
-  return ZX_OK;
-}
-
-zx_status_t Imx227Device::CameraSensorStopStreaming() {
-  std::lock_guard guard(lock_);
-  if (!IsSensorInitialized() || !ctx_.streaming_flag) {
-    return ZX_ERR_BAD_STATE;
-  }
-  ctx_.streaming_flag = 0;
-  HwDeInit();
-  return ZX_OK;
 }
 
 fit::result<uint32_t, zx_status_t> Imx227Device::GetLinesPerSecond() {
@@ -566,31 +397,9 @@ zx_status_t Imx227Device::ReadGainConstants() {
   return ZX_OK;
 }
 
-int32_t Imx227Device::CameraSensorSetAnalogGain(int32_t gain) {
-  std::lock_guard guard(lock_);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-int32_t Imx227Device::CameraSensorSetDigitalGain(int32_t gain) {
-  std::lock_guard guard(lock_);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t Imx227Device::CameraSensorSetIntegrationTime(int32_t int_time) {
-  std::lock_guard guard(lock_);
-
-  // TODO(41260): Add support for this.
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t Imx227Device::SetGroupedParameterHold(bool enable) {
   auto status = Write8(kGroupedParameterHoldReg, enable ? 1 : 0);
   return status;
-}
-
-zx_status_t Imx227Device::CameraSensorUpdate() {
-  std::lock_guard guard(lock_);
-  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::Create(zx_device_t* parent, std::unique_ptr<Imx227Device>* device_out) {

@@ -21,11 +21,11 @@ class Imx227DeviceTest : public zxtest::Test {
  protected:
   void SetUp() override {
     ASSERT_OK(Imx227Device::Create(driver_unit_test::GetParent(), &imx227_device_));
-    ASSERT_OK(imx227_device_->CameraSensorInit());
+    ASSERT_OK(imx227_device_->CameraSensor2Init());
   }
 
   void TearDown() override {
-    imx227_device_->CameraSensorDeInit();
+    imx227_device_->CameraSensor2DeInit();
     imx227_device_.release();
   }
 
@@ -33,28 +33,13 @@ class Imx227DeviceTest : public zxtest::Test {
 };
 
 TEST_F(Imx227DeviceTest, SetMode) {
-  EXPECT_OK(imx227_device_->CameraSensorSetMode(kValidSensorMode));
-  EXPECT_NOT_OK(imx227_device_->CameraSensorSetMode(0xFF));
+  EXPECT_OK(imx227_device_->CameraSensor2SetMode(kValidSensorMode));
+  EXPECT_NOT_OK(imx227_device_->CameraSensor2SetMode(0xFF));
 }
 
 TEST_F(Imx227DeviceTest, PoweredUp) {
-  EXPECT_OK(imx227_device_->CameraSensorSetMode(kValidSensorMode));
-  EXPECT_TRUE(imx227_device_->CameraSensorIsPoweredUp());
-}
-
-TEST_F(Imx227DeviceTest, StartAndStopStreaming) {
-  EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStopStreaming());
-  EXPECT_EQ(ZX_OK, imx227_device_->CameraSensorStartStreaming());
-  EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStartStreaming());
-  // TODO(braval): Figure out a way to validate starting & stopping of streaming
-  EXPECT_EQ(ZX_OK, imx227_device_->CameraSensorStopStreaming());
-}
-
-TEST_F(Imx227DeviceTest, DeInitStateThrowsErrors) {
-  imx227_device_->CameraSensorDeInit();
-  EXPECT_NE(ZX_OK, imx227_device_->CameraSensorSetMode(kValidSensorMode));
-  EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStartStreaming());
-  EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStopStreaming());
+  EXPECT_OK(imx227_device_->CameraSensor2SetMode(kValidSensorMode));
+  EXPECT_TRUE(imx227_device_->IsSensorOutOfReset());
 }
 
 TEST_F(Imx227DeviceTest, OtpReadAndValidate) {
