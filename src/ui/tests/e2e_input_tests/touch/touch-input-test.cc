@@ -112,13 +112,6 @@ class TouchInputTest : public sys::testing::TestWithEnvironment, public Response
                                                fuchsia::ui::policy::Presenter::Name_);
     FX_CHECK(is_ok == ZX_OK);
 
-    // Tunnel through some system services; these are needed for Scenic.
-    is_ok = services->AllowParentService(fuchsia::sysmem::Allocator::Name_);
-    FX_CHECK(is_ok == ZX_OK);
-
-    is_ok = services->AllowParentService(fuchsia::vulkan::loader::Loader::Name_);
-    FX_CHECK(is_ok == ZX_OK);
-
     test_env_ = CreateNewEnclosingEnvironment("touch_input_test_env", std::move(services),
                                               {.inherit_parent_services = true});
 
