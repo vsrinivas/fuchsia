@@ -150,7 +150,7 @@ TEST(VxCopy, Perf) {
   VxCopyTest test;
   test.Initialize(kWidth, kHeight);
 
-  constexpr uint32_t kIterations = 100;
+  constexpr uint32_t kIterations = 5000;
   uint64_t buffer_size = kWidth * kHeight * kPixelWidth;
 
   printf("Copying buffer size %lu iterations %u...\n", buffer_size, kIterations);
