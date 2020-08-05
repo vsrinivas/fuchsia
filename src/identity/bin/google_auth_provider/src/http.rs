@@ -7,26 +7,21 @@
 use crate::error::{ResultExt, TokenProviderError};
 use async_trait::async_trait;
 use fidl_fuchsia_identity_external::Error as ApiError;
-use fidl_fuchsia_mem;
-use fidl_fuchsia_net_oldhttp::{
-    CacheMode, HttpHeader, ResponseBodyMode, UrlBody, UrlLoaderProxy, UrlRequest, UrlResponse,
-};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::io::AsyncReadExt;
 use hyper::StatusCode;
-use log::warn;
 
 type TokenProviderResult<T> = Result<T, TokenProviderError>;
 
 /// Representation of an HTTP request.
-pub struct HttpRequest(UrlRequest);
+pub struct HttpRequest(fidl_fuchsia_net_http::Request);
 
 /// A builder for `HttpRequest`.
 pub struct HttpRequestBuilder<'a> {
     url: String,
     method: String,
-    headers: Option<Vec<HttpHeader>>,
+    headers: Option<Vec<fidl_fuchsia_net_http::Header>>,
     body: Option<&'a str>,
 }
 
@@ -48,10 +43,10 @@ impl<'a> HttpRequestBuilder<'a> {
     /// Add a header to the HTTP request.
     pub fn with_header<T, U>(mut self, name: T, value: U) -> Self
     where
-        String: From<T> + From<U>,
+        Vec<u8>: From<T> + From<U>,
     {
         let headers = self.headers.get_or_insert(vec![]);
-        headers.push(HttpHeader { name: String::from(name), value: String::from(value) });
+        headers.push(fidl_fuchsia_net_http::Header { name: name.into(), value: value.into() });
         self
     }
 
@@ -71,23 +66,20 @@ impl<'a> HttpRequestBuilder<'a> {
                 let vmo = zx::Vmo::create(body_str.as_bytes().len() as u64)
                     .token_provider_error(ApiError::Unknown)?;
                 vmo.write(&body_str.as_bytes(), 0).token_provider_error(ApiError::Unknown)?;
-                Some(Box::new(UrlBody::Buffer(fidl_fuchsia_mem::Buffer {
+                Some(fidl_fuchsia_net_http::Body::Buffer(fidl_fuchsia_mem::Buffer {
                     vmo,
                     size: body_str.as_bytes().len() as u64,
-                })))
+                }))
             }
             None => None,
         };
 
-        Ok(HttpRequest(UrlRequest {
-            url: self.url,
-            method: self.method,
+        Ok(HttpRequest(fidl_fuchsia_net_http::Request {
+            url: Some(self.url),
+            method: Some(self.method),
             headers: self.headers,
             body: url_body,
-            response_body_buffer_size: 0,
-            auto_follow_redirects: false,
-            cache_mode: CacheMode::BypassCache,
-            response_body_mode: ResponseBodyMode::Stream,
+            deadline: None,
         }))
     }
 }
@@ -110,12 +102,12 @@ pub trait HttpClient {
 /// Loader service.
 #[derive(Clone)]
 pub struct UrlLoaderHttpClient {
-    url_loader: UrlLoaderProxy,
+    url_loader: fidl_fuchsia_net_http::LoaderProxy,
 }
 
 impl UrlLoaderHttpClient {
     /// Create a new `UrlLoaderHttpClient`.
-    pub fn new(url_loader: UrlLoaderProxy) -> Self {
+    pub fn new(url_loader: fidl_fuchsia_net_http::LoaderProxy) -> Self {
         UrlLoaderHttpClient { url_loader }
     }
 }
@@ -125,21 +117,21 @@ impl HttpClient for UrlLoaderHttpClient {
     /// Asynchronously send an HTTP request using oldhttp URLLoader service.
     async fn request(
         &self,
-        http_request: HttpRequest,
+        HttpRequest(http_request): HttpRequest,
     ) -> TokenProviderResult<(Option<String>, StatusCode)> {
-        let mut request = http_request.0;
-
-        let UrlResponse { error, body: response_body, status_code, .. } =
-            self.url_loader.start(&mut request).await.token_provider_error(ApiError::Unknown)?;
+        let fidl_fuchsia_net_http::Response { error, body, status_code, .. } =
+            self.url_loader.fetch(http_request).await.token_provider_error(ApiError::Unknown)?;
         if error.is_some() {
             return Err(TokenProviderError::new(ApiError::Network));
         }
 
+        let status_code =
+            status_code.ok_or(TokenProviderError { api_error: ApiError::Unknown, cause: None })?;
         let status =
             StatusCode::from_u16(status_code as u16).token_provider_error(ApiError::Server)?;
 
-        match response_body.map(|x| *x) {
-            Some(UrlBody::Stream(sock)) => {
+        match body {
+            Some(sock) => {
                 let mut socket =
                     fasync::Socket::from_socket(sock).token_provider_error(ApiError::Unknown)?;
                 let mut response_body = Vec::<u8>::with_capacity(RESPONSE_BUFFER_SIZE);
@@ -151,10 +143,6 @@ impl HttpClient for UrlLoaderHttpClient {
                     String::from_utf8(response_body).token_provider_error(ApiError::Unknown)?;
                 Ok((Some(response_str), status))
             }
-            Some(UrlBody::Buffer(_)) => {
-                warn!("URL loader response unexpectedly contained a buffer instead of a stream");
-                Err(TokenProviderError::new(ApiError::Unknown))
-            }
             None => Ok((None, status)),
         }
     }
@@ -165,7 +153,6 @@ mod test {
     use super::*;
     use anyhow::Error;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_net_oldhttp::{HttpError, UrlLoaderMarker, UrlLoaderRequest};
     use futures::prelude::*;
     use lazy_static::lazy_static;
 
@@ -185,15 +172,12 @@ mod test {
             .expect("Failed to build HTTP request.");
         assert_eq!(
             request.0,
-            UrlRequest {
-                url: TEST_URL.clone(),
-                method: method.to_string(),
+            fidl_fuchsia_net_http::Request {
+                url: Some(TEST_URL.clone()),
+                method: Some(method.to_string()),
                 headers: None,
                 body: None,
-                response_body_buffer_size: 0,
-                auto_follow_redirects: false,
-                cache_mode: CacheMode::BypassCache,
-                response_body_mode: ResponseBodyMode::Stream
+                deadline: None,
             }
         );
     }
@@ -208,8 +192,8 @@ mod test {
         assert_eq!(
             request.0.headers.unwrap(),
             vec![
-                HttpHeader { name: "name-1".to_string(), value: "value-1".to_string() },
-                HttpHeader { name: "name-2".to_string(), value: "value-2".to_string() },
+                fidl_fuchsia_net_http::Header { name: "name-1".into(), value: "value-1".into() },
+                fidl_fuchsia_net_http::Header { name: "name-2".into(), value: "value-2".into() },
             ]
         );
         assert!(request.0.body.is_none());
@@ -223,9 +207,9 @@ mod test {
             .finish()
             .expect("Failed to build HTTP request.");
         assert!(request.0.headers.is_none());
-        match *request.0.body.unwrap() {
-            UrlBody::Stream(_) => panic!("Expected body to be a buffer."),
-            UrlBody::Buffer(fidl_fuchsia_mem::Buffer { vmo, size }) => {
+        match request.0.body.unwrap() {
+            fidl_fuchsia_net_http::Body::Stream(_) => panic!("Expected body to be a buffer."),
+            fidl_fuchsia_net_http::Body::Buffer(fidl_fuchsia_mem::Buffer { vmo, size }) => {
                 assert_eq!(size as usize, test_body.len());
                 let mut result_body = vec![0u8; test_body.len()];
                 vmo.read(&mut result_body, 0).expect("Failed to read vmo.");
@@ -237,29 +221,25 @@ mod test {
     fn url_loader_with_response(
         body: &str,
         status_code: u16,
-        error: Option<i32>,
-    ) -> UrlLoaderProxy {
-        let mut response = UrlResponse {
-            error: error.map(|code| Box::new(HttpError { code: code, description: None })),
-            body: Some(Box::new(UrlBody::Stream(socket_with_body(body)))),
-            url: None,
-            status_code: status_code as u32,
+        error: Option<fidl_fuchsia_net_http::Error>,
+    ) -> fidl_fuchsia_net_http::LoaderProxy {
+        let response = fidl_fuchsia_net_http::Response {
+            error,
+            body: Some(socket_with_body(body)),
+            final_url: None,
+            status_code: Some(status_code as u32),
             status_line: None,
             headers: None,
-            mime_type: None,
-            charset: None,
-            redirect_method: None,
-            redirect_url: None,
-            redirect_referrer: None,
+            redirect: None,
         };
         let (url_loader_proxy, mut url_loader_stream) =
-            create_proxy_and_stream::<UrlLoaderMarker>()
+            create_proxy_and_stream::<fidl_fuchsia_net_http::LoaderMarker>()
                 .expect("Failed to create URL loader proxy.");
         fasync::Task::spawn(async move {
             let req =
                 url_loader_stream.try_next().await.expect("Failed to get request from stream");
-            if let Some(UrlLoaderRequest::Start { responder, .. }) = req {
-                responder.send(&mut response).expect("Failed to send response");
+            if let Some(fidl_fuchsia_net_http::LoaderRequest::Fetch { responder, .. }) = req {
+                responder.send(response).expect("Failed to send response");
             } else {
                 panic!("Got unexpected URL Loader request.")
             }
@@ -308,7 +288,11 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn test_network_error() -> Result<(), Error> {
-        let http_client = UrlLoaderHttpClient::new(url_loader_with_response("", 0, Some(0)));
+        let http_client = UrlLoaderHttpClient::new(url_loader_with_response(
+            "",
+            0,
+            Some(fidl_fuchsia_net_http::Error::Connect),
+        ));
         let request = HttpRequestBuilder::new(TEST_URL.as_str(), "GET").finish()?;
         let result = http_client.request(request).await;
         assert_eq!(result.unwrap_err().api_error, ApiError::Network);

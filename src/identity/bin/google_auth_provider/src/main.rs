@@ -25,7 +25,7 @@ use crate::time::UtcClock;
 use crate::web::DefaultStandaloneWebFrame;
 use anyhow::{Context as _, Error};
 use fidl::endpoints::{create_proxy, ClientEnd};
-use fidl_fuchsia_net_oldhttp::{HttpServiceMarker, UrlLoaderMarker};
+use fidl_fuchsia_net_http::LoaderMarker;
 use fidl_fuchsia_web::{ContextMarker, ContextProviderMarker, CreateContextParams, FrameMarker};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
@@ -41,9 +41,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let http_service = connect_to_service::<HttpServiceMarker>()?;
-    let (url_loader, url_loader_service) = create_proxy::<UrlLoaderMarker>()?;
-    http_service.create_url_loader(url_loader_service)?;
+    let url_loader = connect_to_service::<LoaderMarker>()?;
     let frame_supplier = WebFrameSupplier::new();
     let http_client = UrlLoaderHttpClient::new(url_loader);
 
