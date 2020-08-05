@@ -63,10 +63,6 @@ constexpr char kRunTestComponentPath[] = "/bin/run-test-component";
 // component url as its parameter.
 constexpr char kRunTestSuitePath[] = "/bin/run-test-suite";
 
-// This will tell `run-test-component` to fail if test produces logs with severity more than some
-// predetermined value.
-constexpr char kFlagRestrictLogs[] = "--restrict-logs";
-
 fbl::String RootName(const fbl::String& path) {
   const size_t i = strspn(path.c_str(), "/");
   const char* start = &path.c_str()[i];
@@ -377,10 +373,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
     }
     component_launch_args[0] = component_executor.c_str();
     int j = 1;
-    if (component_executor == kRunTestComponentPath) {
-      component_launch_args[j] = kFlagRestrictLogs;
-      j++;
-    }
     component_launch_args[j] = path;
     j++;
     for (size_t i = 1; i <= argc; i++) {
