@@ -220,7 +220,4 @@ executable("cobalt_app_unittests") {
     "//third_party/cobalt/src/public/testing:fake_cobalt_service",
     "//third_party/googletest:gmock",
   ]
-
-  # TODO(46555): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
