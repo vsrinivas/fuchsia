@@ -16,16 +16,7 @@ const AUTHENTICATOR_PASSWORD: &str = "goodpassword";
 const SUPPLICANT_PASSWORD: &str = "badpassword";
 
 async fn doomed_connect() -> fidl_policy::ClientStateSummary {
-    let (wlan_controller, mut update_listener) = init_client_controller();
-
-    let update = get_update_from_client_listener(&mut update_listener).await;
-    assert_eq!(
-        update,
-        fidl_policy::ClientStateSummary {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
-            networks: Some(vec![])
-        }
-    );
+    let (wlan_controller, mut update_listener) = init_client_controller().await;
 
     info!("Saving network. SSID: {:?}, Password: {:?}", SSID, SUPPLICANT_PASSWORD);
     let network_config = create_wpa2_network_config(SSID, SUPPLICANT_PASSWORD);

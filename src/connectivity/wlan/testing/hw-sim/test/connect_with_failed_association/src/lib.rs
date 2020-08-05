@@ -53,15 +53,6 @@ async fn save_network_and_await_connection(
     wlan_controller: &mut fidl_policy::ClientControllerProxy,
     mut update_listener: &mut fidl_policy::ClientStateUpdatesRequestStream,
 ) {
-    let update = get_update_from_client_listener(&mut update_listener).await;
-    assert_eq!(
-        update,
-        fidl_policy::ClientStateSummary {
-            state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
-            networks: Some(vec![])
-        }
-    );
-
     let network_config =
         fidl_policy::NetworkConfig::from(NetworkConfigBuilder::open().ssid(&SSID.to_vec()));
     wlan_controller
@@ -108,7 +99,7 @@ async fn connect_with_failed_association() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let (mut wlan_controller, mut update_listener) = wlan_hw_sim::init_client_controller();
+    let (mut wlan_controller, mut update_listener) = wlan_hw_sim::init_client_controller().await;
     let save_network_fut =
         save_network_and_await_connection(&mut wlan_controller, &mut update_listener);
     pin_mut!(save_network_fut);

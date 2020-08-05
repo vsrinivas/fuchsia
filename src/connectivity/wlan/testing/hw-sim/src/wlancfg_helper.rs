@@ -9,6 +9,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
     futures::StreamExt,
+    log::debug,
 };
 
 // Holds basic WLAN network configuration information and allows cloning and conversion to a policy
@@ -130,13 +131,17 @@ pub async fn start_ap_and_wait_for_confirmation(network_config: NetworkConfigBui
 }
 
 /// Creates a client controller and update stream for getting status updates.
-pub fn init_client_controller(
+pub async fn init_client_controller(
 ) -> (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream) {
     let provider = connect_to_service::<fidl_policy::ClientProviderMarker>().unwrap();
     let (controller_client_end, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
     let (listener_client_end, listener_server_end) = fidl::endpoints::create_endpoints().unwrap();
     provider.get_controller(controller_server_end, listener_client_end).unwrap();
-    let listener_stream = listener_server_end.into_stream().unwrap();
+    let mut listener_stream = listener_server_end.into_stream().unwrap();
+
+    // ConnectionsEnabled with no network states is always the first update.
+    assert_next_client_listener_update(&mut listener_stream, vec![]).await;
+
     (controller_client_end, listener_stream)
 }
 
@@ -154,4 +159,14 @@ pub async fn get_update_from_client_listener(
     // Ack the update.
     responder.send().expect("failed to ack update");
     update.into()
+}
+
+async fn assert_next_client_listener_update(
+    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    networks: Vec<fidl_policy::NetworkState>,
+) {
+    let update = get_update_from_client_listener(listener_stream).await;
+    debug!("Next update from client listener: {:?}", update);
+    assert_eq!(update.state, Some(fidl_policy::WlanClientState::ConnectionsEnabled));
+    assert_eq!(update.networks, Some(networks));
 }
