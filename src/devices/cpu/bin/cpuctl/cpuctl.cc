@@ -151,7 +151,7 @@ void describe(const char* domain_name) {
   }
 
   auto client = std::move(std::get<CpuPerformanceDomain>(domain));
-  const auto& [core_count_status, core_count] = client.GetNumLogicalCores();
+  const auto [core_count_status, core_count] = client.GetNumLogicalCores();
 
   std::cout << "Domain " << domain_name << std::endl;
   if (core_count_status == ZX_OK) {
@@ -231,7 +231,7 @@ void get_performance_state(const char* domain_name) {
 
   auto client = std::move(std::get<CpuPerformanceDomain>(domain));
 
-  const auto& [status, ps_index, pstate] = client.GetCurrentPerformanceState();
+  const auto [status, ps_index, pstate] = client.GetCurrentPerformanceState();
 
   if (status != ZX_OK) {
     std::cout << "Failed to get current performance state, st = " << status << std::endl;

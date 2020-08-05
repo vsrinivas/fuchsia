@@ -193,14 +193,14 @@ void PerformanceDomainTest::SetUp() {
 
 // Trivial Tests.
 TEST_F(PerformanceDomainTest, TestNumLogicalCores) {
-  const auto& [core_count_status, core_count] = pd_->GetNumLogicalCores();
+  const auto [core_count_status, core_count] = pd_->GetNumLogicalCores();
 
   EXPECT_OK(core_count_status);
   EXPECT_EQ(core_count, kNumLogicalCores);
 }
 
 TEST_F(PerformanceDomainTest, TestGetCurrentPerformanceState) {
-  const auto& [st, pstate, pstate_info] = pd_->GetCurrentPerformanceState();
+  const auto [st, pstate, pstate_info] = pd_->GetCurrentPerformanceState();
   EXPECT_OK(st);
   EXPECT_EQ(pstate, kInitialPstate);
   EXPECT_EQ(pstate_info.frequency_hz, kTestPstates[kInitialPstate].frequency_hz);
@@ -227,7 +227,7 @@ TEST_F(PerformanceDomainTest, TestSetPerformanceState) {
   EXPECT_OK(st);
 
   {
-    const auto& [res, new_pstate, info] = pd_->GetCurrentPerformanceState();
+    const auto [res, new_pstate, info] = pd_->GetCurrentPerformanceState();
     EXPECT_OK(res);
     EXPECT_EQ(new_pstate, test_pstate);
   }
@@ -237,7 +237,7 @@ TEST_F(PerformanceDomainTest, TestSetPerformanceState) {
 
   {
     // Make sure the pstate hasn't changed.
-    const auto& [res, new_pstate, info] = pd_->GetCurrentPerformanceState();
+    const auto [res, new_pstate, info] = pd_->GetCurrentPerformanceState();
     EXPECT_OK(res);
     EXPECT_EQ(new_pstate, test_pstate);
   }
