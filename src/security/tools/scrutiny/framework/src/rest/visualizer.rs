@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    log::debug,
-    rouille::{Request, Response},
-};
+use rouille::{Request, Response};
 
 /// Returns a tuple consisting of (PATH_PREFIX_TO_REMOVE_FROM_REQUEST, PATH_RELATIVE_TO_FUCHSIA_ROOT)
 /// of the location of the file specified by the url.
@@ -48,13 +45,18 @@ impl Visualizer {
             rouille::match_assets(&prefix_stripped_req, &format!("{}{}", self.fuchsia_root, path))
         } else {
             let response = rouille::match_assets(request, &self.static_root);
+            // Looking for a *.html file if we were unable to find a matching asset.
             if response.status_code == 404 {
-                // Try looking for an index.html file if we were unable to find a matching asset.
-                debug!("Unable to serve requested url, seeing if {} exists.", request.url());
+                let mut modified_url = request.url();
+                if modified_url.is_empty() || modified_url == "/" {
+                    modified_url = "/index.html".to_string();
+                } else {
+                    modified_url = format!("{}.html", request.url());
+                }
                 let new_request = Request::fake_http_from(
                     *request.remote_addr(),
                     request.method(),
-                    format!("{}/index.html", request.url()),
+                    modified_url,
                     request
                         .headers()
                         .map(|(key, val)| (key.to_string(), val.to_string()))
@@ -91,6 +93,19 @@ mod tests {
 
         let response =
             viz.serve_path_or_index(&Request::fake_http("GET", "foo.html", vec![], vec![]));
+        assert_eq!(response.status_code, 200);
+        let mut buffer = Vec::new();
+        let (mut reader, _) = response.data.into_reader_and_size();
+        reader.read_to_end(&mut buffer).unwrap();
+        assert_eq!(buffer, b"Hello world!");
+    }
+
+    #[test]
+    fn serve_path_or_index_reads_existing_file_with_rewrite() {
+        let tmp_dir = setup_directory();
+        let viz = Visualizer::new("".to_string(), tmp_dir.clone());
+
+        let response = viz.serve_path_or_index(&Request::fake_http("GET", "foo", vec![], vec![]));
         assert_eq!(response.status_code, 200);
         let mut buffer = Vec::new();
         let (mut reader, _) = response.data.into_reader_and_size();

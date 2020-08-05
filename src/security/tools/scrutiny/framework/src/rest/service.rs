@@ -138,7 +138,7 @@ impl RestService {
                 Ok(result) => Response {
                     status_code: 200,
                     headers: vec![("Content-Type".into(), "application/json".into())],
-                    data: ResponseBody::from_string(result.to_string()),
+                    data: ResponseBody::from_string(serde_json::to_string_pretty(&result).unwrap()),
                     upgrade: None,
                 },
                 Err(e) => {
@@ -194,15 +194,15 @@ mod tests {
         let mut dispatcher = ControllerDispatcher::new(data_model);
         let echo = Arc::new(EchoController::default());
         let error = Arc::new(ErrorController::default());
-        dispatcher.add(Uuid::new_v4(), "/foo/bar".to_string(), echo).unwrap();
-        dispatcher.add(Uuid::new_v4(), "/foo/baz".to_string(), error).unwrap();
+        dispatcher.add(Uuid::new_v4(), "/api/foo/bar".to_string(), echo).unwrap();
+        dispatcher.add(Uuid::new_v4(), "/api/foo/baz".to_string(), error).unwrap();
         Arc::new(RwLock::new(dispatcher))
     }
 
     #[test]
     fn handle_controller_request_fails_non_get_or_post_request() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("HEAD", "/foo/bar", vec![], vec![]);
+        let request = &Request::fake_http("HEAD", "/api/foo/bar", vec![], vec![]);
         let response = RestService::handle_controller_request(dispatcher.clone(), request);
         assert_eq!(response.status_code, 405);
     }
@@ -210,7 +210,7 @@ mod tests {
     #[test]
     fn handle_controller_request_returns_500_on_controller_error() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("GET", "/foo/baz", vec![], vec![]);
+        let request = &Request::fake_http("GET", "/api/foo/baz", vec![], vec![]);
         let response = RestService::handle_controller_request(dispatcher.clone(), request);
         assert_eq!(response.status_code, 500);
     }
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn handle_controller_request_returns_404_on_non_matching_dispatcher() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("GET", "/foo/bin", vec![], vec![]);
+        let request = &Request::fake_http("GET", "/api/foo/bin", vec![], vec![]);
         let response = RestService::handle_controller_request(dispatcher.clone(), request);
         assert_eq!(response.status_code, 404);
     }
@@ -226,26 +226,30 @@ mod tests {
     #[test]
     fn handle_controller_request_serves_get_request() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("GET", "/foo/bar?hello=world", vec![], vec![]);
+        let request = &Request::fake_http("GET", "/api/foo/bar?hello=world", vec![], vec![]);
         let response = RestService::handle_controller_request(dispatcher.clone(), request);
         assert_eq!(response.status_code, 200);
         let mut buffer = Vec::new();
         let (mut reader, _) = response.data.into_reader_and_size();
         reader.read_to_end(&mut buffer).unwrap();
-        assert_eq!(buffer, b"{\"hello\":\"world\"}");
+        let response_str = std::str::from_utf8(&buffer).unwrap();
+        assert_eq!(response_str.contains("hello"), true);
+        assert_eq!(response_str.contains("world"), true);
     }
 
     #[test]
     fn handle_controller_request_serves_post_request() {
         let dispatcher = setup_dispatcher();
         let bytes = b"{\"hello\":\"world\"}";
-        let request = &Request::fake_http("POST", "/foo/bar", vec![], bytes.to_vec());
+        let request = &Request::fake_http("POST", "/api/foo/bar", vec![], bytes.to_vec());
         let response = RestService::handle_controller_request(dispatcher.clone(), request);
         assert_eq!(response.status_code, 200);
         let mut buffer = Vec::new();
         let (mut reader, _) = response.data.into_reader_and_size();
         reader.read_to_end(&mut buffer).unwrap();
-        assert_eq!(buffer, bytes);
+        let response_str = std::str::from_utf8(&buffer).unwrap();
+        assert_eq!(response_str.contains("hello"), true);
+        assert_eq!(response_str.contains("world"), true);
     }
 
     #[test]
