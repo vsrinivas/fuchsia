@@ -14,10 +14,14 @@ namespace power_fidl = llcpp::fuchsia::hardware::power;
 
 namespace devmgr {
 
-zx_status_t ComponentLifecycleServer::Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
+zx_status_t ComponentLifecycleServer::Create(async::Loop* loop, Coordinator* dev_coord,
                                              zx::channel chan) {
-  zx_status_t status = fidl::BindSingleInFlightOnly(
-      dispatcher, std::move(chan), std::make_unique<ComponentLifecycleServer>(dev_coord));
+  if (!loop) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  zx_status_t status =
+      fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(chan),
+                                   std::make_unique<ComponentLifecycleServer>(dev_coord, loop));
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to bind component lifecycle service:%s", zx_status_get_string(status));
     return status;
@@ -26,12 +30,13 @@ zx_status_t ComponentLifecycleServer::Create(async_dispatcher_t* dispatcher, Coo
 }
 
 void ComponentLifecycleServer::Stop(StopCompleter::Sync completer) {
-  auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
+  auto callback = [this, completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {
       LOGF(ERROR, "Error suspending devices while stopping the component:%s",
            zx_status_get_string(status));
     }
-    completer.Close(status);
+    LOGF(INFO, "Exiting driver manager gracefully");
+    loop_->Quit();
   };
 
   dev_coord_->Suspend(SuspendContext(SuspendContext::Flags::kSuspend,

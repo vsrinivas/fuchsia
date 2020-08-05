@@ -389,16 +389,14 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
 
   zx::channel component_lifecycle_client, component_lifecycle_server;
   ASSERT_OK(zx::channel::create(0, &component_lifecycle_client, &component_lifecycle_server));
-  ASSERT_OK(devmgr::ComponentLifecycleServer::Create(
-      coordinator_loop()->dispatcher(), coordinator(), std::move(component_lifecycle_server)));
+  ASSERT_OK(devmgr::ComponentLifecycleServer::Create(coordinator_loop(), coordinator(),
+                                                     std::move(component_lifecycle_server)));
   llcpp::fuchsia::process::lifecycle::Lifecycle::SyncClient client(
       std::move(component_lifecycle_client));
   auto result = client.Stop();
   ASSERT_OK(result.status());
-  // the lifecycle channel should be closed now
-  zx_signals_t pending;
-  EXPECT_OK(client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &pending));
-  EXPECT_TRUE(pending & ZX_CHANNEL_PEER_CLOSED);
+  while (coordinator_loop()->GetState() != ASYNC_LOOP_QUIT) {
+  }
   ASSERT_FALSE(suspend_task_pbus.is_pending());
   ASSERT_FALSE(suspend_task_sys.is_pending());
 }

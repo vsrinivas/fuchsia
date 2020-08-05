@@ -7,6 +7,7 @@
 
 #include <fuchsia/boot/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/svc/outgoing.h>
