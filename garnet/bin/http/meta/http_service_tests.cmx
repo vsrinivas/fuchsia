@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/http_service_tests"
-    }
-}

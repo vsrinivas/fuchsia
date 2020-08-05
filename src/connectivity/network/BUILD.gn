@@ -28,6 +28,7 @@ group("config") {
     "dhcpv6/client/sysmgr:config",
     "dns:dns-resolver",
     "dns/sysmgr:config",
+    "http_client/sysmgr:config",
   ]
 }
 

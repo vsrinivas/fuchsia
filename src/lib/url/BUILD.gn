@@ -14,7 +14,6 @@ static_library("url") {
   visibility = [
     "//src/lib",
     ":*",
-    "//garnet/bin/http:*",
     "//src/media/playback/examples/audio_player:*",
     "//src/media/playback/mediaplayer:*",
     "//topaz/examples/mediaplayer/mediaplayer_skia:*",

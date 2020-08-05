@@ -14,7 +14,6 @@ group("bin") {
     # TODO(49942): temporarily disable while flake is investigated.
     # "fidl_compatibility_test",
     "glob",
-    "http",
     "hwstress",
     "insntrace",
     "ktrace_provider",

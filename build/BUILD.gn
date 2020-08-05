@@ -79,7 +79,6 @@ group("deprecated_package_underscore") {
     "//src/tests/fidl/compatibility:fidl_compatibility_test_server_cpp",
     "//src/tests/fidl/compatibility:fidl_compatibility_test_server_llcpp",
     "//src/tests/fidl/compatibility:fidl_compatibility_test_server_rust",
-    "//garnet/bin/http:http_service_tests",
     "//garnet/bin/insntrace/tests:insntrace_tests",
     "//garnet/bin/ktrace_provider:ktrace_provider",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",

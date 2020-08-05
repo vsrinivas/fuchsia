@@ -135,7 +135,9 @@ At present, these are the libraries considered in this document:
    + not planned for SDK inclusion
 - `fuchsia.net.oldhttp`
    + out of scope of this document, not maintained by networking
-   + does it need to be deleted?
+   + only referenced in
+     https://source.chromium.org/chromium/chromium/src/+/master:fuchsia/http/
+   + slated for deletion
 - `fuchsia.net.ppp`
    + dead code? can we delete it? can it be subsumed by
      `fuchsia.hardware.network`?
