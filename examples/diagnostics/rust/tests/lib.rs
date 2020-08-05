@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use diagnostics_testing::AppWithDiagnostics;
 use fuchsia_async as fasync;
 use fuchsia_syslog as syslog;
-use fuchsia_syslog_listener::AppWithLogs;
 
 #[fasync::run_singlethreaded(test)]
 async fn launch_example_and_read_hello_world() {
     let url = "fuchsia-pkg://fuchsia.com/rust-logs-example-tests#meta/rust-logs-example.cmx";
-    let (status, mut logs) = AppWithLogs::launch(url, None).wait().await;
+    let (status, mut logs) = AppWithDiagnostics::launch(url, None).wait().await;
     assert!(status.success());
 
     logs.sort_by_key(|l| l.time);
