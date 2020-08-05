@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Result,
     scrutiny::{
         collectors, controllers,
         engine::{
@@ -16,7 +17,6 @@ use {
         model::controller::DataController,
         model::model::DataModel,
     },
-    anyhow::Result,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::sync::{Arc, Mutex, RwLock},
@@ -108,15 +108,29 @@ struct ModelStats {
     packages: usize,
     manifests: usize,
     routes: usize,
+    #[serde(rename = "zbi sections")]
+    zbi_sections: usize,
+    #[serde(rename = "bootfs files")]
+    bootfs_files: usize,
 }
 
 impl DataController for ModelStatsController {
     fn query(&self, model: Arc<DataModel>, _query: Value) -> Result<Value> {
+        let mut zbi_sections = 0;
+        let mut bootfs_files = 0;
+
+        if let Some(zbi) = &*model.zbi().read().unwrap() {
+            zbi_sections = zbi.sections.len();
+            bootfs_files = zbi.bootfs.len();
+        }
+
         let stats = ModelStats {
             components: model.components().read().unwrap().len(),
             packages: model.packages().read().unwrap().len(),
             manifests: model.manifests().read().unwrap().len(),
             routes: model.routes().read().unwrap().len(),
+            zbi_sections,
+            bootfs_files,
         };
         Ok(json!(stats))
     }
@@ -192,10 +206,8 @@ impl DataController for ControllerListController {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        scrutiny::plugin,
-        scrutiny::model::collector::DataCollector, scrutiny::model::model::Component,
-        std::boxed::Box, tempfile::tempdir, uuid::Uuid,
+        super::*, scrutiny::model::collector::DataCollector, scrutiny::model::model::Component,
+        scrutiny::plugin, std::boxed::Box, tempfile::tempdir, uuid::Uuid,
     };
 
     plugin!(FakePlugin, PluginHooks::new(collectors! {}, controllers! {}), vec![]);
@@ -255,6 +267,8 @@ mod tests {
         assert_eq!(stats.packages, 0);
         assert_eq!(stats.routes, 0);
         assert_eq!(stats.manifests, 0);
+        assert_eq!(stats.zbi_sections, 0);
+        assert_eq!(stats.bootfs_files, 0);
     }
 
     #[test]
