@@ -8,9 +8,17 @@ import("//build/unification/zx_library.gni")
 zx_library("crashsvc") {
   sdk = "source"
 
-  sdk_headers = [ "crashsvc/crashsvc.h" ]
+  sdk_headers = [
+    "crashsvc/crashsvc.h",
+    "crashsvc/exception_handler.h",
+    "crashsvc/logging.h",
+  ]
 
-  sources = [ "crashsvc.cc" ]
+  sources = [
+    "crashsvc.cc",
+    "exception_handler.cc",
+    "logging.cc",
+  ]
 
   deps = [
     "//sdk/fidl/fuchsia.exception:fuchsia.exception_llcpp",

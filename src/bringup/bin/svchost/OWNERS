@@ -1,5 +1,9 @@
+# For svchost
 abarth@google.com
 geb@google.com
 raggi@google.com
-per-file crashsvc.cc=cpu@google.com,frousseau@google.com,scottmg@google.com
-per-file crashsvc-test.cc=cpu@google.com,frousseau@google.com,scottmg@google.com
+
+# For crashsvc
+frousseau@google.com
+pankhurst@google.com
+scottmg@google.com

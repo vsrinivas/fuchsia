@@ -1,23 +1,14 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.  // Use of this source code is governed
+// by a BSD-style license that can be found in the LICENSE file.
 
-#include <fuchsia/exception/llcpp/fidl.h>
-#include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/backtrace-request/backtrace-request-utils.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fidl/llcpp/client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
-#include <stdint.h>
-#include <stdio.h>
 #include <threads.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
@@ -27,6 +18,8 @@
 #include <memory>
 
 #include <crashsvc/crashsvc.h>
+#include <crashsvc/exception_handler.h>
+#include <crashsvc/logging.h>
 #include <inspector/inspector.h>
 
 namespace {
@@ -35,17 +28,6 @@ struct crash_ctx {
   zx::channel exception_channel;
   zx_handle_t exception_handler_svc;
 };
-
-// Logs a general error unrelated to a particular exception.
-void LogError(const char* message, zx_status_t status) {
-  fprintf(stderr, "crashsvc: %s: %s (%d)\n", message, zx_status_get_string(status), status);
-}
-
-// Logs an error when handling the exception described by |info|.
-void LogError(const char* message, const zx_exception_info& info, zx_status_t status) {
-  fprintf(stderr, "crashsvc: %s [thread %" PRIu64 ".%" PRIu64 "]: %s (%d)\n", message, info.pid,
-          info.tid, zx_status_get_string(status), status);
-}
 
 // Cleans up and resumes a thread in a manual backtrace request.
 //
@@ -75,10 +57,8 @@ bool ResumeIfBacktraceRequest(const zx::thread& thread, const zx::exception& exc
   return false;
 }
 
-void HandOffException(
-    zx::exception exception, const zx_exception_info_t& info,
-    const std::unique_ptr<fidl::Client<llcpp::fuchsia::exception::Handler>>& exception_handler,
-    async::Loop* loop) {
+void HandOffException(zx::exception exception, const zx_exception_info_t& info,
+                      ExceptionHandler& handler, async::Loop& loop) {
   zx::process process;
   if (const zx_status_t status = exception.get_process(&process); status != ZX_OK) {
     LogError("failed to get exception process when receiving exception", info, status);
@@ -108,83 +88,24 @@ void HandOffException(
   fprintf(stdout, "crashsvc: exception received, processing\n");
   inspector_print_debug_info(stdout, process.get(), thread.get());
 
+  // Run the loop before handing off the exception to give queued tasks a chance to execute. The
+  // loop is run here to minimize the chance of |handler| becoming unbound after the loop has been
+  // run.
+  if (const zx_status_t status = loop.RunUntilIdle(); status != ZX_OK) {
+    LogError("failed to run async loop", status);
+  }
+
   // Send over the exception to the handler.
   // From this point on, crashsvc has no ownership over the exception and it's up to the handler to
   // decide when and how to resume it.
-  if (exception_handler) {
-    llcpp::fuchsia::exception::ExceptionInfo exception_info;
-    exception_info.process_koid = info.pid;
-    exception_info.thread_koid = info.tid;
-    exception_info.type = static_cast<llcpp::fuchsia::exception::ExceptionType>(info.type);
-
-    // Run the loop before handing off the exception to give queued tasks a chance to execute. The
-    // loop is run here to minimize the chance of |exception_handler| becoming unbound after the
-    // loop has been run.
-    if (const zx_status_t status = loop->RunUntilIdle(); status != ZX_OK) {
-      LogError("failed to run async loop", status);
-    }
-
-    if (const auto result =
-            (*exception_handler)->OnException(std::move(exception), exception_info, [] {});
-        result.status() != ZX_OK) {
-      LogError("failed to pass exception to handler", info, result.status());
-    }
-  }
-}
-
-// Initialize |client| as a new fidl::Client of fuchsia.exception.Handler that will reconnect to the
-// service if disconnected. If |exception_handler_svc| is invalid or connecting to the service
-// fails, |client| will be set to null.
-void MakeExceptionHandlerClient(
-    zx::channel channel, async_dispatcher_t* dispatcher, zx_handle_t exception_handler_svc,
-    std::unique_ptr<fidl::Client<llcpp::fuchsia::exception::Handler>>* client) {
-  // We are in a build without a server for fuchsia.exception.Handler, e.g., bringup.
-  if (exception_handler_svc == ZX_HANDLE_INVALID) {
-    *client = nullptr;
-    return;
-  }
-
-  zx::channel server;
-  zx::channel::create(0u, &server, &channel);
-  if (const zx_status_t status = fdio_service_connect_at(
-          exception_handler_svc, llcpp::fuchsia::exception::Handler::Name, server.release());
-      status != ZX_OK) {
-    LogError("unable to connect to fuchsia.exception.Handler", status);
-    *client = nullptr;
-    return;
-  }
-
-  fidl::OnClientUnboundFn on_unbound =
-      [dispatcher, exception_handler_svc, client](fidl::UnbindInfo info, zx::channel channel) {
-        // If the unbind was not an error, don't reconnect and stop sending exceptions to
-        // fuchsia.exception.Handler. This should only happen in tests.
-        if (info.status == ZX_OK || info.status == ZX_ERR_CANCELED) {
-          *client = nullptr;
-          return;
-        }
-
-        LogError("Lost connection to fuchsia.exception.Handler", info.status);
-
-        // Immediately attempt to reconnect to fuchsia.exception.Handler. An exponential backoff is not
-        // used because a reconnection loop will only ever happen if the build does not contain a server
-        // for the protocol and crashsvc is configured to use the exception handling server.
-        //
-        // TODO(56491): figure out a way to detect if the process holding the other end of |channel|
-        // has crashed and stop sending exceptions to it.
-        MakeExceptionHandlerClient(std::move(channel), dispatcher, exception_handler_svc, client);
-      };
-
-  *client = std::make_unique<fidl::Client<llcpp::fuchsia::exception::Handler>>(
-      std::move(channel), dispatcher, std::move(on_unbound));
+  handler.Handle(std::move(exception), info);
 }
 
 int crash_svc(void* arg) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto ctx = std::unique_ptr<crash_ctx>(reinterpret_cast<crash_ctx*>(arg));
-  std::unique_ptr<fidl::Client<llcpp::fuchsia::exception::Handler>> exception_handler;
-  MakeExceptionHandlerClient(zx::channel(), loop.dispatcher(), ctx->exception_handler_svc,
-                             &exception_handler);
+  ExceptionHandler handler(loop.dispatcher(), ctx->exception_handler_svc);
 
   for (;;) {
     zx_signals_t signals = 0;
@@ -210,7 +131,7 @@ int crash_svc(void* arg) {
       continue;
     }
 
-    HandOffException(std::move(exception), info, exception_handler, &loop);
+    HandOffException(std::move(exception), info, handler, loop);
   }
 
   loop.Shutdown();

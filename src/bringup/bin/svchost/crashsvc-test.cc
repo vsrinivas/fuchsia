@@ -21,6 +21,7 @@
 #include <memory>
 
 #include <crashsvc/crashsvc.h>
+#include <crashsvc/exception_handler.h>
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
@@ -199,8 +200,11 @@ class StubExceptionHandler final : public llcpp::fuchsia::exception::Handler::In
       return ZX_ERR_BAD_STATE;
     }
     binding_.value().Close(ZX_ERR_PEER_CLOSED);
+    binding_ = std::nullopt;
     return ZX_OK;
   }
+
+  bool HasClient() const { return binding_.has_value(); }
 
   int exception_count() const { return exception_count_; }
 
@@ -302,36 +306,6 @@ TEST(crashsvc, ExceptionHandlerAsync) {
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
 }
 
-// TODO(56845): Reenable this test once it no longer flakes.
-TEST(crashsvc, DISABLED_ExceptionHandlerUnbinds) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  FakeService test_svc(loop.dispatcher());
-
-  Jobs jobs;
-  ASSERT_NO_FATAL_FAILURES(GetTestJobs(&jobs));
-
-  // Start crashsvc.
-  thrd_t cthread;
-  ASSERT_OK(start_crashsvc(std::move(jobs.job_copy), test_svc.service_channel().get(), &cthread));
-
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-  EXPECT_EQ(test_svc.exception_handler().exception_count(), 1);
-
-  // Simulates crashsvc losing connection with fuchsia.exception.Handler.
-  ASSERT_OK(test_svc.exception_handler().Unbind());
-
-  ASSERT_NO_FATAL_FAILURES(AnalyzeCrash(&loop, jobs.parent_job, jobs.job));
-
-  // Checks that the next exception is still handled, meaning re-connection happened.
-  EXPECT_EQ(test_svc.exception_handler().exception_count(), 2);
-
-  test_svc.exception_handler().SendAsyncResponses();
-
-  // Kill the test job so that the exception doesn't bubble outside of this test.
-  ASSERT_OK(jobs.job.kill());
-  EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
-}
-
 TEST(crashsvc, MultipleThreadExceptionHandler) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   FakeService test_svc(loop.dispatcher());
@@ -377,6 +351,32 @@ TEST(crashsvc, ThreadBacktraceExceptionHandler) {
   // Kill the test job so that the exception doesn't bubble outside of this test.
   ASSERT_OK(jobs.job.kill());
   EXPECT_EQ(thrd_join(cthread, nullptr), thrd_success);
+}
+
+TEST(ExceptionHandlerTest, ExceptionHandlerReconnects) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  auto RunUntil = [&loop](fit::function<bool()> condition) {
+    while (!condition()) {
+      loop.Run(zx::deadline_after(zx::msec(10)));
+    }
+  };
+
+  FakeService test_svc(loop.dispatcher());
+
+  ExceptionHandler handler(loop.dispatcher(), test_svc.service_channel().get());
+
+  RunUntil([&test_svc] { return test_svc.exception_handler().HasClient(); });
+  ASSERT_TRUE(test_svc.exception_handler().HasClient());
+
+  // Simulates crashsvc losing connection with fuchsia.exception.Handler.
+  ASSERT_OK(test_svc.exception_handler().Unbind());
+  ASSERT_FALSE(test_svc.exception_handler().HasClient());
+
+  RunUntil([&test_svc] { return test_svc.exception_handler().HasClient(); });
+  ASSERT_TRUE(test_svc.exception_handler().HasClient());
+
+  loop.Shutdown();
 }
 
 }  // namespace
