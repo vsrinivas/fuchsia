@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_wlan_common::{Cbw, WlanChan},
     fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_policy::{
-        self as wlan_policy, Credential, NetworkConfig, NetworkIdentifier, SecurityType,
+        self as wlan_policy, Credential, Empty, NetworkConfig, NetworkIdentifier, SecurityType,
     },
     fidl_fuchsia_wlan_service::{ConnectConfig, ErrCode, State, WlanProxy, WlanStatus},
     fidl_fuchsia_wlan_tap::{
@@ -228,10 +228,29 @@ pub fn create_connect_config<S: ToString>(ssid: &[u8], passphrase: S) -> Connect
     }
 }
 
-pub fn create_wpa2_network_config<S: ToString>(ssid: &[u8], passphrase: S) -> NetworkConfig {
-    let network_id = NetworkIdentifier { ssid: ssid.to_vec(), type_: SecurityType::Wpa2 };
-    let credential = Credential::Password(passphrase.to_string().as_bytes().to_vec());
+pub fn create_network_config<S: ToString>(
+    ssid: &[u8],
+    security_type: SecurityType,
+    password: Option<S>,
+) -> NetworkConfig {
+    let network_id = NetworkIdentifier { ssid: ssid.to_vec(), type_: security_type };
+    let credential = match password {
+        None => Credential::None(Empty),
+        Some(p) => Credential::Password(p.to_string().as_bytes().to_vec()),
+    };
     NetworkConfig { id: Some(network_id), credential: Some(credential) }
+}
+
+pub fn create_open_network_config(ssid: &[u8]) -> NetworkConfig {
+    create_network_config(ssid, SecurityType::None, None::<String>)
+}
+
+pub fn create_wpa2_network_config<S: ToString>(ssid: &[u8], password: S) -> NetworkConfig {
+    create_network_config(ssid, SecurityType::Wpa2, Some(password))
+}
+
+pub fn create_wpa3_network_config<S: ToString>(ssid: &[u8], password: S) -> NetworkConfig {
+    create_network_config(ssid, SecurityType::Wpa3, Some(password))
 }
 
 pub fn create_wpa2_psk_authenticator(
