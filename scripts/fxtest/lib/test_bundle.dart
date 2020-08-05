@@ -178,17 +178,16 @@ class TestBundle {
       );
       return;
     }
-
+    var flags = [...runnerFlags];
     if (testType == TestType.component) {
       // once we implement this feature fully we can remove --restrict-logs flag
       // from fx test.
       if (testDefinition.maxLogSeverity != null && shouldRestrictLogs) {
-        runnerFlags.add('--max-log-severity=${testDefinition.maxLogSeverity}');
+        flags.add('--max-log-severity=${testDefinition.maxLogSeverity}');
       }
     }
 
-    CommandTokens commandTokens =
-        executionHandle.getInvocationTokens(runnerFlags);
+    CommandTokens commandTokens = executionHandle.getInvocationTokens(flags);
 
     // Unparsed tests imply a major problem with `fx test`, so we
     // definitely want to throw an exception
