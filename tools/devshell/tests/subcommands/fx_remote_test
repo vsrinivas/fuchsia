@@ -1,0 +1,68 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test fx remote scripts
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/serve-remote"
+  "tools/devshell/lib/fvm.sh"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/image_build_vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/vars.sh"
+)
+
+declare fx sshmock
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  sshmock=$(btf::make_mock_binary "ssh")
+  devfinder="$(btf::make_installed_hosttools_mock device-finder)"
+  echo "127.0.0.1" > "${devfinder}.mock_stdout"
+
+  btf::add_binary_to_path "$sshmock"
+}
+
+# test if the host/dir info is correctly stored in the cache file
+TEST_fx-remote-config-file() {
+  local testhost=myhostname.my.server.com
+  local testdir=~/myfuchsia/directory
+  local out="${BT_TEMP_DIR}/output.log"
+
+  BT_EXPECT ${fx} serve-remote "$testhost" "$testdir" >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${testhost}:${testdir}"
+}
+
+# test if the cache file is used when no argument is given
+TEST_fx-remote-default-args() {
+  local testhost=myhostname.my.server.com
+  local testdir=~/myfuchsia/directory
+  local out="${BT_TEMP_DIR}/output.log"
+
+  echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
+  BT_EXPECT ${fx} serve-remote >>${out} 2>&1
+  btf::does-mock-args-contain "${sshmock}.mock_state.1" "$testhost"
+}
+
+# test if the given host is used even when there's a cache file, and that the
+# cache file is updated with the given host
+TEST_fx-remote-args-given() {
+  local testhost=myhostname.my.server.com
+  local testdir=~/myfuchsia/directory
+  local anotherhost=myhostname.my.server.com
+  local out="${BT_TEMP_DIR}/output.log"
+
+  echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
+  BT_EXPECT ${fx} serve-remote "$anotherhost" "${testdir}" >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
+  btf::does-mock-args-contain "${sshmock}.mock_state.1" "$anotherhost"
+}
+
+
+BT_RUN_TESTS "$@"

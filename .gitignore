@@ -13,6 +13,7 @@
 .fx-build-dir
 .fx-metrics-config
 .fx-multi-list
+.fx-remote-config
 .fx-sync-from-stem.cache
 .cproject
 .DS_Store
