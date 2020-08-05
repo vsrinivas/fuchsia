@@ -924,7 +924,8 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
     pending_txn_ = true;
   }
 
-  // Wait for the bus to become idle before issuing the next request. This could be necessary if the
+zxlogf(INFO, "%s: cmd%d arg 0x%08x", __func__, req->cmd_idx, req->arg);  
+// Wait for the bus to become idle before issuing the next request. This could be necessary if the
   // card is driving CMD low after a voltage switch.
   WaitForBus();
 

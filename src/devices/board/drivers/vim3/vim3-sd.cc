@@ -69,6 +69,40 @@ static const device_fragment_t fragments[] = {
     {"i2c", countof(i2c_fragment), i2c_fragment},
 };
 
+static const zx_bind_inst_t sdio_fn1_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
+    BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
+    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 1),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
+};
+static const zx_bind_inst_t sdio_fn2_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
+    BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
+    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 2),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
+};
+static const zx_bind_inst_t oob_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, A311D_GPIOC(6)),  // CD pin
+};
+static const device_fragment_part_t sdio_fn1_fragment[] = {
+    {std::size(root_match), root_match},
+    {std::size(sdio_fn1_match), sdio_fn1_match},
+};
+static const device_fragment_part_t sdio_fn2_fragment[] = {
+    {std::size(root_match), root_match},
+    {std::size(sdio_fn2_match), sdio_fn2_match},
+};
+static const device_fragment_part_t oob_gpio_fragment[] = {
+    {std::size(root_match), root_match},
+    {std::size(oob_gpio_match), oob_gpio_match},
+};
+static const device_fragment_t wifi_fragments[] = {
+    {"sdio-function-1", std::size(sdio_fn1_fragment), sdio_fn1_fragment},
+    {"sdio-function-2", std::size(sdio_fn2_fragment), sdio_fn2_fragment},
+    {"gpio-oob", std::size(oob_gpio_fragment), oob_gpio_fragment},
+};
+
 zx_status_t Vim3::SdInit() {
   zx_status_t status;
 
@@ -98,6 +132,29 @@ zx_status_t Vim3::SdInit() {
     zxlogf(ERROR, "SdInit could not add sd_dev: %d", status);
     return status;
   }
+    constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_BROADCOM},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_BCM4356},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI},
+  };
+
+  gpio_impl_.SetAltFunction(A311D_GPIOC(6), 0);
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .fragments = wifi_fragments,
+      .fragments_count = countof(wifi_fragments),
+      .coresident_device_index = 0,
+      .metadata_list = nullptr,
+      .metadata_count = 0,
+  };
+
+  if ((status = DdkAddComposite("wifi", &comp_desc)) != ZX_OK) {
+   zxlogf(ERROR, "%s: device_add_composite failed: %d", __func__, status);
+    return status;
+  }
+
 
   return ZX_OK;
 }

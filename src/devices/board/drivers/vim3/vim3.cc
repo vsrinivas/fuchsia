@@ -91,24 +91,24 @@ int Vim3::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
-  if ((status = EmmcInit()) != ZX_OK) {
-    zxlogf(ERROR, "EmmcInit() failed: %d\n", status);
-    init_txn_->Reply(ZX_ERR_INTERNAL);
-    return status;
-  }
+ // if ((status = EmmcInit()) != ZX_OK) {
+ //   zxlogf(ERROR, "EmmcInit() failed: %d\n", status);
+//    init_txn_->Reply(ZX_ERR_INTERNAL);
+//    return status;
+//  }
   if ((status = SdInit()) != ZX_OK) {
     zxlogf(ERROR, "SdInit() failed: %d\n", status);
-    init_txn_->Reply(ZX_ERR_INTERNAL);
-    return status;
-  }
-  if ((status = SdioInit()) != ZX_OK) {
-    zxlogf(ERROR, "SdioInit() failed: %d\n", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
   if ((status = MaliInit()) != ZX_OK) {
     zxlogf(ERROR, "MaliInit() failed: %d\n", status);
   }
+//  if ((status = SdioInit()) != ZX_OK) {
+//    zxlogf(ERROR, "SdioInit() failed: %d\n", status);
+//    init_txn_->Reply(ZX_ERR_INTERNAL);
+//    return status;
+//  }
   if ((status = NnaInit()) != ZX_OK) {
     zxlogf(ERROR, "NnaInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
