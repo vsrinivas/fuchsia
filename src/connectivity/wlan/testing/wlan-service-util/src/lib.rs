@@ -88,6 +88,13 @@ mod tests {
         wlan_common::assert_variant,
     };
 
+    pub(crate) fn setup_fake_service<M: fidl::endpoints::ServiceMarker>(
+    ) -> (fuchsia_async::Executor, M::Proxy, M::RequestStream) {
+        let exec = fuchsia_async::Executor::new().expect("creating executor");
+        let (proxy, server) = fidl::endpoints::create_proxy::<M>().expect("creating proxy");
+        (exec, proxy, server.into_stream().expect("creating stream"))
+    }
+
     fn fake_iface_query_response(
         mac_addr: [u8; 6],
         role: fidl_fuchsia_wlan_device::MacRole,
@@ -135,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_get_wlan_mac_addr_ok() {
-        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let (mut exec, proxy, mut req_stream) = setup_fake_service::<DeviceServiceMarker>();
         let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
         pin_mut!(mac_addr_fut);
 
@@ -154,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_get_wlan_mac_addr_not_found() {
-        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let (mut exec, proxy, mut req_stream) = setup_fake_service::<DeviceServiceMarker>();
         let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
         pin_mut!(mac_addr_fut);
 
@@ -168,7 +175,7 @@ mod tests {
 
     #[test]
     fn test_get_wlan_mac_addr_service_interrupted() {
-        let (mut exec, proxy, req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let (mut exec, proxy, req_stream) = setup_fake_service::<DeviceServiceMarker>();
         let mac_addr_fut = get_wlan_mac_addr(&proxy, 0);
         pin_mut!(mac_addr_fut);
 

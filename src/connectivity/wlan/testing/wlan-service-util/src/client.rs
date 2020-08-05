@@ -249,7 +249,7 @@ fn credential_from_bytes(pwd: Vec<u8>) -> Result<fidl_sme::Credential, Error> {
 mod tests {
     use {
         super::*,
-        crate::wlan_service_util::*,
+        crate::*,
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_device_service::{
             self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, DeviceServiceRequest,
@@ -365,7 +365,8 @@ mod tests {
     }
 
     fn test_get_first_sme(iface_list: &[MacRole]) -> Result<fidl_sme::ClientSmeProxy, Error> {
-        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let (mut exec, proxy, mut req_stream) =
+            crate::tests::setup_fake_service::<DeviceServiceMarker>();
         let fut = get_first_sme(&proxy);
         pin_mut!(fut);
 
@@ -373,17 +374,13 @@ mod tests {
             (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
 
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        crate::wlan_service_util::tests::respond_to_query_iface_list_request(
-            &mut exec,
-            &mut req_stream,
-            ifaces,
-        );
+        crate::tests::respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
 
         for mac_role in iface_list {
             // iface query response
             assert!(exec.run_until_stalled(&mut fut).is_pending());
 
-            crate::wlan_service_util::tests::respond_to_query_iface_request(
+            crate::tests::respond_to_query_iface_request(
                 &mut exec,
                 &mut req_stream,
                 *mac_role,
@@ -402,7 +399,8 @@ mod tests {
     }
 
     fn test_disconnect_all(iface_list: &[(MacRole, StatusResponse)]) -> Result<(), Error> {
-        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let (mut exec, proxy, mut req_stream) =
+            crate::tests::setup_fake_service::<DeviceServiceMarker>();
         let fut = disconnect_all(&proxy);
         pin_mut!(fut);
 
@@ -410,16 +408,12 @@ mod tests {
             (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
 
         assert!(exec.run_until_stalled(&mut fut).is_pending());
-        crate::wlan_service_util::tests::respond_to_query_iface_list_request(
-            &mut exec,
-            &mut req_stream,
-            ifaces,
-        );
+        crate::tests::respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
 
         for (mac_role, status) in iface_list {
             // iface query response
             assert!(exec.run_until_stalled(&mut fut).is_pending());
-            crate::wlan_service_util::tests::respond_to_query_iface_request(
+            crate::tests::respond_to_query_iface_request(
                 &mut exec,
                 &mut req_stream,
                 *mac_role,

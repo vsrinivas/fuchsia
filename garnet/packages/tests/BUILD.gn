@@ -74,7 +74,6 @@ group("all") {
     "//garnet/lib/perfmon:tests",
     "//garnet/lib/process:process_unittests",
     "//garnet/lib/profiler/tests:profiler_tests",
-    "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
     "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
     "//garnet/lib/rust/files_async:files_async_tests",
     "//garnet/lib/rust/httpdate-hyper:httpdate-hyper-tests",

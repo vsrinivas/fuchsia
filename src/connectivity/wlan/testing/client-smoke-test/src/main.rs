@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod net_stack_util;
 mod opts;
 
 use {
-    crate::opts::Opt,
     anyhow::{format_err, Context as _, Error},
-    connectivity_testing::{
-        http_service_util, net_stack_util::netstack_did_get_dhcp, wlan_service_util,
-    },
-    fidl_fuchsia_net_oldhttp::{HttpServiceMarker, HttpServiceProxy},
+    fidl_fuchsia_net_http as http,
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async::{DurationExt, Executor, Time, TimeoutExt, Timer},
+    fuchsia_async::{self as fasync, DurationExt as _, Executor, Time, TimeoutExt as _, Timer},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
-    fuchsia_zircon::DurationNum,
+    fuchsia_zircon::{self as zx, DurationNum as _},
+    net_stack_util::netstack_did_get_dhcp,
+    opts::Opt,
     serde::Serialize,
     std::{collections::HashMap, process},
     structopt::StructOpt,
@@ -61,7 +60,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
     test_results.connect_to_wlan_service = true;
 
-    let http_svc = connect_to_service::<HttpServiceMarker>()?;
+    let http_svc = connect_to_service::<http::LoaderMarker>()?;
     test_results.connect_to_http_service = true;
 
     let network_svc = connect_to_service::<StackMarker>()?;
@@ -316,20 +315,59 @@ fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
     }
 }
 
-fn is_successful_download(result: &Result<http_service_util::IndividualDownload, Error>) -> bool {
-    match result {
-        Ok(result) if result.bytes > 0 => {
-            fx_log_info!(
-                "Received {} bytes in {} ns (goodput_mbps = {})",
-                result.bytes,
-                result.nanos,
-                result.goodput_mbps
-            );
-            true
-        }
-        Ok(_) => {
-            fx_log_warn!("Received 0 bytes for download check");
-            false
+struct Measurement {
+    bytes: u64,
+    duration: zx::Duration,
+}
+
+async fn download_and_measure(http_svc: &http::LoaderProxy) -> Result<Measurement, Error> {
+    let request = http::Request {
+        method: Some("GET".to_string()),
+        url: Some(URL_STRING.to_string()),
+        headers: None,
+        body: None,
+        deadline: None,
+    };
+    let start_time = zx::Time::get(zx::ClockId::Monotonic);
+    let http::Response {
+        error,
+        body,
+        final_url: _,
+        status_code: _,
+        status_line: _,
+        headers: _,
+        redirect: _,
+    } = http_svc.fetch(request).await.context("failed to call Loader::fetch")?;
+    if let Some(error) = error {
+        let () = Err(format_err!("network error: {:?}", error))?;
+    }
+    let socket = body.ok_or(format_err!("no response body"))?;
+    let socket = fasync::Socket::from_socket(socket).context("failed to convert socket")?;
+    // TODO(fxbug.dev/29192): verify data received.
+    let bytes = futures::io::copy(socket, &mut futures::io::sink())
+        .await
+        .context("failed to consume response")?;
+    let end_time = zx::Time::get(zx::ClockId::Monotonic);
+    Ok(Measurement { bytes, duration: end_time - start_time })
+}
+
+async fn can_download_data(http_svc: &http::LoaderProxy) -> bool {
+    match download_and_measure(http_svc).await {
+        Ok(Measurement { bytes, duration }) => {
+            if bytes > 0 {
+                let duration_nanos = duration.into_nanos();
+                let goodput_mbps = (bytes * 8) as f64 / (duration_nanos as f64 * 1e-9);
+                fx_log_info!(
+                    "Received {} bytes in {}ns (goodput_mbps = {})",
+                    bytes,
+                    duration_nanos,
+                    goodput_mbps,
+                );
+                true
+            } else {
+                fx_log_warn!("Received 0 bytes for download check");
+                false
+            }
         }
         Err(e) => {
             fx_log_warn!("Error in download check: {}", e);
@@ -338,15 +376,9 @@ fn is_successful_download(result: &Result<http_service_util::IndividualDownload,
     }
 }
 
-async fn can_download_data(http_svc: &HttpServiceProxy) -> bool {
-    let url_request = http_service_util::create_url_request(URL_STRING);
-    let result = http_service_util::fetch_and_discard_url(&http_svc, url_request).await;
-    is_successful_download(&result)
-}
-
 #[cfg(test)]
 mod tests {
-    use {super::*, http_service_util::IndividualDownload};
+    use super::*;
 
     /// Test to verify a connection will be triggered for an SSID that is not already connected.
     /// This is called with stay connected true and a different target SSID.
@@ -425,32 +457,5 @@ mod tests {
             };
             Box::new(bss_info)
         })
-    }
-
-    /// Test verifying that a populated IndividualDownload result correctly returns success for the
-    /// download check.
-    #[test]
-    fn test_successful_download_with_bytes_passes_download_check() {
-        let individual_download =
-            IndividualDownload { goodput_mbps: 1.11, bytes: 125000, nanos: 900641959 };
-
-        assert!(is_successful_download(&Ok(individual_download)));
-    }
-
-    /// Test verifying that a populated but zero byte IndividualDownload result fails the
-    /// download check.
-    #[test]
-    fn test_successful_download_with_zero_bytes_fails_download_check() {
-        let individual_download =
-            IndividualDownload { goodput_mbps: 1.11, bytes: 0, nanos: 900641959 };
-
-        assert_eq!(is_successful_download(&Ok(individual_download)), false);
-    }
-
-    /// Test verifying that an error returned for the download fails the download check.
-    #[test]
-    fn test_error_download_fails_download_check() {
-        let error = Err(anyhow::format_err!("this is a failure"));
-        assert_eq!(is_successful_download(&error), false);
     }
 }

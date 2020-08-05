@@ -57,6 +57,7 @@ group("tests") {
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim-lib-tests",
     "//src/connectivity/wlan/testing/hw-sim/test:rate-selection-package",
     "//src/connectivity/wlan/testing/hw-sim/test:wlan-hw-sim-test",
+    "//src/connectivity/wlan/testing/wlan-service-util:wlan-service-util-tests",
     "//src/connectivity/wlan/testing/wlantap-client",
     "//src/connectivity/wlan/testing/wlantap-driver:wlantap",
     "//src/connectivity/wlan/tools/wlantool:wlantool-tests",

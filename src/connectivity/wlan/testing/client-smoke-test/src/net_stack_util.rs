@@ -148,7 +148,10 @@ mod tests {
         mac_to_query: &[u8; 6],
         is_dhcp: bool,
     ) {
-        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<StackMarker>();
+        let mut exec = fuchsia_async::Executor::new().expect("creating executor");
+        let (proxy, server) =
+            fidl::endpoints::create_proxy::<StackMarker>().expect("creating proxy");
+        let mut req_stream = server.into_stream().expect("creating stream");
         let iface_addr_fut = netstack_did_get_dhcp(&proxy, mac_to_query);
         pin_mut!(iface_addr_fut);
 

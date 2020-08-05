@@ -6,7 +6,6 @@ mod opts;
 
 use crate::opts::Opt;
 use anyhow::{format_err, Context as _, Error};
-use connectivity_testing::wlan_service_util;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_async as fasync;

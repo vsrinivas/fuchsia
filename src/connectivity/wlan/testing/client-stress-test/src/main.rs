@@ -8,7 +8,6 @@ use crate::opts::Opt;
 
 use {
     anyhow::{bail, format_err, Context as _, Error},
-    connectivity_testing::wlan_service_util,
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

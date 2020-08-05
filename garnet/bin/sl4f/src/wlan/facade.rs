@@ -4,7 +4,6 @@
 
 use crate::wlan::types::{ClientStatusResponse, MacRole, QueryIfaceResponse};
 use anyhow::{Context as _, Error};
-use connectivity_testing::wlan_service_util;
 use fidl_fuchsia_wlan_device;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fuchsia_component::client::connect_to_service;
