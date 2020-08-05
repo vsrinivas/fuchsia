@@ -6,5 +6,3 @@ toc:
   path: /docs/development/benchmarking/catapult_user_guide.md
 - title: "Benchmark results schema"
   path: /docs/development/benchmarking/results_schema.md
-- title: "How to write benchmarks"
-  path: /docs/development/benchmarking/running_on_ci.md
