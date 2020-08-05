@@ -267,6 +267,7 @@ pub fn write_rule<W: io::Write>(
         for dep in customized_dep {
             if let Some(ref deps) = dep.deps {
                 for dep in deps {
+                    // TODO: Respect dep.platform here.
                     dependencies.push_str(format!("  deps += [\"{}\"]", dep).as_str());
                 }
             }
@@ -282,7 +283,7 @@ pub fn write_rule<W: io::Write>(
             }
             if let Some(ref crate_configs) = dep.configs {
                 for config in crate_configs {
-                    configs.add_cfg(config);
+                    configs.add_platform_cfg(dep.platform.clone(), config);
                 }
             }
         }

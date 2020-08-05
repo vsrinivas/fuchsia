@@ -10,3 +10,7 @@ anyhow = "1.0.27"
 # gn config
 [[gn.crate.anyhow."1.0.27"]]
 rustflags = ["--cfg=backtrace"]
+
+[[gn.crate.anyhow."1.0.27"]]
+platform = "cfg(target_os = \"fuchsia\")"
+configs = [ "//build/config/fuchsia:libunwind" ]
