@@ -437,6 +437,25 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
   }
 }
 
+void AmlogicDisplay::DdkSuspend(ddk::SuspendTxn txn) {
+  fbl::AutoLock lock(&display_lock_);
+  if (txn.suspend_reason() != DEVICE_SUSPEND_REASON_MEXEC) {
+    txn.Reply(ZX_ERR_NOT_SUPPORTED, txn.requested_state());
+  }
+  if (osd_) {
+    osd_->Disable();
+  }
+  txn.Reply(ZX_OK, txn.requested_state());
+}
+
+void AmlogicDisplay::DdkResume(ddk::ResumeTxn txn) {
+  fbl::AutoLock lock(&display_lock_);
+  if (osd_) {
+    osd_->Enable();
+  }
+  txn.Reply(ZX_OK, DEV_POWER_STATE_D0, txn.requested_state());
+}
+
 void AmlogicDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlogicDisplay::DdkRelease() {

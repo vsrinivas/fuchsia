@@ -146,10 +146,11 @@ zx_status_t Osd::Init(zx_device_t* parent) {
   return ZX_OK;
 }
 
+void Osd::StopRdma() { vpu_mmio_->ClearBits32(RDMA_ACCESS_AUTO_INT_EN_ALL, VPU_RDMA_ACCESS_AUTO); }
+
 void Osd::Disable(void) {
   ZX_DEBUG_ASSERT(initialized_);
-  // Display RDMA
-  vpu_mmio_->ClearBits32(RDMA_ACCESS_AUTO_INT_EN_ALL, VPU_RDMA_ACCESS_AUTO);
+  StopRdma();
   vpu_mmio_->ClearBits32(1 << 0, VPU_VIU_OSD1_CTRL_STAT);
 }
 
@@ -544,6 +545,8 @@ int Osd::GetNextAvailableRdmaChannel() {
 zx_status_t Osd::SetupRdma() {
   zx_status_t status = ZX_OK;
   DISP_INFO("Setting up Display RDMA\n");
+  StopRdma();
+  bti_.release_quarantine();
 
   // since we are flushing the caches, make sure the tables are at least cache_line apart
   ZX_DEBUG_ASSERT(kChannelBaseOffset > zx_system_get_dcache_line_size());

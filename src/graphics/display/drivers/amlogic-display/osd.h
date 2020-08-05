@@ -82,6 +82,8 @@ class Osd {
   zx_status_t Init(zx_device_t* parent);
   void HwInit();
   void Disable();
+  void Enable();
+
   // This function will apply configuration when VSYNC interrupt occurs using RDMA
   void FlipOnVsync(uint8_t idx, const display_config_t* config);
   void Dump();
@@ -102,7 +104,7 @@ class Osd {
   // this function sets up scaling based on framebuffer and actual display
   // dimensions. The scaling IP and registers and undocumented.
   void EnableScaling(bool enable);
-  void Enable();
+  void StopRdma();
   zx_status_t SetupRdma();
   void ResetRdmaTable();
   void SetRdmaTableValue(uint32_t channel, uint32_t idx, uint32_t val);
