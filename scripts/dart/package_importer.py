@@ -71,14 +71,13 @@ def get_deps(package_name, parsed_yaml, dep_type):
         return {}
 
 
-def parse_min_sdk_version_and_full_dependencies(yaml_path):
-    """ parse the content of a pubspec.yaml """
-    yaml_data = []
-
+def safe_parse_yaml(yaml_path):
+    """ parses a pubspec file that may be malformed """
     # Some yaml files can be malformed and have an extra tab at the end
     # of a line. This causes the parser to fail so we strip all tabs off
     # the end of the lines.
     with open(yaml_path) as yaml_file:
+        yaml_data = []
         for line in yaml_file.readlines():
             yaml_data.append(line.rstrip('\t\n'))
         yaml_doc = "\n".join(yaml_data)
@@ -86,22 +85,30 @@ def parse_min_sdk_version_and_full_dependencies(yaml_path):
         parsed = yaml.safe_load(yaml_doc)
         if not parsed:
             raise Exception('Could not parse yaml file: %s' % yaml_file)
-        package_name = parsed['name']
-        # If a format like sdk: '>=a.b' or sdk: 'a.b' is found, we'll use a.b.
-        # If sdk is not specified (or 'any'), 2.8 is used.
-        # In all other cases 2.0 is used.
-        env_sdk = parsed.get('environment', {}).get('sdk', 'any')
-        match = re.search(r"^(>=)?((0|[1-9]\d*)\.(0|[1-9]\d*))", env_sdk)
-        if match:
-          min_sdk_version = match.group(2)
-        elif env_sdk == 'any':
-          min_sdk_version = '2.8'
-        else:
-          min_sdk_version = '2.0'
-        deps = get_deps(package_name, parsed, 'dependencies')
-        dev_deps = get_deps(package_name, parsed, 'dev_dependencies')
-        dep_overrides = get_deps(package_name, parsed, 'dependency_overrides')
-        return (package_name, min_sdk_version, deps, dev_deps, dep_overrides)
+
+    return parsed
+
+
+def parse_min_sdk_version_and_full_dependencies(yaml_path):
+    """ parse the content of a pubspec.yaml """
+    parsed = safe_parse_yaml(yaml_path)
+
+    package_name = parsed['name']
+    # If a format like sdk: '>=a.b' or sdk: 'a.b' is found, we'll use a.b.
+    # If sdk is not specified (or 'any'), 2.8 is used.
+    # In all other cases 2.0 is used.
+    env_sdk = parsed.get('environment', {}).get('sdk', 'any')
+    match = re.search(r"^(>=)?((0|[1-9]\d*)\.(0|[1-9]\d*))", env_sdk)
+    if match:
+        min_sdk_version = match.group(2)
+    elif env_sdk == 'any':
+        min_sdk_version = '2.8'
+    else:
+        min_sdk_version = '2.0'
+    deps = get_deps(package_name, parsed, 'dependencies')
+    dev_deps = get_deps(package_name, parsed, 'dev_dependencies')
+    dep_overrides = get_deps(package_name, parsed, 'dependency_overrides')
+    return (package_name, min_sdk_version, deps, dev_deps, dep_overrides)
 
 
 def parse_min_sdk_and_dependencies(yaml_path):
@@ -154,9 +161,8 @@ def read_package_versions(base):
             spec = os.path.join(root, dir, 'pubspec.yaml')
             if not os.path.exists(spec):
                 continue
-            with open(spec, 'r') as spec_file:
-                data = yaml.safe_load(spec_file)
-                result[data['name']] = data['version']
+            data = safe_parse_yaml(spec)
+            result[data['name']] = data['version']
         break
     return result
 
