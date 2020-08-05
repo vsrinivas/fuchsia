@@ -9,30 +9,8 @@ class BootfsView {
 
   async init() {
     console.log('[Bootfs] - Loading all files');
-    this.bootfs = await this.post_request(location.origin + '/api/bootfs', null);
+    this.bootfs = await post_request(location.origin + '/api/bootfs', null);
     this.bootfs.sort();
-  }
-
-  post_request(url, body) {
-    return new Promise(function(resolve, reject) {
-             const jsonRequest = new XMLHttpRequest();
-             jsonRequest.open('POST', url);
-             // Only accept 200 success.
-             jsonRequest.onload = function() {
-               if (this.status == 200) {
-                 resolve(JSON.parse(jsonRequest.response));
-               } else {
-                 reject({status: this.status, statusText: jsonRequest.statusText});
-               }
-             };
-
-             // Reject all errors.
-             jsonRequest.onerror = function() {
-               reject({status: this.status, statusText: jsonRequest.statusText});
-             };
-             jsonRequest.send(body);
-           })
-        .catch();
   }
 
   async showFiles() {

@@ -12,29 +12,7 @@ class PackageView {
 
   async init() {
     console.log('[Packages] - Loading all packages');
-    this.packages = await this.post_request(location.origin + '/api/packages', null);
-  }
-
-  post_request(url, body) {
-    return new Promise(function(resolve, reject) {
-             const jsonRequest = new XMLHttpRequest();
-             jsonRequest.open('POST', url);
-             // Only accept 200 success.
-             jsonRequest.onload = function() {
-               if (this.status == 200) {
-                 resolve(JSON.parse(jsonRequest.response));
-               } else {
-                 reject({status: this.status, statusText: jsonRequest.statusText});
-               }
-             };
-
-             // Reject all errors.
-             jsonRequest.onerror = function() {
-               reject({status: this.status, statusText: jsonRequest.statusText});
-             };
-             jsonRequest.send(body);
-           })
-        .catch();
+    this.packages = await post_request(location.origin + '/api/packages', null);
   }
 
   async searchPackages() {

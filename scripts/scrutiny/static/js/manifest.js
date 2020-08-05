@@ -12,29 +12,7 @@ class ManifestView {
 
   async init() {
     console.log('[Manifests] - Loading all component manifests');
-    this.components = await this.post_request(location.origin + '/api/components', null);
-  }
-
-  post_request(url, body) {
-    return new Promise(function(resolve, reject) {
-             const jsonRequest = new XMLHttpRequest();
-             jsonRequest.open('POST', url);
-             // Only accept 200 success.
-             jsonRequest.onload = function() {
-               if (this.status == 200) {
-                 resolve(JSON.parse(jsonRequest.response));
-               } else {
-                 reject({status: this.status, statusText: jsonRequest.statusText});
-               }
-             };
-
-             // Reject all errors.
-             jsonRequest.onerror = function() {
-               reject({status: this.status, statusText: jsonRequest.statusText});
-             };
-             jsonRequest.send(body);
-           })
-        .catch();
+    this.components = await post_request(location.origin + '/api/components', null);
   }
 
   async searchManifests() {
@@ -50,7 +28,7 @@ class ManifestView {
         // Populate with new manifest search tiles.
         let api = location.origin + '/api/component/raw_manifest';
         let query = JSON.stringify({'component_id': component.id});
-        requests.push(this.post_request(api, query));
+        requests.push(post_request(api, query));
         urls.push(component.url);
       }
     });

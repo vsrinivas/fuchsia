@@ -28,18 +28,17 @@ class DashboardView {
 
   async collectData() {
     try {
-      await this.post_request(location.origin + '/api/health/status', null);
+      await post_request(location.origin + '/api/health/status', null);
       this.connected = true;
     } catch {
       this.connected = false;
       return;
     }
-    this.plugins = await this.post_request(location.origin + '/api/management/plugin/list', null);
-    this.model = await this.post_request(location.origin + '/api/management/model/stats', null);
-    this.collectors =
-        await this.post_request(location.origin + '/api/management/collector/list', null);
+    this.plugins = await post_request(location.origin + '/api/management/plugin/list', null);
+    this.model = await post_request(location.origin + '/api/management/model/stats', null);
+    this.collectors = await post_request(location.origin + '/api/management/collector/list', null);
     this.controllers =
-        await this.post_request(location.origin + '/api/management/controller/list', null);
+        await post_request(location.origin + '/api/management/controller/list', null);
   }
 
   async refresh() {
@@ -58,31 +57,9 @@ class DashboardView {
     }
   }
 
-  post_request(url, body) {
-    return new Promise(function(resolve, reject) {
-             const jsonRequest = new XMLHttpRequest();
-             jsonRequest.open('POST', url);
-             // Only accept 200 success.
-             jsonRequest.onload = function() {
-               if (this.status == 200) {
-                 resolve(JSON.parse(jsonRequest.response));
-               } else {
-                 reject({status: this.status, statusText: jsonRequest.statusText});
-               }
-             };
-
-             // Reject all errors.
-             jsonRequest.onerror = function() {
-               reject({status: this.status, statusText: jsonRequest.statusText});
-             };
-             jsonRequest.send(body);
-           })
-        .catch();
-  }
-
   async scheduleCollector() {
     console.log('[Dashboard] - Collectors Scheduled');
-    await this.post_request(location.origin + '/api/management/collector/schedule', null);
+    await post_request(location.origin + '/api/management/collector/schedule', null);
   }
 
   async setPluginList() {
