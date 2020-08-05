@@ -15,7 +15,10 @@ group("wasm") {
 
 group("tests") {
   testonly = true
-  deps = [ ":wasm-triage-unittests" ]
+  deps = [
+    ":wasm",
+    ":wasm-triage-unittests",
+  ]
 }
 
 # We need to specify configs
