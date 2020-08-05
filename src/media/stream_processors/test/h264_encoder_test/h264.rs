@@ -6,6 +6,8 @@ use fidl::encoding::Decodable;
 use fidl_fuchsia_media::FormatDetails;
 use stream_processor_test::*;
 
+const SEPARATE_SPS_PPS: bool = true;
+
 /// Represents an H264 elementary stream.
 pub struct H264Stream {
     data: Vec<u8>,
@@ -188,19 +190,25 @@ impl<'a> Iterator for H264ChunkIter<'a> {
                     if let None = self.chunk_start_pos {
                         self.chunk_start_pos = Some(self.nal_iter.pos - nal.data.len());
                     }
-                    match nal.kind {
-                        H264NalKind::IDR | H264NalKind::NonIDR => {
-                            break Some(H264Chunk {
-                                data: &self.nal_iter.data
-                                    [self.chunk_start_pos.unwrap()..self.nal_iter.pos],
-                                nal_kind: Some(nal.kind),
-                            });
-                        }
-                        _ => continue,
+                    let queue_chunk = match nal.kind {
+                        // picture
+                        H264NalKind::IDR | H264NalKind::NonIDR => true,
+                        // not picture
+                        _ => SEPARATE_SPS_PPS,
+                    };
+                    if queue_chunk {
+                        break Some(H264Chunk {
+                            data: &self.nal_iter.data
+                                [self.chunk_start_pos.unwrap()..self.nal_iter.pos],
+                            nal_kind: Some(nal.kind),
+                        });
+                    } else {
+                        continue;
                     }
                 }
                 None => {
                     if self.chunk_start_pos.expect("Zero NALs?") == self.nal_iter.data.len() {
+                        // done
                         break None;
                     } else {
                         break Some(H264Chunk {

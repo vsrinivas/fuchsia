@@ -7,6 +7,7 @@
 
 #include <lib/fit/defer.h>
 
+#include <cstdint>
 #include <list>
 #include <unordered_map>
 #include <vector>
@@ -95,6 +96,9 @@ class H264MultiDecoder : public VideoDecoder {
                          uint32_t stride) override;
   [[nodiscard]] bool CanBeSwappedIn() override;
   [[nodiscard]] bool CanBeSwappedOut() const override;
+  [[nodiscard]] bool MustBeSwappedOut() const override;
+  [[nodiscard]] bool ShouldSaveInputContext() const override;
+
   void SetSwappedOut() override;
   void SwappedIn() override;
   void OnSignaledWatchdog() override;
@@ -108,6 +112,7 @@ class H264MultiDecoder : public VideoDecoder {
   void ReceivedNewInput();
   // not currently used:
   void FlushFrames();
+  uint32_t GetConsumedBytes();
   void DumpStatus();
   // Try to pump the decoder, rescheduling it if it isn't currently scheduled in.
   void PumpOrReschedule();
@@ -123,7 +128,8 @@ class H264MultiDecoder : public VideoDecoder {
   void StartFrameDecode();
   bool IsUnusedReferenceFrameAvailable();
   std::shared_ptr<ReferenceFrame> GetUnusedReferenceFrame();
-  bool currently_decoding() { return currently_decoding_; }
+  bool is_hw_active() { return is_hw_active_; }
+  bool is_decoder_started() { return is_decoder_started_; }
 
   void* SecondaryFirmwareVirtualAddressForTesting() { return secondary_firmware_->virt_base(); }
   void set_use_parser(bool use_parser) { use_parser_ = use_parser; }
@@ -298,6 +304,7 @@ class H264MultiDecoder : public VideoDecoder {
   void ConfigureDpb();
   void HandleSliceHeadDone();
   void HandlePicDataDone();
+  void HandleBufEmpty();
   void OnFatalError();
   void PumpDecoder();
   bool InitializeRefPics(const std::vector<std::shared_ptr<media::H264Picture>>& ref_pic_list,
@@ -310,6 +317,7 @@ class H264MultiDecoder : public VideoDecoder {
   // requires that the decoder is torn down and recreated before continuing. The method will try to
   // reschedule, since the decoder can't do any more work.
   void RequestStreamReset();
+  uint32_t GetStreamBufferSize();
 
   FrameDataProvider* frame_data_provider_;
   bool fatal_error_ = false;
@@ -347,7 +355,21 @@ class H264MultiDecoder : public VideoDecoder {
   uint32_t next_max_reference_size_ = 0u;
   bool waiting_for_surfaces_ = false;
   bool waiting_for_input_ = false;
-  bool currently_decoding_ = false;
+
+  // This becomes true on StartDecoding(), and becomes false on StopDecoding().
+  //
+  // Invariant: decoder_started_ || !hw_active_.
+  bool is_decoder_started_ = false;
+  // This tracks whether the FW is actively doing any decoding.
+  //
+  // It's possible for decoder_started_ to remain true while hw_active_ becomes false for a while,
+  // then for hw_active_ to become true again without needing to StartDecoding().  For hw_active_
+  // to be true, decoder_started_ must also be true.
+  //
+  // Invariant: decoder_started_ || !hw_active_.
+  // Invariant: is_hw_active_ == watchdog is running
+  bool is_hw_active_ = false;
+
   bool in_pump_decoder_ = false;
   bool is_async_pump_pending_ = false;
 
@@ -356,20 +378,62 @@ class H264MultiDecoder : public VideoDecoder {
   ReferenceFrame* current_metadata_frame_ = nullptr;
 
   std::list<uint32_t> frames_to_output_;
-  std::list<SliceData> slice_data_list_;
+  // by first_mb_in_slice
+  std::map<int, SliceData> slice_data_map_;
   media::H264POC poc_;
   bool have_initialized_ = false;
   uint32_t seq_info2_{};
-  // This is the index of the next bitstream id to be assigned to an input buffer.
-  uint32_t next_pts_id_{};
 
-  // |id_to_pts_map_| maps from bitstream ids to PTSes. Bitstream IDs are assigned to input buffers
-  // and media::H264Decoder plumbs them through to the resulting H264Pictures.
-  std::unordered_map<uint32_t, uint64_t> id_to_pts_map_;
   HardwareRenderParams params_;
 
   media::H264SPS current_sps_;
   media::H264PPS current_pps_;
+
+  // This tracks which slice headers we've seen since starting from a saved state.  If we restore
+  // from the same saved state later, this prevents us from telling H264Decoder about the same slice
+  // more than once.
+  int per_frame_seen_first_mb_in_slice_ = -1;
+  int per_frame_attempt_seen_first_mb_in_slice_ = -1;
+
+  uint32_t stream_buffer_size_ = 0;
+
+  // If we fail to fully decode a frame, we'll force "swap out" but with should_save_input_context_
+  // false to achieve a re-load of the old state when swapping back in.  If we succeed at fully
+  // decoding a frame, we'll force_swap_out_ true in order to checkpoint the useful progress so far,
+  // to persist a saved state from which we can repeatedly start from if decoding the next frame
+  // doesn't work the first time due to insufficient input data so far.
+  bool force_swap_out_ = false;
+  // This is only true if we've made useful progress.  If we haven't made useful progress then we'll
+  // restore a previous state and try to decode starting at the same read position again, with more
+  // data appended at the end, and repeatedly do that until we get a picture fully decoded.
+  bool should_save_input_context_ = false;
+
+  // When we restore from a saved state we've previously started from, we want to restore everything
+  // except the write pointer, since we want to keep the data written to the stream buffer last time
+  // so we can re-decode all that data.
+  uint64_t unwrapped_write_offset_ = 0;
+
+  // This allows us to find the start offset of each decoded frame, to find which timestamp_ish goes
+  // with each decoded frame (if any).
+  uint64_t unwrapped_consumed_bytes_ = 0;
+
+  uint64_t unwrapped_consumed_bytes_decode_tried_ = 0;
+  uint64_t unwrapped_write_offset_decode_tried_ = 0;
+
+  // This points direction to a value within slice_data_map_.
+  SliceData* current_slice_data_ = nullptr;
+  media::H264SliceHeader stashed_latest_slice_header_;
+
+  // We don't want to overwrite data we may read again later if we need to re-decode from the same
+  // saved state again.
+  uint32_t saved_state_starting_read_offset_ = 0;
+
+  // Stashed during ConfigureDpb(), since not robustly available during HandleSliceHeader().
+  uint32_t chroma_format_idc_ = 0;
+
+  // The frame_num we've seen a slice header for, but not yet a pic data done.  We use this to
+  // detect a missing pic data done between slices of two different frames.
+  std::optional<int> frame_num_;
 };
 
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_MULTI_DECODER_H_

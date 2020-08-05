@@ -128,6 +128,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   [[nodiscard]] zx_status_t ProcessVideoNoParser(const void* data, uint32_t len,
                                                  uint32_t* written_out = nullptr) override;
 
+  [[nodiscard]] uint32_t GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(
+      uint32_t write_offset, uint32_t read_offset) override;
+
   [[nodiscard]] uint32_t GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset);
 
   // Similar to GetStreamBufferEmptySpaceAfterOffset, but uses the current core write offset.

@@ -76,12 +76,17 @@ class PtsManager {
   // Offset must be within the frame that's being looked up.
   const LookupResult Lookup(uint64_t offset);
 
+  // Counts how many InsertPts() entries exist with offset >= threshold_offset.
+  // This helps avoid queueing so much into h264_multi_decoder's PtsManager that
+  // kMaxEntriesToKeep is exhausted.
+  uint32_t CountEntriesBeyond(uint64_t threshold_offset) const;
+
  private:
   // The last inserted offset is offset_to_result_.rbegin()->first, unless empty() in which case
   // logically 0.
   uint64_t GetLastInsertedOffset() __TA_REQUIRES(lock_);
 
-  std::mutex lock_;
+  mutable std::mutex lock_;
   __TA_GUARDED(lock_)
   uint32_t lookup_bit_width_ = 64;
 

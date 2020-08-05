@@ -11,6 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <stdint.h>
 
+#include <limits>
 #include <variant>
 
 #include <openssl/sha.h>
@@ -133,8 +134,8 @@ struct UseVideoDecoderTestParams final {
   static constexpr int64_t kDefaultSkipFrameOrdinal = -1;
   int64_t skip_frame_ordinal = kDefaultSkipFrameOrdinal;
 
-  // 0 means unlimited.  Positive means that many frames get queued then stop queuing frames.
-  uint64_t frame_count = 0;
+  // This many frames get queued then stop queuing frames.
+  uint64_t frame_count = std::numeric_limits<uint64_t>::max();
 
   // nullopt means no override
   std::optional<std::string> mime_type;

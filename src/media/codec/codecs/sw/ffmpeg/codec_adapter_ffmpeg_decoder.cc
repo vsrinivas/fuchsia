@@ -48,7 +48,7 @@ void CodecAdapterFfmpegDecoder::ProcessInputLoop() {
     CodecInputItem input_item = std::move(maybe_input_item.value());
     if (input_item.is_format_details()) {
       if (avcodec_context_) {
-        events_->onCoreCodecFailCodec("Midstream input  format change is not supported.");
+        events_->onCoreCodecFailCodec("Midstream input format change is not supported.");
         return;
       }
       auto maybe_avcodec_context = AvCodecContext::CreateDecoder(

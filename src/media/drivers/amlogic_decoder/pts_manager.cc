@@ -68,7 +68,8 @@ void PtsManager::SetEndOfStreamOffset(uint64_t end_of_stream_offset) {
 
 const PtsManager::LookupResult PtsManager::Lookup(uint64_t offset) {
   std::lock_guard<std::mutex> lock(lock_);
-  ZX_DEBUG_ASSERT(offset < (static_cast<uint64_t>(1) << lookup_bit_width_));
+  ZX_DEBUG_ASSERT(lookup_bit_width_ == 64 ||
+                  offset < (static_cast<uint64_t>(1) << lookup_bit_width_));
 
   // last_inserted_offset is known-good in the sense that it's known to be a valid full-width
   // uint64_t input stream offset.  We prefer to anchor on this value rather than incrementally
@@ -123,6 +124,19 @@ const PtsManager::LookupResult PtsManager::Lookup(uint64_t offset) {
   }
 
   return it->second;
+}
+
+uint32_t PtsManager::CountEntriesBeyond(uint64_t threshold_offset) const {
+  std::lock_guard<std::mutex> lock(lock_);
+  // Shorter bit width not implemented for this method yet.
+  ZX_DEBUG_ASSERT(lookup_bit_width_ == 64);
+  auto it = offset_to_result_.upper_bound(threshold_offset);
+  uint32_t count = 0;
+  while (it != offset_to_result_.end()) {
+    ++it;
+    ++count;
+  }
+  return count;
 }
 
 // The last inserted offset is offset_to_result_.rbegin()->first, unless empty() in which case
