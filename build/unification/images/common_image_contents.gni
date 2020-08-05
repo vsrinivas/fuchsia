@@ -154,6 +154,7 @@ common_image_contents = [
   "//src/devices/tee/drivers/optee",
   "//src/devices/thermal/bin/thermal-cli",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",
+  "//src/devices/thermal/drivers/aml-thermal-s905d2g-legacy",
   "//src/devices/thermal/drivers/aml-thermal-s912",
   "//src/devices/usb/bin/lsusb",
   "//src/devices/usb/bin/usb-fwloader",

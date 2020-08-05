@@ -165,6 +165,7 @@ zedboot_deps += [
   "//src/devices/tests/mock-device",
   "//src/devices/tests/sysdev",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",
+  "//src/devices/thermal/drivers/aml-thermal-s905d2g-legacy",
   "//src/devices/thermal/drivers/aml-thermal-s912",
   "//src/devices/usb/drivers/aml-usb-phy-v2",
   "//src/devices/usb/drivers/dwc2",
