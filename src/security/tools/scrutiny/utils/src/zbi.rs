@@ -9,8 +9,8 @@ use {
     log::info,
     scrutiny::model::model::{ZbiSection, ZbiType},
     serde::{Deserialize, Serialize},
-    std::convert::TryFrom,
-    std::io::{Cursor, Read},
+    std::convert::{TryFrom, TryInto},
+    std::io::{Cursor, Read, Seek, SeekFrom},
     thiserror::Error,
 };
 
@@ -115,6 +115,13 @@ impl ZbiReader {
                 zbi_sections.push(ZbiSection { section_type, buffer: decompressed_data });
             } else {
                 zbi_sections.push(ZbiSection { section_type, buffer: section_data });
+            }
+
+            // All items are 8 byte aligned, skip if the end of the block isn't.
+            let position: u64 = self.cursor.position();
+            if position % 8 != 0 {
+                let padding: u64 = 8 - (position % 8);
+                self.cursor.seek(SeekFrom::Current(padding.try_into().unwrap()))?;
             }
 
             // Exit if we have arrived at the end of the container length.
@@ -263,5 +270,60 @@ mod tests {
         let sections = reader.parse().unwrap();
         assert_eq!(sections.len(), 1);
         assert_eq!(sections[0].buffer.len(), uncompressed_len as usize);
+    }
+
+    #[test]
+    fn test_zbi_sections_unaligned() {
+        let mut container_header = ZbiHeader {
+            zbi_type: ZBI_TYPE_CONTAINER,
+            length: 0,
+            extra: 0,
+            flags: 0,
+            reserved_0: 0,
+            reserved_1: 0,
+            magic: ZBI_ITEM_MAGIC,
+            crc32: 0,
+        };
+        let section_header = ZbiHeader {
+            zbi_type: ZbiType::Discard as u32,
+            length: 7,
+            extra: 7,
+            flags: 0,
+            reserved_0: 0,
+            reserved_1: 0,
+            magic: ZBI_ITEM_MAGIC,
+            crc32: 0,
+        };
+        let section_data: Vec<u8> = vec![0; 7];
+
+        let section_header_two = ZbiHeader {
+            zbi_type: ZbiType::Discard as u32,
+            length: 10,
+            extra: 10,
+            flags: 0,
+            reserved_0: 0,
+            reserved_1: 0,
+            magic: ZBI_ITEM_MAGIC,
+            crc32: 0,
+        };
+        let section_data_two: Vec<u8> = vec![0; 10];
+
+        let mut section_bytes: Vec<u8> = bincode::serialize(&section_header).unwrap();
+        section_bytes.extend(&section_data);
+        let padding_len = 8 - (section_bytes.len() % 8);
+        let padding = vec![0; padding_len];
+        section_bytes.extend(&padding);
+        section_bytes.extend(bincode::serialize(&section_header_two).unwrap());
+        section_bytes.extend(&section_data_two);
+
+        container_header.length = u32::try_from(section_bytes.len()).unwrap();
+        let mut zbi_bytes: Vec<u8> = bincode::serialize(&container_header).unwrap();
+        zbi_bytes.extend(&section_bytes);
+
+        let mut reader = ZbiReader::new(zbi_bytes);
+        let sections = reader.parse().unwrap();
+        assert_eq!(sections.len(), 2);
+        assert_eq!(sections[0].buffer.len(), 7);
+        assert_eq!(sections[1].buffer.len(), 10);
     }
 }
