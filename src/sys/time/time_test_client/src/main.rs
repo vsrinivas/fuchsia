@@ -10,7 +10,7 @@
 use {
     anyhow::{Context as _, Error},
     chrono::prelude::*,
-    fuchsia_async as fasync, fuchsia_runtime as runtime, fuchsia_zircon as zx,
+    fidl_fuchsia_time, fuchsia_async as fasync, fuchsia_runtime as runtime, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
     log::{info, warn},
@@ -31,11 +31,15 @@ async fn main() {
 
     let mut futures = vec![];
     futures.push(RuntimeUtcMonitor::new().execute().boxed());
+    KernelUtcMonitor::new();
     match ClockMonitor::new() {
         Ok(clock_monitor) => futures.push(clock_monitor.execute().boxed()),
         Err(err) => warn!("{}", err),
     }
-    // TODO(jsankey): Add a monitor for the fuchsia.time.Utc FIDL interface.
+    match FidlMonitor::new() {
+        Ok(fidl_monitor) => futures.push(fidl_monitor.execute().boxed()),
+        Err(err) => warn!("{}", err),
+    }
     future::join_all(futures).await;
 }
 
@@ -46,7 +50,7 @@ struct RuntimeUtcMonitor {
 }
 
 impl RuntimeUtcMonitor {
-    /// Creates a new `UtcMonitor`, logging the initial state.
+    /// Creates a new `RuntimeUtcMonitor`, logging the initial state.
     pub fn new() -> Self {
         let initial = Utc::now();
         info!("Runtime UTC at initialization: {}", initial.to_rfc2822());
@@ -66,6 +70,21 @@ impl RuntimeUtcMonitor {
             }
         }
     }
+}
+
+/// A monitor for UTC as reported by the kernel.
+struct KernelUtcMonitor {}
+
+impl KernelUtcMonitor {
+    /// Creates a new `KernelUtcMonitor`, logging the initial state.
+    pub fn new() -> Self {
+        let initial = Utc.timestamp_nanos(zx::Time::get(zx::ClockId::UTC).into_nanos());
+        info!("Kernel UTC at initialization: {}", initial.to_rfc2822());
+        KernelUtcMonitor {}
+    }
+
+    // Note: Currently there is no need to perform ongoing monitoring tasks for Kernel time and
+    // hence there is no execute function.
 }
 
 /// A monitor for a UTC `zx::Clock` to log changes in clock details.
@@ -110,7 +129,7 @@ impl ClockMonitor {
         }
     }
 
-    /// Async function to operate this monitor, returning immediately if the clock was not found.
+    /// Async function to operate this monitor.
     async fn execute(self) {
         // Future to log when the clock started signal is observed.
         let clock_start_fut = async {
@@ -149,5 +168,42 @@ impl ClockMonitor {
             transform.rate.reference_ticks,
             (clock_details.error_bounds as f64) / 1e6f64,
         )
+    }
+}
+
+/// A monitor for the `fuchsia.time.Utc` FIDL interface to log changes in time source.
+struct FidlMonitor {
+    /// A proxy for a connection to a `fuchsia.time.Utc` server.
+    utc_service: fidl_fuchsia_time::UtcProxy,
+}
+
+impl FidlMonitor {
+    /// Creates a new `FidlMonitor` or returns an error if the FIDL UTC service could not be found.
+    pub fn new() -> Result<Self, Error> {
+        let utc_service =
+            fuchsia_component::client::connect_to_service::<fidl_fuchsia_time::UtcMarker>()?;
+        Ok(FidlMonitor { utc_service })
+    }
+
+    /// Async function to operate this monitor.
+    async fn execute(self) {
+        loop {
+            match self.utc_service.watch_state().await {
+                Ok(fidl_fuchsia_time::UtcState { source: Some(source), .. }) => {
+                    info!("fuchsia.time.Utc source: {:?}", source);
+                }
+                Ok(fidl_fuchsia_time::UtcState { source: None, .. }) => {
+                    // This failure mode exists because UtcState is a table, but its not likely
+                    // to occur.
+                    warn!("fuchsia.time.Utc state did not contain a source");
+                }
+                Err(err) => {
+                    warn!("Failed to get fuchsia.time.UTC state: {:?}", err);
+                    // Assume service failures are unlikely to self-resolve so quit the monitor to
+                    // avoid spamming the log.
+                    return;
+                }
+            }
+        }
     }
 }
