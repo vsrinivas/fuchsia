@@ -68,10 +68,6 @@ class SessionStorage {
   // Deletes the |story_id| from the list of known stories.
   void DeleteStory(std::string story_id);
 
-  // Sets the last focused timestamp for |story_id| to |ts|. Completes the
-  // returned Future when done.
-  void UpdateLastFocusedTimestamp(std::string story_id, int64_t ts);
-
   // Returns a StoryDataPtr for |story_id|. If |story_id| is not a valid
   // story, the returned StoryDataPtr will be null.
   fuchsia::modular::internal::StoryDataPtr GetStoryData(std::string story_id);

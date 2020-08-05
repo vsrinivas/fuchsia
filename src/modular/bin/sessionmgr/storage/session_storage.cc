@@ -56,21 +56,6 @@ void SessionStorage::DeleteStory(std::string story_name) {
   }
 }
 
-void SessionStorage::UpdateLastFocusedTimestamp(std::string story_name, const int64_t ts) {
-  auto it = story_data_backing_store_.find(story_name);
-  FX_DCHECK(it != story_data_backing_store_.end())
-      << "SessionStorage::UpdateLastFocusedTimestamp was called on story " << story_name
-      << " before it was created!";
-  auto& story_data = it->second;
-
-  if (story_data.story_info().last_focus_time() != ts) {
-    story_data.mutable_story_info()->set_last_focus_time(ts);
-    if (on_story_updated_) {
-      on_story_updated_(std::move(story_name), std::move(story_data));
-    }
-  }
-}
-
 fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(std::string story_name) {
   fuchsia::modular::internal::StoryDataPtr value{};
   auto it = story_data_backing_store_.find(story_name);

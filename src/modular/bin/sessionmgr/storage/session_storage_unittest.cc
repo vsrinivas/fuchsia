@@ -167,15 +167,6 @@ TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
   EXPECT_THAT(story_info.annotations().at(0), annotations::AnnotationEq(ByRef(annotation)));
 }
 
-TEST_F(SessionStorageTest, UpdateLastFocusedTimestamp) {
-  auto storage = CreateStorage();
-  auto story_name = storage->CreateStory("story", {});
-
-  storage->UpdateLastFocusedTimestamp(story_name, 10);
-  auto data = storage->GetStoryData(story_name);
-  EXPECT_EQ(10, data->story_info().last_focus_time());
-}
-
 TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
   auto storage = CreateStorage();
 
@@ -203,10 +194,16 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
 
   // Update something and see a new notification.
   updated = false;
-  storage->UpdateLastFocusedTimestamp(created_story_name, 42);
+  std::vector<fuchsia::modular::Annotation> annotations{};
+  fuchsia::modular::AnnotationValue annotation_value;
+  annotation_value.set_text("test_annotation_value");
+  auto annotation = fuchsia::modular::Annotation{
+      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+  annotations.push_back(fidl::Clone(annotation));
+
+  storage->MergeStoryAnnotations(created_story_name, std::move(annotations));
   RunLoopUntil([&] { return updated; });
   EXPECT_EQ(created_story_name, updated_story_name);
-  EXPECT_EQ(42, updated_story_data.story_info().last_focus_time());
 
   // Delete the story and expect to see a notification.
   storage->DeleteStory(created_story_name);
