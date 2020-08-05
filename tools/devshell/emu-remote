@@ -26,6 +26,7 @@
 ## defaults in future invocations of any 'fx *-remote' tools.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
 fx-config-read
 
 emu=true
@@ -77,17 +78,9 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-readonly CACHE_FILE=".fx-remote-config"
-# if host is not given, check if there's cached info
-if [[ -z "${host}" && -f "${FUCHSIA_DIR}/${CACHE_FILE}" ]]; then
-  cached="$(<${FUCHSIA_DIR}/${CACHE_FILE})"
-  host=${cached%:*}
-  dir=${cached#*:}
-  echo -n "Reusing host=${host}"
-  if [[ -n "${dir}" ]]; then
-    echo -n " and remote-path=${dir}"
-  fi
-  echo " from previous invocation, persisted in file //${CACHE_FILE}"
+if cached=( $(load_remote_info "$host") ); then
+  host="${cached[0]}"
+  dir="${cached[1]}"
 fi
 
 if [[ -z "${host}" ]]; then
@@ -108,7 +101,7 @@ if "${emu}"; then
   fi
 fi
 
-echo "${host}:${dir}" > "${FUCHSIA_DIR}/${CACHE_FILE}"
+save_remote_info "$host" "$dir"
 
 # Check if the port given in argument "$1" is listened by other processes.
 #
