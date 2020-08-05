@@ -1,0 +1,12 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.btitest;
+
+[Discoverable]
+protocol BtiDevice {
+    /// Returns koid for BTI retrieved from platform bus.
+    GetKoid() -> (uint64 koid);
+    /// Crashes driver host.
+    Crash();
+};

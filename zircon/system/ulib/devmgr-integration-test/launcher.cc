@@ -249,8 +249,10 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
   // Forward required services from the current namespace. Currently this is just
   // fuchsia.process.Launcher.
   zx::channel svc_client2(fdio_service_clone(svc_client.get()));
+  zx::channel svc_client3(fdio_service_clone(svc_client.get()));
   ForwardService(svc_loop_state_->root, fuchsia_process_Launcher_Name, std::move(svc_client));
   ForwardService(svc_loop_state_->root, "fuchsia.logger.LogSink", std::move(svc_client2));
+  ForwardService(svc_loop_state_->root, "fuchsia.boot.RootResource", std::move(svc_client3));
   ForwardService(svc_loop_state_->root, "fuchsia.fshost.Loader", std::move(fshost_svc_client));
 
   boot_args.try_emplace("virtcon.disable", "true");

@@ -262,6 +262,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_PWM           0x17
 #define PDEV_DID_TEST_OT_RADIO      0x18
 #define PDEV_DID_TEST_RPMB          0x19
+#define PDEV_DID_TEST_BTI           0x1A
 
 // ARM
 #define PDEV_VID_ARM                0x12

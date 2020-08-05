@@ -113,6 +113,7 @@ group("tests") {
   testonly = true
   deps = [
     ":platform-bus-unittest-package",
+    "test:platform-bus-bti-test",
     "test:platform-bus-test",
   ]
 }

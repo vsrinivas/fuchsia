@@ -56,6 +56,9 @@ import("//src/sys/build/components.gni")
 #     See `test_spec.gni`.
 #     Type: scope
 #
+#   services (optional)
+#     Provide test with a list of additional services necessary to run.
+#
 #   deps
 #   testonly
 #   visibility
@@ -69,22 +72,25 @@ template("isolated_devmgr_unittest_package") {
   manifest_path = "${target_gen_dir}/meta/${component_name}.cmx"
 
   manifest_name = "${component_name}.cmx"
-  generated_file(manifest_name) {
+  additional_services = []
+  if (defined(invoker.services)) {
+    additional_services = invoker.services
+  }
+  action(manifest_name) {
+    script = "//zircon/system/ulib/devmgr-integration-test/generate-component-manifest.py"
     outputs = [ manifest_path ]
-
-    contents = {
-      program = {
-        binary = invoker.executable_path
-      }
-      sandbox = {
-        services = [
-          "fuchsia.exception.Handler",
-          "fuchsia.logger.LogSink",
-          "fuchsia.process.Launcher",
-        ]
-      }
+    args = [
+      "--executable-path",
+      invoker.executable_path,
+      "--output",
+      rebase_path(manifest_path, root_build_dir),
+    ]
+    foreach(service, additional_services) {
+      args += [
+        "--additional-services",
+        service,
+      ]
     }
-    output_conversion = "json"
   }
 
   fuchsia_component(component_name) {

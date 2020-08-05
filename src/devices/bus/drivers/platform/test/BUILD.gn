@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -269,4 +270,72 @@ isolated_devmgr_unittest_package("platform-bus-test") {
   foreach(driver, simple_drivers) {
     deps += [ ":test-$driver" ]
   }
+}
+
+fidl("fuchsia.hardware.btitest") {
+  sources = [ "bti.test.fidl" ]
+}
+
+driver_module("test-bti-board") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [
+    "test-bti-board.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.platform.bus",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+driver_module("test-bti") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "test-bti.cc" ]
+  deps = [
+    ":fuchsia.hardware.btitest_llcpp",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test("platform-bus-bti") {
+  output_name = "platform-bus-bti-test"
+  sources = [ "bti-test.cc" ]
+  deps = [
+    ":fuchsia.hardware.btitest_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/devmgr-launcher",
+  ]
+}
+
+isolated_devmgr_unittest_package("platform-bus-bti-test") {
+  executable_path = "test/platform-bus-bti-test"
+  services = [ "fuchsia.boot.RootResource" ]
+  deps = [
+    ":platform-bus-bti",
+    ":test-bti-board",
+    ":test-bti",
+    "//src/devices/bus/drivers/platform",
+    "//src/devices/internal/drivers/fragment",
+  ]
 }
