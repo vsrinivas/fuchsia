@@ -189,7 +189,10 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
         }
 
         fn path_from(component: &JsonValue) -> Result<String, Error> {
-            let value = extract_json_value(component, "moniker")?;
+            let value = extract_json_value(component, "moniker").or_else(|_| {
+                extract_json_value(component, "path")
+                    .or_else(|_| bail!("Neither 'path' nor 'moniker' found in Inspect component"))
+            })?;
             Ok(value
                 .as_str()
                 .ok_or_else(|| anyhow!("Inspect component path wasn't a valid string"))?
@@ -197,8 +200,10 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
         }
 
         fn moniker_from(path_string: &String) -> Result<Vec<String>, Error> {
-            selectors::parse_path_to_moniker(path_string)
-                .context("Path string needs to be a moniker")
+            let res = selectors::parse_path_to_moniker(path_string)
+                .context("Path string needs to be a moniker");
+            println!("Moniker is {:?}", res);
+            res
         }
 
         let components: Vec<_> = component_vec
@@ -206,7 +211,11 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
             .map(|raw_component| {
                 let path = path_from(raw_component)?;
                 let moniker = moniker_from(&path)?;
-                let raw_contents = extract_json_value(raw_component, "payload")?;
+                let raw_contents = extract_json_value(raw_component, "payload").or_else(|_| {
+                    extract_json_value(raw_component, "contents").or_else(|_| {
+                        bail!("Neither 'payload' nor 'contentsf' found in Inspect component")
+                    })
+                })?;
                 let processed_data: NodeHierarchy = serde_json::from_value(raw_contents.clone())
                     .with_context(|| {
                         format!(
@@ -291,6 +300,7 @@ mod test {
 
     #[test]
     fn test_fetch() -> Result<(), Error> {
+        // This tests both the moniker/payload and path/content (old-style) Inspect formats.
         let json_options = vec![
             r#"[
         {"moniker":"asdf/foo/qwer",
@@ -301,8 +311,8 @@ mod test {
             r#"[
         {"moniker":"asdf/foo/qwer",
          "payload":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
-        {"moniker":"zxcv/bar/hjkl",
-         "payload":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
+        {"path":"hub/r/zxcv/1/r/bar/2/c/hjkl.cmx/1",
+         "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
         ]"#,
         ];
 
@@ -326,7 +336,7 @@ mod test {
                 vec![MetricValue::Float(2.3)]
             );
             assert_eq!(
-                inspect.fetch_str("INSPECT:*/bar/*:base:yes"),
+                inspect.fetch_str("INSPECT:zxcv/*/hjk*:base:yes"),
                 vec![MetricValue::Bool(true)]
             );
             assert_wrong!(
