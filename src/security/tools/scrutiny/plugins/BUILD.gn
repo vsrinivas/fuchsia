@@ -36,6 +36,7 @@ if (!is_fuchsia) {
       "src/components/controllers/mod.rs",
       "src/components/controllers/package_controllers.rs",
       "src/components/controllers/route_controllers.rs",
+      "src/components/controllers/zbi_controllers.rs",
       "src/components/graph.rs",
       "src/components/http.rs",
       "src/components/jsons.rs",

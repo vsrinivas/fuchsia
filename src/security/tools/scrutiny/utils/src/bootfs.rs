@@ -113,7 +113,12 @@ impl BootfsReader {
             self.cursor.set_position(directory.data_offset.into());
             let mut file_data = vec![0; directory.data_len.try_into()?];
             self.cursor.read_exact(&mut file_data)?;
-            files.insert(directory.name.clone(), file_data);
+
+            let mut dir_name = directory.name.clone();
+            if let Some(stripped_path) = dir_name.strip_suffix("\u{0000}") {
+                dir_name = stripped_path.to_string();
+            }
+            files.insert(dir_name, file_data);
         }
         Ok(files)
     }

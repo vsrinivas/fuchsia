@@ -5,3 +5,4 @@
 pub mod component_controllers;
 pub mod package_controllers;
 pub mod route_controllers;
+pub mod zbi_controllers;

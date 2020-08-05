@@ -7,6 +7,7 @@ use {
         controllers::component_controllers::*,
         controllers::package_controllers::*,
         controllers::route_controllers::*,
+        controllers::zbi_controllers::*,
         http::{HttpGetter, PackageGetter},
         package_reader::*,
         types::*,
@@ -54,6 +55,7 @@ plugin!(
             "/component/manifest/sandbox" => ComponentSandboxGraphController::default(),
             "/packages" => PackagesGraphController::default(),
             "/routes" => RoutesGraphController::default(),
+            "/bootfs" => BootfsPathsController::default(),
         }
     ),
     vec![]
