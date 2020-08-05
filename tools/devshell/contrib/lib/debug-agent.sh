@@ -45,7 +45,7 @@ launch_debug_agent() {
   # We branch out on whether the user used the verbose-agent flag. If so, we
   # redirect the debug agent output to /dev/null.
   echo -e "Debug agent not found. Starting one."
-  fx-command-run "run" "${debug_agent_url}" "--port=${port}" "${unwind_flag}" > "${agent_out}" 2>&1 &
+  fx-command-run "shell" "run" "${debug_agent_url}" "--port=${port}" "${unwind_flag}" > "${agent_out}" 2>&1 &
 
   # Bug: 49094, with serve-remote this can not detect a running
   # agent the way that check_for_agent attempts to, we sleep a very
