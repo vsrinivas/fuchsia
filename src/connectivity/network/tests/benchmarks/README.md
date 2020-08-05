@@ -11,8 +11,7 @@ following objectives:
 ## Micro benchmarks
 
 These are benchmarks that are focused on benchmarking duration of
-specific socket related system calls from the test application that uses
-[trace based benchmarking](https://fuchsia.dev/fuchsia-src/development/benchmarking/trace_based_benchmarking).
+specific socket related system calls from the test application.
 
 These can be run manually with:
 fx run-e2e-tests netstack_benchmarks_test

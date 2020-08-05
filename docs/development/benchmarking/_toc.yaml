@@ -8,5 +8,3 @@ toc:
   path: /docs/development/benchmarking/results_schema.md
 - title: "How to write benchmarks"
   path: /docs/development/benchmarking/running_on_ci.md
-- title: "Trace-based benchmarking"
-  path: /docs/development/benchmarking/trace_based_benchmarking.md
