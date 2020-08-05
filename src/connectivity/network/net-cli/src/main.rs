@@ -514,7 +514,18 @@ mod tests {
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
 
-        fasync::Task::local(async move {
+        // Make the first request.
+        let succeeds = do_if(
+            IfEnum::Addr(IfAddr {
+                addr_cmd: IfAddrEnum::Del(IfAddrDel {
+                    id: 1,
+                    addr: String::from("192.168.0.1"),
+                    prefix: None, // The prefix should be set to the default of 32 for IPv4.
+                }),
+            }),
+            &stack,
+        );
+        let success_response = async {
             // Verify that the first request is as expected and return OK.
             let (id, addr, responder) = next_request(&mut requests).await;
             assert_eq!(id, 1);
@@ -525,8 +536,24 @@ mod tests {
                     prefix_len: 32
                 }
             );
-            responder.send(&mut Ok(())).unwrap();
+            responder.send(&mut Ok(())).map_err(anyhow::Error::new)
+        };
+        let ((), ()) = futures::future::try_join(success_response, succeeds)
+            .await
+            .expect("do_if should succeed");
 
+        // Make the second request.
+        let fails = do_if(
+            IfEnum::Addr(IfAddr {
+                addr_cmd: IfAddrEnum::Del(IfAddrDel {
+                    id: 2,
+                    addr: String::from("fd00::1"),
+                    prefix: None, // The prefix should be set to the default of 128 for IPv6.
+                }),
+            }),
+            &stack,
+        );
+        let fail_response = async {
             // Verify that the second request is as expected and return a NotFound error.
             let (id, addr, responder) = next_request(&mut requests).await;
             assert_eq!(id, 2);
@@ -539,36 +566,17 @@ mod tests {
                     prefix_len: 128
                 }
             );
-            responder.send(&mut Err(fidl_fuchsia_net_stack::Error::NotFound)).unwrap();
-        })
-        .detach();
-
-        // Make the first request.
-        let () = do_if(
-            IfEnum::Addr(IfAddr {
-                addr_cmd: IfAddrEnum::Del(IfAddrDel {
-                    id: 1,
-                    addr: String::from("192.168.0.1"),
-                    prefix: None, // The prefix should be set to the default of 32 for IPv4.
-                }),
-            }),
-            &stack,
-        )
-        .await
-        .expect("net-cli do_if del address should succeed");
-
-        // Make the second request.
-        do_if(
-            IfEnum::Addr(IfAddr {
-                addr_cmd: IfAddrEnum::Del(IfAddrDel {
-                    id: 2,
-                    addr: String::from("fd00::1"),
-                    prefix: None, // The prefix should be set to the default of 128 for IPv6.
-                }),
-            }),
-            &stack,
-        )
-        .await
-        .expect_err("net-cli do_if del address should have failed");
+            responder
+                .send(&mut Err(fidl_fuchsia_net_stack::Error::NotFound))
+                .map_err(anyhow::Error::new)
+        };
+        let (fails_response, fails) = futures::future::join(fail_response, fails).await;
+        let () = fails_response.expect("responder.send should succeed");
+        let fidl_err = fails.expect_err("do_if should fail");
+        let fidl_fuchsia_net_stack_ext::NetstackError(underlying_error) = fidl_err
+            .root_cause()
+            .downcast_ref::<fidl_fuchsia_net_stack_ext::NetstackError>()
+            .expect("fidl_err should downcast to NetstackError");
+        assert_eq!(*underlying_error, fidl_fuchsia_net_stack::Error::NotFound);
     }
 }
