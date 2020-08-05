@@ -1,5 +1,9 @@
 {
     "program": {
+        "args": [
+            "--rotation",
+            "90"
+        ],
         "binary": "bin/system_recovery_fdr"
     },
     "sandbox": {

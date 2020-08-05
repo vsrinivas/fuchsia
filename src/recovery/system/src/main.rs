@@ -7,26 +7,33 @@ use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{
-        path_for_rounded_rectangle, DisplayAligned, DisplayRotation, FontFace, GlyphMap, Text,
+        path_for_rectangle, path_for_rounded_rectangle, DisplayAligned, DisplayRotation, FontFace,
+        GlyphMap, Text,
     },
     geometry::IntVector,
     input, make_message,
     render::{
-        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
-        RenderExt, Style,
+        BlendMode, Composition, Context as RenderContext, CopyRegion, Fill, FillRule, Image, Layer,
+        PostCopy, PreClear, Raster, RenderExt, Style,
     },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
     Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use euclid::{default::SideOffsets2D, point2, vec2};
+use euclid::{
+    default::{Point2D, SideOffsets2D, Vector2D},
+    point2, vec2,
+};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
 use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{AsHandleRef, Duration, Event, Signals};
 use futures::StreamExt;
+use png;
+use std::fs::File;
 
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 10;
+const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.png";
 
 #[cfg(feature = "http_setup_server")]
 mod setup;
@@ -77,6 +84,11 @@ enum RecoveryMessages {
     ResetMessage(FactoryResetState),
     CountdownTick(u8),
     ResetFailed,
+}
+
+struct PngImage {
+    file: String,
+    loaded_info: Option<(Size, Image, Raster, Point2D<f32>)>,
 }
 
 struct RecoveryAppAssistant {
@@ -300,6 +312,7 @@ struct RecoveryViewAssistant<'a> {
     countdown_task: Option<Task<()>>,
     data_reset_overlay: Option<DataResetOverlay>,
     countdown_ticks: u8,
+    logo_image: PngImage,
 }
 
 impl<'a> RecoveryViewAssistant<'a> {
@@ -312,9 +325,10 @@ impl<'a> RecoveryViewAssistant<'a> {
     ) -> Result<RecoveryViewAssistant<'a>, Error> {
         RecoveryViewAssistant::setup(app_context, view_key)?;
 
-        let bg_color = Color { r: 255, g: 0, b: 255, a: 255 };
+        let bg_color = Color::white();
         let composition = Composition::new(bg_color);
         let face = FontFace::new(FONT_DATA)?;
+        let logo = PngImage { file: LOGO_IMAGE_PATH.to_string(), loaded_info: None };
 
         Ok(RecoveryViewAssistant {
             display_rotation,
@@ -333,6 +347,7 @@ impl<'a> RecoveryViewAssistant<'a> {
             countdown_task: None,
             data_reset_overlay: None,
             countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
+            logo_image: logo,
         })
     }
 
@@ -432,96 +447,154 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
             ));
         }
 
-        let text_size = min_dimension / 12.0;
-
-        let fg_color = Color { r: 255, g: 255, b: 255, a: 255 };
-
-        self.heading_label = Some(Text::new(
-            render_context,
-            &self.heading,
-            text_size,
-            100,
-            &self.face,
-            &mut self.glyphs,
-        ));
-
-        let heading_label = self.heading_label.as_ref().expect("label");
-        let heading_label_size = heading_label.bounding_box.size;
-        let heading_label_offset = Point::new(
-            (target_size.width / 2.0) - (heading_label_size.width / 2.0),
-            (target_size.height / 4.0) - (heading_label_size.height / 2.0),
-        );
-
-        let display_heading_label_offset = if let Some(transform) = transform {
-            transform.transform_point(heading_label_offset)
-        } else {
-            heading_label_offset.cast_unit::<DisplayAligned>()
+        let background_color = self.bg_color.clone();
+        let clear_background_ext = RenderExt {
+            pre_clear: Some(PreClear { color: background_color }),
+            ..Default::default()
         };
-
-        let heading_label_layer = Layer {
-            raster: heading_label
-                .raster
-                .clone()
-                .translate(to_raster_translation_vector(display_heading_label_offset)),
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(fg_color),
-                blend_mode: BlendMode::Over,
-            },
-        };
-
-        self.body_label = Some(Text::new(
-            render_context,
-            &self.body,
-            text_size,
-            100,
-            &self.face,
-            &mut self.glyphs,
-        ));
-
-        let body_label = self.body_label.as_ref().expect("body_label");
-        let body_label_size = body_label.bounding_box.size;
-        let body_label_offset = Point::new(
-            (target_size.width / 2.0) - (body_label_size.width / 2.0),
-            (target_size.height * 0.75) - (body_label_size.height / 2.0),
-        );
-        let display_body_label_offset = if let Some(transform) = transform {
-            transform.transform_point(body_label_offset)
-        } else {
-            body_label_offset.cast_unit::<DisplayAligned>()
-        };
-
-        let body_label_layer = Layer {
-            raster: body_label
-                .raster
-                .clone()
-                .translate(to_raster_translation_vector(display_body_label_offset)),
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(fg_color),
-                blend_mode: BlendMode::Over,
-            },
-        };
-
-        let overlay_layers = if let Some(overlay) = self.data_reset_overlay.as_mut() {
-            overlay.update(render_context, &self.face, &mut self.glyphs, self.countdown_ticks);
-            overlay.layers()
-        } else {
-            vec![]
-        };
-
-        self.composition.replace(
-            ..,
-            overlay_layers
-                .into_iter()
-                .chain(std::iter::once(body_label_layer))
-                .chain(std::iter::once(heading_label_layer)),
-        );
-
         let image = render_context.get_current_image(context);
-        let ext =
-            RenderExt { pre_clear: Some(PreClear { color: self.bg_color }), ..Default::default() };
-        render_context.render(&self.composition, None, image, &ext);
+
+        if self.reset_state_machine.is_counting_down() {
+            let overlay_layers = if let Some(overlay) = self.data_reset_overlay.as_mut() {
+                overlay.update(render_context, &self.face, &mut self.glyphs, self.countdown_ticks);
+                overlay.layers()
+            } else {
+                vec![]
+            };
+
+            self.composition.replace(.., overlay_layers.into_iter());
+
+            render_context.render(&self.composition, None, image, &clear_background_ext);
+        } else {
+            let text_size = min_dimension / 12.0;
+
+            let fg_color = Color::new();
+
+            let heading_label_layer = {
+                self.heading_label = Some(Text::new(
+                    render_context,
+                    &self.heading,
+                    text_size,
+                    100,
+                    &self.face,
+                    &mut self.glyphs,
+                ));
+
+                let heading_label = self.heading_label.as_ref().expect("label");
+                let heading_label_size = heading_label.bounding_box.size;
+                let heading_label_offset = Point::new(
+                    (target_size.width / 2.0) - (heading_label_size.width / 2.0),
+                    (target_size.height / 4.0) - (heading_label_size.height / 2.0),
+                );
+
+                let display_heading_label_offset = if let Some(transform) = transform {
+                    transform.transform_point(heading_label_offset)
+                } else {
+                    heading_label_offset.cast_unit::<DisplayAligned>()
+                };
+
+                Layer {
+                    raster: heading_label
+                        .raster
+                        .clone()
+                        .translate(to_raster_translation_vector(display_heading_label_offset)),
+                    style: Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(fg_color),
+                        blend_mode: BlendMode::Over,
+                    },
+                }
+            };
+
+            let body_label_layer = {
+                self.body_label = Some(Text::new(
+                    render_context,
+                    &self.body,
+                    text_size,
+                    100,
+                    &self.face,
+                    &mut self.glyphs,
+                ));
+
+                let body_label = self.body_label.as_ref().expect("body_label");
+                let body_label_size = body_label.bounding_box.size;
+                let body_label_offset = Point::new(
+                    (target_size.width / 2.0) - (body_label_size.width / 2.0),
+                    (target_size.height * 0.75) - (body_label_size.height / 2.0),
+                );
+                let display_body_label_offset = if let Some(transform) = transform {
+                    transform.transform_point(body_label_offset)
+                } else {
+                    body_label_offset.cast_unit::<DisplayAligned>()
+                };
+
+                Layer {
+                    raster: body_label
+                        .raster
+                        .clone()
+                        .translate(to_raster_translation_vector(display_body_label_offset)),
+                    style: Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(fg_color),
+                        blend_mode: BlendMode::Over,
+                    },
+                }
+            };
+
+            let (logo_size, png_image, png_raster, logo_position) =
+                self.logo_image.loaded_info.take().unwrap_or_else(|| {
+                    let file = File::open(&self.logo_image.file).expect("failed to load logo png");
+                    let decoder = png::Decoder::new(file);
+                    let (info, mut reader) = decoder.read_info().unwrap();
+                    let image = render_context
+                        .new_image_from_png(&mut reader)
+                        .expect(&format!("failed to decode file {}", &self.logo_image.file));
+                    let size = Size::new(info.width as f32, info.height as f32);
+                    let mut raster_builder =
+                        render_context.raster_builder().expect("raster_builder");
+                    raster_builder.add(
+                        &path_for_rectangle(&Rect::new(Point2D::zero(), size), render_context),
+                        None,
+                    );
+
+                    // Calculate position for centering the logo image
+                    let logo_position = {
+                        let x = (context.size.width - size.width) / 2.0;
+                        let y = (context.size.height - size.height) / 2.0;
+                        Point2D::new(x, y)
+                    };
+
+                    (size, image, raster_builder.build(), logo_position)
+                });
+
+            // Determine visible rect and copy |png_image| to |image|.
+            let dst_rect = Rect::new(logo_position, logo_size);
+            let output_rect = Rect::new(Point2D::zero(), context.size);
+            let png_ext = RenderExt {
+                post_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PostCopy {
+                    image,
+                    color: self.bg_color,
+                    exposure_distance: Vector2D::zero(),
+                    copy_region: CopyRegion {
+                        src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
+                        dst_offset: visible_rect.origin.to_u32(),
+                        extent: visible_rect.size.to_u32(),
+                    },
+                }),
+                ..Default::default()
+            };
+            self.composition.replace(
+                ..,
+                std::iter::once(body_label_layer).chain(std::iter::once(heading_label_layer)),
+            );
+
+            render_context.render(&self.composition, None, image, &clear_background_ext);
+            render_context.render(&self.composition, None, png_image, &png_ext);
+
+            // Cache loaded png info and position
+            self.logo_image.loaded_info.replace((logo_size, png_image, png_raster, logo_position));
+        }
+
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
         Ok(())
     }

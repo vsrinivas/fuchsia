@@ -7,6 +7,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/recovery/system/system_recovery_args.gni")
 
 group("system") {
   testonly = true
@@ -62,6 +63,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:png",
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
@@ -116,6 +118,7 @@ rustc_binary("bin_fdr") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:png",
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
   ]
@@ -173,6 +176,13 @@ package("system_recovery") {
       source = "grand_unified_binary"
     },
   ]
+
+  resources = [
+    {
+      path = rebase_path(recovery_logo_path)
+      dest = "logo.png"
+    },
+  ]
 }
 
 package("system-recovery-fdr") {
@@ -199,6 +209,13 @@ package("system-recovery-fdr") {
     {
       name = "system_recovery_fdr"
       path = "system_recovery_fdr"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(recovery_logo_path)
+      dest = "logo.png"
     },
   ]
 }
@@ -259,6 +276,10 @@ test_package("system_recovery_tests") {
     {
       path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
       dest = "ssl/cert.pem"
+    },
+    {
+      path = rebase_path(recovery_logo_path)
+      dest = "logo.png"
     },
   ]
 
