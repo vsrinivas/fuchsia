@@ -15,6 +15,7 @@ use crate::switchboard::base::{
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use futures::channel::mpsc::UnboundedSender;
+use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::collections::HashMap;
@@ -27,6 +28,7 @@ struct SettingHandler {
     messenger: handler::message::Messenger,
     state_tx: UnboundedSender<State>,
     next_response: Option<(SettingRequest, SettingResponseResult)>,
+    done_tx: Option<oneshot::Sender<()>>,
 }
 
 impl SettingHandler {
@@ -64,12 +66,14 @@ impl SettingHandler {
         mut receptor: handler::message::Receptor,
         setting_type: SettingType,
         state_tx: UnboundedSender<State>,
+        done_tx: Option<oneshot::Sender<()>>,
     ) -> Arc<Mutex<Self>> {
         let handler = Arc::new(Mutex::new(Self {
-            messenger: messenger,
-            setting_type: setting_type,
-            state_tx: state_tx,
+            messenger,
+            setting_type,
+            state_tx,
             next_response: None,
+            done_tx,
         }));
 
         let handler_clone = handler.clone();
@@ -90,6 +94,10 @@ impl SettingHandler {
                     }
                     _ => {}
                 }
+            }
+
+            if let Some(done_tx) = handler_clone.lock().await.done_tx.take() {
+                done_tx.send(()).ok();
             }
         })
         .detach();
@@ -177,7 +185,7 @@ async fn test_notify() {
         handler_factory.lock().await.create(setting_type).await;
     let (state_tx, mut state_rx) = futures::channel::mpsc::unbounded::<State>();
     let handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx);
+        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
 
     // Send a listen state and make sure sink is notified.
     {
@@ -262,7 +270,7 @@ async fn test_request() {
         handler_factory.lock().await.create(setting_type).await;
     let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
     let handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx);
+        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
     let request_id = 42;
 
     handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
@@ -316,7 +324,7 @@ async fn test_generation() {
         handler_factory.lock().await.create(setting_type).await;
     let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
     let _handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx);
+        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
 
     // Send initial request.
     let _ = get_response(
@@ -376,44 +384,82 @@ async fn test_regeneration() {
 
     let (handler_messenger, handler_receptor) =
         handler_factory.lock().await.create(setting_type).await;
-    let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
-    let _handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx);
+    let (state_tx, mut state_rx) = futures::channel::mpsc::unbounded::<State>();
+    let (done_tx, done_rx) = oneshot::channel();
+    let handler = SettingHandler::create(
+        handler_messenger,
+        handler_receptor,
+        setting_type,
+        state_tx,
+        Some(done_tx),
+    );
 
     // Send initial request.
-    let _ = get_response(
-        messenger_client
-            .message(
-                Payload::Action(SettingAction {
-                    id: request_id,
-                    setting_type: setting_type,
-                    data: SettingActionData::Request(SettingRequest::Get),
-                }),
-                Audience::Messenger(registry_signature),
-            )
-            .send(),
-    )
-    .await;
+    assert!(
+        get_response(
+            messenger_client
+                .message(
+                    Payload::Action(SettingAction {
+                        id: request_id,
+                        setting_type,
+                        data: SettingActionData::Request(SettingRequest::Get),
+                    }),
+                    Audience::Messenger(registry_signature),
+                )
+                .send(),
+        )
+        .await
+        .is_some(),
+        "A response was expected"
+    );
 
     // Ensure the handler was only created once.
     assert_eq!(1, handler_factory.lock().await.get_request_count(setting_type));
 
     // The subsequent teardown should happen here.
+    done_rx.await.ok();
+    let mut hit_teardown = false;
+    loop {
+        let state = state_rx.next().await;
+        match state {
+            Some(State::Teardown) => {
+                hit_teardown = true;
+                break;
+            }
+            None => break,
+            _ => {}
+        }
+    }
+    assert!(hit_teardown, "Handler should have torn down");
+    drop(handler);
+
+    // Now that the handler is dropped, state_rx should be dropped too
+    assert!(state_rx.next().await.is_none(), "There should be no more states after teardown");
+
+    let (handler_messenger, handler_receptor) =
+        handler_factory.lock().await.create(setting_type).await;
+    let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
+    let _handler =
+        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
 
     // Send followup request.
-    let _ = get_response(
-        messenger_client
-            .message(
-                Payload::Action(SettingAction {
-                    id: request_id,
-                    setting_type: setting_type,
-                    data: SettingActionData::Request(SettingRequest::Get),
-                }),
-                Audience::Messenger(registry_signature),
-            )
-            .send(),
-    )
-    .await;
+    assert!(
+        get_response(
+            messenger_client
+                .message(
+                    Payload::Action(SettingAction {
+                        id: request_id,
+                        setting_type,
+                        data: SettingActionData::Request(SettingRequest::Get),
+                    }),
+                    Audience::Messenger(registry_signature),
+                )
+                .send(),
+        )
+        .await
+        .is_some(),
+        "A response was expected"
+    );
 
     // Check that the handler was re-generated.
     assert_eq!(2, handler_factory.lock().await.get_request_count(setting_type));
