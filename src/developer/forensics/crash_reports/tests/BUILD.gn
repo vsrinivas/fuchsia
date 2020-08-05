@@ -134,35 +134,6 @@ executable("main_service_unittest_exe") {
   ]
 }
 
-executable("database_unittest_exe") {
-  testonly = true
-
-  # "database_unittest" is rather generic for the default_output_dir that
-  # is set to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [
-    "crashpad_database_gremlin.cc",
-    "crashpad_database_gremlin.h",
-    "database_unittest.cc",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/developer/forensics/crash_reports:database",
-    "//src/developer/forensics/crash_reports/info:info",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/fsl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("inspect_manager_unittest_exe") {
   testonly = true
 
@@ -389,14 +360,6 @@ fuchsia_component("crash_reports_integration_test_valid_override_config") {
   ]
 }
 
-fuchsia_component("database_unittest") {
-  testonly = true
-
-  manifest = "meta/database_unittest.cmx"
-
-  deps = [ ":database_unittest_exe" ]
-}
-
 fuchsia_component("inspect_manager_unittest") {
   testonly = true
 
@@ -464,7 +427,6 @@ fuchsia_test_package("crash-reports-tests") {
     ":crash_reports_integration_test",
     ":crash_reports_integration_test_invalid_override_config",
     ":crash_reports_integration_test_valid_override_config",
-    ":database_unittest",
     ":inspect_manager_unittest",
     ":main_service_unittest",
     ":privacy_settings_ptr_unittest",

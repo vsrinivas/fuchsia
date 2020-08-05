@@ -40,31 +40,14 @@ bool CrashServer::MakeRequest(const Report& report, std::string* server_report_i
     file_readers.emplace("uploadFileMinidump", &attachment_readers.back());
   }
 
-  return MakeRequestInternal(report.Annotations(), file_readers, server_report_id);
-}
-
-bool CrashServer::MakeRequest(const std::map<std::string, std::string>& annotations,
-                              const std::map<std::string, crashpad::FileReader*>& attachments,
-                              std::string* server_report_id) {
-  std::map<std::string, crashpad::FileReaderInterface*> file_readers;
-  for (const auto& [k, v] : attachments) {
-    file_readers[k] = v;
-  }
-  return MakeRequestInternal(annotations, file_readers, server_report_id);
-}
-
-bool CrashServer::MakeRequestInternal(
-    const std::map<std::string, std::string>& annotations,
-    const std::map<std::string, crashpad::FileReaderInterface*>& attachments,
-    std::string* server_report_id) {
   // We have to build the MIME multipart message ourselves as all the public Crashpad helpers are
   // asynchronous and we won't be able to know the upload status nor the server report ID.
   crashpad::HTTPMultipartBuilder http_multipart_builder;
   http_multipart_builder.SetGzipEnabled(true);
-  for (const auto& [key, value] : annotations) {
+  for (const auto& [key, value] : report.Annotations()) {
     http_multipart_builder.SetFormData(key, value);
   }
-  for (const auto& [filename, content] : attachments) {
+  for (const auto& [filename, content] : file_readers) {
     http_multipart_builder.SetFileAttachment(filename, filename, content,
                                              "application/octet-stream");
   }

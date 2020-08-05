@@ -33,6 +33,10 @@ std::optional<Report> Report::MakeReport(const std::string& program_shortname,
                                          std::optional<fuchsia::mem::Buffer> minidump) {
   std::map<std::string, SizedData> attachment_copies;
   for (const auto& [k, v] : attachments) {
+    if (k.empty()) {
+      return std::nullopt;
+    }
+
     auto attachment = MakeAttachment(v);
     if (!attachment) {
       return std::nullopt;
