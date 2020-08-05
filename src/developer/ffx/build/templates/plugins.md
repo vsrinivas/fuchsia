@@ -16,9 +16,25 @@ pub async fn ffx_plugin_impl<D, DFut, R, RFut>(
         >,
     >,
 {
+{% if includes_execution == "true" %}
+{% if includes_subcommands == "true" %}
+  match cmd.subcommand {
+      Some(sub) => match sub {
+{% for plugin in plugins %}
+        {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, c).await,
+{% endfor %}
+      },
+      None => {{execution_lib}}::ffx_plugin_impl(daemon_factory, remote_factory, cmd).await
+    }
+{% else %}
+  {{execution_lib}}::ffx_plugin_impl(daemon_factory, remote_factory, cmd).await
+{% endif %}
+
+{% else %}
     match cmd.subcommand {
 {% for plugin in plugins %}
-      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}::ffx_plugin_impl(daemon_factory, remote_factory, c).await,
+      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, c).await,
 {% endfor %}
     }
+{% endif %}
 }

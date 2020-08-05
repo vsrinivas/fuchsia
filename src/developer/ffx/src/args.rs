@@ -30,8 +30,8 @@ impl Default for Ffx {
             target: None,
             config: None,
             environment_file: None,
-            subcommand: Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
-                subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(
+            subcommand: Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
+                subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(
                     ffx_daemon_start_args::StartCommand {},
                 ),
             }),

@@ -19,8 +19,6 @@ if (host_toolchain == current_toolchain) {
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/tools/ascendd:lib",
-      "//src/developer/ffx:ffx_lib_args",
-      "//src/developer/ffx:ffx_lib_sub_command",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/fastboot:lib",
       "//src/lib/fidl/rust/fidl",

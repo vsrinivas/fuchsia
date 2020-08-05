@@ -7,6 +7,6 @@ group("tests") {
   deps = [
     "component:ffx_component_tests",
     "config:ffx_config_plugin_tests",
-    "daemon:ffx_daemon_suite_tests",
+    "daemon:ffx_daemon_plugin_tests",
   ]
 }
