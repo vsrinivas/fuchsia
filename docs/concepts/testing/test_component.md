@@ -125,45 +125,80 @@ A test might expect to log at ERROR severity. For example, the test might be
 covering a failure condition & recovery steps. Other tests might expect not to
 log anything more severe than INFO. The common case and default behavior is for
 errors above WARN level to be considered failures, but there are configuration
-files for overrides here:
+options to override it.
 
-- **fuchsia**: [//garnet/bin/run_test_component/max_severity_fuchsia.json][max-severity-fuchsia]
-- **petals**: //tests/config/max_severity_\<petal\>.json
+For instance, to allow a test to produce **ERROR** logs:
 
-For example, *experiences*: [//tests/config/max_severity_experiences.json][max-severity-experiences]
+  * {Using fuchsia\_test\_package}
 
-For instance, to allow a test to produce **ERROR** logs, add the following:
+  ```gn
+  fuchsia_component("my-package") {
+    testonly = true
+    manifest = "meta/my-test.cmx"
+    deps = [ ":my_test" ]
+  }
 
-```json
-{
-   "tests": [
+  fuchsia_test_package("my-package") {
+    test_specs = {
+        log_settings = {
+          max_severity = "ERROR"
+        }
+    }
+    test_components = [ ":my-test" ]
+  }
+  ```
+
+  * {Using test\_package}
+
+  ```gn
+  test_package("my-package") {
+    deps = [
+      ":my_test",
+    ]
+
+    meta = []
       {
-         "url": "fuchsia-pkg://fuchsia.com/my-package#meta/my-test.cmx",
-         "max_severity": "ERROR"
+        path = rebase_path("meta/my-test.cmx")
+        dest = "my-test.cmx"
       },
-      ...
-   ]
-}
-```
+    ]
 
-To cause the same test to fail on any log message more severe than **INFO**:
-
-```json
-{
-   "tests": [
+    tests = [
       {
-         "url": "fuchsia-pkg://fuchsia.com/my-package#meta/my-test.cmx",
-         "max_severity": "INFO"
+        log_settings = {
+          max_severity = "ERROR"
+        }
+        name = "my_test"
+        environments = basic_envs
       },
-      ...
-   ]
-}
-```
+    ]
+  }
+  ```
+
+
+
+To make the test fail on any message more severe than **INFO** set `max_severity`
+to **"INFO"**.
 
 Valid values for `max_severity`: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`.
 
-Changes to configuration take effect *only after an update*, for instance with `fx
-update` or `fx ota`, or by rebuilding and restarting `fx qemu`.
+If your test was already configured using [legacy methods][legacy-restrict-logs]
+you will need to remove your test from the config file (eg.
+max_severity_fuchsia.json) and run `fx update` or `fx ota`.
+
+If the test is not removed from the legacy list, the configuration in legacy
+list would be preferred and you will see a warning when running the test.
+
+### Running the test
+
+When running the test on development device, prefer `fx test` to run the test.
+The tool will automatically pick the configuration and pass it to
+run-test-component. If for some reason you need to use `run-test-component`,
+you need to pass the flag yourself.
+
+```sh
+fx shell run-test-component --max-log-severity=ERROR <test_url>
+```
 
 ## Run external services
 
@@ -200,7 +235,6 @@ demonstrated above.
 
 [executing-tests]: /docs/development/testing/running_tests_as_components.md
 [run-test-component]: /docs/development/testing/running_tests_as_components.md#running_tests_legacy
-[max-severity-fuchsia]: /garnet/bin/run_test_component/max_severity_fuchsia.json
-[max-severity-experiences]: https://fuchsia.googlesource.com/experiences/+/refs/heads/master/tests/config/max_severity_experiences.json
 [syslogs]: /docs/development/logs/concepts.md
 [test-packages]: /docs/development/components/build.md#test-packages
+[legacy-restrict-logs]: https://fuchsia.googlesource.com/fuchsia/+/1529a885fa0b9ea4867aa8b71786a291158082b7/docs/concepts/testing/test_component.md#restricting-log-severity

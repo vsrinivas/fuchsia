@@ -31,7 +31,6 @@ static constexpr char kComponentIndexerUrl[] =
 static constexpr char kLabelArgPrefix[] = "--realm-label=";
 static constexpr char kTimeoutArgPrefix[] = "--timeout=";
 static constexpr char kSeverityArgPrefix[] = "--min-severity-logs=";
-static constexpr char kRestrictLogsArgPrefix[] = "--restrict-logs";
 static constexpr char kMaxSeverityArgPrefix[] = "--max-log-severity=";
 
 bool to_bool(std::string str) {
@@ -83,7 +82,6 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     const size_t kLabelArgPrefixLength = strlen(kLabelArgPrefix);
     const size_t kTimeoutArgPrefixLength = strlen(kTimeoutArgPrefix);
     const size_t kSeverityArgPrefixLength = strlen(kSeverityArgPrefix);
-    const size_t kRestrictLogsArgPrefixLength = strlen(kRestrictLogsArgPrefix);
     const size_t kMaxSeverityArgPrefixLength = strlen(kMaxSeverityArgPrefix);
 
     if (argument.substr(0, kLabelArgPrefixLength) == kLabelArgPrefix) {
@@ -115,24 +113,6 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
         return result;
       }
       result.max_log_severity = level_result.value();
-      url_or_matcher_argi++;
-      continue;
-    }
-
-    if (argument.substr(0, kRestrictLogsArgPrefixLength) == kRestrictLogsArgPrefix) {
-      std::string arg = argument.substr(kRestrictLogsArgPrefixLength);
-      result.restrict_logs = false;
-      if (arg.length() == 0) {
-        result.restrict_logs = true;
-      } else {
-        if (arg[0] != '=') {
-          result.error = true;
-          result.error_msg = fxl::StringPrintf("\"%s\" is not a valid argument.", argument.c_str());
-          return result;
-        }
-        arg = arg.substr(1);
-        result.restrict_logs = to_bool(std::move(arg));
-      }
       url_or_matcher_argi++;
       continue;
     }
@@ -188,23 +168,21 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
           "matching. Valid characters are [A-Z a-z 0-9 / _ - .].\n",
           test_name.c_str());
       return result;
-    } else {
-      std::vector<std::string> uris = fuzzy_search_result.response().uris;
-      if (uris.size() == 0) {
-        result.error = true;
-        result.error_msg =
-            fxl::StringPrintf("\"%s\" did not match any components.\n", test_name.c_str());
-        return result;
-      } else {
-        for (auto& uri : uris) {
-          result.matching_urls.push_back(uri);
-        }
-        if (uris.size() > 1) {
-          return result;
-        }
-        url = uris[0];
-      }
     }
+    std::vector<std::string> uris = fuzzy_search_result.response().uris;
+    if (uris.empty()) {
+      result.error = true;
+      result.error_msg =
+          fxl::StringPrintf("\"%s\" did not match any components.\n", test_name.c_str());
+      return result;
+    }
+    for (auto& uri : uris) {
+      result.matching_urls.push_back(uri);
+    }
+    if (uris.size() > 1) {
+      return result;
+    }
+    url = uris[0];
   }
 
   result.launch_info.url = url;

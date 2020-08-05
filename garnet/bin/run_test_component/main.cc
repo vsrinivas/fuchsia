@@ -58,7 +58,7 @@ const std::string max_severity_config_path =
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--max-log-severity=string] [--restrict-logs] <test_url>|<test_matcher> [arguments...]
+Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--max-log-severity=string] <test_url>|<test_matcher> [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -83,12 +83,9 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
        If --timeout is specified, test would be killed in <timeout> secs and
        run_test_component will exit with -ZX_ERR_TIMED_OUT.
 
-       If --restrict-logs is specified then tests will fail by default if they produce ERROR logs.
-       For more information see: https://fuchsia.googlesource.com/fuchsia/+/master/docs/concepts/testing/test_component.md#restricting-log-severity
-
        If --max-log-severity is passed, then the test will fail if it produces logs with higher severity.
-       This is right now a placeholder and would be enabled in future. Allowed values:
-       TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
+       Allowed values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
+       For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/test_component#restricting_log_severity
 
        By default when installing log listener, all logs are collected. To filter 
        by higher severity please pass severity: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
@@ -281,19 +278,23 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
 
   std::vector<std::shared_ptr<fuchsia::logger::LogMessage>> restricted_logs;
-  auto max_severity_allowed = FX_LOG_FATAL;
-
-  bool restrict_logs = parse_result.restrict_logs;
-  if (!restrict_logs) {
-    // Also use max_log_severity, so that when host testrunners stop passing --restrict_logs flag we
-    // can simply remove it.
-    restrict_logs = parse_result.max_log_severity != FX_LOG_NONE;
-  }
+  auto max_severity_allowed = parse_result.max_log_severity;
+  bool restrict_logs = max_severity_allowed != FX_LOG_NONE;
   if (restrict_logs) {
     std::string simplified_url = run::GetSimplifiedUrl(program_name);
-    max_severity_allowed = FX_LOG_WARNING;
     auto it = max_severity_config.config().find(simplified_url);
     if (it != max_severity_config.config().end()) {
+      // Default in BUILD.gn is WARNING. If the user overrides it give a warning that config is
+      // preferred over BUILD.gn configuration.
+      if (max_severity_allowed != FX_LOG_WARNING) {
+        printf(
+            "\nWARNING: Test '%s' overrides max log severity in BUILD.gn as well as config file. "
+            "Using the value from config file. If you want the test to pickup value from BUILD.gn, "
+            "please remove the test url from the config file.\n See "
+            "https://fuchsia.dev/fuchsia-src/concepts/testing/"
+            "test_component#restricting_log_severity for more info.",
+            program_name.c_str());
+      }
       max_severity_allowed = it->second;
     }
   }
@@ -309,8 +310,8 @@ int main(int argc, const char** argv) {
         }
         if (log_wrapper->dropped_logs > 0) {
           auto dropped_logs =
-              dropped_logs_map[log_wrapper->pid];  // default initializer will set it to zero if key
-                                                   // is not found.
+              dropped_logs_map[log_wrapper->pid];  // default initializer will set it
+                                                   // to zero if key is not found.
           if (log_wrapper->dropped_logs > dropped_logs) {
             dropped_logs_map[log_wrapper->pid] = log_wrapper->dropped_logs;
             print_dropped_log_count(log_wrapper);

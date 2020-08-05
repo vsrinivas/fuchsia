@@ -24,8 +24,6 @@ struct ParseArgsResult {
   int32_t timeout = -1;
   int32_t min_log_severity = FX_LOG_TRACE;
   int32_t max_log_severity = FX_LOG_NONE;
-
-  bool restrict_logs = false;
 };
 
 // Parses args.

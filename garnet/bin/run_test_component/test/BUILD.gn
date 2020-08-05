@@ -123,16 +123,13 @@ test_package("run_test_component_test") {
       dest = "component_to_test_standard_out.cmx"
     },
     {
-      path = rebase_path("meta/logging_component_max_severity_error.cmx")
-      dest = "logging_component_max_severity_error.cmx"
+      path = rebase_path("meta/error_logging_component.cmx")
+      dest = "error_logging_component.cmx"
     },
     {
-      path = rebase_path("meta/logging_component_max_severity_info.cmx")
-      dest = "logging_component_max_severity_info.cmx"
-    },
-    {
-      path = rebase_path("meta/logging_component_max_severity_warn.cmx")
-      dest = "logging_component_max_severity_warn.cmx"
+      path = rebase_path(
+              "//src/diagnostics/archivist/tests/meta/logging_component.cmx")
+      dest = "logging_component_with_config.cmx"
     },
   ]
 

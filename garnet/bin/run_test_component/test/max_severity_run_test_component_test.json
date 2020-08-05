@@ -1,11 +1,7 @@
 {
    "tests": [
       {
-         "url": "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component_max_severity_error.cmx",
-         "max_severity": "ERROR"
-      },
-      {
-         "url": "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component_max_severity_info.cmx",
+         "url": "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component_with_config.cmx",
          "max_severity": "INFO"
       }
    ]
