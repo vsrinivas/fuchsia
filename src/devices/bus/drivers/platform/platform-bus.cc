@@ -34,7 +34,20 @@ zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::
   if (iommu_index != 0) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  return zx::bti::create(iommu_handle_, 0, bti_id, out_bti);
+
+  std::pair key(iommu_index, bti_id);
+  auto bti = cached_btis_.find(key);
+  if (bti == cached_btis_.end()) {
+    zx::bti new_bti;
+    zx_status_t status = zx::bti::create(iommu_handle_, 0, bti_id, &new_bti);
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto [iter, _] = cached_btis_.emplace(key, std::move(new_bti));
+    bti = iter;
+  }
+
+  return bti->second.duplicate(ZX_RIGHT_SAME_RIGHTS, out_bti);
 }
 
 zx_status_t PlatformBus::PBusRegisterProtocol(uint32_t proto_id, const void* protocol,

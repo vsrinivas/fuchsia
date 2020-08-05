@@ -16,6 +16,7 @@
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 
+#include <map>
 #include <optional>
 
 #include <ddk/device.h>
@@ -47,6 +48,8 @@ class PlatformBus : public PlatformBusType,
                     public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
  public:
   static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
+
+  PlatformBus(zx_device_t* parent, zx::channel items_svc);
 
   // Device protocol implementation.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -94,8 +97,6 @@ class PlatformBus : public PlatformBusType,
  private:
   pbus_sys_suspend_t suspend_cb_ = {};
 
-  PlatformBus(zx_device_t* parent, zx::channel items_svc);
-
   DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformBus);
 
   zx_status_t GetBoardInfo(zbi_board_info_t* board_info);
@@ -132,6 +133,8 @@ class PlatformBus : public PlatformBusType,
 
   // Dummy IOMMU.
   zx::iommu iommu_handle_;
+
+  std::map<std::pair<uint32_t, uint32_t>, zx::bti> cached_btis_;
 };
 
 }  // namespace platform_bus
