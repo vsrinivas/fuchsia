@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/diagnostics_testing_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
