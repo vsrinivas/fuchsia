@@ -953,27 +953,26 @@ zx_status_t AudioDriverV1::ProcessStartResponse(const audio_rb_cmd_start_resp_t&
   // longer clock monotonic.
   //
   mono_start_time_ = zx::time(resp.start_time);
-  // Need to convert the start time to reference time?
-  ref_start_time_ = reference_clock().ReferenceTimeFromMonotonicTime(zx::time(resp.start_time));
+  ref_start_time_ = reference_clock().ReferenceTimeFromMonotonicTime(mono_start_time_);
 
-  // We are almost Started. Compute various useful timeline functions. See the comments for the
-  // accessors in audio_device.h for detailed descriptions.
-  zx::time first_ptscts_time = mono_start_time() + external_delay_;
+  // We are almost Started. Compute various useful timeline functions.
+  // See the comments for the accessors in audio_device.h for detailed descriptions.
+  zx::time first_ptscts_time = ref_start_time() + external_delay_;
   uint32_t frames_per_sec = format->frames_per_second();
   uint32_t frac_frames_per_sec = FractionalFrames<int64_t>(frames_per_sec).raw_value();
 
   ptscts_ref_clock_to_fractional_frames_ = TimelineFunction{
-      0,                        // First fractional frame presented/captured is always 0.
+      0,                        // First frac_frame presented/captured at ring buffer is always 0.
       first_ptscts_time.get(),  // First pres/cap time is the start time + the external delay.
-      frac_frames_per_sec,      // the number of fractional frames per second
-      zx::sec(1).get()          // the number of clock ticks per second
+      frac_frames_per_sec,      // number of fractional frames per second
+      zx::sec(1).get()          // number of clock ticks per second
   };
 
   safe_read_or_write_ref_clock_to_frames_ = TimelineFunction{
-      fifo_depth_frames_,       // the first safe frame at startup is a FIFO's distance away.
-      mono_start_time().get(),  // the TX/RX start time.
-      frames_per_sec,           // the number of frames per second
-      zx::sec(1).get()          // the number of clock ticks per second
+      fifo_depth_frames_,      // The first safe frame at startup is a FIFO's distance away.
+      ref_start_time().get(),  // TX/RX start time
+      frames_per_sec,          // number of frames per second
+      zx::sec(1).get()         // number of clock ticks per second
   };
 
   ref_clock_to_fractional_frames_->Update(ptscts_ref_clock_to_fractional_frames_);
