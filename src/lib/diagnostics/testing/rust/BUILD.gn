@@ -22,9 +22,13 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/archivist/fidl:controller-rustc",
+    "//src/diagnostics/lib/diagnostics-schema",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//src/lib/syslog/rust:syslog-listener",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 }

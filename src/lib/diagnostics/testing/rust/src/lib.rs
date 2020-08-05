@@ -1,6 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+use anyhow::Error;
+use diagnostics_schema::{InspectSchema, Metadata};
+use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::{EnvironmentControllerProxy, LauncherMarker};
@@ -9,6 +12,7 @@ use fuchsia_component::{
     client::{connect_to_service, launch_with_options, App, ExitStatus, LaunchOptions},
     server::{ServiceFs, ServiceObj},
 };
+use fuchsia_inspect_contrib::reader::ArchiveReader;
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use futures::{channel::mpsc, StreamExt};
 use std::ops::Deref;
@@ -23,6 +27,8 @@ pub struct AppWithDiagnostics {
     _env_task: Task<()>,
     _listen_task: Task<()>,
 }
+
+const ARCHIVIST_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
 
 impl AppWithDiagnostics {
     /// Launch the app from the given URL with the given arguments, collecting its diagnostics.
@@ -39,10 +45,10 @@ impl AppWithDiagnostics {
     ) -> Self {
         let launcher = connect_to_service::<LauncherMarker>().unwrap();
 
-        // we need an observer.cmx to collect the diagnostics from the nested realm we make below
+        // we need an archivist to collect the diagnostics from the nested realm we make below
         let observer = launch_with_options(
             &launcher,
-            "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx".to_owned(),
+            ARCHIVIST_URL.to_owned(),
             // the log connector api is challenging to integrate with the stop api
             Some(vec!["--disable-log-connector".to_owned()]),
             LaunchOptions::new(),
@@ -84,6 +90,22 @@ impl AppWithDiagnostics {
         }));
 
         Self { app, observer, recv_logs, env_proxy, _env_task, _listen_task }
+    }
+
+    /// Read a snapshot of the app's inspect. Also returns inspect from any children of the app.
+    ///
+    /// This method should be called while the components of interest are still running, as
+    /// Archivist does not yet preserve inspect from terminated components.
+    pub async fn snapshot_inspect(&self) -> Result<Vec<InspectSchema>, Error> {
+        let archive = self.observer.connect_to_service::<ArchiveAccessorMarker>()?;
+
+        let mut results = ArchiveReader::new().with_archive(archive).get().await?;
+        results.retain(|root| match &root.metadata {
+            Metadata::Inspect(meta) => &meta.component_url != ARCHIVIST_URL,
+            other => panic!("expected only inspect metadata, got {:?}", other),
+        });
+
+        Ok(results)
     }
 
     /// Kill the running component. Differs from [`fuchsia_component::client::App`] in that it also
@@ -128,5 +150,31 @@ impl Deref for AppWithDiagnostics {
     type Target = App;
     fn deref(&self) -> &Self::Target {
         &self.app
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuchsia_inspect::assert_inspect_tree;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn app_with_inspect() {
+        let test_app = AppWithDiagnostics::launch(
+            "fuchsia-pkg://fuchsia.com/diagnostics-testing-tests#meta/inspect_test_component.cmx",
+            None,
+        );
+
+        let results = dbg!(test_app.snapshot_inspect().await.unwrap());
+        assert_eq!(results.len(), 1, "expecting only one component's inspect");
+        assert_inspect_tree!(results[0].payload.as_ref().unwrap(), root: {
+            int: 3u64,
+            "lazy-node": {
+                a: "test",
+                child: {
+                    double: 3.14,
+                },
+            }
+        });
     }
 }
