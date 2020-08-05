@@ -52,7 +52,6 @@ class TestsManifestReader {
     @required String buildDir,
     @required String fxLocation,
     @required String manifestFileName,
-    bool usePackageHash = true,
   }) async {
     List<dynamic> testJson = await readManifest(
       p.join(buildDir, manifestFileName),

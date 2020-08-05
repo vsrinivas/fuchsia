@@ -99,12 +99,12 @@ TEST_fxtest_hashpinnning() {
   # expect that "fx shell run-test-component URL-WITH-HASH" was executed
   BT_EXPECT ${fx} test --no-build ${testname1} >> "${out}"
   local packageUrl1="fuchsia-pkg://fuchsia.com/example-fuzzers?hash=${hash1}#meta/overflow_fuzzer_test.cmx"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "_ANY_" "${packageUrl1}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "${packageUrl1}"
 
   # expect that "fx shell run-test-component URL-WITH-HASH" was executed
   BT_EXPECT ${fx} test --no-build ${testname2} >> "${out}"
   local packageUrl2="fuchsia-pkg://fuchsia.com/hello_world_cpp_tests?hash=${hash2}#meta/hello_world_cpp_unittests.cmx"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell.mock_state.2" "run-test-component" "_ANY_" "${packageUrl2}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell.mock_state.2" "run-test-component" "${packageUrl2}"
 }
 
 # Test that when the merkle root of a package is changed as a result of the
@@ -125,7 +125,7 @@ EOF
   # expect that "fx shell run-test-component URL-WITH-HASH" executes with the new hash, not the old one
   BT_EXPECT ${fx} test ${testname1} >> "${out}"
   local packageUrl="fuchsia-pkg://fuchsia.com/example-fuzzers?hash=${hash_new}#meta/overflow_fuzzer_test.cmx"
-  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "_ANY_" "${packageUrl}"
+  btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "${packageUrl}"
 }
 
 # Test that "fx test" doesn't fail if a component test doesn't have a hashfile
@@ -149,7 +149,7 @@ EOF
   # expect that "fx shell run-test-component URL-WITHOUT-HASH" is executed
   BT_EXPECT ${fx} test --no-build overflow_fuzzer_test >> "${out}"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
-    "run-test-component" "_ANY_" "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx"
+    "run-test-component" "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx"
 }
 
 # Test that "fx test" builds only the "updates" target for device tests
@@ -286,5 +286,39 @@ EOF
   local test_out_dir="$(sed -n "s/.* FUCHSIA_TEST_OUTDIR=\(.*\)/\1/p" "${out}")"
   BT_EXPECT touch "${test_out_dir}/test_file"
 }
+
+# Ensure that if `fx build` changes `tests.json`, `fx test` loads the updated
+# tests.json before running the test.
+TEST_fxtest_build_changes_testsjson() {
+  mkdir -p "${BT_TEMP_DIR}/out/default"
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+  local test_exec="$(btf::make_hosttools_mock "example_host_test")"
+  cat > "${BT_TEMP_DIR}/out/default/tests.json" <<EOF
+      [{"environments": [],
+    "test": {
+      "command": [
+        "host_x64/example_host_test",
+        "beforefxbuild"
+      ],
+      "cpu": "x64",
+      "label": "//examples/example_host_test:host_tools_example_pkg(//build/toolchain/host_x64)",
+      "name": "example_host_test",
+      "os": "linux",
+      "path": "host_x64/example_host_test"
+    }
+  }]
+EOF
+  # make 'fx build' change the command argument in tests.json from "beforefxbuild"
+  # to "afterfxbuild"
+  cat > "${BT_TEMP_DIR}/tools/devshell/build.mock_side_effects" <<EOF
+    sed -i 's/beforefxbuild/afterfxbuild/' "${BT_TEMP_DIR}/out/default/tests.json"
+EOF
+
+  BT_EXPECT ${fx} test example_host_test > ${out}
+
+  btf::expect-mock-args "${test_exec}.mock_state" "afterfxbuild"
+}
+
+
 
 BT_RUN_TESTS "$@"

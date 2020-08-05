@@ -166,6 +166,8 @@ class FuchsiaTestCommand {
             '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
         return;
       }
+      // Re-parse the manifest in case it has changed as a side effect of building
+      parsedManifest = await readManifest(manifestReader);
     }
 
     try {
@@ -187,7 +189,6 @@ class FuchsiaTestCommand {
       buildDir: testsConfig.fxEnv.outputDir,
       fxLocation: testsConfig.fxEnv.fx,
       manifestFileName: 'tests.json',
-      usePackageHash: testsConfig.flags.shouldUsePackageHash,
     );
     return manifestReader.aggregateTests(
       eventEmitter: emitEvent,
