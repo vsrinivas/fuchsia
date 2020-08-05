@@ -64,10 +64,15 @@ const NOT_A_DIR: &str = "ServiceFs expected directory";
 
 impl<ServiceObjTy: ServiceObjTrait> ServiceFsNode<ServiceObjTy> {
     fn is_service(&self) -> bool {
-        if let ServiceFsNode::Service(_) = self {
-            true
-        } else {
-            false
+        match self {
+            ServiceFsNode::Service(_) => true,
+            _ => false,
+        }
+    }
+    fn is_directory(&self) -> bool {
+        match self {
+            ServiceFsNode::Directory(_) => true,
+            _ => false,
         }
     }
 
@@ -663,6 +668,17 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         Ok(ServiceList { names, provider: None, host_directory: Some(chan2) })
     }
 
+    /// Returns the list of all directories in the root directory
+    fn root_directories_list(&self) -> Vec<String> {
+        self.nodes[ROOT_NODE]
+            .expect_dir()
+            .iter()
+            .filter(|(_, v)| self.nodes[**v].is_directory())
+            .map(|(k, _)| k)
+            .cloned()
+            .collect()
+    }
+
     /// Creates a new environment that only has access to the services provided through this
     /// `ServiceFs` and the enclosing environment's `Loader` service, appending a few random
     /// bytes to the given `environment_label_prefix` to ensure this environment has a unique
@@ -728,6 +744,17 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         let env = crate::client::connect_to_service::<EnvironmentMarker>()
             .context("connecting to current environment")?;
         let services_with_loader = self.add_proxy_service::<LoaderMarker, _>();
+
+        // Services added in any subdirectories won't be provided to the nested environment, which
+        // is an important detail that developers are likely to overlook. If there are any
+        // subdirectories in this ServiceFs, return an error, because what we're about to do
+        // probably doesn't line up with what the developer expects.
+        if !services_with_loader.root_directories_list().is_empty() {
+            return Err(format_err!(
+                "services in sub-directories will not be added to nested environment"
+            ));
+        }
+
         let mut service_list = services_with_loader.host_services_list()?;
 
         let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;

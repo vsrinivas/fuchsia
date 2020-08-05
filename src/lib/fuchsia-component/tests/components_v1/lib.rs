@@ -636,6 +636,18 @@ async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
     Ok(())
 }
 
+#[run_until_stalled(test)]
+async fn create_nested_env_with_sub_dir() {
+    for dir_name in &["svc", "bin", "foobar"] {
+        let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
+
+        fs.dir(*dir_name).add_service_at("test", |_chan: zx::Channel| None);
+        if fs.create_nested_environment("should-not-be-created").is_ok() {
+            panic!("create_nested_environment should fail when a svc dir exists");
+        }
+    }
+}
+
 /// Sets up a new filesystem containing a vmofile.
 ///
 /// Returns a future which runs the filesystem, a proxy connected to the vmofile, and the data

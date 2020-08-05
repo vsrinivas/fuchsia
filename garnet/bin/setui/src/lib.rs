@@ -90,6 +90,7 @@ pub type ExitSender = futures::channel::mpsc::UnboundedSender<()>;
 /// production environments and will hydrate components to be discoverable as
 /// an environment service. Nested creates a service only usable in the scope
 /// of a test.
+#[derive(PartialEq)]
 enum Runtime {
     Service,
     Nested(&'static str),
@@ -244,10 +245,16 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         runtime: Runtime,
     ) -> Result<ServiceFs<ServiceObj<'static, ()>>, Error> {
         let mut fs = ServiceFs::new();
-        // Initialize inspect.
-        component::inspector().serve(&mut fs).ok();
-        let service_dir =
-            if let Runtime::Service = runtime { fs.dir("svc") } else { fs.root_dir() };
+
+        let service_dir;
+        if runtime == Runtime::Service {
+            // Initialize inspect.
+            component::inspector().serve(&mut fs).ok();
+
+            service_dir = fs.dir("svc");
+        } else {
+            service_dir = fs.root_dir();
+        }
 
         let (settings, flags) = match self.configuration {
             Some(configuration) => (configuration.services, configuration.controller_flags),
