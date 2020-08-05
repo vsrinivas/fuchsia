@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <fuchsia/net/http/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -19,32 +19,34 @@
 
 namespace examples {
 
-namespace http = ::fuchsia::net::oldhttp;
+namespace http = ::fuchsia::net::http;
 
 class ResponsePrinter {
  public:
-  void Run(async::Loop* loop, http::URLResponse response) const {
-    if (response.error) {
-      printf("Got error: %d (%s)\n", response.error->code, response.error->description->c_str());
+  void Run(async::Loop* loop, http::Response response) const {
+    if (response.has_error()) {
+      printf("Got error: %d\n", response.error());
     } else {
       PrintResponse(response);
-      PrintResponseBody(std::move(response.body->stream()));
+      PrintResponseBody(response.body());
     }
 
     loop->Quit();  // All done!
   }
 
-  void PrintResponse(const http::URLResponse& response) const {
+  void PrintResponse(const http::Response& response) const {
     printf(">>> Headers <<< \n");
-    printf("  %s\n", response.status_line.value_or("").c_str());
-    if (response.headers) {
-      for (size_t i = 0; i < response.headers->size(); ++i)
-        printf("  %s=%s\n", response.headers->at(i).name.c_str(),
-               response.headers->at(i).value.c_str());
+    const auto& status_line = response.status_line();
+    printf("  %s\n", std::string(status_line.begin(), status_line.end()).c_str());
+    if (response.has_headers()) {
+      for (const auto& header : response.headers()) {
+        printf("  %s=%s\n", std::string(header.name.begin(), header.name.end()).c_str(),
+               std::string(header.value.begin(), header.value.end()).c_str());
+      }
     }
   }
 
-  void PrintResponseBody(zx::socket body) const {
+  void PrintResponseBody(const zx::socket& body) const {
     // Read response body in blocking fashion.
     printf(">>> Body <<<\n");
 
@@ -73,7 +75,7 @@ class PostFileApp {
  public:
   PostFileApp(async::Loop* loop)
       : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
-    http_service_ = context_->svc()->Connect<http::HttpService>();
+    loader_ = context_->svc()->Connect<http::Loader>();
   }
 
   bool Start(const std::vector<std::string>& args) {
@@ -93,15 +95,17 @@ class PostFileApp {
       return false;
     }
 
-    http::URLRequest request;
-    request.url = url;
-    request.method = "POST";
-    request.auto_follow_redirects = true;
+    http::Request request;
+    request.set_url(url);
+    request.set_method("POST");
 
-    http::HttpHeader header;
-    header.name = "Content-Type";
-    header.value = "multipart/form-data; boundary=" + boundary;
-    request.headers.emplace({std::move(header)});
+    const std::string name = "Content-Type";
+    const std::string value = "multipart/form-data; boundary=" + boundary;
+
+    request.set_headers({{
+        .name = std::vector<uint8_t>(name.begin(), name.end()),
+        .value = std::vector<uint8_t>(value.begin(), value.end()),
+    }});
 
     zx::socket consumer;
     zx::socket producer;
@@ -111,8 +115,7 @@ class PostFileApp {
       return false;
     }
 
-    request.body = http::URLBody::New();
-    request.body->set_stream(std::move(consumer));
+    request.set_body(http::Body::WithStream(std::move(consumer)));
 
     async_dispatcher_t* dispatcher = async_get_default_dispatcher();
     fsl::CopyFromFileDescriptor(std::move(fd), std::move(producer), dispatcher,
@@ -123,9 +126,7 @@ class PostFileApp {
                                   }
                                 });
 
-    http_service_->CreateURLLoader(url_loader_.NewRequest());
-
-    url_loader_->Start(std::move(request), [this](http::URLResponse response) {
+    loader_->Fetch(std::move(request), [this](http::Response response) {
       ResponsePrinter printer;
       printer.Run(loop_, std::move(response));
     });
@@ -135,8 +136,7 @@ class PostFileApp {
  private:
   async::Loop* const loop_;
   std::unique_ptr<sys::ComponentContext> context_;
-  http::HttpServicePtr http_service_;
-  http::URLLoaderPtr url_loader_;
+  http::LoaderPtr loader_;
 };
 
 }  // namespace examples

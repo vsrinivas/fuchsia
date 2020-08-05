@@ -10,7 +10,7 @@ executable("bin") {
   sources = [ "postfile.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.net.http",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",

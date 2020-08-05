@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <fuchsia/net/http/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
@@ -14,34 +14,35 @@
 
 namespace examples {
 
-namespace http = ::fuchsia::net::oldhttp;
+namespace http = ::fuchsia::net::http;
 
 class ResponsePrinter {
  public:
-  void Run(async::Loop* loop, http::URLResponse response) const {
-    if (response.error) {
-      printf("Got error: %d (%s)\n", response.error->code,
-             response.error->description.value_or("").c_str());
+  void Run(async::Loop* loop, http::Response response) const {
+    if (response.has_error()) {
+      printf("Got error: %d\n", response.error());
       exit(1);
     } else {
       PrintResponse(response);
-      PrintResponseBody(std::move(response.body->stream()));
+      PrintResponseBody(response.body());
     }
 
     loop->Quit();  // All done!
   }
 
-  void PrintResponse(const http::URLResponse& response) const {
+  void PrintResponse(const http::Response& response) const {
     printf(">>> Headers <<< \n");
-    printf("  %s\n", response.status_line.value_or("").c_str());
-    if (response.headers) {
-      for (size_t i = 0; i < response.headers->size(); ++i)
-        printf("  %s=%s\n", response.headers->at(i).name.c_str(),
-               response.headers->at(i).value.c_str());
+    const auto& status_line = response.status_line();
+    printf("  %s\n", std::string(status_line.begin(), status_line.end()).c_str());
+    if (response.has_headers()) {
+      for (const auto& header : response.headers()) {
+        printf("  %s=%s\n", std::string(header.name.begin(), header.name.end()).c_str(),
+               std::string(header.value.begin(), header.value.end()).c_str());
+      }
     }
   }
 
-  void PrintResponseBody(zx::socket body) const {
+  void PrintResponseBody(const zx::socket& body) const {
     // Read response body in blocking fashion.
     printf(">>> Body <<<\n");
 
@@ -74,8 +75,8 @@ class WGetApp {
  public:
   WGetApp(async::Loop* loop)
       : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
-    http_service_ = context_->svc()->Connect<http::HttpService>();
-    FX_DCHECK(http_service_);
+    loader_ = context_->svc()->Connect<http::Loader>();
+    FX_DCHECK(loader_);
   }
 
   bool Start(const std::vector<std::string>& args) {
@@ -89,14 +90,11 @@ class WGetApp {
     }
     printf("Loading: %s\n", url.c_str());
 
-    http_service_->CreateURLLoader(url_loader_.NewRequest());
+    http::Request request;
+    request.set_url(url);
+    request.set_method("GET");
 
-    http::URLRequest request;
-    request.url = url;
-    request.method = "GET";
-    request.auto_follow_redirects = true;
-
-    url_loader_->Start(std::move(request), [this](http::URLResponse response) {
+    loader_->Fetch(std::move(request), [this](http::Response response) {
       ResponsePrinter printer;
       printer.Run(loop_, std::move(response));
     });
@@ -107,8 +105,7 @@ class WGetApp {
   async::Loop* const loop_;
   std::unique_ptr<sys::ComponentContext> context_;
 
-  http::HttpServicePtr http_service_;
-  http::URLLoaderPtr url_loader_;
+  http::LoaderPtr loader_;
 };
 
 }  // namespace examples

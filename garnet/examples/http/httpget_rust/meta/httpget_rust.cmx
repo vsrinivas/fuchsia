@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.oldhttp.HttpService"
+            "fuchsia.net.http.Loader"
         ]
     }
 }

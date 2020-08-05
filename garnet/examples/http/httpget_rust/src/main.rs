@@ -3,20 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_net_oldhttp as http, fuchsia_async as fasync, fuchsia_component as component,
-    fuchsia_zircon as zx,
-    futures::io::AllowStdIo,
+    anyhow::Error, fidl_fuchsia_net_http as http, fuchsia_async as fasync,
+    fuchsia_component as component, fuchsia_zircon as zx, futures::io::AllowStdIo,
 };
 
-fn print_headers(resp: &http::UrlResponse) {
+fn print_headers(resp: &http::Response) {
     println!(">>> Headers <<<");
     if let Some(status) = &resp.status_line {
-        println!("  {}", status);
+        println!("  {:?}", status);
     }
     if let Some(hdrs) = &resp.headers {
         for hdr in hdrs {
-            println!("  {}={}", hdr.name, hdr.value);
+            println!("  {:?}={:?}", hdr.name, hdr.value);
         }
     }
 }
@@ -45,40 +43,28 @@ fn main() -> Result<(), Error> {
 
 /// Connects to the http service, sends a url request, and prints the response.
 async fn http_get(url: String) -> Result<(), Error> {
-    // Connect to the http service
-    let net = component::client::connect_to_service::<http::HttpServiceMarker>()?;
+    // Connect to the service.
+    let loader_proxy = component::client::connect_to_service::<http::LoaderMarker>()?;
 
-    // Create a UrlLoader instance
-    let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
-    let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
-
-    let loader_server = fidl::endpoints::ServerEnd::<http::UrlLoaderMarker>::new(s);
-    net.create_url_loader(loader_server)?;
-
-    // Send the UrlRequest to fetch the webpage
-    let mut req = http::UrlRequest {
-        url: url,
-        method: String::from("GET"),
+    // Send the request.
+    let req = http::Request {
+        url: Some(url),
+        method: Some(String::from("GET")),
         headers: None,
         body: None,
-        response_body_buffer_size: 0,
-        auto_follow_redirects: true,
-        cache_mode: http::CacheMode::Default,
-        response_body_mode: http::ResponseBodyMode::Stream,
+        deadline: None,
     };
 
-    let loader_proxy = http::UrlLoaderProxy::new(proxy);
-    let resp = loader_proxy.start(&mut req).await?;
+    let resp = loader_proxy.fetch(req).await?;
     if let Some(e) = resp.error {
-        let code = e.code;
-        println!("Got error: {} ({})", code, e.description.unwrap_or("".into()));
+        println!("Got error: {:?}", e);
         return Ok(());
     }
     print_headers(&resp);
 
-    let socket = match resp.body.map(|x| *x) {
-        Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
-        _ => return Err(Error::from(zx::Status::BAD_STATE)),
+    let socket = match resp.body {
+        Some(s) => fasync::Socket::from_socket(s)?,
+        None => return Err(Error::from(zx::Status::BAD_STATE)),
     };
 
     // stdout is blocking, but we'll pretend it's okay
