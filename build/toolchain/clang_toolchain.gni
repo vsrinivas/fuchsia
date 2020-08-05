@@ -279,22 +279,10 @@ template("clang_toolchain") {
       pool = "//build/rust:pool($default_toolchain)"
       depfile = "{{output}}.d"
 
-      ld_location_env = ""
       if (invoker.toolchain_os != "mac") {
         if (invoker.toolchain_os == "fuchsia") {
           # On Fuchsia, lld is directly used to perform linking
           link_map_args = "-C link-args=--Map=\"{{output}}.map\""
-        } else if (invoker.toolchain_cpu == "wasm32" && host_os == "linux") {
-          # TODO(56076): Remove need for ld location.
-          # On WASM builds, rust-lld has trouble finding libLLVM.
-          # This workaround allows the build to proceed.
-
-          # Disable link map args, which also seems to have problems with WASM.
-          link_map_args = ""
-          lib_dir =
-              rebase_path("//prebuilt/third_party/rust/${host_platform}/lib",
-                          root_build_dir)
-          ld_location_env = "LD_LIBRARY_PATH=\"$lib_dir\""
         } else {
           # On host, clang seems to be used to perform linking
           link_map_args = "-C link-args=-Wl,--Map=\"{{output}}.map\""
@@ -305,7 +293,7 @@ template("clang_toolchain") {
       }
 
       # TODO(47565): Replacement for rustenv
-      command = "{{rustenv}} $ld_location_env $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
+      command = "{{rustenv}} $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
 
       description = "RUST {{output}}"
       outputs = [ "{{output_dir}}/{{target_output_name}}{{output_extension}}" ]
