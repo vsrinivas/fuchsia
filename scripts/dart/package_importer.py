@@ -129,10 +129,6 @@ dart_library("%s") {
 
   language_version = "%s"
 
-  # This parameter is left empty as we don't care about analysis or exporting
-  # these sources outside of the tree.
-  sources = []
-
   disable_analysis = true
 
   deps = [
@@ -146,7 +142,7 @@ dart_library("%s") {
 
   sources = [
 ''')
-        for source in dart_sources:
+        for source in sorted(dart_sources):
             build_gn.write('    "%s",\n' % source)
         build_gn.write('''  ]
 }
