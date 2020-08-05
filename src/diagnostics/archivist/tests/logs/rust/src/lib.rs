@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use archivist_lib::logs::message::fx_log_packet_t;
-use diagnostics_testing::AppWithDiagnostics;
 use fidl::{
     endpoints::{ClientEnd, ServerEnd, ServiceMarker},
     Socket, SocketOpts,
@@ -26,7 +25,9 @@ use fuchsia_syslog::{
     self as syslog, fx_log_info,
     levels::{DEBUG, INFO, WARN},
 };
-use fuchsia_syslog_listener::{self as syslog_listener, run_log_listener_with_proxy, LogProcessor};
+use fuchsia_syslog_listener::{
+    self as syslog_listener, run_log_listener_with_proxy, AppWithLogs, LogProcessor,
+};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, Stream, StreamExt, TryStreamExt};
 use log::warn;
@@ -136,7 +137,7 @@ async fn listen_for_klog_routed_stdio() {
 
 #[fasync::run_singlethreaded(test)]
 async fn observer_stop_api() {
-    let (status, logs) = AppWithDiagnostics::launch(
+    let (status, logs) = AppWithLogs::launch(
         "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logging_component.cmx",
         None,
     )

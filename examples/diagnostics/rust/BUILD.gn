@@ -37,10 +37,10 @@ rustc_test("test") {
   source_root = "tests/lib.rs"
 
   deps = [
-    "//src/lib/diagnostics/testing",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/syslog/rust:syslog-listener",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
