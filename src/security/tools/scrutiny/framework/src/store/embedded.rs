@@ -8,13 +8,13 @@ use {
         store::{Collection, Element, Store},
     },
     anyhow::{Error, Result},
-    log::{info, trace},
+    log::{info, trace, warn},
     serde::{Deserialize, Serialize},
     serde_json::value::Value,
     std::collections::hash_map::Iter,
     std::collections::HashMap,
     std::fs::{self, File},
-    std::io::Write,
+    std::io::{BufReader, BufWriter},
     std::path::{Path, PathBuf},
     std::sync::{Arc, RwLock},
 };
@@ -31,7 +31,7 @@ pub struct EmbeddedStore {
 impl EmbeddedStore {
     /// Returns the expected collection path for a given collection name.
     fn collection_path(&self, collection_name: impl Into<String>) -> PathBuf {
-        Path::new(&self.uri).join(format!("{}.json", collection_name.into()))
+        Path::new(&self.uri).join(format!("{}.bin", collection_name.into()))
     }
 }
 
@@ -51,11 +51,19 @@ impl Store for EmbeddedStore {
             let entry = entry?;
             let path = entry.path();
             if let Some(ext) = path.extension() {
-                if ext == "json" {
+                if ext == "bin" {
+                    info!("Loading collection: {:?}", path);
                     let name = path.file_stem().unwrap().to_os_string().into_string().unwrap();
-                    let json = serde_json::from_str(&fs::read_to_string(&path)?)?;
-                    let collection = EmbeddedCollection::load(path, json)?;
-                    collections.insert(name, Arc::new(RwLock::new(collection)));
+                    let file = File::open(path.clone())?;
+                    let reader = BufReader::new(file);
+                    if let Ok(json) = serde_cbor::from_reader(reader) {
+                        let collection = EmbeddedCollection::load(path, json)?;
+                        collections.insert(name, Arc::new(RwLock::new(collection)));
+                    } else {
+                        warn!("Collection corrupted purging: {:?}", path);
+                        let collection = EmbeddedCollection::new(path)?;
+                        collections.insert(name, Arc::new(RwLock::new(collection)));
+                    }
                 }
             }
         }
@@ -111,7 +119,7 @@ impl Store for EmbeddedStore {
     fn flush(&self) -> Result<()> {
         info!("Store: flushing to disk {}", self.uri);
         for (name, collection) in self.collections.iter() {
-            trace!("Flushing collection started: {}", name);
+            info!("Flushing collection: {}", name);
             collection.read().unwrap().flush()?;
             trace!("Flushing collection finished: {}", name);
         }
@@ -176,9 +184,9 @@ impl Collection for EmbeddedCollection {
 
     /// Serializes the collection to a JSON file on disk.
     fn flush(&self) -> Result<()> {
-        let serialized = serde_json::to_string(&self.collection)?;
-        let mut file = File::create(&self.path)?;
-        file.write_all(serialized.as_bytes())?;
+        let file = File::create(&self.path)?;
+        let writer = BufWriter::new(file);
+        serde_cbor::to_writer(writer, &self.collection)?;
         Ok(())
     }
 

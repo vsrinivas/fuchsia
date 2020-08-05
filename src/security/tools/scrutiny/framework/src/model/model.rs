@@ -323,9 +323,13 @@ pub struct ZbiSection {
 /// Defines all of the parsed information in the ZBI.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Zbi {
-    // Raw section data for each zbi section.
+    // Raw section data for each zbi section. This section isn't serialized to
+    // disk because it occupies a large amount of space.
+    #[serde(skip)]
     pub sections: Vec<ZbiSection>,
     // File names to data contained in bootfs.
+    // TODO(benwright) - Work out how to optimize this for speed.
+    #[serde(skip)]
     pub bootfs: HashMap<String, Vec<u8>>,
 }
 

@@ -18,6 +18,7 @@ if (!is_fuchsia) {
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:rouille",
       "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_cbor",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:uuid",
