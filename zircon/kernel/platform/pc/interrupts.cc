@@ -24,6 +24,7 @@
 #include <platform/pc.h>
 #include <platform/pic.h>
 
+#include "dev/interrupt.h"
 #include "interrupt_manager.h"
 #include "platform_p.h"
 
@@ -193,6 +194,9 @@ void shutdown_interrupts_curr_cpu(void) {
 // See 10.1, 10.4, and 10.11 of Intel® 64 and IA-32 Architectures Software Developer’s
 // Manual 3A
 bool msi_is_supported(void) { return true; }
+bool msi_supports_masking() { return false; }
+// Since we do not support masking on x64 it is an error to call |msi_mask_unmask|.
+void msi_mask_unmask(const msi_block_t* block, uint msi_id, bool mask) { PANIC_UNIMPLEMENTED; }
 
 zx_status_t msi_alloc_block(uint requested_irqs, bool can_target_64bit, bool is_msix,
                             msi_block_t* out_block) {
