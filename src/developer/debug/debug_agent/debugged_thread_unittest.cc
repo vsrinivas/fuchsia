@@ -127,7 +127,7 @@ TEST(DebuggedThread, OnException) {
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });
-    exception->SetType(debug_ipc::ExceptionType::kGeneral);
+    exception->set_type(debug_ipc::ExceptionType::kGeneral);
     exception->SetStrategy(debug_ipc::ExceptionStrategy::kFirstChance);
     applied_strategy = debug_ipc::ExceptionStrategy::kNone;  // Clear previously set.
 
@@ -146,7 +146,7 @@ TEST(DebuggedThread, OnException) {
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });
-    exception->SetType(debug_ipc::ExceptionType::kGeneral);
+    exception->set_type(debug_ipc::ExceptionType::kGeneral);
     exception->SetStrategy(debug_ipc::ExceptionStrategy::kSecondChance);
     applied_strategy = debug_ipc::ExceptionStrategy::kNone;  // Clear previously set.
 
@@ -178,7 +178,7 @@ TEST(DebuggedThread, OnException) {
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });
-    exception->SetType(debug_ipc::ExceptionType::kGeneral);
+    exception->set_type(debug_ipc::ExceptionType::kGeneral);
     exception->SetStrategy(debug_ipc::ExceptionStrategy::kFirstChance);
     applied_strategy = debug_ipc::ExceptionStrategy::kNone;  // Clear previously set.
 
@@ -197,7 +197,7 @@ TEST(DebuggedThread, OnException) {
         [&applied_strategy](debug_ipc::ExceptionStrategy new_strategy) {
           applied_strategy = new_strategy;
         });
-    exception->SetType(debug_ipc::ExceptionType::kGeneral);
+    exception->set_type(debug_ipc::ExceptionType::kGeneral);
     exception->SetStrategy(debug_ipc::ExceptionStrategy::kSecondChance);
     applied_strategy = debug_ipc::ExceptionStrategy::kNone;  // Clear previously set.
 
