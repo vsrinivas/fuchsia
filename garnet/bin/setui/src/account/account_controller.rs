@@ -52,8 +52,8 @@ async fn schedule_clear_accounts(
     if connect_result.is_err() {
         return Err(SwitchboardError::ExternalFailure(
             SettingType::Account,
-            "device_settings_manager".to_string(),
-            "connect".to_string(),
+            "device_settings_manager".into(),
+            "connect".into(),
         ));
     }
 
@@ -63,8 +63,8 @@ async fn schedule_clear_accounts(
     {
         return Err(SwitchboardError::ExternalFailure(
             SettingType::Account,
-            "device_settings_manager".to_string(),
-            "set factory reset integer".to_string(),
+            "device_settings_manager".into(),
+            "set factory reset integer".into(),
         ));
     }
 

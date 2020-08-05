@@ -34,16 +34,16 @@ pub enum SwitchboardError {
     StorageFailure(SettingType),
 
     #[error("Invalid argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
-    InvalidArgument(SettingType, Cow<'static, str>, String),
+    InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
 
     #[error("External failure for setting type:{0:?} dependency: {1:?} request:{2:?}")]
-    ExternalFailure(SettingType, String, String),
+    ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>),
 
     #[error("Unhandled type: {0:?}")]
     UnhandledType(SettingType),
 
     #[error("Unexpected error: {0}")]
-    UnexpectedError(String),
+    UnexpectedError(Cow<'static, str>),
 
     #[error("Undeliverable Request:{0:?} for setting type: {1:?}")]
     UndeliverableError(SettingType, SettingRequest),

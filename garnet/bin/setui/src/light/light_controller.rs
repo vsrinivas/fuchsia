@@ -93,7 +93,7 @@ impl LightController {
                 return Err(SwitchboardError::InvalidArgument(
                     SettingType::Light,
                     ARG_NAME.into(),
-                    name,
+                    name.into(),
                 ));
             }
             Entry::Occupied(entry) => entry,
@@ -107,7 +107,7 @@ impl LightController {
             return Err(SwitchboardError::InvalidArgument(
                 SettingType::Light,
                 "state".into(),
-                format!("{:?}", state),
+                format!("{:?}", state).into(),
             ));
         }
 
@@ -123,7 +123,7 @@ impl LightController {
             return Err(SwitchboardError::InvalidArgument(
                 SettingType::Light,
                 "state".into(),
-                format!("{:?}", state),
+                format!("{:?}", state).into(),
             ));
         }
 
@@ -159,7 +159,7 @@ impl LightController {
                         Err(SwitchboardError::InvalidArgument(
                             SettingType::Light,
                             "value".into(),
-                            format!("{:?}", rgb),
+                            format!("{:?}", rgb).into(),
                         ))
                     })?;
                     (
@@ -177,8 +177,8 @@ impl LightController {
             set_result.map(|_| ()).or_else(|_| {
                 Err(SwitchboardError::ExternalFailure(
                     SettingType::Light,
-                    "fuchsia.hardware.light".to_string(),
-                    format!("{} for light {}", method_name, hardware_index),
+                    "fuchsia.hardware.light".into(),
+                    format!("{} for light {}", method_name, hardware_index).into(),
                 ))
             })?;
 
@@ -195,8 +195,8 @@ impl LightController {
             self.light_proxy.call_async(LightProxy::get_num_lights).await.or_else(|_| {
                 Err(SwitchboardError::ExternalFailure(
                     SettingType::Light,
-                    "fuchsia.hardware.light".to_string(),
-                    "get_num_lights".to_string(),
+                    "fuchsia.hardware.light".into(),
+                    "get_num_lights".into(),
                 ))
             })?;
 
@@ -206,8 +206,8 @@ impl LightController {
                 _ => {
                     return Err(SwitchboardError::ExternalFailure(
                         SettingType::Light,
-                        "fuchsia.hardware.light".to_string(),
-                        format!("get_info for light {}", i),
+                        "fuchsia.hardware.light".into(),
+                        format!("get_info for light {}", i).into(),
                     ));
                 }
             };
@@ -235,8 +235,8 @@ impl LightController {
                     _ => {
                         return Err(SwitchboardError::ExternalFailure(
                             SettingType::Light,
-                            "fuchsia.hardware.light".to_string(),
-                            format!("get_current_brightness_value for light {}", index),
+                            "fuchsia.hardware.light".into(),
+                            format!("get_current_brightness_value for light {}", index).into(),
                         ));
                     }
                 },
@@ -247,8 +247,8 @@ impl LightController {
                     _ => {
                         return Err(SwitchboardError::ExternalFailure(
                             SettingType::Light,
-                            "fuchsia.hardware.light".to_string(),
-                            format!("get_current_rgb_value for light {}", index),
+                            "fuchsia.hardware.light".into(),
+                            format!("get_current_rgb_value for light {}", index).into(),
                         ));
                     }
                 }
@@ -259,8 +259,8 @@ impl LightController {
                     _ => {
                         return Err(SwitchboardError::ExternalFailure(
                             SettingType::Light,
-                            "fuchsia.hardware.light".to_string(),
-                            format!("get_current_simple_value for light {}", index),
+                            "fuchsia.hardware.light".into(),
+                            format!("get_current_simple_value for light {}", index).into(),
                         ));
                     }
                 },

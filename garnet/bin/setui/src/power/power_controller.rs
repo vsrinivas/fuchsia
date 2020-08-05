@@ -23,16 +23,16 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Swi
         .or_else(|_| {
             Err(SwitchboardError::ExternalFailure(
                 SettingType::Power,
-                "hardware_power_statecontrol_manager".to_owned(),
-                "connect".to_owned(),
+                "hardware_power_statecontrol_manager".into(),
+                "connect".into(),
             ))
         })?;
 
     let build_err = || {
         SwitchboardError::ExternalFailure(
             SettingType::Power,
-            "hardware_power_statecontrol_manager".to_owned(),
-            "reboot".to_owned(),
+            "hardware_power_statecontrol_manager".into(),
+            "reboot".into(),
         )
     };
 

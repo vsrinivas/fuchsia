@@ -104,7 +104,7 @@ impl IntlController {
                 return Err(SwitchboardError::InvalidArgument(
                     SettingType::Intl,
                     "timezone id".into(),
-                    time_zone_id.as_str().to_string(),
+                    time_zone_id.into(),
                 ));
             }
         }

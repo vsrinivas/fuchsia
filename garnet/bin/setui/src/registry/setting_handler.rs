@@ -327,7 +327,7 @@ pub mod persist {
             if let ControllerError::WriteFailure { setting_type } = e {
                 SwitchboardError::StorageFailure(setting_type)
             } else {
-                SwitchboardError::UnexpectedError("client write failure".to_string())
+                SwitchboardError::UnexpectedError("client write failure".into())
             }
         })
     }

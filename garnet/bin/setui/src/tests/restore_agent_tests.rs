@@ -116,7 +116,7 @@ async fn test_restore() {
 
     // Snould fail when any other error is introduced.
     verify_restore_handling(
-        Box::new(|| Err(SwitchboardError::UnexpectedError("foo".to_string()))),
+        Box::new(|| Err(SwitchboardError::UnexpectedError("foo".into()))),
         false,
     )
     .await;

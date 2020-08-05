@@ -488,7 +488,7 @@ mod tests {
 
             let mut response = None;
             if self.always_fail {
-                response = Some(Err(SwitchboardError::UnexpectedError("set failure".to_string())));
+                response = Some(Err(SwitchboardError::UnexpectedError("set failure".into())));
             } else if let Some(value) = self.id_to_send {
                 response = Some(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(
                     false,

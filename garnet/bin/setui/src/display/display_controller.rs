@@ -93,8 +93,8 @@ impl BrightnessManager for ExternalBrightnessControl {
         .map_err(|_| {
             SwitchboardError::ExternalFailure(
                 SettingType::Display,
-                String::from("brightness_service"),
-                String::from("set_brightness"),
+                "brightness_service".into(),
+                "set_brightness".into(),
             )
         })
     }
