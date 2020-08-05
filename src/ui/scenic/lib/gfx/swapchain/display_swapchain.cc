@@ -384,13 +384,14 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   auto& record = frames_[frame_index];
 
   uint64_t frame_number = record->frame_timings ? record->frame_timings->frame_number() : 0u;
+  // TODO(57725) Replace with more robust solution.
+  uint64_t frame_trace_id = (record->use_protected_memory * 3) + frame_index + 1;
 
   TRACE_DURATION("gfx", "DisplaySwapchain::OnFrameRendered", "frame count", frame_number,
-                 "frame index", frame_index);
+                 "frame index", frame_trace_id);
   TRACE_FLOW_END("gfx", "scenic_frame", frame_number);
 
-  // It is effectively 1-indexed in the display.
-  TRACE_FLOW_BEGIN("gfx", "present_image", frame_index + 1);
+  TRACE_FLOW_BEGIN("gfx", "present_image", frame_trace_id);
 
   FX_DCHECK(record);
   if (record->frame_timings) {
