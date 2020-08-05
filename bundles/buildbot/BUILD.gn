@@ -28,7 +28,6 @@ group("core") {
     "//scripts/sdk/gn:tests",
     "//src",
     "//src:tests",
-    "//src/diagnostics:tests",
     "//src/media/audio/bundles:virtual_audio_driver",
     "//src/media/bundles:examples",
     "//src/media/bundles:services",
