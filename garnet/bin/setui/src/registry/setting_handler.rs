@@ -15,6 +15,7 @@ use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
+use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use thiserror::Error;
@@ -29,9 +30,9 @@ pub enum ControllerError {
     #[error("Write failed. setting type: {setting_type:?}")]
     WriteFailure { setting_type: SettingType },
     #[error("Initialization failure: cause {description:?}")]
-    InitFailure { description: String },
+    InitFailure { description: Cow<'static, str> },
     #[error("Restoration of setting on controller startup failed: cause {description:?}")]
-    RestoreFailure { description: String },
+    RestoreFailure { description: Cow<'static, str> },
 }
 
 pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;

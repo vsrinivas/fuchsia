@@ -55,7 +55,8 @@ impl data_controller::Create<LightInfo> for LightController {
                     description: format!(
                         "failed to connect to fuchsia.hardware.light with error: {:?}",
                         e
-                    ),
+                    )
+                    .into(),
                 })
             })?;
 

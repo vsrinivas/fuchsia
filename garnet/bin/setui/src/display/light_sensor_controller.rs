@@ -46,9 +46,7 @@ impl controller::Create for LightSensorController {
             let current_data = Arc::new(Mutex::new(get_sensor_data(&proxy).await));
             Ok(Self { client, proxy, current_value: current_data, notifier_abort: None })
         } else {
-            Err(ControllerError::InitFailure {
-                description: "Could not connect to proxy".to_string(),
-            })
+            Err(ControllerError::InitFailure { description: "Could not connect to proxy".into() })
         }
     }
 }

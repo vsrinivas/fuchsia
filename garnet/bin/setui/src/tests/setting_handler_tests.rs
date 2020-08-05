@@ -43,7 +43,7 @@ macro_rules! gen_controller {
                 if $succeed {
                     Ok(Self {})
                 } else {
-                    Err(ControllerError::InitFailure { description: "failure".to_string() })
+                    Err(ControllerError::InitFailure { description: "failure".into() })
                 }
             }
         }
@@ -78,7 +78,7 @@ macro_rules! gen_data_controller {
                 if $succeed {
                     Ok(Self { _storage: PhantomData })
                 } else {
-                    Err(ControllerError::InitFailure { description: "failure".to_string() })
+                    Err(ControllerError::InitFailure { description: "failure".into() })
                 }
             }
         }
