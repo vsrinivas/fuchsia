@@ -19,6 +19,9 @@ namespace {
 
 class LogEngineTest : public gtest::TestLoopFixture {
  protected:
+  LogEngineTest() = default;
+  ~LogEngineTest() override = default;
+
   void SetUp() override {
     startup_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
     tts_manager_ = std::make_unique<TtsManager>(startup_context_.get());
