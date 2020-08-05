@@ -3,17 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("ffx_plugin.gni")
+import("ffx_plugin_suite.gni")
 
 # Defines FFX
 #
 template("ffx") {
   ffx_deps = []
+  if (defined(invoker.deps)) {
+    ffx_deps += invoker.deps
+  }
   if (defined(invoker.plugin_deps)) {
-    foreach(d, invoker.plugin_deps) {
-      dep = d + "_suite"
-      ffx_deps += [ dep ]
-    }
+    ffx_deps += invoker.plugin_deps
   }
 
   ffx_name = target_name
@@ -24,14 +24,14 @@ template("ffx") {
 
   suite_name = ffx_name + "_lib"
 
-  ffx_plugin(suite_name) {
+  ffx_plugin_suite(suite_name) {
     forward_variables_from(invoker, "*", [])
     args_deps = [ "core:lib" ]
 
     # These are needed only for the default FFX
     extra_deps = [
-      "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
-      "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_args",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_sub_command",
       "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
     ]
   }
@@ -41,23 +41,7 @@ template("ffx") {
     deps = ffx_deps + [
              ":" + suite_name + "_args",
              ":" + suite_name + "_sub_command",
-             ":" + suite_name + "_suite",
-             "//src/developer/ffx/config:lib",
-             "//src/developer/ffx/core:lib",
-             "//src/developer/ffx/daemon:lib",
-             "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
-             "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
-             "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
-             "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
-             "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-             "//src/connectivity/overnet/lib/hoist",
-             "//src/lib/fidl/rust/fidl",
-             "//src/lib/fuchsia-async",
-             "//third_party/rust_crates:anyhow",
-             "//third_party/rust_crates:argh",
-             "//third_party/rust_crates:futures",
-             "//third_party/rust_crates:log",
-             "//third_party/rust_crates:simplelog",
+             ":" + suite_name,
            ]
     non_rust_deps = [ "//third_party/boringssl" ]
     forward_variables_from(invoker,

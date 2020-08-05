@@ -9,49 +9,30 @@ template("plugins") {
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
   }
-  includes_subcommands = "false"
+  plugin_deps = []
   if (defined(invoker.plugin_deps)) {
-    includes_subcommands = "true"
+    plugin_deps += invoker.plugin_deps
   }
 
-  includes_execution = "false"
-  if (defined(invoker.includes_execution)) {
-    includes_execution = invoker.includes_execution
+  libraries = []
+  foreach(dep, plugin_deps) {
+    libraries += [ get_label_info(dep, "name") ]
   }
 
   generated_file = "$target_gen_dir/" + output_name
   outputs = [ generated_file ]
 
+  lib_str = string_join(",", libraries)
   script_args = [
     "--out",
     rebase_path(generated_file),
+    "--deps",
+    lib_str,
     "--args",
     invoker.args,
-    "--includes_execution",
-    invoker.includes_execution,
-    "--includes_subcommands",
-    includes_subcommands,
-    "--execution_lib",
-    invoker.execution_lib,
+    "--sub_command",
+    invoker.sub_command,
   ]
-  if (defined(invoker.plugin_deps)) {
-    libraries = []
-    foreach(dep, invoker.plugin_deps) {
-      libraries += [ get_label_info(dep, "name") ]
-    }
-
-    lib_str = string_join(",", libraries)
-    script_args += [
-      "--deps",
-      lib_str,
-    ]
-  }
-  if (defined(invoker.sub_command)) {
-    script_args += [
-      "--sub_command",
-      invoker.sub_command,
-    ]
-  }
 
   action(target_name) {
     script = "//src/developer/ffx/build/gn_generate_plugins.py"

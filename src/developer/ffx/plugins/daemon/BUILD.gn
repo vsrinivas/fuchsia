@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/developer/ffx/build/ffx_plugin.gni")
+import("//src/developer/ffx/build/ffx_plugin_suite.gni")
 
-ffx_plugin("ffx_daemon_plugin") {
+ffx_plugin_suite("ffx_daemon_suite") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true

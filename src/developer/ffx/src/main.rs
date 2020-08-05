@@ -35,8 +35,8 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
 }
 
 fn get_log_name(subcommand: &Subcommand) -> &'static str {
-    if let Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
-        subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(_),
+    if let Subcommand::FfxDaemonSuite(ffx_daemon_suite_args::DaemonCommand {
+        subcommand: ffx_daemon_suite_sub_command::Subcommand::FfxDaemonStart(_),
     }) = subcommand
     {
         "ffx.daemon"
@@ -48,7 +48,7 @@ fn get_log_name(subcommand: &Subcommand) -> &'static str {
 async fn run() -> Result<()> {
     let app: Ffx = argh::from_env();
     setup_logger(get_log_name(&app.subcommand)).await;
-    ffx_lib_suite::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await
+    ffx_lib::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await
 }
 
 #[fuchsia_async::run_singlethreaded]
