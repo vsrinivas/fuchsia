@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use cm_fidl_translator;
+use fidl::encoding::decode_persistent;
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::*;
@@ -12,11 +12,10 @@ use std::io::Read;
 use std::path::PathBuf;
 
 fn main() {
-    let cm_content = read_cm("/pkg/meta/example.cm").expect("could not open example.cm");
-    let golden_cm = read_cm("/pkg/data/golden.cm").expect("could not open golden.cm");
-    assert_eq!(&cm_content, &golden_cm);
+    // example.cm has already been compiled by cmc as part of the build process
+    // See: https://fuchsia.googlesource.com/fuchsia/+/c4b7ddf8128e782f957374c64f57aa2508ac3fe2/build/package.gni#304
+    let cm_decl = read_cm("/pkg/meta/example.cm").expect("could not read cm file");
 
-    let cm_decl = cm_fidl_translator::translate(&cm_content).expect("could not translate cm");
     let expected_decl = {
         let program = fdata::Dictionary {
             entries: Some(vec![
@@ -221,9 +220,9 @@ fn main() {
     assert_eq!(cm_decl, expected_decl);
 }
 
-fn read_cm(file: &str) -> Result<String, Error> {
-    let mut buffer = String::new();
+fn read_cm(file: &str) -> Result<ComponentDecl, Error> {
+    let mut buffer = Vec::new();
     let path = PathBuf::from(file);
-    File::open(&path)?.read_to_string(&mut buffer)?;
-    Ok(buffer)
+    File::open(&path)?.read_to_end(&mut buffer)?;
+    Ok(decode_persistent(&buffer)?)
 }

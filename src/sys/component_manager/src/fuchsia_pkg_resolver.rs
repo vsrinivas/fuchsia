@@ -5,7 +5,6 @@
 use {
     crate::model::resolver::{Resolver, ResolverError, ResolverFut},
     anyhow::format_err,
-    cm_fidl_translator,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fidl_fuchsia_sys::LoaderProxy,
@@ -68,11 +67,12 @@ impl FuchsiaPkgResolver {
             .expect("failed to create directory proxy");
         let file = io_util::open_file(&dir, cm_path, fio::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
-        let cm_str = io_util::read_file(&file)
-            .await
-            .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
-        let component_decl = cm_fidl_translator::translate(&cm_str)
-            .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+        let component_decl = io_util::read_file_fidl(&file).await.map_err(|e| {
+            match e.downcast_ref::<io_util::file::ReadError>() {
+                Some(_) => ResolverError::manifest_not_available(component_url, e),
+                None => ResolverError::manifest_invalid(component_url, e),
+            }
+        })?;
         let package_dir = ClientEnd::new(
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
         );
@@ -96,7 +96,6 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
-        cm_fidl_translator,
         fidl::endpoints::{self, ServerEnd},
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_sys::{LoaderMarker, LoaderRequest, Package},
@@ -196,9 +195,10 @@ mod tests {
         let path = Path::new("meta/hello-world.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
-        let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");
         assert_eq!(
-            cm_fidl_translator::translate(&cm_contents).expect("could not parse cm"),
+            io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy)
+                .await
+                .expect("could not read cm"),
             expected_decl
         );
 

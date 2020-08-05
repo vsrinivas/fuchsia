@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::error::{Error, Location},
     crate::{cml, one_or_many::OneOrMany},
-    cm_json::{self, Error, JsonSchema, Location, CMX_SCHEMA},
+    cm_json::{self, JsonSchema, CMX_SCHEMA},
     directed_graph::{self, DirectedGraph},
     lazy_static::lazy_static,
     serde_json::Value,
@@ -146,7 +147,7 @@ pub fn validate_json(json: &Value, schema: &JsonSchema<'_>) -> Result<(), Error>
         // The ordering in which valico emits these errors is unstable.
         // Sort error messages so that the resulting message is predictable.
         err_msgs.sort_unstable();
-        return Err(Error::validate_schema(&schema, err_msgs.join(", ")));
+        return Err(Error::validate_schema(&schema.name.to_string(), err_msgs.join(", ")));
     }
     Ok(())
 }

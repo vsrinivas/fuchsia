@@ -8,7 +8,7 @@
 
 //! `cmc` is the Component Manifest Compiler.
 
-use cm_json::Error;
+use crate::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
@@ -16,6 +16,7 @@ use structopt::StructOpt;
 
 mod cml;
 mod compile;
+mod error;
 mod format;
 mod merge;
 mod one_or_many;
@@ -42,8 +43,9 @@ fn run_cmc() -> Result<(), Error> {
             }
             format::format(&file, pretty, cml, output)?;
         }
-        opts::Commands::Compile { file, pretty, output } => {
-            compile::compile(&file, pretty, output)?
+        opts::Commands::Compile { file, pretty: _, output } => {
+            // FIXME: Don't just unwrap it.
+            compile::compile(&file, &output.unwrap())?
         }
     }
     if let Some(stamp_path) = opt.stamp {

@@ -3,24 +3,22 @@
 // found in the LICENSE file.
 
 use crate::cml::{self, CapabilityClause};
+use crate::error::Error;
 use crate::one_or_many::OneOrMany;
 use crate::validate;
-use cm_json::{cm, Error, Location};
-use serde::ser::Serialize;
-use serde_json::{
-    self,
-    ser::{CompactFormatter, PrettyFormatter, Serializer},
-    value::Value,
-    Map,
-};
+use cm_json::cm;
+use fidl::encoding::encode_persistent;
+use fidl_fuchsia_data as fdata;
+use fidl_fuchsia_io2 as fio2;
+use fidl_fuchsia_sys2 as fsys;
+use serde_json::{self, value::Value, Map};
 use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::str::from_utf8;
 
 /// Read in a CML file and produce the equivalent CM.
-pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
+pub fn compile(file: &PathBuf, output: &PathBuf) -> Result<(), Error> {
     match file.extension().and_then(|e| e.to_str()) {
         Some("cml") => Ok(()),
         _ => Err(Error::invalid_args(format!(
@@ -28,109 +26,195 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
             file
         ))),
     }?;
-    if let Some(ref path) = output {
-        match path.extension().and_then(|e| e.to_str()) {
-            Some("cm") => Ok(()),
-            _ => Err(Error::invalid_args(format!(
-                "Output file {:?} does not have the component manifest extension (.cm)",
-                path
-            ))),
-        }?;
-    }
+    match output.extension().and_then(|e| e.to_str()) {
+        Some("cm") => Ok(()),
+        _ => Err(Error::invalid_args(format!(
+            "Output file {:?} does not have the component manifest extension (.cm)",
+            output
+        ))),
+    }?;
 
     let mut buffer = String::new();
-    File::open(file.as_path())?.read_to_string(&mut buffer)?;
+    File::open(&file.as_path())?.read_to_string(&mut buffer)?;
     let document = validate::parse_cml(&buffer, file.as_path())?;
-    let out = compile_cml(document)?;
+    let mut out_data = compile_cml(document)?;
 
-    let mut res = Vec::new();
-    if pretty {
-        let mut ser = Serializer::with_formatter(&mut res, PrettyFormatter::with_indent(b"    "));
-        out.serialize(&mut ser).map_err(|e| {
-            Error::parse(format!("Couldn't serialize JSON: {}", e), None, Some(file.as_path()))
-        })?;
-    } else {
-        let mut ser = Serializer::with_formatter(&mut res, CompactFormatter {});
-        out.serialize(&mut ser).map_err(|e| {
-            Error::parse(format!("Couldn't serialize JSON: {}", e), None, Some(file.as_path()))
-        })?;
-    }
-    if let Some(output_path) = output {
-        fs::OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(output_path)?
-            .write_all(&res)?;
-    } else {
-        println!("{}", from_utf8(&res)?);
-    }
-    // Sanity check that output conforms to CM schema.
-    serde_json::from_slice::<cm::Document>(&res).map_err(|e| {
-        Error::parse(
-            format!("Couldn't read output as JSON: {}", e),
-            Some(Location { line: e.line(), column: e.column() }),
-            Some(file.as_path()),
-        )
-    })?;
+    let mut out_file =
+        fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
+    out_file.write(&encode_persistent(&mut out_data)?)?;
+
     Ok(())
 }
 
-fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
-    let mut out = cm::Document::default();
-    out.program = document.program.as_ref().map(translate_program).transpose()?;
-    out.children = document.children.as_ref().map(translate_children).transpose()?;
-    out.uses = document.r#use.as_ref().map(translate_use).transpose()?;
-    out.exposes = document.expose.as_ref().map(translate_expose).transpose()?;
-    out.capabilities = document.capabilities.as_ref().map(translate_capabilities).transpose()?;
-    if let Some(offer) = document.offer.as_ref() {
-        let all_children = document.all_children_names().into_iter().collect();
-        let all_collections = document.all_collection_names().into_iter().collect();
-        out.offers = Some(translate_offer(offer, &all_children, &all_collections)?);
+fn compile_cml(document: cml::Document) -> Result<fsys::ComponentDecl, Error> {
+    Ok(fsys::ComponentDecl {
+        program: document.program.as_ref().map(translate_program).transpose()?,
+        uses: document.r#use.as_ref().map(translate_use).transpose()?,
+        exposes: document.expose.as_ref().map(translate_expose).transpose()?,
+        offers: document
+            .offer
+            .as_ref()
+            .map(|offer| {
+                let all_children = document.all_children_names().into_iter().collect();
+                let all_collections = document.all_collection_names().into_iter().collect();
+                translate_offer(offer, &all_children, &all_collections)
+            })
+            .transpose()?,
+        capabilities: document.capabilities.as_ref().map(translate_capabilities).transpose()?,
+        children: document.children.as_ref().map(translate_children).transpose()?,
+        collections: document.collections.as_ref().map(translate_collections).transpose()?,
+        environments: document.environments.as_ref().map(translate_environments).transpose()?,
+        facets: document.facets.clone().map(fsys_object_from_map).transpose()?,
+    })
+}
+
+// Converts a Map<String, serde_json::Value> to a fuchsia Object.
+fn fsys_object_from_map(dictionary: Map<String, Value>) -> Result<fsys::Object, Error> {
+    let mut out = fsys::Object { entries: vec![] };
+    for (k, v) in dictionary {
+        if let Some(value) = convert_value(v)? {
+            out.entries.push(fsys::Entry { key: k, value: Some(value) });
+        }
     }
-    out.environments = document.environments.as_ref().map(translate_environments).transpose()?;
-    out.collections = document.collections.as_ref().map(translate_collections).transpose()?;
-    out.facets = document.facets.as_ref().cloned();
     Ok(out)
 }
 
-pub fn translate_program(program: &Map<String, Value>) -> Result<Map<String, Value>, Error> {
-    let mut program_out: Map<String, Value> = Map::new();
+// Converts a serde_json::Value into a fuchsia fidl Value. Used by `fsys_object_from_map`.
+fn convert_value(v: Value) -> Result<Option<Box<fsys::Value>>, Error> {
+    Ok(match v {
+        Value::Null => None,
+        Value::Bool(b) => Some(Box::new(fsys::Value::Bit(b))),
+        Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Some(Box::new(fsys::Value::Inum(i)))
+            } else if let Some(f) = n.as_f64() {
+                Some(Box::new(fsys::Value::Fnum(f)))
+            } else {
+                return Err(Error::validate(format!("Number is out of range: {}", n)));
+            }
+        }
+        Value::String(s) => Some(Box::new(fsys::Value::Str(s.clone()))),
+        Value::Array(a) => {
+            let vector = fsys::Vector {
+                values: a.into_iter().map(convert_value).collect::<Result<Vec<_>, Error>>()?,
+            };
+            Some(Box::new(fsys::Value::Vec(vector)))
+        }
+        Value::Object(o) => {
+            let obj = fsys_object_from_map(o)?;
+            Some(Box::new(fsys::Value::Obj(obj)))
+        }
+    })
+}
+
+// Converts a Map<String, serde_json::Value> to a fuchsia Dictionary.
+fn dictionary_from_map(in_obj: Map<String, Value>) -> Result<fdata::Dictionary, Error> {
+    let mut entries = vec![];
+    for (key, v) in in_obj {
+        let value = value_to_dictionary_value(v)?;
+        entries.push(fdata::DictionaryEntry { key, value });
+    }
+    Ok(fdata::Dictionary { entries: Some(entries) })
+}
+
+// Converts a serde_json::Value into a fuchsia DictionaryValue. Used by `dictionary_from_map`.
+fn value_to_dictionary_value(value: Value) -> Result<Option<Box<fdata::DictionaryValue>>, Error> {
+    match value {
+        Value::Null => Ok(None),
+        Value::String(s) => Ok(Some(Box::new(fdata::DictionaryValue::Str(s.clone())))),
+        Value::Array(arr) => {
+            let mut strs = vec![];
+            for val in arr {
+                match val {
+                    Value::String(s) => strs.push(s),
+                    _ => return Err(Error::validate("Value must be string")),
+                };
+            }
+            Ok(Some(Box::new(fdata::DictionaryValue::StrVec(strs))))
+        }
+        _ => return Err(Error::validate("Value must be string or list of strings")),
+    }
+}
+
+// Translates a cm::StorageType to a fsys::StorageType.
+fn translate_storage_type_to_fidl(storage_type: &cm::StorageType) -> fsys::StorageType {
+    match storage_type {
+        cm::StorageType::Data => fsys::StorageType::Data,
+        cm::StorageType::Cache => fsys::StorageType::Cache,
+        cm::StorageType::Meta => fsys::StorageType::Meta,
+    }
+}
+
+// Translates a optional cm::DependencyType to a fsys::DependencyType, defaulting to Strong if the input is None.
+fn translate_dependency_type_to_fidl(
+    dependency_type: Option<cm::DependencyType>,
+) -> fsys::DependencyType {
+    match dependency_type {
+        None | Some(cm::DependencyType::Strong) => fsys::DependencyType::Strong,
+        Some(cm::DependencyType::WeakForMigration) => fsys::DependencyType::WeakForMigration,
+    }
+}
+
+// Translates a cm::StartupMode to a fsys::StartupMode.
+fn translate_startup_mode_to_fidl(startup_mode: &cm::StartupMode) -> fsys::StartupMode {
+    match startup_mode {
+        cm::StartupMode::Lazy => fsys::StartupMode::Lazy,
+        cm::StartupMode::Eager => fsys::StartupMode::Eager,
+    }
+}
+
+// Translates a cm::Durability to a fsys::Durability.
+fn translate_durability_to_fidl(durability: &cm::Durability) -> fsys::Durability {
+    match durability {
+        cm::Durability::Persistent => fsys::Durability::Persistent,
+        cm::Durability::Transient => fsys::Durability::Transient,
+    }
+}
+
+// 'program' rules denote a set of dictionary entries that may specify lifestyle events with a "lifecycle" prefix key.
+// All other entries are copied as is.
+pub fn translate_program(program: &Map<String, Value>) -> Result<fdata::Dictionary, Error> {
+    let mut entries = Vec::new();
     for (k, v) in program {
-        match &k[..] {
-            "lifecycle" => match v {
-                Value::Object(events) => {
-                    for (event, subscription) in events {
-                        program_out.insert(format!("lifecycle.{}", event), subscription.clone());
-                    }
+        match (&k[..], v) {
+            ("lifecycle", Value::Object(events)) => {
+                for (event, subscription) in events {
+                    entries.push(fdata::DictionaryEntry {
+                        key: format!("lifecycle.{}", event),
+                        value: value_to_dictionary_value(subscription.clone())?,
+                    });
                 }
-                _ => {
-                    return Err(Error::validate(format!(
-                        "Unexpected entry in lifecycle section: {}",
-                        v
-                    )));
-                }
-            },
+            }
+            ("lifecycle", _) => {
+                return Err(Error::validate(format!(
+                    "Unexpected entry in lifecycle section: {}",
+                    v
+                )));
+            }
             _ => {
-                let _ = program_out.insert(k.clone(), v.clone());
+                entries.push(fdata::DictionaryEntry {
+                    key: k.clone(),
+                    value: value_to_dictionary_value(v.clone())?,
+                });
             }
         }
     }
-    return Ok(program_out);
+
+    Ok(fdata::Dictionary { entries: Some(entries) })
 }
 
 /// `use` rules consume a single capability from one source (parent|framework).
-fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
+fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
         if let Some(n) = use_.service() {
             let source = extract_use_source(use_)?;
             let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
                 .extract_path()?;
-            out_uses.push(cm::Use::Service(cm::UseService {
-                source,
-                source_name: n.clone(),
-                target_path,
+            out_uses.push(fsys::UseDecl::Service(fsys::UseServiceDecl {
+                source: Some(source),
+                source_name: Some(n.clone().into()),
+                target_path: Some(target_path.into()),
             }));
         } else if let Some(p) = use_.protocol() {
             let source = extract_use_source(use_)?;
@@ -139,10 +223,10 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             let source_ids = p.to_vec();
             for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
                 let target_path = cml::NameOrPath::Path(target_id.extract_path()?);
-                out_uses.push(cm::Use::Protocol(cm::UseProtocol {
-                    source: source.clone(),
-                    source_path: source_id.clone(),
-                    target_path,
+                out_uses.push(fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_path: Some(source_id.clone().into()),
+                    target_path: Some(target_path.into()),
                 }));
             }
         } else if let Some(p) = use_.directory() {
@@ -153,12 +237,12 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             );
             let rights = extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
-            out_uses.push(cm::Use::Directory(cm::UseDirectory {
-                source,
-                source_path: p.clone(),
-                target_path,
-                rights,
-                subdir,
+            out_uses.push(fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                source: Some(source),
+                source_path: Some(p.clone().into()), // Q: Why do we need to clone here as opposed to with source_path and target_path elsewhere, which are also &Path
+                target_path: Some(target_path.into()),
+                rights: Some(rights),
+                subdir: subdir.map(|s| s.into()),
             }));
         } else if let Some(s) = use_.storage_type() {
             let target_path =
@@ -172,9 +256,14 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                     ))),
                     None => Ok(None),
                 }?;
-            out_uses.push(cm::Use::Storage(cm::UseStorage { type_: s.clone(), target_path }));
+            out_uses.push(fsys::UseDecl::Storage(fsys::UseStorageDecl {
+                type_: Some(translate_storage_type_to_fidl(s)),
+                target_path: target_path.map(|path| path.into()),
+            }));
         } else if let Some(n) = use_.runner() {
-            out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: n.clone() }))
+            out_uses.push(fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                source_name: Some(n.clone().into()),
+            }))
         } else if let Some(n) = use_.event() {
             let source = extract_use_event_source(use_)?;
             let target_ids = all_target_capability_ids(use_, use_, cml::RoutingClauseType::Use)
@@ -188,21 +277,24 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 // target_name, so we use source_names[0] to derive the source_name.
                 let source_name =
                     if source_ids.len() == 1 { source_ids[0].clone() } else { target_name.clone() };
-                out_uses.push(cm::Use::Event(cm::UseEvent {
-                    source: source.clone(),
-                    source_name,
-                    target_name,
+                out_uses.push(fsys::UseDecl::Event(fsys::UseEventDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(source_name.into()),
+                    target_name: Some(target_name.into()),
                     // We have already validated that none will be present if we were using many
                     // events.
-                    filter: use_.filter.clone(),
+                    filter: match use_.filter.clone() {
+                        Some(dict) => Some(dictionary_from_map(dict)?),
+                        None => None,
+                    },
                 }));
             }
         } else if let Some(p) = use_.event_stream() {
             let target_path = one_target_capability_id(use_, use_, cml::RoutingClauseType::Use)?
                 .extract_path()?;
-            out_uses.push(cm::Use::EventStream(cm::UseEventStream {
-                target_path,
-                events: p.to_vec().into_iter().cloned().collect(),
+            out_uses.push(fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
+                target_path: Some(target_path.into()),
+                events: Some(p.to_vec().into_iter().map(|name| name.clone().into()).collect()),
             }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
@@ -213,7 +305,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
 
 /// `expose` rules route a single capability from one or more sources (self|framework|#<child>) to
 /// one or more targets (parent|framework).
-fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Error> {
+fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let target = extract_expose_target(expose)?;
@@ -223,11 +315,11 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
                     .extract_name()?;
             for source in sources {
-                out_exposes.push(cm::Expose::Service(cm::ExposeService {
-                    source,
-                    source_name: n.clone(),
-                    target_name: target_name.clone(),
-                    target: target.clone(),
+                out_exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(n.clone().into()),
+                    target_name: Some(target_name.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
                 }))
             }
         } else if let Some(p) = expose.protocol() {
@@ -237,11 +329,11 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 all_target_capability_ids(expose, expose, cml::RoutingClauseType::Expose)
                     .ok_or_else(|| Error::internal("no capability"))?;
             for (source_id, target_id) in source_ids.into_iter().zip(target_ids.into_iter()) {
-                out_exposes.push(cm::Expose::Protocol(cm::ExposeProtocol {
-                    source: source.clone(),
-                    source_path: source_id.clone(),
-                    target_path: target_id,
-                    target: target.clone(),
+                out_exposes.push(fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_path: Some(source_id.clone().into()),
+                    target_path: Some(target_id.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
                 }))
             }
         } else if let Some(p) = expose.directory() {
@@ -250,35 +342,35 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?;
             let rights = extract_expose_rights(expose)?;
             let subdir = extract_expose_subdir(expose);
-            out_exposes.push(cm::Expose::Directory(cm::ExposeDirectory {
-                source,
-                source_path: p.clone(),
-                target_path: target_id,
-                target,
-                rights,
-                subdir,
+            out_exposes.push(fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
+                source: Some(clone_fsys_ref(&source)?),
+                source_path: Some(p.clone().into()),
+                target_path: Some(target_id.clone().into()),
+                target: Some(clone_fsys_ref(&target)?),
+                rights: rights,
+                subdir: subdir.map(|s| s.into()),
             }))
         } else if let Some(n) = expose.runner() {
             let source = extract_single_expose_source(expose)?;
             let target_name =
                 one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
                     .extract_name()?;
-            out_exposes.push(cm::Expose::Runner(cm::ExposeRunner {
-                source,
-                source_name: n.clone(),
-                target,
-                target_name,
+            out_exposes.push(fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
+                source: Some(clone_fsys_ref(&source)?),
+                source_name: Some(n.clone().into()),
+                target: Some(clone_fsys_ref(&target)?),
+                target_name: Some(target_name.clone().into()),
             }))
         } else if let Some(n) = expose.resolver() {
             let source = extract_single_expose_source(expose)?;
             let target_name =
                 one_target_capability_id(expose, expose, cml::RoutingClauseType::Expose)?
                     .extract_name()?;
-            out_exposes.push(cm::Expose::Resolver(cm::ExposeResolver {
-                source,
-                source_name: n.clone(),
-                target,
-                target_name,
+            out_exposes.push(fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl {
+                source: Some(clone_fsys_ref(&source)?),
+                source_name: Some(n.clone().into()),
+                target: Some(clone_fsys_ref(&target)?),
+                target_name: Some(target_name.clone().into()),
             }))
         } else {
             return Err(Error::internal(format!("expose: must specify a known capability")));
@@ -292,7 +384,7 @@ fn translate_offer(
     offer_in: &Vec<cml::Offer>,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-) -> Result<Vec<cm::Offer>, Error> {
+) -> Result<Vec<fsys::OfferDecl>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
         if let Some(n) = offer.service() {
@@ -301,11 +393,11 @@ fn translate_offer(
             for (target, target_id) in targets {
                 let target_name = target_id.extract_name()?;
                 for source in &sources {
-                    out_offers.push(cm::Offer::Service(cm::OfferService {
-                        source_name: n.clone(),
-                        source: source.clone(),
-                        target: target.clone(),
-                        target_name: target_name.clone(),
+                    out_offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                        source_name: Some(n.clone().into()),
+                        source: Some(clone_fsys_ref(&source)?),
+                        target: Some(clone_fsys_ref(&target)?),
+                        target_name: Some(target_name.clone().into()),
                     }));
                 }
             }
@@ -324,42 +416,40 @@ fn translate_offer(
                 // target_ids instead of the cross product of them.
                 let source_id =
                     if source_ids.len() == 1 { source_ids[0].clone() } else { target_id.clone() };
-                out_offers.push(cm::Offer::Protocol(cm::OfferProtocol {
-                    source_path: source_id.clone(),
-                    source: source.clone(),
-                    target,
-                    target_path: target_id.clone(),
-                    dependency_type: offer
-                        .dependency
-                        .clone()
-                        .unwrap_or(cm::DependencyType::default()),
+                out_offers.push(fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_path: Some(source_id.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
+                    target_path: Some(target_id.clone().into()),
+                    dependency_type: Some(translate_dependency_type_to_fidl(
+                        offer.dependency.clone(),
+                    )),
                 }));
             }
         } else if let Some(p) = offer.directory() {
             let source = extract_single_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
-                out_offers.push(cm::Offer::Directory(cm::OfferDirectory {
-                    source_path: p.clone(),
-                    source: source.clone(),
-                    target,
-                    target_path: target_id,
+                out_offers.push(fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                    source_path: Some(p.clone().into()),
+                    source: Some(clone_fsys_ref(&source)?),
+                    target: Some(clone_fsys_ref(&target)?),
+                    target_path: Some(target_id.into()),
                     rights: extract_offer_rights(offer)?,
-                    subdir: extract_offer_subdir(offer),
-                    dependency_type: offer
-                        .dependency
-                        .clone()
-                        .unwrap_or(cm::DependencyType::default()),
+                    subdir: extract_offer_subdir(offer).map(|s| s.into()),
+                    dependency_type: Some(translate_dependency_type_to_fidl(
+                        offer.dependency.clone(),
+                    )),
                 }));
             }
         } else if let Some(s) = offer.storage_type() {
             let source = extract_single_offer_storage_source(offer)?;
             let targets = extract_storage_targets(offer, all_children, all_collections)?;
             for target in targets {
-                out_offers.push(cm::Offer::Storage(cm::OfferStorage {
-                    type_: s.clone(),
-                    source: source.clone(),
-                    target,
+                out_offers.push(fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
+                    type_: Some(translate_storage_type_to_fidl(s)),
+                    source: Some(clone_fsys_ref(&source)?),
+                    target: Some(clone_fsys_ref(&target)?),
                 }));
             }
         } else if let Some(n) = offer.runner() {
@@ -367,11 +457,11 @@ fn translate_offer(
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 let target_name = target_id.extract_name()?;
-                out_offers.push(cm::Offer::Runner(cm::OfferRunner {
-                    source: source.clone(),
-                    source_name: n.clone(),
-                    target,
-                    target_name,
+                out_offers.push(fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(n.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
+                    target_name: Some(target_name.clone().into()),
                 }));
             }
         } else if let Some(n) = offer.resolver() {
@@ -379,11 +469,11 @@ fn translate_offer(
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 let target_name = target_id.extract_name()?;
-                out_offers.push(cm::Offer::Resolver(cm::OfferResolver {
-                    source: source.clone(),
-                    source_name: n.clone(),
-                    target,
-                    target_name,
+                out_offers.push(fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(n.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
+                    target_name: Some(target_name.clone().into()),
                 }));
             }
         } else if let Some(p) = offer.event() {
@@ -398,14 +488,17 @@ fn translate_offer(
                 let target_name = target_id.extract_name()?;
                 let source_name =
                     if source_ids.len() == 1 { source_ids[0].clone() } else { target_name.clone() };
-                out_offers.push(cm::Offer::Event(cm::OfferEvent {
-                    source: source.clone(),
-                    source_name,
-                    target,
-                    target_name,
+                out_offers.push(fsys::OfferDecl::Event(fsys::OfferEventDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(source_name.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
+                    target_name: Some(target_name.clone().into()),
                     // We have already validated that none will be present if we were using many
                     // events.
-                    filter: offer.filter.clone(),
+                    filter: match offer.filter.clone() {
+                        Some(dict) => Some(dictionary_from_map(dict)?),
+                        None => None,
+                    },
                 }));
             }
         } else {
@@ -415,14 +508,14 @@ fn translate_offer(
     Ok(out_offers)
 }
 
-fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, Error> {
+fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<fsys::ChildDecl>, Error> {
     let mut out_children = vec![];
     for child in children_in.iter() {
-        out_children.push(cm::Child {
-            name: child.name.clone(),
-            url: child.url.clone(),
-            startup: child.startup.clone(),
-            environment: extract_environment_ref(child.environment.as_ref()),
+        out_children.push(fsys::ChildDecl {
+            name: Some(child.name.clone().into()),
+            url: Some(child.url.clone().into()),
+            startup: Some(translate_startup_mode_to_fidl(&child.startup)),
+            environment: extract_environment_ref(child.environment.as_ref()).map(|e| e.into()),
         });
     }
     Ok(out_children)
@@ -430,13 +523,13 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, E
 
 fn translate_collections(
     collections_in: &Vec<cml::Collection>,
-) -> Result<Vec<cm::Collection>, Error> {
+) -> Result<Vec<fsys::CollectionDecl>, Error> {
     let mut out_collections = vec![];
     for collection in collections_in.iter() {
-        out_collections.push(cm::Collection {
-            name: collection.name.clone(),
-            durability: collection.durability.clone(),
-            environment: extract_environment_ref(collection.environment.as_ref()),
+        out_collections.push(fsys::CollectionDecl {
+            name: Some(collection.name.clone().into()),
+            durability: Some(translate_durability_to_fidl(&collection.durability)),
+            environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
         });
     }
     Ok(out_collections)
@@ -444,43 +537,48 @@ fn translate_collections(
 
 fn translate_capabilities(
     capabilities_in: &Vec<cml::Capability>,
-) -> Result<Vec<cm::Capability>, Error> {
+) -> Result<Vec<fsys::CapabilityDecl>, Error> {
     let mut out_capabilities = vec![];
     for capability in capabilities_in {
         if let Some(n) = &capability.service {
             let source_path =
                 capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-            out_capabilities
-                .push(cm::Capability::Service(cm::Service { name: n.clone(), source_path }));
+            out_capabilities.push(fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                name: Some(n.clone().into()),
+                source_path: Some(source_path.clone().into()),
+            }));
         } else if let Some(n) = &capability.protocol {
             let source_path =
                 capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-            out_capabilities
-                .push(cm::Capability::Protocol(cm::Protocol { name: n.clone(), source_path }));
+            out_capabilities.push(fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                name: Some(n.clone().into()),
+                source_path: Some(source_path.into()),
+            }));
         } else if let Some(n) = &capability.directory {
             let source_path =
                 capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-            out_capabilities.push(cm::Capability::Directory(cm::Directory {
-                name: n.clone(),
-                source_path,
-                rights: extract_required_rights(capability, "capability")?,
+            let rights = extract_required_rights(capability, "capability")?;
+            out_capabilities.push(fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                name: Some(n.clone().into()),
+                source_path: Some(source_path.into()),
+                rights: Some(rights),
             }));
         } else if let Some(n) = &capability.storage {
-            out_capabilities.push(cm::Capability::Storage(cm::Storage {
-                name: n.clone(),
-                source_path: capability.path.clone().expect("missing path"),
-                source: offer_source_from_ref(capability.from.as_ref().unwrap().into())?,
+            out_capabilities.push(fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                name: Some(n.clone().into()),
+                source_path: Some(capability.path.clone().expect("missing path").into()),
+                source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
             }));
         } else if let Some(n) = &capability.runner {
-            out_capabilities.push(cm::Capability::Runner(cm::Runner {
-                name: n.clone(),
-                source_path: capability.path.clone().expect("missing path"),
-                source: offer_source_from_ref(capability.from.as_ref().unwrap().into())?,
+            out_capabilities.push(fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
+                name: Some(n.clone().into()),
+                source_path: Some(capability.path.clone().expect("missing path").into()),
+                source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
             }));
         } else if let Some(n) = &capability.resolver {
-            out_capabilities.push(cm::Capability::Resolver(cm::Resolver {
-                name: n.clone(),
-                source_path: capability.path.clone().expect("missing path"),
+            out_capabilities.push(fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
+                name: Some(n.clone().into()),
+                source_path: Some(capability.path.clone().expect("missing path").into()),
             }));
         } else {
             return Err(Error::internal(format!("no capability in use declaration")));
@@ -489,16 +587,18 @@ fn translate_capabilities(
     Ok(out_capabilities)
 }
 
-fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Environment>, Error> {
+fn translate_environments(
+    envs_in: &Vec<cml::Environment>,
+) -> Result<Vec<fsys::EnvironmentDecl>, Error> {
     envs_in
         .iter()
         .map(|env| {
-            Ok(cm::Environment {
-                name: env.name.clone(),
+            Ok(fsys::EnvironmentDecl {
+                name: Some(env.name.clone().into()),
                 extends: match env.extends {
-                    Some(cml::EnvironmentExtends::Realm) => cm::EnvironmentExtends::Realm,
-                    Some(cml::EnvironmentExtends::None) => cm::EnvironmentExtends::None,
-                    None => cm::EnvironmentExtends::None,
+                    Some(cml::EnvironmentExtends::Realm) => Some(fsys::EnvironmentExtends::Realm),
+                    Some(cml::EnvironmentExtends::None) => Some(fsys::EnvironmentExtends::None),
+                    None => Some(fsys::EnvironmentExtends::None),
                 },
                 runners: env
                     .runners
@@ -528,53 +628,90 @@ fn translate_environments(envs_in: &Vec<cml::Environment>) -> Result<Vec<cm::Env
 
 fn translate_runner_registration(
     reg: &cml::RunnerRegistration,
-) -> Result<cm::RunnerRegistration, Error> {
-    Ok(cm::RunnerRegistration {
-        source_name: reg.runner.clone(),
-        source: extract_single_offer_source(reg)?,
-        target_name: reg.r#as.as_ref().unwrap_or(&reg.runner).clone(),
+) -> Result<fsys::RunnerRegistration, Error> {
+    Ok(fsys::RunnerRegistration {
+        source_name: Some(reg.runner.clone().into()),
+        source: Some(extract_single_offer_source(reg)?),
+        target_name: Some(reg.r#as.as_ref().unwrap_or(&reg.runner).clone().into()),
     })
 }
 
 fn translate_resolver_registration(
     reg: &cml::ResolverRegistration,
-) -> Result<cm::ResolverRegistration, Error> {
-    Ok(cm::ResolverRegistration {
-        resolver: reg.resolver.clone(),
-        source: extract_single_offer_source(reg)?,
-        scheme: reg
-            .scheme
-            .as_str()
-            .parse()
-            .map_err(|e| Error::internal(format!("invalid URL scheme: {}", e)))?,
+) -> Result<fsys::ResolverRegistration, Error> {
+    Ok(fsys::ResolverRegistration {
+        resolver: Some(reg.resolver.clone().into()),
+        source: Some(extract_single_offer_source(reg)?),
+        scheme: Some(
+            reg.scheme
+                .as_str()
+                .parse::<cm_types::UrlScheme>()
+                .map_err(|e| Error::internal(format!("invalid URL scheme: {}", e)))?
+                .into(),
+        ),
     })
 }
 
-fn extract_use_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
+fn extract_use_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
     match in_obj.from.as_ref() {
-        Some(cml::UseFromRef::Parent) => Ok(cm::Ref::Parent(cm::ParentRef {})),
-        Some(cml::UseFromRef::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-        None => Ok(cm::Ref::Parent(cm::ParentRef {})), // Default value.
+        Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
+        Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        None => Ok(fsys::Ref::Parent(fsys::ParentRef {})), // Default value.
     }
 }
 
-fn extract_use_event_source(in_obj: &cml::Use) -> Result<cm::Ref, Error> {
+// Since fsys::Ref is not cloneable, write our own clone function.
+fn clone_fsys_ref(fsys_ref: &fsys::Ref) -> Result<fsys::Ref, Error> {
+    match fsys_ref {
+        fsys::Ref::Parent(parent_ref) => Ok(fsys::Ref::Parent(parent_ref.clone())),
+        fsys::Ref::Self_(self_ref) => Ok(fsys::Ref::Self_(self_ref.clone())),
+        fsys::Ref::Child(child_ref) => Ok(fsys::Ref::Child(child_ref.clone())),
+        fsys::Ref::Collection(collection_ref) => Ok(fsys::Ref::Collection(collection_ref.clone())),
+        fsys::Ref::Storage(storage_ref) => Ok(fsys::Ref::Storage(storage_ref.clone())),
+        fsys::Ref::Framework(framework_ref) => Ok(fsys::Ref::Framework(framework_ref.clone())),
+        _ => Err(Error::internal("Unknown fsys::Ref found.")),
+    }
+}
+
+fn extract_use_event_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
     match in_obj.from.as_ref() {
-        Some(cml::UseFromRef::Parent) => Ok(cm::Ref::Parent(cm::ParentRef {})),
-        Some(cml::UseFromRef::Framework) => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
+        Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
+        Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
         None => Err(Error::internal(format!("No source \"from\" provided for \"use\""))),
     }
 }
 
-fn extract_required_rights<T>(in_obj: &T, keyword: &str) -> Result<cm::Rights, Error>
+fn extract_required_rights<T>(in_obj: &T, keyword: &str) -> Result<fio2::Operations, Error>
 where
     T: cml::RightsClause,
 {
     match in_obj.rights() {
-        Some(right_tokens) => match cml::parse_rights(right_tokens) {
-            Ok(rights) => Ok(rights),
-            _ => Err(Error::internal("Rights provided to use are not well formed.")),
-        },
+        Some(rights_tokens) => {
+            let mut rights = Vec::new();
+            for token in rights_tokens.0.iter() {
+                rights.append(&mut token.expand())
+            }
+            if rights.is_empty() {
+                return Err(Error::missing_rights(format!(
+                    "Rights provided to `{}` are not well formed.",
+                    keyword
+                )));
+            }
+            let mut seen_rights = HashSet::with_capacity(rights.len());
+            let mut operations: fio2::Operations = fio2::Operations::empty();
+            for right in rights.iter() {
+                if seen_rights.contains(&right) {
+                    return Err(Error::duplicate_rights(format!(
+                        "Rights provided to `{}` are not well formed.",
+                        keyword
+                    )));
+                }
+                seen_rights.insert(right);
+                operations |= *right;
+            }
+
+            Ok(operations)
+        }
         None => Err(Error::internal(format!(
             "No `{}` rights provided but required for directories",
             keyword
@@ -594,25 +731,48 @@ fn extract_offer_subdir(in_obj: &cml::Offer) -> Option<cm::RelativePath> {
     in_obj.subdir.clone()
 }
 
-fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<cm::Rights>, Error> {
+fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<fio2::Operations>, Error> {
     match in_obj.rights.as_ref() {
-        Some(rights_tokens) => match cml::parse_rights(rights_tokens) {
-            Ok(rights) => Ok(Some(rights)),
-            _ => Err(Error::internal("Rights provided to expose are not well formed.")),
-        },
+        Some(rights_tokens) => {
+            let mut rights = Vec::new();
+            for token in rights_tokens.0.iter() {
+                rights.append(&mut token.expand())
+            }
+            if rights.is_empty() {
+                return Err(Error::missing_rights(
+                    "Rights provided to expose are not well formed.",
+                ));
+            }
+            let mut seen_rights = HashSet::with_capacity(rights.len());
+            let mut operations: fio2::Operations = fio2::Operations::empty();
+            for right in rights.iter() {
+                if seen_rights.contains(&right) {
+                    return Err(Error::duplicate_rights(
+                        "Rights provided to expose are not well formed.",
+                    ));
+                }
+                seen_rights.insert(right);
+                operations |= *right;
+            }
+
+            Ok(Some(operations))
+        }
+        // Unlike use rights, expose rights can take a None value
         None => Ok(None),
     }
 }
 
-fn expose_source_from_ref(reference: &cml::ExposeFromRef) -> Result<cm::Ref, Error> {
+fn expose_source_from_ref(reference: &cml::ExposeFromRef) -> Result<fsys::Ref, Error> {
     match reference {
-        cml::ExposeFromRef::Named(name) => Ok(cm::Ref::Child(cm::ChildRef { name: name.clone() })),
-        cml::ExposeFromRef::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-        cml::ExposeFromRef::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
+        cml::ExposeFromRef::Named(name) => {
+            Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
+        }
+        cml::ExposeFromRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        cml::ExposeFromRef::Self_ => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
     }
 }
 
-fn extract_single_expose_source(in_obj: &cml::Expose) -> Result<cm::Ref, Error> {
+fn extract_single_expose_source(in_obj: &cml::Expose) -> Result<fsys::Ref, Error> {
     match &in_obj.from {
         OneOrMany::One(reference) => expose_source_from_ref(&reference),
         OneOrMany::Many(many) => {
@@ -624,30 +784,51 @@ fn extract_single_expose_source(in_obj: &cml::Expose) -> Result<cm::Ref, Error> 
     }
 }
 
-fn extract_all_expose_sources(in_obj: &cml::Expose) -> Result<Vec<cm::Ref>, Error> {
+fn extract_all_expose_sources(in_obj: &cml::Expose) -> Result<Vec<fsys::Ref>, Error> {
     in_obj.from.to_vec().into_iter().map(expose_source_from_ref).collect()
 }
 
-fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<cm::Rights>, Error> {
+fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<fio2::Operations>, Error> {
     match in_obj.rights.as_ref() {
-        Some(rights_tokens) => match cml::parse_rights(rights_tokens) {
-            Ok(rights) => Ok(Some(rights)),
-            _ => Err(Error::internal("Rights provided to offer are not well formed.")),
-        },
+        Some(rights_tokens) => {
+            let mut rights = Vec::new();
+            for token in rights_tokens.0.iter() {
+                rights.append(&mut token.expand())
+            }
+            if rights.is_empty() {
+                return Err(Error::missing_rights("Rights provided to offer are not well formed."));
+            }
+            let mut seen_rights = HashSet::with_capacity(rights.len());
+            let mut operations: fio2::Operations = fio2::Operations::empty();
+            for right in rights.iter() {
+                if seen_rights.contains(&right) {
+                    return Err(Error::duplicate_rights(
+                        "Rights provided to offer are not well formed.",
+                    ));
+                }
+                seen_rights.insert(right);
+                operations |= *right;
+            }
+
+            Ok(Some(operations))
+        }
+        // Unlike use rights, offer rights can take a None value
         None => Ok(None),
     }
 }
 
-fn offer_source_from_ref(reference: cml::AnyRef) -> Result<cm::Ref, Error> {
+fn offer_source_from_ref(reference: cml::AnyRef) -> Result<fsys::Ref, Error> {
     match reference {
-        cml::AnyRef::Named(name) => Ok(cm::Ref::Child(cm::ChildRef { name: name.clone() })),
-        cml::AnyRef::Framework => Ok(cm::Ref::Framework(cm::FrameworkRef {})),
-        cml::AnyRef::Parent => Ok(cm::Ref::Parent(cm::ParentRef {})),
-        cml::AnyRef::Self_ => Ok(cm::Ref::Self_(cm::SelfRef {})),
+        cml::AnyRef::Named(name) => {
+            Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
+        }
+        cml::AnyRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        cml::AnyRef::Parent => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
+        cml::AnyRef::Self_ => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
     }
 }
 
-fn extract_single_offer_source<T>(in_obj: &T) -> Result<cm::Ref, Error>
+fn extract_single_offer_source<T>(in_obj: &T) -> Result<fsys::Ref, Error>
 where
     T: cml::FromClause,
 {
@@ -662,11 +843,11 @@ where
     }
 }
 
-fn extract_all_offer_sources(in_obj: &cml::Offer) -> Result<Vec<cm::Ref>, Error> {
+fn extract_all_offer_sources(in_obj: &cml::Offer) -> Result<Vec<fsys::Ref>, Error> {
     in_obj.from.to_vec().into_iter().map(|r| offer_source_from_ref(r.into())).collect()
 }
 
-fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<cm::Ref, Error> {
+fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<fsys::Ref, Error> {
     let reference = match &in_obj.from {
         OneOrMany::One(r) => r,
         OneOrMany::Many(_) => {
@@ -677,9 +858,9 @@ fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<cm::Ref, E
         }
     };
     match reference {
-        cml::OfferFromRef::Parent => Ok(cm::Ref::Parent(cm::ParentRef {})),
+        cml::OfferFromRef::Parent => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         cml::OfferFromRef::Named(name) => {
-            Ok(cm::Ref::Storage(cm::StorageRef { name: name.clone() }))
+            Ok(fsys::Ref::Storage(fsys::StorageRef { name: name.clone().into() }))
         }
         other => Err(Error::internal(format!("invalid \"from\" for \"offer\": {:?}", other))),
     }
@@ -689,13 +870,13 @@ fn translate_child_or_collection_ref(
     reference: cml::AnyRef,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-) -> Result<cm::Ref, Error> {
+) -> Result<fsys::Ref, Error> {
     match reference {
         cml::AnyRef::Named(name) if all_children.contains(name) => {
-            Ok(cm::Ref::Child(cm::ChildRef { name: name.clone() }))
+            Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
         }
         cml::AnyRef::Named(name) if all_collections.contains(name) => {
-            Ok(cm::Ref::Collection(cm::CollectionRef { name: name.clone() }))
+            Ok(fsys::Ref::Collection(fsys::CollectionRef { name: name.clone().into() }))
         }
         cml::AnyRef::Named(_) => {
             Err(Error::internal(format!("dangling reference: \"{}\"", reference)))
@@ -708,7 +889,7 @@ fn extract_storage_targets(
     in_obj: &cml::Offer,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-) -> Result<Vec<cm::Ref>, Error> {
+) -> Result<Vec<fsys::Ref>, Error> {
     in_obj
         .to
         .0
@@ -722,7 +903,7 @@ fn extract_all_targets_for_each_child(
     in_obj: &cml::Offer,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-) -> Result<Vec<(cm::Ref, cml::NameOrPath)>, Error> {
+) -> Result<Vec<(fsys::Ref, cml::NameOrPath)>, Error> {
     let mut out_targets = vec![];
 
     let target_ids = all_target_capability_ids(in_obj, in_obj, cml::RoutingClauseType::Offer)
@@ -851,11 +1032,11 @@ where
     }
 }
 
-fn extract_expose_target(in_obj: &cml::Expose) -> Result<cm::ExposeTarget, Error> {
+fn extract_expose_target(in_obj: &cml::Expose) -> Result<fsys::Ref, Error> {
     match &in_obj.to {
-        Some(cml::ExposeToRef::Parent) => Ok(cm::ExposeTarget::Parent),
-        Some(cml::ExposeToRef::Framework) => Ok(cm::ExposeTarget::Framework),
-        None => Ok(cm::ExposeTarget::Parent),
+        Some(cml::ExposeToRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
+        Some(cml::ExposeToRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        None => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
     }
 }
 
@@ -869,12 +1050,11 @@ fn extract_environment_ref(r: Option<&cml::EnvironmentRef>) -> Option<cm::Name> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cm_json::Error;
+    use fidl::encoding::decode_persistent;
     use matches::assert_matches;
     use serde_json::json;
-    use std::fs::File;
     use std::io;
-    use std::io::{Read, Write};
+    use std::io::Write;
     use tempfile::TempDir;
 
     macro_rules! test_compile {
@@ -891,29 +1071,44 @@ mod tests {
                 $(#[$m])*
                 #[test]
                 fn $test_name() {
-                    compile_test($input, $result, true);
+                    compile_test($input, $result);
                 }
             )+
         }
     }
 
-    fn compile_test(input: serde_json::value::Value, expected_output: &str, pretty: bool) {
+    fn compile_test(input: serde_json::value::Value, expected_output: fsys::ComponentDecl) {
         let tmp_dir = TempDir::new().unwrap();
         let tmp_in_path = tmp_dir.path().join("test.cml");
         let tmp_out_path = tmp_dir.path().join("test.cm");
 
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
 
-        compile(&tmp_in_path, pretty, Some(tmp_out_path.clone())).expect("compilation failed");
-        let mut buffer = String::new();
-        fs::File::open(&tmp_out_path).unwrap().read_to_string(&mut buffer).unwrap();
-        assert_eq!(buffer, expected_output);
+        compile(&tmp_in_path, &tmp_out_path.clone()).expect("compilation failed");
+        let mut buffer = Vec::new();
+        fs::File::open(&tmp_out_path).unwrap().read_to_end(&mut buffer).unwrap();
+        let output: fsys::ComponentDecl = decode_persistent(&buffer).unwrap();
+        assert_eq!(output, expected_output);
+    }
+
+    fn default_component_decl() -> fsys::ComponentDecl {
+        fsys::ComponentDecl {
+            program: None,
+            uses: None,
+            exposes: None,
+            offers: None,
+            capabilities: None,
+            children: None,
+            collections: None,
+            environments: None,
+            facets: None,
+        }
     }
 
     test_compile! {
         test_compile_empty => {
             input = json!({}),
-            output = "{}",
+            output = default_component_decl(),
         },
 
         test_compile_program => {
@@ -925,18 +1120,20 @@ mod tests {
                     { "runner": "elf" }
                 ]
             }),
-            output = r#"{
-    "program": {
-        "binary": "bin/app"
-    },
-    "uses": [
-        {
-            "runner": {
-                "source_name": "elf"
-            }
-        }
-    ]
-}"#,
+            output = fsys::ComponentDecl {
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                    }]),
+                }),
+                uses: Some(vec![fsys::UseDecl::Runner (
+                    fsys::UseRunnerDecl {
+                        source_name: Some("elf".to_string()),
+                    }
+                )]),
+                ..default_component_decl()
+            },
         },
         test_compile_program_with_lifecycle => {
             input = json!({
@@ -950,19 +1147,26 @@ mod tests {
                     { "runner": "elf" }
                 ]
             }),
-            output = r#"{
-    "program": {
-        "binary": "bin/app",
-        "lifecycle.stop_event": "notify"
-    },
-    "uses": [
-        {
-            "runner": {
-                "source_name": "elf"
-            }
-        }
-    ]
-}"#,
+            output = fsys::ComponentDecl {
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                        },
+                        fdata::DictionaryEntry {
+                            key: "lifecycle.stop_event".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
+                        },
+                    ]),
+                }),
+                uses: Some(vec![fsys::UseDecl::Runner (
+                    fsys::UseRunnerDecl {
+                        source_name: Some("elf".to_string()),
+                    }
+                )]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_use => {
@@ -1003,177 +1207,150 @@ mod tests {
                     },
                 ],
             }),
-            output = r#"{
-    "uses": [
-        {
-            "service": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "CoolFonts",
-                "target_path": "/svc/fuchsia.fonts.Provider"
-            }
-        },
-        {
-            "service": {
-                "source": {
-                    "framework": {}
-                },
-                "source_name": "fuchsia.sys2.Realm",
-                "target_path": "/svc/fuchsia.sys2.Realm"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "LegacyCoolFonts",
-                "target_path": "/svc/fuchsia.fonts.LegacyProvider"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "/fonts/LegacyCoolFonts",
-                "target_path": "/svc/fuchsia.fonts.LegacyProvider2"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "framework": {}
-                },
-                "source_path": "fuchsia.sys2.LegacyRealm",
-                "target_path": "/svc/fuchsia.sys2.LegacyRealm"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "framework": {}
-                },
-                "source_path": "/svc/fuchsia.sys2.LegacyRealm2",
-                "target_path": "/svc/fuchsia.sys2.LegacyRealm2"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "assets",
-                "target_path": "/data/assets",
-                "rights": [
-                    "read_bytes"
-                ]
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "/data/assets2",
-                "target_path": "/data/assets2",
-                "rights": [
-                    "read_bytes"
-                ]
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "config",
-                "target_path": "/data/config",
-                "rights": [
-                    "read_bytes"
-                ],
-                "subdir": "fonts"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "/data/config2",
-                "target_path": "/data/config2",
-                "rights": [
-                    "read_bytes"
-                ],
-                "subdir": "fonts"
-            }
-        },
-        {
-            "storage": {
-                "type": "meta"
-            }
-        },
-        {
-            "storage": {
-                "type": "cache",
-                "target_path": "/tmp"
-            }
-        },
-        {
-            "runner": {
-                "source_name": "elf"
-            }
-        },
-        {
-            "runner": {
-                "source_name": "web"
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "destroyed",
-                "target_name": "destroyed",
-                "filter": null
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "framework": {}
-                },
-                "source_name": "started",
-                "target_name": "started",
-                "filter": null
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "framework": {}
-                },
-                "source_name": "stopped",
-                "target_name": "stopped",
-                "filter": null
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "capability_ready",
-                "target_name": "diagnostics",
-                "filter": {
-                    "path": "/diagnostics"
-                }
-            }
-        }
-    ]
-}"#,
+            output = fsys::ComponentDecl {
+                uses: Some(vec![
+                    fsys::UseDecl::Service (
+                        fsys::UseServiceDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("CoolFonts".to_string()),
+                            target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Service (
+                        fsys::UseServiceDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_name: Some("fuchsia.sys2.Realm".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("LegacyCoolFonts".to_string()),
+                            target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("/fonts/LegacyCoolFonts".to_string()),
+                            target_path: Some("/svc/fuchsia.fonts.LegacyProvider2".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_path: Some("fuchsia.sys2.LegacyRealm".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.LegacyRealm".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_path: Some("/svc/fuchsia.sys2.LegacyRealm2".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.LegacyRealm2".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Directory (
+                        fsys::UseDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("assets".to_string()),
+                            target_path: Some("/data/assets".to_string()),
+                            rights: Some(fio2::Operations::ReadBytes),
+                            subdir: None,
+                        }
+                    ),
+                    fsys::UseDecl::Directory (
+                        fsys::UseDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("/data/assets2".to_string()),
+                            target_path: Some("/data/assets2".to_string()),
+                            rights: Some(fio2::Operations::ReadBytes),
+                            subdir: None,
+                        }
+                    ),
+                    fsys::UseDecl::Directory (
+                        fsys::UseDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("config".to_string()),
+                            target_path: Some("/data/config".to_string()),
+                            rights: Some(fio2::Operations::ReadBytes),
+                            subdir: Some("fonts".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Directory (
+                        fsys::UseDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("/data/config2".to_string()),
+                            target_path: Some("/data/config2".to_string()),
+                            rights: Some(fio2::Operations::ReadBytes),
+                            subdir: Some("fonts".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Storage (
+                        fsys::UseStorageDecl {
+                            type_: Some(fsys::StorageType::Meta),
+                            target_path: None,
+                        }
+                    ),
+                    fsys::UseDecl::Storage (
+                        fsys::UseStorageDecl {
+                            type_: Some(fsys::StorageType::Cache),
+                            target_path: Some("/tmp".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Runner (
+                        fsys::UseRunnerDecl {
+                            source_name: Some("elf".to_string())
+                        }
+                    ),
+                    fsys::UseDecl::Runner (
+                        fsys::UseRunnerDecl {
+                            source_name: Some("web".to_string())
+                        }
+                    ),
+                    fsys::UseDecl::Event (
+                        fsys::UseEventDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("destroyed".to_string()),
+                            target_name: Some("destroyed".to_string()),
+                            filter: None,
+                        }
+                    ),
+                    fsys::UseDecl::Event (
+                        fsys::UseEventDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_name: Some("started".to_string()),
+                            target_name: Some("started".to_string()),
+                            filter: None,
+                        }
+                    ),
+                    fsys::UseDecl::Event (
+                        fsys::UseEventDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_name: Some("stopped".to_string()),
+                            target_name: Some("stopped".to_string()),
+                            filter: None,
+                        }
+                    ),
+                    fsys::UseDecl::Event (
+                        fsys::UseEventDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("capability_ready".to_string()),
+                            target_name: Some("diagnostics".to_string()),
+                            filter: Some(fdata::Dictionary {
+                                entries: Some(vec![
+                                    fdata::DictionaryEntry {
+                                        key: "path".to_string(),
+                                        value: Some(Box::new(fdata::DictionaryValue::Str("/diagnostics".to_string()))),
+                                    },
+                                ]),
+                            }),
+                        }
+                    ),
+                ]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_expose => {
@@ -1250,245 +1427,219 @@ mod tests {
                     },
                 ]
             }),
-            output = r#"{
-    "exposes": [
-        {
-            "service": {
-                "source": {
-                    "child": {
-                        "name": "logger"
+            output = fsys::ComponentDecl {
+                exposes: Some(vec![
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target_name: Some("fuchsia.logger.Log2".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service".to_string()),
+                            target_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("my.service.Service".to_string()),
+                            target_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        }
+                    ),
+                    fsys::ExposeDecl::Protocol (
+                        fsys::ExposeProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Protocol (
+                        fsys::ExposeProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("/svc/fuchsia.logger.LegacyLog2".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Protocol (
+                        fsys::ExposeProtocolDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("A".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("A".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Protocol (
+                        fsys::ExposeProtocolDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("B".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("B".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Protocol (
+                        fsys::ExposeProtocolDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("/A".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("/A".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Protocol (
+                        fsys::ExposeProtocolDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("/B".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("/B".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Directory (
+                        fsys::ExposeDirectoryDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("blob".to_string()),
+                            target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            target_path: Some("blob".to_string()),
+                            rights: Some(
+                                fio2::Operations::Connect | fio2::Operations::Enumerate |
+                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
+                                fio2::Operations::GetAttributes
+                            ),
+                            subdir: None,
+                        }
+                    ),
+                    fsys::ExposeDecl::Directory (
+                        fsys::ExposeDirectoryDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("/volumes/blobfs/blob".to_string()),
+                            target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            target_path: Some("/volumes/blobfs/blob".to_string()),
+                            rights: Some(
+                                fio2::Operations::Connect | fio2::Operations::Enumerate |
+                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
+                                fio2::Operations::GetAttributes
+                            ),
+                            subdir: None,
+                        }
+                    ),
+                    fsys::ExposeDecl::Directory (
+                        fsys::ExposeDirectoryDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_path: Some("hub".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("hub".to_string()),
+                            rights: None,
+                            subdir: None,
+                        }
+                    ),
+                    fsys::ExposeDecl::Directory (
+                        fsys::ExposeDirectoryDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_path: Some("/hub".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("/hub".to_string()),
+                            rights: None,
+                            subdir: None,
+                        }
+                    ),
+                    fsys::ExposeDecl::Runner (
+                        fsys::ExposeRunnerDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("web".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("web".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Runner (
+                        fsys::ExposeRunnerDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("web".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("web-rename".to_string()),
+                        }
+                    ),
+                    fsys::ExposeDecl::Resolver (
+                        fsys::ExposeResolverDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my_resolver".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("pkg_resolver".to_string()),
+                        }
+                    ),
+                ]),
+                offers: None,
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("my.service.Service".to_string()),
+                            source_path: Some("/svc/my.service.Service".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Protocol (
+                        fsys::ProtocolDecl {
+                            name: Some("A".to_string()),
+                            source_path: Some("/svc/A".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Protocol (
+                        fsys::ProtocolDecl {
+                            name: Some("B".to_string()),
+                            source_path: Some("/svc/B".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Directory (
+                        fsys::DirectoryDecl {
+                            name: Some("blob".to_string()),
+                            source_path: Some("/volumes/blobfs/blob".to_string()),
+                            rights: Some(fio2::Operations::Connect | fio2::Operations::Enumerate |
+                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
+                                fio2::Operations::GetAttributes
+                            ),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Runner (
+                        fsys::RunnerDecl {
+                            name: Some("web".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("/svc/fuchsia.component.ComponentRunner".to_string()),
+                        }
+                    ),
+                ]),
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
                     }
-                },
-                "source_name": "fuchsia.logger.Log",
-                "target_name": "fuchsia.logger.Log2",
-                "target": "parent"
-            }
-        },
-        {
-            "service": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_name": "my.service.Service",
-                "target_name": "my.service.Service",
-                "target": "parent"
-            }
-        },
-        {
-            "service": {
-                "source": {
-                    "self": {}
-                },
-                "source_name": "my.service.Service",
-                "target_name": "my.service.Service",
-                "target": "parent"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "fuchsia.logger.Log",
-                "target_path": "fuchsia.logger.LegacyLog",
-                "target": "parent"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "/loggers/fuchsia.logger.LegacyLog",
-                "target_path": "/svc/fuchsia.logger.LegacyLog2",
-                "target": "parent"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "A",
-                "target_path": "A",
-                "target": "parent"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "B",
-                "target_path": "B",
-                "target": "parent"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "/A",
-                "target_path": "/A",
-                "target": "parent"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "/B",
-                "target_path": "/B",
-                "target": "parent"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "blob",
-                "target_path": "blob",
-                "target": "framework",
-                "rights": [
-                    "connect",
-                    "enumerate",
-                    "traverse",
-                    "read_bytes",
-                    "get_attributes"
-                ]
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "/volumes/blobfs/blob",
-                "target_path": "/volumes/blobfs/blob",
-                "target": "framework",
-                "rights": [
-                    "connect",
-                    "enumerate",
-                    "traverse",
-                    "read_bytes",
-                    "get_attributes"
-                ]
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "framework": {}
-                },
-                "source_path": "hub",
-                "target_path": "hub",
-                "target": "parent"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "framework": {}
-                },
-                "source_path": "/hub",
-                "target_path": "/hub",
-                "target": "parent"
-            }
-        },
-        {
-            "runner": {
-                "source": {
-                    "self": {}
-                },
-                "source_name": "web",
-                "target": "parent",
-                "target_name": "web"
-            }
-        },
-        {
-            "runner": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_name": "web",
-                "target": "parent",
-                "target_name": "web-rename"
-            }
-        },
-        {
-            "resolver": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_name": "my_resolver",
-                "target": "parent",
-                "target_name": "pkg_resolver"
-            }
-        }
-    ],
-    "capabilities": [
-        {
-            "service": {
-                "name": "my.service.Service",
-                "source_path": "/svc/my.service.Service"
-            }
-        },
-        {
-            "protocol": {
-                "name": "A",
-                "source_path": "/svc/A"
-            }
-        },
-        {
-            "protocol": {
-                "name": "B",
-                "source_path": "/svc/B"
-            }
-        },
-        {
-            "directory": {
-                "name": "blob",
-                "source_path": "/volumes/blobfs/blob",
-                "rights": [
-                    "connect",
-                    "enumerate",
-                    "traverse",
-                    "read_bytes",
-                    "get_attributes"
-                ]
-            }
-        },
-        {
-            "runner": {
-                "name": "web",
-                "source": {
-                    "self": {}
-                },
-                "source_path": "/svc/fuchsia.component.ComponentRunner"
-            }
-        }
-    ],
-    "children": [
-        {
-            "name": "logger",
-            "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-            "startup": "lazy"
-        }
-    ]
-}"#,
+                ]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_offer => {
@@ -1666,466 +1817,392 @@ mod tests {
                     },
                 ],
             }),
-            output = r#"{
-    "offers": [
-        {
-            "service": {
-                "source": {
-                    "child": {
-                        "name": "logger"
+            output = fsys::ComponentDecl {
+                offers: Some(vec![
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("fuchsia.logger.Log".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("fuchsia.logger.Log2".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("fuchsia.logger.LegacySysLog".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("/svc/fuchsia.logger.LegacySysLog".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("fuchsia.setui.SetUiService".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("fuchsia.setui.SetUiService".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("fuchsia.wlan.service.Wlan".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("fuchsia.wlan.service.Wlan".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("/svc/fuchsia.setui.SetUiService".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("/svc/fuchsia.setui.SetUiService".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("/svc/fuchsia.wlan.service.Wlan".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("/svc/fuchsia.wlan.service.Wlan".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("assets".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_path: Some("assets".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("/data/assets".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_path: Some("/data/assets".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("data".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("assets".to_string()),
+                            rights: None,
+                            subdir: Some("index/file".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("/data/assets".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("/data".to_string()),
+                            rights: None,
+                            subdir: Some("index/file".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_path: Some("hub".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("hub".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_path: Some("/hub".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("/hub".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                        }
+                    ),
+                    fsys::OfferDecl::Storage (
+                        fsys::OfferStorageDecl {
+                            type_: Some(fsys::StorageType::Data),
+                            source: Some(fsys::Ref::Storage(fsys::StorageRef {
+                                name: "logger-storage".to_string(),
+                            })),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                        }
+                    ),
+                    fsys::OfferDecl::Storage (
+                        fsys::OfferStorageDecl {
+                            type_: Some(fsys::StorageType::Data),
+                            source: Some(fsys::Ref::Storage(fsys::StorageRef {
+                                name: "logger-storage".to_string(),
+                            })),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                        }
+                    ),
+                    fsys::OfferDecl::Runner (
+                        fsys::OfferRunnerDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("web".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("web".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Runner (
+                        fsys::OfferRunnerDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("elf".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("elf-renamed".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Event (
+                        fsys::OfferEventDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_name: Some("destroyed".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("destroyed_net".to_string()),
+                            filter: None,
+                        }
+                    ),
+                    fsys::OfferDecl::Event (
+                        fsys::OfferEventDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("stopped".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("stopped".to_string()),
+                            filter: None,
+                        }
+                    ),
+                    fsys::OfferDecl::Event (
+                        fsys::OfferEventDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("started".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("started".to_string()),
+                            filter: None,
+                        }
+                    ),
+                    fsys::OfferDecl::Event (
+                        fsys::OfferEventDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("capability_ready".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("net-ready".to_string()),
+                            filter: Some(fdata::Dictionary {
+                                entries: Some(vec![
+                                    fdata::DictionaryEntry {
+                                        key: "path".to_string(),
+                                        value: Some(Box::new(fdata::DictionaryValue::StrVec(
+                                            vec!["/diagnostics".to_string(), "/foo/bar".to_string()]
+                                        ))),
+                                    },
+                                ]),
+                            }),
+                        }
+                    ),
+                    fsys::OfferDecl::Resolver (
+                        fsys::OfferResolverDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("my_resolver".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("pkg_resolver".to_string()),
+                        }
+                    ),
+                ]),
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("my.service.Service".to_string()),
+                            source_path: Some("/svc/my.service.Service".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Storage (
+                        fsys::StorageDecl {
+                            name: Some("logger-storage".to_string()),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("/minfs".to_string()),
+                        }
+                    )
+                ]),
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                    },
+                    fsys::ChildDecl {
+                        name: Some("netstack".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                    },
+                ]),
+                collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
+                        environment: None,
                     }
-                },
-                "source_name": "fuchsia.logger.Log",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_name": "fuchsia.logger.Log"
-            }
-        },
-        {
-            "service": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_name": "fuchsia.logger.Log",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "fuchsia.logger.Log2"
-            }
-        },
-        {
-            "service": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_name": "my.service.Service",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_name": "my.service.Service"
-            }
-        },
-        {
-            "service": {
-                "source": {
-                    "self": {}
-                },
-                "source_name": "my.service.Service",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_name": "my.service.Service"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "fuchsia.logger.LegacyLog",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_path": "fuchsia.logger.LegacyLog",
-                "dependency_type": "weak_for_migration"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "/svc/fuchsia.logger.LegacyLog",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_path": "/svc/fuchsia.logger.LegacyLog",
-                "dependency_type": "weak_for_migration"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "fuchsia.logger.LegacyLog",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "fuchsia.logger.LegacySysLog",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "/svc/fuchsia.logger.LegacyLog",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "/svc/fuchsia.logger.LegacySysLog",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "fuchsia.setui.SetUiService",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "fuchsia.setui.SetUiService",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "fuchsia.wlan.service.Wlan",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "fuchsia.wlan.service.Wlan",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "/svc/fuchsia.setui.SetUiService",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "/svc/fuchsia.setui.SetUiService",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "/svc/fuchsia.wlan.service.Wlan",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "/svc/fuchsia.wlan.service.Wlan",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "assets",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_path": "assets",
-                "dependency_type": "weak_for_migration"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "/data/assets",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_path": "/data/assets",
-                "dependency_type": "weak_for_migration"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "data",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "assets",
-                "subdir": "index/file",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "/data/assets",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "/data",
-                "subdir": "index/file",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "framework": {}
-                },
-                "source_path": "hub",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "hub",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "directory": {
-                "source": {
-                    "framework": {}
-                },
-                "source_path": "/hub",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "/hub",
-                "dependency_type": "strong"
-            }
-        },
-        {
-            "storage": {
-                "type": "data",
-                "source": {
-                    "storage": {
-                        "name": "logger-storage"
-                    }
-                },
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                }
-            }
-        },
-        {
-            "storage": {
-                "type": "data",
-                "source": {
-                    "storage": {
-                        "name": "logger-storage"
-                    }
-                },
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                }
-            }
-        },
-        {
-            "runner": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "web",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "web"
-            }
-        },
-        {
-            "runner": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "elf",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "elf-renamed"
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "framework": {}
-                },
-                "source_name": "destroyed",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_name": "destroyed_net",
-                "filter": null
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "stopped",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "stopped",
-                "filter": null
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "started",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "started",
-                "filter": null
-            }
-        },
-        {
-            "event": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "capability_ready",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_name": "net-ready",
-                "filter": {
-                    "path": [
-                        "/diagnostics",
-                        "/foo/bar"
-                    ]
-                }
-            }
-        },
-        {
-            "resolver": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "my_resolver",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "pkg_resolver"
-            }
-        }
-    ],
-    "capabilities": [
-        {
-            "service": {
-                "name": "my.service.Service",
-                "source_path": "/svc/my.service.Service"
-            }
-        },
-        {
-            "storage": {
-                "name": "logger-storage",
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "/minfs"
-            }
-        }
-    ],
-    "children": [
-        {
-            "name": "logger",
-            "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-            "startup": "lazy"
-        },
-        {
-            "name": "netstack",
-            "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
-            "startup": "lazy"
-        }
-    ],
-    "collections": [
-        {
-            "name": "modular",
-            "durability": "persistent"
-        }
-    ]
-}"#,
+                ]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_children => {
@@ -2154,32 +2231,38 @@ mod tests {
                     },
                 ],
             }),
-            output = r#"{
-    "children": [
-        {
-            "name": "logger",
-            "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-            "startup": "lazy"
-        },
-        {
-            "name": "gmail",
-            "url": "https://www.google.com/gmail",
-            "startup": "eager"
-        },
-        {
-            "name": "echo",
-            "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
-            "startup": "lazy",
-            "environment": "myenv"
-        }
-    ],
-    "environments": [
-        {
-            "name": "myenv",
-            "extends": "realm"
-        }
-    ]
-}"#,
+            output = fsys::ComponentDecl {
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                    },
+                    fsys::ChildDecl {
+                        name: Some("gmail".to_string()),
+                        url: Some("https://www.google.com/gmail".to_string()),
+                        startup: Some(fsys::StartupMode::Eager),
+                        environment: None,
+                    },
+                    fsys::ChildDecl {
+                        name: Some("echo".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: Some("myenv".to_string()),
+                    }
+                ]),
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: None,
+                    }
+                ]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_collections => {
@@ -2202,25 +2285,30 @@ mod tests {
                     }
                 ],
             }),
-            output = r#"{
-    "collections": [
-        {
-            "name": "modular",
-            "durability": "persistent"
-        },
-        {
-            "name": "tests",
-            "durability": "transient",
-            "environment": "myenv"
-        }
-    ],
-    "environments": [
-        {
-            "name": "myenv",
-            "extends": "realm"
-        }
-    ]
-}"#,
+            output = fsys::ComponentDecl {
+                collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
+                        environment: None,
+                    },
+                    fsys::CollectionDecl {
+                        name: Some("tests".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                        environment: Some("myenv".to_string()),
+                    }
+                ]),
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: None,
+                    }
+                ]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_capabilities => {
@@ -2267,76 +2355,73 @@ mod tests {
                     },
                 ]
             }),
-            output = r#"{
-    "capabilities": [
-        {
-            "service": {
-                "name": "myservice",
-                "source_path": "/service"
-            }
-        },
-        {
-            "service": {
-                "name": "myservice2",
-                "source_path": "/svc/myservice2"
-            }
-        },
-        {
-            "protocol": {
-                "name": "myprotocol",
-                "source_path": "/protocol"
-            }
-        },
-        {
-            "protocol": {
-                "name": "myprotocol2",
-                "source_path": "/svc/myprotocol2"
-            }
-        },
-        {
-            "directory": {
-                "name": "mydirectory",
-                "source_path": "/directory",
-                "rights": [
-                    "connect"
-                ]
-            }
-        },
-        {
-            "storage": {
-                "name": "mystorage",
-                "source": {
-                    "child": {
-                        "name": "minfs"
+            output = fsys::ComponentDecl {
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("myservice".to_string()),
+                            source_path: Some("/service".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("myservice2".to_string()),
+                            source_path: Some("/svc/myservice2".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Protocol (
+                        fsys::ProtocolDecl {
+                            name: Some("myprotocol".to_string()),
+                            source_path: Some("/protocol".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Protocol (
+                        fsys::ProtocolDecl {
+                            name: Some("myprotocol2".to_string()),
+                            source_path: Some("/svc/myprotocol2".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Directory (
+                        fsys::DirectoryDecl {
+                            name: Some("mydirectory".to_string()),
+                            source_path: Some("/directory".to_string()),
+                            rights: Some(fio2::Operations::Connect),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Storage (
+                        fsys::StorageDecl {
+                            name: Some("mystorage".to_string()),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "minfs".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("/storage".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Runner (
+                        fsys::RunnerDecl {
+                            name: Some("myrunner".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("/runner".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Resolver (
+                        fsys::ResolverDecl {
+                            name: Some("myresolver".to_string()),
+                            source_path: Some("/resolver".to_string()),
+                        }
+                    )
+                ]),
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("minfs".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
                     }
-                },
-                "source_path": "/storage"
-            }
-        },
-        {
-            "runner": {
-                "name": "myrunner",
-                "source": {
-                    "self": {}
-                },
-                "source_path": "/runner"
-            }
-        },
-        {
-            "resolver": {
-                "name": "myresolver",
-                "source_path": "/resolver"
-            }
-        }
-    ],
-    "children": [
-        {
-            "name": "minfs",
-            "url": "fuchsia-pkg://fuchsia.com/minfs/stable#meta/minfs.cm",
-            "startup": "lazy"
-        }
-    ]
-}"#,
+                ]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_facets => {
@@ -2349,19 +2434,41 @@ mod tests {
                     }
                 }
             }),
-            output = r#"{
-    "facets": {
-        "metadata": {
-            "authors": [
-                "me",
-                "you"
-            ],
-            "title": "foo",
-            "year": 2018
-        }
-    }
-}"#,
+            output = fsys::ComponentDecl {
+                facets: Some(fsys::Object {
+                    entries: vec![
+                        fsys::Entry {
+                            key: "metadata".to_string(),
+                            value: Some(Box::new(fsys::Value::Obj(fsys::Object {
+                                entries: vec![
+                                    fsys::Entry {
+                                        key: "authors".to_string(),
+                                        value: Some(Box::new(fsys::Value::Vec (
+                                            fsys::Vector {
+                                                values: vec![
+                                                    Some(Box::new(fsys::Value::Str("me".to_string()))),
+                                                    Some(Box::new(fsys::Value::Str("you".to_string()))),
+                                                ]
+                                            }
+                                        ))),
+                                    },
+                                    fsys::Entry {
+                                        key: "title".to_string(),
+                                        value: Some(Box::new(fsys::Value::Str("foo".to_string()))),
+                                    },
+                                    fsys::Entry {
+                                        key: "year".to_string(),
+                                        value: Some(Box::new(fsys::Value::Inum(2018))),
+                                    },
+                                ],
+                            }))),
+                        },
+                    ],
+                }),
+                ..default_component_decl()
+            },
         },
+
         test_compile_environment => {
             input = json!({
                 "environments": [
@@ -2379,24 +2486,34 @@ mod tests {
                     }
                 ],
             }),
-            output = r#"{
-    "environments": [
-        {
-            "name": "myenv",
-            "extends": "none"
+            output = fsys::ComponentDecl {
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::None),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: None,
+                    },
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv2".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: None,
+                    },
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv3".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::None),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: Some(8000),
+                    },
+                ]),
+                ..default_component_decl()
+            },
         },
-        {
-            "name": "myenv2",
-            "extends": "realm"
-        },
-        {
-            "name": "myenv3",
-            "extends": "none",
-            "__stop_timeout_ms": 8000
-        }
-    ]
-}"#,
-        },
+
         test_compile_environment_with_runner_and_resolver => {
             input = json!({
                 "environments": [
@@ -2418,33 +2535,32 @@ mod tests {
                     },
                 ],
             }),
-            output = r#"{
-    "environments": [
-        {
-            "name": "myenv",
-            "extends": "none",
-            "runners": [
-                {
-                    "source_name": "dart",
-                    "source": {
-                        "parent": {}
+            output = fsys::ComponentDecl {
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::None),
+                        runners: Some(vec![
+                            fsys::RunnerRegistration {
+                                source_name: Some("dart".to_string()),
+                                source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                                target_name: Some("dart".to_string()),
+                            }
+                        ]),
+                        resolvers: Some(vec![
+                            fsys::ResolverRegistration {
+                                resolver: Some("pkg_resolver".to_string()),
+                                source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                                scheme: Some("fuchsia-pkg".to_string()),
+                            }
+                        ]),
+                        stop_timeout_ms: None,
                     },
-                    "target_name": "dart"
-                }
-            ],
-            "resolvers": [
-                {
-                    "resolver": "pkg_resolver",
-                    "source": {
-                        "parent": {}
-                    },
-                    "scheme": "fuchsia-pkg"
-                }
-            ]
-        }
-    ]
-}"#,
+                ]),
+                ..default_component_decl()
+            },
         },
+
         test_compile_environment_with_runner_alias => {
             input = json!({
                 "environments": [
@@ -2460,23 +2576,24 @@ mod tests {
                     },
                 ],
             }),
-            output = r#"{
-    "environments": [
-        {
-            "name": "myenv",
-            "extends": "none",
-            "runners": [
-                {
-                    "source_name": "dart",
-                    "source": {
-                        "parent": {}
+            output = fsys::ComponentDecl {
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::None),
+                        runners: Some(vec![
+                            fsys::RunnerRegistration {
+                                source_name: Some("dart".to_string()),
+                                source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                                target_name: Some("my-dart".to_string()),
+                            }
+                        ]),
+                        resolvers: None,
+                        stop_timeout_ms: None,
                     },
-                    "target_name": "my-dart"
-                }
-            ]
-        }
-    ]
-}"#,
+                ]),
+                ..default_component_decl()
+            },
         },
 
         test_compile_all_sections => {
@@ -2545,193 +2662,184 @@ mod tests {
                     }
                 ],
             }),
-            output = r#"{
-    "program": {
-        "binary": "bin/app"
-    },
-    "uses": [
-        {
-            "service": {
-                "source": {
-                    "parent": {}
-                },
-                "source_name": "CoolFonts",
-                "target_path": "/svc/fuchsia.fonts.Provider"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "LegacyCoolFonts",
-                "target_path": "/svc/fuchsia.fonts.LegacyProvider"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "ReallyGoodFonts",
-                "target_path": "/svc/ReallyGoodFonts"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "parent": {}
-                },
-                "source_path": "IWouldNeverUseTheseFonts",
-                "target_path": "/svc/IWouldNeverUseTheseFonts"
-            }
-        },
-        {
-            "runner": {
-                "source_name": "elf"
-            }
-        }
-    ],
-    "exposes": [
-        {
-            "directory": {
-                "source": {
-                    "self": {}
-                },
-                "source_path": "blobfs",
-                "target_path": "blobfs",
-                "target": "parent",
-                "rights": [
-                    "connect",
-                    "enumerate",
-                    "traverse",
-                    "read_bytes",
-                    "get_attributes"
-                ]
-            }
-        }
-    ],
-    "offers": [
-        {
-            "service": {
-                "source": {
-                    "child": {
-                        "name": "logger"
+            output = fsys::ComponentDecl {
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                    }]),
+                }),
+                uses: Some(vec![
+                    fsys::UseDecl::Service (
+                        fsys::UseServiceDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("CoolFonts".to_string()),
+                            target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("LegacyCoolFonts".to_string()),
+                            target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("ReallyGoodFonts".to_string()),
+                            target_path: Some("/svc/ReallyGoodFonts".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_path: Some("IWouldNeverUseTheseFonts".to_string()),
+                            target_path: Some("/svc/IWouldNeverUseTheseFonts".to_string()),
+                        }
+                    ),
+                    fsys::UseDecl::Runner (
+                        fsys::UseRunnerDecl {
+                            source_name: Some("elf".to_string()),
+                        }
+                    ),
+                ]),
+                exposes: Some(vec![
+                    fsys::ExposeDecl::Directory (
+                        fsys::ExposeDirectoryDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("blobfs".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_path: Some("blobfs".to_string()),
+                            rights: Some(
+                                fio2::Operations::Connect | fio2::Operations::Enumerate |
+                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
+                                fio2::Operations::GetAttributes
+                            ),
+                            subdir: None,
+                        }
+                    ),
+                ]),
+                offers: Some(vec![
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("fuchsia.logger.Log".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("fuchsia.logger.Log".to_string()),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_path: Some("fuchsia.logger.LegacyLog".to_string()),
+                            dependency_type: Some(fsys::DependencyType::WeakForMigration),
+                        }
+                    ),
+                ]),
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Directory (
+                        fsys::DirectoryDecl {
+                            name: Some("blobfs".to_string()),
+                            source_path: Some("/volumes/blobfs".to_string()),
+                            rights: Some(fio2::Operations::Connect | fio2::Operations::Enumerate |
+                                fio2::Operations::Traverse | fio2::Operations::ReadBytes |
+                                fio2::Operations::GetAttributes
+                            ),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Runner (
+                        fsys::RunnerDecl {
+                            name: Some("myrunner".to_string()),
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_path: Some("/runner".to_string()),
+                        }
+                    ),
+                ]),
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                    },
+                    fsys::ChildDecl {
+                        name: Some("netstack".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                    },
+                ]),
+                collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("modular".to_string()),
+                        durability: Some(fsys::Durability::Persistent),
+                        environment: None,
                     }
-                },
-                "source_name": "fuchsia.logger.Log",
-                "target": {
-                    "child": {
-                        "name": "netstack"
+                ]),
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: None,
                     }
-                },
-                "target_name": "fuchsia.logger.Log"
-            }
-        },
-        {
-            "service": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_name": "fuchsia.logger.Log",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_name": "fuchsia.logger.Log"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "fuchsia.logger.LegacyLog",
-                "target": {
-                    "child": {
-                        "name": "netstack"
-                    }
-                },
-                "target_path": "fuchsia.logger.LegacyLog",
-                "dependency_type": "weak_for_migration"
-            }
-        },
-        {
-            "protocol": {
-                "source": {
-                    "child": {
-                        "name": "logger"
-                    }
-                },
-                "source_path": "fuchsia.logger.LegacyLog",
-                "target": {
-                    "collection": {
-                        "name": "modular"
-                    }
-                },
-                "target_path": "fuchsia.logger.LegacyLog",
-                "dependency_type": "weak_for_migration"
-            }
-        }
-    ],
-    "capabilities": [
-        {
-            "directory": {
-                "name": "blobfs",
-                "source_path": "/volumes/blobfs",
-                "rights": [
-                    "connect",
-                    "enumerate",
-                    "traverse",
-                    "read_bytes",
-                    "get_attributes"
-                ]
-            }
-        },
-        {
-            "runner": {
-                "name": "myrunner",
-                "source": {
-                    "self": {}
-                },
-                "source_path": "/runner"
-            }
-        }
-    ],
-    "children": [
-        {
-            "name": "logger",
-            "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-            "startup": "lazy"
-        },
-        {
-            "name": "netstack",
-            "url": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
-            "startup": "lazy"
-        }
-    ],
-    "collections": [
-        {
-            "name": "modular",
-            "durability": "persistent"
-        }
-    ],
-    "facets": {
-        "author": "Fuchsia",
-        "year": 2018
-    },
-    "environments": [
-        {
-            "name": "myenv",
-            "extends": "realm"
-        }
-    ]
-}"#,
+                ]),
+                facets: Some(fsys::Object {
+                    entries: vec![
+                        fsys::Entry {
+                            key: "author".to_string(),
+                            value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
+                        },
+                        fsys::Entry {
+                            key: "year".to_string(),
+                            value: Some(Box::new(fsys::Value::Inum(2018))),
+                        },
+                    ],
+                }),
+            },
         },
     }
 
@@ -2744,8 +2852,29 @@ mod tests {
                 { "directory": "/data/assets", "rights": ["read_bytes"] }
             ]
         });
-        let output = r#"{"uses":[{"service":{"source":{"parent":{}},"source_name":"CoolFonts","target_path":"/svc/fuchsia.fonts.Provider"}},{"protocol":{"source":{"parent":{}},"source_path":"/fonts/LegacyCoolFonts","target_path":"/svc/fuchsia.fonts.LegacyProvider"}},{"directory":{"source":{"parent":{}},"source_path":"/data/assets","target_path":"/data/assets","rights":["read_bytes"]}}]}"#;
-        compile_test(input, &output, false);
+        let output = fsys::ComponentDecl {
+            uses: Some(vec![
+                fsys::UseDecl::Service(fsys::UseServiceDecl {
+                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                    source_name: Some("CoolFonts".to_string()),
+                    target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                }),
+                fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
+                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                    source_path: Some("/fonts/LegacyCoolFonts".to_string()),
+                    target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+                }),
+                fsys::UseDecl::Directory(fsys::UseDirectoryDecl {
+                    source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                    source_path: Some("/data/assets".to_string()),
+                    target_path: Some("/data/assets".to_string()),
+                    rights: Some(fio2::Operations::ReadBytes),
+                    subdir: None,
+                }),
+            ]),
+            ..default_component_decl()
+        };
+        compile_test(input, output);
     }
 
     #[test]
@@ -2761,7 +2890,7 @@ mod tests {
         });
         File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         {
-            let result = compile(&tmp_in_path, false, Some(tmp_out_path.clone()));
+            let result = compile(&tmp_in_path, &tmp_out_path.clone());
             assert_matches!(
                 result,
                 Err(Error::Parse { err, ..  }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""

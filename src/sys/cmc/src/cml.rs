@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::error::Error,
     crate::one_or_many::OneOrMany,
-    cm_json::{cm, Error},
     cmc_macro::{CheckedVec, OneOrMany, Reference},
+    fidl_fuchsia_io2 as fio2,
     serde::{de, Deserialize},
     serde_json::{Map, Value},
     std::{collections::HashMap, fmt},
@@ -293,70 +294,60 @@ impl fmt::Display for Right {
 }
 
 impl Right {
-    /// Expands this right or bundle or rights into a list of `cm::Right`.
-    pub fn expand(&self) -> Vec<cm::Right> {
+    /// Expands this right or bundle or rights into a list of `fio2::Operations`.
+    pub fn expand(&self) -> Vec<fio2::Operations> {
         match self {
-            Self::Connect => vec![cm::Right::Connect],
-            Self::Enumerate => vec![cm::Right::Enumerate],
-            Self::Execute => vec![cm::Right::Execute],
-            Self::GetAttributes => vec![cm::Right::GetAttributes],
-            Self::ModifyDirectory => vec![cm::Right::ModifyDirectory],
-            Self::ReadBytes => vec![cm::Right::ReadBytes],
-            Self::Traverse => vec![cm::Right::Traverse],
-            Self::UpdateAttributes => vec![cm::Right::UpdateAttributes],
-            Self::WriteBytes => vec![cm::Right::WriteBytes],
-            Self::Admin => vec![cm::Right::Admin],
+            Self::Connect => vec![fio2::Operations::Connect],
+            Self::Enumerate => vec![fio2::Operations::Enumerate],
+            Self::Execute => vec![fio2::Operations::Execute],
+            Self::GetAttributes => vec![fio2::Operations::GetAttributes],
+            Self::ModifyDirectory => vec![fio2::Operations::ModifyDirectory],
+            Self::ReadBytes => vec![fio2::Operations::ReadBytes],
+            Self::Traverse => vec![fio2::Operations::Traverse],
+            Self::UpdateAttributes => vec![fio2::Operations::UpdateAttributes],
+            Self::WriteBytes => vec![fio2::Operations::WriteBytes],
+            Self::Admin => vec![fio2::Operations::Admin],
             Self::ReadAlias => vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::ReadBytes,
-                cm::Right::GetAttributes,
+                fio2::Operations::Connect,
+                fio2::Operations::Enumerate,
+                fio2::Operations::Traverse,
+                fio2::Operations::ReadBytes,
+                fio2::Operations::GetAttributes,
             ],
             Self::WriteAlias => vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::WriteBytes,
-                cm::Right::ModifyDirectory,
-                cm::Right::UpdateAttributes,
+                fio2::Operations::Connect,
+                fio2::Operations::Enumerate,
+                fio2::Operations::Traverse,
+                fio2::Operations::WriteBytes,
+                fio2::Operations::ModifyDirectory,
+                fio2::Operations::UpdateAttributes,
             ],
             Self::ExecuteAlias => vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::Execute,
+                fio2::Operations::Connect,
+                fio2::Operations::Enumerate,
+                fio2::Operations::Traverse,
+                fio2::Operations::Execute,
             ],
             Self::ReadWriteAlias => vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::ReadBytes,
-                cm::Right::WriteBytes,
-                cm::Right::ModifyDirectory,
-                cm::Right::GetAttributes,
-                cm::Right::UpdateAttributes,
+                fio2::Operations::Connect,
+                fio2::Operations::Enumerate,
+                fio2::Operations::Traverse,
+                fio2::Operations::ReadBytes,
+                fio2::Operations::WriteBytes,
+                fio2::Operations::ModifyDirectory,
+                fio2::Operations::GetAttributes,
+                fio2::Operations::UpdateAttributes,
             ],
             Self::ReadExecuteAlias => vec![
-                cm::Right::Connect,
-                cm::Right::Enumerate,
-                cm::Right::Traverse,
-                cm::Right::ReadBytes,
-                cm::Right::GetAttributes,
-                cm::Right::Execute,
+                fio2::Operations::Connect,
+                fio2::Operations::Enumerate,
+                fio2::Operations::Traverse,
+                fio2::Operations::ReadBytes,
+                fio2::Operations::GetAttributes,
+                fio2::Operations::Execute,
             ],
         }
     }
-}
-
-/// Converts a set of cml right tokens (including aliases) into a well formed cm::Rights expansion.
-/// A `cm::RightsValidationError` is returned on invalid rights.
-pub fn parse_rights(right_tokens: &Rights) -> Result<cm::Rights, cm::RightsValidationError> {
-    let mut rights = Vec::<cm::Right>::new();
-    for right_token in right_tokens.0.iter() {
-        rights.append(&mut right_token.expand());
-    }
-    cm::Rights::new(rights)
 }
 
 #[derive(Deserialize, Debug)]
@@ -1123,59 +1114,59 @@ mod tests {
         }
     }
 
-    fn expand_rights_test(input: Right, expected: Vec<cm::Right>) {
+    fn expand_rights_test(input: Right, expected: Vec<fio2::Operations>) {
         assert_eq!(input.expand(), expected);
     }
 
     test_expand_rights! {
-        (Right::Connect, vec![cm::Right::Connect]),
-        (Right::Enumerate, vec![cm::Right::Enumerate]),
-        (Right::Execute, vec![cm::Right::Execute]),
-        (Right::GetAttributes, vec![cm::Right::GetAttributes]),
-        (Right::ModifyDirectory, vec![cm::Right::ModifyDirectory]),
-        (Right::ReadBytes, vec![cm::Right::ReadBytes]),
-        (Right::Traverse, vec![cm::Right::Traverse]),
-        (Right::UpdateAttributes, vec![cm::Right::UpdateAttributes]),
-        (Right::WriteBytes, vec![cm::Right::WriteBytes]),
-        (Right::Admin, vec![cm::Right::Admin]),
+        (Right::Connect, vec![fio2::Operations::Connect]),
+        (Right::Enumerate, vec![fio2::Operations::Enumerate]),
+        (Right::Execute, vec![fio2::Operations::Execute]),
+        (Right::GetAttributes, vec![fio2::Operations::GetAttributes]),
+        (Right::ModifyDirectory, vec![fio2::Operations::ModifyDirectory]),
+        (Right::ReadBytes, vec![fio2::Operations::ReadBytes]),
+        (Right::Traverse, vec![fio2::Operations::Traverse]),
+        (Right::UpdateAttributes, vec![fio2::Operations::UpdateAttributes]),
+        (Right::WriteBytes, vec![fio2::Operations::WriteBytes]),
+        (Right::Admin, vec![fio2::Operations::Admin]),
         (Right::ReadAlias, vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::ReadBytes,
-            cm::Right::GetAttributes,
+            fio2::Operations::Connect,
+            fio2::Operations::Enumerate,
+            fio2::Operations::Traverse,
+            fio2::Operations::ReadBytes,
+            fio2::Operations::GetAttributes,
         ]),
         (Right::WriteAlias, vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::WriteBytes,
-            cm::Right::ModifyDirectory,
-            cm::Right::UpdateAttributes,
+            fio2::Operations::Connect,
+            fio2::Operations::Enumerate,
+            fio2::Operations::Traverse,
+            fio2::Operations::WriteBytes,
+            fio2::Operations::ModifyDirectory,
+            fio2::Operations::UpdateAttributes,
         ]),
         (Right::ExecuteAlias, vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::Execute,
+            fio2::Operations::Connect,
+            fio2::Operations::Enumerate,
+            fio2::Operations::Traverse,
+            fio2::Operations::Execute,
         ]),
         (Right::ReadWriteAlias, vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::ReadBytes,
-            cm::Right::WriteBytes,
-            cm::Right::ModifyDirectory,
-            cm::Right::GetAttributes,
-            cm::Right::UpdateAttributes,
+            fio2::Operations::Connect,
+            fio2::Operations::Enumerate,
+            fio2::Operations::Traverse,
+            fio2::Operations::ReadBytes,
+            fio2::Operations::WriteBytes,
+            fio2::Operations::ModifyDirectory,
+            fio2::Operations::GetAttributes,
+            fio2::Operations::UpdateAttributes,
         ]),
         (Right::ReadExecuteAlias, vec![
-            cm::Right::Connect,
-            cm::Right::Enumerate,
-            cm::Right::Traverse,
-            cm::Right::ReadBytes,
-            cm::Right::GetAttributes,
-            cm::Right::Execute,
+            fio2::Operations::Connect,
+            fio2::Operations::Enumerate,
+            fio2::Operations::Traverse,
+            fio2::Operations::ReadBytes,
+            fio2::Operations::GetAttributes,
+            fio2::Operations::Execute,
         ]),
     }
 

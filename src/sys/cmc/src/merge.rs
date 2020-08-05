@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    cm_json::{self, Error, Location},
+    crate::error::{Error, Location},
     serde_json::{json, Value},
     serde_json5,
     std::fs,

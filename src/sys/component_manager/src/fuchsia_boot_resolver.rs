@@ -5,7 +5,6 @@
 use {
     crate::model::resolver::{Resolver, ResolverError, ResolverFut},
     anyhow::Error,
-    cm_fidl_translator::translate,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys,
@@ -68,11 +67,9 @@ impl FuchsiaBootResolver {
         // Read component manifest from resource into a component decl.
         let cm_file = io_util::open_file(&self.boot_proxy, &res_path, fio::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
-        let cm_str = io_util::read_file(&cm_file)
+        let component_decl = io_util::read_file_fidl(&cm_file)
             .await
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
-        let component_decl =
-            translate(&cm_str).map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
         let path_proxy = io_util::open_directory(
@@ -227,9 +224,8 @@ mod tests {
         let path = Path::new("meta/hello-world.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
-        let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");
         assert_eq!(
-            cm_fidl_translator::translate(&cm_contents).expect("could not parse cm"),
+            io_util::read_file_fidl::<ComponentDecl>(&file_proxy).await.expect("could not read cm"),
             expected_decl
         );
 

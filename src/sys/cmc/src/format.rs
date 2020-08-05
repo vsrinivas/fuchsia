@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use cm_json::{Error, Location};
+use crate::error::{Error, Location};
 use json5format;
 use json5format::{FormatOptions, PathOption};
 use maplit::hashmap;
