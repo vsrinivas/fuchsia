@@ -591,6 +591,45 @@ class TaskState {
   WaitQueue retcode_wait_queue_;
 };
 
+// Keeps track of whether a thread is allowed to allocate memory.
+//
+// A thread's |MemoryAllocationState| should only be accessed by that thread itself or interrupt
+// handlers running in the thread's context.
+class MemoryAllocationState {
+ public:
+  void Disable() {
+    atomic_signal_fence();
+    disable_count_++;
+    atomic_signal_fence();
+  }
+
+  void Enable() {
+    atomic_signal_fence();
+    DEBUG_ASSERT(disable_count_ > 0);
+    disable_count_--;
+    atomic_signal_fence();
+  }
+
+  // Returns true if memory allocation is allowed.
+  bool IsEnabled() {
+    atomic_signal_fence();
+    return disable_count_ == 0;
+  }
+
+ private:
+  // Notice that we aren't using atomic operations to access the field.  We don't need atomic
+  // operations here as long as...
+  //
+  // 1. We use atomic_signal_fence to prevent compiler reordering.
+  //
+  // 2. We use volatile to ensure the compiler actually generates loads and stores for the value (so
+  // the interrupt handler can see what the thread see, and vice versa).
+  //
+  // 3. Upon completion, an interrupt handler that modified the field restores it to the value it
+  // held at the start of the interrupt.
+  volatile uint32_t disable_count_ = 0;
+};
+
 struct Thread {
   // TODO(kulakowski) Are these needed?
   // Default constructor/destructor declared to be not-inline in order to
@@ -757,6 +796,10 @@ struct Thread {
 
     static PreemptionState& preemption_state() {
       return Thread::Current::Get()->preemption_state();
+    }
+
+    static MemoryAllocationState& memory_allocation_state() {
+      return Thread::Current::Get()->memory_allocation_state_;
     }
 
     // Print the backtrace on the current thread
@@ -1021,6 +1064,8 @@ struct Thread {
 
   PreemptionState preemption_state_;
 
+  MemoryAllocationState memory_allocation_state_;
+
   // This is used by dispatcher.cc:SafeDeleter.
   void* recursive_object_deletion_list_ = nullptr;
 
@@ -1168,6 +1213,16 @@ class ScopedThreadExceptionContext {
   const arch_exception_context_t* context_;
   bool need_to_remove_;
   bool need_to_restore_;
+};
+
+// RAII helper to enforce that a block of code does not allocate memory.
+//
+// See |Thread::Current::memory_allocation_state()|.
+class ScopedMemoryAllocationDisabled {
+ public:
+  ScopedMemoryAllocationDisabled() { Thread::Current::memory_allocation_state().Disable(); }
+  ~ScopedMemoryAllocationDisabled() { Thread::Current::memory_allocation_state().Enable(); }
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedMemoryAllocationDisabled);
 };
 
 // These come last, after the definitions of both Thread and WaitQueue.

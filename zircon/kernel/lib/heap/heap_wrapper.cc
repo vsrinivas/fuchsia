@@ -21,6 +21,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
+#include <kernel/thread.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -131,6 +132,7 @@ void heap_trim() { cmpct_trim(); }
 
 void* malloc(size_t size) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
   LTRACEF("size %zu\n", size);
 
@@ -150,6 +152,7 @@ void* malloc(size_t size) {
 
 void* malloc_debug_caller_(size_t size, void* caller) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
   LTRACEF("size %zu\n", size);
 
@@ -169,6 +172,7 @@ void* malloc_debug_caller_(size_t size, void* caller) {
 
 void* memalign_debug_caller_(size_t align, size_t size, void* caller) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
   LTRACEF("size %zu\n", size);
 
@@ -188,6 +192,7 @@ void* memalign_debug_caller_(size_t align, size_t size, void* caller) {
 
 void* memalign(size_t boundary, size_t size) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
   LTRACEF("boundary %zu, size %zu\n", boundary, size);
 
@@ -207,6 +212,7 @@ void* memalign(size_t boundary, size_t size) {
 
 void* calloc(size_t count, size_t size) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
   LTRACEF("count %zu, size %zu\n", count, size);
 
@@ -226,6 +232,7 @@ void* calloc(size_t count, size_t size) {
 
 void* realloc(void* ptr, size_t size) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 
   LTRACEF("ptr %p, size %zu\n", ptr, size);
 

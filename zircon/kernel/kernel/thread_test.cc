@@ -555,6 +555,33 @@ bool backtrace_test() {
   END_TEST;
 }
 
+bool scoped_allocation_disabled_test() {
+  BEGIN_TEST;
+
+  EXPECT_TRUE(Thread::Current::memory_allocation_state().IsEnabled());
+
+  Thread::Current::memory_allocation_state().Disable();
+  EXPECT_FALSE(Thread::Current::memory_allocation_state().IsEnabled());
+  Thread::Current::memory_allocation_state().Enable();
+  EXPECT_TRUE(Thread::Current::memory_allocation_state().IsEnabled());
+
+  {
+    EXPECT_TRUE(Thread::Current::memory_allocation_state().IsEnabled());
+    {
+      ScopedMemoryAllocationDisabled smad;
+      EXPECT_FALSE(Thread::Current::memory_allocation_state().IsEnabled());
+      {
+        ScopedMemoryAllocationDisabled smad;
+        EXPECT_FALSE(Thread::Current::memory_allocation_state().IsEnabled());
+      }
+      EXPECT_FALSE(Thread::Current::memory_allocation_state().IsEnabled());
+    }
+    EXPECT_TRUE(Thread::Current::memory_allocation_state().IsEnabled());
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
@@ -569,4 +596,5 @@ UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
 UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
 UNITTEST("runtime_test", runtime_test)
 UNITTEST("backtrace_test", backtrace_test)
+UNITTEST("scoped_allocation_disabled_test", scoped_allocation_disabled_test)
 UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

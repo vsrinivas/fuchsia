@@ -94,7 +94,12 @@ void MemoryWatchdog::OnOom() {
       Thread::Current::SleepRelative(ZX_MSEC(500));
       break;
 
-    case OomBehavior::kReboot:
+    case OomBehavior::kReboot: {
+      // We are out of or nearly out of memory so future attempts to allocate may fail.  From this
+      // point on, avoid performing any allocation.  Establish a "no allocation allowed" scope to
+      // detect (assert) if we attempt to allocate.
+      ScopedMemoryAllocationDisabled allocation_disabled;
+
       const int kSleepSeconds = 8;
       printf("memory-pressure: pausing for %ds after OOM mem signal\n", kSleepSeconds);
       zx_status_t status = Thread::Current::SleepRelative(ZX_SEC(kSleepSeconds));
@@ -127,6 +132,7 @@ void MemoryWatchdog::OnOom() {
       ASSERT_MSG(status == ZX_OK, "dlog_shutdown failed: %d\n", status);
 
       platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
+    }
   }
 }
 
