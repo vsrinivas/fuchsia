@@ -200,7 +200,7 @@ void bootstrap_vmos(Handle** handles) {
 
   // Crashlog.
   fbl::RefPtr<VmObject> crashlog_vmo;
-  size_t crashlog_size;
+  size_t crashlog_size = 0;
   status = crashlog_to_vmo(&crashlog_vmo, &crashlog_size);
   ASSERT(status == ZX_OK);
   status = get_vmo_handle(crashlog_vmo, true, crashlog_size, nullptr, &handles[kCrashlog]);
