@@ -31,7 +31,7 @@ class MixStage : public ReadableStream {
   std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
   void Trim(zx::time dest_ref_time) override;
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  TimelineFunctionSnapshot ReferenceClockToFixed() const override;
   AudioClock& reference_clock() override { return output_ref_clock_; }
   void SetMinLeadTime(zx::duration min_lead_time) override;
 

@@ -512,7 +512,7 @@ zx_status_t AudioDriverV2::Start() {
     // See the comments for the accessors in audio_device.h for detailed descriptions.
     zx::time first_ptscts_time = ref_start_time() + external_delay_;
     uint32_t frames_per_sec = format->frames_per_second();
-    uint32_t frac_frames_per_sec = FractionalFrames<int64_t>(frames_per_sec).raw_value();
+    uint32_t frac_frames_per_sec = Fixed(frames_per_sec).raw_value();
 
     ptscts_ref_clock_to_fractional_frames_ = TimelineFunction{
         0,                        // First frac_frame presented/captured at ring buffer is always 0.

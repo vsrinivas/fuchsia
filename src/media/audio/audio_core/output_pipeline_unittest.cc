@@ -36,8 +36,7 @@ const Format kDefaultFormat =
         .take_value();
 
 const TimelineFunction kDefaultTransform = TimelineFunction(
-    TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                 zx::sec(1).to_nsecs()));
+    TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
 enum ClockMode { SAME, WITH_OFFSET, RATE_ADJUST };
 
@@ -298,10 +297,9 @@ TEST_F(OutputPipelineTest, Loopback) {
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto transform = pipeline->loopback()->ReferenceClockToFractionalFrames();
+  auto transform = pipeline->loopback()->ReferenceClockToFixed();
   auto loopback_frame =
-      FractionalFrames<int64_t>::FromRaw(transform.timeline_function.Apply((zx::time(0)).get()))
-          .Floor();
+      Fixed::FromRaw(transform.timeline_function.Apply((zx::time(0)).get())).Floor();
   auto loopback_buf = pipeline->loopback()->ReadLock(zx::time(0) + zx::msec(1), loopback_frame, 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), 0u);
@@ -370,10 +368,9 @@ TEST_F(OutputPipelineTest, LoopbackWithUpsample) {
 
   // We loopback after the mix stage and before the linearize stage. So we should observe only a
   // single effects pass. Therefore we expect all loopback samples to be 1.0.
-  auto transform = pipeline->loopback()->ReferenceClockToFractionalFrames();
+  auto transform = pipeline->loopback()->ReferenceClockToFixed();
   auto loopback_frame =
-      FractionalFrames<int64_t>::FromRaw(transform.timeline_function.Apply((zx::time(0)).get()))
-          .Floor();
+      Fixed::FromRaw(transform.timeline_function.Apply((zx::time(0)).get())).Floor();
   auto loopback_buf = pipeline->loopback()->ReadLock(zx::time(0) + zx::msec(1), loopback_frame, 48);
   ASSERT_TRUE(loopback_buf);
   ASSERT_EQ(loopback_buf->start().Floor(), 0u);

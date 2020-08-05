@@ -35,7 +35,7 @@ class TestOutputPipeline : public OutputPipeline {
     return buffer;
   }
   void Trim(zx::time dest_ref_time) override {}
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
+  TimelineFunctionSnapshot ReferenceClockToFixed() const override {
     return TimelineFunctionSnapshot{
         .timeline_function = TimelineFunction(),
         .generation = kInvalidGenerationId,
@@ -305,8 +305,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
                      })
           .take_value();
   const TimelineFunction kDefaultTransform = TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs()));
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
   // Create OutputPipeline with no effects and verify output.
   static PipelineConfig default_config = PipelineConfig::Default();

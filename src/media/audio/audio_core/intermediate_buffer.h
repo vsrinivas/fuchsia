@@ -28,7 +28,7 @@ class IntermediateBuffer : public WritableStream {
 
   // |media::audio::WritableStream|
   std::optional<Buffer> WriteLock(zx::time ref_time, int64_t frame, uint32_t frame_count) override;
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  TimelineFunctionSnapshot ReferenceClockToFixed() const override;
   AudioClock& reference_clock() override { return audio_clock_; }
 
  private:

@@ -47,17 +47,15 @@ class EffectsStage : public ReadableStream {
   std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
   void Trim(zx::time dest_ref_time) override { source_->Trim(dest_ref_time); }
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  TimelineFunctionSnapshot ReferenceClockToFixed() const override;
   AudioClock& reference_clock() override { return source_->reference_clock(); }
 
   void SetMinLeadTime(zx::duration lead_time) override;
-  void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
-                       FractionalFrames<int64_t> frac_source_mix_point,
+  void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                        zx::duration underflow_duration) override {
     source_->ReportUnderflow(frac_source_start, frac_source_mix_point, underflow_duration);
   }
-  void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
-                              int64_t dest_mix_offset) override {
+  void ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) override {
     source_->ReportPartialUnderflow(frac_source_offset, dest_mix_offset);
   }
 

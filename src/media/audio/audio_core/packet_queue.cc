@@ -151,8 +151,7 @@ void PacketQueue::Trim(zx::time ref_time) {
   TRACE_DURATION("audio", "PacketQueue::Trim");
   int64_t ref_now_ticks = (ref_time - zx::time(0)).to_nsecs();
 
-  auto frac_frame_to_trim =
-      FractionalFrames<int64_t>::FromRaw(timeline_function_->get().first(ref_now_ticks));
+  auto frac_frame_to_trim = Fixed::FromRaw(timeline_function_->get().first(ref_now_ticks));
 
   std::lock_guard<std::mutex> locker(pending_mutex_);
   while (!pending_packet_queue_.empty()) {
@@ -165,7 +164,7 @@ void PacketQueue::Trim(zx::time ref_time) {
   }
 }
 
-BaseStream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFractionalFrames() const {
+BaseStream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFixed() const {
   if (!timeline_function_) {
     return {
         .timeline_function = TimelineFunction(),
@@ -180,8 +179,7 @@ BaseStream::TimelineFunctionSnapshot PacketQueue::ReferenceClockToFractionalFram
   };
 }
 
-void PacketQueue::ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
-                                  FractionalFrames<int64_t> frac_source_mix_point,
+void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                                   zx::duration underflow_duration) {
   TRACE_INSTANT("audio", "PacketQueue::ReportUnderflow", TRACE_SCOPE_PROCESS);
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
@@ -216,8 +214,7 @@ void PacketQueue::ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
   }
 }
 
-void PacketQueue::ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
-                                         int64_t dest_mix_offset) {
+void PacketQueue::ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) {
   TRACE_INSTANT("audio", "PacketQueue::ReportPartialUnderflow", TRACE_SCOPE_PROCESS);
 
   // Shifts by less than four source frames do not necessarily indicate underflow. A shift of this

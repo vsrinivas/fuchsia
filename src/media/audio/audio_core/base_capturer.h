@@ -153,9 +153,8 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
  private:
   void UpdateState(State new_state);
 
-  void OverflowOccurred(FractionalFrames<int64_t> source_start, FractionalFrames<int64_t> mix_point,
-                        zx::duration overflow_duration);
-  void PartialOverflowOccurred(FractionalFrames<int64_t> source_offset, int64_t mix_offset);
+  void OverflowOccurred(Fixed source_start, Fixed mix_point, zx::duration overflow_duration);
+  void PartialOverflowOccurred(Fixed source_offset, int64_t mix_offset);
 
   // |fuchsia::media::AudioCapturer|
   void GetStreamType(GetStreamTypeCallback cbk) final;
@@ -197,8 +196,7 @@ class BaseCapturer : public AudioObject, public fuchsia::media::AudioCapturer {
     return TimelineRate(ZX_SEC(1), format_.frames_per_second());
   }
   TimelineRate fractional_dest_frames_to_ref_clock_rate() {
-    return TimelineRate(ZX_SEC(1),
-                        FractionalFrames<int64_t>(format_.frames_per_second()).raw_value());
+    return TimelineRate(ZX_SEC(1), Fixed(format_.frames_per_second()).raw_value());
   }
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;

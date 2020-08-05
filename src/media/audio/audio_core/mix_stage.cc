@@ -24,8 +24,7 @@ namespace {
 
 TimelineFunction ReferenceClockToIntegralFrames(
     TimelineFunction reference_clock_to_fractional_frames) {
-  TimelineRate frames_per_fractional_frame =
-      TimelineRate(1, FractionalFrames<uint32_t>(1).raw_value());
+  TimelineRate frames_per_fractional_frame = TimelineRate(1, Fixed(1).raw_value());
   return TimelineFunction::Compose(TimelineFunction(frames_per_fractional_frame),
                                    reference_clock_to_fractional_frames);
 }
@@ -116,7 +115,7 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time,
   }
   FX_DCHECK(output_buffer->start().Floor() == frame);
 
-  auto snapshot = output_stream_->ReferenceClockToFractionalFrames();
+  auto snapshot = output_stream_->ReferenceClockToFixed();
 
   cur_mix_job_.buf = static_cast<float*>(output_buffer->payload());
   cur_mix_job_.buf_frames = output_buffer->length().Floor();
@@ -138,9 +137,9 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(zx::time dest_ref_time,
       [output_buffer = std::move(output_buffer)](bool) mutable { output_buffer = std::nullopt; });
 }
 
-BaseStream::TimelineFunctionSnapshot MixStage::ReferenceClockToFractionalFrames() const {
-  TRACE_DURATION("audio", "MixStage::ReferenceClockToFractionalFrames");
-  return output_stream_->ReferenceClockToFractionalFrames();
+BaseStream::TimelineFunctionSnapshot MixStage::ReferenceClockToFixed() const {
+  TRACE_DURATION("audio", "MixStage::ReferenceClockToFixed");
+  return output_stream_->ReferenceClockToFixed();
 }
 
 void MixStage::SetMinLeadTime(zx::duration min_lead_time) {
@@ -201,8 +200,8 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_r
   // Calculate the first sampling point for the initial job, in source sub-frames. Use timestamps
   // for the first and last dest frames we need, translated into the source (frac_frame) timeline.
   auto& info = mixer.bookkeeping();
-  auto frac_source_for_first_mix_job_frame = FractionalFrames<int64_t>::FromRaw(
-      info.dest_frames_to_frac_source_frames(cur_mix_job_.start_pts_of));
+  auto frac_source_for_first_mix_job_frame =
+      Fixed::FromRaw(info.dest_frames_to_frac_source_frames(cur_mix_job_.start_pts_of));
 
   while (true) {
     // At this point we know we need to consume some source data, but we don't yet know how much.
@@ -214,9 +213,8 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream, zx::time source_r
     }
 
     // Calculate this job's last sampling point.
-    FractionalFrames<int64_t> source_frames =
-        FractionalFrames<int64_t>::FromRaw(
-            info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left)) +
+    Fixed source_frames =
+        Fixed::FromRaw(info.dest_frames_to_frac_source_frames.rate().Scale(dest_frames_left)) +
         mixer.pos_filter_width();
 
     // Try to grab the front of the packet queue (or ring buffer, if capturing).
@@ -283,14 +281,14 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 
   // Determine this job's first and last sampling points, in source sub-frames. Use the next
   // expected source position (in frac_frames) saved in our long-running position accounting.
-  FractionalFrames<int64_t> frac_source_for_first_mix_job_frame = info.next_frac_source_frame;
+  Fixed frac_source_for_first_mix_job_frame = info.next_frac_source_frame;
 
   // This represents the last possible source frame we need for this mix. Note that it is 1 subframe
   // short of the source needed for the SUBSEQUENT dest frame, floored to an integral source frame.
   // We cannot just subtract one integral frame from the source corresponding to the next start dest
   // because very large or small step_size values make this 1-frame assumption invalid.
   //
-  auto frac_source_for_final_mix_job_frame = FractionalFrames<int64_t>::FromRaw(
+  auto frac_source_for_final_mix_job_frame = Fixed::FromRaw(
       frac_source_for_first_mix_job_frame.raw_value() +
       (info.step_size * dest_frames_left +
        (info.rate_modulo * dest_frames_left + info.src_pos_modulo) / info.denominator) -
@@ -300,24 +298,21 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   //
   // Assert our implementation-defined limit is compatible with the FIDL limit. The latter is
   // already enforced by the renderer implementation.
-  static_assert(fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET <=
-                FractionalFrames<int32_t>::Max().Floor());
+  static_assert(fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET <= Fixed::Max().Floor());
   FX_DCHECK(source_buffer.end() > source_buffer.start());
-  FX_DCHECK(source_buffer.length() <= FractionalFrames<uint32_t>(FractionalFrames<int32_t>::Max()));
+  FX_DCHECK(source_buffer.length() <= Fixed(Fixed::Max()));
 
   // Calculate the actual first and final frame times in the source packet.
-  FractionalFrames<int64_t> frac_source_for_first_packet_frame = source_buffer.start();
-  FractionalFrames<int64_t> frac_source_for_final_packet_frame =
-      source_buffer.end() - FractionalFrames<int64_t>(1);
+  Fixed frac_source_for_first_packet_frame = source_buffer.start();
+  Fixed frac_source_for_final_packet_frame = source_buffer.end() - Fixed(1);
 
   // If this source packet's final audio frame occurs before our filter's negative edge, centered at
   // our first sampling point, then this packet is entirely in the past and may be skipped.
   // Returning true means we're done with the packet (it can be completed) and we would like another
   if (frac_source_for_final_packet_frame <
       (frac_source_for_first_mix_job_frame - mixer.neg_filter_width())) {
-    FractionalFrames<int64_t> source_frac_frames_late = frac_source_for_first_mix_job_frame -
-                                                        mixer.neg_filter_width() -
-                                                        frac_source_for_first_packet_frame;
+    Fixed source_frac_frames_late = frac_source_for_first_mix_job_frame - mixer.neg_filter_width() -
+                                    frac_source_for_first_packet_frame;
     auto clock_mono_late = zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
         source_frac_frames_late.raw_value()));
 
@@ -339,9 +334,9 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   // Compute the offset into the dest buffer where our first generated sample should land, and the
   // offset into the source packet where we should start sampling.
   int64_t dest_offset_64 = 0;
-  FractionalFrames<int64_t> frac_source_offset_64 =
+  Fixed frac_source_offset_64 =
       frac_source_for_first_mix_job_frame - frac_source_for_first_packet_frame;
-  FractionalFrames<int64_t> frac_source_pos_edge_first_mix_frame =
+  Fixed frac_source_pos_edge_first_mix_frame =
       frac_source_for_first_mix_job_frame + mixer.pos_filter_width();
 
   // If the packet's first frame comes after the filter window's positive edge,
@@ -357,12 +352,12 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // computed dest frame), then add an additional 'round-up' frame (to account for initial
     // subtract). Because we entered this IF in the first place, we have at least some fractional
     // src delta, thus dest_offset_64 is guaranteed to become greater than zero.
-    FractionalFrames<int64_t> first_source_mix_point =
+    Fixed first_source_mix_point =
         frac_source_for_first_packet_frame - frac_source_pos_edge_first_mix_frame;
     dest_offset_64 = dest_to_src.Inverse().Scale(first_source_mix_point.raw_value() - 1) + 1;
     FX_DCHECK(dest_offset_64 > 0);
 
-    frac_source_offset_64 += FractionalFrames<int64_t>::FromRaw(dest_to_src.Scale(dest_offset_64));
+    frac_source_offset_64 += Fixed::FromRaw(dest_to_src.Scale(dest_offset_64));
 
     // Packet is within the mix window but starts after mix start. MixStream breaks mix jobs into
     // multiple pieces so that each packet gets its own ProcessMix call; this means there was no
@@ -381,10 +376,10 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 
   FX_DCHECK(frac_source_offset_64 <= std::numeric_limits<int32_t>::max());
   FX_DCHECK(frac_source_offset_64 >= std::numeric_limits<int32_t>::min());
-  auto frac_source_offset = FractionalFrames<int32_t>(frac_source_offset_64);
+  auto frac_source_offset = Fixed(frac_source_offset_64);
 
   // Looks like we are ready to go. Mix.
-  FX_DCHECK(frac_source_offset + mixer.pos_filter_width() >= FractionalFrames<uint32_t>(0));
+  FX_DCHECK(frac_source_offset + mixer.pos_filter_width() >= Fixed(0));
   bool consumed_source;
   if (dest_offset >= dest_frames_left) {
     // We initially needed to source frames from this packet in order to finish this mix. After
@@ -434,7 +429,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
       consumed_source = mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(),
                                   source_buffer.length().raw_value(), &raw_source_offset,
                                   cur_mix_job_.accumulate);
-      frac_source_offset = FractionalFrames<int32_t>::FromRaw(raw_source_offset);
+      frac_source_offset = Fixed::FromRaw(raw_source_offset);
       cur_mix_job_.usages_mixed.insert_all(source_buffer.usage_mask());
       // The gain for the stream will be any previously applied gain combined with any additional
       // gain that will be applied at this stage. In terms of the applied gain of the mixed stream,
@@ -482,7 +477,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
   // UpdateSourceTrans
   //
   // Ensure the mappings from source-frame to source-ref-time and monotonic-time are up-to-date.
-  auto snapshot = stream.ReferenceClockToFractionalFrames();
+  auto snapshot = stream.ReferenceClockToFixed();
   bk.source_ref_clock_to_frac_source_frames = snapshot.timeline_function;
 
   if (bk.source_ref_clock_to_frac_source_frames.subject_delta() == 0) {
@@ -591,8 +586,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer& mixer, ReadableStream& strea
     auto max_error_frac =
         bk.source_ref_clock_to_frac_source_frames.rate().Scale(kMaxErrorThresholdDuration.get());
 
-    auto curr_src_frac_pos =
-        FractionalFrames<int64_t>::FromRaw(bk.dest_frames_to_frac_source_frames(curr_dest_frame));
+    auto curr_src_frac_pos = Fixed::FromRaw(bk.dest_frames_to_frac_source_frames(curr_dest_frame));
     bk.frac_source_error = bk.next_frac_source_frame - curr_src_frac_pos;
 
     // AdjustClock

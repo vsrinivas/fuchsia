@@ -53,12 +53,10 @@ class PacketQueue : public ReadableStream {
   std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
   void Trim(zx::time dest_ref_time) override;
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
-  void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
-                       FractionalFrames<int64_t> frac_source_mix_point,
+  TimelineFunctionSnapshot ReferenceClockToFixed() const override;
+  void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                        zx::duration underflow_duration) override;
-  void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
-                              int64_t dest_mix_offset) override;
+  void ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) override;
   AudioClock& reference_clock() override { return audio_clock_; }
 
  private:

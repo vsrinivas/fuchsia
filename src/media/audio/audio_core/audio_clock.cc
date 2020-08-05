@@ -140,7 +140,7 @@ zx::time AudioClock::MonotonicTimeFromReferenceTime(zx::time ref_time) const {
 // The time units here are dest frames, the error factor is a difference in frac_src frames.
 // This method is periodically called, to incorporate the current source position error (in
 // fractional frames) into a feedback control that tunes the rate-adjustment factor for this clock.
-void AudioClock::TuneRateForError(FractionalFrames<int64_t> frac_src_error, int64_t dest_frame) {
+void AudioClock::TuneRateForError(Fixed frac_src_error, int64_t dest_frame) {
   FX_CHECK(type_ != Type::Invalid) << "Invalid clock cannot be rate-adjusted";
   FX_CHECK((type_ == Type::Adjustable) || (source_ == Source::Client))
       << "Cannot rate-adjust a static device clock";

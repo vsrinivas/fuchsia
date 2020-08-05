@@ -50,9 +50,9 @@ class Packet : public fbl::SlabAllocated<internal::PacketAllocatorTraits>,
   // source's timeline) at which the first frame of audio in the packet should
   // be presented.  The |end| is the time at which the frame after the final
   // frame in the packet would be presented.
-  FractionalFrames<int64_t> start() const { return start_; }
-  FractionalFrames<int64_t> end() const { return start_ + length_; }
-  FractionalFrames<uint32_t> length() const { return length_; }
+  Fixed start() const { return start_; }
+  Fixed end() const { return start_ + length_; }
+  Fixed length() const { return length_; }
 
   void* payload() { return reinterpret_cast<uint8_t*>(vmo_ref_->start()) + vmo_offset_bytes_; }
 
@@ -65,16 +65,15 @@ class Packet : public fbl::SlabAllocated<internal::PacketAllocatorTraits>,
 
   // fbl::SlabAllocated _requires_ instances to be sourced from an fbl::SlabAllocator. Make this
   // ctor non-public to prevent other ways of instantiation.
-  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes,
-         FractionalFrames<uint32_t> frac_frame_len, FractionalFrames<int64_t> start_frame,
-         async_dispatcher_t* callback_dispatcher, fit::closure callback);
+  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes, Fixed frac_frame_len,
+         Fixed start_frame, async_dispatcher_t* callback_dispatcher, fit::closure callback);
 
  private:
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   size_t vmo_offset_bytes_;
 
-  FractionalFrames<uint32_t> length_;
-  FractionalFrames<int64_t> start_;
+  Fixed length_;
+  Fixed start_;
 
   async_dispatcher_t* dispatcher_;
   fit::closure callback_;

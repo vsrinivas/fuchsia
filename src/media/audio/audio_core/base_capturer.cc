@@ -556,7 +556,7 @@ zx_status_t BaseCapturer::Process() {
       // factor. Then we could re-establish this function without re-reducing the fps-to-nsec rate.
       // Since we supply a rate that is already reduced, this should go pretty quickly.
       ref_clock_to_fractional_dest_frames_->Update(
-          TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), ref_now.get(),
+          TimelineFunction(Fixed(frame_count_).raw_value(), ref_now.get(),
                            fractional_dest_frames_to_ref_clock_rate().Inverse()));
     }
 
@@ -564,8 +564,8 @@ zx_status_t BaseCapturer::Process() {
     if (mix_state->capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
       auto [ref_clock_to_fractional_dest_frames, _] = ref_clock_to_fractional_dest_frames_->get();
       FX_DCHECK(ref_clock_to_fractional_dest_frames.invertible());
-      mix_state->capture_timestamp = ref_clock_to_fractional_dest_frames.Inverse().Apply(
-          FractionalFrames<int64_t>(frame_count_).raw_value());
+      mix_state->capture_timestamp =
+          ref_clock_to_fractional_dest_frames.Inverse().Apply(Fixed(frame_count_).raw_value());
     }
 
     // Limit our job size to our max job size.
@@ -576,7 +576,7 @@ zx_status_t BaseCapturer::Process() {
     // Figure out when we can finish the job. If in the future, wait until then.
     zx::time last_frame_ref_time =
         zx::time(ref_clock_to_fractional_dest_frames_->get().first.Inverse().Apply(
-            FractionalFrames<int64_t>(frame_count_ + mix_state->frames).raw_value()));
+            Fixed(frame_count_ + mix_state->frames).raw_value()));
     if (last_frame_ref_time.get() == TimelineRate::kOverflow) {
       FX_LOGS(ERROR) << "Fatal timeline overflow in capture mixer, shutting down capture.";
       ShutdownFromMixDomain();
@@ -613,7 +613,8 @@ zx_status_t BaseCapturer::Process() {
     auto buf = mix_stage_->ReadLock(ref_now, frame_count_, mix_state->frames);
     FX_DCHECK(buf);
     FX_DCHECK(buf->start().Floor() == frame_count_);
-    FX_DCHECK(buf->length().Floor() == mix_state->frames);
+    FX_DCHECK(buf->length().Floor() > 0);
+    FX_DCHECK(static_cast<size_t>(buf->length().Floor()) == mix_state->frames);
     if (!buf) {
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
@@ -643,7 +644,7 @@ zx_status_t BaseCapturer::Process() {
         // It looks like we were flushed while we were mixing. Invalidate our timeline function,
         // we will re-establish it and flag a discontinuity next time we have work to do.
         ref_clock_to_fractional_dest_frames_->Update(
-            TimelineFunction(FractionalFrames<int64_t>(frame_count_).raw_value(), ref_now.get(),
+            TimelineFunction(Fixed(frame_count_).raw_value(), ref_now.get(),
                              fractional_dest_frames_to_ref_clock_rate().Inverse()));
         break;
     }
@@ -653,8 +654,7 @@ zx_status_t BaseCapturer::Process() {
   }  // while (true)
 }
 
-void BaseCapturer::OverflowOccurred(FractionalFrames<int64_t> frac_source_start,
-                                    FractionalFrames<int64_t> frac_source_mix_point,
+void BaseCapturer::OverflowOccurred(Fixed frac_source_start, Fixed frac_source_mix_point,
                                     zx::duration overflow_duration) {
   TRACE_INSTANT("audio", "BaseCapturer::OverflowOccurred", TRACE_SCOPE_PROCESS);
   uint16_t overflow_count = std::atomic_fetch_add<uint16_t>(&overflow_count_, 1u);
@@ -682,8 +682,7 @@ void BaseCapturer::OverflowOccurred(FractionalFrames<int64_t> frac_source_start,
   }
 }
 
-void BaseCapturer::PartialOverflowOccurred(FractionalFrames<int64_t> frac_source_offset,
-                                           int64_t dest_mix_offset) {
+void BaseCapturer::PartialOverflowOccurred(Fixed frac_source_offset, int64_t dest_mix_offset) {
   TRACE_INSTANT("audio", "BaseCapturer::PartialOverflowOccurred", TRACE_SCOPE_PROCESS);
 
   // Slips by less than four source frames do not necessarily indicate overflow. A slip of this

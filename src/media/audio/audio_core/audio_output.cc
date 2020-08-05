@@ -72,7 +72,10 @@ void AudioOutput::Process() {
           payload = reinterpret_cast<float*>(buf->payload());
 
           // Reduce the frame range if we did not fill the entire requested frame region.
-          uint32_t valid_frames = std::min(mix_frames->length, buf->length().Floor());
+          int64_t buffer_length = buf->length().Floor();
+          FX_CHECK(buffer_length >= 0);
+          uint64_t valid_frames =
+              std::min(mix_frames->length, static_cast<uint64_t>(buffer_length));
           frames_remaining = mix_frames->length - valid_frames;
           mix_frames->length = valid_frames;
         } else {
@@ -204,7 +207,7 @@ fit::promise<void, zx_status_t> AudioOutput::UpdatePipelineConfig(const Pipeline
   mix_domain().PostTask(
       [this, config, volume_curve, completer = std::move(bridge.completer)]() mutable {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
-        auto snapshot = pipeline_->ReferenceClockToFractionalFrames();
+        auto snapshot = pipeline_->ReferenceClockToFixed();
         pipeline_ = CreateOutputPipeline(config, volume_curve, max_block_size_frames_,
                                          snapshot.timeline_function, reference_clock());
         FX_DCHECK(pipeline_);

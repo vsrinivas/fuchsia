@@ -55,9 +55,9 @@ TEST(BookkeepingTest, Reset) {
   info.src_pos_modulo = 3u;
 
   info.next_dest_frame = 13;
-  info.next_frac_source_frame = FractionalFrames<int64_t>(11);
+  info.next_frac_source_frame = Fixed(11);
   info.next_src_pos_modulo = 2;
-  info.frac_source_error = FractionalFrames<int64_t>::FromRaw(-17);
+  info.frac_source_error = Fixed::FromRaw(-17);
 
   info.gain.SetSourceGainWithRamp(-42.0f, zx::sec(1),
                                   fuchsia::media::audio::RampType::SCALE_LINEAR);
@@ -71,9 +71,9 @@ TEST(BookkeepingTest, Reset) {
   EXPECT_EQ(info.src_pos_modulo, 0u);
 
   EXPECT_EQ(info.next_dest_frame, 13);
-  EXPECT_EQ(info.next_frac_source_frame, FractionalFrames<int64_t>(11));
+  EXPECT_EQ(info.next_frac_source_frame, Fixed(11));
   EXPECT_EQ(info.next_src_pos_modulo, 2u);
-  EXPECT_EQ(info.frac_source_error, FractionalFrames<int64_t>::FromRaw(-17));
+  EXPECT_EQ(info.frac_source_error, Fixed::FromRaw(-17));
 
   EXPECT_FALSE(info.gain.IsRamping());
 }
@@ -91,9 +91,9 @@ TEST(BookkeepingTest, ResetPositions) {
 
   // All these values will be overwritten
   info.next_dest_frame = -97;
-  info.next_frac_source_frame = FractionalFrames<int64_t>(7);
+  info.next_frac_source_frame = Fixed(7);
   info.next_src_pos_modulo = 1u;
-  info.frac_source_error = FractionalFrames<int64_t>::FromRaw(-777);
+  info.frac_source_error = Fixed::FromRaw(-777);
 
   info.ResetPositions(100);
 
@@ -101,7 +101,7 @@ TEST(BookkeepingTest, ResetPositions) {
   EXPECT_EQ(info.frac_source_error, 0);
 
   // Calculated directly from the TimelineFunction
-  EXPECT_EQ(info.next_frac_source_frame, FractionalFrames<int64_t>::FromRaw(1700));
+  EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(1700));
 
   // Calculated from rate_modulo and deominator, starting at zero. (100*5)%7 = 3.
   EXPECT_EQ(info.next_src_pos_modulo, 3u);
@@ -119,15 +119,15 @@ TEST(BookkeepingTest, AdvanceRunningPositions) {
   info.src_pos_modulo = 3;
 
   info.next_dest_frame = 2;
-  info.next_frac_source_frame = FractionalFrames<int64_t>(3);
+  info.next_frac_source_frame = Fixed(3);
   info.next_src_pos_modulo = 1;
-  info.frac_source_error = FractionalFrames<int64_t>::FromRaw(-17);
+  info.frac_source_error = Fixed::FromRaw(-17);
 
   info.AdvanceRunningPositionsBy(9);
 
   // These should be unchanged
   EXPECT_EQ(info.src_pos_modulo, 3u);
-  EXPECT_EQ(info.frac_source_error, FractionalFrames<int64_t>::FromRaw(-17));
+  EXPECT_EQ(info.frac_source_error, Fixed::FromRaw(-17));
 
   // These should be updated
   EXPECT_EQ(info.next_dest_frame, 11u);
@@ -136,8 +136,7 @@ TEST(BookkeepingTest, AdvanceRunningPositions) {
   // Position mod: expect 1 + (9 * 2) = 19, %5 becomes 3 subframes and position modulo 4.
   // frac_src: expect 3 + (9 * 1.002) frames (12 frames + 18 subframes), plus 3 subs from above.
   // Thus expect new running src position: 12 frames, 21 subframes, position modulo 4.
-  EXPECT_EQ(info.next_frac_source_frame,
-            FractionalFrames<int64_t>(12) + FractionalFrames<int64_t>::FromRaw(21));
+  EXPECT_EQ(info.next_frac_source_frame, Fixed(12) + Fixed::FromRaw(21));
   EXPECT_EQ(info.next_src_pos_modulo, 4u);
 }
 
@@ -151,7 +150,7 @@ TEST(BookkeepingTest, NegativeAdvanceRunningPosition) {
   info.denominator = 5;
 
   info.next_dest_frame = 12;
-  info.next_frac_source_frame = FractionalFrames<int64_t>(3);
+  info.next_frac_source_frame = Fixed(3);
   info.next_src_pos_modulo = 0;
 
   info.AdvanceRunningPositionsBy(-3);
@@ -165,7 +164,7 @@ TEST(BookkeepingTest, NegativeAdvanceRunningPosition) {
   // 0 subframes + mod -6/5 becomes -2 subframe + mod 4/5.
   //
   // frac_src advances by -3f, -8 subframes (-6-2) to become 0 frames -8 subframes.
-  EXPECT_EQ(info.next_frac_source_frame, FractionalFrames<int64_t>::FromRaw(-8));
+  EXPECT_EQ(info.next_frac_source_frame, Fixed::FromRaw(-8));
   EXPECT_EQ(info.next_src_pos_modulo, 4u);
 }
 

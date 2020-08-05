@@ -26,7 +26,7 @@ class PacketFactory {
                                    fit::closure callback = nullptr);
 
   const Format& format() const { return format_; }
-  void SeekToFrame(int64_t frame_num) { next_pts_ = FractionalFrames<int64_t>(frame_num); }
+  void SeekToFrame(int64_t frame_num) { next_pts_ = Fixed(frame_num); }
 
  private:
   Packet::Allocator allocator_{1, true};
@@ -34,7 +34,7 @@ class PacketFactory {
   Format format_;
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   size_t buffer_offset_ = 0;
-  FractionalFrames<int64_t> next_pts_{0};
+  Fixed next_pts_{0};
 };
 
 }  // namespace media::audio::testing

@@ -41,8 +41,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
 
   void SetUp() {
     testing::ThreadingModelFixture::SetUp();
-    TimelineRate rate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                      zx::sec(1).to_nsecs());
+    TimelineRate rate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs());
     auto source_timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(rate));
 
@@ -52,7 +51,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
     ASSERT_TRUE(packet_queue_);
 
     auto tap_timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
-        TimelineFunction(FractionalFrames<int64_t>(tap_frame_offset_).raw_value(), 0, rate));
+        TimelineFunction(Fixed(tap_frame_offset_).raw_value(), 0, rate));
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(kDefaultFormat, tap_timeline_function,
                                                             packet_queue_->reference_clock(),
@@ -87,8 +86,8 @@ class TapStageTest : public testing::ThreadingModelFixture {
                    float expected_sample, bool release = true) {
     auto buffer = stream->ReadLock(zx::time(0) + epoch_delta, frame, frame_count);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(frame));
-    EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(frame_count));
+    EXPECT_EQ(buffer->start(), Fixed(frame));
+    EXPECT_EQ(buffer->length(), Fixed(frame_count));
     auto& arr = as_array<float, frame_count>(buffer->payload());
     EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
     buffer->set_is_fully_consumed(release);
@@ -119,8 +118,8 @@ TEST_F(TapStageTest, TruncateToInputBuffer) {
   {  // Read from the tap, expect to get the same bytes from the packet.
     auto buffer = tap().ReadLock(zx::time(0), 0, frame_count * 2);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(0));
-    EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(frame_count));
+    EXPECT_EQ(buffer->start(), Fixed(0));
+    EXPECT_EQ(buffer->length(), Fixed(frame_count));
     auto& arr = as_array<float, frame_count>(buffer->payload());
     EXPECT_THAT(arr, Each(FloatEq(1.0f)));
   }
@@ -170,8 +169,8 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     int64_t frame = 2 * kDefaultPacketFrames;
     auto buffer = ring_buffer().ReadLock(zx::time(0) + zx::msec(30), frame, requested_frames);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(frame));
-    EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(expected_frames));
+    EXPECT_EQ(buffer->start(), Fixed(frame));
+    EXPECT_EQ(buffer->length(), Fixed(expected_frames));
     auto& arr = as_array<float, expected_frames>(buffer->payload());
     EXPECT_THAT(arr, Each(FloatEq(3.0f)));
   }
@@ -182,8 +181,8 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
     int64_t frame = kRingBufferFrameCount;
     auto buffer = ring_buffer().ReadLock(zx::time(0) + zx::msec(30), frame, requested_frames);
     ASSERT_TRUE(buffer);
-    EXPECT_EQ(buffer->start(), FractionalFrames<int64_t>(frame));
-    EXPECT_EQ(buffer->length(), FractionalFrames<uint32_t>(expected_frames));
+    EXPECT_EQ(buffer->start(), Fixed(frame));
+    EXPECT_EQ(buffer->length(), Fixed(expected_frames));
     {
       auto& arr = as_array<float, expected_frames>(buffer->payload());
       EXPECT_THAT(arr, Each(FloatEq(3.0f)));

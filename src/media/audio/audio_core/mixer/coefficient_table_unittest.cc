@@ -12,8 +12,8 @@ namespace media::audio::mixer {
 namespace {
 
 TEST(CoefficientTableTest, AllIndicesAccessible) {
-  FractionalFrames<uint32_t> width(10);
-  CoefficientTable table(width.raw_value(), FractionalFrames<uint32_t>::Format::FractionalBits);
+  Fixed width(10);
+  CoefficientTable table(width.raw_value(), Fixed::Format::FractionalBits);
   for (uint32_t i = 0; i < width.raw_value(); ++i) {
     table[i] = static_cast<float>(i);
   }
@@ -23,10 +23,10 @@ TEST(CoefficientTableTest, AllIndicesAccessible) {
 }
 
 TEST(CoefficientTableTest, IntegralStrideHasPhysicallyContiguousIndicies) {
-  FractionalFrames<uint32_t> width(10);
-  CoefficientTable table(width.raw_value(), FractionalFrames<uint32_t>::Format::FractionalBits);
+  Fixed width(10);
+  CoefficientTable table(width.raw_value(), Fixed::Format::FractionalBits);
 
-  const auto FRAC_BITS = FractionalFrames<uint32_t>::Format::FractionalBits;
+  const auto FRAC_BITS = Fixed::Format::FractionalBits;
   const auto FRAC_ONE = 1 << FRAC_BITS;
   for (uint32_t fraction = 0; fraction < FRAC_ONE; ++fraction) {
     // Each fractional value will have a block in the vector. Now check that every valid integral

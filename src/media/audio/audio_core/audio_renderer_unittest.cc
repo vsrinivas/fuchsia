@@ -192,7 +192,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
 
   // Expect 3 buffers. Since these have NO_TIMESTAMP and also no discontinutity flag, they should
   // be continuous starting at pts 0.
-  constexpr size_t kPacketSizeFrames = 32;
+  constexpr int64_t kPacketSizeFrames = 32;
   int64_t expected_packet_pts = 0;
   for (uint32_t i = 0; i < 3; ++i) {
     auto buffer = stream->ReadLock(zx::time(0), expected_packet_pts, kPacketSizeFrames);

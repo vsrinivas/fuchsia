@@ -67,7 +67,7 @@ class BaseRingBuffer {
                  uint32_t frame_count, uint32_t offset_frames, bool is_hardware_buffer);
   virtual ~BaseRingBuffer() = default;
 
-  BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFramesImpl() const;
+  BaseStream::TimelineFunctionSnapshot ReferenceClockToFixedImpl() const;
 
   const fbl::RefPtr<RefCountedVmoMapper> vmo_mapper_;
   const uint32_t frames_ = 0;
@@ -90,7 +90,7 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
   void Trim(zx::time dest_ref_time) override {}
-  BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  BaseStream::TimelineFunctionSnapshot ReferenceClockToFixed() const override;
 
   AudioClock& reference_clock() override { return audio_clock_; }
 };
@@ -107,7 +107,7 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   // |media::audio::WritableStream|
   std::optional<WritableStream::Buffer> WriteLock(zx::time ref_time, int64_t frame,
                                                   uint32_t frame_count) override;
-  BaseStream::TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
+  BaseStream::TimelineFunctionSnapshot ReferenceClockToFixed() const override;
 
   AudioClock& reference_clock() override { return audio_clock_; }
 };

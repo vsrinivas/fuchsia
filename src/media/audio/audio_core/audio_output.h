@@ -76,7 +76,7 @@ class AudioOutput : public AudioDevice {
 
   struct FrameSpan {
     int64_t start;
-    uint32_t length;
+    uint64_t length;
     bool is_mute;
   };
 

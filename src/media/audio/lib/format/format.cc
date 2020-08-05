@@ -74,7 +74,7 @@ Format::Format(fuchsia::media::AudioStreamType stream_type) : stream_type_(strea
   frames_per_ns_ = TimelineRate(stream_type.frames_per_second, ZX_SEC(1));
 
   // Figure out the rate we need to scale by in order to produce our fixed point timestamps.
-  frame_to_media_ratio_ = TimelineRate(FractionalFrames<int32_t>(1).raw_value(), 1);
+  frame_to_media_ratio_ = TimelineRate(Fixed(1).raw_value(), 1);
 
   switch (stream_type.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:

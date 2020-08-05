@@ -194,8 +194,8 @@ TYPED_TEST(AudioDriverTest, SanityCheckTimelineMath) {
   int64_t txrx_pos = safe_read_write_pos - fifo_depth_frames;
 
   ref_now += external_delay;
-  int64_t ptscts_pos_frames = ptscts_ref_clock_to_fractional_frames.Apply(ref_now.get()) /
-                              FractionalFrames<uint32_t>(1).raw_value();
+  int64_t ptscts_pos_frames =
+      ptscts_ref_clock_to_fractional_frames.Apply(ref_now.get()) / Fixed(1).raw_value();
   EXPECT_EQ(txrx_pos, ptscts_pos_frames);
 }
 

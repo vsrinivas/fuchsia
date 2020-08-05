@@ -179,7 +179,7 @@ bool BaseRenderer::ValidateConfig() {
   }
 
   // Compute the number of fractional frames per PTS tick.
-  FractionalFrames<uint32_t> frac_fps(format()->stream_type().frames_per_second);
+  Fixed frac_fps(format()->stream_type().frames_per_second);
   frac_frames_per_pts_tick_ =
       TimelineRate::Product(pts_ticks_per_second_.Inverse(), TimelineRate(frac_fps.raw_value(), 1));
 
@@ -188,10 +188,10 @@ bool BaseRenderer::ValidateConfig() {
     // The user has not explicitly set a continuity threshold. Default to 1/2
     // of a PTS tick expressed in fractional input frames, rounded up.
     pts_continuity_threshold_frac_frame_ =
-        FractionalFrames<int64_t>::FromRaw((frac_frames_per_pts_tick_.Scale(1) + 1) >> 1);
+        Fixed::FromRaw((frac_frames_per_pts_tick_.Scale(1) + 1) >> 1);
   } else {
-    pts_continuity_threshold_frac_frame_ = FractionalFrames<int64_t>::FromRaw(
-        static_cast<double>(frac_fps.raw_value()) * pts_continuity_threshold_);
+    pts_continuity_threshold_frac_frame_ =
+        Fixed::FromRaw(static_cast<double>(frac_fps.raw_value()) * pts_continuity_threshold_);
   }
 
   AUDIO_LOG_OBJ(DEBUG, this) << " threshold_set_: " << pts_continuity_threshold_set_
@@ -398,8 +398,8 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
 
   // Now compute the starting PTS expressed in fractional input frames. If no explicit PTS was
   // provided, interpolate using the next expected PTS.
-  FractionalFrames<int64_t> start_pts;
-  FractionalFrames<int64_t> packet_ffpts{0};
+  Fixed start_pts;
+  Fixed packet_ffpts{0};
   if (packet.pts == fuchsia::media::NO_TIMESTAMP) {
     start_pts = next_frac_frame_pts_;
 
@@ -411,19 +411,19 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
       FX_CHECK(status == ZX_OK);
       zx::time deadline = ref_now + min_lead_time_;
 
-      auto first_valid_frame = FractionalFrames<int64_t>::FromRaw(
-          reference_clock_to_fractional_frames_->Apply(deadline.get()));
+      auto first_valid_frame =
+          Fixed::FromRaw(reference_clock_to_fractional_frames_->Apply(deadline.get()));
       if (start_pts < first_valid_frame) {
         zx::time start_ref_time = deadline + kPaddingForUnspecifiedRefTime;
-        start_pts = FractionalFrames<int64_t>::FromRaw(
-            reference_clock_to_fractional_frames_->Apply(start_ref_time.get()));
+        start_pts =
+            Fixed::FromRaw(reference_clock_to_fractional_frames_->Apply(start_ref_time.get()));
       }
     }
   } else {
     // Looks like we have an explicit PTS on this packet. Boost it into the fractional input frame
     // domain, then apply our continuity threshold rules.
-    packet_ffpts = FractionalFrames<int64_t>::FromRaw(pts_to_frac_frames_.Apply(packet.pts));
-    FractionalFrames<int64_t> delta = packet_ffpts - next_frac_frame_pts_;
+    packet_ffpts = Fixed::FromRaw(pts_to_frac_frames_.Apply(packet.pts));
+    Fixed delta = packet_ffpts - next_frac_frame_pts_;
     delta = delta.Absolute();
     start_pts =
         (delta < pts_continuity_threshold_frac_frame_) ? next_frac_frame_pts_ : packet_ffpts;
@@ -449,11 +449,11 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
   // which schedules the packet to start at a fractional position on the source time line, we should
   // probably permit this. We need to make sure that the mixer cores are ready to handle this case
   // before proceeding, however.
-  start_pts = FractionalFrames<int64_t>(start_pts.Floor());
+  start_pts = Fixed(start_pts.Floor());
 
   // Create the packet.
   auto packet_ref = packet_allocator_.New(
-      payload_buffer, packet.payload_offset, FractionalFrames<uint32_t>(frame_count), start_pts,
+      payload_buffer, packet.payload_offset, Fixed(frame_count), start_pts,
       context_.threading_model().FidlDomain().dispatcher(), std::move(callback));
   if (!packet_ref) {
     FX_LOGS(ERROR) << "Client created too many concurrent Packets; Allocator has created "
@@ -560,7 +560,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
   // Note: users specify the units for media time by calling SetPtsUnits(), or nanoseconds if this
   // is never called. Internally we use fractional input frames, on the timeline defined when
   // transitioning to operational mode.
-  FractionalFrames<int64_t> frac_frame_media_time;
+  Fixed frac_frame_media_time;
 
   if (media_time == fuchsia::media::NO_TIMESTAMP) {
     // Are we resuming from pause?
@@ -568,7 +568,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
       frac_frame_media_time = pause_time_frac_frames_;
     } else {
       // TODO(mpuryear): peek the first PTS of the pending queue.
-      frac_frame_media_time = FractionalFrames<int64_t>(0);
+      frac_frame_media_time = Fixed(0);
     }
 
     // If we do not know the pts_to_frac_frames relationship yet, compute one.
@@ -584,8 +584,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
       ComputePtsToFracFrames(media_time);
       frac_frame_media_time = next_frac_frame_pts_;
     } else {
-      frac_frame_media_time =
-          FractionalFrames<int64_t>::FromRaw(pts_to_frac_frames_.Apply(media_time));
+      frac_frame_media_time = Fixed::FromRaw(pts_to_frac_frames_.Apply(media_time));
     }
   }
 
@@ -631,8 +630,7 @@ void BaseRenderer::Pause(PauseCallback callback) {
   FX_CHECK(status == ZX_OK) << "Error while reading clock: " << status;
 
   // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
-  pause_time_frac_frames_ =
-      FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frames_->Apply(ref_now));
+  pause_time_frac_frames_ = Fixed::FromRaw(reference_clock_to_fractional_frames_->Apply(ref_now));
   pause_time_frac_frames_valid_ = true;
 
   reference_clock_to_fractional_frames_->Update(

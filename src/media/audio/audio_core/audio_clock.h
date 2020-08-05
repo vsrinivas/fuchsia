@@ -159,7 +159,7 @@ class AudioClock {
   //
   // At a given dest_frame, the source position error is provided (in fractional frames). This is
   // used to maintain a rate_adjustment() factor that eliminates the error over time.
-  void TuneRateForError(FractionalFrames<int64_t> frac_src_error, int64_t dest_frame);
+  void TuneRateForError(Fixed frac_src_error, int64_t dest_frame);
 
   // This returns the current rate adjustment factor (a rate close to 1.0) that should be applied,
   // to chase the actual source in an optimal manner.

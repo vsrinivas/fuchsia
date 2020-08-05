@@ -11,8 +11,7 @@
 
 namespace media::audio {
 
-template <typename Integer>
-using FractionalFrames = ffl::Fixed<Integer, kPtsFractionalBits>;
+using Fixed = ffl::Fixed<int64_t, kPtsFractionalBits>;
 
 }  // namespace media::audio
 

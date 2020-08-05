@@ -36,7 +36,10 @@ std::optional<ReadableStream::Buffer> TapStage::ReadLock(zx::time dest_ref_time,
       break;
     }
 
-    uint32_t frames_copied = std::min(output_buffer->length().Floor(), output_frames_outstanding);
+    int64_t output_buffer_length = output_buffer->length().Floor();
+    FX_CHECK(output_buffer_length <= std::numeric_limits<uint32_t>::max());
+    uint32_t frames_copied =
+        std::min(static_cast<uint32_t>(output_buffer_length), output_frames_outstanding);
     uint32_t bytes_copied = frames_copied * format().bytes_per_frame();
     memcpy(output_buffer->payload(), input_ptr, bytes_copied);
 
@@ -56,13 +59,13 @@ void TapStage::SetMinLeadTime(zx::duration min_lead_time) {
 const TimelineFunction& TapStage::SourceFracFrameToTapFrame() {
   FX_DCHECK(source_->reference_clock() == tap_->reference_clock());
 
-  auto source_snapshot = source_->ReferenceClockToFractionalFrames();
-  auto tap_snapshot = tap_->ReferenceClockToFractionalFrames();
+  auto source_snapshot = source_->ReferenceClockToFixed();
+  auto tap_snapshot = tap_->ReferenceClockToFixed();
   if (source_snapshot.generation != source_generation_ ||
       tap_snapshot.generation != tap_generation_) {
     auto source_frac_frame_to_tap_frac_frame =
         tap_snapshot.timeline_function * source_snapshot.timeline_function.Inverse();
-    auto frac_frame_to_frame = TimelineRate(1, FractionalFrames<uint32_t>(1).raw_value());
+    auto frac_frame_to_frame = TimelineRate(1, Fixed(1).raw_value());
     source_frac_frame_to_tap_frame_ =
         TimelineFunction(frac_frame_to_frame) * source_frac_frame_to_tap_frac_frame;
     source_generation_ = source_snapshot.generation;

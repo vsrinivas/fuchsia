@@ -25,7 +25,7 @@ std::optional<ReadableStream::Buffer> FakeStream::ReadLock(zx::time dest_ref_tim
                                                     usage_mask_, gain_db_);
 }
 
-ReadableStream::TimelineFunctionSnapshot FakeStream::ReferenceClockToFractionalFrames() const {
+ReadableStream::TimelineFunctionSnapshot FakeStream::ReferenceClockToFixed() const {
   auto [timeline_function, generation] = timeline_function_->get();
   return {
       .timeline_function = timeline_function,

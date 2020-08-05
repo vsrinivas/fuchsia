@@ -48,9 +48,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
   zx::time time_until(zx::duration delta) { return zx::time(delta.to_nsecs()); }
 
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
-      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-          TimelineRate(FractionalFrames<int64_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                       zx::sec(1).to_nsecs())));
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   // Views the memory at |ptr| as a std::array of |N| elements of |T|. If |offset| is provided, it
   // is the number of |T| sized elements to skip at the beginning of |ptr|.
@@ -100,8 +99,7 @@ AudioClock MixStageTest::SetPacketFactoryWithOffsetAudioClock(zx::duration clock
 void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   std::shared_ptr<PacketQueue> packet_queue;
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
@@ -163,8 +161,7 @@ TEST_F(MixStageTest, Trim_ClockOffset) { TestMixStageTrim(ClockMode::WITH_OFFSET
 void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   // Create 2 PacketQueues that we mix together. One may have a clock with an offset, so create a
   // seperate PacketFactory for it, that can set timestamps appropriately.
@@ -340,8 +337,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
 TEST_F(MixStageTest, MixNoInputs) {
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   constexpr uint32_t kRequestedFrames = 48;
   auto buf = mix_stage_->ReadLock(zx::time(0), 0, kRequestedFrames);
@@ -356,8 +352,7 @@ static constexpr auto kInputStreamUsage = StreamUsage::WithRenderUsage(RenderUsa
 void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   // Set timeline rate to match our format.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
   std::shared_ptr<PacketQueue> packet_queue;
@@ -401,8 +396,7 @@ TEST_F(MixStageTest, MixSingleInput_ClockOffset) {
 TEST_F(MixStageTest, MixMultipleInputs) {
   // Set timeline rate to match our format.
   auto timeline_function = TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs()));
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
   auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, PAGE_SIZE);
   input1->timeline_function()->Update(timeline_function);
@@ -459,9 +453,9 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
   auto offset_result = clock::testing::GetOffsetFromMonotonic(raw_clock);
   EXPECT_TRUE(offset_result.is_ok()) << "GetOffsetFromMonotonic err:" << offset_result.error();
   auto clock_offset = offset_result.take_value();
-  auto seek_frac_frame = FractionalFrames<int64_t>::FromRaw(
-      round(static_cast<double>(clock_offset.get()) * FractionalFrames<int64_t>(1).raw_value() *
-            kDefaultFormat.frames_per_second() / ZX_SEC(1)));
+  auto seek_frac_frame =
+      Fixed::FromRaw(round(static_cast<double>(clock_offset.get()) * Fixed(1).raw_value() *
+                           kDefaultFormat.frames_per_second() / ZX_SEC(1)));
   testing::PacketFactory packet_factory(
       dispatcher(), kDefaultFormat,
       kDefaultFormat.frames_per_second() * kDefaultFormat.bytes_per_frame());
@@ -471,8 +465,7 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
   AudioClock audio_clock = AudioClock::CreateAsCustom(std::move(raw_clock));
   EXPECT_TRUE(audio_clock.is_valid());
   auto nsec_to_frac_src = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   std::shared_ptr<PacketQueue> packet_queue =
       std::make_shared<PacketQueue>(kDefaultFormat, nsec_to_frac_src, std::move(audio_clock));
 
@@ -492,34 +485,34 @@ void MixStageTest::TestMixPosition(ClockMode clock_mode, int32_t rate_adjust_ppm
   //
   // Note: these are liable to change as we tune the PID coefficients for optimal performance.
   //
-  FractionalFrames<int64_t> upper_limit, lower_limit;
+  Fixed upper_limit, lower_limit;
   // If clock runs fast, our initial error is negative (position too low), followed by smaller
   // positive error (position too high). These are reversed if clock runs slow.
   if (rate_adjust_ppm > 0) {
-    upper_limit = FractionalFrames<int64_t>::FromRaw(rate_adjust_ppm * 8);
-    lower_limit = FractionalFrames<int64_t>::FromRaw(rate_adjust_ppm * -16);
+    upper_limit = Fixed::FromRaw(rate_adjust_ppm * 8);
+    lower_limit = Fixed::FromRaw(rate_adjust_ppm * -16);
   } else {
-    upper_limit = FractionalFrames<int64_t>::FromRaw(rate_adjust_ppm * -16);
-    lower_limit = FractionalFrames<int64_t>::FromRaw(rate_adjust_ppm * 8);
+    upper_limit = Fixed::FromRaw(rate_adjust_ppm * -16);
+    lower_limit = Fixed::FromRaw(rate_adjust_ppm * 8);
   }
   //
   // At VERY low-magnitude rate adjustment (1-2 ppm), our worst-case initial-response desync is
   // slightly worse than linear -- as much as +/-40nanosec (16 fractional frames).
   if (rate_adjust_ppm != 0) {
-    upper_limit = std::max(upper_limit, FractionalFrames<int64_t>::FromRaw(16));
-    lower_limit = std::min(lower_limit, FractionalFrames<int64_t>::FromRaw(-16));
+    upper_limit = std::max(upper_limit, Fixed::FromRaw(16));
+    lower_limit = std::min(lower_limit, Fixed::FromRaw(-16));
   }
 
   // Once we've settled back to steady state, our desync ripple is +/-20nsec (8 fractional frames).
-  constexpr FractionalFrames<int64_t> kUpperLimitLastTen = FractionalFrames<int64_t>::FromRaw(8);
-  constexpr FractionalFrames<int64_t> kLowerLimitLastTen = FractionalFrames<int64_t>::FromRaw(-8);
+  constexpr Fixed kUpperLimitLastTen = Fixed::FromRaw(8);
+  constexpr Fixed kLowerLimitLastTen = Fixed::FromRaw(-8);
 
   // We will measure long-running position across 500 mixes of 5ms each.
   constexpr int kTotalMixCount = 400;
   constexpr zx::duration kMixDuration = zx::msec(5);
   constexpr uint32_t dest_frames_per_mix = kBlockSizeFrames;
-  FractionalFrames<int64_t> max_frac_error{0}, max_frac_error_last_ten{0};
-  FractionalFrames<int64_t> min_frac_error{0}, min_frac_error_last_ten{0};
+  Fixed max_frac_error{0}, max_frac_error_last_ten{0};
+  Fixed min_frac_error{0}, min_frac_error_last_ten{0};
   int mix_count_of_max_error = 0, mix_count_of_min_error = 0;
 
   for (auto mix_count = 0; mix_count < kTotalMixCount; ++mix_count) {

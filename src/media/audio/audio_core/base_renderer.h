@@ -111,17 +111,17 @@ class BaseRenderer : public AudioObject,
   bool config_validated_ = false;
 
   // PTS interpolation state.
-  FractionalFrames<int64_t> next_frac_frame_pts_{0};
+  Fixed next_frac_frame_pts_{0};
   TimelineRate pts_ticks_per_second_;
   TimelineRate frac_frames_per_pts_tick_;
   TimelineFunction pts_to_frac_frames_;
   bool pts_to_frac_frames_valid_ = false;
   float pts_continuity_threshold_ = 0.0f;
   bool pts_continuity_threshold_set_ = false;
-  FractionalFrames<int64_t> pts_continuity_threshold_frac_frame_{0};
+  Fixed pts_continuity_threshold_frac_frame_{0};
 
   // Play/Pause state
-  FractionalFrames<int64_t> pause_time_frac_frames_;
+  Fixed pause_time_frac_frames_;
   bool pause_time_frac_frames_valid_ = false;
   TimelineRate frac_frames_per_ref_tick_;
 

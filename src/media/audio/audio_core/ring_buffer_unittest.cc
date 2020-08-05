@@ -29,9 +29,9 @@ class InputRingBufferTest : public ::testing::Test {
  protected:
   void SetUp() override {
     const auto& format = kDefaultFormat;
-    auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-        0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
-        zx::sec(1).to_nsecs()));
+    auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
+        TimelineFunction(0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(),
+                         zx::sec(1).to_nsecs()));
 
     audio_clock_ =
         AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
@@ -55,9 +55,9 @@ class OutputRingBufferTest : public ::testing::Test {
  protected:
   void SetUp() override {
     const auto& format = kDefaultFormat;
-    auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-        0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
-        zx::sec(1).to_nsecs()));
+    auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(
+        TimelineFunction(0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(),
+                         zx::sec(1).to_nsecs()));
 
     audio_clock_ =
         AudioClock::CreateAsDeviceStatic(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
@@ -209,8 +209,7 @@ TEST(RingBufferTest, FrameOffset) {
   const uint32_t frame_offset = 128;
 
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      0, zx::time(0).get(), FractionalFrames<int64_t>(format.frames_per_second()).raw_value(),
-      zx::sec(1).to_nsecs()));
+      0, zx::time(0).get(), Fixed(format.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
   auto audio_clock = AudioClock::CreateAsCustom(clock::CloneOfMonotonic());
 

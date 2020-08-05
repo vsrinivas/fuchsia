@@ -23,7 +23,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
     // Use a simple transform of one frame per millisecond to make validations simple in the test
     // (ex: frame 1 will be consumed after 1ms).
     auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
-        TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
+        TimelineFunction(TimelineRate(Fixed(1).raw_value(), 1'000'000)));
 
     return std::make_unique<PacketQueue>(
         Format::Create({
@@ -54,8 +54,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
       ++released_packet_count_;
       released_packets_.push_back(payload_buffer_id);
     };
-    return allocator_.New(it->second, 0, FractionalFrames<uint32_t>(length),
-                          FractionalFrames<int64_t>(start), dispatcher(), callback);
+    return allocator_.New(it->second, 0, Fixed(length), Fixed(start), dispatcher(), callback);
   }
 
   std::vector<int64_t> released_packets() const { return released_packets_; }
@@ -121,7 +120,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
     ASSERT_TRUE(buffer);
     ASSERT_FALSE(buffer->is_continuous());
     ASSERT_EQ(0, buffer->start());
-    ASSERT_EQ(20u, buffer->length());
+    ASSERT_EQ(20, buffer->length());
     ASSERT_EQ(20, buffer->end());
     ASSERT_EQ(packet0->payload(), buffer->payload());
     ASSERT_FALSE(packet_queue->empty());
@@ -138,7 +137,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
     ASSERT_TRUE(buffer);
     ASSERT_TRUE(buffer->is_continuous());
     ASSERT_EQ(20, buffer->start());
-    ASSERT_EQ(20u, buffer->length());
+    ASSERT_EQ(20, buffer->length());
     ASSERT_EQ(40, buffer->end());
     ASSERT_EQ(packet1->payload(), buffer->payload());
     packet1 = nullptr;
@@ -153,7 +152,7 @@ TEST_F(PacketQueueTest, LockUnlock) {
     ASSERT_TRUE(buffer);
     ASSERT_TRUE(buffer->is_continuous());
     ASSERT_EQ(40, buffer->start());
-    ASSERT_EQ(20u, buffer->length());
+    ASSERT_EQ(20, buffer->length());
     ASSERT_EQ(60, buffer->end());
     ASSERT_EQ(packet2->payload(), buffer->payload());
     packet2 = nullptr;
@@ -214,7 +213,7 @@ TEST_F(PacketQueueTest, LockFlushUnlock) {
     ASSERT_TRUE(buffer);
     ASSERT_FALSE(buffer->is_continuous());
     ASSERT_EQ(0, buffer->start());
-    ASSERT_EQ(20u, buffer->length());
+    ASSERT_EQ(20, buffer->length());
     ASSERT_EQ(20, buffer->end());
 
     // This should flush 0-3 but not 4.

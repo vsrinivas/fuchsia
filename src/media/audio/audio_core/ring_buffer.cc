@@ -44,14 +44,13 @@ std::optional<typename RingBufferT::Buffer> LockBuffer(RingBufferT* b, zx::time 
                                                        int64_t frame, uint32_t frame_count,
                                                        bool is_read_lock, bool is_hardware_buffer) {
   frame += b->offset_frames();
-  auto [reference_clock_to_fractional_frame, _] = b->ReferenceClockToFractionalFrames();
+  auto [reference_clock_to_fractional_frame, _] = b->ReferenceClockToFixed();
   if (!reference_clock_to_fractional_frame.invertible()) {
     return std::nullopt;
   }
 
   int64_t ring_position_now =
-      FractionalFrames<int64_t>::FromRaw(reference_clock_to_fractional_frame.Apply(ref_time.get()))
-          .Floor() +
+      Fixed::FromRaw(reference_clock_to_fractional_frame.Apply(ref_time.get())).Floor() +
       b->offset_frames();
 
   int64_t first_valid_frame;
@@ -248,7 +247,7 @@ std::optional<WritableStream::Buffer> WritableRingBuffer::WriteLock(zx::time ref
                                         is_hardware_buffer_);
 }
 
-BaseStream::TimelineFunctionSnapshot BaseRingBuffer::ReferenceClockToFractionalFramesImpl() const {
+BaseStream::TimelineFunctionSnapshot BaseRingBuffer::ReferenceClockToFixedImpl() const {
   if (!reference_clock_to_fractional_frame_) {
     return {
         .timeline_function = TimelineFunction(),
@@ -262,12 +261,12 @@ BaseStream::TimelineFunctionSnapshot BaseRingBuffer::ReferenceClockToFractionalF
   };
 }
 
-BaseStream::TimelineFunctionSnapshot ReadableRingBuffer::ReferenceClockToFractionalFrames() const {
-  return BaseRingBuffer::ReferenceClockToFractionalFramesImpl();
+BaseStream::TimelineFunctionSnapshot ReadableRingBuffer::ReferenceClockToFixed() const {
+  return BaseRingBuffer::ReferenceClockToFixedImpl();
 }
 
-BaseStream::TimelineFunctionSnapshot WritableRingBuffer::ReferenceClockToFractionalFrames() const {
-  return BaseRingBuffer::ReferenceClockToFractionalFramesImpl();
+BaseStream::TimelineFunctionSnapshot WritableRingBuffer::ReferenceClockToFixed() const {
+  return BaseRingBuffer::ReferenceClockToFixedImpl();
 }
 
 }  // namespace media::audio

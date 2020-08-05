@@ -49,9 +49,9 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  auto timeline_function =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
@@ -182,9 +182,8 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
-  stream->timeline_function()->Update(TimelineFunction(
-      TimelineRate(FractionalFrames<int64_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  stream->timeline_function()->Update(TimelineFunction(TimelineRate(
+      Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
   test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
@@ -206,17 +205,14 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
   // emerge from the effect in output frame 13.
   // Conversely, output frame 0 was produced based on the source frame at time -13.
-  auto ref_clock_to_output_frac_frame =
-      effects_stage->ReferenceClockToFractionalFrames().timeline_function;
-  EXPECT_EQ(FractionalFrames<int64_t>::FromRaw(ref_clock_to_output_frac_frame.Apply(0)),
-            FractionalFrames<int64_t>(13));
+  auto ref_clock_to_output_frac_frame = effects_stage->ReferenceClockToFixed().timeline_function;
+  EXPECT_EQ(Fixed::FromRaw(ref_clock_to_output_frac_frame.Apply(0)), Fixed(13));
 
   // Similarly, at the time we produce output frame 0, we had to draw upon the source frame from
   // time -13. Use a fuzzy compare to allow for slight rounding errors.
   int64_t frame_13_time = (zx::sec(-13).to_nsecs()) / k48k2ChanFloatFormat.frames_per_second();
   auto frame_13_frac_frames =
-      FractionalFrames<int64_t>::FromRaw(ref_clock_to_output_frac_frame.Apply(frame_13_time))
-          .Absolute();
+      Fixed::FromRaw(ref_clock_to_output_frac_frame.Apply(frame_13_time)).Absolute();
   EXPECT_LE(frame_13_frac_frames.raw_value(), 1);
 }
 
@@ -225,9 +221,8 @@ TEST_F(EffectsStageTest, AddDelayFramesIntoMinLeadTime) {
 
   // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
   // streams format.
-  stream->timeline_function()->Update(TimelineFunction(
-      TimelineRate(FractionalFrames<int64_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  stream->timeline_function()->Update(TimelineFunction(TimelineRate(
+      Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   test_effects_.AddEffect("effect_with_delay_3").WithSignalLatencyFrames(3);
   test_effects_.AddEffect("effect_with_delay_10").WithSignalLatencyFrames(10);
@@ -265,9 +260,9 @@ TEST_F(EffectsStageTest, UpdateEffect) {
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  auto timeline_function =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
@@ -312,9 +307,9 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  auto timeline_function =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
@@ -373,9 +368,9 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  auto timeline_function =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
@@ -415,9 +410,9 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
 
   // Create a packet queue to use as our source stream.
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  auto timeline_function =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
@@ -463,9 +458,8 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
   // Set timeline rate to match our format.
-  auto timeline_function = TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs()));
+  auto timeline_function = TimelineFunction(TimelineRate(
+      Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
   auto input = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, PAGE_SIZE);
   input->timeline_function()->Update(timeline_function);
@@ -538,9 +532,9 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
 
 TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
   testing::PacketFactory packet_factory{dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE};
-  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
-      TimelineRate(FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-                   zx::sec(1).to_nsecs())));
+  auto timeline_function =
+      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
+          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   auto stream = std::make_shared<PacketQueue>(
       k48k2ChanFloatFormat, timeline_function,
       AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));
@@ -617,8 +611,7 @@ class EffectsStageRingoutTest : public EffectsStageTest,
   void SetUp() override {
     auto timeline_function =
         fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
-            FractionalFrames<uint32_t>(k48k2ChanFloatFormat.frames_per_second()).raw_value(),
-            zx::sec(1).to_nsecs())));
+            Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
     stream_ = std::make_shared<PacketQueue>(
         k48k2ChanFloatFormat, timeline_function,
         AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic()));

@@ -277,15 +277,15 @@ std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(zx::time dest_ref_t
   return std::nullopt;
 }
 
-BaseStream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames() const {
-  auto snapshot = source_->ReferenceClockToFractionalFrames();
+BaseStream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFixed() const {
+  auto snapshot = source_->ReferenceClockToFixed();
 
   // Update our timeline function to include the latency introduced by these effects.
   //
   // Our effects shift incoming audio into the future by "delay_frames".
   // So input frame[N] corresponds to output frame[N + delay_frames].
   int64_t delay_frames = effects_processor_->delay_frames();
-  auto delay_frac_frames = FractionalFrames<int64_t>(delay_frames);
+  auto delay_frac_frames = Fixed(delay_frames);
 
   auto source_frac_frame_to_dest_frac_frame =
       TimelineFunction(delay_frac_frames.raw_value(), 0, TimelineRate(1, 1));

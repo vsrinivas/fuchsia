@@ -25,13 +25,13 @@ class BaseStream {
   virtual ~BaseStream() = default;
 
   // A snapshot of a |TimelineFunction| with an associated |generation|. If |generation| is equal
-  // between two subsequent calls to |ReferenceClockToFractionalFrames|, then the
+  // between two subsequent calls to |ReferenceClockToFixed|, then the
   // |timeline_function| is guaranteed to be unchanged.
   struct TimelineFunctionSnapshot {
     TimelineFunction timeline_function;
     uint32_t generation;
   };
-  virtual TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const = 0;
+  virtual TimelineFunctionSnapshot ReferenceClockToFixed() const = 0;
   virtual AudioClock& reference_clock() = 0;
 
   const Format& format() const { return format_; }
@@ -64,9 +64,8 @@ class ReadableStream : public BaseStream {
           usage_mask_(usage_mask),
           gain_db_(gain_db) {}
 
-    Buffer(FractionalFrames<int64_t> start, FractionalFrames<uint32_t> length, void* payload,
-           bool is_continuous, StreamUsageMask usage_mask, float gain_db,
-           DestructorT dtor = nullptr)
+    Buffer(Fixed start, Fixed length, void* payload, bool is_continuous, StreamUsageMask usage_mask,
+           float gain_db, DestructorT dtor = nullptr)
         : dtor_(std::move(dtor)),
           payload_(payload),
           start_(start),
@@ -87,9 +86,9 @@ class ReadableStream : public BaseStream {
     Buffer(const Buffer& rhs) = delete;
     Buffer& operator=(const Buffer& rhs) = delete;
 
-    FractionalFrames<int64_t> start() const { return start_; }
-    FractionalFrames<int64_t> end() const { return start_ + length_; }
-    FractionalFrames<uint32_t> length() const { return length_; }
+    Fixed start() const { return start_; }
+    Fixed end() const { return start_ + length_; }
+    Fixed length() const { return length_; }
     void* payload() const { return payload_; }
 
     // Indicates this packet is continuous with a packet previously returned from an immediately
@@ -112,8 +111,8 @@ class ReadableStream : public BaseStream {
    private:
     DestructorT dtor_;
     void* payload_;
-    FractionalFrames<int64_t> start_;
-    FractionalFrames<uint32_t> length_;
+    Fixed start_;
+    Fixed length_;
     bool is_continuous_;
     bool is_fully_consumed_ = true;
     StreamUsageMask usage_mask_;
@@ -135,11 +134,9 @@ class ReadableStream : public BaseStream {
   virtual void Trim(zx::time dest_ref_time) = 0;
 
   // Hooks to add logging or metrics for [Partial] Underflow events.
-  virtual void ReportUnderflow(FractionalFrames<int64_t> frac_source_start,
-                               FractionalFrames<int64_t> frac_source_mix_point,
+  virtual void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
                                zx::duration underflow_duration) {}
-  virtual void ReportPartialUnderflow(FractionalFrames<int64_t> frac_source_offset,
-                                      int64_t dest_mix_offset) {}
+  virtual void ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) {}
 };
 
 // A write-only stream of audio data.
@@ -167,16 +164,16 @@ class WritableStream : public BaseStream {
     Buffer(const Buffer& rhs) = delete;
     Buffer& operator=(const Buffer& rhs) = delete;
 
-    FractionalFrames<int64_t> start() const { return start_; }
-    FractionalFrames<int64_t> end() const { return start_ + length_; }
-    FractionalFrames<uint32_t> length() const { return length_; }
+    Fixed start() const { return start_; }
+    Fixed end() const { return start_ + length_; }
+    Fixed length() const { return length_; }
     void* payload() const { return payload_; }
 
    private:
     DestructorT dtor_;
     void* payload_;
-    FractionalFrames<int64_t> start_;
-    FractionalFrames<uint32_t> length_;
+    Fixed start_;
+    Fixed length_;
   };
 
   // WriteLock acquires a write lock on the stream and returns a buffer representing the requested

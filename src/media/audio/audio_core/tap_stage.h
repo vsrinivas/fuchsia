@@ -23,8 +23,8 @@ class TapStage : public ReadableStream {
   std::optional<ReadableStream::Buffer> ReadLock(zx::time dest_ref_time, int64_t frame,
                                                  uint32_t frame_count) override;
   void Trim(zx::time dest_ref_time) override { source_->Trim(dest_ref_time); }
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
-    return source_->ReferenceClockToFractionalFrames();
+  TimelineFunctionSnapshot ReferenceClockToFixed() const override {
+    return source_->ReferenceClockToFixed();
   }
   AudioClock& reference_clock() override { return source_->reference_clock(); }
 

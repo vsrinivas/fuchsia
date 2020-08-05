@@ -32,8 +32,7 @@ std::optional<WritableStream::Buffer> IntermediateBuffer::WriteLock(zx::time ref
   return std::make_optional<WritableStream::Buffer>(frame, clamped_length, vmo_.start());
 }
 
-WritableStream::TimelineFunctionSnapshot IntermediateBuffer::ReferenceClockToFractionalFrames()
-    const {
+WritableStream::TimelineFunctionSnapshot IntermediateBuffer::ReferenceClockToFixed() const {
   auto [timeline_function, generation] = reference_clock_to_fractional_frames_->get();
   return {
       .timeline_function = timeline_function,

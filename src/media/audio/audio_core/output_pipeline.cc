@@ -126,7 +126,7 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     auto [timeline_function, _] = ref_clock_to_fractional_frame->get();
     // Create a new timeline function to represent the ref_clock_to_frac_frame mapping for this
     // input.
-    auto frac_fps = FractionalFrames<int64_t>(input.output_rate).raw_value();
+    auto frac_fps = Fixed(input.output_rate).raw_value();
     auto function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
         // Use the same reference point as the result timeline function. This is to ensure that
         // we align frames between intermediate mix stages to integral frame numbers.

@@ -91,10 +91,10 @@ class OutputPipelineImpl : public OutputPipeline {
     FX_CHECK(state_.stream);
     state_.stream->Trim(dest_ref_time);
   }
-  TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override {
-    TRACE_DURATION("audio", "OutputPipeline::ReferenceClockToFractionalFrames");
+  TimelineFunctionSnapshot ReferenceClockToFixed() const override {
+    TRACE_DURATION("audio", "OutputPipeline::ReferenceClockToFixed");
     FX_DCHECK(state_.stream);
-    return state_.stream->ReferenceClockToFractionalFrames();
+    return state_.stream->ReferenceClockToFixed();
   }
   void SetMinLeadTime(zx::duration min_lead_time) override {
     ReadableStream::SetMinLeadTime(min_lead_time);

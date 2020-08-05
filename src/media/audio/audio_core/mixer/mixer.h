@@ -101,7 +101,7 @@ class Mixer {
     // step_size and rate_modulo/denominator. If next_dest_frame does not match the requested dest
     // frame value, this stream's running position is reset by recalculating next_frac_source_frame
     // from the dest_frames_to_frac_source_frames TimelineFunction.
-    FractionalFrames<int64_t> next_frac_source_frame{0};
+    Fixed next_frac_source_frame{0};
 
     // This field is similar to src_pos_modulo and relates to the same rate_modulo and denominator.
     // It expresses the stream's long-running position modulo (whereas src_pos_modulo is per-Mix).
@@ -112,7 +112,7 @@ class Mixer {
     // the dest_frames_to_frac_source_frames TimelineFunction). Upon a dest frame discontinuity,
     // next_frac_source_frame is reset to that clock-derived value, and this field is set to zero.
     // This field sets the direction and magnitude of any steps taken for clock reconciliation.
-    FractionalFrames<int64_t> frac_source_error{0};
+    Fixed frac_source_error{0};
 
     bool running_pos_established = false;
 
@@ -132,12 +132,12 @@ class Mixer {
       Reset();
 
       next_dest_frame = target_dest_frames;
-      next_frac_source_frame = FractionalFrames<int64_t>::FromRaw(
-          dest_frames_to_frac_source_frames.Apply(target_dest_frames));
+      next_frac_source_frame =
+          Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frames));
       if (denominator) {
         next_src_pos_modulo = (target_dest_frames * rate_modulo) % denominator;
       }
-      frac_source_error = FractionalFrames<int64_t>::FromRaw(0);
+      frac_source_error = Fixed::FromRaw(0);
     }
 
     // Only called by custom code when debugging, so can remain at INFO severity.
@@ -171,7 +171,7 @@ class Mixer {
           next_src_pos_modulo %= denominator;
         }
       }
-      next_frac_source_frame += FractionalFrames<int64_t>::FromRaw(frac_src_increment);
+      next_frac_source_frame += Fixed::FromRaw(frac_src_increment);
     }
 
     // From current values, advance long-running positions to the specified absolute dest frame num.
@@ -292,8 +292,8 @@ class Mixer {
   // Conversely, source frame X contributes to the output samples S where
   //  (S >= X - P)  and  (S <= X + N)
   //
-  inline FractionalFrames<uint32_t> pos_filter_width() const { return pos_filter_width_; }
-  inline FractionalFrames<uint32_t> neg_filter_width() const { return neg_filter_width_; }
+  inline Fixed pos_filter_width() const { return pos_filter_width_; }
+  inline Fixed neg_filter_width() const { return neg_filter_width_; }
 
   Bookkeeping& bookkeeping() { return bookkeeping_; }
   const Bookkeeping& bookkeeping() const { return bookkeeping_; }
@@ -307,8 +307,8 @@ class Mixer {
   Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width);
 
  private:
-  FractionalFrames<uint32_t> pos_filter_width_;
-  FractionalFrames<uint32_t> neg_filter_width_;
+  Fixed pos_filter_width_;
+  Fixed neg_filter_width_;
   Bookkeeping bookkeeping_;
 };
 

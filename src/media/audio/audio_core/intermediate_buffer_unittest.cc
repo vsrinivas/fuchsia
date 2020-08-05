@@ -24,7 +24,7 @@ class IntermediateBufferTest : public ::testing::Test {};
 
 TEST_F(IntermediateBufferTest, WriteLock) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
-      TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
+      TimelineFunction(TimelineRate(Fixed(1).raw_value(), 1'000'000)));
 
   auto ref_clock = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
 
@@ -39,22 +39,22 @@ TEST_F(IntermediateBufferTest, WriteLock) {
     auto stream_buffer = intermediate_buffer->WriteLock(zx::time(0), 0, 256);
     ASSERT_TRUE(stream_buffer);
     ASSERT_EQ(intermediate_buffer->buffer(), stream_buffer->payload());
-    ASSERT_EQ(FractionalFrames<int64_t>(0), stream_buffer->start());
-    ASSERT_EQ(FractionalFrames<uint32_t>(256), stream_buffer->length());
+    ASSERT_EQ(Fixed(0), stream_buffer->start());
+    ASSERT_EQ(Fixed(256), stream_buffer->length());
   }
 
   {
     auto stream_buffer = intermediate_buffer->WriteLock(zx::time(0), 3, 256);
     ASSERT_TRUE(stream_buffer);
     ASSERT_EQ(intermediate_buffer->buffer(), stream_buffer->payload());
-    ASSERT_EQ(FractionalFrames<int64_t>(3), stream_buffer->start());
-    ASSERT_EQ(FractionalFrames<uint32_t>(256), stream_buffer->length());
+    ASSERT_EQ(Fixed(3), stream_buffer->start());
+    ASSERT_EQ(Fixed(256), stream_buffer->length());
   }
 }
 
 TEST_F(IntermediateBufferTest, ClampLengthToBufferSize) {
   auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
-      TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
+      TimelineFunction(TimelineRate(Fixed(1).raw_value(), 1'000'000)));
 
   auto ref_clock = AudioClock::CreateAsCustom(clock::AdjustableCloneOfMonotonic());
   auto intermediate_buffer =
@@ -66,8 +66,8 @@ TEST_F(IntermediateBufferTest, ClampLengthToBufferSize) {
   auto stream_buffer = intermediate_buffer->WriteLock(zx::time(0), 0, 1024);
   ASSERT_TRUE(stream_buffer);
   ASSERT_EQ(intermediate_buffer->buffer(), stream_buffer->payload());
-  ASSERT_EQ(FractionalFrames<int64_t>(0), stream_buffer->start());
-  ASSERT_EQ(FractionalFrames<uint32_t>(256), stream_buffer->length());
+  ASSERT_EQ(Fixed(0), stream_buffer->start());
+  ASSERT_EQ(Fixed(256), stream_buffer->length());
 }
 
 }  // namespace
