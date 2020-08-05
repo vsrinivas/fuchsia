@@ -447,11 +447,27 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create inspect");
 
+    // Creates registry, used to register handlers for setting types.
+    let registry_signature = RegistryImpl::create(
+        handler_factory.clone(),
+        registry_messenger_factory.clone(),
+        setting_handler_messenger_factory,
+    )
+    .await?;
+
+    let mut proxies = HashMap::new();
+
+    for setting_type in &components {
+        // For now, point all setting types to the registry.
+        proxies.insert(*setting_type, registry_signature);
+    }
+
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
     SwitchboardBuilder::create()
         .registry_messenger_factory(registry_messenger_factory.clone())
         .switchboard_messenger_factory(switchboard_messenger_factory.clone())
+        .add_setting_proxies(proxies)
         .build()
         .await
         .expect("could not create switchboard");
@@ -463,15 +479,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         components.clone(),
     )
     .await?;
-
-    // Creates registry, used to register handlers for setting types.
-    let _ = RegistryImpl::create(
-        handler_factory.clone(),
-        registry_messenger_factory.clone(),
-        setting_handler_messenger_factory,
-    )
-    .await
-    .expect("could not create registry");
 
     register_fidl_handler!(
         components,

@@ -162,12 +162,13 @@ async fn test_notify() {
 
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
-    let _registry = RegistryImpl::create(
+    let registry_signature = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
-    .await;
+    .await
+    .expect("registry creation should succeed");
     let setting_type = SettingType::Unknown;
     let (messenger_client, mut receptor) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
@@ -187,7 +188,7 @@ async fn test_notify() {
                     setting_type: setting_type,
                     data: SettingActionData::Listen(1),
                 }),
-                Audience::Address(Address::Registry),
+                Audience::Messenger(registry_signature),
             )
             .send()
             .wait_for_acknowledge()
@@ -221,7 +222,7 @@ async fn test_notify() {
                     setting_type: setting_type,
                     data: SettingActionData::Listen(0),
                 }),
-                Audience::Address(Address::Registry),
+                Audience::Messenger(registry_signature),
             )
             .send()
             .ack();
@@ -246,12 +247,13 @@ async fn test_request() {
     let handler_messenger_factory = handler::message::create_hub();
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
-    let _registry = RegistryImpl::create(
+    let registry_signature = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
-    .await;
+    .await
+    .expect("registry should be created successfully");
     let setting_type = SettingType::Unknown;
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
@@ -273,7 +275,7 @@ async fn test_request() {
                 setting_type: setting_type,
                 data: SettingActionData::Request(SettingRequest::Get),
             }),
-            Audience::Address(Address::Registry),
+            Audience::Messenger(registry_signature),
         )
         .send();
 
@@ -300,12 +302,13 @@ async fn test_generation() {
 
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let _registry = RegistryImpl::create(
+    let registry_signature = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
-    .await;
+    .await
+    .expect("registry should be created successfully");
     let setting_type = SettingType::Unknown;
     let request_id = 42;
 
@@ -324,7 +327,7 @@ async fn test_generation() {
                     setting_type: setting_type,
                     data: SettingActionData::Listen(1),
                 }),
-                Audience::Address(Address::Registry),
+                Audience::Messenger(registry_signature),
             )
             .send(),
     )
@@ -342,7 +345,7 @@ async fn test_generation() {
                     setting_type: setting_type,
                     data: SettingActionData::Request(SettingRequest::Get),
                 }),
-                Audience::Address(Address::Registry),
+                Audience::Messenger(registry_signature),
             )
             .send(),
     )
@@ -361,12 +364,13 @@ async fn test_regeneration() {
 
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let _registry = RegistryImpl::create(
+    let registry_signature = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
     )
-    .await;
+    .await
+    .expect("registry should be created successfully");
     let setting_type = SettingType::Unknown;
     let request_id = 42;
 
@@ -385,7 +389,7 @@ async fn test_regeneration() {
                     setting_type: setting_type,
                     data: SettingActionData::Request(SettingRequest::Get),
                 }),
-                Audience::Address(Address::Registry),
+                Audience::Messenger(registry_signature),
             )
             .send(),
     )
@@ -405,7 +409,7 @@ async fn test_regeneration() {
                     setting_type: setting_type,
                     data: SettingActionData::Request(SettingRequest::Get),
                 }),
-                Audience::Address(Address::Registry),
+                Audience::Messenger(registry_signature),
             )
             .send(),
     )

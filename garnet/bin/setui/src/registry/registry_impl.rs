@@ -82,14 +82,15 @@ impl RegistryImpl {
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: core::message::Factory,
         controller_messenger_factory: handler::message::Factory,
-    ) -> Result<(), Error> {
-        let messenger_result =
-            messenger_factory.create(MessengerType::Addressable(core::Address::Registry)).await;
+    ) -> Result<core::message::Signature, Error> {
+        let messenger_result = messenger_factory.create(MessengerType::Unbound).await;
         if let Err(error) = messenger_result {
             return Err(Error::new(error));
         }
         let (registry_messenger_client, mut registry_messenger_receptor) =
             messenger_result.unwrap();
+
+        let signature = registry_messenger_client.get_signature();
 
         let controller_messenger_result = controller_messenger_factory
             .create(MessengerType::Addressable(handler::Address::Registry))
@@ -156,7 +157,7 @@ impl RegistryImpl {
             }
         })
         .detach();
-        Ok(())
+        Ok(signature)
     }
 
     /// Interpret action from switchboard into registry actions.

@@ -8,7 +8,6 @@ use std::fmt::Debug;
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Switchboard,
-    Registry,
 }
 
 // The types of data that can be sent.
