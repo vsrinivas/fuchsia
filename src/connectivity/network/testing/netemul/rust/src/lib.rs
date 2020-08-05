@@ -327,29 +327,16 @@ impl<'a> TestEnvironment<'a> {
 
     /// Creates a [`socket2::Socket`] backed by the implementation of
     /// `fuchsia.posix.socket/Provider` in this environment.
-    pub async fn socket(
+    pub async fn datagram_socket(
         &self,
-        domain: socket2::Domain,
-        type_: socket2::Type,
-        protocol: Option<socket2::Protocol>,
+        domain: fidl_fuchsia_posix_socket::Domain,
+        proto: fidl_fuchsia_posix_socket::DatagramSocketProtocol,
     ) -> Result<socket2::Socket> {
         let socket_provider = self
             .connect_to_service::<posix_socket::ProviderMarker>()
             .context("failed to connect to socket provider")?;
         let sock = socket_provider
-            .socket2(
-                libc::c_int::from(domain)
-                    .try_into()
-                    .with_context(|| format!("invalid domain = {:?}", domain))?,
-                libc::c_int::from(type_)
-                    .try_into()
-                    .with_context(|| format!("invalid type = {:?}", type_))?,
-                protocol
-                    .map(libc::c_int::from)
-                    .unwrap_or(0)
-                    .try_into()
-                    .with_context(|| format!("invalid protocol = {:?}", protocol))?,
-            )
+            .datagram_socket(domain, proto)
             .await
             .context("failed to call socket")?
             .map_err(|e| std::io::Error::from_raw_os_error(e.into_primitive()))
@@ -653,11 +640,11 @@ impl EnvironmentUdpSocket for std::net::UdpSocket {
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
             let domain = match &addr {
-                std::net::SocketAddr::V4(_) => socket2::Domain::ipv4(),
-                std::net::SocketAddr::V6(_) => socket2::Domain::ipv6(),
+                std::net::SocketAddr::V4(_) => fidl_fuchsia_posix_socket::Domain::Ipv4,
+                std::net::SocketAddr::V6(_) => fidl_fuchsia_posix_socket::Domain::Ipv6,
             };
             let sock = env
-                .socket(domain, socket2::Type::dgram(), None)
+                .datagram_socket(domain, fidl_fuchsia_posix_socket::DatagramSocketProtocol::Udp)
                 .await
                 .context("failed to create socket")?;
 

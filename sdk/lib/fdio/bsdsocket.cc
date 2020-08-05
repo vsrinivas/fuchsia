@@ -64,21 +64,76 @@ int socket(int domain, int type, int protocol) {
     return ERRNO(EIO);
   }
 
-  // We're going to manage blocking on the client side, so always ask the
-  // provider for a non-blocking socket.
-  auto socket_result =
-      provider->Socket2(static_cast<int16_t>(domain), static_cast<int16_t>(type) | SOCK_NONBLOCK,
-                        static_cast<int16_t>(protocol));
-  status = socket_result.status();
-  if (status != ZX_OK) {
-    return ERROR(status);
+  fsocket::Domain sock_domain;
+  switch (domain) {
+    case AF_INET:
+      sock_domain = fsocket::Domain::IPV4;
+      break;
+    case AF_INET6:
+      sock_domain = fsocket::Domain::IPV6;
+      break;
+    case AF_PACKET:
+      return ERRNO(EPERM);
+    default:
+      return ERRNO(EPROTONOSUPPORT);
   }
-  auto& socket_response = socket_result.Unwrap()->result;
-  if (socket_response.is_err()) {
-    return ERRNO(static_cast<int>(socket_response.err()));
+  constexpr int kSockTypesMask = ~(SOCK_CLOEXEC | SOCK_NONBLOCK);
+  zx::channel socket_channel;
+  switch (type & kSockTypesMask) {
+    case SOCK_STREAM:
+      switch (protocol) {
+        case IPPROTO_IP:
+        case IPPROTO_TCP: {
+          auto result = provider->StreamSocket(sock_domain, fsocket::StreamSocketProtocol::TCP);
+          if (result.status() != ZX_OK) {
+            return ERROR(result.status());
+          }
+          if (result->result.is_err()) {
+            return ERRNO(static_cast<int32_t>(result->result.err()));
+          }
+          socket_channel = std::move(result->result.mutable_response().s);
+        } break;
+        default:
+          return ERRNO(EPROTONOSUPPORT);
+      }
+      break;
+    case SOCK_DGRAM: {
+      fsocket::DatagramSocketProtocol proto;
+      switch (protocol) {
+        case IPPROTO_IP:
+        case IPPROTO_UDP:
+          proto = fsocket::DatagramSocketProtocol::UDP;
+          break;
+        case IPPROTO_ICMP:
+          if (sock_domain != fsocket::Domain::IPV4) {
+            return ERRNO(EPROTONOSUPPORT);
+          }
+          proto = fsocket::DatagramSocketProtocol::ICMP_ECHO;
+          break;
+        case IPPROTO_ICMPV6:
+          if (sock_domain != fsocket::Domain::IPV6) {
+            return ERRNO(EPROTONOSUPPORT);
+          }
+          proto = fsocket::DatagramSocketProtocol::ICMP_ECHO;
+          break;
+        default:
+          return ERRNO(EPROTONOSUPPORT);
+      }
+      auto result = provider->DatagramSocket(sock_domain, proto);
+      if (result.status() != ZX_OK) {
+        return ERROR(result.status());
+      }
+      if (result->result.is_err()) {
+        return ERRNO(static_cast<int32_t>(result->result.err()));
+      }
+      socket_channel = std::move(result->result.mutable_response().s);
+    } break;
+    default:
+      return ERRNO(EPROTONOSUPPORT);
   }
+
   fdio_t* io;
-  status = fdio_from_channel(std::move(socket_response.mutable_response().s), &io);
+  status = fdio_from_channel(std::move(socket_channel), &io);
   if (status != ZX_OK) {
     return ERROR(status);
   }

@@ -1114,37 +1114,35 @@ type providerImpl struct {
 
 var _ socket.ProviderWithCtx = (*providerImpl)(nil)
 
-// Highest two bits modify the socket type.
-const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
+func toTransProtoStream(domain socket.Domain, proto socket.StreamSocketProtocol) (posix.Errno, tcpip.TransportProtocolNumber) {
+	switch proto {
+	case socket.StreamSocketProtocolTcp:
+		return 0, tcp.ProtocolNumber
+	}
+	return posix.ErrnoEprotonosupport, 0
+}
 
-func toTransProto(typ, protocol int16) (posix.Errno, tcpip.TransportProtocolNumber) {
-	switch typ & sockTypesMask {
-	case C.SOCK_STREAM:
-		switch protocol {
-		case C.IPPROTO_IP, C.IPPROTO_TCP:
-			return 0, tcp.ProtocolNumber
-		}
-	case C.SOCK_DGRAM:
-		switch protocol {
-		case C.IPPROTO_IP, C.IPPROTO_UDP:
-			return 0, udp.ProtocolNumber
-		case C.IPPROTO_ICMP:
+func toTransProtoDatagram(domain socket.Domain, proto socket.DatagramSocketProtocol) (posix.Errno, tcpip.TransportProtocolNumber) {
+	switch proto {
+	case socket.DatagramSocketProtocolUdp:
+		return 0, udp.ProtocolNumber
+	case socket.DatagramSocketProtocolIcmpEcho:
+		switch domain {
+		case socket.DomainIpv4:
 			return 0, icmp.ProtocolNumber4
-		case C.IPPROTO_ICMPV6:
+		case socket.DomainIpv6:
 			return 0, icmp.ProtocolNumber6
 		}
 	}
 	return posix.ErrnoEprotonosupport, 0
 }
 
-func toNetProto(domain int16) (posix.Errno, tcpip.NetworkProtocolNumber) {
+func toNetProto(domain socket.Domain) (posix.Errno, tcpip.NetworkProtocolNumber) {
 	switch domain {
-	case C.AF_INET:
+	case socket.DomainIpv4:
 		return 0, ipv4.ProtocolNumber
-	case C.AF_INET6:
+	case socket.DomainIpv6:
 		return 0, ipv6.ProtocolNumber
-	case C.AF_PACKET:
-		return posix.ErrnoEperm, 0
 	default:
 		return posix.ErrnoEpfnosupport, 0
 	}
@@ -1156,107 +1154,200 @@ func (cb callback) Callback(e *waiter.Entry) {
 	cb(e)
 }
 
-func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (socket.ProviderSocket2Result, error) {
+func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, proto socket.DatagramSocketProtocol) (socket.ProviderDatagramSocketResult, error) {
 	code, netProto := toNetProto(domain)
 	if code != 0 {
-		return socket.ProviderSocket2ResultWithErr(code), nil
+		return socket.ProviderDatagramSocketResultWithErr(code), nil
 	}
-	code, transProto := toTransProto(typ, protocol)
+	code, transProto := toTransProtoDatagram(domain, proto)
 	if code != 0 {
-		return socket.ProviderSocket2ResultWithErr(code), nil
+		return socket.ProviderDatagramSocketResultWithErr(code), nil
 	}
+
 	wq := new(waiter.Queue)
-	ep, err := sp.ns.stack.NewEndpoint(transProto, netProto, wq)
-	if err != nil {
-		return socket.ProviderSocket2ResultWithErr(tcpipErrorToCode(err)), nil
+	ep, tcpErr := sp.ns.stack.NewEndpoint(transProto, netProto, wq)
+	if tcpErr != nil {
+		return socket.ProviderDatagramSocketResultWithErr(tcpipErrorToCode(tcpErr)), nil
 	}
 
-	if transProto == tcp.ProtocolNumber {
-		ep, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns)
-		if err != nil {
-			return socket.ProviderSocket2Result{}, err
-		}
-		streamSocketInterface, err := newStreamSocket(ep)
-		if err != nil {
-			return socket.ProviderSocket2Result{}, err
-		}
-		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
-			S: socket.BaseSocketWithCtxInterface(streamSocketInterface),
-		}), nil
-	} else {
-		var localE, peerE zx.Handle
-		if status := zx.Sys_eventpair_create(0, &localE, &peerE); status != zx.ErrOk {
-			return socket.ProviderSocket2Result{}, &zx.Error{Status: status, Text: "zx.EventPair"}
-		}
-		localC, peerC, err := zx.NewChannel(0)
-		if err != nil {
-			return socket.ProviderSocket2Result{}, err
-		}
-		s := &datagramSocketImpl{
-			endpointWithEvent: &endpointWithEvent{
-				endpoint: endpoint{
-					ep:         ep,
-					wq:         wq,
-					transProto: transProto,
-					netProto:   netProto,
-					ns:         sp.ns,
-				},
-				local: localE,
-				peer:  peerE,
+	var localE, peerE zx.Handle
+	if status := zx.Sys_eventpair_create(0, &localE, &peerE); status != zx.ErrOk {
+		return socket.ProviderDatagramSocketResult{}, &zx.Error{Status: status, Text: "zx.EventPair"}
+	}
+	localC, peerC, err := zx.NewChannel(0)
+	if err != nil {
+		return socket.ProviderDatagramSocketResult{}, err
+	}
+	s := &datagramSocketImpl{
+		endpointWithEvent: &endpointWithEvent{
+			endpoint: endpoint{
+				ep:         ep,
+				wq:         wq,
+				transProto: transProto,
+				netProto:   netProto,
+				ns:         sp.ns,
 			},
+			local: localE,
+			peer:  peerE,
+		},
+	}
+
+	s.entry.Callback = callback(func(*waiter.Entry) {
+		var err error
+		s.endpointWithEvent.incoming.mu.Lock()
+		if !s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) != 0 {
+			err = s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalIncoming)
+			s.endpointWithEvent.incoming.mu.asserted = true
+		}
+		s.endpointWithEvent.incoming.mu.Unlock()
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	s.wq.EventRegister(&s.entry, waiter.EventIn)
+
+	s.addConnection(ctx, io.NodeWithCtxInterfaceRequest{Channel: localC})
+	go func() {
+		s.wg.Wait()
+
+		s.wq.EventUnregister(&s.entry)
+
+		// Copy the handle before closing below; (*zx.Handle).Close sets the
+		// receiver to zx.HandleInvalid.
+		key := s.local
+
+		if err := s.local.Close(); err != nil {
+			panic(fmt.Sprintf("local.Close() = %s", err))
 		}
 
-		s.entry.Callback = callback(func(*waiter.Entry) {
-			var err error
-			s.endpointWithEvent.incoming.mu.Lock()
-			if !s.endpointWithEvent.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) != 0 {
-				err = s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalIncoming)
-				s.endpointWithEvent.incoming.mu.asserted = true
-			}
-			s.endpointWithEvent.incoming.mu.Unlock()
-			if err != nil {
-				panic(err)
-			}
-		})
-
-		s.wq.EventRegister(&s.entry, waiter.EventIn)
-
-		s.addConnection(ctx, io.NodeWithCtxInterfaceRequest{Channel: localC})
-		go func() {
-			s.wg.Wait()
-
-			s.wq.EventUnregister(&s.entry)
-
-			// Copy the handle before closing below; (*zx.Handle).Close sets the
-			// receiver to zx.HandleInvalid.
-			key := s.local
-
-			if err := s.local.Close(); err != nil {
-				panic(fmt.Sprintf("local.Close() = %s", err))
-			}
-
-			if err := s.peer.Close(); err != nil {
-				panic(fmt.Sprintf("peer.Close() = %s", err))
-			}
-
-			s.ns.onRemoveEndpoint(key)
-
-			s.ep.Close()
-
-			syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", s.endpointWithEvent)
-		}()
-		syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p", s.endpointWithEvent)
-		datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
-
-		sp.ns.onAddEndpoint(localE, ep)
-
-		if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalOutgoing); err != nil {
-			panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalOutgoing) = %s", err))
+		if err := s.peer.Close(); err != nil {
+			panic(fmt.Sprintf("peer.Close() = %s", err))
 		}
 
-		return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{
-			S: socket.BaseSocketWithCtxInterface(datagramSocketInterface),
-		}), nil
+		s.ns.onRemoveEndpoint(key)
+
+		s.ep.Close()
+
+		syslog.VLogTf(syslog.DebugVerbosity, "close", "%p", s.endpointWithEvent)
+	}()
+	syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p", s.endpointWithEvent)
+	datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
+
+	sp.ns.onAddEndpoint(localE, ep)
+
+	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalOutgoing); err != nil {
+		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalOutgoing) = %s", err))
+	}
+
+	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponse{
+		S: socket.DatagramSocketWithCtxInterface{Channel: datagramSocketInterface.Channel},
+	}), nil
+
+}
+
+func (sp *providerImpl) StreamSocket(ctx fidl.Context, domain socket.Domain, proto socket.StreamSocketProtocol) (socket.ProviderStreamSocketResult, error) {
+	code, netProto := toNetProto(domain)
+	if code != 0 {
+		return socket.ProviderStreamSocketResultWithErr(code), nil
+	}
+	code, transProto := toTransProtoStream(domain, proto)
+	if code != 0 {
+		return socket.ProviderStreamSocketResultWithErr(code), nil
+	}
+
+	wq := new(waiter.Queue)
+	ep, tcpErr := sp.ns.stack.NewEndpoint(transProto, netProto, wq)
+	if tcpErr != nil {
+		return socket.ProviderStreamSocketResultWithErr(tcpipErrorToCode(tcpErr)), nil
+	}
+
+	socketEp, err := newEndpointWithSocket(ep, wq, transProto, netProto, sp.ns)
+	if err != nil {
+		return socket.ProviderStreamSocketResult{}, err
+	}
+	streamSocketInterface, err := newStreamSocket(socketEp)
+	if err != nil {
+		return socket.ProviderStreamSocketResult{}, err
+	}
+	return socket.ProviderStreamSocketResultWithResponse(socket.ProviderStreamSocketResponse{
+		S: socket.StreamSocketWithCtxInterface{Channel: streamSocketInterface.Channel},
+	}), nil
+}
+
+// TODO(fxb/44347) Remove after soft transition.
+func (sp *providerImpl) Socket2(ctx fidl.Context, domain, typ, protocol int16) (socket.ProviderSocket2Result, error) {
+	var socketDomain socket.Domain
+	switch domain {
+	case C.AF_INET:
+		socketDomain = socket.DomainIpv4
+	case C.AF_INET6:
+		socketDomain = socket.DomainIpv6
+	case C.AF_PACKET:
+		return socket.ProviderSocket2ResultWithErr(posix.ErrnoEperm), nil
+	default:
+		return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
+	}
+	// Highest two bits modify the socket type.
+	const sockTypesMask = 0x7fff &^ (C.SOCK_CLOEXEC | C.SOCK_NONBLOCK)
+
+	switch typ & sockTypesMask {
+	case C.SOCK_STREAM:
+		var socketProtocol socket.StreamSocketProtocol
+		switch protocol {
+		case C.IPPROTO_IP, C.IPPROTO_TCP:
+			socketProtocol = socket.StreamSocketProtocolTcp
+		default:
+			return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
+		}
+		result, err := sp.StreamSocket(ctx, socketDomain, socketProtocol)
+		if err != nil {
+			return socket.ProviderSocket2Result{}, nil
+		}
+		switch result.Which() {
+		case socket.ProviderStreamSocketResultResponse:
+			return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{S: socket.BaseSocketWithCtxInterface{
+				Channel: result.Response.S.Channel,
+			}}), nil
+		case socket.ProviderStreamSocketResultErr:
+			return socket.ProviderSocket2ResultWithErr(result.Err), nil
+		default:
+			panic(fmt.Sprintf("Unexpected socket.ProviderStreamSocketResult result ordinal %x", result.Which()))
+		}
+	case C.SOCK_DGRAM:
+		var socketProtocol socket.DatagramSocketProtocol
+		switch protocol {
+		case C.IPPROTO_IP, C.IPPROTO_UDP:
+			socketProtocol = socket.DatagramSocketProtocolUdp
+		case C.IPPROTO_ICMP:
+			if socketDomain != socket.DomainIpv4 {
+				return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
+			}
+			socketProtocol = socket.DatagramSocketProtocolIcmpEcho
+		case C.IPPROTO_ICMPV6:
+			if socketDomain != socket.DomainIpv6 {
+				return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
+			}
+			socketProtocol = socket.DatagramSocketProtocolIcmpEcho
+		default:
+			return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
+		}
+		result, err := sp.DatagramSocket(ctx, socketDomain, socketProtocol)
+		if err != nil {
+			return socket.ProviderSocket2Result{}, nil
+		}
+		switch result.Which() {
+		case socket.ProviderDatagramSocketResultResponse:
+			return socket.ProviderSocket2ResultWithResponse(socket.ProviderSocket2Response{S: socket.BaseSocketWithCtxInterface{
+				Channel: result.Response.S.Channel,
+			}}), nil
+		case socket.ProviderDatagramSocketResultErr:
+			return socket.ProviderSocket2ResultWithErr(result.Err), nil
+		default:
+			panic(fmt.Sprintf("Unexpected socket.ProviderStreamSocketResult result ordinal %x", result.Which()))
+		}
+	default:
+		return socket.ProviderSocket2ResultWithErr(posix.ErrnoEprotonosupport), nil
 	}
 }
 

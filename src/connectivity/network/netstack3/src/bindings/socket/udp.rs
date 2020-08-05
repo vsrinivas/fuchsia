@@ -909,7 +909,7 @@ mod tests {
     ) -> psocket::DatagramSocketProxy {
         let socket_provider = test_stack.connect_socket_provider().unwrap();
         let socket = socket_provider
-            .socket2(A::FAMILY as i16, libc::SOCK_DGRAM as i16, 0)
+            .datagram_socket(A::domain(), psocket::DatagramSocketProtocol::Udp)
             .await
             .unwrap()
             .expect("Socket succeeds");
@@ -1207,7 +1207,7 @@ mod tests {
         let test_stack = t.get(0);
         let socket_provider = test_stack.connect_socket_provider().unwrap();
         let socket = socket_provider
-            .socket2(libc::AF_INET as i16, libc::SOCK_DGRAM as i16, 0)
+            .datagram_socket(psocket::Domain::Ipv4, psocket::DatagramSocketProtocol::Udp)
             .await
             .unwrap()
             .expect("Socket call succeeds")

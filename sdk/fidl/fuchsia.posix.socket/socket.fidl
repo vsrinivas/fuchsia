@@ -102,11 +102,62 @@ table InterfaceAddresses {
     4: vector<fuchsia.net.Subnet>:MAX addresses;
 };
 
+/// A socket's domain.
+///
+/// Determines the addressing domain for a socket.
+enum Domain : int16 {
+    /// An IPv4 socket. Equivalent to `AF_INET`.
+    IPV4 = 0;
+    /// An IPv6 socket. Equivalent to `AF_INET6`.
+    IPV6 = 1;
+};
+
+/// Protocols supported by [`fuchsia.posix.socket/DatagramSocket`].
+///
+/// `DatagramSocketProtocol` enumerates the protocols supported by the network stack over datagram
+/// sockets.
+// NOTE: This list can be expanded to accommodate other protocols should the need arise. Most
+// notably, there exists the question on whether to support raw IP sockets and what the access model
+// for those should be.
+enum DatagramSocketProtocol {
+    /// UDP (User Datagram Protocol).
+    ///
+    /// A UDP socket is equivalent to the POSIX API of `SOCK_DGRAM` with a protocol of 0 or
+    /// `IPPROTO_UDP`.
+    UDP = 1;
+    /// ICMP (Internet Control Message Protocol) echo.
+    ///
+    /// An ICMP echo socket is equivalent to the POSIX API of `SOCK_DGRAM` with a protocol of
+    /// `IPPROTO_ICMP` `IPPROTO_ICMPV6` (depending on provided domain).
+    ///
+    /// Datagrams sent over an ICMP echo socket *must* have a valid ICMP or ICMPv6 echo header.
+    ICMP_ECHO = 2;
+};
+
+/// Protocols supported by [`fuchsia.posix.socket/StreamSocket`].
+///
+/// `StreamSocketProtocol` enumerates the protocols supported by the network stack over stream
+/// sockets.
+enum StreamSocketProtocol {
+    /// TCP (Transmission Control Protocol).
+    ///
+    /// A TCP socket is equivalent to the POSIX API of `SOCK_STREAM` with a protocol of 0 or
+    /// `IPPROTO_TCP`.
+    TCP = 0;
+};
+
 /// Provider implements the POSIX sockets API.
 [Discoverable]
 protocol Provider {
     /// Requests a socket with the specified parameters.
+    // TODO(fxb/44347): Remove after soft transition.
+    [Deprecated = "Use StreamSocket or DatagramSocket instead"]
     Socket2(int16 domain, int16 type, int16 protocol) -> (BaseSocket s) error fuchsia.posix.Errno;
+
+    /// Requests a stream socket with the specified parameters.
+    StreamSocket(Domain domain, StreamSocketProtocol proto) -> (StreamSocket s) error fuchsia.posix.Errno;
+    /// Requests a datagram socket with the specified parameters.
+    DatagramSocket(Domain domain, DatagramSocketProtocol proto) -> (DatagramSocket s) error fuchsia.posix.Errno;
 
     /// Looks up an interface by its index and returns its name. Returns `ZX_ERR_NOT_FOUND` if the
     /// specified index doesn't exist.

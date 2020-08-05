@@ -6,7 +6,7 @@
 
 pub(crate) mod udp;
 
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::num::NonZeroU16;
 
 use byteorder::{NativeEndian, NetworkEndian};
@@ -40,22 +40,30 @@ pub enum TransProto {
     Tcp,
 }
 
-/// Common properties for socket workers.
-#[derive(Debug)]
-struct SocketWorkerProperties {
-    nonblock: bool,
-}
+impl TryFrom<psocket::DatagramSocketProtocol> for TransProto {
+    type Error = Errno;
 
-fn get_domain_ip_version<T>(v: T) -> Option<IpVersion>
-where
-    i32: TryFrom<T>,
-{
-    match i32::try_from(v) {
-        Ok(libc::AF_INET) => Some(IpVersion::V4),
-        Ok(libc::AF_INET6) => Some(IpVersion::V6),
-        _ => None,
+    fn try_from(value: psocket::DatagramSocketProtocol) -> Result<Self, Self::Error> {
+        match value {
+            psocket::DatagramSocketProtocol::Udp => Ok(TransProto::Udp),
+            psocket::DatagramSocketProtocol::IcmpEcho => Err(Errno::Eprotonosupport),
+        }
     }
 }
+
+impl TryFrom<psocket::StreamSocketProtocol> for TransProto {
+    type Error = Errno;
+
+    fn try_from(value: psocket::StreamSocketProtocol) -> Result<Self, Self::Error> {
+        match value {
+            psocket::StreamSocketProtocol::Tcp => Ok(TransProto::Tcp),
+        }
+    }
+}
+
+/// Common properties for socket workers.
+#[derive(Debug)]
+struct SocketWorkerProperties {}
 
 pub(crate) trait SocketStackDispatcher:
     InnerValue<udp::UdpSocketCollection>
@@ -142,8 +150,19 @@ where
                 // TODO(https://fxbug.dev/48969): implement this method.
                 responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
             }
-            psocket::ProviderRequest::Socket2 { domain, type_, protocol: _, responder } => {
-                responder_send!(responder, &mut self.socket(domain, type_));
+            psocket::ProviderRequest::Socket2 { domain: _, type_: _, protocol: _, responder } => {
+                // NB: Netstack3 is not load-bearing enough to justify
+                // maintaining two implementations.
+                responder.control_handle().shutdown_with_epitaph(zx::Status::NOT_SUPPORTED);
+            }
+            psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
+                responder_send!(responder, &mut Err(Errno::Eprotonosupport));
+            }
+            psocket::ProviderRequest::DatagramSocket { domain, proto, responder } => {
+                responder_send!(
+                    responder,
+                    &mut self.socket::<psocket::DatagramSocketMarker, _>(domain, proto)
+                );
             }
             psocket::ProviderRequest::GetInterfaceAddresses { responder } => {
                 // TODO(https://fxbug.dev/54162): implement this method.
@@ -152,36 +171,26 @@ where
         }
     }
 
-    fn socket(
+    fn socket<T, P: TryInto<TransProto, Error = Errno>>(
         &self,
-        domain: i16,
-        sock_type: i16,
-    ) -> Result<ClientEnd<psocket::BaseSocketMarker>, Errno> {
-        let nonblock = i32::from(sock_type) & libc::SOCK_NONBLOCK != 0;
-        let sock_type = i32::from(sock_type) & !(libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC);
-
-        let net_proto = get_domain_ip_version(domain).ok_or(Errno::Eafnosupport)?;
-        let trans_proto = match sock_type {
-            libc::SOCK_DGRAM => TransProto::Udp,
-            libc::SOCK_STREAM => TransProto::Tcp,
-            _ => {
-                return Err(Errno::Eafnosupport);
-            }
+        domain: psocket::Domain,
+        proto: P,
+    ) -> Result<ClientEnd<T>, Errno> {
+        let net_proto = match domain {
+            psocket::Domain::Ipv4 => IpVersion::V4,
+            psocket::Domain::Ipv6 => IpVersion::V6,
         };
 
-        if let Ok((c0, c1)) = zx::Channel::create() {
-            self.spawn_worker(
-                net_proto,
-                trans_proto,
-                // we can safely unwrap here because we just created
-                // this channel above.
-                fasync::Channel::from_channel(c0).unwrap(),
-                SocketWorkerProperties { nonblock },
-            )
-            .map(|()| ClientEnd::<psocket::BaseSocketMarker>::new(c1))
-        } else {
-            Err(Errno::Enobufs)
-        }
+        let (server, client) = zx::Channel::create().map_err(|_: zx::Status| Errno::Enobufs)?;
+        self.spawn_worker(
+            net_proto,
+            proto.try_into()?,
+            // we can safely unwrap here because we just created
+            // this channel above.
+            fasync::Channel::from_channel(server).unwrap(),
+            SocketWorkerProperties {},
+        )
+        .map(|()| ClientEnd::<T>::new(client))
     }
 }
 
@@ -422,6 +431,15 @@ mod testutil {
 
         /// The default subnet prefix used for tests.
         const DEFAULT_PREFIX: u8;
+
+        /// Get the [`psocket::Domain`] for this `SockAddr`'s family.
+        fn domain() -> psocket::Domain {
+            match i32::from(Self::FAMILY) {
+                libc::AF_INET => psocket::Domain::Ipv4,
+                libc::AF_INET6 => psocket::Domain::Ipv6,
+                _ => panic!("Unrecognized socket family {}", Self::FAMILY),
+            }
+        }
 
         /// Creates the serialized representation of this [`SockAddr`] with the
         /// informed `options`.
