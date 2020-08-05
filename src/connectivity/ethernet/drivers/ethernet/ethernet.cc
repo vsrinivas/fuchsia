@@ -539,17 +539,22 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
 
 // The thread safety analysis cannot reason through the aliasing of
 // edev0 and edev->edev0_, so disable it.
+void EthDev::ClearFilteringLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
+  // The next three lines clean up promisc, multicast-promisc, and multicast-filter, in case
+  // this ethdev had any state set. Ignore failures, which may come from drivers not
+  // supporting the feature.
+  SetPromiscLocked(false);
+  SetMulticastPromiscLocked(false);
+  RebuildMulticastFilterLocked();
+}
+
+// The thread safety analysis cannot reason through the aliasing of
+// edev0 and edev->edev0_, so disable it.
 zx_status_t EthDev::StopLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
   if (state_ & kStateRunning) {
     state_ &= (~kStateRunning);
     edev0_->list_active_.erase(*this);
     edev0_->list_idle_.push_back(fbl::RefPtr(this));
-    // The next three lines clean up promisc, multicast-promisc, and multicast-filter, in case
-    // this ethdev had any state set. Ignore failures, which may come from drivers not
-    // supporting the feature. (TODO: check failure codes).
-    SetPromiscLocked(false);
-    SetMulticastPromiscLocked(false);
-    RebuildMulticastFilterLocked();
     if (edev0_->list_active_.is_empty()) {
       if (!(state_ & kStateDead)) {
         // Release the lock to allow other device operations in callback routine.
@@ -769,7 +774,7 @@ void EthDev::KillLocked() {
 void EthDev::StopAndKill() {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   StopLocked();
-  SetPromiscLocked(false);
+  ClearFilteringLocked();
   if (transmit_fifo_.is_valid()) {
     // Ask the Transmit thread to exit.
     transmit_fifo_.signal(0, kSignalFifoTerminate);
@@ -912,6 +917,7 @@ void EthDev0::DestroyAllEthDev() TA_NO_THREAD_SAFETY_ANALYSIS {
     auto& eth = *itr;
     itr++;
     eth.StopLocked();
+    eth.ClearFilteringLocked();
   }
 
   for (auto itr = list_idle_.begin(); itr != list_idle_.end();) {

@@ -770,7 +770,8 @@ TEST(EthernetConfigTests, EthernetMulticastPromiscOnOverflow) {
   ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(mac));
   ASSERT_NO_FATAL_FAILURES(
       tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, -1, 0, nullptr, "overloaded B"));
-  ASSERT_EQ(ZX_OK, clientB.Stop());
+  // Drop a client, multicast filtering for it must be dropped as well.
+  clientB.Cleanup();
   n_data--;
   ASSERT_NO_FATAL_FAILURES(tap.ExpectSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_data, n_data,
                                               data, "deleted B - filter should have 31"));

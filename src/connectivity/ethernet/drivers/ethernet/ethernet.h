@@ -210,6 +210,7 @@ class EthDev : public EthDevType,
   void RecvLocked(const void* data, size_t len, uint32_t extra) __TA_REQUIRES(edev0_->ethdev_lock_);
   void KillLocked() __TA_REQUIRES(edev0_->ethdev_lock_);
   zx_status_t StopLocked() __TA_REQUIRES(edev0_->ethdev_lock_);
+  void ClearFilteringLocked() __TA_REQUIRES(edev0_->ethdev_lock_);
   zx_status_t SetClientNameLocked(const void* in_buf, size_t in_len)
       __TA_REQUIRES(edev0_->ethdev_lock_);
   zx_status_t GetStatusLocked(void* out_buf, size_t out_len, size_t* out_actual)
