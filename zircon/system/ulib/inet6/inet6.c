@@ -28,12 +28,6 @@ const ip6_addr_t ip6_ll_all_nodes = {
     .u8 = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
 
-// If non-zero, this setting causes us to generate our
-// MAC-derived link-local IPv6 address in a way that
-// is different from the spec, so we our link-local traffic
-// is distinct from traffic from Fuchsia's netstack service.
-#define INET6_COEXIST_WITH_NETSTACK 1
-
 // Convert MAC Address to IPv6 Unique Local Address.
 void ula6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
   uint8_t* ip = _ip->u8;
@@ -58,7 +52,7 @@ void ula6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
 }
 
 // Convert MAC Address to IPv6 Link Local Address
-// aa:bb:cc:dd:ee:ff => FF80::aabb:ccFF:FEdd:eeff
+// aa:bb:cc:dd:ee:ff => FF80::aabb:cc4D:FEdd:eeff
 // bit 2 (U/L) of the mac is inverted
 void ll6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
   uint8_t* ip = _ip->u8;
@@ -73,11 +67,10 @@ void ll6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
   ip[8] = mac[0] ^ 2;
   ip[9] = mac[1];
   ip[10] = mac[2];
-#if INET6_COEXIST_WITH_NETSTACK
+  // Normally this would be set to 0xFF when generating the modified EUI-64
+  // interface identifier, as per RFC 4291 section 2.5.1. However, netstack
+  // will generate that address so we use a modified version.
   ip[11] = 'M';
-#else
-  ip[11] = 0xFF;
-#endif
   ip[12] = 0xFE;
   ip[13] = mac[3];
   ip[14] = mac[4];
@@ -436,17 +429,13 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
       BAD_PACKET_FROM(&ip->src, "bogus NDP code");
       return;
     }
-#if !INET6_COEXIST_WITH_NETSTACK
+
+    // Ignore the neighbor solicitation if it is targetting another node, as per
+    // RFC 4861 section 7.2.3.
     if (!ip6_addr_eq((ip6_addr_t*)ndp->target, &ll_ip6_addr) &&
         !ip6_addr_eq((ip6_addr_t*)ndp->target, &ula_ip6_addr)) {
-      char src_addr_str[IP6TOAMAX];
-      char dst_addr_str[IP6TOAMAX];
-      ip6toa(src_addr_str, &ip->src);
-      ip6toa(dst_addr_str, (ip6_addr_t*)ndp->target);
-      printf("inet6: ignoring NDP packet sent from %s to %s\n", src_addr_str, dst_addr_str);
       return;
     }
-#endif
 
     msg.hdr.type = ICMP6_NDP_N_ADVERTISE;
     msg.hdr.code = 0;
