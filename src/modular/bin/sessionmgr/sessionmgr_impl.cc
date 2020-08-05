@@ -271,9 +271,6 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig stor
     ConnectToSessionShellService(story_shell_factory_ptr.NewRequest());
   }
 
-  fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_story_provider;
-  auto focus_provider_request_story_provider = focus_provider_story_provider.NewRequest();
-
   presentation_provider_impl_ = std::make_unique<PresentationProviderImpl>(this);
   OnTerminate(Reset(&presentation_provider_impl_));
 
@@ -288,8 +285,7 @@ void SessionmgrImpl::InitializeModular(fuchsia::modular::session::AppConfig stor
 
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
-      std::move(story_shell_factory_ptr), component_context_info,
-      std::move(focus_provider_story_provider), startup_agent_launcher_.get(),
+      std::move(story_shell_factory_ptr), component_context_info, startup_agent_launcher_.get(),
       presentation_provider_impl_.get(), &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 

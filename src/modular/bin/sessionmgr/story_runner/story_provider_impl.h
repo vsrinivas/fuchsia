@@ -41,13 +41,12 @@ class SessionStorage;
 class StoryControllerImpl;
 class StoryStorage;
 
-class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::FocusWatcher {
+class StoryProviderImpl : fuchsia::modular::StoryProvider {
  public:
   StoryProviderImpl(Environment* session_environment, SessionStorage* session_storage,
                     fuchsia::modular::session::AppConfig story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                     const ComponentContextInfo& component_context_info,
-                    fuchsia::modular::FocusProviderPtr focus_provider,
                     AgentServicesFactory* agent_services_factory,
                     PresentationProvider* presentation_provider, inspect::Node* root_node);
 
@@ -139,9 +138,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
   // |fuchsia::modular::StoryProvider|
   void Watch(fidl::InterfaceHandle<fuchsia::modular::StoryProviderWatcher> watcher) override;
 
-  // |fuchsia::modular::FocusWatcher|
-  void OnFocusChange(fuchsia::modular::FocusInfoPtr info) override;
-
   // Called by *session_storage_.
   void OnStoryStorageDeleted(std::string story_id);
   void OnStoryStorageUpdated(std::string story_id,
@@ -224,13 +220,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   AgentServicesFactory* const agent_services_factory_;  // Not owned.
   PresentationProvider* const presentation_provider_;   // Not owned.
-
-  // When a story gets created, or when it gets focused on this device, we write
-  // a record of the current context in the story page. So we need to watch the
-  // context and the focus. This serves to compute relative importance of
-  // stories in the timeline, as determined by the current context.
-  fuchsia::modular::FocusProviderPtr focus_provider_;
-  fidl::Binding<fuchsia::modular::FocusWatcher> focus_watcher_binding_;
 
   inspect::Node* session_inspect_node_;
 

@@ -206,7 +206,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
                                      fuchsia::modular::session::AppConfig story_shell_config,
                                      fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                                      const ComponentContextInfo& component_context_info,
-                                     fuchsia::modular::FocusProviderPtr focus_provider,
                                      AgentServicesFactory* const agent_services_factory,
                                      PresentationProvider* const presentation_provider,
                                      inspect::Node* root_node)
@@ -217,8 +216,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
       component_context_info_(component_context_info),
       agent_services_factory_(agent_services_factory),
       presentation_provider_(presentation_provider),
-      focus_provider_(std::move(focus_provider)),
-      focus_watcher_binding_(this),
       session_inspect_node_(root_node),
       weak_factory_(this) {
   session_storage_->set_on_story_deleted(
@@ -234,8 +231,6 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
           return;
         weak_ptr->OnStoryStorageUpdated(std::move(story_id), std::move(story_data));
       });
-
-  focus_provider_->Watch(focus_watcher_binding_.NewBinding());
 }
 
 StoryProviderImpl::~StoryProviderImpl() = default;
@@ -510,27 +505,6 @@ void StoryProviderImpl::OnStoryStorageDeleted(std::string story_id) {
           (*i)->OnDelete(story_id);
         }
       }));
-}
-
-// |fuchsia::modular::FocusWatcher|
-void StoryProviderImpl::OnFocusChange(fuchsia::modular::FocusInfoPtr info) {
-  operation_queue_.Add(std::make_unique<SyncCall>([this, info = std::move(info)]() {
-    if (!info->focused_story_id.has_value()) {
-      return;
-    }
-
-    auto i = story_runtime_containers_.find(info->focused_story_id.value());
-    if (i == story_runtime_containers_.end()) {
-      FX_LOGS(ERROR) << "Story controller not found for focused story " << info->focused_story_id;
-      return;
-    }
-
-    // Last focus time is recorded in SessionStorage, and story provider
-    // watchers are notified through watching SessionStorage.
-    zx_time_t now = 0;
-    zx_clock_get(ZX_CLOCK_UTC, &now);
-    session_storage_->UpdateLastFocusedTimestamp(info->focused_story_id.value(), now);
-  }));
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(
