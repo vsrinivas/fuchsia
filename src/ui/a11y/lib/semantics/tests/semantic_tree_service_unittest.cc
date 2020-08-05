@@ -227,13 +227,20 @@ TEST_F(SemanticTreeServiceTest, LogsSemanticTree) {
   semantic_tree_->UpdateSemanticNodes(std::move(updates));
   semantic_tree_->CommitUpdates([]() {});
   const std::string expected_semantic_tree_odd =
-      "ID: 0 Label:Node-0 Location: no location Transform: no transform\n"
-      "    ID: 1 Label:Node-1 Location: no location Transform: no transform\n"
-      "        ID: 3 Label:Node-3 Location: no location Transform: no transform\n"
-      "        ID: 4 Label:Node-4 Location: no location Transform: no transform\n"
-      "    ID: 2 Label:Node-2 Location: no location Transform: no transform\n"
-      "        ID: 5 Label:Node-5 Location: no location Transform: no transform\n"
-      "        ID: 6 Label:Node-6 Location: no location Transform: no transform\n";
+      "ID: 0 Label:Node-0 Location: no location Transform: no transform Role: no role Action: no "
+      "actions\n"
+      "    ID: 1 Label:Node-1 Location: no location Transform: no transform Role: no role Action: "
+      "no actions\n"
+      "        ID: 3 Label:Node-3 Location: no location Transform: no transform Role: no role "
+      "Action: no actions\n"
+      "        ID: 4 Label:Node-4 Location: no location Transform: no transform Role: no role "
+      "Action: no actions\n"
+      "    ID: 2 Label:Node-2 Location: no location Transform: no transform Role: no role Action: "
+      "no actions\n"
+      "        ID: 5 Label:Node-5 Location: no location Transform: no transform Role: no role "
+      "Action: no actions\n"
+      "        ID: 6 Label:Node-6 Location: no location Transform: no transform Role: no role "
+      "Action: no actions\n";
 
   vfs::internal::Node* node;
   EXPECT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(semantic_tree_->view_ref_koid()), &node));

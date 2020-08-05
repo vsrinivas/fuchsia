@@ -384,6 +384,54 @@ std::string locationToString(const fuchsia::ui::gfx::BoundingBox location) {
       {"{ min: ", vec3ToString(location.min), ", max: ", vec3ToString(location.max), " }"});
 }
 
+std::string roleToString(const fuchsia::accessibility::semantics::Role role) {
+  switch (role) {
+    case fuchsia::accessibility::semantics::Role::UNKNOWN:
+      return "UNKNOWN";
+    case fuchsia::accessibility::semantics::Role::BUTTON:
+      return "BUTTON";
+    case fuchsia::accessibility::semantics::Role::HEADER:
+      return "HEADER";
+    case fuchsia::accessibility::semantics::Role::IMAGE:
+      return "IMAGE";
+    case fuchsia::accessibility::semantics::Role::TEXT_FIELD:
+      return "TEXT_FIELD";
+    case fuchsia::accessibility::semantics::Role::SLIDER:
+      return "SLIDER";
+    default:
+      return "Default";
+  }
+}
+
+std::string actionToString(const fuchsia::accessibility::semantics::Action action) {
+  switch (action) {
+    case fuchsia::accessibility::semantics::Action::DEFAULT:
+      return "DEFAULT";
+    case fuchsia::accessibility::semantics::Action::SECONDARY:
+      return "SECONDARY";
+    case fuchsia::accessibility::semantics::Action::SET_FOCUS:
+      return "SET_FOCUS";
+    case fuchsia::accessibility::semantics::Action::SET_VALUE:
+      return "SET_VALUE";
+    case fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN:
+      return "SHOW_ON_SCREEN";
+    case fuchsia::accessibility::semantics::Action::DECREMENT:
+      return "DECREMENT";
+    case fuchsia::accessibility::semantics::Action::INCREMENT:
+      return "INCREMENT";
+    default:
+      return "No Action Found";
+  }
+}
+
+std::string actionsToString(const std::vector<fuchsia::accessibility::semantics::Action>& actions) {
+  std::string retval = "{ ";
+  for (const auto& action : actions) {
+    retval.append(fxl::StringPrintf("%s, ", actionToString(action).c_str()));
+  }
+  return retval.append("}");
+}
+
 std::string SemanticTree::ToString() const {
   std::function<void(const Node*, int, std::string*)> printNode;
 
@@ -401,7 +449,8 @@ std::string SemanticTree::ToString() const {
                                                                   : "no label",
          " Location: ", node->has_location() ? locationToString(node->location()) : "no location",
          " Transform: ", node->has_transform() ? mat4ToString(node->transform()) : "no transform",
-         "\n"});
+         " Role: ", node->has_role() ? roleToString(node->role()) : "no role",
+         " Action: ", node->has_actions() ? actionsToString(node->actions()) : "no actions", "\n"});
 
     if (!node->has_child_ids()) {
       return;
