@@ -65,7 +65,6 @@ generated_file("size_checker_json") {
 }
 
 go_library("size_checker_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/size_checker/cmd"
 }
 
 go_binary("size_checker") {

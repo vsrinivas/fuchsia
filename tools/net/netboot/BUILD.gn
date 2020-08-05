@@ -6,7 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("netboot") {
-  name = "go.fuchsia.dev/fuchsia/tools/net/netboot"
   deps = [
     "//third_party/golibs:golang.org/x/net",
     "//third_party/golibs:golang.org/x/sys",

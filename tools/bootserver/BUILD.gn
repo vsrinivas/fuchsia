@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("bootserver_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/bootserver"
   deps = [
     ":bootserverconstants",
     "//third_party/golibs:cloud.google.com/go/storage",
@@ -23,12 +22,10 @@ go_library("bootserver_lib") {
 }
 
 go_library("bootserverconstants") {
-  name = "go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
   source_dir = "bootserverconstants"
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/bootserver/cmd"
   source_dir = "cmd"
   deps = [
     ":bootserver_lib",

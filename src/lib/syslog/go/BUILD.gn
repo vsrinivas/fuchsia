@@ -9,7 +9,6 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("go") {
-  name = "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
   deps = [
     "//sdk/fidl/fuchsia.logger($go_toolchain)",
     "//src/lib/component($go_toolchain)",

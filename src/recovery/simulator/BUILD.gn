@@ -22,7 +22,6 @@ if (is_linux) {
   go_library("recovery_simulator_support_lib") {
     testonly = true
 
-    name = "go.fuchsia.dev/fuchsia/src/recovery/simulator/support"
     source_dir = "//src/recovery/simulator/support"
 
     deps = [ "//src/testing/qemu" ]
@@ -34,7 +33,6 @@ if (is_linux) {
     split_name = invoker.target_name
     go_library(target_name) {
       testonly = true
-      name = "go.fuchsia.dev/fuchsia/src/recovery/simulator/$split_name"
       source_dir = "//src/recovery/simulator/$split_name"
       deps = [
         ":recovery_simulator_support_lib",

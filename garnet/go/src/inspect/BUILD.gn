@@ -9,7 +9,6 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("inspect") {
-  name = "go.fuchsia.dev/fuchsia/garnet/go/src/inspect"
 }
 
 go_test("go_inspect_test") {

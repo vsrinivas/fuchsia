@@ -8,7 +8,7 @@
 #
 #   name (optional)
 #     Name of the Go package.
-#     Defaults to the target name.
+#     Defaults to "go.fuchsia.dev/fuchsia/${source_dir}".
 #
 #   name_file (optional)
 #     Path to a file containing the name of the Go package.
@@ -38,6 +38,12 @@
 template("go_library") {
   assert(!(defined(invoker.name) && defined(invoker.name_file)),
          "Defining both name and name_file is not allowed")
+
+  source_dir = "."
+  if (defined(invoker.source_dir)) {
+    source_dir = invoker.source_dir
+  }
+
   if (defined(invoker.name)) {
     name_args = [
       "--name",
@@ -50,15 +56,12 @@ template("go_library") {
       rebase_path(invoker.name_file),
     ]
   } else {
+    target_name_dir = get_label_info(":$target_name", "dir")
+    source_dir = rebase_path(source_dir, target_name_dir)
     name_args = [
       "--name",
-      target_name,
+      "go.fuchsia.dev/fuchsia/" + rebase_path(source_dir, "//"),
     ]
-  }
-
-  source_dir = "."
-  if (defined(invoker.source_dir)) {
-    source_dir = invoker.source_dir
   }
 
   go_sources = []

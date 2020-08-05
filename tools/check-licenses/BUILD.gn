@@ -13,7 +13,6 @@ go_binary("check-licenses") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/cmd"
   source_dir = "cmd"
   deps = [
     ":golden",
@@ -25,12 +24,10 @@ go_library("main") {
 }
 
 go_library("templates") {
-  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/templates"
   source_dir = "templates"
 }
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/check-licenses"
   deps = [
     ":templates",
     "//tools/lib/logger",
@@ -38,7 +35,6 @@ go_library("lib") {
 }
 
 go_library("golden") {
-  name = "go.fuchsia.dev/fuchsia/tools/check-licenses/golden"
   source_dir = "golden"
 }
 

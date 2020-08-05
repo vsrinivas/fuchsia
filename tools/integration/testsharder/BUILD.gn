@@ -7,12 +7,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("testsharder_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/integration/testsharder"
   deps = [ "//tools/build" ]
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/cmd"
   source_dir = "cmd"
   deps = [
     ":testsharder_lib",

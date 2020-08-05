@@ -5,5 +5,4 @@
 import("//build/go/go_library.gni")
 
 go_library("isatty") {
-  name = "go.fuchsia.dev/fuchsia/tools/lib/isatty"
 }

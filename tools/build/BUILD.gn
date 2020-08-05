@@ -22,7 +22,6 @@ group("tests") {
 }
 
 go_library("build") {
-  name = "go.fuchsia.dev/fuchsia/tools/build"
   deps = [ "//tools/lib/osmisc" ]
 }
 

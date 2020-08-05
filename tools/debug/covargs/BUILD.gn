@@ -14,12 +14,10 @@ go_library("codecoverage_api") {
 }
 
 go_library("llvm_api") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/covargs/api/llvm"
   source_dir = "api/llvm"
 }
 
 go_library("covargs_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/covargs"
   deps = [
     ":codecoverage_api",
     ":llvm_api",
@@ -32,7 +30,6 @@ go_library("covargs_lib") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/covargs/cmd"
   source_dir = "cmd"
   deps = [
     ":covargs_lib",

@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("botanist_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/botanist"
   deps = [
     ":constants",
     "//src/sys/pkg/lib/repo",
@@ -24,7 +23,6 @@ go_library("botanist_lib") {
 }
 
 go_library("target") {
-  name = "go.fuchsia.dev/fuchsia/tools/botanist/target"
   source_dir = "target"
   deps = [
     ":botanist_lib",
@@ -43,7 +41,6 @@ go_library("target") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/botanist/cmd"
   source_dir = "cmd"
   deps = [
     ":botanist_lib",
@@ -79,7 +76,6 @@ go_test("botanist_target_tests") {
 }
 
 go_library("constants") {
-  name = "go.fuchsia.dev/fuchsia/tools/botanist/constants"
   source_dir = "constants"
 }
 

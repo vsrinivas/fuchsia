@@ -6,7 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("serial") {
-  name = "go.fuchsia.dev/fuchsia/tools/serial"
   deps = [
     "//third_party/golibs:golang.org/x/sys",
     "//tools/lib/ring",

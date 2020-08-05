@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck"
   deps = [
     "//tools/bootserver:bootserverconstants",
     "//tools/botanist:constants",
@@ -17,7 +16,6 @@ go_library("lib") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/tefmocheck/cmd"
   source_dir = "cmd"
   deps = [
     ":lib",

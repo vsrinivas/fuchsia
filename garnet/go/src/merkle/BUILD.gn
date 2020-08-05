@@ -9,7 +9,6 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("merkle") {
-  name = "go.fuchsia.dev/fuchsia/garnet/go/src/merkle"
 }
 
 go_test("go_merkle_test") {

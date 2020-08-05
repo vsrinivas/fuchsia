@@ -7,7 +7,6 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("elflib") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/elflib"
 }
 
 _testdata_path = "$target_gen_dir/testdata"

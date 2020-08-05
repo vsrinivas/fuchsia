@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("testparser") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/testparser"
 }
 
 group("tests") {
@@ -26,7 +25,6 @@ go_test("test") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/testparser/cmd"
   source_dir = "cmd"
   deps = [ ":testparser" ]
 }

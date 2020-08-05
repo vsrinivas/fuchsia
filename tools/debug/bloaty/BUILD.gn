@@ -6,7 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("bloaty") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/bloaty"
 }
 
 go_test("bloaty_tests") {

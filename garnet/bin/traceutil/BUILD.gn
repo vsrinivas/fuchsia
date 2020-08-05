@@ -33,7 +33,6 @@ install_host_tools("traceutil") {
 }
 
 go_library("zedmon") {
-  name = "go.fuchsia.dev/fuchsia/garnet/bin/traceutil/zedmon"
   source_dir = "zedmon"
 }
 

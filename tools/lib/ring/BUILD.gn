@@ -6,7 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("ring") {
-  name = "go.fuchsia.dev/fuchsia/tools/lib/ring"
 }
 
 go_test("tests") {

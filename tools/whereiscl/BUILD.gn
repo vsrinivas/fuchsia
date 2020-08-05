@@ -8,7 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/host.gni")
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/whereiscl"
   deps = [ ":netutil" ]
 }
 
@@ -19,7 +18,6 @@ go_library("main") {
 }
 
 go_library("netutil") {
-  name = "go.fuchsia.dev/fuchsia/tools/whereiscl/netutil"
   source_dir = "netutil"
 }
 
@@ -34,7 +32,6 @@ install_host_tools("host") {
 }
 
 go_library("testhelper") {
-  name = "go.fuchsia.dev/fuchsia/tools/whereiscl/testhelper"
   source_dir = "testhelper"
 }
 

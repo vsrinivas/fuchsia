@@ -8,7 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("symbolize_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/symbolize"
   deps = [
     "//third_party/golibs:cloud.google.com/go/storage",
     "//tools/debug/elflib",
@@ -18,7 +17,6 @@ go_library("symbolize_lib") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/cmd"
   source_dir = "cmd"
   deps = [
     ":symbolize_lib",

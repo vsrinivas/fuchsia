@@ -6,7 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("repo") {
-  name = "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
   deps = [ "//third_party/golibs:github.com/flynn/go-tuf" ]
 
   # The following dependencies are for add.go, which has a +build directive to

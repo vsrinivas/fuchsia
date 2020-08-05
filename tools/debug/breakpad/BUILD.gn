@@ -6,11 +6,9 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("breakpad") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/breakpad"
 }
 
 go_library("generator") {
-  name = "go.fuchsia.dev/fuchsia/tools/debug/breakpad/generator"
   source_dir = "generator"
   deps = [
     ":breakpad",

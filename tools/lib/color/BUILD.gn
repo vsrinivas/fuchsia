@@ -6,7 +6,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("color") {
-  name = "go.fuchsia.dev/fuchsia/tools/lib/color"
   deps = [ "//tools/lib/isatty" ]
 }
 

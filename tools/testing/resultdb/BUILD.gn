@@ -8,7 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/testing/resultdb"
   deps = [
     "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:golang.org/x/sync",

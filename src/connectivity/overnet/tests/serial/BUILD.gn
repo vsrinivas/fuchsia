@@ -20,8 +20,6 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "go.fuchsia.dev/fuchsia/src/tests/overnet_serial"
-
     deps = [ "//src/testing/qemu" ]
   }
 
@@ -31,7 +29,8 @@ if (is_linux) {
   }
 
   go_test("overnet_serial_tests") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/overnet_serial" ]
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/src/connectivity/overnet/tests/serial" ]
     deps = [ ":lib" ]
     non_go_deps = [
       ":ascendd",

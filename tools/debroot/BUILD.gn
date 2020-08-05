@@ -6,7 +6,6 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/debroot"
   source_dir = "cmd"
   deps = [
     "//third_party/golibs:github.com/go-yaml/yaml",
@@ -16,6 +15,6 @@ go_library("main") {
 }
 
 go_binary("debroot") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/debroot"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/debroot/cmd"
   deps = [ ":main" ]
 }

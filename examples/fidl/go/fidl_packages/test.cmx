@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "bin/fidl_example_go_tests"
-    }
-}

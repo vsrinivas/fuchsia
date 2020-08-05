@@ -25,7 +25,6 @@ if (is_linux) {
   go_library("support") {
     testonly = true
 
-    name = "go.fuchsia.dev/fuchsia/src/tests/reboot/support"
     source_dir = "//src/tests/reboot/support"
 
     deps = [ "//src/testing/qemu" ]
@@ -43,7 +42,6 @@ if (is_linux) {
     split_name = invoker.target_name
     go_library(target_name) {
       testonly = true
-      name = "go.fuchsia.dev/fuchsia/src/tests/reboot/$split_name"
       source_dir = "//src/tests/reboot/$split_name"
       deps = [ ":support" ]
     }

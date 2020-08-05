@@ -8,8 +8,6 @@ import("//build/go/toolchain.gni")
 import("//build/test/test_package.gni")
 
 go_library("component") {
-  name = "go.fuchsia.dev/fuchsia/src/lib/component"
-
   deps = [
     "//sdk/fidl/fuchsia.io($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",

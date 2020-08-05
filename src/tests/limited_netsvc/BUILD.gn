@@ -20,8 +20,6 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    name = "go.fuchsia.dev/fuchsia/src/tests/limited_netsvc"
-
     deps = [ "//src/testing/qemu" ]
   }
 

@@ -7,7 +7,6 @@ import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("ninjagraph") {
-  name = "go.fuchsia.dev/fuchsia/tools/build/ninjagraph"
   deps = [ "//third_party/golibs:golang.org/x/sync" ]
 }
 

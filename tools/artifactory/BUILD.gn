@@ -21,7 +21,6 @@ group("tests") {
 }
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/artifactory/cmd"
   source_dir = "cmd"
   deps = [
     ":lib",
@@ -37,7 +36,6 @@ go_library("main") {
 }
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/artifactory"
   deps = [
     "//tools/build",
     "//tools/lib/logger",

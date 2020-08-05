@@ -9,7 +9,6 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 go_library("benchmarking") {
-  name = "go.fuchsia.dev/fuchsia/garnet/go/src/benchmarking"
 }
 
 go_test("go_benchmarking_test") {

@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("main") {
-  name = "go.fuchsia.dev/fuchsia/tools/net/device-finder"
   source_dir = "cmd"
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",
@@ -19,13 +18,13 @@ go_library("main") {
 }
 
 go_binary("device-finder") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/net/device-finder"
+  gopackage = "go.fuchsia.dev/fuchsia/tools/net/device-finder/cmd"
   deps = [ ":main" ]
   sdk_category = "partner"
 }
 
 go_test("dev_finder_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/device-finder" ]
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/device-finder/cmd" ]
   deps = [ ":main" ]
 }
 
