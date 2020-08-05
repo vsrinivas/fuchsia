@@ -37,7 +37,7 @@ recovery_packages = [
   "//src/sys/core",
   "//src/sys/pkg:recovery",
   "//src/sys/stash",
-  "//src/sys/timekeeper:recovery",
+  "//src/sys/time:recovery",
   "//src/connectivity/network/http_client",
 ]
 

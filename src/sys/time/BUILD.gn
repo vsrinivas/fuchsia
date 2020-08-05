@@ -1,0 +1,11 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Packages needed for time synchronization in recovery images
+group("recovery") {
+  deps = [
+    "//garnet/bin/network_time_service",
+    "//src/sys/timekeeper",
+  ]
+}
