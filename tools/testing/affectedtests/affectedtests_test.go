@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -28,10 +29,6 @@ func TestCoreDOT(t *testing.T) {
 		t.Fatalf("Failed to unmarshal test JSON: %s", err)
 	}
 	dotPath := filepath.Join(*testDataFlag, "core", "ninja.dot")
-	dotFileContents, err := ioutil.ReadFile(dotPath)
-	if err != nil {
-		t.Fatalf("Failed to read file %q: %s", dotPath, err)
-	}
 
 	for _, tc := range []struct {
 		desc string
@@ -53,7 +50,16 @@ func TestCoreDOT(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			actual := AffectedTests(tc.srcs, testSpecs, dotFileContents)
+			dotFile, err := os.Open(dotPath)
+			if err != nil {
+				t.Fatalf("Failed to open file %q: %s", dotPath, err)
+			}
+			defer dotFile.Close()
+
+			actual, err := AffectedTests(tc.srcs, testSpecs, dotFile)
+			if err != nil {
+				t.Fatalf("AffectedTests(%v, _, _) failed: %s", tc.srcs, err)
+			}
 			if !reflect.DeepEqual(tc.want, actual) {
 				t.Errorf("AffectedTests(%v, _, _) = %v; want %v", tc.srcs, actual, tc.want)
 			}

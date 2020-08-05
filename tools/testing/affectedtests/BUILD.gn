@@ -17,7 +17,10 @@ go_binary("affectedtests") {
 
 go_library("lib") {
   name = "go.fuchsia.dev/fuchsia/tools/testing/affectedtests"
-  deps = [ "//tools/build" ]
+  deps = [
+    "//tools/build",
+    "//tools/build/ninjagraph",
+  ]
 }
 
 go_library("main") {

@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
+
+go_library("ninjagraph") {
+  name = "go.fuchsia.dev/fuchsia/tools/build/ninjagraph"
+  deps = [ "//third_party/golibs:golang.org/x/sync" ]
+}
+
+if (is_host) {
+  _testdata_path = "$target_gen_dir/testdata/ninja.dot"
+
+  go_test("test") {
+    output_name = "ninjagraph_tests"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjagraph" ]
+    args = [
+      "--test_dot_path",
+      rebase_path(_testdata_path, root_build_dir),
+    ]
+    deps = [
+      ":ninjagraph",
+      "//third_party/golibs:github.com/google/go-cmp",
+    ]
+    non_go_deps = [ ":testdata" ]
+  }
+
+  host_test_data("testdata") {
+    sources = [ "//tools/testing/affectedtests/testdata/core/ninja.dot" ]
+    outputs = [ _testdata_path ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":test($host_toolchain)" ]
+}

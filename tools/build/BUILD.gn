@@ -16,6 +16,7 @@ group("tests") {
 
   deps = [
     ":build_tests",
+    "//tools/build/ninjagraph:tests",
     "//tools/build/ninjalog:ninjalog_tests",
   ]
 }
