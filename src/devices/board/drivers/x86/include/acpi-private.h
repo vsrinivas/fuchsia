@@ -18,6 +18,36 @@
 #define MAX_NAMESPACE_DEPTH 100
 
 namespace acpi {
+namespace internal {
+
+// utility functions used to implement ExtractHidToDevProps and
+// ExtractCidToDevProps (below)
+static uint32_t ExtractPnpIdWord(const ACPI_PNP_DEVICE_ID& id, size_t offset) {
+  auto buf = reinterpret_cast<const char*>(id.String);
+  auto buf_len = static_cast<size_t>(id.Length);
+
+  if (offset >= buf_len) {
+    return 0;
+  }
+
+  size_t i;
+  size_t avail = buf_len - offset;
+  uint32_t ret = buf[offset];
+  for (i = 1; i < std::min(avail, sizeof(uint32_t)); ++i) {
+    ret = (ret << 8) | buf[offset + i];
+  }
+  ret <<= (sizeof(uint32_t) - i) * 8;
+
+  return ret;
+}
+
+template <typename T>
+static inline size_t UnusedPropsCount(const T& props, uint32_t propcount) {
+  ZX_DEBUG_ASSERT(propcount <= std::size(props));
+  return std::size(props) - std::min<size_t>(propcount, std::size(props));
+}
+
+}  // namespace internal
 
 // An RAII unique pointer type for resources allocated from the ACPICA library.
 template <typename T>
@@ -140,6 +170,80 @@ ACPI_STATUS WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object, uint3
   };
 
   return ::AcpiWalkNamespace(type, start_object, max_depth, Descent, Ascent, &cbk, nullptr);
+}
+
+// ExtractHidToDevProps and ExtractCidToDevProps
+//
+// These functions will take an ACPI_DEVICE_INFO structure, and attempt to
+// extract the Hardware ID or first available Compatiblity ID from the device
+// (if present), and pack the data (space permitting) into an array of device
+// properties which exists in an arbitrary structure provided by the user.
+//
+// The string HID/CID provided by ACPI will be packed into a pair of uint32_t in
+// a big-endian fashion, with 0x00 being used as a filler in the case that the
+// identifier is too short.  Appropriate device property type labels will be
+// applied to the dev_props structure.
+//
+// ACPI IDs which are longer than 8 bytes are currently unsupported as there is
+// no good way to represent them with the existing devprops binding scheme.
+//
+template <typename T>
+zx_status_t ExtractHidToDevProps(const ACPI_DEVICE_INFO& info, T& props, uint32_t& propcount) {
+  // If we have no HID to extract, then just do nothing.  This is not
+  // considered to be an error.
+  if (!((info.Valid & ACPI_VALID_HID) && (info.HardwareId.Length > 0))) {
+    return ZX_OK;
+  }
+
+  const ACPI_PNP_DEVICE_ID& pnp_id = info.HardwareId;
+
+  // We cannot currently handle any IDs which would be longer than 8 bytes
+  // (not including the null termination of the string)
+  if ((pnp_id.Length - 1) > sizeof(uint64_t)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Make sure we have the space to extract the info.
+  if (internal::UnusedPropsCount(props, propcount) < 2) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  props[propcount].id = BIND_ACPI_HID_0_3;
+  props[propcount++].value = internal::ExtractPnpIdWord(pnp_id, 0);
+  props[propcount].id = BIND_ACPI_HID_4_7;
+  props[propcount++].value = internal::ExtractPnpIdWord(pnp_id, 4);
+
+  return ZX_OK;
+}
+
+template <typename T>
+zx_status_t ExtractCidToDevProps(const ACPI_DEVICE_INFO& info, T& props, uint32_t& propcount) {
+  // If we have no CID to extract, then just do nothing.  This is not
+  // considered to be an error.
+  if (!((info.Valid & ACPI_VALID_CID) && (info.CompatibleIdList.Count > 0) &&
+        (info.CompatibleIdList.Ids[0].Length > 0))) {
+    return ZX_OK;
+  }
+
+  const ACPI_PNP_DEVICE_ID& pnp_id = info.CompatibleIdList.Ids[0];
+
+  // We cannot currently handle any IDs which would be longer than 8 bytes
+  // (not including the null termination of the string)
+  if ((pnp_id.Length - 1) > sizeof(uint64_t)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Make sure we have the space to extract the info.
+  if (internal::UnusedPropsCount(props, propcount) < 2) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  props[propcount].id = BIND_ACPI_CID_0_3;
+  props[propcount++].value = internal::ExtractPnpIdWord(pnp_id, 0);
+  props[propcount].id = BIND_ACPI_CID_4_7;
+  props[propcount++].value = internal::ExtractPnpIdWord(pnp_id, 4);
+
+  return ZX_OK;
 }
 
 }  // namespace acpi

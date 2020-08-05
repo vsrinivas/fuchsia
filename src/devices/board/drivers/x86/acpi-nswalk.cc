@@ -447,43 +447,23 @@ zx_status_t Device::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection
 
 device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
                                       std::array<zx_device_prop_t, 4>* out_props) {
-  zx_device_prop_t* props = out_props->data();
-  int propcount = 0;
+  uint32_t propcount = 0;
 
-  char acpi_name[5] = {0};
-  if (!name) {
-    memcpy(acpi_name, &info->Name, sizeof(acpi_name) - 1);
-    name = (const char*)acpi_name;
+  // Publish HID, and the first CID (if present), in device props
+  if (zx_status_t status = acpi::ExtractHidToDevProps(*info, *out_props, propcount);
+      status != ZX_OK) {
+    zxlogf(WARNING, "Failed to extract HID into dev_props for acpi device \"%s\" (status %d)\n",
+           fourcc_to_string(info->Name).str, status);
   }
-
-  // Publish HID in device props
-  const char* hid = hid_from_acpi_devinfo(info);
-  if (hid) {
-    props[propcount].id = BIND_ACPI_HID_0_3;
-    props[propcount++].value = htobe32(*((uint32_t*)(hid)));
-    props[propcount].id = BIND_ACPI_HID_4_7;
-    props[propcount++].value = htobe32(*((uint32_t*)(hid + 4)));
-  }
-
-  // Publish the first CID in device props
-  const char* cid = (const char*)info->CompatibleIdList.Ids[0].String;
-  if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
-      ((info->CompatibleIdList.Ids[0].Length - 1) <= sizeof(uint64_t))) {
-    props[propcount].id = BIND_ACPI_CID_0_3;
-
-    // Use memcpy() to safely access a uint32_t from a misaligned address.
-    uint32_t value;
-    memcpy(&value, cid, sizeof(value));
-    props[propcount++].value = htobe32(value);
-    props[propcount].id = BIND_ACPI_CID_4_7;
-
-    memcpy(&value, cid + 4, sizeof(value));
-    props[propcount++].value = htobe32(value);
+  if (zx_status_t status = acpi::ExtractCidToDevProps(*info, *out_props, propcount);
+      status != ZX_OK) {
+    zxlogf(WARNING, "Failed to extract CID into dev_props for acpi device \"%s\" (status %d)\n",
+           fourcc_to_string(info->Name).str, status);
   }
 
   if (zxlog_level_enabled(TRACE)) {
     // ACPI names are always 4 characters in a uint32
-    zxlogf(TRACE, "acpi: got device %s", acpi_name);
+    zxlogf(TRACE, "acpi: got device %s", fourcc_to_string(info->Name).str);
     if (info->Valid & ACPI_VALID_HID) {
       zxlogf(TRACE, "     HID=%s", info->HardwareId.String);
     } else {
@@ -503,14 +483,15 @@ device_add_args_t get_device_add_args(const char* name, ACPI_DEVICE_INFO* info,
       zxlogf(TRACE, "     CID=invalid");
     }
     zxlogf(TRACE, "    devprops:");
-    for (int i = 0; i < propcount; i++) {
-      zxlogf(TRACE, "     [%d] id=0x%08x value=0x%08x", i, props[i].id, props[i].value);
+    for (size_t i = 0; i < propcount; i++) {
+      zxlogf(TRACE, "     [%zu] id=0x%08x value=0x%08x", i, (*out_props)[i].id,
+             (*out_props)[i].value);
     }
   }
 
   return {.name = name,
-          .props = (propcount > 0) ? props : nullptr,
-          .prop_count = static_cast<uint32_t>(propcount)};
+          .props = (propcount > 0) ? out_props->data() : nullptr,
+          .prop_count = propcount};
 }
 
 zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
