@@ -5,6 +5,7 @@
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/clang.gni")
 import("$zx/public/gn/toolchain/goma.gni")
+import("$zx/public/gn/toolchain/toolchain_runtime_deps.gni")
 import("levels.gni")
 
 declare_args() {
