@@ -16,7 +16,7 @@ import("//build/testing/test_spec.gni")
 #   . . .
 # }
 #
-# zbi_test("zbi") {
+# bootfs_test("test") {
 #   name = "bar"
 #   deps = [ ":foo" ]
 # }
@@ -35,7 +35,7 @@ import("//build/testing/test_spec.gni")
 #   environments
 #     See //build/testing/test_spec.gni.
 
-template("zbi_test") {
+template("bootfs_test") {
   assert(defined(invoker.name), "Need to specify a test name")
   assert(defined(invoker.deps), "Need to specify deps")
   _deps = invoker.deps
