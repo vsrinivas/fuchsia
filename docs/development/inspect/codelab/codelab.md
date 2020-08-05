@@ -814,7 +814,7 @@ The output above shows that the connection is still open and it received one req
    * {Dart}
 
       ```dart
-      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/src/reverser.dart" region_tag="part_1_result" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/topaz" gerrit_path="public/dart/fuchsia_inspect/codelab/part_2/lib/reverser.dart" region_tag="part_1_result" adjust_indentation="auto" %}
       ```
 
 2. Run the client again:
