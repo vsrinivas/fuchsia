@@ -5,15 +5,16 @@
 use anyhow::Error;
 use carnelian::{
     color::Color,
-    drawing::{FontFace, GlyphMap, Text},
+    drawing::{path_for_rounded_rectangle, FontFace, GlyphMap, Text},
     input, make_message,
     render::{
-        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear,
+        BlendMode, Composition, Context as RenderContext, Fill, FillRule, Layer, PreClear, Raster,
         RenderExt, Style,
     },
-    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Point,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
+    Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
+use euclid::{default::SideOffsets2D, point2, vec2};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
 use fuchsia_async::{self as fasync, Task};
@@ -80,11 +81,167 @@ impl AppAssistant for RecoveryAppAssistant {
     }
 }
 
+fn raster_for_rounded_rectangle(
+    bounds: &Rect,
+    corner_radius: Coord,
+    render_context: &mut RenderContext,
+) -> Raster {
+    let path = path_for_rounded_rectangle(bounds, corner_radius, render_context);
+    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+    raster_builder.add(&path, None);
+    raster_builder.build()
+}
+
+struct DataResetOverlay {
+    headline_text: Text,
+    headline_text_size: f32,
+    headline_wrap: usize,
+    headline_position: Point,
+    body_text: Text,
+    body_position: Point,
+    background: Raster,
+}
+
+const MARGIN: f32 = 20.0;
+
+impl DataResetOverlay {
+    fn new(
+        render_context: &mut RenderContext,
+        size: Size,
+        face: &FontFace<'_>,
+        glyphs: &mut GlyphMap,
+        small_glyphs: &mut GlyphMap,
+    ) -> Self {
+        let headline_text_size = size.height / 12.0;
+        let inset = size * 0.25;
+        let bounds = Rect::from_size(size).inner_rect(SideOffsets2D::new(
+            inset.height,
+            inset.width,
+            inset.height,
+            inset.width,
+        ));
+
+        let headline_wrap =
+            ((bounds.size.width - MARGIN * 2.0) / headline_text_size * 2.5) as usize;
+
+        let headline_text = Self::make_headline_text(
+            render_context,
+            headline_text_size,
+            headline_wrap,
+            face,
+            glyphs,
+            FACTORY_RESET_TIMER_IN_SECONDS,
+        );
+
+        let headline_position = bounds.origin + vec2(MARGIN, MARGIN);
+
+        let overlay_body_text_size = size.height / 18.0;
+        let overlay_body_wrap = (bounds.size.width - MARGIN * 2.0) / overlay_body_text_size * 2.5;
+
+        let body_text = Text::new(
+            render_context,
+            "This will wipe all of your data from this device and reset it to factory default settings",
+            overlay_body_text_size,
+            overlay_body_wrap as usize,
+            face,
+            small_glyphs,
+        );
+
+        let body_position = point2(bounds.origin.x, bounds.max_y())
+            + vec2(MARGIN, -body_text.bounding_box.size.height - MARGIN * 2.0);
+
+        let background = raster_for_rounded_rectangle(&bounds, 14.0, render_context);
+
+        Self {
+            headline_text,
+            headline_text_size,
+            headline_wrap,
+            headline_position,
+            body_text,
+            body_position,
+            background,
+        }
+    }
+
+    fn make_headline_text(
+        render_context: &mut RenderContext,
+        headline_text_size: f32,
+        wrap: usize,
+        face: &FontFace<'_>,
+        glyphs: &mut GlyphMap,
+        time_left: u8,
+    ) -> Text {
+        Text::new(
+            render_context,
+            &format!("Device will be factory reset in {} seconds", time_left),
+            headline_text_size,
+            wrap as usize,
+            face,
+            glyphs,
+        )
+    }
+
+    fn update(
+        &mut self,
+        render_context: &mut RenderContext,
+        face: &FontFace<'_>,
+        glyphs: &mut GlyphMap,
+        time_left: u8,
+    ) {
+        self.headline_text = Self::make_headline_text(
+            render_context,
+            self.headline_text_size,
+            self.headline_wrap,
+            face,
+            glyphs,
+            time_left,
+        );
+    }
+
+    fn layers(&self) -> Vec<Layer> {
+        let overlay_headline_layer = Layer {
+            raster: self
+                .headline_text
+                .raster
+                .clone()
+                .translate(self.headline_position.to_vector().to_i32()),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(Color::new()),
+                blend_mode: BlendMode::Over,
+            },
+        };
+
+        let overlay_body_layer = Layer {
+            raster: self
+                .body_text
+                .raster
+                .clone()
+                .translate(self.body_position.to_vector().to_i32()),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(Color::new()),
+                blend_mode: BlendMode::Over,
+            },
+        };
+        let overlay_layer = Layer {
+            raster: self.background.clone(),
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(Color::white()),
+                blend_mode: BlendMode::Over,
+            },
+        };
+        vec![overlay_headline_layer, overlay_body_layer, overlay_layer]
+    }
+}
+
 struct RecoveryViewAssistant<'a> {
     face: FontFace<'a>,
     bg_color: Color,
     composition: Composition,
     glyphs: GlyphMap,
+    small_glyphs: GlyphMap,
     heading: String,
     heading_label: Option<Text>,
     body: String,
@@ -93,6 +250,8 @@ struct RecoveryViewAssistant<'a> {
     app_context: AppContext,
     view_key: ViewKey,
     countdown_task: Option<Task<()>>,
+    data_reset_overlay: Option<DataResetOverlay>,
+    countdown_ticks: u8,
 }
 
 impl<'a> RecoveryViewAssistant<'a> {
@@ -113,6 +272,7 @@ impl<'a> RecoveryViewAssistant<'a> {
             bg_color,
             composition,
             glyphs: GlyphMap::new(),
+            small_glyphs: GlyphMap::new(),
             heading: heading.to_string(),
             heading_label: None,
             body: body.to_string(),
@@ -121,6 +281,8 @@ impl<'a> RecoveryViewAssistant<'a> {
             app_context: app_context.clone(),
             view_key: 0,
             countdown_task: None,
+            data_reset_overlay: None,
+            countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
         })
     }
 
@@ -192,6 +354,18 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
         ready_event: Event,
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
+        if self.data_reset_overlay.is_none() && self.reset_state_machine.is_counting_down() {
+            // since a render context is needed to create an overlay, this
+            // creation must be done lazily.
+            self.data_reset_overlay = Some(DataResetOverlay::new(
+                render_context,
+                context.size,
+                &self.face,
+                &mut self.glyphs,
+                &mut self.small_glyphs,
+            ));
+        }
+
         let text_size = context.size.height / 12.0;
 
         let fg_color = Color { r: 255, g: 255, b: 255, a: 255 };
@@ -250,9 +424,19 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
             },
         };
 
+        let overlay_layers = if let Some(overlay) = self.data_reset_overlay.as_mut() {
+            overlay.update(render_context, &self.face, &mut self.glyphs, self.countdown_ticks);
+            overlay.layers()
+        } else {
+            vec![]
+        };
+
         self.composition.replace(
             ..,
-            std::iter::once(heading_label_layer).chain(std::iter::once(body_label_layer)),
+            overlay_layers
+                .into_iter()
+                .chain(std::iter::once(body_label_layer))
+                .chain(std::iter::once(heading_label_layer)),
         );
 
         let image = render_context.get_current_image(context);
@@ -323,6 +507,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                                 .reset_state_machine
                                 .handle_event(ResetEvent::CountdownCancelled);
                             assert_eq!(state, fdr::FactoryResetState::Waiting);
+                            self.data_reset_overlay = None;
                             self.app_context.queue_message(
                                 self.view_key,
                                 make_message(RecoveryMessages::ResetMessage(state)),
@@ -341,6 +526,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                 }
                 RecoveryMessages::CountdownTick(count) => {
                     self.heading = "Factory Reset".to_string();
+                    self.countdown_ticks = *count;
                     if *count == 0 {
                         self.body = "Resetting device...".to_string();
                         let state =
@@ -351,7 +537,7 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
                             make_message(RecoveryMessages::ResetMessage(state)),
                         );
                     } else {
-                        self.body = format!("Resetting in {}", count);
+                        self.body = String::from(" ");
                     }
                     self.app_context.request_render(self.view_key);
                 }
@@ -383,6 +569,46 @@ impl ViewAssistant for RecoveryViewAssistant<'_> {
             }
             _ => {}
         }
+        Ok(())
+    }
+
+    // This is to allow development of this feature on devices without consumer control buttons.
+    fn handle_keyboard_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        event: &input::Event,
+        keyboard_event: &input::keyboard::Event,
+    ) -> Result<(), Error> {
+        const HID_USAGE_KEY_F11: u32 = 0x44;
+        const HID_USAGE_KEY_F12: u32 = 0x45;
+
+        fn keyboard_to_consumer_phase(
+            phase: carnelian::input::keyboard::Phase,
+        ) -> carnelian::input::consumer_control::Phase {
+            match phase {
+                carnelian::input::keyboard::Phase::Pressed => {
+                    carnelian::input::consumer_control::Phase::Down
+                }
+                _ => carnelian::input::consumer_control::Phase::Up,
+            }
+        }
+
+        let synthetic_event = match keyboard_event.hid_usage {
+            HID_USAGE_KEY_F11 => Some(input::consumer_control::Event {
+                button: ConsumerControlButton::VolumeDown,
+                phase: keyboard_to_consumer_phase(keyboard_event.phase),
+            }),
+            HID_USAGE_KEY_F12 => Some(input::consumer_control::Event {
+                button: ConsumerControlButton::VolumeUp,
+                phase: keyboard_to_consumer_phase(keyboard_event.phase),
+            }),
+            _ => None,
+        };
+
+        if let Some(synthetic_event) = synthetic_event {
+            self.handle_consumer_control_event(context, event, &synthetic_event)?;
+        }
+
         Ok(())
     }
 }

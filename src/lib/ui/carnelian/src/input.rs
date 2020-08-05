@@ -131,7 +131,7 @@ mod mouse_tests {
 pub mod keyboard {
     use super::*;
 
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Clone, Copy, Debug, PartialEq)]
     pub enum Phase {
         Pressed,
         Released,

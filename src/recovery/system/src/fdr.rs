@@ -31,6 +31,10 @@ impl FactoryResetStateMachine {
         }
     }
 
+    pub fn is_counting_down(&self) -> bool {
+        self.state == FactoryResetState::StartCountdown
+    }
+
     fn update_button_state(&mut self, button: ConsumerControlButton, phase: Phase) {
         match button {
             ConsumerControlButton::VolumeUp => self.volume_up_phase = phase,
