@@ -190,7 +190,7 @@ function setup-http2-proxy {
   fi
   (
     trap '' 1
-    "$GOMA_HTTP2_PROXY" -server-host "$BACKEND_URL" -port "$GOMA_HTTP2_PROXY_PORT" 2>&1 >/dev/null &
+    "$GOMA_HTTP2_PROXY" -server-host "$BACKEND_URL" -port "$GOMA_HTTP2_PROXY_PORT" >/dev/null 2>&1 &
   )
 }
 
