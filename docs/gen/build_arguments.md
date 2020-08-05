@@ -213,7 +213,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:49
+From //src/graphics/lib/magma/gnbuild/magma.gni:55
 
 ### board_kernel_cmdline_args
 List of kernel command line this board to bake into the boot image that are
@@ -344,7 +344,7 @@ Targets that will be built as mali vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:37
+From //src/graphics/lib/magma/gnbuild/magma.gni:43
 
 ### build_libvulkan_goldfish
 
@@ -357,21 +357,21 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:46
+From //src/graphics/lib/magma/gnbuild/magma.gni:52
 
 ### build_libvulkan_qcom_adreno
 Targets that will be built as qualcomm vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:43
+From //src/graphics/lib/magma/gnbuild/magma.gni:49
 
 ### build_libvulkan_vsi_vip
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:40
+From //src/graphics/lib/magma/gnbuild/magma.gni:46
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -550,7 +550,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/591e05e41ced6bab7979716c572abfb1529698a9/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -558,14 +558,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/591e05e41ced6bab7979716c572abfb1529698a9/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/591e05e41ced6bab7979716c572abfb1529698a9/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -587,16 +587,6 @@ Package the rootfs as a QCOW image (as opposed to a flat file).
 **Current value (from the default):** `true`
 
 From //src/virtualization/packages/debian_guest/BUILD.gn:9
-
-### debug_zircon_libraries_more
-Use this flag to optimize source libraries imported from Zircon the same was
-as other libraries in this build.
-By default, they are optimized the same as in the ZN build, which leaves
-less debugging information available.
-
-**Current value (from the default):** `false`
-
-From //build/unification/config/BUILD.gn:10
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -803,7 +793,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/591e05e41ced6bab7979716c572abfb1529698a9/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -818,14 +808,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/591e05e41ced6bab7979716c572abfb1529698a9/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/915772947c9f825b2e6f1a6d6a7d2a8476dbaa8f/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/591e05e41ced6bab7979716c572abfb1529698a9/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1423,6 +1413,20 @@ Enable this to include fuchsia tracing capability
 **Current value (from the default):** `true`
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:23
+
+### magma_openvx_include
+The path to OpenVX headers
+
+**Current value (from the default):** `""`
+
+From //src/graphics/lib/magma/gnbuild/magma.gni:35
+
+### magma_openvx_package
+The path to an OpenVX implementation
+
+**Current value (from the default):** `""`
+
+From //src/graphics/lib/magma/gnbuild/magma.gni:38
 
 ### magma_python_path
 
