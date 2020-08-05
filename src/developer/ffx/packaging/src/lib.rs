@@ -41,9 +41,15 @@ fn cmd_package_build(
     mut w: impl std::io::Write,
     repo: &Repository,
 ) -> Result<()> {
-    let mut entries = Vec::new();
+    if cmd.depfile.is_some() && cmd.hash_out.is_none() {
+        anyhow::bail!("--depfile only makes sense with --hash-out");
+    }
+
+    let mut entries = vec![];
+    let mut deps = vec![];
     for entry in cmd.entries {
         if entry.starts_with("@") {
+            deps.push(entry[1..].to_owned());
             let file = fs::File::open(&entry[1..])
                 .context(format!("Couldn't open entry file {}", &entry[1..]))?;
             for line in std::io::BufReader::new(file).lines() {
@@ -62,6 +68,7 @@ fn cmd_package_build(
         if let Some(ref source_dir) = cmd.source_dir {
             source = PathBuf::from(source_dir).join(source);
         }
+        deps.push(source.to_str().unwrap().to_owned());
         if entry.path.starts_with("meta/") {
             meta_files.insert(entry.path, fs::read(source)?);
         } else {
@@ -71,7 +78,10 @@ fn cmd_package_build(
 
     let meta_hash = build_package(repo, contents, meta_files)?;
     if let Some(hash_out) = cmd.hash_out {
-        writeln!(fs::File::create(hash_out)?, "{}", meta_hash)?;
+        writeln!(fs::File::create(&hash_out)?, "{}", meta_hash)?;
+        if let Some(depfile) = cmd.depfile {
+            write_depfile(depfile, hash_out, deps)?;
+        }
     } else {
         writeln!(w, "{}", meta_hash)?;
     }
@@ -104,6 +114,15 @@ fn build_package(
     fuchsia_archive::write(&mut meta_far, meta_files)?;
     meta_far.set_position(0);
     repo.blobs().add_blob(&mut meta_far)
+}
+
+fn write_depfile(depfile: String, output_file: String, deps: Vec<String>) -> Result<()> {
+    let mut f = fs::File::create(depfile)?;
+    write!(f, "{}: ", output_file)?;
+    for dep in deps {
+        write!(f, "{} ", dep)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -158,7 +177,7 @@ mod test {
         let (tmpdir, repo) = make_test_repo()?;
         let tmp = tmpdir.path();
         let mut cmd = build_command_for_test_package(tmpdir.path())?;
-        cmd.hash_out = Some(tmp.join("hash.txt").to_string_lossy().into());
+        cmd.hash_out = Some(tmp.join("hash.txt").to_str().unwrap().into());
         crate::cmd_package_build(cmd, &mut std::io::stdout(), &repo)?;
 
         assert_eq!(
@@ -166,6 +185,30 @@ mod test {
             format!("{}\n", TEST_PACKAGE_HASHES[0])
         );
         validate_blobs(tmp, &TEST_PACKAGE_HASHES)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_build_with_depfile() -> Result<()> {
+        let (tmpdir, repo) = make_test_repo()?;
+        let tmp = tmpdir.path();
+
+        // check error case
+        let mut cmd = build_command_for_test_package(tmpdir.path())?;
+        cmd.depfile = Some(tmp.join("foo.d").to_str().unwrap().into());
+        assert!(crate::cmd_package_build(cmd, &mut std::io::stdout(), &repo).is_err());
+
+        let mut cmd = build_command_for_test_package(tmpdir.path())?;
+        cmd.depfile = Some(tmp.join("foo.d").to_str().unwrap().into());
+        cmd.hash_out = Some(tmp.join("hash.txt").to_str().unwrap().into());
+        crate::cmd_package_build(cmd, &mut std::io::stdout(), &repo)?;
+
+        let mut expected_depfile = String::new();
+        for entry in &["hash.txt:", "entries.rsp", "foo.cmx", "foo"] {
+            expected_depfile.push_str(tmp.join(entry).to_str().unwrap());
+            expected_depfile.push(' ');
+        }
+        assert_eq!(fs::read_to_string(tmp.join("foo.d"))?, expected_depfile);
         Ok(())
     }
 
