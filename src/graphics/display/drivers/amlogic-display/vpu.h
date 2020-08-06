@@ -38,6 +38,9 @@ class Vpu {
   // false if driver was already loaded previously
   bool SetFirstTimeDriverLoad();
 
+  // Power On/Off AFBC Engine
+  void AfbcPower(bool power_on);
+
   zx_status_t CaptureInit(uint8_t canvas_idx, uint32_t height, uint32_t stride);
   zx_status_t CaptureStart();
   zx_status_t CaptureDone();

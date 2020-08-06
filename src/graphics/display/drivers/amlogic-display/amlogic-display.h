@@ -49,12 +49,18 @@ struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> 
     if (canvas.ctx && canvas_idx > 0) {
       amlogic_canvas_free(&canvas, canvas_idx);
     }
+    if (pmt) {
+      pmt.unpin();
+    }
   }
   amlogic_canvas_protocol_t canvas;
   uint8_t canvas_idx;
   uint32_t image_height;
   uint32_t image_width;
-  uint32_t image_stride;
+
+  bool is_afbc;
+  zx::pmt pmt;
+  zx_paddr_t paddr;
 };
 
 class AmlogicDisplay;

@@ -30,8 +30,14 @@ struct RdmaTable {
   uint32_t val;
 };
 
+/*
+ * This is the RDMA table index. Each index points to a specific VPU register.
+ * RDMA engine will be programmed to update all those registers at vsync time.
+ * Since all the fields will be updated at vsync time, we need to make sure all
+ * the fields are updated with a valid value when FlipOnVsync is called.
+ */
 enum {
-  IDX_CFG_W0,
+  IDX_BLK0_CFG_W0,
   IDX_CTRL_STAT,
   IDX_CTRL_STAT2,
   IDX_MATRIX_COEF00_01,
@@ -45,6 +51,12 @@ enum {
   IDX_MATRIX_PRE_OFFSET2,
   IDX_MATRIX_EN_CTRL,
   IDX_GAMMA_EN,
+  IDX_BLK2_CFG_W4,
+  IDX_MALI_UNPACK_CTRL,
+  IDX_PATH_MISC_CTRL,
+  IDX_AFBC_HEAD_BUF_ADDR_LOW,
+  IDX_AFBC_HEAD_BUF_ADDR_HIGH,
+  IDX_AFBC_SURFACE_CFG,
   IDX_MAX,
 };
 
@@ -67,6 +79,9 @@ constexpr uint8_t kMaxRdmaChannels = 3;
 constexpr uint8_t kMaxRetries = 100;
 // spread channels 512B apart (make sure it's greater than a cache line size)
 constexpr size_t kChannelBaseOffset = 512;
+
+// RDMA Channel 7 will be dedicated to AFBC Trigger
+static constexpr uint8_t kAfbcRdmaChannel = 7;
 
 class Osd {
  public:
@@ -110,9 +125,12 @@ class Osd {
   void SetRdmaTableValue(uint32_t channel, uint32_t idx, uint32_t val);
   void FlushRdmaTable(uint32_t channel);
   int GetNextAvailableRdmaChannel();
+  void SetAfbcRdmaTableValue(uint32_t val) const;
+  void FlushAfbcRdmaTable() const;
   int RdmaThread();
   void EnableGamma();
   void DisableGamma();
+  zx_status_t ConfigAfbc();
   zx_status_t SetGamma(GammaChannel channel, const float* data);
   zx_status_t WaitForGammaAddressReady();
   zx_status_t WaitForGammaWriteReady();
@@ -132,8 +150,15 @@ class Osd {
   zx_paddr_t rdma_phys_;
   uint8_t* rdma_vbuf_;
 
-  // container that holds channel specific properties
+  // Container that holds channel specific properties
   RdmaChannelContainer rdma_chnl_container_[kMaxRdmaChannels];
+
+  // Container that holds AFBC specific trigger register
+  RdmaChannelContainer afbc_rdma_chnl_container_;
+  zx::vmo afbc_rdma_vmo_;
+  zx_handle_t afbc_rdma_pmt_;
+  zx_paddr_t afbc_rdma_phys_;
+  uint8_t* afbc_rdma_vbuf_;
 
   // Framebuffer dimension
   uint32_t fb_width_;

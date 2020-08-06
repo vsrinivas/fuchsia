@@ -242,7 +242,49 @@ void Vpu::ConfigureClock() {
   WRITE32_REG(VPU, VPU_RDARB_MODE_L2C1, 0x900000);
   WRITE32_REG(VPU, VPU_WRARB_MODE_L2C1, 0x20000);
 }
-
+/*
+ *  Power Table
+ *  <vpu module>          <register>           <bit> <len>
+ *  {VPU_VIU_OSD1,        HHI_VPU_MEM_PD_REG0,   0,   2},
+ *  {VPU_VIU_OSD2,        HHI_VPU_MEM_PD_REG0,   2,   2},
+ *  {VPU_VIU_VD1,         HHI_VPU_MEM_PD_REG0,   4,   2},
+ *  {VPU_VIU_VD2,         HHI_VPU_MEM_PD_REG0,   6,   2},
+ *  {VPU_VIU_CHROMA,      HHI_VPU_MEM_PD_REG0,   8,   2},
+ *  {VPU_VIU_OFIFO,       HHI_VPU_MEM_PD_REG0,  10,   2},
+ *  {VPU_VIU_SCALE,       HHI_VPU_MEM_PD_REG0,  12,   2},
+ *  {VPU_VIU_OSD_SCALE,   HHI_VPU_MEM_PD_REG0,  14,   2},
+ *  {VPU_VIU_VDIN0,       HHI_VPU_MEM_PD_REG0,  16,   2},
+ *  {VPU_VIU_VDIN1,       HHI_VPU_MEM_PD_REG0,  18,   2},
+ *  {VPU_VIU_SRSCL,       HHI_VPU_MEM_PD_REG0,  20,   2},
+ *  {VPU_AFBC_DEC1,       HHI_VPU_MEM_PD_REG0,  22,   2},
+ *  {VPU_VIU_DI_SCALE,    HHI_VPU_MEM_PD_REG0,  24,   2},
+ *  {VPU_DI_PRE,          HHI_VPU_MEM_PD_REG0,  26,   2},
+ *  {VPU_DI_POST,         HHI_VPU_MEM_PD_REG0,  28,   2},
+ *  {VPU_SHARP,           HHI_VPU_MEM_PD_REG0,  30,   2},
+ *  {VPU_VIU2_OSD1,       HHI_VPU_MEM_PD_REG1,   0,   2},
+ *  {VPU_VIU2_OFIFO,      HHI_VPU_MEM_PD_REG1,   2,   2},
+ *  {VPU_VKSTONE,         HHI_VPU_MEM_PD_REG1,   4,   2},
+ *  {VPU_DOLBY_CORE3,     HHI_VPU_MEM_PD_REG1,   6,   2},
+ *  {VPU_DOLBY0,          HHI_VPU_MEM_PD_REG1,   8,   2},
+ *  {VPU_DOLBY1A,         HHI_VPU_MEM_PD_REG1,  10,   2},
+ *  {VPU_DOLBY1B,         HHI_VPU_MEM_PD_REG1,  12,   2},
+ *  {VPU_VPU_ARB,         HHI_VPU_MEM_PD_REG1,  14,   2},
+ *  {VPU_AFBC_DEC,        HHI_VPU_MEM_PD_REG1,  16,   2},
+ *  {VPU_VD2_SCALE,       HHI_VPU_MEM_PD_REG1,  18,   2},
+ *  {VPU_VENCP,           HHI_VPU_MEM_PD_REG1,  20,   2},
+ *  {VPU_VENCL,           HHI_VPU_MEM_PD_REG1,  22,   2},
+ *  {VPU_VENCI,           HHI_VPU_MEM_PD_REG1,  24,   2},
+ *  {VPU_VD2_OSD2_SCALE,  HHI_VPU_MEM_PD_REG1,  30,   2},
+ *  {VPU_VIU_WM,          HHI_VPU_MEM_PD_REG2,   0,   2},
+ *  {VPU_VIU_OSD3,        HHI_VPU_MEM_PD_REG2,   4,   2},
+ *  {VPU_VIU_OSD4,        HHI_VPU_MEM_PD_REG2,   6,   2},
+ *  {VPU_MAIL_AFBCD,      HHI_VPU_MEM_PD_REG2,   8,   2},
+ *  {VPU_VD1_SCALE,       HHI_VPU_MEM_PD_REG2,  10,   2},
+ *  {VPU_OSD_BLD34,       HHI_VPU_MEM_PD_REG2,  12,   2},
+ *  {VPU_PRIME_DOLBY_RAM, HHI_VPU_MEM_PD_REG2,  14,   2},
+ *  {VPU_VD2_OFIFO,       HHI_VPU_MEM_PD_REG2,  16,   2},
+ *  {VPU_RDMA,            HHI_VPU_MEM_PD_REG2,  30,   2},
+ */
 void Vpu::PowerOn() {
   ZX_DEBUG_ASSERT(initialized_);
   SET_BIT32(AOBUS, AOBUS_GEN_PWR_SLEEP0, 0, 8, 1);  // [8] power on
@@ -331,6 +373,12 @@ void Vpu::PowerOff() {
 
   SET_BIT32(HHI, HHI_VAPBCLK_CNTL, 0, 8, 1);
   SET_BIT32(HHI, HHI_VPU_CLK_CNTL, 0, 8, 1);
+}
+
+void Vpu::AfbcPower(bool power_on) {
+  ZX_DEBUG_ASSERT(initialized_);
+  SET_BIT32(HHI, HHI_VPU_MEM_PD_REG2, power_on ? 0 : 3, 8, 2);
+  zx_nanosleep(zx_deadline_after(ZX_USEC(5)));
 }
 
 zx_status_t Vpu::CaptureInit(uint8_t canvas_idx, uint32_t height, uint32_t stride) {
