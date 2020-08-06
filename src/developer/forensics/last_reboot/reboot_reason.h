@@ -38,16 +38,16 @@ enum class RebootReason {
 };
 
 // Whether the reason justifies a crash report.
-bool IsCrash(RebootReason reboot_reason);
+bool IsCrash(RebootReason reason);
 
 // Whether the reboot is graceful, ungraceful or undetermined.
-std::optional<bool> OptionallyGraceful(RebootReason reboot_reason);
+std::optional<bool> OptionallyGraceful(RebootReason reason);
 
-cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason);
-cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(RebootReason reboot_reason);
-std::string ToCrashSignature(RebootReason reboot_reason);
-std::string ToCrashProgramName(RebootReason reboot_reason);
-std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason reboot_reason);
+cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason);
+cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(RebootReason reason);
+std::string ToCrashSignature(RebootReason reason);
+std::string ToCrashProgramName(RebootReason reason);
+std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason reason);
 
 }  // namespace last_reboot
 }  // namespace forensics

@@ -10,8 +10,8 @@ namespace forensics {
 namespace last_reboot {
 namespace {
 
-std::string ToString(const RebootReason reboot_reason) {
-  switch (reboot_reason) {
+std::string ToString(const RebootReason reason) {
+  switch (reason) {
     case RebootReason::kNotParseable:
       return "RebootReason::kNotParseable";
     case RebootReason::kGenericGraceful:
@@ -43,8 +43,8 @@ std::string ToString(const RebootReason reboot_reason) {
 
 }  // namespace
 
-bool IsCrash(const RebootReason reboot_reason) {
-  switch (reboot_reason) {
+bool IsCrash(const RebootReason reason) {
+  switch (reason) {
     case RebootReason::kNotParseable:
     case RebootReason::kSpontaneous:
     case RebootReason::kKernelPanic:
@@ -63,8 +63,8 @@ bool IsCrash(const RebootReason reboot_reason) {
   }
 }
 
-std::optional<bool> OptionallyGraceful(const RebootReason reboot_reason) {
-  switch (reboot_reason) {
+std::optional<bool> OptionallyGraceful(const RebootReason reason) {
+  switch (reason) {
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
@@ -84,8 +84,8 @@ std::optional<bool> OptionallyGraceful(const RebootReason reboot_reason) {
   }
 }
 
-cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reboot_reason) {
-  switch (reboot_reason) {
+cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reason) {
+  switch (reason) {
     case RebootReason::kNotParseable:
       return cobalt::LegacyRebootReason::kKernelPanic;
     case RebootReason::kGenericGraceful:
@@ -111,8 +111,8 @@ cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reboot_
   }
 }
 
-cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason) {
-  switch (reboot_reason) {
+cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
+  switch (reason) {
     case RebootReason::kNotParseable:
       return cobalt::LastRebootReason::kUnknown;
     case RebootReason::kGenericGraceful:
@@ -142,8 +142,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reboot_reason) {
   }
 }
 
-std::string ToCrashSignature(const RebootReason reboot_reason) {
-  switch (reboot_reason) {
+std::string ToCrashSignature(const RebootReason reason) {
+  switch (reason) {
     case RebootReason::kNotParseable:
       return "fuchsia-reboot-log-not-parseable";
     case RebootReason::kSpontaneous:
@@ -165,13 +165,13 @@ std::string ToCrashSignature(const RebootReason reboot_reason) {
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
-      FX_LOGS(FATAL) << "Not expecting a crash for reboot reason " << ToString(reboot_reason);
+      FX_LOGS(FATAL) << "Not expecting a crash for reboot reason " << ToString(reason);
       return "FATAL ERROR";
   }
 }
 
-std::string ToCrashProgramName(const RebootReason reboot_reason) {
-  switch (reboot_reason) {
+std::string ToCrashProgramName(const RebootReason reason) {
+  switch (reason) {
     case RebootReason::kNotParseable:
       return "reboot-log";
     case RebootReason::kKernelPanic:
@@ -190,14 +190,13 @@ std::string ToCrashProgramName(const RebootReason reboot_reason) {
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
       FX_LOGS(FATAL) << "Not expecting a program name request for reboot reason "
-                     << ToString(reboot_reason);
+                     << ToString(reason);
       return "FATAL ERROR";
   }
 }
 
-std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(
-    const RebootReason reboot_reason) {
-  switch (reboot_reason) {
+std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootReason reason) {
+  switch (reason) {
     case RebootReason::kGenericGraceful:
       return std::nullopt;
     case RebootReason::kUserRequest:
