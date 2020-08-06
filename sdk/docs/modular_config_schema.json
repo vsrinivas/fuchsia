@@ -23,7 +23,10 @@
         "session_launcher": { "$ref": "#/definitions/url_and_args" }
       },
       "additionalProperties": false,
-      "required": ["base_shell", "session_shells"]
+      "oneOf": [
+        { "required": ["session_launcher"] },
+        { "required": ["session_shells"] }
+      ]
     },
     "base_shell": {
       "type": "object",
@@ -133,6 +136,6 @@
     "basemgr": { "$ref": "#/definitions/basemgr" },
     "sessionmgr": { "$ref": "#/definitions/sessionmgr" }
   },
-  "required": ["basemgr", "sessionmgr"],
+  "required": ["basemgr"],
   "additionalProperties": false
 }

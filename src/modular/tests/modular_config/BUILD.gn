@@ -6,9 +6,16 @@ import("//src/modular/build/modular_config/modular_config.gni")
 
 group("modular_config") {
   testonly = true
-  deps = [ ":test_config" ]
+  deps = [
+    ":test_config",
+    ":test_launcher_config",
+  ]
 }
 
 modular_config_validate("test_config") {
   config = "test_config.json"
+}
+
+modular_config_validate("test_launcher_config") {
+  config = "test_launcher_config.json"
 }
