@@ -43,6 +43,23 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
     renderer_ = CreateAudioRenderer(format_, kPayloadFrames);
   }
 
+  // All pipline tests send batches of packets. This method returns the suggested size for
+  // each batch. We want each batch to be large enough such that the output driver needs to
+  // wake multiple times to mix the batch -- this ensures we're testing the timing paths in
+  // the driver. We don't have direct access to the driver's timers, however, we know that
+  // the driver must wake up at least once every MinLeadTime. Therefore, we return enough
+  // packets to exceed one MinLeadTime.
+  size_t NumPacketsPerBatch() {
+    auto min_lead_time = renderer_->GetMinLeadTime();
+    FX_CHECK(min_lead_time > 0);
+    // In exceptional cases, min_lead_time might be smaller than one packet.
+    // Ensure we have at least a handful of packets.
+    auto n = std::max(5lu, static_cast<size_t>(zx::duration(min_lead_time) /
+                                               zx::msec(RendererShimImpl::kPacketMs)));
+    FX_CHECK(n < kNumPacketsInPayload);
+    return n;
+  }
+
   const TypedFormat<ASF::SIGNED_16> format_;
   VirtualOutput<ASF::SIGNED_16>* output_ = nullptr;
   AudioRendererShim<ASF::SIGNED_16>* renderer_ = nullptr;
@@ -50,10 +67,8 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
 
 // Validate that timestamped packets play through renderer to ring buffer as expected.
 TEST_F(AudioRendererPipelineTest, RenderWithPts) {
-  auto min_lead_time = renderer_->GetMinLeadTime();
-  ASSERT_GT(min_lead_time, 0);
-  auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
-  auto num_frames = num_packets * kPacketFrames;
+  const auto num_packets = NumPacketsPerBatch();
+  const auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
@@ -113,7 +128,7 @@ TEST_F(AudioRendererPipelineTest, DiscardDuringPlayback) {
   const int64_t restart_packet = 2 + min_lead_time_in_packets;
   const int64_t first_pts = first_packet * kPacketFrames;
   const int64_t restart_pts = restart_packet * kPacketFrames;
-  const size_t num_packets = 5;
+  const auto num_packets = NumPacketsPerBatch();
   const size_t num_frames = num_packets * kPacketFrames;
 
   // Load the renderer with lots of packets, but interrupt after two of them.
@@ -208,10 +223,8 @@ class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTest {
 
 // Validate that the effects package is loaded and that it processes the input.
 TEST_F(AudioRendererPipelineEffectsTest, RenderWithEffects) {
-  auto min_lead_time = renderer_->GetMinLeadTime();
-  ASSERT_GT(min_lead_time, 0);
-  auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
-  auto num_frames = num_packets * kPacketFrames;
+  const auto num_packets = NumPacketsPerBatch();
+  const auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});
@@ -260,10 +273,8 @@ TEST_F(AudioRendererPipelineEffectsTest, EffectsControllerUpdateEffect) {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(result.is_response());
 
-  auto min_lead_time = renderer_->GetMinLeadTime();
-  ASSERT_GT(min_lead_time, 0);
-  auto num_packets = zx::duration(min_lead_time) / zx::msec(RendererShimImpl::kPacketMs);
-  auto num_frames = num_packets * kPacketFrames;
+  const auto num_packets = NumPacketsPerBatch();
+  const auto num_frames = num_packets * kPacketFrames;
 
   auto input_buffer = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames);
   auto packets = renderer_->AppendPackets({&input_buffer});

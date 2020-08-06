@@ -45,9 +45,9 @@ class VirtualDevice {
   bool Ready() const { return received_start_; }
 
   // Returns a timestamp in the future that corresponds to byte 0 of the ring buffer.
-  // This is a reference time that can be passed to AudioRenderer::Play().
-  // The fixture is used to loop through time to locate the boundaries of the ring buffer.
-  zx::time NextSynchronizedTimestamp(TestFixture* fixture) const;
+  // The returned time is guaranteed to be at least min_time in the future, even if that
+  // means waiting for more than one round trip through the ring buffer.
+  zx::time NextSynchronizedTimestamp(zx::time min_time = zx::time(0)) const;
 
   // For validating properties exported by inspect.
   // By default, there are no expectations.
@@ -73,8 +73,8 @@ class VirtualDevice {
   bool received_set_format_ = false;
   bool received_start_ = false;
   bool received_stop_ = false;
-  zx_time_t start_time_ = 0;
-  zx_time_t stop_time_ = 0;
+  zx::time start_time_;
+  zx::time stop_time_;
   uint64_t stop_pos_ = 0;
   uint64_t ring_pos_ = 0;
   uint64_t running_ring_pos_ = 0;

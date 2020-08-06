@@ -42,6 +42,23 @@ void RendererShimImpl::SetPtsUnits(uint32_t ticks_per_second_numerator,
 }
 
 void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64_t media_time) {
+  renderer_->Play(
+      reference_time.get(), media_time,
+      fixture->AddCallback("Play", [&reference_time, &media_time](int64_t actual_reference_time,
+                                                                  int64_t actual_media_time) {
+        if (reference_time.get() != fuchsia::media::NO_TIMESTAMP) {
+          EXPECT_EQ(reference_time.get(), actual_reference_time);
+        } else {
+          reference_time = zx::time(actual_reference_time);
+        }
+        if (media_time != fuchsia::media::NO_TIMESTAMP) {
+          EXPECT_EQ(media_time, actual_media_time);
+        } else {
+          media_time = actual_media_time;
+        }
+      }));
+  fixture->ExpectCallback();
+
   // Update the reference times for each queued packet.
   TimelineRate ns_per_pts_tick =
       TimelineRate::Product(pts_ticks_per_second_.Inverse(), TimelineRate::NsPerSecond);
@@ -50,16 +67,19 @@ void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64
     p->end_ref_time = reference_time + zx::nsec(ns_per_pts_tick.Scale(p->end_pts - media_time));
   }
   queued_packets_.clear();
-
-  renderer_->Play(reference_time.get(), media_time, fixture->AddCallback("Play"));
-  fixture->ExpectCallback();
 }
 
 zx::time RendererShimImpl::PlaySynchronized(
     TestFixture* fixture, VirtualDevice<fuchsia::virtualaudio::Output>* output_device,
     int64_t media_time) {
-  // TODO(46650): Translate to the renderer's reference time.
-  auto mono_time = output_device->NextSynchronizedTimestamp(fixture);
+  FX_CHECK(min_lead_time_ >= 0);
+  // Synchronize at some point that is at least min_lead_time + tolerance in the future,
+  // where tolerance estimates the maximum execution delay between the time we compute the
+  // next synchronized time and the time we call Play.
+  const auto tolerance = zx::msec(5);
+  auto min_start_time = zx::clock::get_monotonic() + zx::nsec(min_lead_time_) + tolerance;
+  auto mono_time = output_device->NextSynchronizedTimestamp(min_start_time);
+  // TODO(46650): Translate mono_time to the renderer's reference time.
   Play(fixture, mono_time, media_time);
   return mono_time;
 }

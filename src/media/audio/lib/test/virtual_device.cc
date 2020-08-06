@@ -106,13 +106,13 @@ void VirtualDevice<Iface>::WatchEvents() {
     ASSERT_TRUE(received_set_format_);
     ASSERT_TRUE(rb_vmo_.is_valid());
     received_start_ = true;
-    start_time_ = start_time;
+    start_time_ = zx::time(start_time);
     AUDIO_LOG(DEBUG) << "OnStart callback: " << start_time;
   };
 
   device_.events().OnStop = [this](zx_time_t stop_time, uint32_t ring_pos) {
     received_stop_ = true;
-    stop_time_ = stop_time;
+    stop_time_ = zx::time(stop_time);
     stop_pos_ = ring_pos;
     AUDIO_LOG(DEBUG) << "OnStop callback: " << stop_time << ", " << ring_pos;
   };
@@ -130,19 +130,21 @@ void VirtualDevice<Iface>::WatchEvents() {
 }
 
 template <class Iface>
-zx::time VirtualDevice<Iface>::NextSynchronizedTimestamp(TestFixture* fixture) const {
-  // Wait for a ring buffer rollover, to give the client enough time before the next one.
-  auto min_num_rings_for_measurement = (running_ring_pos_ + rb_.SizeBytes()) / rb_.SizeBytes();
-  auto pos_for_measurement = min_num_rings_for_measurement * rb_.SizeBytes();
-  fixture->RunLoopUntil(
-      [this, pos_for_measurement]() { return running_ring_pos_ >= pos_for_measurement; });
+zx::time VirtualDevice<Iface>::NextSynchronizedTimestamp(zx::time min_time) const {
+  // Compute a function to translate from ring buffer position to device time.
+  auto ns_per_byte = format_.frames_per_ns().Inverse() * TimelineRate(1, format_.bytes_per_frame());
+  auto running_pos_to_ref_time = TimelineFunction(start_time_.get(), 0, ns_per_byte);
 
-  // Calculate the reference time for the start of the next ring buffer.
-  auto ns_per_byte =
-      TimelineRate(zx::sec(1).get(), format_.frames_per_second() * format_.bytes_per_frame());
-  int64_t running_pos_for_play = ((running_ring_pos_ / rb_.SizeBytes()) + 1) * rb_.SizeBytes();
-  auto running_pos_to_ref_time = TimelineFunction(start_time_, 0, ns_per_byte);
-  return zx::time(running_pos_to_ref_time.Apply(running_pos_for_play));
+  // Compute the next synchronized position, then iterate until we find a synchronized
+  // position at min_time or later.
+  int64_t running_pos_sync = ((running_ring_pos_ / rb_.SizeBytes()) + 1) * rb_.SizeBytes();
+  while (true) {
+    zx::time sync_time = zx::time(running_pos_to_ref_time.Apply(running_pos_sync));
+    if (sync_time >= min_time) {
+      return sync_time;
+    }
+    running_pos_sync += rb_.SizeBytes();
+  }
 }
 
 // Only two instantiations are needed.

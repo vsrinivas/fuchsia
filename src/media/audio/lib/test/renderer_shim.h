@@ -57,6 +57,7 @@ class RendererShimImpl {
   void SetPtsUnits(uint32_t ticks_per_second_numerator, uint32_t ticks_per_second_denominator);
 
   // Send a Play command to the renderer and wait until it is processed.
+  // Either time may be NO_TIMESTAMP, as described in the FIDL documentation.
   void Play(TestFixture* fixture, zx::time reference_time, int64_t media_time);
 
   // Like Play, but aligns the reference_time with the start of output_device's ring buffer.
