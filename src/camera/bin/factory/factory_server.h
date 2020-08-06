@@ -9,6 +9,9 @@
 #include <fuchsia/factory/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl-utils/bind.h>
+#include <lib/fidl/cpp/binding.h>
+#include "lib/fidl/cpp/interface_request.h"
 
 namespace camera {
 
@@ -21,7 +24,7 @@ class FactoryServer : public fuchsia::factory::camera::Controller {
   ~FactoryServer();
 
   // Factory method that creates a FactoryServer and connects it to the Camera Manager and ISP
-  // Driver.
+  // driver.
   //
   // Returns:
   //  A FactoryServer object which provides an interface to the factory API.
@@ -30,22 +33,27 @@ class FactoryServer : public fuchsia::factory::camera::Controller {
   // Getters
   bool streaming() const { return streaming_; }
 
+  void StartStream() {}
+  void StopStream() {}
+  void CaptureFrames(uint32_t amount, std::string dir_path) {}
+  void DisplayToScreen(uint32_t stream_index) {}
+  void GetOtpData();
+  void GetSensorTemperature();
+  void SetAWBMode(fuchsia::factory::camera::WhiteBalanceMode mode, uint32_t temp);
+  void SetAEMode(fuchsia::factory::camera::ExposureMode mode);
+  void SetExposure(float integration_time, float analog_gain, float digital_gain);
+  void SetSensorMode(uint32_t mode);
+  void SetTestPatternMode(uint16_t mode);
+
  private:
   // |fuchsia.camera.factory.Controller|
   void StartStreaming() override {}
   void StopStreaming() override {}
   void CaptureFrames(uint32_t amount, std::string dir_path, CaptureFramesCallback cb) override {}
   void DisplayToScreen(uint32_t stream_index, DisplayToScreenCallback cb) override {}
-  void GetOtpData(GetOtpDataCallback cb) override {}
-  void GetSensorTemperature(GetSensorTemperatureCallback cb) override {}
-  void SetAWBMode(fuchsia::factory::camera::WhiteBalanceMode mode, uint32_t temp,
-                  SetAWBModeCallback cb) override {}
-  void SetAEMode(fuchsia::factory::camera::ExposureMode mode, SetAEModeCallback cb) override {}
-  void SetExposure(float integration_time, float analog_gain, float digital_gain,
-                 SetExposureCallback cb) override {}
-  void SetSensorMode(uint32_t mode, SetSensorModeCallback cb) override {}
-  void SetTestPatternMode(uint16_t mode, SetTestPatternModeCallback cb) override {}
+  void BindIspChannel(fidl::InterfaceRequest<fuchsia::factory::camera::Isp> isp_req) override {}
 
+  fuchsia::factory::camera::IspSyncPtr isp_;
   bool streaming_ = false;
 };
 

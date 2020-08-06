@@ -3,6 +3,9 @@
         "binary": "test/camera_factory_test"
     },
     "sandbox": {
+        "dev": [
+            "class/isp"
+        ],
         "features": [
             "isolated-persistent-storage"
         ],

@@ -22,7 +22,10 @@ class FactoryServerTest : public gtest::TestLoopFixture {
     factory_server_ = std::move(result.value());
   }
 
-  void TearDown() override { RunLoopUntilIdle(); }
+  void TearDown() override {
+    factory_server_ = nullptr;
+    RunLoopUntilIdle();
+  }
 
   std::unique_ptr<FactoryServer> factory_server_;
 };

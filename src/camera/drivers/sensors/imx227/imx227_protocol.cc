@@ -287,7 +287,7 @@ zx_status_t Imx227Device::CameraSensor2SetTestPatternMode(uint16_t mode) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = Write8(kTestPatternReg, mode);
+  zx_status_t status = Write16(kTestPatternReg, mode);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s; Writing the mode failed.", __func__);
   }

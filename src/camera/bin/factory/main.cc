@@ -20,4 +20,6 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   auto factory_server = factory_server_result.take_value();
+
+  return EXIT_SUCCESS;
 }
