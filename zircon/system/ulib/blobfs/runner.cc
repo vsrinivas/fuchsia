@@ -27,9 +27,13 @@ zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> devic
   // Setup the diagnostics directory for BlobFS
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  auto vnode = fbl::AdoptRef(new fs::Service(
-      [connector = inspect::MakeTreeHandler(fs->Metrics()->inspector(), loop->dispatcher())](
-          zx::channel chan) mutable {
+  auto vnode = fbl::AdoptRef(
+      // TODO(fxbug.dev/57330): Remove force_private_snapshot when we support requesting different
+      // consistency from servers.
+      new fs::Service([connector = inspect::MakeTreeHandler(
+                           fs->Metrics()->inspector(), loop->dispatcher(),
+                           inspect::TreeHandlerSettings{.force_private_snapshot = true})](
+                          zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
         return ZX_OK;
       }));
