@@ -286,6 +286,17 @@ std::vector<uint8_t> InitResponse(uint32_t request_id, uint32_t status) {
   return buffer;
 }
 
+std::vector<uint8_t> ResetResponse(uint32_t status) {
+  rndis_reset_complete response{.msg_type = RNDIS_RESET_CMPLT,
+                                .msg_length = sizeof(rndis_reset_complete),
+                                .status = status,
+                                .addressing_reset = 1};
+
+  std::vector<uint8_t> buffer(sizeof(rndis_reset_complete));
+  memcpy(buffer.data(), &response, sizeof(rndis_reset_complete));
+  return buffer;
+}
+
 std::vector<uint8_t> QueryResponse(uint32_t request_id,
                                    const std::optional<std::vector<uint8_t>>& oid_response) {
   size_t buffer_size = sizeof(rndis_query_complete);
@@ -421,11 +432,16 @@ zx_status_t RndisFunction::HandleCommand(const void* buffer, size_t size) {
     case RNDIS_KEEPALIVE_MSG:
       response.emplace(KeepaliveResponse(header->request_id, RNDIS_STATUS_SUCCESS));
       break;
-    case RNDIS_HALT_MSG:
-      zxlogf(WARNING, "Host sent a halt message, which we do not support yet.");
+    case RNDIS_HALT_MSG: {
+      zx_status_t status = Halt();
+      if (status != ZX_OK) {
+        zxlogf(WARNING, "Failed to handle HALT command: %s", zx_status_get_string(status));
+      }
       break;
+    }
     case RNDIS_RESET_MSG:
-      zxlogf(WARNING, "Host sent a reset message, which we do not support yet.");
+      Reset();
+      response.emplace(ResetResponse(RNDIS_STATUS_SUCCESS));
       break;
     case RNDIS_PACKET_MSG:
       // The should only send packets on the data channel.
@@ -439,8 +455,7 @@ zx_status_t RndisFunction::HandleCommand(const void* buffer, size_t size) {
   }
 
   if (!response.has_value()) {
-    zxlogf(ERROR, "Reached bottom of HandleCommand without generating a response.");
-    return ZX_ERR_INTERNAL;
+    return ZX_OK;
   }
   fbl::AutoLock lock(&lock_);
   control_responses_.push(std::move(response.value()));
@@ -485,6 +500,46 @@ zx_status_t RndisFunction::HandleResponse(void* buffer, size_t size, size_t* act
   return ZX_OK;
 }
 
+zx_status_t RndisFunction::Halt() {
+  Reset();
+
+  fbl::AutoLock lock(&lock_);
+  zx_status_t status = function_.DisableEp(NotificationAddress());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to disable control endpoint: %s", zx_status_get_string(status));
+    return status;
+  }
+  status = function_.DisableEp(BulkInAddress());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to disable data in endpoint: %s", zx_status_get_string(status));
+    return status;
+  }
+  status = function_.DisableEp(BulkOutAddress());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to disable data out endpoint: %s", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
+}
+
+void RndisFunction::Reset() {
+  fbl::AutoLock lock(&lock_);
+
+  function_.CancelAll(BulkInAddress());
+  function_.CancelAll(BulkOutAddress());
+  function_.CancelAll(NotificationAddress());
+
+  while (!control_responses_.empty()) {
+    control_responses_.pop();
+  }
+
+  rndis_ready_ = false;
+  link_speed_ = 0;
+  if (ifc_.is_valid()) {
+    ifc_.Status(0);
+  }
+}
+
 zx_status_t RndisFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
                                                        const void* write_buffer, size_t write_size,
                                                        void* out_read_buffer, size_t read_size,
@@ -516,67 +571,46 @@ zx_status_t RndisFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
 }
 
 zx_status_t RndisFunction::UsbFunctionInterfaceSetConfigured(bool configured, usb_speed_t speed) {
-  if (configured) {
-    zx_status_t status = function_.ConfigEp(&descriptors_.notification_ep, nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to configure control endpoint: %s", zx_status_get_string(status));
-      return status;
-    }
+  if (!configured) {
+    return Halt();
+  }
 
-    status = function_.ConfigEp(&descriptors_.in_ep, nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to configure bulk in endpoint: %s", zx_status_get_string(status));
-      return status;
-    }
-    status = function_.ConfigEp(&descriptors_.out_ep, nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to configure bulk out endpoint: %s", zx_status_get_string(status));
-      return status;
-    }
+  zx_status_t status = function_.ConfigEp(&descriptors_.notification_ep, nullptr);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to configure control endpoint: %s", zx_status_get_string(status));
+    return status;
+  }
 
-    fbl::AutoLock lock(&lock_);
-    // Set the speed optimistically to roughly the capacity of the bus. We report link speed in
-    // units of 100bps.
-    switch (speed) {
-      case USB_SPEED_LOW:
-        link_speed_ = 15'000;
-        break;
-      case USB_SPEED_FULL:
-        link_speed_ = 120'000;
-        break;
-      case USB_SPEED_HIGH:
-        link_speed_ = 4'800'000;
-        break;
-      case USB_SPEED_SUPER:
-        link_speed_ = 50'000'000;
-        break;
-      default:
-        link_speed_ = 0;
-        break;
-    }
-  } else {
-    zx_status_t status = function_.DisableEp(NotificationAddress());
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to disable control endpoint: %s", zx_status_get_string(status));
-      return status;
-    }
-    status = function_.DisableEp(BulkInAddress());
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to disable data in endpoint: %s", zx_status_get_string(status));
-      return status;
-    }
-    status = function_.DisableEp(BulkOutAddress());
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Failed to disable data out endpoint: %s", zx_status_get_string(status));
-      return status;
-    }
+  status = function_.ConfigEp(&descriptors_.in_ep, nullptr);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to configure bulk in endpoint: %s", zx_status_get_string(status));
+    return status;
+  }
+  status = function_.ConfigEp(&descriptors_.out_ep, nullptr);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to configure bulk out endpoint: %s", zx_status_get_string(status));
+    return status;
+  }
 
-    fbl::AutoLock lock(&lock_);
-    rndis_ready_ = false;
-    link_speed_ = 0;
-    if (ifc_.is_valid()) {
-      ifc_.Status(0);
-    }
+  fbl::AutoLock lock(&lock_);
+  // Set the speed optimistically to roughly the capacity of the bus. We report link speed in
+  // units of 100bps.
+  switch (speed) {
+    case USB_SPEED_LOW:
+      link_speed_ = 15'000;
+      break;
+    case USB_SPEED_FULL:
+      link_speed_ = 120'000;
+      break;
+    case USB_SPEED_HIGH:
+      link_speed_ = 4'800'000;
+      break;
+    case USB_SPEED_SUPER:
+      link_speed_ = 50'000'000;
+      break;
+    default:
+      link_speed_ = 0;
+      break;
   }
   return ZX_OK;
 }
@@ -793,6 +827,11 @@ void RndisFunction::NotifyLocked() {
 }
 
 void RndisFunction::IndicateConnectionStatus(bool connected) {
+  fbl::AutoLock lock(&lock_);
+  if (!rndis_ready_) {
+    return;
+  }
+
   rndis_indicate_status status;
   status.msg_type = RNDIS_INDICATE_STATUS_MSG;
   status.msg_length = static_cast<uint32_t>(sizeof(rndis_indicate_status));
@@ -807,7 +846,6 @@ void RndisFunction::IndicateConnectionStatus(bool connected) {
   std::vector<uint8_t> buffer(sizeof(rndis_indicate_status));
   memcpy(buffer.data(), &status, sizeof(rndis_indicate_status));
 
-  fbl::AutoLock lock(&lock_);
   control_responses_.push(std::move(buffer));
   NotifyLocked();
 }

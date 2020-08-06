@@ -314,8 +314,6 @@ TEST_F(RndisFunctionTest, EthernetStartStop) {
   EXPECT_TRUE(ifc_.LastStatus().has_value());
   EXPECT_EQ(ifc_.LastStatus().value(), 0);
 
-  ReadIndicateStatus(RNDIS_STATUS_MEDIA_CONNECT);
-
   status = device_->EthernetImplStart(ifc_.Protocol());
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
 
@@ -328,6 +326,7 @@ TEST_F(RndisFunctionTest, EthernetStartStop) {
   device_->EthernetImplStop();
   status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
+
   ReadIndicateStatus(RNDIS_STATUS_MEDIA_DISCONNECT);
 }
 
@@ -377,7 +376,6 @@ TEST_F(RndisFunctionTest, Send) {
   // Start the interface and bring the device online.
   zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
-  ReadIndicateStatus(RNDIS_STATUS_MEDIA_CONNECT);
 
   uint32_t filter = 0;
   SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
@@ -475,7 +473,6 @@ TEST_F(RndisFunctionTest, Receive) {
   // Start the interface and bring the device online.
   zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
   ASSERT_OK(status);
-  ReadIndicateStatus(RNDIS_STATUS_MEDIA_CONNECT);
 
   uint32_t filter = 0;
   SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
@@ -516,6 +513,66 @@ TEST_F(RndisFunctionTest, KeepAliveMessage) {
   EXPECT_EQ(response.msg_type, RNDIS_KEEPALIVE_CMPLT);
   EXPECT_EQ(response.msg_length, sizeof(response));
   EXPECT_EQ(response.request_id, 42);
+  EXPECT_EQ(response.status, RNDIS_STATUS_SUCCESS);
+}
+
+TEST_F(RndisFunctionTest, Halt) {
+  zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
+  ASSERT_OK(status);
+  EXPECT_TRUE(ifc_.LastStatus().has_value());
+  EXPECT_EQ(ifc_.LastStatus().value(), 0);
+
+  status = device_->EthernetImplStart(ifc_.Protocol());
+  EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
+
+  // Set a packet filter to put the device online.
+  uint32_t filter = 0;
+  SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+  EXPECT_TRUE(ifc_.LastStatus().has_value());
+  EXPECT_EQ(ifc_.LastStatus().value(), ETHERNET_STATUS_ONLINE);
+
+  rndis_header msg{
+      msg.msg_type = RNDIS_HALT_MSG,
+      msg.msg_length = sizeof(rndis_header),
+      msg.request_id = 42,
+  };
+  WriteCommand(&msg, sizeof(msg));
+
+  EXPECT_TRUE(ifc_.LastStatus().has_value());
+  EXPECT_EQ(ifc_.LastStatus().value(), 0);
+
+  EXPECT_EQ(function_.DisableEpCalls(), 3);
+}
+
+TEST_F(RndisFunctionTest, Reset) {
+  zx_status_t status = device_->EthernetImplStart(ifc_.Protocol());
+  ASSERT_OK(status);
+  EXPECT_TRUE(ifc_.LastStatus().has_value());
+  EXPECT_EQ(ifc_.LastStatus().value(), 0);
+
+  status = device_->EthernetImplStart(ifc_.Protocol());
+  EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
+
+  // Set a packet filter to put the device online.
+  uint32_t filter = 0;
+  SetOid(OID_GEN_CURRENT_PACKET_FILTER, &filter, sizeof(filter));
+  EXPECT_TRUE(ifc_.LastStatus().has_value());
+  EXPECT_EQ(ifc_.LastStatus().value(), ETHERNET_STATUS_ONLINE);
+
+  rndis_header msg{
+      msg.msg_type = RNDIS_RESET_MSG,
+      msg.msg_length = sizeof(rndis_header),
+      msg.request_id = 42,
+  };
+  WriteCommand(&msg, sizeof(msg));
+
+  EXPECT_TRUE(ifc_.LastStatus().has_value());
+  EXPECT_EQ(ifc_.LastStatus().value(), 0);
+
+  rndis_reset_complete response;
+  ReadResponse(&response, sizeof(response));
+  EXPECT_EQ(response.msg_type, RNDIS_RESET_CMPLT);
+  EXPECT_EQ(response.msg_length, sizeof(rndis_reset_complete));
   EXPECT_EQ(response.status, RNDIS_STATUS_SUCCESS);
 }
 

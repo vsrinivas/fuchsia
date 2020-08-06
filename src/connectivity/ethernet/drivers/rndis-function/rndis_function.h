@@ -61,6 +61,8 @@ class RndisFunction : public RndisFunctionType,
  private:
   zx_status_t HandleCommand(const void* buffer, size_t size);
   zx_status_t HandleResponse(void* buffer, size_t size, size_t* actual);
+  zx_status_t Halt();
+  void Reset();
 
   std::optional<std::vector<uint8_t>> QueryOidLocked(uint32_t oid, void* input, size_t length)
       __TA_REQUIRES(lock_);

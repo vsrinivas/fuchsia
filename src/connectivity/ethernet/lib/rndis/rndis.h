@@ -177,6 +177,13 @@ typedef struct {
 typedef struct {
   uint32_t msg_type;
   uint32_t msg_length;
+  uint32_t status;
+  uint32_t addressing_reset;
+} __PACKED rndis_reset_complete;
+
+typedef struct {
+  uint32_t msg_type;
+  uint32_t msg_length;
   uint32_t request_id;
   uint32_t oid;
   uint32_t info_buffer_length;
