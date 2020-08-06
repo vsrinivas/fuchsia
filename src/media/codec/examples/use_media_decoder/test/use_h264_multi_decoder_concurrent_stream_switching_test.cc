@@ -46,34 +46,24 @@ int main(int argc, char* argv[]) {
   std::atomic_bool go = false;
   std::unique_ptr<std::thread> threads[kThreadCount];
   for (uint32_t i = 0; i < kThreadCount; ++i) {
-    threads[i] = std::make_unique<std::thread>([&result, i, &go, &test_params] {
+    threads[i] = std::make_unique<std::thread>([&result, i, &go, &test_params]{
       while (!go) {
         zx::nanosleep(zx::deadline_after(zx::usec(1)));
       }
-      result[i] =
-          use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
-                                 /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                 /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
+      result[i] = use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
+                                  /*is_secure_output=*/false, /*is_secure_input=*/false,
+                                  /*min_output_buffer_count=*/0, kGoldenSha256, &test_params);
     });
   }
   go = true;
   for (uint32_t i = 0; i < kThreadCount; ++i) {
     threads[i]->join();
   }
-  bool failed = false;
   for (uint32_t i = 0; i < kThreadCount; ++i) {
     if (result[i] != 0) {
-      LOGF("Sub-test failed: %u", i);
-      failed = true;
-    } else {
-      LOGF("Sub-test passed: %u", i);
+      return result[i];
     }
   }
-  if (failed) {
-    LOGF("At least one sub-test failed, so fail.");
-    return -1;
-  } else {
-    LOGF("Both streams worked.  PASS");
-    return 0;
-  }
+  LOGF("Both streams worked.");
+  return 0;
 }

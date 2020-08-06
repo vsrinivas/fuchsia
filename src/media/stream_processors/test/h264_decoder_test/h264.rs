@@ -8,7 +8,6 @@ use fidl_fuchsia_media::FormatDetails;
 use std::{convert::TryFrom, fs, mem, path::Path};
 use stream_processor_test::*;
 
-const SEPARATE_SPS_PPS: bool = true;
 pub const BEAR_TEST_FILE: &str = "/pkg/data/bear.h264";
 const NAL_START_CODE: u32 = 1;
 
@@ -57,10 +56,7 @@ impl ElementaryStream for H264Stream {
             start_access_unit: true,
             known_end_access_unit: true,
             data: chunk.data.to_vec(),
-            significance: match chunk.nal_kind {
-                Some(H264NalKind::Picture) => Significance::Video(VideoSignificance::Picture),
-                _ => Significance::Video(VideoSignificance::NotPicture),
-            },
+            significance: Significance::Video(VideoSignificance::Picture),
             timestamp: None,
         }))
     }
@@ -182,7 +178,6 @@ impl<'a> Iterator for H264NalIter<'a> {
 }
 
 pub struct H264Chunk<'a> {
-    pub nal_kind: Option<H264NalKind>,
     pub data: &'a [u8],
 }
 
@@ -207,27 +202,21 @@ impl<'a> Iterator for H264ChunkIter<'a> {
                     if let None = self.chunk_start_pos {
                         self.chunk_start_pos = Some(self.nal_iter.pos - nal.data.len());
                     }
-                    let queue_chunk = match nal.kind {
-                        H264NalKind::NotPicture => SEPARATE_SPS_PPS,
-                        H264NalKind::Picture => true,
-                    };
-                    if queue_chunk {
-                        break Some(H264Chunk {
-                            nal_kind: Some(nal.kind),
-                            data: &self.nal_iter.data
-                                [self.chunk_start_pos.unwrap()..self.nal_iter.pos],
-                        });
-                    } else {
-                        continue;
+                    match nal.kind {
+                        H264NalKind::NotPicture => continue,
+                        H264NalKind::Picture => {
+                            break Some(H264Chunk {
+                                data: &self.nal_iter.data
+                                    [self.chunk_start_pos.unwrap()..self.nal_iter.pos],
+                            });
+                        }
                     }
                 }
                 None => {
                     if self.chunk_start_pos.expect("Zero NALs?") == self.nal_iter.data.len() {
-                        // done
                         break None;
                     } else {
                         break Some(H264Chunk {
-                            nal_kind: None,
                             data: &self.nal_iter.data[self.chunk_start_pos.unwrap()..],
                         });
                     }

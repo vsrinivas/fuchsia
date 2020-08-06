@@ -16,13 +16,7 @@
 #include "util.h"
 #include "video_decoder.h"
 
-namespace {
-
-constexpr uint32_t kFirmwareSize = 4 * 4096;
-
-constexpr uint32_t kReadOffsetAlignment = 512;
-
-}  // namespace
+static constexpr uint32_t kFirmwareSize = 4 * 4096;
 
 std::optional<InternalBuffer> Vdec1::LoadFirmwareToBuffer(const uint8_t* data, uint32_t len) {
   TRACE_DURATION("media", "Vdec1::LoadFirmwareToBuffer");
@@ -282,23 +276,14 @@ void Vdec1::WaitForIdle() {
 }
 
 void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address, uint32_t buffer_size) {
-  ZX_DEBUG_ASSERT(buffer_size % kReadOffsetAlignment == 0);
-
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
   VldMemVififoWrapCount::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
-  // These reset bits avoid the fifo leaking in data.  With these bits we can cleanly re-start
-  // decode without stale fifo bits leaking in.  This allows using InitializeStreamInput() to
-  // re-start decode almost as if we're restoring a saved input context.
-  DosSwReset0::Get().FromValue(0).set_vdec_vld(1).set_vdec_vld_part(1).set_vdec_vififo(1).WriteTo(
-      mmio()->dosbus);
+  DosSwReset0::Get().FromValue(0).set_vdec_vld_part(1).WriteTo(mmio()->dosbus);
   DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
 
   Reset0Register::Get().ReadFrom(mmio()->reset);
-
-  auto temp = PowerCtlVld::Get().ReadFrom(mmio()->dosbus);
-  temp.set_reg_value(temp.reg_value() | (1 << 4) | (1 << 6) | (1 << 9));
-  temp.WriteTo(mmio()->dosbus);
+  PowerCtlVld::Get().FromValue(1 << 4).WriteTo(mmio()->dosbus);
 
   VldMemVififoStartPtr::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
   VldMemVififoCurrPtr::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
@@ -329,12 +314,6 @@ void Vdec1::InitializeParserInput() {
 void Vdec1::InitializeDirectInput() {
   VldMemVififoBufCntl::Get().FromValue(0).set_init(true).set_manual(true).WriteTo(mmio()->dosbus);
   VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(mmio()->dosbus);
-}
-
-void Vdec1::UpdateWriteOffset(uint32_t write_offset) {
-  uint32_t buffer_start = VldMemVififoStartPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
-  assert(buffer_start + write_offset >= buffer_start);
-  UpdateWritePointer(buffer_start + write_offset);
 }
 
 void Vdec1::UpdateWritePointer(uint32_t write_pointer) {
@@ -403,13 +382,7 @@ zx_status_t Vdec1::RestoreInputContext(InputContext* context) {
 
   // Dummy read to give time for the hardware to reset.
   Reset0Register::Get().ReadFrom(mmio()->reset);
-
-  auto temp = PowerCtlVld::Get().ReadFrom(mmio()->dosbus);
-  temp.set_reg_value(temp.reg_value() | (1 << 4));
-  temp.WriteTo(mmio()->dosbus);
-
-  VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
-
+  PowerCtlVld::Get().FromValue(1 << 4).WriteTo(mmio()->dosbus);
   VldMemSwapAddr::Get()
       .FromValue(truncate_to_32(context->buffer->phys_base()))
       .WriteTo(mmio()->dosbus);
