@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/network_time/timezone.h"
+#include "src/sys/time/lib/network_time/timezone.h"
 
 #include <fcntl.h>
 #include <inttypes.h>
@@ -18,9 +18,9 @@
 #include <string>
 
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
-#include "garnet/bin/network_time/roughtime_server.h"
-#include "garnet/bin/network_time/time_server_config.h"
-#include "garnet/bin/network_time/time_util.h"
+#include "src/sys/time/lib/network_time/roughtime_server.h"
+#include "src/sys/time/lib/network_time/time_server_config.h"
+#include "src/sys/time/lib/network_time/time_util.h"
 #include "zircon/system/ulib/zx/include/lib/zx/channel.h"
 
 namespace time_server {

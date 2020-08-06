@@ -27,7 +27,6 @@ base_package_labels += [
   "//src/connectivity/network/http_client",
   "//garnet/bin/log_listener:log_listener",
   "//garnet/bin/log_listener:log_listener_shell",
-  "//garnet/bin/network_time_service",
   "//garnet/bin/scpi",
   "//garnet/bin/setui:setui_service",
   "//garnet/bin/sshd-host",
@@ -74,6 +73,7 @@ base_package_labels += [
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
   "//src/sys/stash:pkg",
   "//src/sys/timekeeper",
+  "//src/sys/time/network_time_service:network-time-service",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]
 

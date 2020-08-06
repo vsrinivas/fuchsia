@@ -20,13 +20,13 @@
 
 #include "fake_rtc_device.h"
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
-#include "garnet/bin/network_time/timezone.h"
 #include "local_roughtime_server.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
+#include "src/sys/time/lib/network_time/timezone.h"
 #include "third_party/roughtime/protocol.h"
 
 namespace time_server {
@@ -75,7 +75,7 @@ constexpr uint8_t kPublicKey[roughtime::kPublicKeyLength] = {
 #undef GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY
 
 constexpr char kNetworkTimePackage[] =
-    "fuchsia-pkg://fuchsia.com/network_time_service#meta/network_time_service.cmx";
+    "fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx";
 
 constexpr char kFakeDevPath[] = "/fakedev";
 constexpr char kRtcServiceName[] = "fuchsia.hardware.rtc.Device";

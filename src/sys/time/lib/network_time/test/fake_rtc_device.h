@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_TIME_TEST_FAKE_RTC_DEVICE_H_
-#define GARNET_BIN_NETWORK_TIME_TEST_FAKE_RTC_DEVICE_H_
+#ifndef SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_FAKE_RTC_DEVICE_H_
+#define SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_FAKE_RTC_DEVICE_H_
 
 #include "fuchsia/hardware/rtc/cpp/fidl.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -33,4 +33,4 @@ class FakeRtcDevice : fuchsia::hardware::rtc::Device {
 
 }  // namespace time_server
 
-#endif  // GARNET_BIN_NETWORK_TIME_TEST_FAKE_RTC_DEVICE_H_
+#endif  // SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_FAKE_RTC_DEVICE_H_

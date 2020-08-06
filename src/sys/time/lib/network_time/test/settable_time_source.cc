@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include "settable_time_source.h"
-#include "garnet/bin/network_time/time_util.h"
+
+#include "src/sys/time/lib/network_time/time_util.h"
 #include "third_party/roughtime/protocol.h"
 #include "third_party/roughtime/time_source.h"
 

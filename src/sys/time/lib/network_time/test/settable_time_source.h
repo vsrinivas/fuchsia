@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_TIME_TEST_SETTABLE_TIME_SOURCE_H_
-#define GARNET_BIN_NETWORK_TIME_TEST_SETTABLE_TIME_SOURCE_H_
+#ifndef SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_SETTABLE_TIME_SOURCE_H_
+#define SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_SETTABLE_TIME_SOURCE_H_
 
 #include "third_party/roughtime/protocol.h"
 #include "third_party/roughtime/time_source.h"
@@ -36,4 +36,4 @@ class SettableTimeSource : public roughtime::TimeSource {
 
 }  // namespace time_server
 
-#endif  // GARNET_BIN_NETWORK_TIME_TEST_SETTABLE_TIME_SOURCE_H_
+#endif  // SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_SETTABLE_TIME_SOURCE_H_

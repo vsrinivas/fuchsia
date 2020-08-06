@@ -29,7 +29,7 @@ mod diagnostics;
 
 /// URL of the time source. In the future, this value belongs in a config file.
 const NETWORK_TIME_SERVICE: &str =
-    "fuchsia-pkg://fuchsia.com/network_time_service#meta/network_time_service.cmx";
+    "fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {

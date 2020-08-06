@@ -5,7 +5,12 @@
 # Packages needed for time synchronization in recovery images
 group("recovery") {
   deps = [
-    "//garnet/bin/network_time_service",
+    "network_time_service:network-time-service",
     "//src/sys/timekeeper",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "lib/network_time:tests" ]
 }

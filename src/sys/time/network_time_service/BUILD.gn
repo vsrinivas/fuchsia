@@ -4,6 +4,10 @@
 
 import("//build/package.gni")
 
+group("network_time_service") {
+  deps = [ ":network-time-service" ]
+}
+
 source_set("lib") {
   sources = [
     "service.cc",
@@ -11,12 +15,12 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/bin/network_time:lib",
     "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/fxl",
+    "//src/sys/time/lib/network_time:lib",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -38,7 +42,7 @@ executable("bin") {
   ]
 }
 
-package("network_time_service") {
+package("network-time-service") {
   deps = [ ":bin" ]
 
   resources = [

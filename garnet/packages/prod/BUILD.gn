@@ -326,11 +326,6 @@ group("network-speed-test") {
   public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
 }
 
-group("network_time") {
-  testonly = true
-  public_deps = [ "//garnet/bin/network_time_service" ]
-}
-
 group("openthread") {
   testonly = true
   public_deps = [ "//src/connectivity/openthread/drivers/ot-radio:openthread" ]

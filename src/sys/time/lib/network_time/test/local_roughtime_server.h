@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_
-#define GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_
+#ifndef SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_
+#define SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_
 
 #include <thread>
+
 #include "settable_time_source.h"
 #include "third_party/roughtime/server.h"
 #include "third_party/roughtime/simple_server.h"
@@ -69,4 +70,4 @@ class LocalRoughtimeServer {
 
 }  // namespace time_server
 
-#endif  // GARNET_BIN_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_
+#endif  // SRC_SYS_TIME_LIB_NETWORK_TIME_TEST_LOCAL_ROUGHTIME_SERVER_H_

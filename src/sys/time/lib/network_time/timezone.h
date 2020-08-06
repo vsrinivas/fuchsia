@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_TIME_TIMEZONE_H_
-#define GARNET_BIN_NETWORK_TIME_TIMEZONE_H_
+#ifndef SRC_SYS_TIME_LIB_NETWORK_TIME_TIMEZONE_H_
+#define SRC_SYS_TIME_LIB_NETWORK_TIME_TIMEZONE_H_
 
 #include <lib/zx/time.h>
 #include <sys/time.h>
@@ -38,4 +38,4 @@ class Timezone {
 
 }  // namespace time_server
 
-#endif  // GARNET_BIN_NETWORK_TIME_TIMEZONE_H_
+#endif  // SRC_SYS_TIME_LIB_NETWORK_TIME_TIMEZONE_H_

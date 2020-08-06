@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_TIME_SERVICE_SERVICE_H_
-#define GARNET_BIN_NETWORK_TIME_SERVICE_SERVICE_H_
+#ifndef SRC_SYS_TIME_NETWORK_TIME_SERVICE_SERVICE_H_
+#define SRC_SYS_TIME_NETWORK_TIME_SERVICE_SERVICE_H_
 
 #include <fuchsia/deprecatedtimezone/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <vector>
 
-#include "garnet/bin/network_time/timezone.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "src/sys/time/lib/network_time/timezone.h"
 
 namespace network_time_service {
 
@@ -42,4 +42,4 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService {
 
 }  // namespace network_time_service
 
-#endif  // GARNET_BIN_NETWORK_TIME_SERVICE_SERVICE_H_
+#endif  // SRC_SYS_TIME_NETWORK_TIME_SERVICE_SERVICE_H_

@@ -98,6 +98,6 @@ group("tests") {
 group("recovery") {
   deps = [
     ":timekeeper",
-    "//garnet/bin/network_time_service",
+    "//src/sys/time/network_time_service:network-time-service",
   ]
 }

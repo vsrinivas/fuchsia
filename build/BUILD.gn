@@ -91,8 +91,6 @@ group("deprecated_package_underscore") {
     "//garnet/bin/metric_broker:metric_broker",
     "//garnet/bin/network_settings_server:network_settings_server",
     "//garnet/bin/network_time/test:system_time_updater_test",
-    "//garnet/bin/network_time:network_time_tests",
-    "//garnet/bin/network_time_service:network_time_service",
     "//garnet/bin/odu:odu_tests",
     "//garnet/bin/power_manager/rkf45:rkf45_tests",
     "//garnet/bin/power_manager:power_manager",

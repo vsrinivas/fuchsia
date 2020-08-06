@@ -33,6 +33,7 @@ group("tests") {
     "sysmgr:tests",
     "test_manager:tests",
     "test_runners:tests",
+    "time:tests",
     "timekeeper:tests",
     "tools/cs:tests",
   ]

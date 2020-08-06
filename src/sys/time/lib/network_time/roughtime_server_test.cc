@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/network_time/roughtime_server.h"
+#include "src/sys/time/lib/network_time/roughtime_server.h"
 
 #include <arpa/inet.h>
 #include <netdb.h>

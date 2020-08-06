@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_NETWORK_TIME_ROUGHTIME_SERVER_H_
-#define GARNET_BIN_NETWORK_TIME_ROUGHTIME_SERVER_H_
+#ifndef SRC_SYS_TIME_LIB_NETWORK_TIME_ROUGHTIME_SERVER_H_
+#define SRC_SYS_TIME_LIB_NETWORK_TIME_ROUGHTIME_SERVER_H_
 
+#include <lib/zx/time.h>
 #include <protocol.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <lib/zx/time.h>
 
 #include <map>
 #include <optional>
@@ -52,4 +51,4 @@ class RoughTimeServer {
 
 }  // namespace time_server
 
-#endif  // GARNET_BIN_NETWORK_TIME_ROUGHTIME_SERVER_H_
+#endif  // SRC_SYS_TIME_LIB_NETWORK_TIME_ROUGHTIME_SERVER_H_

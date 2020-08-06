@@ -8,7 +8,7 @@ import("//build/testing/environments.gni")
 group("test") {
   testonly = true
   deps = [
-    ":system_time_updater_test",
+    ":system-time-updater-test",
     ":system_time_updater_test_bin",
   ]
 }
@@ -28,8 +28,6 @@ executable("system_time_updater_test_bin") {
   ]
 
   deps = [
-    "//garnet/bin/network_time:lib",
-    "//garnet/bin/network_time:time_util_lib",
     "//sdk/fidl/fuchsia.hardware.rtc",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp",
@@ -40,6 +38,8 @@ executable("system_time_updater_test_bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/time/lib/network_time:lib",
+    "//src/sys/time/lib/network_time:time_util_lib",
     "//third_party/boringssl",
     "//third_party/googletest:gmock",
     "//third_party/roughtime:client_lib",
@@ -50,7 +50,7 @@ executable("system_time_updater_test_bin") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test_package("system_time_updater_test") {
+test_package("system-time-updater-test") {
   deps = [ ":system_time_updater_test_bin" ]
 
   tests = [

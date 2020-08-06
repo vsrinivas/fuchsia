@@ -7,11 +7,11 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "garnet/bin/network_time_service/service.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fit/function.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/sys/time/network_time_service/service.h"
 
 constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
 

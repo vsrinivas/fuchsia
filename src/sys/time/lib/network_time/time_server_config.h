@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_SYS_TIME_LIB_NETWORK_TIME_TIME_SERVER_CONFIG_H_
+#define SRC_SYS_TIME_LIB_NETWORK_TIME_TIME_SERVER_CONFIG_H_
 
 #include <string>
 #include <vector>
 
-#include "garnet/bin/network_time/roughtime_server.h"
+#include "src/sys/time/lib/network_time/roughtime_server.h"
 
 namespace time_server {
 
@@ -21,3 +22,5 @@ class TimeServerConfig {
 };
 
 }  // namespace time_server
+
+#endif  // SRC_SYS_TIME_LIB_NETWORK_TIME_TIME_SERVER_CONFIG_H_

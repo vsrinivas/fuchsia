@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "time_util.h"
+
 #include <string>
 
 namespace time_server {
