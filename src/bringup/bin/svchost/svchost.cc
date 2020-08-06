@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/boot/c/fidl.h>
-#include <fuchsia/component/runner/c/fidl.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/component/runner/llcpp/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
-#include <fuchsia/fshost/c/fidl.h>
-#include <fuchsia/hardware/power/statecontrol/c/fidl.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
-#include <fuchsia/kernel/c/fidl.h>
+#include <fuchsia/fshost/llcpp/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
+#include <fuchsia/hardware/pty/llcpp/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <fuchsia/net/llcpp/fidl.h>
-#include <fuchsia/paver/c/fidl.h>
+#include <fuchsia/paver/llcpp/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
-#include <fuchsia/process/c/fidl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
-#include <fuchsia/virtualconsole/c/fidl.h>
+#include <fuchsia/process/llcpp/fidl.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <fuchsia/virtualconsole/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -194,16 +193,16 @@ static constexpr const char* deprecated_services[] = {
 
 // List of services which are re-routed to the fshost service provider handle.
 static constexpr const char* fshost_services[] = {
-    fuchsia_fshost_BlockWatcher_Name,
-    fuchsia_fshost_Filesystems_Name,
-    fuchsia_fshost_Registry_Name,
+    llcpp::fuchsia::fshost::BlockWatcher::Name,
+    llcpp::fuchsia::fshost::Filesystems::Name,
+    llcpp::fuchsia::fshost::Registry::Name,
     nullptr,
 };
 
 // Forward these Zircon services to miscsvc.
 static constexpr const char* miscsvc_services[] = {
-    fuchsia_kernel_Counter_Name,
-    fuchsia_paver_Paver_Name,
+    llcpp::fuchsia::kernel::Counter::Name,
+    llcpp::fuchsia::paver::Paver::Name,
     nullptr,
 };
 
@@ -212,28 +211,28 @@ static constexpr const char* miscsvc_services[] = {
 // namespace instead.
 static constexpr const char* devcoordinator_services[] = {
     // clang-format off
-    fuchsia_boot_Arguments_Name,
-    fuchsia_boot_FactoryItems_Name,
-    fuchsia_boot_Items_Name,
-    fuchsia_boot_ReadOnlyLog_Name,
-    fuchsia_boot_RootJobForInspect_Name,
-    fuchsia_boot_RootJob_Name,
-    fuchsia_boot_RootResource_Name,
-    fuchsia_boot_WriteOnlyLog_Name,
-    fuchsia_hardware_power_statecontrol_Admin_Name,
-    fuchsia_hardware_pty_Device_Name,
-    fuchsia_kernel_Stats_Name,
-    fuchsia_process_Launcher_Name,
-    fuchsia_sysinfo_SysInfo_Name,
+    llcpp::fuchsia::boot::Arguments::Name,
+    llcpp::fuchsia::boot::FactoryItems::Name,
+    llcpp::fuchsia::boot::Items::Name,
+    llcpp::fuchsia::boot::ReadOnlyLog::Name,
+    llcpp::fuchsia::boot::RootJobForInspect::Name,
+    llcpp::fuchsia::boot::RootJob::Name,
+    llcpp::fuchsia::boot::RootResource::Name,
+    llcpp::fuchsia::boot::WriteOnlyLog::Name,
+    llcpp::fuchsia::hardware::power::statecontrol::Admin::Name,
+    llcpp::fuchsia::hardware::pty::Device::Name,
+    llcpp::fuchsia::kernel::Stats::Name,
+    llcpp::fuchsia::process::Launcher::Name,
+    llcpp::fuchsia::sysinfo::SysInfo::Name,
     nullptr,
     // clang-format on
 };
 
 // List of services which are re-routed to devmgr.
 static constexpr const char* devmgr_services[] = {
-    fuchsia_component_runner_ComponentRunner_Name,
-    fuchsia_device_manager_Administrator_Name,
-    fuchsia_device_manager_DebugDumper_Name,
+    llcpp::fuchsia::component::runner::ComponentRunner::Name,
+    llcpp::fuchsia::device::manager::Administrator::Name,
+    llcpp::fuchsia::device::manager::DebugDumper::Name,
     llcpp::fuchsia::device::manager::BindDebugger::Name,
     llcpp::fuchsia::device::manager::SystemStateTransition::Name,
     nullptr,
@@ -378,11 +377,11 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), devcoordinator_services,
                    zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
-  publish_service(outgoing.svc_dir(), fuchsia_device_NameProvider_Name,
+  publish_service(outgoing.svc_dir(), llcpp::fuchsia::device::NameProvider::Name,
                   zx::unowned_channel(device_name_provider_svc));
 
   if (virtcon_proxy_channel.is_valid()) {
-    publish_proxy_service(outgoing.svc_dir(), fuchsia_virtualconsole_SessionManager_Name,
+    publish_proxy_service(outgoing.svc_dir(), llcpp::fuchsia::virtualconsole::SessionManager::Name,
                           zx::unowned_channel(virtcon_proxy_channel));
   }
 
