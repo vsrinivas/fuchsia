@@ -66,15 +66,35 @@ table ChannelParameters {
     2: uint16 max_rx_sdu_size;
 };
 
-/// Used to return an opened channel. If there was an error in opening the channel, `Channel` will
-/// be empty. Otherwise, all fields will be present.
+/// A channel opened to a peer.
 table Channel {
     /// Socket interface for sending/receiving SDUs on the channel.
+    /// Missing if there was an error opening the channel, present otherwise.
     1: zx.handle:SOCKET socket;
     /// Channel mode accepted by the peer.
+    /// Present when `socket` is provided.
     2: ChannelMode channel_mode;
     /// Maximum SDU size the peer is capable of accepting.
+    /// Present when `socket` is provided.
     3: uint16 max_tx_sdu_size;
+    /// Audio Direction priority extension. See `AudioDirectionExt`.
+    /// Present only if supported by the host.
+    4: AudioDirectionExt ext_direction;
+};
+
+/// A2DP packet priority used in `AudioDirectionExt`. `NORMAL` should be used whenever audio is not
+/// streaming, and `SOURCE`/`SINK` should match the direction audio is being streamed.
+enum A2dpDirectionPriority {
+    NORMAL = 1;
+    SOURCE = 2;
+    SINK = 3;
+};
+
+/// Audio Priority Direction extension.
+/// Used to put the channel in a mode where A2DP packets are prioritized over other packets in the
+/// source or sink direction.
+protocol AudioDirectionExt {
+    SetPriority(A2dpDirectionPriority priority) -> () error fuchsia.bluetooth.ErrorCode;
 };
 
 /// Represents a service which is registered by this profile.  Closing this protocol will remove the

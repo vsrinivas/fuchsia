@@ -1098,6 +1098,7 @@ mod tests {
                         socket: Some(transport),
                         channel_mode: Some(ChannelMode::Basic),
                         max_tx_sdu_size: Some(672),
+                        ..Decodable::new_empty()
                     }))
                     .expect("responder sends");
             }
