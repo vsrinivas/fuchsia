@@ -2792,7 +2792,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto handle_info = event->invoked_event()->GetHandleInfo(
           event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
       if (handle_info != nullptr) {
-        handle_info->add_close_event(event);
+        handle_info->AddCloseEvent(event);
       }
     });
   }
@@ -2816,9 +2816,11 @@ void SyscallDecoderDispatcher::Populate() {
       for (const auto& value : handles->values()) {
         auto handle_value = value->AsHandleValue();
         FX_DCHECK(handle_value != nullptr);
-        HandleInfo* handle_info =
-            event->thread()->process()->SearchHandleInfo(handle_value->handle().handle);
-        handle_info->add_close_event(event);
+        if (handle_value->handle().handle != ZX_HANDLE_INVALID) {
+          HandleInfo* handle_info =
+              event->thread()->process()->SearchHandleInfo(handle_value->handle().handle);
+          handle_info->AddCloseEvent(event);
+        }
       }
     });
   }
@@ -3356,11 +3358,11 @@ void SyscallDecoderDispatcher::Populate() {
       auto out0 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
       FX_DCHECK(out0 != nullptr);
-      out0->add_creation_event(event);
+      out0->AddCreationEvent(event);
       auto out1 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
       FX_DCHECK(out1 != nullptr);
-      out1->add_creation_event(event);
+      out1->AddCreationEvent(event);
     });
   }
 
@@ -3402,7 +3404,7 @@ void SyscallDecoderDispatcher::Populate() {
 
     zx_channel_read->set_compute_statistics([](const OutputEvent* event) {
       const fidl_codec::FidlMessageValue* message = event->GetMessage();
-      if (!message->unknown_direction()) {
+      if ((message != nullptr) && !message->unknown_direction()) {
         CreateHandleVisitor visitor(event);
         message->Visit(&visitor, nullptr);
       }
@@ -3448,7 +3450,7 @@ void SyscallDecoderDispatcher::Populate() {
 
     zx_channel_read_etc->set_compute_statistics([](const OutputEvent* event) {
       const fidl_codec::FidlMessageValue* message = event->GetMessage();
-      if (!message->unknown_direction()) {
+      if ((message != nullptr) && !message->unknown_direction()) {
         CreateHandleVisitor visitor(event);
         message->Visit(&visitor, nullptr);
       }
@@ -3481,7 +3483,7 @@ void SyscallDecoderDispatcher::Populate() {
 
     zx_channel_write->set_compute_statistics([](const OutputEvent* event) {
       const fidl_codec::FidlMessageValue* message = event->invoked_event()->GetMessage();
-      if (!message->unknown_direction()) {
+      if ((message != nullptr) && !message->unknown_direction()) {
         CloseHandleVisitor visitor(event);
         message->Visit(&visitor, nullptr);
       }
@@ -3540,11 +3542,15 @@ void SyscallDecoderDispatcher::Populate() {
 
     zx_channel_call->set_compute_statistics([](const OutputEvent* event) {
       const fidl_codec::FidlMessageValue* request = event->invoked_event()->GetMessage();
-      CloseHandleVisitor close_handle_visitor(event);
-      request->Visit(&close_handle_visitor, nullptr);
+      if (request != nullptr) {
+        CloseHandleVisitor close_handle_visitor(event);
+        request->Visit(&close_handle_visitor, nullptr);
+      }
       const fidl_codec::FidlMessageValue* response = event->GetMessage();
-      CreateHandleVisitor create_handle_visitor(event);
-      response->Visit(&create_handle_visitor, nullptr);
+      if (response != nullptr) {
+        CreateHandleVisitor create_handle_visitor(event);
+        response->Visit(&create_handle_visitor, nullptr);
+      }
     });
   }
 
@@ -3567,11 +3573,11 @@ void SyscallDecoderDispatcher::Populate() {
       auto out0 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
       FX_DCHECK(out0 != nullptr);
-      out0->add_creation_event(event);
+      out0->AddCreationEvent(event);
       auto out1 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
       FX_DCHECK(out1 != nullptr);
-      out1->add_creation_event(event);
+      out1->AddCreationEvent(event);
     });
   }
 
@@ -3657,7 +3663,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -3919,11 +3925,11 @@ void SyscallDecoderDispatcher::Populate() {
       auto proc_handle = event->GetHandleInfo(
           event->syscall()->SearchInlineMember("proc_handle", /*invoked=*/false));
       FX_DCHECK(proc_handle != nullptr);
-      proc_handle->add_creation_event(event);
+      proc_handle->AddCreationEvent(event);
       auto vmar_handle = event->GetHandleInfo(
           event->syscall()->SearchInlineMember("vmar_handle", /*invoked=*/false));
       FX_DCHECK(vmar_handle != nullptr);
-      vmar_handle->add_creation_event(event);
+      vmar_handle->AddCreationEvent(event);
     });
   }
 
@@ -4010,7 +4016,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4093,7 +4099,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4148,7 +4154,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4171,11 +4177,11 @@ void SyscallDecoderDispatcher::Populate() {
       auto out0 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
       FX_DCHECK(out0 != nullptr);
-      out0->add_creation_event(event);
+      out0->AddCreationEvent(event);
       auto out1 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
       FX_DCHECK(out1 != nullptr);
-      out1->add_creation_event(event);
+      out1->AddCreationEvent(event);
     });
   }
 
@@ -4320,7 +4326,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4389,7 +4395,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4434,7 +4440,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4536,7 +4542,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4590,7 +4596,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4615,7 +4621,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4772,11 +4778,11 @@ void SyscallDecoderDispatcher::Populate() {
       auto out0 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out0", /*invoked=*/false));
       FX_DCHECK(out0 != nullptr);
-      out0->add_creation_event(event);
+      out0->AddCreationEvent(event);
       auto out1 =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out1", /*invoked=*/false));
       FX_DCHECK(out1 != nullptr);
-      out1->add_creation_event(event);
+      out1->AddCreationEvent(event);
     });
   }
 
@@ -4849,7 +4855,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -4872,7 +4878,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -5058,7 +5064,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out_handle = event->GetHandleInfo(
           event->syscall()->SearchInlineMember("out_handle", /*invoked=*/false));
       FX_DCHECK(out_handle != nullptr);
-      out_handle->add_creation_event(event);
+      out_handle->AddCreationEvent(event);
     });
   }
 
@@ -5196,7 +5202,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -5220,7 +5226,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -5586,7 +5592,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto resource_out = event->GetHandleInfo(
           event->syscall()->SearchInlineMember("resource_out", /*invoked=*/false));
       FX_DCHECK(resource_out != nullptr);
-      resource_out->add_creation_event(event);
+      resource_out->AddCreationEvent(event);
     });
   }
 
@@ -5612,11 +5618,11 @@ void SyscallDecoderDispatcher::Populate() {
       auto guest_handle = event->GetHandleInfo(
           event->syscall()->SearchInlineMember("guest_handle", /*invoked=*/false));
       FX_DCHECK(guest_handle != nullptr);
-      guest_handle->add_creation_event(event);
+      guest_handle->AddCreationEvent(event);
       auto vmar_handle = event->GetHandleInfo(
           event->syscall()->SearchInlineMember("vmar_handle", /*invoked=*/false));
       FX_DCHECK(vmar_handle != nullptr);
-      vmar_handle->add_creation_event(event);
+      vmar_handle->AddCreationEvent(event);
     });
   }
 
@@ -5661,7 +5667,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -5773,7 +5779,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 
@@ -5803,7 +5809,7 @@ void SyscallDecoderDispatcher::Populate() {
       auto out =
           event->GetHandleInfo(event->syscall()->SearchInlineMember("out", /*invoked=*/false));
       FX_DCHECK(out != nullptr);
-      out->add_creation_event(event);
+      out->AddCreationEvent(event);
     });
   }
 

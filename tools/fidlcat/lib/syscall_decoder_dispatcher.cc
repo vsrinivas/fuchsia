@@ -497,8 +497,8 @@ void SyscallDecoderDispatcher::GenerateProtoSession(proto::Session* session) {
     auto process_semantic = inference().GetProcessSemantic(process.second->koid());
     if (process_semantic != nullptr) {
       for (const auto& linked_handles : process_semantic->linked_handles) {
-        proto::LinkedHandles* proto_linked_handles = proto_process->add_linked_handles();
         if (linked_handles.first < linked_handles.second) {
+          proto::LinkedHandles* proto_linked_handles = proto_process->add_linked_handles();
           proto_linked_handles->set_handle_0(linked_handles.first);
           proto_linked_handles->set_handle_1(linked_handles.second);
         }

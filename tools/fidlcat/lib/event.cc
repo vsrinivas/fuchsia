@@ -104,10 +104,14 @@ const fidl_codec::Value* SyscallEvent::GetValue(const fidl_codec::StructMember* 
     return nullptr;
   }
   auto result = inline_fields_.find(member);
-  if (result == inline_fields_.end()) {
-    return nullptr;
+  if (result != inline_fields_.end()) {
+    return result->second.get();
   }
-  return result->second.get();
+  auto result2 = outline_fields_.find(member);
+  if (result2 != outline_fields_.end()) {
+    return result2->second.get();
+  }
+  return nullptr;
 }
 
 const fidl_codec::HandleValue* SyscallEvent::GetHandleValue(
@@ -266,15 +270,16 @@ void OutputEvent::Display(FidlcatPrinter& printer) const {
             << ((message->epitaph_error() == "ZX_OK") ? fidl_codec::Green : fidl_codec::Red)
             << message->epitaph_error() << fidl_codec::ResetColor << '\n';
   } else {
-    printer << fidl_codec::WhiteOnMagenta
-            << (message->is_request() ? "request "
-                                      : ((method->request() != nullptr) ? "response" : "event   "))
-            << fidl_codec::ResetColor;
     if (method == nullptr) {
-      printer << " ordinal=" << std::hex << message->ordinal() << std::dec;
+      printer << " ordinal=" << std::hex << message->ordinal() << std::dec << '\n';
     } else {
-      printer << ' ' << fidl_codec::Green << method->enclosing_interface().name() << '.'
-              << method->name() << fidl_codec::ResetColor << '\n';
+      printer << fidl_codec::WhiteOnMagenta
+              << (message->is_request()
+                      ? "request "
+                      : ((method->request() != nullptr) ? "response" : "event   "))
+              << fidl_codec::ResetColor << ' ' << fidl_codec::Green
+              << method->enclosing_interface().name() << '.' << method->name()
+              << fidl_codec::ResetColor << '\n';
     }
   }
 }

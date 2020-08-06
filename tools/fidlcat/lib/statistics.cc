@@ -14,7 +14,7 @@ void CloseHandleVisitor::VisitHandleValue(const fidl_codec::HandleValue* node,
   HandleInfo* handle_info =
       output_event_->thread()->process()->SearchHandleInfo(node->handle().handle);
   if (handle_info != nullptr) {
-    handle_info->add_close_event(output_event_);
+    handle_info->AddCloseEvent(output_event_);
   }
 }
 
@@ -23,7 +23,7 @@ void CreateHandleVisitor::VisitHandleValue(const fidl_codec::HandleValue* node,
   HandleInfo* handle_info =
       output_event_->thread()->process()->SearchHandleInfo(node->handle().handle);
   if (handle_info != nullptr) {
-    handle_info->add_creation_event(output_event_);
+    handle_info->AddCreationEvent(output_event_);
   }
 }
 
@@ -96,69 +96,66 @@ void SyscallDisplayDispatcher::DisplaySummary(std::ostream& os) {
             }
           }
         }
-        // Displays all the creation events for the handle (we should have at most one event).
-        bool first = true;
-        for (const auto& event : handle_info->creation_events()) {
-          if (first && !handle_info->startup()) {
+        // Displays all the sessions for the handle.
+        const char* separator = "";
+        for (const auto& session : handle_info->sessions()) {
+          printer << separator;
+          const OutputEvent* creation_event = session->creation_event();
+          if (creation_event != nullptr) {
+            // Displays the creation event for the session.
             printer << "created by ";
-            first = false;
-          } else {
-            printer << fidl_codec::Red << "found another incorrect creation by "
-                    << fidl_codec::ResetColor;
+            if (creation_event->syscall()->kind() == SyscallKind::kRegularSyscall) {
+              // The creation event is something like zx_channel_create, zx_timer_create, ...
+              printer << fidl_codec::Green << creation_event->syscall()->name()
+                      << fidl_codec::ResetColor;
+            } else {
+              // The creation event is a message read from a channel (for example zx_channel_read).
+              // The process received the event from the message.
+              auto creation_handle_info = creation_event->invoked_event()->GetHandleInfo(
+                  creation_event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
+              FX_DCHECK(creation_handle_info != nullptr);
+              printer.DisplayHandleInfo(creation_handle_info);
+              const fidl_codec::FidlMessageValue* message = creation_event->GetMessage();
+              FX_DCHECK(message != nullptr);
+              FX_DCHECK(message->method() != nullptr);
+              printer << " receiving " << fidl_codec::Green
+                      << message->method()->fully_qualified_name() << fidl_codec::ResetColor;
+            }
+            printer << '\n';
           }
-          if (event->syscall()->kind() == SyscallKind::kRegularSyscall) {
-            // The creation event is something like zx_channel_create, zx_timer_create, ...
-            printer << fidl_codec::Green << event->syscall()->name() << fidl_codec::ResetColor;
-          } else {
-            // The creation event is a message read from a channel (for example zx_channel_read).
-            // The process received the event from the message.
-            auto creation_handle_info = event->invoked_event()->GetHandleInfo(
-                event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
-            FX_DCHECK(creation_handle_info != nullptr);
-            printer.DisplayHandleInfo(creation_handle_info);
-            const fidl_codec::FidlMessageValue* message = event->GetMessage();
-            FX_DCHECK(message != nullptr);
-            FX_DCHECK(message->method() != nullptr);
-            printer << " receiving " << fidl_codec::Green
-                    << message->method()->fully_qualified_name() << fidl_codec::ResetColor;
+          // Displays all the regular events for the handle.
+          {
+            fidl_codec::Indent indent(printer);
+            for (const auto& event : session->events()) {
+              event->Display(printer);
+            }
           }
-          printer << '\n';
-        }
-        // Displays all the regular events for the handle.
-        {
-          fidl_codec::Indent indent(printer);
-          for (const auto& event : handle_info->events()) {
-            event->Display(printer);
-          }
-        }
-        // Displays all the closing events for the handle (we should have at most one event).
-        first = true;
-        for (const auto& event : handle_info->close_events()) {
-          if (first) {
+          const OutputEvent* close_event = session->close_event();
+          if (close_event != nullptr) {
+            // Displays the close event for the session.
             printer << "closed by ";
-            first = false;
-          } else {
-            printer << fidl_codec::Red << "found another incorrect closing by "
-                    << fidl_codec::ResetColor;
+            if (close_event->syscall()->kind() == SyscallKind::kRegularSyscall) {
+              // The close event is zx_handle_close or zx_handle_close_many.
+              printer << fidl_codec::Green << close_event->syscall()->name()
+                      << fidl_codec::ResetColor;
+            } else {
+              // The close event is a message sent to a channel to another process (for example
+              // zx_channel_write).
+              // The process sent the event using the message.
+              auto close_handle_info = close_event->invoked_event()->GetHandleInfo(
+                  close_event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
+              FX_DCHECK(close_handle_info != nullptr);
+              printer.DisplayHandleInfo(close_handle_info);
+              const fidl_codec::FidlMessageValue* message =
+                  close_event->invoked_event()->GetMessage();
+              FX_DCHECK(message != nullptr);
+              FX_DCHECK(message->method() != nullptr);
+              printer << " sending " << fidl_codec::Green
+                      << message->method()->fully_qualified_name() << fidl_codec::ResetColor;
+            }
+            printer << '\n';
           }
-          if (event->syscall()->kind() == SyscallKind::kRegularSyscall) {
-            // The closing event is zx_handle_close or zx_handle_close_many.
-            printer << fidl_codec::Green << event->syscall()->name() << fidl_codec::ResetColor;
-          } else {
-            // The closing event is a message sent to a channel to another process (for example
-            // zx_channel_write).
-            // The process sent the event using the message.
-            auto creation_handle_info = event->invoked_event()->GetHandleInfo(
-                event->syscall()->SearchInlineMember("handle", /*invoked=*/true));
-            FX_DCHECK(creation_handle_info != nullptr);
-            printer.DisplayHandleInfo(creation_handle_info);
-            const fidl_codec::FidlMessageValue* message = event->invoked_event()->GetMessage();
-            FX_DCHECK(message != nullptr);
-            FX_DCHECK(message->method() != nullptr);
-            printer << " sending " << fidl_codec::Green << message->method()->fully_qualified_name()
-                    << fidl_codec::ResetColor;
-          }
-          printer << '\n';
+          separator = "\n";
         }
       }
     }

@@ -28,6 +28,28 @@ class SyscallDecoder;
 class SyscallDisplayDispatcher;
 class Thread;
 
+class HandleSession {
+ public:
+  HandleSession() = default;
+
+  const OutputEvent* creation_event() const { return creation_event_; }
+  void set_creation_event(const OutputEvent* creation_event) { creation_event_ = creation_event; }
+
+  const std::vector<const Event*>& events() const { return events_; }
+  void add_event(const Event* event) { events_.emplace_back(event); }
+
+  const OutputEvent* close_event() const { return close_event_; }
+  void set_close_event(const OutputEvent* close_event) { close_event_ = close_event; }
+
+ private:
+  // The event which created the session.
+  const OutputEvent* creation_event_ = nullptr;
+  // All the regular events which use the handle during the session.
+  std::vector<const Event*> events_;
+  // The event which closed the session.
+  const OutputEvent* close_event_ = nullptr;
+};
+
 class HandleInfo {
  public:
   HandleInfo(Thread* thread, uint32_t handle, int64_t creation_time, bool startup)
@@ -43,15 +65,39 @@ class HandleInfo {
   void set_rights(zx_rights_t rights) { rights_ = rights; }
   zx_koid_t koid() const { return koid_; }
   void set_koid(zx_koid_t koid) { koid_ = koid; }
-  const std::vector<Event*>& events() const { return events_; }
-  const std::vector<const OutputEvent*>& creation_events() const { return creation_events_; }
-  void add_creation_event(const OutputEvent* creation_event) {
-    creation_events_.emplace_back(creation_event);
-  }
-  const std::vector<const OutputEvent*> close_events() const { return close_events_; }
-  void add_close_event(const OutputEvent* close_event) { close_events_.emplace_back(close_event); }
+  const std::vector<std::unique_ptr<HandleSession>>& sessions() const { return sessions_; }
 
-  void AddEvent(Event* event) { events_.emplace_back(event); }
+  void AddCreationEvent(const OutputEvent* creation_event) {
+    auto session = std::make_unique<HandleSession>();
+    session->set_creation_event(creation_event);
+    sessions_.emplace_back(std::move(session));
+  }
+
+  void AddEvent(const Event* event) {
+    if (!sessions_.empty()) {
+      HandleSession* session = sessions_.back().get();
+      if (session->close_event() == nullptr) {
+        session->add_event(event);
+        return;
+      }
+    }
+    auto session = std::make_unique<HandleSession>();
+    session->add_event(event);
+    sessions_.emplace_back(std::move(session));
+  }
+
+  void AddCloseEvent(const OutputEvent* close_event) {
+    if (!sessions_.empty()) {
+      HandleSession* session = sessions_.back().get();
+      if (session->close_event() == nullptr) {
+        session->set_close_event(close_event);
+        return;
+      }
+    }
+    auto session = std::make_unique<HandleSession>();
+    session->set_close_event(close_event);
+    sessions_.emplace_back(std::move(session));
+  }
 
  private:
   Thread* const thread_;
@@ -64,13 +110,10 @@ class HandleInfo {
   zx_rights_t rights_ = 0;
   // The unique id assigned by the kernel to the object referenced by the handle.
   zx_koid_t koid_ = ZX_KOID_INVALID;
-  // All the events which created the handle. It should contain at most one event (and zero event
-  // for a startup handle).
-  std::vector<const OutputEvent*> creation_events_;
-  // All the events which closed the handle. It should contain at most one event.
-  std::vector<const OutputEvent*> close_events_;
-  // All the regular events which use the handle.
-  std::vector<Event*> events_;
+  // All the sessions for the handle. Usually, it will contain at most one session. However, some
+  // processes send a handle to themself (some tests, for example, use this feature). In that case,
+  // we will have several sessions for one handle.
+  std::vector<std::unique_ptr<HandleSession>> sessions_;
 };
 
 class Process {
