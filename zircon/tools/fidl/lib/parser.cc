@@ -10,6 +10,8 @@
 #include <regex>
 
 #include "fidl/attributes.h"
+#include "fidl/diagnostics.h"
+#include "fidl/experimental_flags.h"
 #include "fidl/types.h"
 
 namespace fidl {
@@ -1155,7 +1157,8 @@ std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
 }
 
 std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
+    types::Resourceness resourceness) {
   std::vector<std::unique_ptr<raw::StructMember>> members;
 
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStruct));
@@ -1193,7 +1196,8 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(
     Fail();
 
   return std::make_unique<raw::StructDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                  std::move(identifier), std::move(members));
+                                                  std::move(identifier), std::move(members),
+                                                  resourceness);
 }
 
 std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
@@ -1236,7 +1240,8 @@ std::unique_ptr<raw::TableMember> Parser::ParseTableMember() {
 }
 
 std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness,
+    types::Resourceness resourceness) {
   std::vector<std::unique_ptr<raw::TableMember>> members;
 
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTable));
@@ -1283,7 +1288,7 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
 
   return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                  std::move(identifier), std::move(members),
-                                                 strictness);
+                                                 strictness, resourceness);
 }
 
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
@@ -1327,7 +1332,8 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
 }
 
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness,
+    types::Resourceness resourceness) {
   std::vector<std::unique_ptr<raw::UnionMember>> members;
 
   auto identifier = ParseIdentifier();
@@ -1377,7 +1383,7 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
 
   return std::make_unique<raw::UnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
                                                  std::move(identifier), std::move(members),
-                                                 strictness);
+                                                 strictness, resourceness);
 }
 
 std::unique_ptr<raw::File> Parser::ParseFile() {
@@ -1421,10 +1427,34 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     if (!Ok())
       return More;
 
+    auto resourceness = types::Resourceness::kResource;
+    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDefaultNoHandles)) {
+      resourceness = types::Resourceness::kValue;
+      switch (Peek().combined()) {
+        case CASE_IDENTIFIER(Token::Subkind::kResource):
+          ConsumeToken(IdentifierOfSubkind(Token::Subkind::kResource));
+          assert(Ok() && "we should have just seen a resource token");
+          resourceness = types::Resourceness::kResource;
+          switch (Peek().combined()) {
+            case CASE_TOKEN(Token::Kind::kEndOfFile):
+              Fail();
+              return Done;
+            case CASE_IDENTIFIER(Token::Subkind::kStruct):
+            case CASE_IDENTIFIER(Token::Subkind::kTable):
+            case CASE_IDENTIFIER(Token::Subkind::kUnion):
+            case CASE_IDENTIFIER(Token::Subkind::kXUnion):
+              break;
+            default:
+              // TODO(fxb/57409): Improve this error message.
+              Fail(ErrCannotSpecifyResource, Peek());
+          }
+          break;
+      }
+    }
+
     if (maybe_strictness) {
       switch (Peek().combined()) {
         case CASE_IDENTIFIER(Token::Subkind::kBits):
-          [[fallthrough]];
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
           if (*maybe_strictness == types::Strictness::kFlexible &&
               !experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kFlexibleBitsAndEnums)) {
@@ -1433,10 +1463,10 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
           }
           break;
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
-          [[fallthrough]];
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
           break;
         default:
+          // TODO(fxb/57409): Improve this error message.
           Fail(ErrCannotSpecifyStrict, Peek());
           return More;
       }
@@ -1499,14 +1529,15 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       case CASE_IDENTIFIER(Token::Subkind::kStruct): {
         done_with_library_imports = true;
         add(&struct_declaration_list,
-            [&] { return ParseStructDeclaration(std::move(attributes), scope); });
+            [&] { return ParseStructDeclaration(std::move(attributes), scope, resourceness); });
         return More;
       }
 
       case CASE_IDENTIFIER(Token::Subkind::kTable): {
         done_with_library_imports = true;
         add(&table_declaration_list, [&] {
-          return ParseTableDeclaration(std::move(attributes), scope, types::Strictness::kFlexible);
+          return ParseTableDeclaration(std::move(attributes), scope, types::Strictness::kFlexible,
+                                       resourceness);
         });
         return More;
       }
@@ -1531,7 +1562,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
         add(&union_declaration_list, [&] {
           return ParseUnionDeclaration(std::move(attributes), scope,
-                                       maybe_strictness.value_or(types::Strictness::kStrict));
+                                       maybe_strictness.value_or(types::Strictness::kStrict),
+                                       resourceness);
         });
         return More;
       }

@@ -283,9 +283,11 @@ struct Struct final : public TypeDecl {
   using Member = StructMember;
 
   Struct(std::unique_ptr<raw::AttributeList> attributes, Name name,
-         std::vector<Member> unparented_members, bool is_request_or_response = false)
+         std::vector<Member> unparented_members, types::Resourceness resourceness,
+         bool is_request_or_response = false)
       : TypeDecl(Kind::kStruct, std::move(attributes), std::move(name)),
         members(std::move(unparented_members)),
+        resourceness(resourceness),
         is_request_or_response(is_request_or_response) {
     for (auto& member : members) {
       member.parent = this;
@@ -293,6 +295,7 @@ struct Struct final : public TypeDecl {
   }
 
   std::vector<Member> members;
+  const types::Resourceness resourceness;
 
   // This is true iff this struct is a method request/response in a transaction header.
   const bool is_request_or_response;
@@ -350,13 +353,15 @@ struct Table final : public TypeDecl {
   using Member = TableMember;
 
   Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
-        types::Strictness strictness)
+        types::Strictness strictness, types::Resourceness resourceness)
       : TypeDecl(Kind::kTable, std::move(attributes), std::move(name)),
         members(std::move(members)),
-        strictness(strictness) {}
+        strictness(strictness),
+        resourceness(resourceness) {}
 
   std::vector<Member> members;
   const types::Strictness strictness;
+  const types::Resourceness resourceness;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
@@ -406,10 +411,12 @@ struct Union final : public TypeDecl {
   using Member = UnionMember;
 
   Union(std::unique_ptr<raw::AttributeList> attributes, Name name,
-        std::vector<Member> unparented_members, types::Strictness strictness)
+        std::vector<Member> unparented_members, types::Strictness strictness,
+        types::Resourceness resourceness)
       : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
         members(std::move(unparented_members)),
-        strictness(strictness) {
+        strictness(strictness),
+        resourceness(resourceness) {
     for (auto& member : members) {
       if (member.maybe_used) {
         member.maybe_used->parent = this;
@@ -419,6 +426,7 @@ struct Union final : public TypeDecl {
 
   std::vector<Member> members;
   const types::Strictness strictness;
+  const types::Resourceness resourceness;
 
   std::vector<std::reference_wrapper<const Member>> MembersSortedByXUnionOrdinal() const;
 

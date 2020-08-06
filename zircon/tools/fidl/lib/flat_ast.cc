@@ -18,6 +18,7 @@
 #include "fidl/ordinals.h"
 #include "fidl/parser.h"
 #include "fidl/raw_ast.h"
+#include "fidl/types.h"
 #include "fidl/utils.h"
 
 namespace fidl {
@@ -247,6 +248,45 @@ bool IsSimple(const Type* type, Reporter* reporter) {
       }
     }
   }
+}
+
+// Returns true if |type| is a resource type, false if it is a value type. See
+// FTP-057 for the definitions of these terms.
+bool IsResourceType(const Type* type) {
+  switch (type->kind) {
+    case Type::Kind::kPrimitive:
+    case Type::Kind::kString:
+      return false;
+    case Type::Kind::kHandle:
+    case Type::Kind::kRequestHandle:
+      return true;
+    case Type::Kind::kArray:
+      return IsResourceType(static_cast<const ArrayType*>(type)->element_type);
+    case Type::Kind::kVector:
+      return IsResourceType(static_cast<const VectorType*>(type)->element_type);
+    case Type::Kind::kIdentifier: {
+      const auto decl = static_cast<const IdentifierType*>(type)->type_decl;
+      switch (decl->kind) {
+        case Decl::Kind::kBits:
+        case Decl::Kind::kEnum:
+          return false;
+        case Decl::Kind::kProtocol:
+          return true;
+        case Decl::Kind::kStruct:
+          return static_cast<const Struct*>(decl)->resourceness == types::Resourceness::kResource;
+        case Decl::Kind::kTable:
+          return static_cast<const Table*>(decl)->resourceness == types::Resourceness::kResource;
+        case Decl::Kind::kUnion:
+          return static_cast<const Union*>(decl)->resourceness == types::Resourceness::kResource;
+        case Decl::Kind::kConst:
+        case Decl::Kind::kResource:
+        case Decl::Kind::kService:
+        case Decl::Kind::kTypeAlias:
+          assert(false && "Unexpected kind");
+      }
+    }
+  }
+  __builtin_unreachable();
 }
 
 FieldShape Struct::Member::fieldshape(WireFormat wire_format) const {
@@ -1608,8 +1648,12 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   result_attributes.emplace_back(*method, "Result", "");
   auto result_attributelist =
       std::make_unique<raw::AttributeList>(*method, std::move(result_attributes));
-  auto union_decl = std::make_unique<Union>(std::move(result_attributelist), std::move(result_name),
-                                            std::move(result_members), types::Strictness::kStrict);
+  // There is no syntax for indicating the resourceness of a method result type,
+  // so we conservatively assume all such types are resources.
+  const auto resourceness = types::Resourceness::kResource;
+  auto union_decl =
+      std::make_unique<Union>(std::move(result_attributelist), std::move(result_name),
+                              std::move(result_members), types::Strictness::kStrict, resourceness);
   auto result_decl = union_decl.get();
   if (!RegisterDecl(std::move(union_decl)))
     return false;
@@ -1623,7 +1667,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
 
   auto struct_decl = std::make_unique<Struct>(
       nullptr /* attributes */, Name::CreateDerived(this, response_span, NextAnonymousName()),
-      std::move(response_members), true);
+      std::move(response_members), resourceness, true /* is_request_or_response */);
   auto struct_decl_ptr = struct_decl.get();
   if (!RegisterDecl(std::move(struct_decl)))
     return false;
@@ -1745,8 +1789,12 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
                          std::move(parameter->attributes));
   }
 
+  // There is no syntax for indicating the resourceness of a parameter list, so
+  // we conservatively assume all parameter-list structs are resources.
+  const auto resourceness = types::Resourceness::kResource;
   if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
-                                             std::move(members), is_request_or_response)))
+                                             std::move(members), resourceness,
+                                             is_request_or_response)))
     return false;
   *out_struct_decl = struct_declarations_.back().get();
   return true;
@@ -1790,8 +1838,8 @@ void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
                          std::move(maybe_default_value), std::move(attributes));
   }
 
-  RegisterDecl(
-      std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
+  RegisterDecl(std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members),
+                                        struct_declaration->resourceness));
 }
 
 void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
@@ -1827,7 +1875,8 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
   }
 
   RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name), std::move(members),
-                                       table_declaration->strictness));
+                                       table_declaration->strictness,
+                                       table_declaration->resourceness));
 }
 
 void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration) {
@@ -1862,7 +1911,8 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
   }
 
   RegisterDecl(std::make_unique<Union>(std::move(union_declaration->attributes), std::move(name),
-                                       std::move(members), union_declaration->strictness));
+                                       std::move(members), union_declaration->strictness,
+                                       union_declaration->resourceness));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
@@ -3184,6 +3234,7 @@ bool Library::CompileService(Service* service_decl) {
 
 bool Library::CompileStruct(Struct* struct_declaration) {
   Scope<std::string> scope;
+  const StructMember* first_resource_member = nullptr;
   for (const auto& member : struct_declaration->members) {
     const auto original_name = member.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
@@ -3205,8 +3256,11 @@ bool Library::CompileStruct(Struct* struct_declaration) {
       return false;
     assert(!(struct_declaration->is_request_or_response && member.maybe_default_value) &&
            "method parameters cannot have default values");
+    if (!first_resource_member && IsResourceType(member.type_ctor->type)) {
+      first_resource_member = &member;
+    }
     if (member.maybe_default_value) {
-      const auto* default_value_type = member.type_ctor.get()->type;
+      const auto* default_value_type = member.type_ctor->type;
       if (!TypeCanBeConst(default_value_type)) {
         return Fail(ErrInvalidStructMemberType, *struct_declaration, NameIdentifier(member.name),
                     default_value_type);
@@ -3217,39 +3271,57 @@ bool Library::CompileStruct(Struct* struct_declaration) {
     }
   }
 
+  if (first_resource_member && struct_declaration->resourceness == types::Resourceness::kValue) {
+    return Fail(ErrResourceTypeInValueType, first_resource_member->name,
+                first_resource_member->type_ctor->type, struct_declaration->name,
+                first_resource_member->name.data(), struct_declaration->name);
+  }
+
   return true;
 }
 
 bool Library::CompileTable(Table* table_declaration) {
   Scope<std::string> name_scope;
   Ordinal64Scope ordinal_scope;
+  const Table::Member::Used* first_resource_member = nullptr;
 
   for (const auto& member : table_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
-    if (!ordinal_result.ok())
+    if (!ordinal_result.ok()) {
       return Fail(ErrDuplicateTableFieldOrdinal, member.ordinal->span(),
                   ordinal_result.previous_occurrence());
+    }
     if (member.maybe_used) {
-      const auto original_name = member.maybe_used->name.data();
+      const auto& member_used = *member.maybe_used;
+      const auto original_name = member_used.name.data();
       const auto canonical_name = utils::canonicalize(original_name);
-      const auto name_result = name_scope.Insert(canonical_name, member.maybe_used->name);
+      const auto name_result = name_scope.Insert(canonical_name, member_used.name);
       if (!name_result.ok()) {
         const auto previous_span = name_result.previous_occurrence();
         if (original_name == name_result.previous_occurrence().data()) {
-          return Fail(ErrDuplicateTableFieldName, member.maybe_used->name, original_name,
-                      previous_span);
+          return Fail(ErrDuplicateTableFieldName, member_used.name, original_name, previous_span);
         }
-        return Fail(ErrDuplicateTableFieldNameCanonical, member.maybe_used->name, original_name,
+        return Fail(ErrDuplicateTableFieldNameCanonical, member_used.name, original_name,
                     previous_span.data(), previous_span, canonical_name);
       }
-      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get()))
+      if (!CompileTypeConstructor(member_used.type_ctor.get())) {
         return false;
+      }
+      if (!first_resource_member && IsResourceType(member_used.type_ctor->type)) {
+        first_resource_member = &member_used;
+      }
     }
   }
 
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
     return Fail(ErrNonDenseOrdinal, span, ordinal);
+  }
+
+  if (first_resource_member && table_declaration->resourceness == types::Resourceness::kValue) {
+    return Fail(ErrResourceTypeInValueType, first_resource_member->name,
+                first_resource_member->type_ctor->type, table_declaration->name,
+                first_resource_member->name.data(), table_declaration->name);
   }
 
   return true;
@@ -3258,6 +3330,7 @@ bool Library::CompileTable(Table* table_declaration) {
 bool Library::CompileUnion(Union* union_declaration) {
   Scope<std::string> scope;
   Ordinal64Scope ordinal_scope;
+  const Union::Member::Used* first_resource_member = nullptr;
 
   for (const auto& member : union_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
@@ -3266,21 +3339,24 @@ bool Library::CompileUnion(Union* union_declaration) {
                   ordinal_result.previous_occurrence());
     }
     if (member.maybe_used) {
-      const auto original_name = member.maybe_used->name.data();
+      const auto& member_used = *member.maybe_used;
+      const auto original_name = member_used.name.data();
       const auto canonical_name = utils::canonicalize(original_name);
-      const auto name_result = scope.Insert(canonical_name, member.maybe_used->name);
+      const auto name_result = scope.Insert(canonical_name, member_used.name);
       if (!name_result.ok()) {
         const auto previous_span = name_result.previous_occurrence();
         if (original_name == name_result.previous_occurrence().data()) {
-          return Fail(ErrDuplicateUnionMemberName, member.maybe_used->name, original_name,
-                      previous_span);
+          return Fail(ErrDuplicateUnionMemberName, member_used.name, original_name, previous_span);
         }
-        return Fail(ErrDuplicateUnionMemberNameCanonical, member.maybe_used->name, original_name,
+        return Fail(ErrDuplicateUnionMemberNameCanonical, member_used.name, original_name,
                     previous_span.data(), previous_span, canonical_name);
       }
 
-      if (!CompileTypeConstructor(member.maybe_used->type_ctor.get())) {
+      if (!CompileTypeConstructor(member_used.type_ctor.get())) {
         return false;
+      }
+      if (!first_resource_member && IsResourceType(member_used.type_ctor->type)) {
+        first_resource_member = &member_used;
       }
     }
   }
@@ -3288,6 +3364,12 @@ bool Library::CompileUnion(Union* union_declaration) {
   if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
     return Fail(ErrNonDenseOrdinal, span, ordinal);
+  }
+
+  if (first_resource_member && union_declaration->resourceness == types::Resourceness::kValue) {
+    return Fail(ErrResourceTypeInValueType, first_resource_member->name,
+                first_resource_member->type_ctor->type, union_declaration->name,
+                first_resource_member->name.data(), union_declaration->name);
   }
 
   {

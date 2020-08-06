@@ -20,6 +20,7 @@
       },
       "members": [],
       "strict": false,
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -102,6 +103,7 @@
         }
       ],
       "strict": false,
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -149,6 +151,7 @@
         }
       ],
       "strict": false,
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -256,6 +259,7 @@
         }
       ],
       "strict": false,
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -323,6 +327,7 @@
         }
       ],
       "strict": false,
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,

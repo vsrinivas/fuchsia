@@ -46,6 +46,8 @@ constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifyFlexible(
     "cannot specify flexible for {}");
 constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifyStrict(
     "cannot specify strictness for {}");
+constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifyResource(
+    "cannot specify resource for {}");
 constexpr ErrorDef ErrDocCommentOnParameters("cannot have doc comment on parameters");
 constexpr ErrorDef ErrXunionDeprecated("xunion is deprecated, please use `flexible union` instead");
 constexpr ErrorDef ErrStrictXunionDeprecated(
@@ -207,6 +209,10 @@ constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceS
         "value of {} member '{}' conflicts with previously declared member '{}' at {}");
 constexpr ErrorDef<SourceSpan> ErrDuplicateResourcePropertyName(
     "multiple resource properties with the same name; previous was at {}");
+constexpr ErrorDef<const flat::Type *, flat::Name, std::string_view, flat::Name>
+    ErrResourceTypeInValueType(
+        "'{}' is a resource type (may contain handles), but '{}' is not. "
+        "either remove member '{}', or declare '{}' with the `resource` modifier");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints

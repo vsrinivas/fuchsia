@@ -54,6 +54,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 2,
         "alignment": 1,
@@ -110,6 +111,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 8,

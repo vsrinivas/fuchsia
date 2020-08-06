@@ -54,6 +54,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 8,
         "alignment": 4,
@@ -110,6 +111,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 4,
         "alignment": 2,
@@ -154,6 +156,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 12,
         "alignment": 2,
@@ -230,6 +233,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 24,
         "alignment": 4,
@@ -289,6 +293,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 16,
         "alignment": 8,
@@ -347,6 +352,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 40,
         "alignment": 8,

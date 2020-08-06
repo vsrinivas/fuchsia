@@ -571,17 +571,20 @@ class StructDeclaration final : public SourceElement {
   // Note: A nullptr passed to attributes means an empty attribute list.
   StructDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                     std::unique_ptr<Identifier> identifier,
-                    std::vector<std::unique_ptr<StructMember>> members)
+                    std::vector<std::unique_ptr<StructMember>> members,
+                    types::Resourceness resourceness)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
-        members(std::move(members)) {}
+        members(std::move(members)),
+        resourceness(resourceness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<StructMember>> members;
+  const types::Resourceness resourceness;
 };
 
 struct TableMember final : public SourceElement {
@@ -621,12 +624,14 @@ struct TableMember final : public SourceElement {
 struct TableDeclaration final : public SourceElement {
   TableDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<TableMember>> members, types::Strictness strictness)
+                   std::vector<std::unique_ptr<TableMember>> members, types::Strictness strictness,
+                   types::Resourceness resourceness)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         members(std::move(members)),
-        strictness(strictness) {}
+        strictness(strictness),
+        resourceness(resourceness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -634,6 +639,7 @@ struct TableDeclaration final : public SourceElement {
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<TableMember>> members;
   const types::Strictness strictness;
+  const types::Resourceness resourceness;
 };
 
 class UnionMember final : public SourceElement {
@@ -676,12 +682,14 @@ class UnionDeclaration final : public SourceElement {
  public:
   UnionDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> identifier,
-                   std::vector<std::unique_ptr<UnionMember>> members, types::Strictness strictness)
+                   std::vector<std::unique_ptr<UnionMember>> members, types::Strictness strictness,
+                   types::Resourceness resourceness)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
         members(std::move(members)),
-        strictness(strictness) {}
+        strictness(strictness),
+        resourceness(resourceness) {}
 
   void Accept(TreeVisitor* visitor) const;
 
@@ -689,6 +697,7 @@ class UnionDeclaration final : public SourceElement {
   std::unique_ptr<Identifier> identifier;
   std::vector<std::unique_ptr<UnionMember>> members;
   const types::Strictness strictness;
+  const types::Resourceness resourceness;
 };
 
 class File final : public SourceElement {

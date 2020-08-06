@@ -717,6 +717,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 40,
         "alignment": 8,

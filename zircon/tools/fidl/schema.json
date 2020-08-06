@@ -532,6 +532,7 @@
             "required": [
                 "name",
                 "members",
+                "resource",
                 "type_shape_v1"
             ],
             "properties": {
@@ -561,6 +562,10 @@
                     "items": {
                         "$ref": "#/definitions/struct-member"
                     }
+                },
+                "resource": {
+                    "description": "True if the struct is a resource type (declared to contain handles)",
+                    "type": "boolean"
                 },
                 "type_shape_v1": {
                     "description": "Type shape of this declaration",
@@ -610,7 +615,8 @@
                 "name",
                 "members",
                 "type_shape_v1",
-                "strict"
+                "strict",
+                "resource"
             ],
             "properties": {
                 "max_handles": {
@@ -638,6 +644,10 @@
                 },
                 "strict": {
                     "description": "Strictness of table",
+                    "type": "boolean"
+                },
+                "resource": {
+                    "description": "True if the table is a resource type (may contain handles)",
                     "type": "boolean"
                 },
                 "type_shape_v1": {
@@ -751,7 +761,8 @@
                 "name",
                 "members",
                 "type_shape_v1",
-                "strict"
+                "strict",
+                "resource"
             ],
             "properties": {
                 "max_handles": {
@@ -779,6 +790,10 @@
                 },
                 "strict": {
                     "description": "Strictness of extensible union",
+                    "type": "boolean"
+                },
+                "resource": {
+                    "description": "True if the union is a resource type (may contain handles)",
                     "type": "boolean"
                 },
                 "type_shape_v1": {

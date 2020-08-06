@@ -201,6 +201,7 @@ if (current_toolchain == default_toolchain) {
       "recursion_detector_tests.cc",
       "reporter_tests.cc",
       "resource_tests.cc",
+      "resourceness_tests.cc",
       "service_tests.cc",
       "span_tests.cc",
       "strictness_tests.cc",

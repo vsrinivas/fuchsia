@@ -25,6 +25,7 @@
         }
       ],
       "members": [],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 1,
         "alignment": 1,

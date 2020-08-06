@@ -5,6 +5,7 @@
 #include "fidl/json_generator.h"
 
 #include "fidl/names.h"
+#include "fidl/types.h"
 
 namespace fidl {
 
@@ -404,6 +405,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
+    GenerateObjectMember("resource", value.resourceness == types::Resourceness::kResource);
     GenerateTypeShapes(value);
   });
 }
@@ -431,6 +433,7 @@ void JSONGenerator::Generate(const flat::Table& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateObjectMember("resource", value.resourceness == types::Resourceness::kResource);
     GenerateTypeShapes(value);
   });
 }
@@ -483,6 +486,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateObjectMember("resource", value.resourceness == types::Resourceness::kResource);
     GenerateTypeShapes(value);
   });
 }

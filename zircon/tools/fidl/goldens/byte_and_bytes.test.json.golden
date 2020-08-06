@@ -102,6 +102,7 @@
           }
         }
       ],
+      "resource": true,
       "type_shape_v1": {
         "inline_size": 56,
         "alignment": 8,

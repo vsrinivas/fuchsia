@@ -43,8 +43,6 @@ struct Object {
   // <https://eli.thegreenplace.net/2018/type-erasure-and-reification/> for a good introduction to
   // type erasure in C++.
   //
-  // This struct is named Visitor since it's a visitor that cannot modify the Object, similarly
-  // named to const_iterators.
   // TODO(fxb/37535): Refactor the visitor pattern here to be the simpler kind-enum + switch()
   // dispatch.
   template <typename T>
