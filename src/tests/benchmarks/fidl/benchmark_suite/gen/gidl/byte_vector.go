@@ -47,11 +47,11 @@ func init() {
 			{
 				Name: "ByteVector/65536",
 				Comment: `65536 byte vector in a struct
-			Disabled on HLCPP / LLCPP due to clang performance issues`,
+			Disabled on Rust / HLCPP / LLCPP due to clang performance issues`,
 				Config: config.Config{
 					"size": 65536,
 				},
-				Denylist: []config.Binding{config.HLCPP, config.LLCPP, config.Walker},
+				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker},
 			},
 		},
 	})

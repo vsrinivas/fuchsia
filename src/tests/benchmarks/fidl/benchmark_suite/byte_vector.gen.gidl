@@ -613,9 +613,9 @@ benchmark("ByteVector/4096") {
 }
 
 // 65536 byte vector in a struct
-// Disabled on HLCPP / LLCPP due to clang performance issues
+// Disabled on Rust / HLCPP / LLCPP due to clang performance issues
 benchmark("ByteVector/65536") {
-    bindings_denylist = [cpp, llcpp, walker],
+    bindings_denylist = [rust, cpp, llcpp, walker],
     value = ByteVector{
         bytes: [
             // 1 - 256
