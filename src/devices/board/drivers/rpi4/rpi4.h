@@ -8,17 +8,13 @@
 #define SRC_DEVICES_BOARD_DRIVERS_RPI4_RPI4_H_
 
 #include <threads.h>
-
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform/bus.h>
-#include <fbl/macros.h>
-#include <soc/aml-a311d/a311d-hw.h>
 
 namespace rpi4 {
 

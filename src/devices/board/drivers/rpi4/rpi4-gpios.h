@@ -5,8 +5,6 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_VIM3_VIM3_GPIOS_H_
 #define SRC_DEVICES_BOARD_DRIVERS_VIM3_VIM3_GPIOS_H_
 
-#include <soc/aml-a311d/a311d-gpio.h>
-
 // VIM3 specific assignments should be placed in this file.
 // SoC specific definitions should be placed in soc/aml-a311d-gpio.h
 

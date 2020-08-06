@@ -171,6 +171,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_BCM2711            0x03
 
 #define PDEV_DID_BCM_WIFI           0x01
+#define PDEV_DID_BCM_GPIO           0x02
 
 //Hardkernel
 #define PDEV_VID_HARDKERNEL         0x07

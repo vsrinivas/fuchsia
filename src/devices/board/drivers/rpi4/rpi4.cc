@@ -2,49 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// for the time being it's only a template copy from vim3
-
 #include "rpi4.h"
-
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
-#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 namespace rpi4 {
 
 zx_status_t Rpi4::Create(void* ctx, zx_device_t* parent) {
-  pbus_protocol_t pbus;
-  iommu_protocol_t iommu;
 
+  pbus_protocol_t pbus;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_PBUS, &pbus);
   if (status != ZX_OK) {
     return status;
   }
 
+  iommu_protocol_t iommu;
   status = device_get_protocol(parent, ZX_PROTOCOL_IOMMU, &iommu);
   if (status != ZX_OK) {
     return status;
   }
-  printf("# after get ZX_PROTOCOL_PBUS and ZX_PROTOCOL_IOMMU\n");
 
   fbl::AllocChecker ac;
   auto board = fbl::make_unique_checked<Rpi4>(&ac, parent, &pbus, &iommu);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  printf("# after fbl::make_unique_checked<Rpi4>(&ac, parent, &pbus, &iommu)\n");
 
   status = board->DdkAdd("rpi4");
   if (status != ZX_OK) {
@@ -83,6 +68,7 @@ int Rpi4::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
+
   if ((status = EthInit()) != ZX_OK) {
     zxlogf(ERROR, "EthInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
@@ -108,11 +94,13 @@ int Rpi4::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
+
   init_txn_->Reply(status);
   return ZX_OK;
 }
 
 void Rpi4::DdkInit(ddk::InitTxn txn) {
+
   init_txn_ = std::move(txn);
   int rc = thrd_create_with_name(
       &thread_, [](void* arg) -> int { return reinterpret_cast<Rpi4*>(arg)->Thread(); }, this,

@@ -1,49 +1,30 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
 
-driver_module("rpi4") {
+driver_module("bcm2711-gpio") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  sources = [
-    "rpi4-clk.cc",
-    "rpi4-emmc.cc",
-    "rpi4-eth.cc",
-    "rpi4-gpio.cc",
-    "rpi4-i2c.cc",
-    "rpi4-nna.cc",
-    "rpi4-sd.cc",
-    "rpi4-sdio.cc",
-    "rpi4-sysmem.cc",
-    "rpi4.cc",
-  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "bcm2711-gpio.cc" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.clock",
-    "//sdk/banjo/ddk.protocol.clockimpl",
-    "//sdk/banjo/ddk.protocol.ethernet",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
-    "//sdk/banjo/ddk.protocol.iommu",
     "//sdk/banjo/ddk.protocol.platform.bus",
-    "//sdk/banjo/ddk.protocol.platform.device",
-    "//sdk/banjo/ddk.protocol.sdmmc",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//src/devices/lib/amlogic",
+    "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/broadcom",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
 }
