@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 group("cts") {
-  assert_no_deps = [
-    "//src/*",
-    "//zircon/*",
-  ]
   deps = [ "//cts/tests/hello_world:tests" ]
   testonly = true
 }
