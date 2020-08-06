@@ -14,5 +14,6 @@ group("tests") {
   deps = [
     "driver_host:tests",
     "driver_manager:tests",
+    "register-util:tests",
   ]
 }

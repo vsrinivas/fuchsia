@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/register-util-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver"
+        ]
+    }
+}

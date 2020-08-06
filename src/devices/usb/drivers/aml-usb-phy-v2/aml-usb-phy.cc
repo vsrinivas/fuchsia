@@ -10,6 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/errors.h>
+
+#include <cstdio>
+#include <sstream>
+#include <string>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -17,6 +22,7 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
@@ -272,6 +278,27 @@ void AmlUsbPhy::RemoveXhciDevice() {
   }
 }
 
+zx_status_t AmlUsbPhy::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::registers::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
+}
+
+void AmlUsbPhy::WriteRegister(uint64_t address, uint32_t value,
+                              WriteRegisterCompleter::Sync completer) {
+  if (!factory_mmio_.has_value()) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  constexpr auto kUsbBaseAddress = 0xff400000;
+  if ((address < kUsbBaseAddress) || (address >= kUsbBaseAddress + factory_mmio_->get_size())) {
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+  factory_mmio_->Write32(value, address - kUsbBaseAddress);
+  completer.ReplySuccess();
+}
+
 zx_status_t AmlUsbPhy::AddDwc2Device() {
   if (dwc2_device_) {
     return ZX_ERR_BAD_STATE;
@@ -327,6 +354,12 @@ zx_status_t AmlUsbPhy::Init() {
   if (status != ZX_OK) {
     return status;
   }
+  status = pdev_.MapMmio(4, &factory_mmio_);
+  if (status != ZX_OK) {
+    // Device doesn't support factory mode
+    factory_mmio_->reset();
+  }
+
   status = pdev_.GetInterrupt(0, &irq_);
   if (status != ZX_OK) {
     return status;

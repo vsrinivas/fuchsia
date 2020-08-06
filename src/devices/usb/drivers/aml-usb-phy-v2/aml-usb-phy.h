@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
 #define SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
 
+#include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
@@ -20,10 +21,12 @@
 namespace aml_usb_phy {
 
 class AmlUsbPhy;
-using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::UnbindableDeprecated>;
+using AmlUsbPhyType = ddk::Device<AmlUsbPhy, ddk::UnbindableDeprecated, ddk::Messageable>;
 
 // This is the main class for the platform bus driver.
-class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, ddk::base_protocol> {
+class AmlUsbPhy : public AmlUsbPhyType,
+                  public ddk::UsbPhyProtocol<AmlUsbPhy, ddk::base_protocol>,
+                  public llcpp::fuchsia::hardware::registers::Device::Interface {
  public:
   explicit AmlUsbPhy(zx_device_t* parent) : AmlUsbPhyType(parent), pdev_(parent) {}
 
@@ -35,6 +38,10 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
   // Device protocol implementation.
   void DdkUnbindDeprecated();
   void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+  void WriteRegister(uint64_t address, uint32_t value,
+                     WriteRegisterCompleter::Sync completer) override;
 
  private:
   enum class UsbMode {
@@ -63,6 +70,7 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
   std::optional<ddk::MmioBuffer> usbctrl_mmio_;
   std::optional<ddk::MmioBuffer> usbphy20_mmio_;
   std::optional<ddk::MmioBuffer> usbphy21_mmio_;
+  std::optional<ddk::MmioBuffer> factory_mmio_;
 
   zx::interrupt irq_;
   thrd_t irq_thread_;

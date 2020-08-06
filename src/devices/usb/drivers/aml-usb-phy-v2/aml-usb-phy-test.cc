@@ -39,7 +39,7 @@ enum class RegisterIndex : size_t {
   Phy1 = 3,
 };
 
-constexpr auto kRegisterBanks = 4;
+constexpr auto kRegisterBanks = 5;
 constexpr auto kRegisterCount = 2048;
 
 class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
@@ -49,10 +49,19 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
     for (size_t i = 0; i < kRegisterBanks; i++) {
       for (size_t c = 0; c < kRegisterCount; c++) {
         regs_[i][c].SetReadCallback([this, i, c]() { return reg_values_[i][c]; });
-        regs_[i][c].SetWriteCallback([this, i, c](uint64_t value) { reg_values_[i][c] = value; });
+        regs_[i][c].SetWriteCallback([this, i, c](uint64_t value) {
+          reg_values_[i][c] = value;
+          if (callback_) {
+            (*callback_)(i, c, value);
+          }
+        });
       }
       regions_[i].emplace(regs_[i], sizeof(uint32_t), kRegisterCount);
     }
+  }
+
+  void SetWriteCallback(fit::function<void(size_t bank, size_t reg, uint64_t value)> callback) {
+    callback_ = std::move(callback);
   }
 
   const pdev_protocol_t* pdev() const { return &pdev_; }
@@ -87,6 +96,7 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
   ~FakeDevice() {}
 
  private:
+  std::optional<fit::function<void(size_t bank, size_t reg, uint64_t value)>> callback_;
   zx::unowned_interrupt irq_signaller_;
   zx::interrupt irq_;
   uint64_t reg_values_[kRegisterBanks][kRegisterCount] = {};
@@ -155,6 +165,34 @@ TEST(AmlUsbPhy, DoesNotCrash) {
   zx::interrupt irq;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
   ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
+  DestroyDevices(root_device.get());
+}
+
+TEST(AmlUsbPhy, FIDLWrites) {
+  Ddk ddk;
+  auto pdev = std::make_unique<FakeDevice>();
+  auto root_device = std::make_shared<zx_device_t>();
+  root_device->pdev_ops = *pdev->pdev();
+  zx::interrupt irq;
+  bool written = false;
+  pdev->SetWriteCallback([&](uint64_t bank, uint64_t index, size_t value) {
+    if ((bank == 4) && (index = 5) && (value == 42)) {
+      written = true;
+    }
+  });
+  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
+  ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
+  fake_ddk::FidlMessenger fidl;
+  fidl.SetMessageOp(root_device->devices.front().get(),
+                    [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+                      auto dev = static_cast<zx_device_t*>(ctx);
+                      return dev->dev_ops.message(dev->pdev_ops.ctx, msg, txn);
+                    });
+
+  llcpp::fuchsia::hardware::registers::Device::SyncClient device(std::move(fidl.local()));
+  constexpr auto kUsbBaseAddress = 0xff400000;
+  ASSERT_OK(device.WriteRegister(kUsbBaseAddress + (5 * 4), 42));
+  ASSERT_TRUE(written);
   DestroyDevices(root_device.get());
 }
 
