@@ -21,7 +21,7 @@ const POLL_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 
 lazy_static! {
    /// Rights to request when duplicating handles to userspace clocks.
-   static ref CLOCK_RIGHTS: zx::Rights = zx::Rights::READ | zx::Rights::DUPLICATE;
+   static ref CLOCK_RIGHTS: zx::Rights = zx::Rights::READ | zx::Rights::DUPLICATE | zx::Rights::WAIT;
 }
 
 #[fasync::run_singlethreaded]
@@ -79,7 +79,7 @@ impl KernelUtcMonitor {
     /// Creates a new `KernelUtcMonitor`, logging the initial state.
     pub fn new() -> Self {
         let initial = Utc.timestamp_nanos(zx::Time::get(zx::ClockId::UTC).into_nanos());
-        info!("Kernel UTC at initialization: {}", initial.to_rfc2822());
+        info!("ZX_CLOCK_UTC at initialization: {}", initial.to_rfc2822());
         KernelUtcMonitor {}
     }
 
@@ -101,29 +101,32 @@ impl ClockMonitor {
     pub fn new() -> Result<Self, Error> {
         // Retrieve a handle to the UTC clock.
         let clock = runtime::duplicate_utc_clock_handle(*CLOCK_RIGHTS)
-            .map_err(|stat| anyhow::anyhow!("Error retreiving UTC clock handle: {}", stat))?;
+            .map_err(|stat| anyhow::anyhow!("Error retreiving UTC zx::Clock handle: {}", stat))?;
 
         // Log the time reported by the clock.
         match clock.read() {
             Ok(time) => info!(
-                "Clock UTC at initialization: {}",
+                "UTC zx::Clock at initialization: {}",
                 Utc.timestamp_nanos(time.into_nanos()).to_rfc2822()
             ),
-            Err(stat) => warn!("Error reading initial clock time {}", stat),
+            Err(stat) => warn!("Error reading UTC zx::Clock initial time {}", stat),
         }
 
         // Log the initial details and backstop time on creation
         match clock.get_details() {
             Ok(details) => {
                 info!(
-                    "Clock backstop time: {}",
+                    "UTC zx::Clock backstop time: {}",
                     Utc.timestamp_nanos(details.backstop.into_nanos()).to_rfc2822()
                 );
-                info!("Details at initialization: {}", Self::describe_clock_details(&details));
+                info!(
+                    "UTC zx::Clock details at initialization: {}",
+                    Self::describe_clock_details(&details)
+                );
                 Ok(ClockMonitor { clock, initial_generation: details.generation_counter })
             }
             Err(stat) => {
-                warn!("Error reading clock details {}", stat);
+                warn!("Error reading zx::Clock details {}", stat);
                 Ok(ClockMonitor { clock, initial_generation: 0 })
             }
         }
@@ -135,7 +138,7 @@ impl ClockMonitor {
         let clock_start_fut = async {
             match fasync::OnSignals::new(&self.clock, zx::Signals::CLOCK_STARTED).await {
                 Ok(_) => info!("UTC zx:Clock has started"),
-                Err(err) => warn!("Error waiting for clock start: {}", err),
+                Err(err) => warn!("Error waiting for UTC zx::Clock start: {}", err),
             }
         };
 
@@ -147,7 +150,10 @@ impl ClockMonitor {
                 fasync::Timer::new(fasync::Time::after(POLL_DELAY)).await;
                 if let Ok(details) = self.clock.get_details() {
                     if details.generation_counter != last_logged {
-                        info!("Updated details: {}", Self::describe_clock_details(&details));
+                        info!(
+                            "Updated UTC zx::Clock details: {}",
+                            Self::describe_clock_details(&details)
+                        );
                         last_logged = details.generation_counter;
                     }
                 }
