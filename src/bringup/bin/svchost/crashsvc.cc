@@ -3,6 +3,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/backtrace-request/backtrace-request-utils.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
@@ -88,17 +90,15 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   fprintf(stdout, "crashsvc: exception received, processing\n");
   inspector_print_debug_info(stdout, process.get(), thread.get());
 
-  // Run the loop before handing off the exception to give queued tasks a chance to execute. The
-  // loop is run here to minimize the chance of |handler| becoming unbound after the loop has been
-  // run.
-  if (const zx_status_t status = loop.RunUntilIdle(); status != ZX_OK) {
-    LogError("failed to run async loop", status);
-  }
-
   // Send over the exception to the handler.
   // From this point on, crashsvc has no ownership over the exception and it's up to the handler to
   // decide when and how to resume it.
-  handler.Handle(std::move(exception), info);
+  //
+  // This is done asynchronously to give queued tasks, like the reconnection logic, a chance to
+  // execute.
+  async::PostTask(loop.dispatcher(), [&handler, info, exception = std::move(exception)]() mutable {
+    handler.Handle(std::move(exception), info);
+  });
 }
 
 int crash_svc(void* arg) {
@@ -106,20 +106,22 @@ int crash_svc(void* arg) {
 
   auto ctx = std::unique_ptr<crash_ctx>(reinterpret_cast<crash_ctx*>(arg));
   ExceptionHandler handler(loop.dispatcher(), ctx->exception_handler_svc);
+  async::Wait wait_for_exceptions(ctx->exception_channel.get(),
+                                  ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, /*options=*/0u);
 
-  for (;;) {
-    zx_signals_t signals = 0;
-    if (const zx_status_t status = ctx->exception_channel.wait_one(
-            ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals);
-        status != ZX_OK) {
-      LogError("failed to wait on the exception channel", status);
-      continue;
+  wait_for_exceptions.set_handler([&loop, &handler, &ctx](async_dispatcher_t* dispatcher,
+                                                          async::Wait* wait, zx_status_t status,
+                                                          const zx_packet_signal_t* signal) {
+    if (status == ZX_ERR_CANCELED) {
+      loop.Shutdown();
+      return;
     }
 
-    if (signals & ZX_CHANNEL_PEER_CLOSED) {
+    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
       // We should only get here in crashsvc's unit tests. In production, our job is actually the
       // root job so the system will halt before closing its exception channel.
-      break;
+      loop.Shutdown();
+      return;
     }
 
     zx_exception_info_t info;
@@ -128,13 +130,25 @@ int crash_svc(void* arg) {
             0, &info, exception.reset_and_get_address(), sizeof(info), 1, nullptr, nullptr);
         status != ZX_OK) {
       LogError("failed to read from the exception channel", status);
-      continue;
+      return;
     }
 
     HandOffException(std::move(exception), info, handler, loop);
+
+    if (const zx_status_t status = wait->Begin(loop.dispatcher()); status != ZX_OK) {
+      LogError("Failed to restart wait, crashsvc won't continue", status);
+      loop.Shutdown();
+      return;
+    }
+  });
+
+  if (const zx_status_t status = wait_for_exceptions.Begin(loop.dispatcher()); status != ZX_OK) {
+    LogError("Failed to being wait, crashsvc won't start", status);
+    return status;
   }
 
-  loop.Shutdown();
+  loop.Run();
+
   return 0;
 }
 
