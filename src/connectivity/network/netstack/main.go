@@ -524,7 +524,7 @@ func getSecretKeyForOpaqueIID(appCtx *component.Context) ([]byte, error) {
 	// Attempt to get the existing secret key.
 	opaqueIIDSecretKeyValue, err := storeAccessor.GetValue(context.Background(), opaqueIIDSecretKeyName)
 	if err != nil {
-		syslog.Errorf("failed to get opaque IID secret key from secure stash store: %s", err)
+		syslog.Warnf("failed to get opaque IID secret key from secure stash store: %s", err)
 		return newSecretKeyForOpaqueIID()
 	}
 

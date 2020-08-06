@@ -631,7 +631,7 @@ func (eps *endpointWithSocket) loopWrite() {
 					panic(err)
 				}
 				return
-			case tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
+			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
 				closeFn()
 				return
 			case tcpip.ErrTimeout:
@@ -790,7 +790,7 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 					panic(err)
 				}
 				return
-			case tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
+			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
 				closeFn()
 				return
 			default:
