@@ -12,7 +12,7 @@ executable("bin") {
   sources = [ "coding_tables_tests.cc" ]
 
   deps = [
-    ":fidl.test.example.codingtables_c",
+    ":fidl.test.example.codingtables_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
