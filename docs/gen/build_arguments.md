@@ -1750,6 +1750,13 @@ is only for use during local development.
 
 From //src/identity/bin/account_manager/BUILD.gn:12
 
+### recovery_logo_path
+Path to file to use for recovery logo
+
+**Current value (from the default):** `"//src/recovery/system/res/fuchsia-logo.png"`
+
+From //src/recovery/system/system_recovery_args.gni:7
+
 ### recovery_ta_uuids
 UUID of TAs to include in the Recovery build.
 
@@ -2723,5 +2730,5 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From [//third_party/acpica/BUILD.gn:7](https://fuchsia.googlesource.com/third_party/acpica/+/b4e0457ad8f111cf0ec5bd86f34f6d3e78eee711/BUILD.gn#7)
+From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/53f1fa0c1db0fd16445fbb3c45b752633a3a9095/BUILD.gn#9)
 

@@ -41,7 +41,7 @@ default format is used.
 
 **Current value (from the default):** `""`
 
-From //public/gn/config/BUILD.zircon.gn:24
+From //public/gn/config/BUILD.zircon.gn:25
 
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
@@ -57,7 +57,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/clang-crashreports"`
 
-From //public/gn/config/BUILD.zircon.gn:12
+From //public/gn/config/BUILD.zircon.gn:13
 
 ### current_cpu
 
@@ -401,7 +401,7 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 }]
 ```
 
-From //public/gn/config/BUILD.zircon.gn:18
+From //public/gn/config/BUILD.zircon.gn:19
 
 ### target_cpu
 
