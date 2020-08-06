@@ -17,13 +17,11 @@ func init() {
 		Gen:      gidlGenEnumArray,
 		Benchmarks: []config.Benchmark{
 			{
-				Name: "EnumArray/256",
-				Comment: `256 enum array in a struct
-				Disabled on LLCPP / Walker because of enum bug in GIDL`,
+				Name:    "EnumArray/256",
+				Comment: `256 enum array in a struct`,
 				Config: config.Config{
 					"size": 256,
 				},
-				Denylist: []config.Binding{config.LLCPP, config.Walker},
 			},
 		},
 	})

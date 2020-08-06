@@ -55,12 +55,12 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 	case bool:
 		return fmt.Sprintf("%t", value)
 	case uint64:
-		return fmt.Sprintf("%dll", value)
+		return fmt.Sprintf("%s(%dll)", typeName(decl), value)
 	case int64:
 		if value == -9223372036854775808 {
-			return "(-9223372036854775807ll - 1)"
+			return fmt.Sprintf("%s(-9223372036854775807ll - 1)", typeName(decl))
 		}
-		return fmt.Sprintf("%dll", value)
+		return fmt.Sprintf("%s(%dll)", typeName(decl), value)
 	case float64:
 		return fmt.Sprintf("%g", value)
 	case string:
@@ -177,7 +177,7 @@ func (b *unownedBuilder) buildListItems(value []interface{}, decl gidlmixer.List
 	var elements []string
 	elemDecl := decl.Elem()
 	for _, item := range value {
-		elements = append(elements, fmt.Sprintf("std::move(%s)", b.visit(item, elemDecl)))
+		elements = append(elements, fmt.Sprintf("%s", b.visit(item, elemDecl)))
 	}
 	return elements
 }
