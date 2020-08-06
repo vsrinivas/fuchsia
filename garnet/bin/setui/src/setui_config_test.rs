@@ -4,6 +4,7 @@
 
 use anyhow::{Context, Error};
 use clap::{App, Arg};
+use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
     EnabledServicesConfiguration, LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
@@ -13,7 +14,7 @@ use std::fs::File;
 use std::io::Read;
 
 fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
-    println!("Validating {:?}", path);
+    fx_log_info!("Validating {:?}", path);
     let mut file = File::open(path)
         .with_context(|| format!("Couldn't open path `{}`", path.to_string_lossy()))?;
     let mut contents = String::new();
