@@ -5,4 +5,4 @@ name: ermine
 description: A development shell for Fuchsia.
 
 flutter:
-
+  uses-material-design: true

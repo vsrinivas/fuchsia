@@ -7,7 +7,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show RawKeyDownEvent, RawKeyEventDataFuchsia;
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
@@ -16,6 +16,8 @@ import 'package:ermine/src/utils/suggestion.dart';
 import 'package:ermine/src/utils/suggestions.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   ValueNotifier<bool> visibility;
   MockSuggestionService suggestionService;
   AskModel model;

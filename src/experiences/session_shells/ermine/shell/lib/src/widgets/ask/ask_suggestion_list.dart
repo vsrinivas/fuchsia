@@ -40,35 +40,30 @@ class AskSuggestionList extends StatelessWidget {
         }
       }
     });
-    return RawKeyboardListener(
-      onKey: model.handleKey,
-      focusNode: model.focusNode,
-      child: AnimatedBuilder(
-          animation: model.suggestions,
-          builder: (context, child) {
-            return Container(
-              decoration: model.suggestions.value.isNotEmpty && !unbounded
-                  ? BoxDecoration(
-                      color: ErmineStyle.kOverlayBackgroundColor,
-                      border: Border.all(
-                        color: ErmineStyle.kOverlayBorderColor,
-                        width: ErmineStyle.kOverlayBorderWidth,
-                      ),
-                      borderRadius: BorderRadius.all(Radius.zero),
-                    )
-                  : null,
-              constraints: unbounded
-                  ? null
-                  : BoxConstraints(maxHeight: _kListViewHeight),
-              child: AnimatedList(
-                controller: controller,
-                key: model.suggestionsListKey,
-                shrinkWrap: true,
-                itemBuilder: _buildItem,
-              ),
-            );
-          }),
-    );
+    return AnimatedBuilder(
+        animation: model.suggestions,
+        builder: (context, child) {
+          return Container(
+            decoration: model.suggestions.value.isNotEmpty && !unbounded
+                ? BoxDecoration(
+                    color: ErmineStyle.kOverlayBackgroundColor,
+                    border: Border.all(
+                      color: ErmineStyle.kOverlayBorderColor,
+                      width: ErmineStyle.kOverlayBorderWidth,
+                    ),
+                    borderRadius: BorderRadius.all(Radius.zero),
+                  )
+                : null,
+            constraints:
+                unbounded ? null : BoxConstraints(maxHeight: _kListViewHeight),
+            child: AnimatedList(
+              controller: controller,
+              key: model.suggestionsListKey,
+              shrinkWrap: true,
+              itemBuilder: _buildItem,
+            ),
+          );
+        });
   }
 
   Widget _buildItem(

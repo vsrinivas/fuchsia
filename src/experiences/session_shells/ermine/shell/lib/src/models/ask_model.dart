@@ -6,7 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
-    show RawKeyDownEvent, RawKeyEventDataFuchsia;
+    show RawKeyboard, RawKeyDownEvent, RawKeyEventDataFuchsia;
 
 import '../utils/styles.dart';
 import '../utils/suggestion.dart';
@@ -65,12 +65,15 @@ class AskModel extends ChangeNotifier {
   AskModel({
     @required SuggestionService suggestionService,
     this.onDismiss,
-  }) : _suggestionService = suggestionService;
+  }) : _suggestionService = suggestionService {
+    RawKeyboard.instance.addListener(handleKey);
+  }
 
   @override
   void dispose() {
     super.dispose();
     controller.dispose();
+    RawKeyboard.instance.removeListener(handleKey);
   }
 
   /// Called by [TextField]'s [onChanged] callback when text changes.
