@@ -10,10 +10,10 @@ The Command Line Interface (CLI) provides the UX for FFX. It is responsible for:
 FFX uses the Rust crate [Argh](https://github.com/google/argh) to manage CLI parameter definitions and parsing.  As Argh complies with the Google standard, code is able to be structured into decoupled plugins for FFX.  Each subcommand in the FFX call can be represented by a plugin, so for example: 
 
 ```sh
-$fx ffx run-component "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx"
+$fx ffx component run "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx"
 ```
 
-The part of the command 'run-component' is a subcommand that routes the code execution to the 'run-component' plugin.  More on this in the [routing](#routing) section.
+The part of the command 'component run' is a subcommand that routes the code execution to the 'component run' plugin.  More on this in the [routing](#routing) section.
 
 ## Communicating with the daemon
 
