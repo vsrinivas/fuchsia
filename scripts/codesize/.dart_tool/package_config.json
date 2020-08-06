@@ -29,23 +29,11 @@
       "name": "async",
       "rootUri": "../../../third_party/dart-pkg/pub/async",
       "packageUri": "lib/",
-      "languageVersion": "2.2"
-    },
-    {
-      "name": "boolean_selector",
-      "rootUri": "file:///usr/local/google/home/yifeit/.pub-cache/hosted/pub.dartlang.org/boolean_selector-2.0.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.4"
+      "languageVersion": "2.10"
     },
     {
       "name": "charcode",
       "rootUri": "../../../third_party/dart-pkg/pub/charcode",
-      "packageUri": "lib/",
-      "languageVersion": "2.0"
-    },
-    {
-      "name": "cli_util",
-      "rootUri": "file:///usr/local/google/home/yifeit/.pub-cache/hosted/pub.dartlang.org/cli_util-0.1.4",
       "packageUri": "lib/",
       "languageVersion": "2.0"
     },
@@ -60,12 +48,6 @@
       "rootUri": "../../../third_party/dart-pkg/pub/convert",
       "packageUri": "lib/",
       "languageVersion": "1.17"
-    },
-    {
-      "name": "coverage",
-      "rootUri": "file:///usr/local/google/home/yifeit/.pub-cache/hosted/pub.dartlang.org/coverage-0.14.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.7"
     },
     {
       "name": "crypto",
@@ -155,7 +137,7 @@
       "name": "path",
       "rootUri": "../../../third_party/dart-pkg/pub/path",
       "packageUri": "lib/",
-      "languageVersion": "2.0"
+      "languageVersion": "2.10"
     },
     {
       "name": "pedantic",
@@ -173,7 +155,7 @@
       "name": "pool",
       "rootUri": "../../../third_party/dart-pkg/pub/pool",
       "packageUri": "lib/",
-      "languageVersion": "2.0"
+      "languageVersion": "2.10"
     },
     {
       "name": "process",
@@ -191,19 +173,19 @@
       "name": "source_span",
       "rootUri": "../../../third_party/dart-pkg/pub/source_span",
       "packageUri": "lib/",
-      "languageVersion": "2.6"
+      "languageVersion": "2.10"
     },
     {
       "name": "stack_trace",
       "rootUri": "../../../third_party/dart-pkg/pub/stack_trace",
       "packageUri": "lib/",
-      "languageVersion": "2.0"
+      "languageVersion": "2.10"
     },
     {
       "name": "string_scanner",
       "rootUri": "../../../third_party/dart-pkg/pub/string_scanner",
       "packageUri": "lib/",
-      "languageVersion": "2.0"
+      "languageVersion": "2.10"
     },
     {
       "name": "term_glyph",
