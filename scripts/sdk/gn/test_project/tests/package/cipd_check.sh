@@ -20,7 +20,12 @@ do
   if [[ "${data_dir}" =~ \${}/.* ]]; then
     eval far_file="${data_dir}/${f}"
   else
-    far_file="${outdir}/${data_dir}/${f}"
+    # if the root is relative, then prepend the outdir
+    if [[ "${data_dir}" != "/"* ]]; then
+      far_file="${outdir}/${data_dir}/${f}"
+    else
+      far_file="${data_dir}/${f}"
+    fi
   fi
 
   if [[ ! -e "${far_file}" ]]; then

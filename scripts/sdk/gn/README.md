@@ -97,7 +97,7 @@ To test the SDK on a test project, the `generate.py` must be run with the `--tes
 directory (assuming the current directory is $FUCHSIA_DIR):
 
    ```sh
-   $ mkdir out/temp
+   $ mkdir -p out/temp
    $ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)"
    gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz out/temp/idk.tar.gz
    ```

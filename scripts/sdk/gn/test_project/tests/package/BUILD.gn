@@ -130,6 +130,11 @@ fuchsia_cipd_package("cipd_package") {
   package = "test/fuchsia/cipd-\${targetarch}"
   description = "Test package for CIPD rule template."
 
+  # Use absolute root path. This models how things are built and then cipd is
+  # run outside the GN/ninja environment, so root_build_dir is not known to
+  # the process running cipd.
+  use_absolute_root_path = true
+
   deps = [ ":package" ]
 
   sources = [ "${root_gen_dir}/tests/package/package/package.far" ]

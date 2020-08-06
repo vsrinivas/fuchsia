@@ -70,6 +70,13 @@ import("config/config.gni")
 #
 #     Type: list of files
 #
+#   use_absolute_root_path: [Optional]
+#     The value of `root` in the cipd package definition is written as an absolute path.
+#       Default value is False, indicating to use relative paths, following the GN conventions of being relative to
+#       $root_build_dir.
+#
+#     Type: boolean
+#
 #   Standard parameters:
 #     * deps
 #     * public deps
@@ -112,6 +119,12 @@ template("fuchsia_cipd_package") {
     _package_definition_dir = invoker.package_definition_dir
   }
 
+  _root_base_path = root_build_dir
+  if (defined(invoker.use_absolute_root_path) &&
+      invoker.use_absolute_root_path) {
+    _root_base_path = ""
+  }
+
   action(target_name) {
     script = "${fuchsia_sdk}/build/prepare_cipd_package_definition.py"
     depfile = "$target_gen_dir/$target_name.d"
@@ -124,7 +137,7 @@ template("fuchsia_cipd_package") {
       "--description",
       invoker.description,
       "--pkg-root",
-      rebase_path(_package_root, root_build_dir),
+      rebase_path(_package_root, _root_base_path),
       "--install-mode",
       _install_mode,
       "--pkg-def",
@@ -132,6 +145,7 @@ template("fuchsia_cipd_package") {
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
+
     if (defined(invoker.sources)) {
       args += [ "--copy-files" ] + rebase_path(sources, root_build_dir)
     }
