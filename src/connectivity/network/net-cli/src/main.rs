@@ -81,6 +81,7 @@ async fn main() -> Result<(), Error> {
         CommandEnum::Log(cmd) => do_log(cmd.log_cmd, log).await,
         CommandEnum::Stat(cmd) => do_stat(cmd.stat_cmd).await,
         CommandEnum::Metric(cmd) => do_metric(cmd.metric_cmd, netstack).await,
+        CommandEnum::Dhcp(cmd) => do_dhcp(cmd.dhcp_cmd, netstack).await,
     }
 }
 
@@ -431,6 +432,30 @@ async fn do_metric(cmd: opts::MetricEnum, netstack: NetstackProxy) -> Result<(),
     }
 }
 
+async fn do_dhcp(cmd: opts::DhcpEnum, netstack: NetstackProxy) -> Result<(), Error> {
+    let (dhcp, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()?;
+    match cmd {
+        DhcpEnum::Start(DhcpStart { id }) => {
+            let () = netstack
+                .get_dhcp_client(id, server_end)
+                .await?
+                .map_err(fuchsia_zircon::Status::from_raw)?;
+            let () = dhcp.start().await?.map_err(fuchsia_zircon::Status::from_raw)?;
+            info!("dhcp client started on interface {}", id);
+        }
+        DhcpEnum::Stop(DhcpStop { id }) => {
+            let () = netstack
+                .get_dhcp_client(id, server_end)
+                .await?
+                .map_err(fuchsia_zircon::Status::from_raw)?;
+            let () = dhcp.stop().await?.map_err(fuchsia_zircon::Status::from_raw)?;
+            info!("dhcp client stopped on interface {}", id);
+        }
+    }
+    Ok(())
+}
+
 fn visit_inspect_object(
     t: &mut Table,
     prefix: &str,
@@ -630,5 +655,61 @@ mod tests {
         };
         let ((), ()) =
             futures::future::try_join(succeeds, response).await.expect("metric set should succeed");
+    }
+
+    async fn test_do_dhcp(cmd: DhcpEnum) {
+        let (netstack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+        let op = do_dhcp(cmd.clone(), netstack.clone());
+        let op_succeeds = async move {
+            let (received_id, dhcp_requests, netstack_responder) = requests
+                .try_next()
+                .await
+                .expect("get dhcp client FIDL error")
+                .expect("request stream should not have ended")
+                .into_get_dhcp_client()
+                .expect("request should be of type GetDhcpClient");
+            let mut dhcp_requests =
+                dhcp_requests.into_stream().expect("should convert to request stream");
+            netstack_responder.send(&mut Ok(())).expect("netstack_responder.send should succeed");
+            match cmd {
+                DhcpEnum::Start(DhcpStart { id: expected_id }) => {
+                    assert_eq!(received_id, expected_id);
+                    dhcp_requests
+                        .try_next()
+                        .await
+                        .expect("start FIDL error")
+                        .expect("request stream should not have ended")
+                        .into_start()
+                        .expect("request should be of type Start")
+                        .send(&mut Ok(()))
+                        .map_err(anyhow::Error::new)
+                }
+                DhcpEnum::Stop(DhcpStop { id: expected_id }) => {
+                    assert_eq!(received_id, expected_id);
+                    dhcp_requests
+                        .try_next()
+                        .await
+                        .expect("stop FIDL error")
+                        .expect("request stream should not have ended")
+                        .into_stop()
+                        .expect("request should be of type Stop")
+                        .send(&mut Ok(()))
+                        .map_err(anyhow::Error::new)
+                }
+            }
+        };
+        let ((), ()) =
+            futures::future::try_join(op, op_succeeds).await.expect("dhcp command should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_dhcp_start() {
+        let () = test_do_dhcp(DhcpEnum::Start(DhcpStart { id: 1 })).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_dhcp_stop() {
+        let () = test_do_dhcp(DhcpEnum::Stop(DhcpStop { id: 1 })).await;
     }
 }

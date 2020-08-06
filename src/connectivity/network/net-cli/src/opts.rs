@@ -34,6 +34,7 @@ pub enum CommandEnum {
     Route(Route),
     Stat(Stat),
     Metric(Metric),
+    Dhcp(Dhcp),
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -387,4 +388,37 @@ pub struct MetricSet {
     #[argh(positional)]
     /// route metric to be assigned
     pub metric: u32,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "dhcp")]
+/// commands for an interfaces dhcp client
+pub struct Dhcp {
+    #[argh(subcommand)]
+    pub dhcp_cmd: DhcpEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum DhcpEnum {
+    Start(DhcpStart),
+    Stop(DhcpStop),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "start")]
+/// starts a dhcp client on the interface
+pub struct DhcpStart {
+    #[argh(positional)]
+    /// id of the network interface for which a dhcp client will be started
+    pub id: u32,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "stop")]
+/// stops the dhcp client on the interface
+pub struct DhcpStop {
+    #[argh(positional)]
+    /// id of the network interface for which the dhcp client will be stopped
+    pub id: u32,
 }
