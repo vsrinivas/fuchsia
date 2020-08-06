@@ -60,9 +60,9 @@ KCOUNTER(timer_fired_counter, "timer.fired")
 // firing are not counted.
 KCOUNTER(timer_canceled_counter, "timer.canceled")
 
-// Default platform ticks hook.  This hook will be replaced with the appropriate
-// source of time for the platform, selected during platform initialization.
-zx_ticks_t (*current_ticks)(void) = [](void) -> zx_ticks_t { return 0; };
+zx_ticks_t current_ticks(void) {
+  return platform_current_ticks();
+}
 
 namespace {
 

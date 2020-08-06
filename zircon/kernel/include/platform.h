@@ -33,7 +33,10 @@ zx_time_t current_time(void);
 zx_ticks_t ticks_per_second(void);
 
 /* high-precision timer current_ticks */
-extern zx_ticks_t (*current_ticks)(void);
+zx_ticks_t current_ticks(void);
+
+/* Reads a platform-specific fixed-rate monotonic counter */
+zx_ticks_t platform_current_ticks(void);
 
 /* a bool indicating whether or not user mode has direct access to the registers
  * which allow directly observing the tick counter or not. */

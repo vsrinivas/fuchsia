@@ -69,17 +69,21 @@ KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 // sent from the scheduler.
 
 enum clock_source {
+  // Used before wall_clock is selected. current_ticks() returns 0.
+  CLOCK_UNSELECTED = 0,
+
+  CLOCK_TSC,
   CLOCK_PIT,
   CLOCK_HPET,
-  CLOCK_TSC,
 
   CLOCK_COUNT
 };
 
 const char* clock_name[] = {
+    [CLOCK_UNSELECTED] = "UNSELECTED",
+    [CLOCK_TSC] = "TSC",
     [CLOCK_PIT] = "PIT",
     [CLOCK_HPET] = "HPET",
-    [CLOCK_TSC] = "TSC",
 };
 static_assert(ktl::size(clock_name) == CLOCK_COUNT, "");
 
@@ -98,7 +102,7 @@ static bool invariant_tsc;
 // rate-invariant under P-state transitions.
 static bool constant_tsc;
 
-static enum clock_source wall_clock;
+static enum clock_source wall_clock = CLOCK_UNSELECTED;
 static enum clock_source calibration_clock;
 
 // APIC timer calibration values
@@ -135,6 +139,24 @@ zx_ticks_t current_ticks_rdtsc(void) { return _rdtsc(); }
 zx_ticks_t current_ticks_hpet(void) { return hpet_get_value(); }
 
 zx_ticks_t current_ticks_pit(void) { return pit_ticks; }
+
+zx_ticks_t platform_current_ticks() {
+  // Directly call the ticks functions to avoid the cost of a virtual (indirect) call.
+  if (wall_clock == CLOCK_TSC) {
+    return current_ticks_rdtsc();
+  } else {
+    switch (wall_clock) {
+    case CLOCK_UNSELECTED:
+      return 0;
+    case CLOCK_PIT:
+      return current_ticks_pit();
+    case CLOCK_HPET:
+      return current_ticks_hpet();
+    default:
+      PANIC_UNIMPLEMENTED;
+    }
+  }
+}
 
 const affine::Ratio& rdtsc_to_nanos() { return rdtsc_ticks_to_clock_monotonic; }
 
@@ -509,9 +531,8 @@ static void pc_init_timer(uint level) {
     // the count.  This will pause the PIT.
     outp(I8253_CONTROL_REG, 0x38);
 
-    // Set up our ticks hook to point to rdtsc, and stash the initial
+    // Set up our wall clock to rdtsc, and stash the initial
     // transformation from ticks to clock monotonic.
-    current_ticks = current_ticks_rdtsc;
     platform_set_ticks_to_time_ratio(rdtsc_ticks_to_clock_monotonic);
     wall_clock = CLOCK_TSC;
 
@@ -527,9 +548,8 @@ static void pc_init_timer(uint level) {
     }
 
     if (has_hpet && (!force_wallclock || !strcmp(force_wallclock, "hpet"))) {
-      // Set up our ticks hook to point to HPET, and stash the initial
+      // Set up our wall clock to the HPET, and stash the initial
       // transformation from ticks to clock monotonic.
-      current_ticks = current_ticks_hpet;
       platform_set_ticks_to_time_ratio(hpet_ticks_to_clock_monotonic);
       wall_clock = CLOCK_HPET;
       hpet_set_value(0);
@@ -539,9 +559,8 @@ static void pc_init_timer(uint level) {
         panic("Could not satisfy kernel.wallclock choice\n");
       }
 
-      // Set up our ticks hook to point to pit, and stash the initial
+      // Set up our wall clock to pit, and stash the initial
       // transformation from ticks to clock monotonic.
-      current_ticks = current_ticks_pit;
       platform_set_ticks_to_time_ratio({1'000'000, 1});
       wall_clock = CLOCK_PIT;
 

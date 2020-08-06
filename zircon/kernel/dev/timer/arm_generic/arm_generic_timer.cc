@@ -251,6 +251,10 @@ static interrupt_eoi platform_tick(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
+zx_ticks_t platform_current_ticks() {
+  return read_ct();
+}
+
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   DEBUG_ASSERT(arch_ints_disabled());
 
@@ -307,8 +311,6 @@ static void arm_generic_timer_init(uint32_t freq_override) {
   } else {
     cntfrq = freq_override;
   }
-
-  current_ticks = read_ct;
 
   dprintf(INFO, "arm generic timer freq %u Hz\n", cntfrq);
   platform_set_ticks_to_time_ratio(arm_generic_timer_compute_conversion_factors<true>(cntfrq));
