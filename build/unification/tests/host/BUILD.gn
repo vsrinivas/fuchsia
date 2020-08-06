@@ -145,8 +145,6 @@ group("migrated-tests") {
 
     #------------------
     #------------------
-    "//zircon/system/utest/fs-host",
-
     #------------------
     #------------------
     "//src/lib/listnode:listnode-tests",

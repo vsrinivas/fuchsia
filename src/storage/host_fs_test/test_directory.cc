@@ -5,66 +5,69 @@
 #include <iterator>
 
 #include <fbl/algorithm.h>
+#include <fbl/span.h>
 
-#include "util.h"
+#include "src/storage/host_fs_test/fixture.h"
 
-bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t len) {
-  BEGIN_HELPER;
+namespace fs_test {
+namespace {
+
+struct ExpectedDirectoryEntry {
+  std::string_view name;
+  unsigned char d_type;  // Same as the d_type entry from struct dirent.
+};
+
+void CheckDirectoryContents(const char* dirname, fbl::Span<const ExpectedDirectoryEntry> entries) {
   DIR* dir = emu_opendir(dirname);
-
   emu_rewinddir(dir);
-  size_t seen = 0;
-  while (seen != len) {
+  std::vector<bool> seen(entries.size());
+  size_t total_seen = 0;
+  while (total_seen < entries.size()) {
     struct dirent* de = emu_readdir(dir);
-    ASSERT_NE(de, (void*)0, "Didn't see all expected direntries");
+    ASSERT_NE(de, nullptr) << "Didn't see all expected direntries";
     bool found = false;
-    for (size_t i = 0; i < len; i++) {
-      if (strcmp(edirents[i].d_name, de->d_name) == 0) {
-        ASSERT_EQ(edirents[i].d_type, de->d_type, "Saw direntry with unexpected type");
-        ASSERT_FALSE(edirents[i].seen, "Direntry seen twice");
-        edirents[i].seen = true;
-        seen++;
+    auto seen_iter = seen.begin();
+    for (const auto& entry : entries) {
+      if (entry.name == de->d_name) {
+        ASSERT_EQ(entry.d_type, de->d_type) << "Saw direntry with unexpected type";
+        ASSERT_FALSE(*seen_iter) << "Direntry seen twice";
+        *seen_iter = true;
         found = true;
+        ++total_seen;
         break;
       }
+      ++seen_iter;
     }
 
-    ASSERT_TRUE(found, "Saw an unexpected dirent");
+    ASSERT_TRUE(found) << "Saw an unexpected dirent: " << de->d_name;
   }
 
-  ASSERT_EQ(emu_readdir(dir), (void*)0, "There exists an entry we didn't expect to see");
-  ASSERT_EQ(emu_closedir(dir), 0, "Couldn't close inspected directory");
-  END_HELPER;
+  ASSERT_EQ(emu_readdir(dir), nullptr) << "There exists an entry we didn't expect to see";
+  EXPECT_EQ(emu_closedir(dir), 0);
 }
 
-#define LARGE_PATH_LENGTH 128
-
-bool TestDirectoryLarge(void) {
-  BEGIN_TEST;
-
+TEST_F(HostFilesystemTest, DirectoryLarge) {
+  constexpr int kLargePathLength = 128;
   const int num_files = 1024;
-  for (int i = 0; i < num_files; i++) {
-    char path[LARGE_PATH_LENGTH + 1];
-    snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
+  for (int i = 0; i < num_files; ++i) {
+    char path[kLargePathLength + 1];
+    snprintf(path, sizeof(path), "::%0*d", kLargePathLength - 2, i);
     int fd = emu_open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(emu_close(fd), 0);
   }
 
-  ASSERT_EQ(run_fsck(), 0);
-  END_TEST;
+  ASSERT_EQ(RunFsck(), 0);
 }
 
-bool TestDirectoryReaddir(void) {
-  BEGIN_TEST;
-
+TEST_F(HostFilesystemTest, DirectoryReaddir) {
   ASSERT_EQ(emu_mkdir("::a", 0755), 0);
   ASSERT_EQ(emu_mkdir("::a", 0755), -1);
 
-  expected_dirent_t empty_dir[] = {
-      {false, ".", DT_DIR},
+  ExpectedDirectoryEntry empty_dir[] = {
+      {".", DT_DIR},
   };
-  ASSERT_TRUE(check_dir_contents("::a", empty_dir, std::size(empty_dir)));
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents("::a", empty_dir));
 
   ASSERT_EQ(emu_mkdir("::a/dir1", 0755), 0);
   int fd = emu_open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644);
@@ -76,49 +79,43 @@ bool TestDirectoryReaddir(void) {
   ASSERT_EQ(emu_close(fd), 0);
 
   ASSERT_EQ(emu_mkdir("::a/dir2", 0755), 0);
-  expected_dirent_t filled_dir[] = {
-      {false, ".", DT_DIR},     {false, "dir1", DT_DIR},  {false, "dir2", DT_DIR},
-      {false, "file1", DT_REG}, {false, "file2", DT_REG},
+  ExpectedDirectoryEntry filled_dir[] = {
+      {".", DT_DIR}, {"dir1", DT_DIR}, {"dir2", DT_DIR}, {"file1", DT_REG}, {"file2", DT_REG},
   };
-  ASSERT_TRUE(check_dir_contents("::a", filled_dir, std::size(filled_dir)));
-  ASSERT_EQ(run_fsck(), 0);
-  END_TEST;
+  ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents("::a", filled_dir));
+  ASSERT_EQ(RunFsck(), 0);
 }
 
-bool TestDirectoryReaddirLarge(void) {
-  BEGIN_TEST;
-
+TEST_F(HostFilesystemTest, ReaddirLarge) {
   size_t num_entries = 1000;
   ASSERT_EQ(emu_mkdir("::dir", 0755), 0);
 
-  for (size_t i = 0; i < num_entries; i++) {
+  for (size_t i = 0; i < num_entries; ++i) {
     char dirname[100];
     snprintf(dirname, 100, "::dir/%05lu", i);
     ASSERT_EQ(emu_mkdir(dirname, 0755), 0);
   }
 
   DIR* dir = emu_opendir("::dir");
-  ASSERT_NONNULL(dir);
+  ASSERT_NE(dir, nullptr);
 
   struct dirent* de;
   size_t num_seen = 0;
   size_t i = 0;
-  while ((de = emu_readdir(dir)) != NULL) {
+  while ((de = emu_readdir(dir)) != nullptr) {
     if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
       continue;
     }
     char dirname[100];
     snprintf(dirname, 100, "%05lu", i++);
-    ASSERT_EQ(strcmp(de->d_name, dirname), 0, "Unexpected dirent");
-    num_seen++;
+    ASSERT_EQ(strcmp(de->d_name, dirname), 0) << "Unexpected dirent";
+    ++num_seen;
   }
 
-  ASSERT_EQ(num_seen, num_entries, "Did not see all expected entries");
+  ASSERT_EQ(num_seen, num_entries) << "Did not see all expected entries";
   ASSERT_EQ(emu_closedir(dir), 0);
-  ASSERT_EQ(run_fsck(), 0);
-  END_TEST;
+  ASSERT_EQ(RunFsck(), 0);
 }
 
-RUN_MINFS_TESTS(directory_tests,
-                RUN_TEST_LARGE(TestDirectoryLarge) RUN_TEST_MEDIUM(TestDirectoryReaddir)
-                    RUN_TEST_MEDIUM(TestDirectoryReaddirLarge))
+}  // namespace
+}  // namespace fs_test

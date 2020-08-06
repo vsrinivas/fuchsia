@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "util.h"
+#include "src/storage/host_fs_test/fixture.h"
 
-bool test_basic(void) {
-  BEGIN_TEST;
+namespace fs_test {
+namespace {
+
+TEST_F(HostFilesystemTest, Basic) {
   ASSERT_EQ(emu_mkdir("::alpha", 0755), 0);
   ASSERT_EQ(emu_mkdir("::alpha/bravo", 0755), 0);
   ASSERT_EQ(emu_mkdir("::alpha/bravo/charlie", 0755), 0);
@@ -31,8 +33,8 @@ bool test_basic(void) {
   ASSERT_EQ(emu_write(fd1, "Don't write to directories", 26), -1);
   ASSERT_EQ(emu_ftruncate(fd1, 0), -1);
   ASSERT_EQ(emu_close(fd1), 0);
-  ASSERT_EQ(run_fsck(), 0);
-  END_TEST;
+  ASSERT_EQ(RunFsck(), 0);
 }
 
-RUN_MINFS_TESTS(basic_tests, RUN_TEST_MEDIUM(test_basic))
+}  // namespace
+}  // namespace fs_test

@@ -5,22 +5,25 @@
 #include <errno.h>
 
 #include <algorithm>
+#include <iostream>
 
 #include <fbl/algorithm.h>
 
-#include "util.h"
+#include "src/storage/host_fs_test/fixture.h"
 
-#define MB (1 << 20)
-#define PRINT_SIZE (MB * 100)
+namespace fs_test {
+namespace {
 
-bool test_maxfile(void) {
-  BEGIN_TEST;
+constexpr int kMiB = 1 << 20;
+constexpr int kPrintSize = 100 * kMiB;
 
+TEST_F(HostFilesystemTest, MaxFile) {
   int fd = emu_open("::bigfile", O_CREAT | O_RDWR, 0644);
   ASSERT_GT(fd, 0);
-  char data_a[8192];
-  char data_b[8192];
-  char data_c[8192];
+  constexpr int kBufSize = 131072;
+  char data_a[kBufSize];
+  char data_b[kBufSize];
+  char data_c[kBufSize];
   memset(data_a, 0xaa, sizeof(data_a));
   memset(data_b, 0xbb, sizeof(data_b));
   memset(data_c, 0xcc, sizeof(data_c));
@@ -40,43 +43,43 @@ bool test_maxfile(void) {
   const char* data = data_a;
   for (;;) {
     if ((r = emu_write(fd, data, sizeof(data_a))) < 0) {
-      fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
-      if ((errno == EFBIG) || (errno == ENOSPC)) {
+      std::cerr << "bigfile received error: " << strerror(errno) << std::endl;
+      if (errno == EFBIG || errno == ENOSPC) {
         // Either the file should be too big (EFBIG) or the file should
         // consume the whole volume (ENOSPC).
-        fprintf(stderr, "(This was an expected error)\n");
+        std::cerr << "(This was an expected error)" << std::endl;
         r = 0;
       }
       break;
     }
-    if ((sz + r) % PRINT_SIZE < (sz % PRINT_SIZE)) {
-      fprintf(stderr, "wrote %zu MB\n", static_cast<size_t>((sz + r) / MB));
+    if ((sz + r) % kPrintSize < (sz % kPrintSize)) {
+      std::cerr << "wrote " << (sz + r) / kMiB << " MiB" << std::endl;
     }
     sz += r;
     if (r < (ssize_t)(sizeof(data_a))) {
-      fprintf(stderr, "bigfile write short write of %ld bytes\n", r);
+      std::cerr << "bigfile write short write of " << r << " bytes" << std::endl;
       break;
     }
 
     // Rotate which data buffer we use
     data = rotate(data);
   }
-  ASSERT_EQ(r, 0, "Saw an unexpected error from write");
+  ASSERT_EQ(r, 0) << "Saw an unexpected error from write";
 
   struct stat buf;
-  ASSERT_EQ(emu_fstat(fd, &buf), 0, "Couldn't stat max file");
-  ASSERT_EQ(buf.st_size, sz, "Unexpected max file size");
+  ASSERT_EQ(emu_fstat(fd, &buf), 0);
+  ASSERT_EQ(buf.st_size, sz);
 
   // Try closing, re-opening, and verifying the file
   ASSERT_EQ(emu_close(fd), 0);
   fd = emu_open("::bigfile", O_RDWR, 0644);
-  char readbuf[8192];
+  char readbuf[kBufSize];
   ssize_t bytes_read = 0;
   data = data_a;
   while (bytes_read < sz) {
     r = emu_read(fd, readbuf, sizeof(readbuf));
     ASSERT_EQ(r, std::min(sz - bytes_read, static_cast<ssize_t>(sizeof(readbuf))));
-    ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
+    ASSERT_EQ(memcmp(readbuf, data, r), 0);
     data = rotate(data);
     bytes_read += r;
   }
@@ -84,8 +87,8 @@ bool test_maxfile(void) {
   ASSERT_EQ(bytes_read, sz);
 
   ASSERT_EQ(emu_close(fd), 0);
-  ASSERT_EQ(run_fsck(), 0);
-  END_TEST;
+  ASSERT_EQ(RunFsck(), 0);
 }
 
-RUN_MINFS_TESTS(maxfile_tests, RUN_TEST_LARGE(test_maxfile))
+}  // namespace
+}  // namespace fs_test

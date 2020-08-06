@@ -4,92 +4,107 @@
 
 #include <time.h>
 
-#include <memory>
+#include <iostream>
+#include <vector>
 
-#include <fbl/alloc_checker.h>
+#include "src/storage/host_fs_test/fixture.h"
 
-#include "util.h"
+namespace fs_test {
+namespace {
+
+struct TestParam {
+  size_t write_offset;
+  size_t read_offset;
+  size_t write_size;
+};
+
+class SparseHostFilesystemTest : public HostFilesystemTest,
+                                 public testing::WithParamInterface<TestParam> {};
 
 static unsigned count = 0;
-template <size_t WriteOffset, size_t ReadOffset, size_t WriteSize>
-bool test_sparse(void) {
-  BEGIN_TEST;
-
+TEST_P(SparseHostFilesystemTest, Sparse) {
   char filename[20];
-  sprintf(filename, "::my_file_%u", count++);
+  sprintf(filename, "::my_file_%u", ++count);
 
   int fd = emu_open(filename, O_RDWR | O_CREAT, 0644);
   ASSERT_GT(fd, 0);
 
   // Create a random write buffer of data
-  fbl::AllocChecker ac;
-  std::unique_ptr<uint8_t[]> wbuf(new (&ac) uint8_t[WriteSize]);
-  ASSERT_EQ(ac.check(), true);
-  unsigned int seed = static_cast<unsigned int>(time(NULL));
-  unittest_printf("Sparse test using seed: %u\n", seed);
-  for (size_t i = 0; i < WriteSize; i++) {
+  std::vector<uint8_t> wbuf(GetParam().write_size);
+  unsigned int seed = static_cast<unsigned int>(time(nullptr));
+  std::cerr << "Sparse test using seed: " << seed << std::endl;
+  for (size_t i = 0; i < GetParam().write_size; ++i) {
     wbuf[i] = (uint8_t)rand_r(&seed);
   }
 
   // Dump write buffer to file
-  ASSERT_EQ(emu_pwrite(fd, &wbuf[0], WriteSize, WriteOffset), WriteSize);
+  ASSERT_EQ(emu_pwrite(fd, &wbuf[0], GetParam().write_size, GetParam().write_offset),
+            static_cast<ssize_t>(GetParam().write_size));
   // Reopen file
   ASSERT_EQ(emu_close(fd), 0);
   fd = emu_open(filename, O_RDWR, 0644);
   ASSERT_GT(fd, 0);
 
   // Access read buffer from file
-  constexpr size_t kFileSize = WriteOffset + WriteSize;
-  constexpr size_t kBytesToRead =
-      (kFileSize - ReadOffset) > WriteSize ? WriteSize : (kFileSize - ReadOffset);
-  static_assert(kBytesToRead > 0, "We want to test writing AND reading");
-  std::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[kBytesToRead]);
-  ASSERT_EQ(ac.check(), true);
-  ASSERT_EQ(emu_pread(fd, &rbuf[0], kBytesToRead, ReadOffset), kBytesToRead);
+  const size_t file_size = GetParam().write_offset + GetParam().write_size;
+  const size_t bytes_to_read = (file_size - GetParam().read_offset) > GetParam().write_size
+                                   ? GetParam().write_size
+                                   : (file_size - GetParam().read_offset);
+  ASSERT_GT(bytes_to_read, 0u) << "We want to test writing AND reading";
+  std::vector<uint8_t> rbuf(bytes_to_read);
+  ASSERT_EQ(emu_pread(fd, &rbuf[0], bytes_to_read, GetParam().read_offset),
+            static_cast<ssize_t>(bytes_to_read));
 
-  constexpr size_t kSparseLength = (ReadOffset < WriteOffset) ? WriteOffset - ReadOffset : 0;
+  const size_t sparse_length = (GetParam().read_offset < GetParam().write_offset)
+                                   ? GetParam().write_offset - GetParam().read_offset
+                                   : 0;
 
-  if (kSparseLength > 0) {
-    for (size_t i = 0; i < kSparseLength; i++) {
-      ASSERT_EQ(rbuf[i], 0, "This portion of file should be sparse; but isn't");
+  if (sparse_length > 0) {
+    for (size_t i = 0; i < sparse_length; ++i) {
+      ASSERT_EQ(rbuf[i], 0) << "This portion of file should be sparse; but isn't";
     }
   }
 
-  constexpr size_t kWbufOffset = (ReadOffset < WriteOffset) ? 0 : ReadOffset - WriteOffset;
-  constexpr size_t kValidLength = kBytesToRead - kSparseLength;
+  const size_t wbuf_offset = (GetParam().read_offset < GetParam().write_offset)
+                                 ? 0
+                                 : GetParam().read_offset - GetParam().write_offset;
+  const size_t valid_length = bytes_to_read - sparse_length;
 
-  if (kValidLength > 0) {
-    for (size_t i = 0; i < kValidLength; i++) {
-      ASSERT_EQ(rbuf[kSparseLength + i], wbuf[kWbufOffset + i]);
+  if (valid_length > 0) {
+    for (size_t i = 0; i < valid_length; ++i) {
+      ASSERT_EQ(rbuf[sparse_length + i], wbuf[wbuf_offset + i]);
     }
   }
 
   ASSERT_EQ(emu_close(fd), 0);
-  ASSERT_EQ(run_fsck(), 0);
-  END_TEST;
+  ASSERT_EQ(RunFsck(), 0);
 }
 
 constexpr size_t kBlockSize = 8192;
 constexpr size_t kDirectBlocks = 16;
 
-RUN_MINFS_TESTS(
-    sparse_tests,
-    RUN_TEST_MEDIUM((test_sparse<0, 0, kBlockSize>))
-        RUN_TEST_MEDIUM((test_sparse<kBlockSize / 2, 0, kBlockSize>)) RUN_TEST_MEDIUM(
-            (test_sparse<kBlockSize / 2, kBlockSize, kBlockSize>))
-            RUN_TEST_MEDIUM((test_sparse<kBlockSize, 0, kBlockSize>)) RUN_TEST_MEDIUM(
-                (test_sparse<kBlockSize, kBlockSize / 2, kBlockSize>))
+std::string GetParamDescription(const testing::TestParamInfo<TestParam>& param) {
+  std::stringstream s;
+  s << "WriteOffset" << param.param.write_offset << "ReadOffset" << param.param.read_offset
+    << "WriteSize" << param.param.write_size;
+  return s.str();
+}
 
-                RUN_TEST_MEDIUM(
-                    (test_sparse<kBlockSize * kDirectBlocks,
-                                 kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2>))
-                    RUN_TEST_MEDIUM(
-                        (test_sparse<kBlockSize * kDirectBlocks,
-                                     kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32>))
-                        RUN_TEST_MEDIUM(
-                            (test_sparse<kBlockSize * kDirectBlocks + kBlockSize,
-                                         kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32>))
-                            RUN_TEST_MEDIUM(
-                                (test_sparse<kBlockSize * kDirectBlocks + kBlockSize,
-                                             kBlockSize * kDirectBlocks + 2 * kBlockSize,
-                                             kBlockSize * 32>)))
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, SparseHostFilesystemTest,
+    testing::Values(TestParam{kBlockSize / 2, 0, kBlockSize},
+                    TestParam{kBlockSize / 2, kBlockSize, kBlockSize},
+                    TestParam{kBlockSize, 0, kBlockSize},
+                    TestParam{kBlockSize, kBlockSize / 2, kBlockSize},
+                    TestParam{kBlockSize * kDirectBlocks, kBlockSize* kDirectBlocks - kBlockSize,
+                              kBlockSize * 2},
+                    TestParam{kBlockSize * kDirectBlocks, kBlockSize* kDirectBlocks - kBlockSize,
+                              kBlockSize * 32},
+                    TestParam{kBlockSize * kDirectBlocks + kBlockSize,
+                              kBlockSize* kDirectBlocks - kBlockSize, kBlockSize * 32},
+                    TestParam{kBlockSize * kDirectBlocks + kBlockSize,
+                              kBlockSize* kDirectBlocks + 2 * kBlockSize, kBlockSize * 32}),
+    GetParamDescription);
+
+}  // namespace
+}  // namespace fs_test
