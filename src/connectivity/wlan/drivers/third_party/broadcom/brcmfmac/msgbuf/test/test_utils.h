@@ -14,7 +14,8 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 

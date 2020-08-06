@@ -29,7 +29,7 @@ source_set("test_utils") {
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
-    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
 }
@@ -46,8 +46,8 @@ executable("flow_ring_handler_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
 }
@@ -63,8 +63,8 @@ executable("flow_ring_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
 }
@@ -78,7 +78,7 @@ executable("msgbuf_ring_handler_test") {
     ":test_utils",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
 }

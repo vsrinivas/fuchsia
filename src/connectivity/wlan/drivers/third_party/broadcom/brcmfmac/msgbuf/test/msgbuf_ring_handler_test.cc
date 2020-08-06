@@ -16,7 +16,8 @@
 #include <string>
 #include <utility>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_pool.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"

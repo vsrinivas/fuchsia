@@ -9,7 +9,8 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
+#include <zxtest/zxtest.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_ring.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_structs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/test/fake_msgbuf_interfaces.h"
