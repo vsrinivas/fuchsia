@@ -110,7 +110,7 @@ export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
 
 _args=(
   "${PREBUILT_DART_DIR}/bin/dart"
-  "--packages=${FUCHSIA_DIR}/scripts/fxtest/fxtest.packages"
+  "--packages=${FUCHSIA_DIR}/scripts/fxtest/package_config.json"
   "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart"
 )
 

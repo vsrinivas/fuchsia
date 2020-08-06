@@ -1,0 +1,72 @@
+{
+  "configVersion": 2,
+  "generator": "gen_dart_package_config.py",
+  "packages": [
+    {
+      "languageVersion": "2.8",
+      "name": "fxtest",
+      "packageUri": "lib",
+      "rootUri": "."
+    },
+    {
+      "languageVersion": "2.8",
+      "name": "fxutils",
+      "packageUri": "lib",
+      "rootUri": "../fxutils"
+    },
+    {
+      "languageVersion": "2.9",
+      "name": "async",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/async"
+    },
+    {
+      "languageVersion": "2.3",
+      "name": "io",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/io"
+    },
+    {
+      "languageVersion": "2.3",
+      "name": "edit_distance",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/edit_distance"
+    },
+    {
+      "languageVersion": "2.3",
+      "name": "meta",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/meta"
+    },
+    {
+      "languageVersion": "2.3",
+      "name": "mockito",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/mockito"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "path",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/path"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "pedantic",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/pedantic"
+    },
+    {
+      "languageVersion": "2.8",
+      "name": "test",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/test"
+    },
+    {
+      "languageVersion": "2.10",
+      "name": "args",
+      "packageUri": "lib",
+      "rootUri": "../../third_party/dart-pkg/pub/args"
+    }
+  ]
+}
