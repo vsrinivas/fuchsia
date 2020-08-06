@@ -15,6 +15,7 @@ fidl("fuchsia.ui.policy") {
 
   sources = [
     "device_listener.fidl",
+    "display_backlight.fidl",
     "display_usage.fidl",
     "presentation.fidl",
     "presenter.fidl",

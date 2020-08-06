@@ -1,0 +1,32 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.policy;
+
+/// Manipulates global policy for display backlight. Serves as the main "front
+/// end" interface for usage by UX components; other protocols (such as
+/// fuchsia.ui.scenic.Session and fuchsia.hardware.display.Controller) act as
+/// implementation.
+///
+/// Global Scope. All displays, in all display controllers, are affected uniformly.
+///
+/// Effect Timing. This protocol does not guarantee a deadline by which the
+/// minimum value is applied to a display; it is best effort.
+///
+/// Multiple clients. This protocol does not guarantee unique access to
+/// manipulate display backlight functionality.
+///
+/// Reference. Related to fuchsia.hardware.display.Controller.
+[Discoverable]
+protocol DisplayBacklight {
+    /// Submits a new minimum color channel value for display backlight.
+    ///
+    /// The valid range for a minimum value is [0, 255] (inclusive).  For a new
+    /// minimum value M, each color channel's range will be limited to [M, 255].
+    ///
+    /// Flow control: The caller is allowed at most one in-flight
+    /// |SetMinimumRgb| at at time. Subsequent calls must wait until the
+    /// acknowledgment returns. Non-compliance results in channel closure.
+    SetMinimumRgb(uint8 minimum_rgb) -> ();
+};
