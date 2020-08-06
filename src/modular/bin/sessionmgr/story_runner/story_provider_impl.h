@@ -208,7 +208,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
     fuchsia::modular::internal::StoryDataPtr current_data;
 
     std::unique_ptr<inspect::Node> story_node;
-    inspect::IntProperty last_focus_time_inspect_property;
     std::map<const std::string, inspect::StringProperty> annotation_inspect_properties;
 
     void InitializeInspect(std::string story_id, inspect::Node* session_inspect_node);

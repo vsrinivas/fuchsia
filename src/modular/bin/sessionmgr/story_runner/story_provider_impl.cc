@@ -547,13 +547,10 @@ fuchsia::modular::StoryInfo StoryProviderImpl::StoryInfo2ToStoryInfo(
 void StoryProviderImpl::StoryRuntimeContainer::InitializeInspect(
     std::string story_id, inspect::Node* session_inspect_node) {
   story_node = std::make_unique<inspect::Node>(session_inspect_node->CreateChild(story_id));
-  last_focus_time_inspect_property = story_node->CreateInt("last_focus_time", 0);
   ResetInspect();
 }
 
 void StoryProviderImpl::StoryRuntimeContainer::ResetInspect() {
-  last_focus_time_inspect_property.Set(current_data->story_info().last_focus_time());
-
   if (current_data->story_info().has_annotations()) {
     for (const fuchsia::modular::Annotation& annotation :
          current_data->story_info().annotations()) {

@@ -95,34 +95,6 @@ class InspectSessionTest : public modular_testing::TestHarnessFixture {
   async::Executor executor_;
 };  // namespace
 
-class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
- public:
-  TestStoryProviderWatcher() : binding_(this) {}
-  ~TestStoryProviderWatcher() override = default;
-
-  void OnChange2(fit::function<void(fuchsia::modular::StoryInfo2)> on_change) {
-    on_change_2_ = std::move(on_change);
-  }
-
-  void Watch(fuchsia::modular::StoryProvider* const story_provider) {
-    story_provider->Watch(binding_.NewBinding());
-  }
-
- private:
-  // |fuchsia::modular::StoryProviderWatcher|
-  void OnDelete(::std::string story_id) override {}
-
-  // |fuchsia::modular::StoryProviderWatcher|
-  void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
-                 fuchsia::modular::StoryVisibilityState story_visibility_state) override {
-    on_change_2_(std::move(story_info));
-    return;
-  }
-
-  fit::function<void(fuchsia::modular::StoryInfo2)> on_change_2_;
-  fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
-};
-
 TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
   RunHarnessAndInterceptSessionShell();
 
@@ -195,19 +167,6 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
                          });
   RunLoopUntil([&] { return done; });
 
-  // Watch for changes to the session.
-  TestStoryProviderWatcher story_provider_watcher;
-  story_provider_watcher.Watch(fake_session_shell_->story_provider());
-
-  // Keep track of the focus timestamp that we receive for the story.
-  std::vector<int64_t> last_focus_timestamps;
-  story_provider_watcher.OnChange2([&](fuchsia::modular::StoryInfo2 story_info) {
-    ASSERT_TRUE(story_info.has_id());
-    ASSERT_TRUE(story_info.has_last_focus_time());
-    ASSERT_EQ(kStoryId, story_info.id());
-    last_focus_timestamps.push_back(story_info.last_focus_time());
-  });
-
   // Story doesn't start unless it has a mod, so add a mod.
   AddMod add_mod;
   add_mod.mod_name_transitional = "mod1";
@@ -228,8 +187,6 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   auto data_result = GetInspectDiagnosticsData();
   ASSERT_TRUE(data_result.is_ok());
   auto data = data_result.take_value();
-  EXPECT_EQ(rapidjson::Value(last_focus_timestamps.back()),
-            data.GetByPath({"root", kStoryId, "last_focus_time"}));
   EXPECT_EQ(rapidjson::Value("test_value"),
             data.GetByPath({"root", kStoryId, "annotation: test_key"}));
 
