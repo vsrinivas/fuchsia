@@ -120,7 +120,6 @@ zx_status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
 }
 
 zx_status_t PcieBridge::EnableBusMasterUpstream(bool enabled) {
-  TRACE_ENTRY;
   // If being asked to disable Bus Mastering then we should ensure that no other
   // devices downstream of this bridge still have it enabled. If any do then we
   // leave BusMastering enabled.
@@ -136,16 +135,16 @@ zx_status_t PcieBridge::EnableBusMasterUpstream(bool enabled) {
     }
   }
 
-  TRACEF("UpstreamNode bm cnt: %zu\n", downstream_bus_mastering_cnt_);
+  LTRACEF("UpstreamNode bm cnt: %zu\n", downstream_bus_mastering_cnt_);
   // Only make a change to the bridge's configuration in a case where the
   // state of the children has changed meaningfully.
   if (downstream_bus_mastering_cnt_ == 0) {
-    TRACEF("Disabling BusMastering\n");
+    LTRACEF("Disabling BusMastering\n");
     return PcieDevice::EnableBusMaster(false);
   }
 
   if (downstream_bus_mastering_cnt_ == 1 && enabled) {
-    TRACEF("Enabling BusMastering\n");
+    LTRACEF("Enabling BusMastering\n");
     return PcieDevice::EnableBusMaster(true);
   }
 
