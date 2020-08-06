@@ -282,10 +282,10 @@ void StoryProviderImpl::Watch(
     FX_CHECK(container.current_data->has_story_info());
     watcher_ptr->OnChange(StoryInfo2ToStoryInfo(container.current_data->story_info()),
                           container.model_observer->model().runtime_state(),
-                          container.model_observer->model().visibility_state());
+                          fuchsia::modular::StoryVisibilityState::DEFAULT);
     watcher_ptr->OnChange2(CloneStruct(container.current_data->story_info()),
                            container.model_observer->model().runtime_state(),
-                           container.model_observer->model().visibility_state());
+                           fuchsia::modular::StoryVisibilityState::DEFAULT);
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -384,18 +384,16 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
 
 void StoryProviderImpl::AttachView(std::string story_id,
                                    fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  FX_CHECK(session_shell_)
-      << "The session shell component must export and keep alive a "
-      << "fuchsia.modular.SessionShell service for sessionmgr to function.";
+  FX_CHECK(session_shell_) << "The session shell component must export and keep alive a "
+                           << "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = story_id;
   session_shell_->AttachView2(std::move(view_id), std::move(view_holder_token));
 }
 
 void StoryProviderImpl::DetachView(std::string story_id, fit::function<void()> done) {
-  FX_CHECK(session_shell_)
-      << "The session shell component must export and keep alive a "
-      << "fuchsia.modular.SessionShell service for sessionmgr to function.";
+  FX_CHECK(session_shell_) << "The session shell component must export and keep alive a "
+                           << "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
   view_id.story_id = story_id;
   session_shell_->DetachView(std::move(view_id), std::move(done));
@@ -410,8 +408,7 @@ void StoryProviderImpl::NotifyStoryStateChange(std::string story_id) {
     return;
   }
   NotifyStoryWatchers(it->second.current_data.get(),
-                      it->second.model_observer->model().runtime_state(),
-                      it->second.model_observer->model().visibility_state());
+                      it->second.model_observer->model().runtime_state());
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -480,13 +477,10 @@ void StoryProviderImpl::OnStoryStorageUpdated(std::string story_id,
   // Otherwise, use defaults for an unloaded story and send a request for the
   // story to start running (stories should start running by default).
   fuchsia::modular::StoryState runtime_state = fuchsia::modular::StoryState::STOPPED;
-  fuchsia::modular::StoryVisibilityState visibility_state =
-      fuchsia::modular::StoryVisibilityState::DEFAULT;
   auto it = story_runtime_containers_.find(story_data.story_info().id());
   if (it != story_runtime_containers_.end()) {
     auto& container = it->second;
     runtime_state = container.model_observer->model().runtime_state();
-    visibility_state = container.model_observer->model().visibility_state();
     container.current_data = CloneOptional(story_data);
     container.ResetInspect();
   } else {
@@ -494,7 +488,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(std::string story_id,
     GetController(story_id, story_controller.NewRequest());
     story_controller->RequestStart();
   }
-  NotifyStoryWatchers(&story_data, runtime_state, visibility_state);
+  NotifyStoryWatchers(&story_data, runtime_state);
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(std::string story_id) {
@@ -506,10 +500,8 @@ void StoryProviderImpl::OnStoryStorageDeleted(std::string story_id) {
       }));
 }
 
-void StoryProviderImpl::NotifyStoryWatchers(
-    const fuchsia::modular::internal::StoryData* story_data,
-    const fuchsia::modular::StoryState story_state,
-    const fuchsia::modular::StoryVisibilityState story_visibility_state) {
+void StoryProviderImpl::NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
+                                            const fuchsia::modular::StoryState story_state) {
   if (!story_data) {
     return;
   }
@@ -518,8 +510,9 @@ void StoryProviderImpl::NotifyStoryWatchers(
       continue;
     }
     (*i)->OnChange(StoryInfo2ToStoryInfo(story_data->story_info()), story_state,
-                   story_visibility_state);
-    (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
+                   fuchsia::modular::StoryVisibilityState::DEFAULT);
+    (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state,
+                    fuchsia::modular::StoryVisibilityState::DEFAULT);
   }
 }
 

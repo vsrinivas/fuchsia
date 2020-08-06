@@ -147,8 +147,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   void NotifyStoryStateChange(std::string story_id);
 
   void NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
-                           fuchsia::modular::StoryState story_state,
-                           fuchsia::modular::StoryVisibilityState story_visibility_state);
+                           fuchsia::modular::StoryState story_state);
 
   void MaybeLoadStoryShell();
 

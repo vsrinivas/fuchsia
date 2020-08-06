@@ -46,20 +46,9 @@ protocol StoryProviderWatcher {
     ///    invocation with the current infor and state of each story known on the
     ///    current device.
     ///
-    ///  * Every time a change to StoryInfo is applied to the record of the story
-    ///    kept on the current device, including a new story created on another
-    ///    device becoming known on this device for the first time.
+    ///  * Every time a change to StoryInfo is applied to the record of the story.
     ///
-    ///  * Every time the StoryState of the story changes on this device. The
-    ///    StoryState on another device of a story known on this device is not made
-    ///    known on this device.
-    ///
-    ///  * Every time the StoryVisibilityState of the story changes on this device.
-    ///    The StoryVisibilityState on another device of a story known on this
-    ///    device is not made known on this device.
-    ///
-    ///    I.e. if the story is started or stopped on *another* device, it does
-    ///    *not* cause an OnChange() call on *this* device. Cf. OnDelete() below.
+    ///  * Every time the StoryState of the story changes.
     ///
     /// The ID of the story the notifications are about are part of StoryInfo.
     ///
@@ -67,8 +56,7 @@ protocol StoryProviderWatcher {
     /// on this device and was not yet started on the current device. It's RUNNING
     /// when the story is started on the current device.
     ///
-    /// `story_visibility_state` is DEFAULT until a mod on the current device
-    /// requests for the visibility state to be changed.
+    /// `story_visibility_state` is deprecated and will always have a value of DEFAULT.
     [Transitional = "Implement OnChange2 instead"]
     OnChange(StoryInfo story_info, StoryState story_state,
              StoryVisibilityState story_visibility_state);
@@ -83,4 +71,10 @@ protocol StoryProviderWatcher {
     /// If the story is running on this device at the time it is deleted,
     /// OnChange() will not be called first.
     OnDelete(string:MAX story_id);
+};
+
+// Deprecated.
+enum StoryVisibilityState {
+    DEFAULT = 1;
+    IMMERSIVE = 2;
 };

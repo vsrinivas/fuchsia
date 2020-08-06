@@ -30,7 +30,6 @@ using fuchsia::modular::StoryCommand;
 using fuchsia::modular::StoryInfo;
 using fuchsia::modular::StoryInfo2;
 using fuchsia::modular::StoryState;
-using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::ViewIdentifier;
 using ::fxl::Substitute;
 using testing::IsNull;

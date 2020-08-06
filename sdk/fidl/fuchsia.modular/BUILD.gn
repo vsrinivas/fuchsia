@@ -30,7 +30,6 @@ fidl("fuchsia.modular") {
     "story_shell.fidl",
     "story_shell_factory.fidl",
     "story_state.fidl",
-    "story_visibility_state.fidl",
     "surface.fidl",
   ]
 
