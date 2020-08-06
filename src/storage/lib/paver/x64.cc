@@ -19,6 +19,9 @@ constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
 constexpr size_t kGibibyte = kMebibyte * 1024;
 
+// All X64 boards currently use the legacy partition scheme.
+constexpr PartitionScheme kPartitionScheme = PartitionScheme::kLegacy;
+
 // TODO: Remove support after July 9th 2021.
 constexpr char kOldEfiName[] = "efi-system";
 
@@ -110,7 +113,7 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  const char* name = PartitionName(spec.partition);
+  const char* name = PartitionName(spec.partition, kPartitionScheme);
   auto type = GptPartitionType(spec.partition);
   if (type.is_error()) {
     return type.take_error();
@@ -223,9 +226,10 @@ zx::status<> EfiDevicePartitioner::InitPartitionTables() const {
   for (auto type : partitions_to_add) {
     auto status = AddPartition(PartitionSpec(type));
     if (status.status_value() == ZX_ERR_ALREADY_BOUND) {
-      ERROR("Warning: Skipping existing partition \"%s\"\n", PartitionName(type));
+      ERROR("Warning: Skipping existing partition \"%s\"\n", PartitionName(type, kPartitionScheme));
     } else if (status.is_error()) {
-      ERROR("Failed to create partition \"%s\": %s\n", PartitionName(type), status.status_string());
+      ERROR("Failed to create partition \"%s\": %s\n", PartitionName(type, kPartitionScheme),
+            status.status_string());
       return status.take_error();
     }
   }

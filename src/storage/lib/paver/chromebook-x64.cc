@@ -26,6 +26,9 @@ constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
 constexpr size_t kGibibyte = kMebibyte * 1024;
 
+// Chromebook uses the legacy partition scheme.
+constexpr PartitionScheme kPartitionScheme = PartitionScheme::kLegacy;
+
 zx::status<Uuid> CrosPartitionType(Partition type) {
   switch (type) {
     case Partition::kZirconA:
@@ -139,7 +142,7 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  const char* name = PartitionName(spec.partition);
+  const char* name = PartitionName(spec.partition, kPartitionScheme);
   auto type = CrosPartitionType(spec.partition);
   if (type.is_error()) {
     return type.take_error();
@@ -159,7 +162,7 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartitio
     case Partition::kZirconB:
     case Partition::kZirconR: {
       const auto filter = [&spec](const gpt_partition_t& part) {
-        const char* name = PartitionName(spec.partition);
+        const char* name = PartitionName(spec.partition, kPartitionScheme);
         auto partition_type = CrosPartitionType(spec.partition);
         return partition_type.is_ok() && FilterByTypeAndName(part, partition_type.value(), name);
       };
@@ -194,7 +197,7 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
   }
 
   // Find the Zircon A kernel partition.
-  const char* name = PartitionName(Partition::kZirconA);
+  const char* name = PartitionName(Partition::kZirconA, kPartitionScheme);
   const auto filter = [name](const gpt_partition_t& part) {
     return FilterByTypeAndName(part, GUID_CROS_KERNEL_VALUE, name);
   };

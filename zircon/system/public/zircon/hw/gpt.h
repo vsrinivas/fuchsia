@@ -48,6 +48,152 @@ typedef struct gpt_entry {
 
 static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 
+// GUIDs are specified in mixed-endian, to avoid manual errors use this macro.
+// Example usage: GPT_GUID(0x00112233, 0x4455, 0x6677, 0x8899, 0xAABBCCDDEEFF)
+// clang-format off
+#define GPT_GUID(group0, group1, group2, group3, group4) { \
+  /* group0: 4 bytes, little-endian. */                    \
+  (group0 >> 0) & 0xFF,                                    \
+  (group0 >> 8) & 0xFF,                                    \
+  (group0 >> 16) & 0xFF,                                   \
+  (group0 >> 24) & 0xFF,                                   \
+  /* group1: 2 bytes, little-endian. */                    \
+  (group1 >> 0) & 0xFF,                                    \
+  (group1 >> 8) & 0xFF,                                    \
+  /* group2: 2 bytes, little-endian. */                    \
+  (group2 >> 0) & 0xFF,                                    \
+  (group2 >> 8) & 0xFF,                                    \
+  /* group3: 2 bytes, big-endian. */                       \
+  (group3 >> 8) & 0xFF,                                    \
+  (group3 >> 0) & 0xFF,                                    \
+  /* group4: 6 bytes, big-endian. */                       \
+  (group4 >> 40) & 0xFF,                                   \
+  (group4 >> 32) & 0xFF,                                   \
+  (group4 >> 24) & 0xFF,                                   \
+  (group4 >> 16) & 0xFF,                                   \
+  (group4 >> 8) & 0xFF,                                    \
+  (group4 >> 0) & 0xFF                                     \
+}
+// clang-format on
+
+// == GPT partition definitions ==
+//
+// These are some common partition definitions used across various boards.
+// The general scheme is:
+//   |type|: identical for slotted partitions, e.g. zircon_{a,b,r} will all
+//           share the same type GUID
+//   |guid|: unspecified and generally expected to be random
+//   |name|: specific name for uniquely identifying partitions
+//
+// New boards should adopt this scheme when possible, but see below for a
+// slightly different legacy scheme used by existing boards.
+
+// clang-format off
+
+// bootloader_{a,b,r}
+//
+// These partitions are optional and may be used to hold bootloader and/or
+// other firmware images. The format is SoC-specific.
+#define GPT_BOOTLOADER_A_NAME         "bootloader_a"
+#define GPT_BOOTLOADER_B_NAME         "bootloader_b"
+#define GPT_BOOTLOADER_R_NAME         "bootloader_r"
+#define GPT_BOOTLOADER_ABR_TYPE_GUID  GPT_GUID(0xfe8a2634, 0x5e2e, 0x46ba, 0x99e3, 0x3a192091a350)
+
+// durable
+//
+// This partition holds mutable data that must remain intact across factory
+// reset. It differs from durable_boot only in that it is larger, ignored by
+// bootloaders, and is expected to have a filesystem.
+//
+// This partition is expected to be written to by Fuchsia during normal
+// operation. It is expected to be read by Fuchsia, but not by any bootloader
+// or firmware. It is expected to have a filesystem with encryption built in.
+// Use of this partition increases attack surface and should be minimized.
+#define GPT_DURABLE_NAME              "durable"
+#define GPT_DURABLE_TYPE_GUID         GPT_GUID(0xd9fd4535, 0x106c, 0x4cec, 0x8d37, 0xdfc020ca87cb)
+
+// durable_boot
+//
+// This partition holds A/B/R metadata and other very small mutable data that
+// must remain intact across factory reset. There is no filesystem and the
+// content layout is fixed.
+//
+// This partition is expected to be written to by Fuchsia and the main
+// bootloader during normal operation. It is expected to be read by bootloaders
+// very early in boot. It has no encryption or integrity check built in. Use of
+// this partition increases attack surface and should be minimized.
+#define GPT_DURABLE_BOOT_NAME         "durable_boot"
+#define GPT_DURABLE_BOOT_TYPE_GUID    GPT_GUID(0xa409e16b, 0x78aa, 0x4acc, 0x995c, 0x302352621a41)
+
+// factory
+//
+// This partition holds factory-provisioned data used by the Fuchsia-based
+// system and is read-only.
+//
+// It is expected that this partition is only written in the factory and has a
+// simple file system. It is not encrypted, but is checked for integrity by
+// Fuchsia. Bootloaders and firmware are expected to ignore this partition.
+#define GPT_FACTORY_NAME              "factory"
+#define GPT_FACTORY_TYPE_GUID         GPT_GUID(0xf95d940e, 0xcaba, 0x4578, 0x9b93, 0xbb6c90f29d3e)
+
+// factory_boot
+//
+// This partition holds factory-provisioned data used by the bootloader and is
+// read-only. It must be small enough to be loaded into memory and verified
+// during boot.
+//
+// It is expected that this partition is only written in the factory and has a
+// simple structured format, not a filesystem. It is not encrypted but is
+// checked for integrity by the verified boot process. It is expected to be read
+// only by the main bootloader, not by Fuchsia.
+#define GPT_FACTORY_BOOT_NAME         "factory_boot"
+#define GPT_FACTORY_BOOT_TYPE_GUID    GPT_GUID(0x10b8dbaa, 0xd2bf, 0x42a9, 0x98c6, 0xa7c5db3701e7)
+
+// fvm
+//
+// This partition is owned by the Fuchsia Volume Manager. It will be used for
+// both system and user data.
+#define GPT_FVM_NAME                  "fvm"
+#define GPT_FVM_TYPE_GUID             GPT_GUID(0x49fd7cb8, 0xdf15, 0x4e73, 0xb9d9, 0x992070127f0f)
+
+// vbmeta_{a,b,r}
+//
+// These partitions each hold verified boot metadata for a particular A/B/R
+// slot. The format is defined by libavb.
+//
+// These partitions are expected to be written in the factory and during an OTA
+// update. They are expected to be read by the main bootloader and possibly by
+// Fuchsia. They are not encrypted, but are checked for integrity as part of the
+// verified boot process.
+#define GPT_VBMETA_A_NAME             "vbmeta_a"
+#define GPT_VBMETA_B_NAME             "vbmeta_b"
+#define GPT_VBMETA_R_NAME             "vbmeta_r"
+#define GPT_VBMETA_ABR_TYPE_GUID      GPT_GUID(0x421a8bfc, 0x85d9, 0x4d85, 0xacda, 0xb64eec0133e9)
+
+// zircon_{a,b,r}
+//
+// These partitions each hold a complete Zircon boot image, including an
+// embedded bootfs image, for a particular A/B/R slot.
+//
+// These partitions are expected to be written in the factory and during an OTA
+// update. They are expected to be read only by the main bootloader. They are
+// not encrypted but are checked for integrity as part of the verified boot
+// process.
+#define GPT_ZIRCON_A_NAME             "zircon_a"
+#define GPT_ZIRCON_B_NAME             "zircon_b"
+#define GPT_ZIRCON_R_NAME             "zircon_r"
+#define GPT_ZIRCON_ABR_TYPE_GUID      GPT_GUID(0x9b37fff6, 0x2e58, 0x466a, 0x983a, 0xf7926d0b04e0)
+
+// clang-format on
+
+// == Legacy GPT partition definitions ==
+//
+// These definitions instead use the following scheme:
+//   |type|: unique for each partition, e.g. zircon_{a,b,r} will each have their
+//           own type GUID
+//   |guid|: unspecified and generally expected to be random
+//   |name|: specific name, can use this or |type| find an individual partition
+
 // clang-format off
 #define GUID_EMPTY_STRING "00000000-0000-0000-0000-000000000000"
 #define GUID_EMPTY_VALUE {                         \
@@ -294,7 +440,6 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
     0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4 \
 }
 #define GUID_LINUX_FILESYSTEM_DATA_NAME "linux-filesystem"
-
 // clang-format on
 
 #endif  // SYSROOT_ZIRCON_HW_GPT_H_

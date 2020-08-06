@@ -25,6 +25,9 @@
 
 namespace paver {
 
+// Whether the device uses the new or legacy partition scheme.
+enum class PartitionScheme { kNew, kLegacy };
+
 enum class Partition {
   kUnknown,
   kBootloader,
@@ -38,7 +41,7 @@ enum class Partition {
   kFuchsiaVolumeManager,
 };
 
-const char* PartitionName(Partition type);
+const char* PartitionName(Partition partition, PartitionScheme scheme);
 
 enum class Arch {
   kX64,
@@ -67,6 +70,9 @@ struct PartitionSpec {
       : partition(partition), content_type(content_type) {}
 
   // Returns a descriptive string for logging.
+  //
+  // Does not necessary match the on-disk partition name, just meant to
+  // indicate the conceptual partition type in a device-agnostic way.
   fbl::String ToString() const;
 
   Partition partition;
@@ -153,7 +159,7 @@ class DevicePartitionerFactory {
 
 // DevicePartitioner implementation for devices which have fixed partition maps (e.g. ARM
 // devices). It will not attempt to write a partition map of any kind to the device.
-// Assumes standardized partition layout structure (e.g. ZIRCON-A, ZIRCON-B,
+// Assumes legacy partition layout structure (e.g. ZIRCON-A, ZIRCON-B,
 // ZIRCON-R).
 class FixedDevicePartitioner : public DevicePartitioner {
  public:

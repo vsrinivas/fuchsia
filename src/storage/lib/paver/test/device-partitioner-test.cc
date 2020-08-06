@@ -284,16 +284,45 @@ void EnsurePartitionsMatch(const gpt::GptDevice* gpt,
   }
 }
 
+constexpr paver::Partition kUnknownPartition = static_cast<paver::Partition>(1000);
+
+TEST(PartitionName, Bootloader) {
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloader, paver::PartitionScheme::kNew),
+                GPT_BOOTLOADER_A_NAME);
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kBootloader, paver::PartitionScheme::kLegacy),
+                GUID_EFI_NAME);
+}
+
+TEST(PartitionName, AbrMetadata) {
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kAbrMeta, paver::PartitionScheme::kNew),
+                GPT_DURABLE_BOOT_NAME);
+  EXPECT_STR_EQ(PartitionName(paver::Partition::kAbrMeta, paver::PartitionScheme::kLegacy),
+                GUID_ABR_META_NAME);
+}
+
+TEST(PartitionName, UnknownPartition) {
+  // We don't define what is returned in this case, but it shouldn't crash and
+  // it should be non-empty.
+  EXPECT_STR_NE(PartitionName(kUnknownPartition, paver::PartitionScheme::kNew), "");
+  EXPECT_STR_NE(PartitionName(kUnknownPartition, paver::PartitionScheme::kLegacy), "");
+}
+
 TEST(PartitionSpec, ToStringDefaultContentType) {
-  EXPECT_EQ(PartitionSpec(paver::Partition::kZirconA).ToString(), GUID_ZIRCON_A_NAME);
-  EXPECT_EQ(PartitionSpec(paver::Partition::kVbMetaB).ToString(), GUID_VBMETA_B_NAME);
+  // This is a bit of a change-detector test since we don't actually care about
+  // the string value, but it's the cleanest way to check that the string is
+  // 1) non-empty and 2) doesn't contain a type suffix.
+  EXPECT_EQ(PartitionSpec(paver::Partition::kZirconA).ToString(), "Zircon A");
+  EXPECT_EQ(PartitionSpec(paver::Partition::kVbMetaB).ToString(), "VBMeta B");
 }
 
 TEST(PartitionSpec, ToStringWithContentType) {
-  EXPECT_EQ(PartitionSpec(paver::Partition::kZirconA, "foo_type").ToString(),
-            GUID_ZIRCON_A_NAME " (foo_type)");
-  EXPECT_EQ(PartitionSpec(paver::Partition::kZirconA, "a b c").ToString(),
-            GUID_ZIRCON_A_NAME " (a b c)");
+  EXPECT_EQ(PartitionSpec(paver::Partition::kZirconA, "foo").ToString(), "Zircon A (foo)");
+  EXPECT_EQ(PartitionSpec(paver::Partition::kVbMetaB, "a b c").ToString(), "VBMeta B (a b c)");
+}
+
+TEST(PartitionSpec, ToStringUnknownPartition) {
+  EXPECT_NE(PartitionSpec(kUnknownPartition).ToString(), "");
+  EXPECT_NE(PartitionSpec(kUnknownPartition, "foo").ToString(), "");
 }
 
 class GptDevicePartitionerTests : public zxtest::Test {
@@ -402,8 +431,7 @@ TEST_F(GptDevicePartitionerTests, AddPartitionAtLargeOffset) {
   ASSERT_OK(status);
 
   // Check if a partition can be added after the "dummy-partition"
-  ASSERT_OK(status->gpt->AddPartition("test", uuid::Uuid(GUID_FVM_VALUE),
-                                      15LU * kGibibyte, 0));
+  ASSERT_OK(status->gpt->AddPartition("test", uuid::Uuid(GUID_FVM_VALUE), 15LU * kGibibyte, 0));
 }
 
 class EfiDevicePartitionerTests : public GptDevicePartitionerTests {
