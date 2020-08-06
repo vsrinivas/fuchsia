@@ -100,6 +100,7 @@ rustc_library("carnelian") {
     "src/render/generic/spinel/path.rs",
     "src/render/generic/spinel/raster.rs",
     "src/render/mod.rs",
+    "src/render/shed.rs",
     "src/view.rs",
     "src/view/strategies.rs",
     "src/view/strategies/base.rs",
@@ -530,6 +531,14 @@ package("svg-rs") {
     {
       path = rebase_path("meta/example.cmx")
       dest = "svg-rs.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("examples/static/fuchsia.shed")
+      file_name = get_path_info("fuchsia.shed", "file")
+      dest = "static/${file_name}"
     },
   ]
 }

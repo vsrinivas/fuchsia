@@ -24,9 +24,6 @@ use {
     std::collections::BTreeMap,
 };
 
-#[path = "static/fuchsia.rs"]
-mod fuchsia;
-
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 
 /// Svg.
@@ -108,6 +105,7 @@ impl ViewAssistant for SvgViewAssistant {
         let position = self.position;
         let last_position = rendering.last_position;
         let rasters = self.rasters.get_or_insert_with(|| {
+            let shed = carnelian::render::Shed::open("/pkg/data/static/fuchsia.shed").unwrap();
             let size = 50.0;
             let min_size = context.size.width.min(context.size.height);
             let transform = Transform2D::create_rotation(Angle::degrees(90.0))
@@ -115,7 +113,7 @@ impl ViewAssistant for SvgViewAssistant {
                 .post_scale(min_size / size, min_size / size)
                 .post_translate(Vector2D::new(context.size.width / 2.0, context.size.height / 2.0));
 
-            fuchsia::fuchsia(render_context, Some(&transform))
+            shed.rasters(render_context, Some(&transform))
         });
 
         let layers = rasters.iter().map(|(raster, style)| Layer {

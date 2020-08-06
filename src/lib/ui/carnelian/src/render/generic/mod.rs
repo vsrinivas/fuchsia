@@ -189,7 +189,7 @@ pub trait RasterBuilder<B: Backend> {
 /// Raster fill rule that determines how self-intersecting parts of the path are filled. It uses the
 /// winding number--the count of how many full counter-clockwise revolutions ('windings') the curve
 /// makes around a point--to determine whether this point should be filled or not.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FillRule {
     /// Points with non-zero winding number are filled.
     NonZero,
@@ -200,21 +200,21 @@ pub enum FillRule {
 }
 
 /// Raster fill type.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Fill {
     /// Fills the raster with a uniform color.
     Solid(Color),
 }
 
 /// Raster blend mode.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlendMode {
     /// Blends raster over previous rasters.
     Over,
 }
 
 /// Raster style.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Style {
     /// Raster fill rule.
     pub fill_rule: FillRule,
