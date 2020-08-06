@@ -20,6 +20,10 @@ pub struct ProgramArguments {
     #[argh(option, short = 's')]
     pub source_directory: String,
 
+    /// if set to true, c++ changes will not be analyzed (i.e., will always return `Build`)
+    #[argh(switch)]
+    pub disable_cpp: bool,
+
     /// the files that have been changed
     #[argh(positional, short = 'c')]
     pub changed_files: Vec<String>,

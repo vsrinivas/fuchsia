@@ -49,6 +49,17 @@ impl FromStr for FileType {
     }
 }
 
+pub fn contains_disabled_file_types<I, S>(files: I, disabled_file_types: Vec<FileType>) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    files
+        .into_iter()
+        .map(|file| FileType::from_str(file.as_ref()).unwrap())
+        .any(|f| disabled_file_types.contains(&f))
+}
+
 /// Returns true if all `files` are of a type supported by `affected_targets`.
 ///
 /// If this returns true, it is safe to continue analyzing the build, and potentially
@@ -115,5 +126,21 @@ mod tests {
             "test.unsupported"
         ]));
         assert!(!file_types_are_supported(&["test.h", "BUILD.gn", "test.fidl", "no_extension"]));
+    }
+
+    #[test]
+    fn test_disabled_file_types() {
+        assert!(contains_disabled_file_types(
+            &["test.h", "BUILD.gn", "test.fidl"],
+            vec![FileType::Cpp]
+        ));
+        assert!(contains_disabled_file_types(
+            &["test.h", "BUILD.cc", "test.cc"],
+            vec![FileType::Cpp]
+        ));
+        assert!(!contains_disabled_file_types(
+            &["test.gn", "BUILD.fidl", "test.rs"],
+            vec![FileType::Cpp]
+        ));
     }
 }
