@@ -9,6 +9,7 @@
 #include <fbl/string_printf.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/zx/vmo.h>
+#include <future>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 #include <zircon/process.h>
@@ -36,6 +37,15 @@ static zx_protocol_device_t dev_proto = {
     .get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) -> zx_status_t {
       return static_cast<Device*>(ctx)->DdkGetProtocol(proto_id, protocol);
     },
+    .init = [](void* ctx) {
+      return static_cast<Device*>(ctx)->DdkInit();
+    },
+    .unbind = [](void* ctx) {
+      return static_cast<Device*>(ctx)->DdkUnbind();
+    },
+    .release = [](void* ctx) {
+      return static_cast<Device*>(ctx)->DdkRelease();
+    },
     .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
       return static_cast<Device*>(ctx)->DdkMessage(msg, txn);
     },
@@ -51,7 +61,6 @@ zx_status_t Device::Bind() {
       .ctx = this,
       .ops = &dev_proto,
       .proto_id = ZX_PROTOCOL_BT_HCI,
-      .flags = DEVICE_ADD_INVISIBLE,
   };
 
   return device_add(parent_, &args, &zxdev_);
@@ -203,8 +212,7 @@ zx_status_t Device::LoadFirmware() {
                           ZX_TIME_INFINITE, &ver, sizeof(ver), &actual_read);
 
   if (result != ZX_OK) {
-    errorf("couldn't get version");
-    return result;
+    return FailInit(result, "Couldn't get version");
   }
 
   uint8_t status;
@@ -214,14 +222,13 @@ zx_status_t Device::LoadFirmware() {
   usb_desc_iter_t iter;
   result = usb_desc_iter_init(&usb_, &iter);
   if (result < 0) {
-    errorf("usb iterator failed: %s\n", zx_status_get_string(result));
-    return result;
+    return FailInit(result, "Usb iterator failed");
   }
 
   usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
   if (!intf || intf->bNumEndpoints != 3) {
     usb_desc_iter_release(&iter);
-    return ZX_ERR_NOT_SUPPORTED;
+    return FailInit(ZX_ERR_NOT_SUPPORTED, "Unexpected number of usb endpoints");
   }
 
   usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
@@ -236,21 +243,20 @@ zx_status_t Device::LoadFirmware() {
   usb_desc_iter_release(&iter);
 
   if (!bulk_out_addr_) {
-    errorf("bind could not find bulk out endpoint\n");
-    return ZX_ERR_NOT_SUPPORTED;
+    return FailInit(ZX_ERR_NOT_SUPPORTED, "LoadFirmware could not find bulk out endpoint");
   }
 
   if (!(status & PATCH_UPDATED)) {
     result = LoadRAM(ver);
     if (result != ZX_OK) {
-      return Remove(result, "Failed to load Qualcomm Atheros RAM patches");
+      return FailInit(result, "Failed to load Qualcomm Atheros RAM patches");
     }
   }
 
   if (!(status & SYSCFG_UPDATED)) {
     result = LoadNVM(ver);
     if (result != ZX_OK) {
-      return Remove(result, "Failed to load Qualcomm Atheros NVM patches");
+      return FailInit(result, "Failed to load Qualcomm Atheros NVM patches");
     }
   }
 
@@ -258,8 +264,8 @@ zx_status_t Device::LoadFirmware() {
   return Appear(note.c_str());
 }
 
-zx_status_t Device::Remove(zx_status_t status, const char* note) {
-  device_async_remove(zxdev_);
+zx_status_t Device::FailInit(zx_status_t status, const char* note) {
+  device_init_reply(zxdev_, status, nullptr);
   errorf("%s: %s", note, zx_status_get_string(status));
   return status;
 }
@@ -267,7 +273,8 @@ zx_status_t Device::Remove(zx_status_t status, const char* note) {
 zx_status_t Device::Appear(const char* note) {
   fbl::AutoLock lock(&mutex_);
   errorf("Making visible\n");
-  device_make_visible(zxdev_, nullptr);
+  // This will make the device visible and able to be unbound.
+  device_init_reply(zxdev_, ZX_OK, nullptr);
   infof("%s\n", note);
   firmware_loaded_ = true;
   return ZX_OK;
@@ -288,7 +295,12 @@ zx_handle_t Device::MapFirmware(const char* name, uintptr_t* fw_addr, size_t* fw
   return vmo;
 }
 
-void Device::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
+
+void Device::DdkInit() {
+  auto f = std::async(std::launch::async, [=]() { LoadFirmware(); });
+}
+
+void Device::DdkUnbind() { device_unbind_reply(zxdev_); }
 
 void Device::DdkRelease() { delete this; }
 

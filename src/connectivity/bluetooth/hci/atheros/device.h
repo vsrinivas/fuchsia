@@ -45,7 +45,8 @@ class Device {
   zx_status_t LoadFirmware();
 
   // ddk::Device methods
-  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkInit();
+  void DdkUnbind();
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_proto);
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
@@ -61,10 +62,11 @@ class Device {
       .OpenSnoopChannel = OpenSnoopChannel,
   };
 
-  // Removes the device and leaves an error on the kernel log
+  // Informs the device manager that device initialization has failed,
+  // which will unbind the device, and leaves an error on the kernel log
   // prepended with |note|.
   // Returns |status|.
-  zx_status_t Remove(zx_status_t status, const char* note);
+  zx_status_t FailInit(zx_status_t status, const char* note);
 
   // Load the Qualcomm firmware in RAM
   zx_status_t LoadRAM(const qca_version& ver);

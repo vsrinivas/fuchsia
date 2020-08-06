@@ -50,7 +50,7 @@ zx_status_t bt_atheros_bind(void* ctx, zx_device_t* device) {
   }
 
   // Bind succeeded and devmgr is now responsible for releasing |btdev|
-  auto f = std::async(std::launch::async, [btdev]() { btdev->LoadFirmware(); });
+  // The device's init hook will load the firmware.
   return ZX_OK;
 }
 
