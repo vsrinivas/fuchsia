@@ -96,7 +96,7 @@ async fn test_manual_brightness_with_storage_controller() {
 async fn test_manual_brightness_with_brightness_controller() {
     let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
 
-    let settings = display_proxy.watch2().await.expect("watch completed");
+    let settings = display_proxy.watch().await.expect("watch completed");
 
     assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
 
@@ -104,7 +104,7 @@ async fn test_manual_brightness_with_brightness_controller() {
     display_settings.brightness_value = Some(CHANGED_BRIGHTNESS);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
-    let settings = display_proxy.watch2().await.expect("watch completed");
+    let settings = display_proxy.watch().await.expect("watch completed");
     assert_eq!(settings.brightness_value, Some(CHANGED_BRIGHTNESS));
 
     let current_brightness =
@@ -137,7 +137,7 @@ async fn test_auto_brightness_with_brightness_controller() {
     display_settings.auto_brightness = Some(true);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
-    let settings = display_proxy.watch2().await.expect("watch completed");
+    let settings = display_proxy.watch().await.expect("watch completed");
     assert_eq!(settings.auto_brightness, Some(true));
 
     let auto_brightness =
@@ -190,7 +190,7 @@ async fn test_light_mode_with_brightness_controller() {
     display_settings.low_light_mode = Some(FidlLowLightMode::Enable);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
-    let settings = display_proxy.watch2().await.expect("watch completed");
+    let settings = display_proxy.watch().await.expect("watch completed");
 
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Enable));
 
@@ -199,7 +199,7 @@ async fn test_light_mode_with_brightness_controller() {
     display_settings.low_light_mode = Some(FidlLowLightMode::Disable);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
-    let settings = display_proxy.watch2().await.expect("watch completed");
+    let settings = display_proxy.watch().await.expect("watch completed");
 
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Disable));
 
@@ -208,7 +208,7 @@ async fn test_light_mode_with_brightness_controller() {
     display_settings.low_light_mode = Some(FidlLowLightMode::DisableImmediately);
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
-    let settings = display_proxy.watch2().await.expect("watch completed");
+    let settings = display_proxy.watch().await.expect("watch completed");
 
     assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::DisableImmediately));
 }
