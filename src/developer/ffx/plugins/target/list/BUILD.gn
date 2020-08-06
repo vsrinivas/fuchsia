@@ -15,4 +15,12 @@ ffx_plugin("ffx_list") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:regex",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+    "src/target_formatter.rs",
+  ]
 }

@@ -13,4 +13,8 @@ ffx_plugin("ffx_daemon_plugin") {
     "start:ffx_daemon_start",
     "stop:ffx_daemon_stop",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/args.rs" ]
 }

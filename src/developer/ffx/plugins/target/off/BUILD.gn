@@ -12,4 +12,11 @@ ffx_plugin("ffx_off") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//src/lib/fuchsia-async",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

@@ -13,4 +13,8 @@ ffx_plugin("ffx_target") {
     "off:ffx_off",
     "reboot:ffx_reboot",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/args.rs" ]
 }

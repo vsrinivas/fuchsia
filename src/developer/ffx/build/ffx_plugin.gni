@@ -102,6 +102,8 @@ template("ffx_plugin") {
       sub_cmd = output_name + "_sub_command"
       rustc_library(sub_cmd) {
         source_root = "$target_gen_dir/cmd_args.rs"
+        enforce_source_listing = true
+        sources = [ "$target_gen_dir/cmd_args.rs" ]
         deps = args_deps + [
                  ":" + sub_cmd_gen,
                  "//third_party/rust_crates:argh",
@@ -115,6 +117,8 @@ template("ffx_plugin") {
                                  "extra_deps",
                                  "args_source_root",
                                  "source_root",
+                                 "sources",
+                                 "enforce_source_listing",
                                  "target_name",
                                ])
       }
@@ -236,6 +240,8 @@ template("ffx_plugin") {
 
     rustc_library(suite_name) {
       source_root = "$target_gen_dir/plugins.rs"
+      enforce_source_listing = true
+      sources = [ "$target_gen_dir/plugins.rs" ]
       deps = suite_deps
       non_rust_deps = [ "//third_party/boringssl" ]
       forward_variables_from(invoker,
@@ -245,6 +251,8 @@ template("ffx_plugin") {
                                "deps",
                                "non_rust_deps",
                                "target_name",
+                               "sources",
+                               "enforce_source_listing",
                              ])
     }
   }

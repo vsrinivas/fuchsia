@@ -14,6 +14,10 @@ ffx_plugin("ffx_component") {
     "select:ffx_select",
     "//src/sys/run_test_suite/ffx:ffx_test",
   ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/args.rs" ]
 }
 
 group("tests") {

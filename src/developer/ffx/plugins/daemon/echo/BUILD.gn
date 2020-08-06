@@ -9,4 +9,11 @@ ffx_plugin("ffx_echo") {
   edition = "2018"
   with_unit_tests = true
   deps = [ "//src/lib/fuchsia-async" ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

@@ -12,4 +12,11 @@ ffx_plugin("ffx_select") {
     "//src/diagnostics/lib/selectors",
     "//src/lib/fuchsia-async",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

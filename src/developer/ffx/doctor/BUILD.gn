@@ -21,4 +21,13 @@ ffx_plugin("ffx_doctor") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/constants.rs",
+    "src/daemon_manager.rs",
+    "src/lib.rs",
+  ]
 }

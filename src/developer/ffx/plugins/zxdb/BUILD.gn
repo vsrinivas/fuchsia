@@ -23,4 +23,11 @@ ffx_plugin("ffx_zxdb_plugin") {
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:signal-hook",
   ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

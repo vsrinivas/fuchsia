@@ -29,6 +29,14 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/ffx/plugins/target:ffx_target",
       "//src/developer/ffx/plugins/zxdb:ffx_zxdb_plugin",
     ]
+
+    enforce_source_listing = true
+
+    sources = [
+      "src/args.rs",
+      "src/logger.rs",
+      "src/main.rs",
+    ]
   }
 }
 
