@@ -729,7 +729,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:691
+From //build/config/BUILDCONFIG.gn:701
 
 ### factory_mode
 factory_mode: enables/disables factory mode
@@ -1150,12 +1150,22 @@ From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.c
 
 From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/feca8dfaef3556cafa27eeb40c43504e6d04a884/config.gni#13)
 
+### is_analysis
+If set, the build will produce compilation analysis dumps, used for code
+cross-referencing in code search.  The extra work done during analysis
+is only needed for cross-referencing builds, so we're keeping the flag
+and the analysis overhead turned off by default.
+
+**Current value (from the default):** `false`
+
+From //build/config/BUILDCONFIG.gn:28
+
 ### is_debug
 Debug build.
 
 **Current value (from the default):** `true`
 
-From //build/config/BUILDCONFIG.gn:25
+From //build/config/BUILDCONFIG.gn:31
 
 ### kernel_cmdline_args
 List of kernel command line arguments to bake into the boot image.
@@ -1321,7 +1331,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:616
+From //build/config/BUILDCONFIG.gn:626
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1665,7 +1675,7 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:28
+From //build/config/BUILDCONFIG.gn:34
 
 ### override_recovery_label
 Allows a product to override the recovery image used in the zirconr slot.
@@ -1949,7 +1959,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:921
+From //build/config/BUILDCONFIG.gn:931
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1958,7 +1968,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:926
+From //build/config/BUILDCONFIG.gn:936
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1992,7 +2002,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:737
+From //build/config/BUILDCONFIG.gn:747
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2228,7 +2238,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:99
+From //build/config/BUILDCONFIG.gn:105
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -2256,7 +2266,7 @@ From //build/config/sanitizers/BUILD.gn:33
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:711
+From //build/config/BUILDCONFIG.gn:721
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
