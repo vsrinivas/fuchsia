@@ -21,7 +21,7 @@ func init() {
 				Config: config.Config{
 					"depth": 8,
 				},
-				Denylist: []config.Binding{config.Rust},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 		},
 	})

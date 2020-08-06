@@ -22,6 +22,8 @@ executable("bin") {
   sources = [
     "byte_vector.cc",
     "main.cc",
+    "padded_struct_tree.cc",
+    "struct_tree.cc",
     "uint8_table.cc",
   ]
   deps = [

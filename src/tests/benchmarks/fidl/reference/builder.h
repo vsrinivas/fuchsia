@@ -26,6 +26,8 @@ llcpp::benchmarkfidl::Table16Struct Build_Table_SingleSet_16_of_16();
 llcpp::benchmarkfidl::Table256Struct Build_Table_SingleSet_1_of_256();
 llcpp::benchmarkfidl::Table256Struct Build_Table_SingleSet_16_of_256();
 llcpp::benchmarkfidl::Table256Struct Build_Table_SingleSet_256_of_256();
+llcpp::benchmarkfidl::PaddedStructTree8 Build_PaddedStructTree_Depth8();
+llcpp::benchmarkfidl::StructTree8 Build_StructTree_Depth8();
 
 }  // namespace benchmark_suite
 
