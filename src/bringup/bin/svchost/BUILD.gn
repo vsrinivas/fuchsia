@@ -23,6 +23,7 @@ zx_library("crashsvc") {
   deps = [
     "//sdk/fidl/fuchsia.exception:fuchsia.exception_llcpp",
     "//sdk/lib/fdio",
+    "//src/lib/fsl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",

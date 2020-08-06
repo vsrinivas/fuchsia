@@ -24,6 +24,8 @@
 #include <crashsvc/logging.h>
 #include <inspector/inspector.h>
 
+#include "src/lib/fsl/handles/object_info.h"
+
 namespace {
 
 struct crash_ctx {
@@ -89,6 +91,23 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   // Dump the crash info to the logs whether we have a FIDL handler or not.
   fprintf(stdout, "crashsvc: exception received, processing\n");
   inspector_print_debug_info(stdout, process.get(), thread.get());
+
+  // If the process serving fuchsia.exception.Handler crashes, the system will still send future
+  // fuchsia.exception.Handler/OnException requests to that process as it is still alive and
+  // therefore the exception will be stuck in the underlying channel, never terminating the process.
+  // So we release the exception here to terminate the process and unfortunately forgo further
+  // exception handling for that exception.
+  //
+  // This needs to be kept in sync with the name of the process serving
+  // fuchsia.exception.Handler.
+  if (fsl::GetObjectName(process.get()) == "exceptions.cmx") {
+    LogError("cannot handle exception for the process serving fuchsia.exception.Handler",
+             ZX_ERR_NOT_SUPPORTED);
+
+    // Release the exception to let the kernel terminate the process.
+    exception.reset();
+    return;
+  }
 
   // Send over the exception to the handler.
   // From this point on, crashsvc has no ownership over the exception and it's up to the handler to
