@@ -522,8 +522,9 @@ impl Server {
     fn build_ack(&self, req: Message, requested_ip: Ipv4Addr) -> Result<Message, ServerError> {
         let options = match self.cache.get(&req.chaddr) {
             Some(config) => {
-                let mut options = config.options.clone();
+                let mut options = Vec::with_capacity(config.options.len() + 1);
                 options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
+                options.extend(config.options.iter().cloned());
                 options
             }
             None => return Err(ServerError::UnknownClientMac(req.chaddr)),
@@ -1233,60 +1234,117 @@ pub mod tests {
         Ok(server)
     }
 
-    fn new_test_discover() -> Message {
-        let mut disc = Message::new();
-        disc.xid = rand::thread_rng().gen();
-        disc.chaddr = random_mac_generator();
-        disc.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
-        disc.options.push(DhcpOption::ParameterRequestList(vec![
-            OptionCode::SubnetMask,
-            OptionCode::Router,
-            OptionCode::DomainNameServer,
-        ]));
-        disc
+    fn new_client_message(message_type: MessageType) -> Message {
+        Message {
+            op: OpCode::BOOTREQUEST,
+            xid: rand::thread_rng().gen(),
+            secs: 0,
+            bdcast_flag: false,
+            ciaddr: Ipv4Addr::UNSPECIFIED,
+            yiaddr: Ipv4Addr::UNSPECIFIED,
+            siaddr: Ipv4Addr::UNSPECIFIED,
+            giaddr: Ipv4Addr::UNSPECIFIED,
+            chaddr: random_mac_generator(),
+            sname: String::new(),
+            file: String::new(),
+            options: vec![
+                DhcpOption::DhcpMessageType(message_type),
+                DhcpOption::ParameterRequestList(vec![
+                    OptionCode::SubnetMask,
+                    OptionCode::Router,
+                    OptionCode::DomainNameServer,
+                ]),
+            ],
+        }
     }
 
-    // Creating a new offer needs a reference to `discover` and `server`
-    // so it can copy over the essential randomly generated options.
-    fn new_test_offer(disc: &Message, server: &Server) -> Message {
-        let mut offer = Message::new();
-        offer.op = OpCode::BOOTREPLY;
-        offer.xid = disc.xid;
-        offer.chaddr = disc.chaddr;
-        offer.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPOFFER));
-        offer.options.push(DhcpOption::ServerIdentifier(
-            server.get_server_ip(&disc).unwrap_or(Ipv4Addr::UNSPECIFIED),
-        ));
-        offer.options.push(DhcpOption::IpAddressLeaseTime(100));
-        offer.options.push(DhcpOption::RenewalTimeValue(50));
-        offer.options.push(DhcpOption::RebindingTimeValue(75));
-        offer.options.push(DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)));
+    fn new_test_discover() -> Message {
+        new_client_message(MessageType::DHCPDISCOVER)
+    }
+
+    fn new_server_message(
+        message_type: MessageType,
+        client_message: &Message,
+        server: &Server,
+    ) -> Message {
+        let Message {
+            op: _,
+            xid,
+            secs: _,
+            bdcast_flag: _,
+            ciaddr: _,
+            yiaddr: _,
+            siaddr: _,
+            giaddr: _,
+            chaddr,
+            sname: _,
+            file: _,
+            options: _,
+        } = client_message;
+        Message {
+            op: OpCode::BOOTREPLY,
+            xid: *xid,
+            secs: 0,
+            bdcast_flag: false,
+            ciaddr: Ipv4Addr::UNSPECIFIED,
+            yiaddr: Ipv4Addr::UNSPECIFIED,
+            siaddr: Ipv4Addr::UNSPECIFIED,
+            giaddr: Ipv4Addr::UNSPECIFIED,
+            chaddr: *chaddr,
+            sname: String::new(),
+            file: String::new(),
+            options: vec![
+                DhcpOption::DhcpMessageType(message_type),
+                DhcpOption::ServerIdentifier(
+                    server.get_server_ip(client_message).unwrap_or(Ipv4Addr::UNSPECIFIED),
+                ),
+            ],
+        }
+    }
+
+    fn new_server_message_with_lease(
+        message_type: MessageType,
+        client_message: &Message,
+        server: &Server,
+    ) -> Message {
+        let mut msg = new_server_message(message_type, client_message, server);
+        msg.options.extend(
+            [
+                DhcpOption::IpAddressLeaseTime(100),
+                DhcpOption::RenewalTimeValue(50),
+                DhcpOption::RebindingTimeValue(75),
+            ]
+            // TODO(tamird): use into_iter after
+            // https://github.com/rust-lang/rust/issues/25725
+            .iter()
+            .cloned(),
+        );
+        let () = add_server_options(&mut msg, server);
+        msg
+    }
+
+    fn add_server_options(msg: &mut Message, server: &Server) {
+        msg.options.push(DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)));
         if let Some(routers) = match server.options_repo.get(&OptionCode::Router) {
             Some(DhcpOption::Router(v)) => Some(v),
             _ => None,
         } {
-            offer.options.push(DhcpOption::Router(routers.clone()));
+            msg.options.push(DhcpOption::Router(routers.clone()));
         }
         if let Some(servers) = match server.options_repo.get(&OptionCode::DomainNameServer) {
             Some(DhcpOption::DomainNameServer(v)) => Some(v),
             _ => None,
         } {
-            offer.options.push(DhcpOption::DomainNameServer(servers.clone()));
+            msg.options.push(DhcpOption::DomainNameServer(servers.clone()));
         }
-        offer
+    }
+
+    fn new_test_offer(disc: &Message, server: &Server) -> Message {
+        new_server_message_with_lease(MessageType::DHCPOFFER, disc, server)
     }
 
     fn new_test_request() -> Message {
-        let mut req = Message::new();
-        req.xid = rand::thread_rng().gen();
-        req.chaddr = random_mac_generator();
-        req.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPREQUEST));
-        req.options.push(DhcpOption::ParameterRequestList(vec![
-            OptionCode::SubnetMask,
-            OptionCode::Router,
-            OptionCode::DomainNameServer,
-        ]));
-        req
+        new_client_message(MessageType::DHCPREQUEST)
     }
 
     fn new_test_request_selecting_state(server: &Server) -> Message {
@@ -1298,79 +1356,31 @@ pub mod tests {
     }
 
     fn new_test_ack(req: &Message, server: &Server) -> Message {
-        let mut ack = Message::new();
-        ack.op = OpCode::BOOTREPLY;
-        ack.xid = req.xid;
-        ack.chaddr = req.chaddr;
-        ack.options.push(DhcpOption::ServerIdentifier(
-            server.get_server_ip(&req).unwrap_or(Ipv4Addr::UNSPECIFIED),
-        ));
-        ack.options.push(DhcpOption::IpAddressLeaseTime(100));
-        ack.options.push(DhcpOption::RenewalTimeValue(50));
-        ack.options.push(DhcpOption::RebindingTimeValue(75));
-        ack.options.push(DhcpOption::SubnetMask(std_ip_v4!(255.255.255.0)));
-        if let Some(routers) = match server.options_repo.get(&OptionCode::Router) {
-            Some(DhcpOption::Router(v)) => Some(v),
-            _ => None,
-        } {
-            ack.options.push(DhcpOption::Router(routers.clone()));
-        }
-        if let Some(servers) = match server.options_repo.get(&OptionCode::DomainNameServer) {
-            Some(DhcpOption::DomainNameServer(v)) => Some(v),
-            _ => None,
-        } {
-            ack.options.push(DhcpOption::DomainNameServer(servers.clone()));
-        }
-        ack.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
-        ack
+        new_server_message_with_lease(MessageType::DHCPACK, req, server)
     }
 
     fn new_test_nak(req: &Message, server: &Server, error: String) -> Message {
-        let mut nak = Message::new();
-        nak.op = OpCode::BOOTREPLY;
-        nak.xid = req.xid;
-        nak.chaddr = req.chaddr;
-        nak.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPNAK));
-        nak.options.push(DhcpOption::ServerIdentifier(
-            server.get_server_ip(&req).unwrap_or(Ipv4Addr::UNSPECIFIED),
-        ));
+        let mut nak = new_server_message(MessageType::DHCPNAK, req, server);
         nak.options.push(DhcpOption::Message(error));
         nak
     }
 
     fn new_test_release() -> Message {
-        let mut release = Message::new();
-        release.xid = rand::thread_rng().gen();
-        release.chaddr = random_mac_generator();
-        release.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPRELEASE));
-        release
+        new_client_message(MessageType::DHCPRELEASE)
     }
 
     fn new_test_inform() -> Message {
-        let mut inform = Message::new();
-        inform.xid = rand::thread_rng().gen();
-        inform.chaddr = random_mac_generator();
-        inform.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPINFORM));
-        inform
+        new_client_message(MessageType::DHCPINFORM)
     }
 
     fn new_test_inform_ack(req: &Message, server: &Server) -> Message {
-        let mut ack = Message::new();
-        ack.op = OpCode::BOOTREPLY;
-        ack.xid = req.xid;
-        ack.chaddr = req.chaddr;
-        ack.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
-        ack.options.push(DhcpOption::ServerIdentifier(
-            server.get_server_ip(&req).unwrap_or(Ipv4Addr::UNSPECIFIED),
-        ));
-        ack
+        let mut msg = new_server_message(MessageType::DHCPACK, req, server);
+        let () = add_server_options(&mut msg, server);
+        msg
     }
 
     fn new_test_decline(server: &Server) -> Message {
-        let mut decline = Message::new();
-        decline.xid = rand::thread_rng().gen();
-        decline.chaddr = random_mac_generator();
-        decline.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDECLINE));
+        let mut decline = new_client_message(MessageType::DHCPDECLINE);
         decline.options.push(DhcpOption::ServerIdentifier(
             server.get_server_ip(&decline).unwrap_or(Ipv4Addr::UNSPECIFIED),
         ));
@@ -1823,52 +1833,45 @@ pub mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_client_offer_message_returns_error() -> Result<(), Error> {
+    async fn test_dispatch_with_bogus_client_message_returns_error(
+        message_type: MessageType,
+    ) -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
 
-        // Construct a simple offer sent by client.
-        let mut client_offer = Message::new();
-        client_offer.op = OpCode::BOOTREQUEST;
-        client_offer.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPOFFER));
-
         assert_eq!(
-            server.dispatch(client_offer),
-            Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPOFFER))
+            server.dispatch(Message {
+                op: OpCode::BOOTREQUEST,
+                xid: 0,
+                secs: 0,
+                bdcast_flag: false,
+                ciaddr: Ipv4Addr::UNSPECIFIED,
+                yiaddr: Ipv4Addr::UNSPECIFIED,
+                siaddr: Ipv4Addr::UNSPECIFIED,
+                giaddr: Ipv4Addr::UNSPECIFIED,
+                chaddr: MacAddr { octets: [0; 6] },
+                sname: String::new(),
+                file: String::new(),
+                options: vec![DhcpOption::DhcpMessageType(message_type),],
+            }),
+            Err(ServerError::UnexpectedClientMessageType(message_type))
         );
+
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_client_offer_message_returns_error() -> Result<(), Error> {
+        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPOFFER).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dispatch_with_client_ack_message_returns_error() -> Result<(), Error> {
-        let mut server = new_test_minimal_server().await?;
-
-        // Construct a simple ack sent by client.
-        let mut client_ack = Message::new();
-        client_ack.op = OpCode::BOOTREQUEST;
-        client_ack.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPACK));
-
-        assert_eq!(
-            server.dispatch(client_ack),
-            Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPACK))
-        );
-        Ok(())
+        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPACK).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dispatch_with_client_nak_message_returns_error() -> Result<(), Error> {
-        let mut server = new_test_minimal_server().await?;
-
-        // Construct a simple nak sent by client.
-        let mut client_nak = Message::new();
-        client_nak.op = OpCode::BOOTREQUEST;
-        client_nak.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPNAK));
-
-        assert_eq!(
-            server.dispatch(client_nak),
-            Err(ServerError::UnexpectedClientMessageType(MessageType::DHCPNAK))
-        );
-        Ok(())
+        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPNAK).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

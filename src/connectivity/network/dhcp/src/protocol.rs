@@ -41,10 +41,6 @@ const UNUSED_CHADDR_BYTES: usize = 10;
 const SNAME_LEN: usize = 64;
 const FILE_LEN: usize = 128;
 
-const ONE_BYTE_LEN: usize = 8;
-const TWO_BYTE_LEN: usize = 16;
-const THREE_BYTE_LEN: usize = 24;
-
 #[derive(Debug, Error, PartialEq)]
 pub enum ProtocolError {
     #[error("invalid buffer length: {}", _0)]
@@ -101,25 +97,6 @@ pub struct Message {
 }
 
 impl Message {
-    /// Instantiates a new `Message` with default field values.
-    pub fn new() -> Self {
-        let msg = Message {
-            op: OpCode::BOOTREQUEST,
-            xid: 0,
-            secs: 0,
-            bdcast_flag: false,
-            ciaddr: Ipv4Addr::UNSPECIFIED,
-            yiaddr: Ipv4Addr::UNSPECIFIED,
-            siaddr: Ipv4Addr::UNSPECIFIED,
-            giaddr: Ipv4Addr::UNSPECIFIED,
-            chaddr: MacAddr { octets: [0; 6] },
-            sname: String::new(),
-            file: String::new(),
-            options: Vec::new(),
-        };
-        msg
-    }
-
     /// Instantiates a new `Message` from a byte buffer conforming to the DHCP
     /// protocol as defined RFC 2131. Returns `None` if the buffer is malformed.
     /// Any malformed configuration options will be skipped over, leaving only
@@ -129,91 +106,107 @@ impl Message {
             return Err(ProtocolError::InvalidBufferLength(buf.len()));
         }
         let (buf, options) = buf.split_at(OPTIONS_START_IDX);
-
-        let mut msg = Message::new();
-        let op = buf.get(OP_IDX).ok_or(ProtocolError::MissingOpCode)?;
-        msg.op = OpCode::try_from(*op)?;
-        msg.xid = u32::from_be_bytes(
-            <[u8; 4]>::try_from(
-                buf.get(XID_IDX..SECS_IDX).ok_or(ProtocolError::InvalidBufferLength(buf.len()))?,
-            )
-            .map_err(|std::array::TryFromSliceError { .. }| {
-                ProtocolError::InvalidBufferLength(buf.len())
-            })?,
-        );
-        msg.secs = u16::from_be_bytes(
-            <[u8; 2]>::try_from(
-                buf.get(SECS_IDX..FLAGS_IDX)
-                    .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?,
-            )
-            .map_err(|std::array::TryFromSliceError { .. }| {
-                ProtocolError::InvalidBufferLength(buf.len())
-            })?,
-        );
-        msg.bdcast_flag = buf[FLAGS_IDX] > 0;
-        msg.ciaddr = ip_addr_from_buf_at(buf, CIADDR_IDX)?;
-        msg.yiaddr = ip_addr_from_buf_at(buf, YIADDR_IDX)?;
-        msg.siaddr = ip_addr_from_buf_at(buf, SIADDR_IDX)?;
-        msg.giaddr = ip_addr_from_buf_at(buf, GIADDR_IDX)?;
-        copy_buf_into_mac_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut msg.chaddr);
-        msg.sname = buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?;
-        msg.file = buf_to_msg_string(&buf[FILE_IDX..])?;
-        if options.len() >= MAGIC_COOKIE.len() {
+        let options = if options.len() >= MAGIC_COOKIE.len() {
             let (magic_cookie, options) = options.split_at(MAGIC_COOKIE.len());
             if magic_cookie == MAGIC_COOKIE {
-                msg.options.extend(OptionBuffer::new(options).into_iter().filter_map(|v| match v {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::warn!("failed to parse option buffer: {}", e);
-                        None
-                    }
-                }))
+                OptionBuffer::new(options)
+                    .into_iter()
+                    .filter_map(|v| match v {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            log::warn!("failed to parse option buffer: {}", e);
+                            None
+                        }
+                    })
+                    .collect()
+            } else {
+                Vec::new()
             }
-        }
+        } else {
+            Vec::new()
+        };
 
-        Ok(msg)
+        let op = buf.get(OP_IDX).ok_or(ProtocolError::MissingOpCode)?;
+        let mut chaddr = MacAddr { octets: [0; 6] };
+        copy_buf_into_mac_addr(&buf[CHADDR_IDX..CHADDR_IDX + 6], &mut chaddr);
+        Ok(Self {
+            op: OpCode::try_from(*op)?,
+            xid: u32::from_be_bytes(
+                <[u8; 4]>::try_from(
+                    buf.get(XID_IDX..SECS_IDX)
+                        .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?,
+                )
+                .map_err(|std::array::TryFromSliceError { .. }| {
+                    ProtocolError::InvalidBufferLength(buf.len())
+                })?,
+            ),
+            secs: u16::from_be_bytes(
+                <[u8; 2]>::try_from(
+                    buf.get(SECS_IDX..FLAGS_IDX)
+                        .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?,
+                )
+                .map_err(|std::array::TryFromSliceError { .. }| {
+                    ProtocolError::InvalidBufferLength(buf.len())
+                })?,
+            ),
+            bdcast_flag: buf[FLAGS_IDX] > 0,
+            ciaddr: ip_addr_from_buf_at(buf, CIADDR_IDX)?,
+            yiaddr: ip_addr_from_buf_at(buf, YIADDR_IDX)?,
+            siaddr: ip_addr_from_buf_at(buf, SIADDR_IDX)?,
+            giaddr: ip_addr_from_buf_at(buf, GIADDR_IDX)?,
+            chaddr,
+            sname: buf_to_msg_string(&buf[SNAME_IDX..FILE_IDX])?,
+            file: buf_to_msg_string(&buf[FILE_IDX..])?,
+            options,
+        })
     }
 
     /// Consumes the calling `Message` to serialize it into a buffer of bytes.
     pub fn serialize(self) -> Vec<u8> {
+        let Self {
+            op,
+            xid,
+            secs,
+            bdcast_flag,
+            ciaddr,
+            yiaddr,
+            siaddr,
+            giaddr,
+            chaddr,
+            sname,
+            file,
+            options,
+        } = self;
         let mut buffer = Vec::with_capacity(OPTIONS_START_IDX);
-        buffer.push(self.op.into());
+        buffer.push(op.into());
         buffer.push(ETHERNET_HTYPE);
         buffer.push(ETHERNET_HLEN);
         buffer.push(HOPS_DEFAULT);
-        buffer.push((self.xid >> THREE_BYTE_LEN) as u8);
-        buffer.push((self.xid >> TWO_BYTE_LEN) as u8);
-        buffer.push((self.xid >> ONE_BYTE_LEN) as u8);
-        buffer.push(self.xid as u8);
-        buffer.push((self.secs >> ONE_BYTE_LEN) as u8);
-        buffer.push(self.secs as u8);
-        if self.bdcast_flag {
+        buffer.extend_from_slice(&xid.to_be_bytes());
+        buffer.extend_from_slice(&secs.to_be_bytes());
+        if bdcast_flag {
             // Set most significant bit.
             buffer.push(128u8);
         } else {
             buffer.push(0u8);
         }
         buffer.push(0u8);
-        buffer.extend_from_slice(&self.ciaddr.octets());
-        buffer.extend_from_slice(&self.yiaddr.octets());
-        buffer.extend_from_slice(&self.siaddr.octets());
-        buffer.extend_from_slice(&self.giaddr.octets());
-        buffer.extend_from_slice(&self.chaddr.octets.as_ref());
+        buffer.extend_from_slice(&ciaddr.octets());
+        buffer.extend_from_slice(&yiaddr.octets());
+        buffer.extend_from_slice(&siaddr.octets());
+        buffer.extend_from_slice(&giaddr.octets());
+        buffer.extend_from_slice(&chaddr.octets.as_ref());
         buffer.extend_from_slice(&[0u8; UNUSED_CHADDR_BYTES]);
-        trunc_string_to_n_and_push(&self.sname, SNAME_LEN, &mut buffer);
-        trunc_string_to_n_and_push(&self.file, FILE_LEN, &mut buffer);
-        buffer.extend_from_slice(&self.serialize_options());
-        buffer
-    }
+        trunc_string_to_n_and_push(&sname, SNAME_LEN, &mut buffer);
+        trunc_string_to_n_and_push(&file, FILE_LEN, &mut buffer);
 
-    fn serialize_options(self) -> Vec<u8> {
-        let mut bytes = Vec::new();
-        bytes.extend_from_slice(&MAGIC_COOKIE);
-        for option in self.options.into_iter() {
-            option.serialize_to(&mut bytes);
+        buffer.extend_from_slice(&MAGIC_COOKIE);
+        for option in options.into_iter() {
+            option.serialize_to(&mut buffer);
         }
-        bytes.push(OptionCode::End.into());
-        bytes
+        buffer.push(OptionCode::End.into());
+
+        buffer
     }
 
     /// Returns the value's DHCP `MessageType` or appropriate `MessageTypeError` in case of failure.
@@ -1861,13 +1854,20 @@ mod tests {
     const DEFAULT_SUBNET_MASK: Ipv4Addr = ip_v4!(255.255.255.0);
 
     fn new_test_msg() -> Message {
-        let mut msg = Message::new();
-        msg.xid = 42;
-        msg.secs = 1024;
-        msg.yiaddr = ip_v4!(192.168.1.1);
-        msg.sname = String::from("relay.example.com");
-        msg.file = String::from("boot.img");
-        msg
+        Message {
+            op: OpCode::BOOTREQUEST,
+            xid: 42,
+            secs: 1024,
+            bdcast_flag: false,
+            ciaddr: Ipv4Addr::UNSPECIFIED,
+            yiaddr: ip_v4!(192.168.1.1),
+            siaddr: Ipv4Addr::UNSPECIFIED,
+            giaddr: Ipv4Addr::UNSPECIFIED,
+            chaddr: MacAddr { octets: [0; 6] },
+            sname: String::from("relay.example.com"),
+            file: String::from("boot.img"),
+            options: Vec::new(),
+        }
     }
 
     #[test]
@@ -2057,7 +2057,7 @@ mod tests {
 
     #[test]
     fn test_get_dhcp_type_with_dhcp_type_option_returns_value() {
-        let mut msg = Message::new();
+        let mut msg = new_test_msg();
         msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));
 
         assert_eq!(msg.get_dhcp_type(), Ok(MessageType::DHCPDISCOVER));
@@ -2065,7 +2065,7 @@ mod tests {
 
     #[test]
     fn test_get_dhcp_type_without_dhcp_type_option_returns_err() {
-        let msg = Message::new();
+        let msg = new_test_msg();
 
         assert_eq!(
             msg.get_dhcp_type(),
@@ -2076,7 +2076,7 @@ mod tests {
     #[test]
     fn test_buf_into_options_with_invalid_option_parses_other_valid_options() {
         let msg = || {
-            let mut msg = Message::new();
+            let mut msg = new_test_msg();
             msg.options.push(DhcpOption::SubnetMask(DEFAULT_SUBNET_MASK));
             msg.options.push(DhcpOption::Router(vec![ip_v4!(192.168.1.1)]));
             msg.options.push(DhcpOption::DhcpMessageType(MessageType::DHCPDISCOVER));

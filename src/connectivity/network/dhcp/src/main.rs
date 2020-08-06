@@ -552,8 +552,9 @@ mod tests {
             Ok(CannedSocket { name: name.map(|s| s.to_string()), src })
         }
 
-        fn dispatch_message(&mut self, _msg: Message) -> Result<ServerAction, ServerError> {
-            Ok(ServerAction::SendResponse(Message::new(), None))
+        fn dispatch_message(&mut self, mut msg: Message) -> Result<ServerAction, ServerError> {
+            msg.op = dhcp::protocol::OpCode::BOOTREPLY;
+            Ok(ServerAction::SendResponse(msg, None))
         }
     }
 
