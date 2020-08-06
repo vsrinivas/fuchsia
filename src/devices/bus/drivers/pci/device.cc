@@ -202,7 +202,7 @@ void Device::DisableLocked() {
   // Disable a device because we cannot allocate space for all of its BARs (or
   // forwarding windows, in the case of a bridge).  Flag the device as
   // disabled from here on out.
-  zxlogf(TRACE, "[%s]%s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
+  zxlogf(TRACE, "[%s] %s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
 
   // Flag the device as disabled.  Close the device's MMIO/PIO windows, shut
   // off device initiated accesses to the bus, disable legacy interrupts.
@@ -246,12 +246,12 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
 
   // Sanity check the read-only configuration of the BAR
   if (bar_info.is_64bit && (bar_info.bar_id == bar_count_ - 1)) {
-    zxlogf(ERROR, "%s has a 64bit bar in invalid position %u!", cfg_->addr(), bar_info.bar_id);
+    zxlogf(ERROR, "[%s] has a 64bit bar in invalid position %u!", cfg_->addr(), bar_info.bar_id);
     return ZX_ERR_BAD_STATE;
   }
 
   if (bar_info.is_64bit && !bar_info.is_mmio) {
-    zxlogf(ERROR, "%s bar %u is 64bit but not mmio!", cfg_->addr(), bar_info.bar_id);
+    zxlogf(ERROR, "[%s] bar %u is 64bit but not mmio!", cfg_->addr(), bar_info.bar_id);
     return ZX_ERR_BAD_STATE;
   }
 
@@ -318,7 +318,7 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
   }
 
   std::array<char, 8> pretty_size = {};
-  zxlogf(TRACE, "%s Region %u: probed %s (%s%sprefetchable) [size=%s]", cfg_->addr(), bar_id,
+  zxlogf(DEBUG, "[%s] Region %u: probed %s (%s%sprefetchable) [size=%s]", cfg_->addr(), bar_id,
          (bar_info.is_mmio) ? "Memory" : "I/O ports", (bar_info.is_64bit) ? "64-bit, " : "",
          (bar_info.is_prefetchable) ? "" : "non-",
          format_size(pretty_size.data(), pretty_size.max_size(), bar_info.size));
@@ -358,10 +358,10 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     if (status == ZX_OK) {
       // If we successfully grabbed the allocation then we're finished because
       // our metadata already matches what we requested from the allocator.
-      zxlogf(TRACE, "%s preserved BAR %u's existing allocation.", cfg_->addr(), bar_info.bar_id);
+      zxlogf(TRACE, "[%s] preserved BAR %u's existing allocation.", cfg_->addr(), bar_info.bar_id);
       return ZX_OK;
     } else {
-      zxlogf(TRACE, "%s failed to preserve BAR %u address %lx, reallocating: %d", cfg_->addr(),
+      zxlogf(TRACE, "[%s] failed to preserve BAR %u address %lx, reallocating: %d", cfg_->addr(),
              bar_info.bar_id, bar_info.address, status);
       bar_info.address = 0;
     }
@@ -374,11 +374,15 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     // Request a base address of zero to signal we'll take any location in
     // the window.
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s couldn't allocate %#zx for bar %u: %d", cfg_->addr(), bar_info.size,
+      zxlogf(ERROR, "[%s] couldn't allocate %#zx for bar %u: %d", cfg_->addr(), bar_info.size,
              bar_info.bar_id, status);
       return status;
     }
   }
+
+  zxlogf(TRACE, "[%s] allocated { %#lx - %#lx } to bar[%u]", cfg_->addr(),
+         bar_info.allocation->base(), bar_info.allocation->base() + bar_info.allocation->size(),
+         bar_info.bar_id);
 
   // Now write the allocated address space to the BAR.
   uint16_t cmd_backup = cfg_->Read(Config::kCommand);
@@ -406,7 +410,7 @@ zx_status_t Device::ConfigureBars() {
   for (uint32_t bar_id = 0; bar_id < bar_count_; bar_id++) {
     status = ProbeBar(bar_id);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s error probing bar %u: %d. Skipping it.", cfg_->addr(), bar_id, status);
+      zxlogf(ERROR, "[%s] error probing bar %u: %d. Skipping it.", cfg_->addr(), bar_id, status);
       continue;
     }
 
@@ -414,7 +418,7 @@ zx_status_t Device::ConfigureBars() {
     if (bars_[bar_id].size) {
       status = AllocateBar(bar_id);
       if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to allocate bar %u: %d", cfg_->addr(), bar_id, status);
+        zxlogf(ERROR, "[%s] failed to allocate bar %u: %d", cfg_->addr(), bar_id, status);
       }
     }
 
@@ -429,7 +433,7 @@ zx_status_t Device::ConfigureBars() {
 }
 
 void Device::Unplug() {
-  zxlogf(TRACE, "[%s]%s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
+  zxlogf(TRACE, "[%s] %s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
   // Begin by completely nerfing this device, and preventing an new API
   // operations on it.  We need to be inside the dev lock to do this.  Note:
   // it is assumed that we will not disappear during any of this function,
@@ -469,7 +473,7 @@ void Device::Dump() const {
     for (auto& cap : caps_.list) {
       auto id = static_cast<Capability::Id>(cap.id());
       bool end = &cap == &caps_.list.back();
-      log.AppendPrintf("%s (%#x)%s", CapabilityIdToName(id), cap.id(), (!end) ? "," : " ");
+      log.AppendPrintf("%s (%#x)%s", CapabilityIdToName(id), cap.id(), (!end) ? ", " : " ");
     }
     zxlogf(TRACE, "%s", log.c_str());
     log.Clear();

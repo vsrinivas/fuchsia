@@ -257,85 +257,6 @@ zx_status_t x64Pciroot::PcirootConfigWrite32(const pci_bdf_t* address, uint16_t 
   return pci_pio_write32(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootGetAddressSpace(size_t size, zx_paddr_t in_base,
-                                               pci_address_space_t type, bool low,
-                                               zx_paddr_t* out_base, zx::resource* out_resource) {
-  zxlogf(DEBUG, "%s(size = %zu, request_addr = %#lx, type = %u, low = %u)\n", __func__, size,
-         in_base, type, low);
-  RegionAllocator* alloc = nullptr;
-  uint32_t rsrc_kind = ZX_RSRC_KIND_MMIO;
-  // Grab the correct allocator and check for overflow conditions at the same time
-  // because compiler overflow detecting deduces the check based on type sizes.
-  if (type == PCI_ADDRESS_SPACE_MMIO) {
-    if (low || in_base + size < UINT32_MAX) {
-      uint32_t overflow;
-      if (in_base && add_overflow(in_base, size, &overflow)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      alloc = &root_host_->Mmio32();
-    } else {
-      uint64_t overflow;
-      if (in_base && add_overflow(in_base, size, &overflow)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      alloc = &root_host_->Mmio64();
-    }
-  } else {
-    rsrc_kind = ZX_RSRC_KIND_IOPORT;
-    alloc = &root_host_->Io();
-  }
-
-  // If |out_base| is set then we have been requested to find address space
-  // starting at a given |base|.
-  RegionAllocator::Region::UPtr region_uptr;
-  zx_status_t status;
-  const ralloc_region_t region = {
-      .base = in_base,
-      .size = size,
-  };
-
-  // Some address space requests will want a given address / size because they are for
-  // devices already configured by the bios at boot.
-  if (in_base) {
-    status = alloc->GetRegion(region, region_uptr);
-  } else {
-    status = alloc->GetRegion(static_cast<uint64_t>(size), region_uptr);
-  }
-
-  if (status != ZX_OK) {
-    zxlogf(DEBUG, "pciroot: failed to get region { %#lx-%#lx, type = %s, low = %d }: %d.", in_base,
-           in_base + size, (type == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", low, status);
-    alloc->WalkAvailableRegions([](const ralloc_region_t* r) -> bool {
-      zxlogf(DEBUG, "region avail: [%#lx - %#lx]\n", r->base, r->base + r->size);
-      return true;
-    });
-    return status;
-  }
-
-  // Names will be generated in the format of: PCI### [mm]io ##bit
-  std::array<char, ZX_MAX_NAME_LEN> name = {};
-  snprintf(name.data(), name.size(), "%s %s", context_.name,
-           (type == PCI_ADDRESS_SPACE_MMIO) ? ((low) ? "mmio 32bit" : "mmio 64bit") : "io");
-  // Craft a resource handle for the other end. This handle will be held
-  // within the Root allocation in the pci bus driver will encompass the
-  // entirety of the address space it requested.
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  status = zx_resource_create(get_root_resource(), rsrc_kind | ZX_RSRC_FLAG_EXCLUSIVE,
-                              region_uptr->base, region_uptr->size, name.data(), name.size(),
-                              out_resource->reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *out_base = region_uptr->base;
-  // Discard the lifecycle aspect of the returned pointer, we'll be tracking it on the bus
-  // side of things.
-  region_uptr.release();
-  zxlogf(DEBUG, "pciroot: assigned [ %#lx-%#lx, type = %s, size = %#lx ] to bus driver.", *out_base,
-         *out_base + size, (type == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", size);
-  return ZX_OK;
-}
-
 zx_status_t x64Pciroot::Create(PciRootHost* root_host, x64Pciroot::Context ctx, zx_device_t* parent,
                                const char* name) {
   auto pciroot = new x64Pciroot(root_host, std::move(ctx), parent, name);
@@ -344,10 +265,6 @@ zx_status_t x64Pciroot::Create(PciRootHost* root_host, x64Pciroot::Context ctx, 
 
 #else  // TODO(cja): remove after the switch to userspace pci
 static zx_status_t pciroot_op_get_pci_platform_info(void*, pci_platform_info_t*) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t pciroot_op_get_pci_irq_info(void*, pci_irq_info_t*) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -382,11 +299,7 @@ static zx_status_t pciroot_op_allocate_msi(void*, uint32_t, bool, zx_handle_t*) 
 }
 
 static zx_status_t pciroot_op_get_address_space(void*, size_t, zx_paddr_t, pci_address_space_t,
-                                                bool, zx_paddr_t*, zx_handle_t*) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t pciroot_op_free_address_space(void*, zx_paddr_t, size_t, pci_address_space_t) {
+                                                bool, zx_paddr_t*, zx_handle_t*, zx_handle_t*) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -394,7 +307,6 @@ static pciroot_protocol_ops_t pciroot_proto = {
     .connect_sysmem = pciroot_op_connect_sysmem,
     .get_auxdata = pciroot_op_get_auxdata,
     .get_bti = pciroot_op_get_bti,
-    .get_pci_irq_info = pciroot_op_get_pci_irq_info,
     .get_pci_platform_info = pciroot_op_get_pci_platform_info,
     .driver_should_proxy_config = pciroot_op_driver_should_proxy_config,
     .config_read8 = pciroot_op_config_read8,
@@ -404,7 +316,6 @@ static pciroot_protocol_ops_t pciroot_proto = {
     .config_write16 = pciroot_op_config_write16,
     .config_write32 = pciroot_op_config_write32,
     .get_address_space = pciroot_op_get_address_space,
-    .free_address_space = pciroot_op_free_address_space,
     .allocate_msi = pciroot_op_allocate_msi,
 };
 

@@ -52,8 +52,8 @@ class PciRoot : public UpstreamNode {
   // 3) pio which will attempt to allocate from the pio allocator
   PciRoot(uint32_t mbus_id, ddk::PcirootProtocolClient proto)
       : UpstreamNode(UpstreamNode::Type::ROOT, mbus_id),
-        mmio_regions_(proto, PCI_ADDRESS_SPACE_MMIO, true),
-        pf_mmio_regions_(proto, PCI_ADDRESS_SPACE_MMIO, false),
+        mmio_regions_(proto, PCI_ADDRESS_SPACE_MEMORY, true),
+        pf_mmio_regions_(proto, PCI_ADDRESS_SPACE_MEMORY, false),
         pio_regions_(proto, PCI_ADDRESS_SPACE_IO, false) {}
 
   PciRootAllocator mmio_regions_;

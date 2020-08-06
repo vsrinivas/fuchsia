@@ -28,19 +28,18 @@ zx_status_t PciAllocation::CreateVmObject(zx::vmo* out_vmo) const {
 
 zx_status_t PciRootAllocator::AllocateWindow(zx_paddr_t in_base, size_t size,
                                              std::unique_ptr<PciAllocation>* out_alloc) {
-  zx_paddr_t out_base;
-  zx::resource res;
-  zx_status_t status = pciroot_.GetAddressSpace(size, in_base, type_, low_, &out_base, &res);
+  zx_paddr_t out_base = {};
+  zx::resource res = {};
+  zx::eventpair ep = {};
+  zx_status_t status = pciroot_.GetAddressSpace(in_base, size, type_, low_, &out_base, &res, &ep);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to allocate [%#8lx, %#8lx, %s] from root: %d", in_base, size,
-           (type_ == PCI_ADDRESS_SPACE_MMIO) ? "mmio" : "io", status);
+           (type_ == PCI_ADDRESS_SPACE_MEMORY) ? "mmio" : "io", status);
     return status;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&]() { pciroot_.FreeAddressSpace(out_base, size, type_); });
-
-  *out_alloc = std::make_unique<PciRootAllocation>(pciroot_, type_, std::move(res), out_base, size);
-  cleanup.cancel();
+  *out_alloc = std::make_unique<PciRootAllocation>(pciroot_, type_, std::move(res), std::move(ep),
+                                                   out_base, size);
   return ZX_OK;
 }
 

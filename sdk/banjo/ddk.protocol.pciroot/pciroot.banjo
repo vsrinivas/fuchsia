@@ -3,16 +3,8 @@
 // found in the LICENSE file.
 
 library ddk.protocol.pciroot;
-// hopefully this includes ddk
 using zircon.hw.pci;
 using zx;
-
-// These may need to remain entirely in the kernel since platform_ctx
-// is an exposed pointer, and we will need a kernel shim for IRQ processing
-// anyway.
-struct MsiBlock {
-    uint64 reserved;
-};
 
 /// This structure is the primary means of passing PCI platform information from
 /// the platform bus implementation to the PCI bus driver. If an ecam is found
@@ -27,15 +19,9 @@ struct PciPlatformInfo {
     handle<vmo> ecam_vmo;
 };
 
-/// TODO(cja): Fill this in for IRQ metadata
-struct PciIrqInfo {
-    uint64 reserved;
-};
-
-/// TODO(cja): possibly necessary now that IO config access is proxied to pciroot.
 enum PciAddressSpace : uint8 {
-    MMIO = 0;
-    IO = 0x1;
+    Memory = 0;
+    Io = 0x1;
 };
 
 [Layout = "ddk-protocol"]
@@ -45,8 +31,6 @@ protocol Pciroot {
     ConnectSysmem(handle connection) -> (zx.status s);
     GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
-    /// Get IRQ information, including the swizzle table.
-    GetPciIrqInfo() -> (zx.status s, PciIrqInfo info);
     /// Get the platform information structure from the pciroot protocol to be used for bus init.
     GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
 
@@ -55,7 +39,7 @@ protocol Pciroot {
     /// necessary in cases of IO config on x86, or for controllers that require configuration to
     /// map in device config headers.
     DriverShouldProxyConfig() -> (bool use_proxy);
-    /// Read 8 bytes from config space for device at bdf address |address|, offset |offset|.
+    /// Read 8 bytes from config space for device at bdf address |address|:we, offset |offset|.
     ConfigRead8(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
     /// Read 16 bytes from config space for device at bdf address |address|, offset |offset|.
     ConfigRead16(zircon.hw.pci.PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
@@ -68,18 +52,16 @@ protocol Pciroot {
     /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
     ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
     /// Request address space reservations from platform bus to use for mapping bars / bridges
-    /// |in_base| is an optional requested start address which should otherwise be 0. |len| is the
+    /// |in_base| is an optional requested start address which should otherwise be 0. |size| is the
     /// size of the request in bytes. |low| dictates whether the allocation should be an address
     /// below 4 GB or not.
     ///
-    /// On success, the base address is provided in |out_base| and the size is |len|.
+    /// On success, the base address is provided in |out_base| and the size is |size|.
     ///
-    /// An error will be returned if |len| cannot be fulfilled, |low| is set with |in_base|+|len|
+    /// An error will be returned if |size| cannot be fulfilled, |low| is set with |in_base|+|size|
     /// being >=4GB, or if a requested |in_base| cannot be provided.
-    GetAddressSpace(zx.paddr in_base, usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base, handle<resource> resource);
-    /// Free address space reserved via GetAddressSpace from platform bus to use for mapping bars / bridges
-    /// TODO(cja): parameters/return are not finalized.
-    FreeAddressSpace(zx.paddr base, usize len, PciAddressSpace type) -> (zx.status s);
+    GetAddressSpace(zx.paddr in_base, usize size, PciAddressSpace type, bool low)
+        -> (zx.status s, zx.paddr base, handle<resource> resource, handle<eventpair> token);
     /// Allocate |msi_count| MSIs and return a handle to the backing MsiAllocation.
     AllocateMsi(uint32 msi_count, bool can_target_64bit) -> (zx.status s, handle<msi> allocation);
 };

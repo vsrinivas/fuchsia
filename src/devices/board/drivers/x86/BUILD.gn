@@ -133,6 +133,7 @@ driver_module("platform-bus-x86") {
     "//zircon/public/lib/lazy_init",
     "//zircon/public/lib/region-alloc",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-unit-test",

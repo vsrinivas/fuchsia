@@ -18,11 +18,12 @@ class PciRootHostTests : public zxtest::Test {
  protected:
   void SetUp() final {
     ASSERT_OK(fake_root_resource_create(fake_root_.reset_and_get_address()));
-    root_host_.reset(new PciRootHost(fake_root_.borrow()));
+    root_host_ = std::make_unique<PciRootHost>(zx::unowned_resource(fake_root_.borrow()),
+                                               PCI_ADDRESS_SPACE_IO);
   }
 
   zx::resource& fake_root() { return fake_root_; }
-  PciRootHost& root_host() { return *root_host_.get(); }
+  PciRootHost& root_host() { return *root_host_; }
 
  private:
   zx::resource fake_root_;
@@ -43,7 +44,9 @@ TEST_F(PciRootHostTests, ResourceAllocationLifecycle) {
     ASSERT_OK(root_host().AllocateMmio64Window(kRangeStart, kRangeSize, &res1, &endpoint1));
     // That position should not work.
     ASSERT_EQ(ZX_ERR_NOT_FOUND,
-              root_host().AllocateMmio64Window(kRangeStart, kRangeSize, &res2, &endpoint2));
+              root_host()
+                  .AllocateMmio64Window(kRangeStart, kRangeSize, &res2, &endpoint2)
+                  .status_value());
     // But an allocation of the same size with no base should.
     ASSERT_OK(root_host().AllocateMmio64Window(0, kRangeSize, &res3, &endpoint3));
   }

@@ -52,10 +52,6 @@ class x64Pciroot : public PcirootBase {
   virtual zx_status_t PcirootConnectSysmem(zx::handle handle) final;
   virtual zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
   virtual zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
-  virtual zx_status_t PcirootGetAddressSpace(size_t size, zx_paddr_t in_base,
-                                             pci_address_space_t type, bool low,
-                                             zx_paddr_t* out_base,
-                                             zx::resource* out_resource) final;
   virtual zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset,
                                          uint8_t* value) final;
   virtual zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,

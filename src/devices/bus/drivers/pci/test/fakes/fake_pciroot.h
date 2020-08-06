@@ -46,7 +46,6 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   }
   zx_status_t PcirootConnectSysmem(zx::handle handle) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PcirootGetPciIrqInfo(pci_irq_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
   bool PcirootDriverShouldProxyConfig(void) { return false; }
   zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) {
     if (address->bus_id < bus_start_ || address->bus_id > bus_end_) {
@@ -100,13 +99,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
                            out_allocation->reset_and_get_address());
   }
 
-  zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t len, pci_address_space_t type,
-                                     bool low, uint64_t* out_base, zx::resource* resource) {
+  zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t size, pci_address_space_t type,
+                                     bool low, uint64_t* out_base, zx::resource* resource,
+                                     zx::eventpair* eventpair) {
     allocation_cnt_++;
-    return ZX_OK;
-  }
-  zx_status_t PcirootFreeAddressSpace(uint64_t base, size_t len, pci_address_space_t type) {
-    allocation_cnt_--;
     return ZX_OK;
   }
 

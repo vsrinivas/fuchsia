@@ -73,8 +73,8 @@ class PciAllocation {
   virtual zx_status_t CreateVmObject(zx::vmo* out_vmo) const;
 
  protected:
-  PciAllocation(zx::resource&& resource) : resource_(std::move(resource)) {}
-  const zx::resource resource_;
+  explicit PciAllocation(zx::resource&& resource) : resource_(std::move(resource)) {}
+  const zx::resource& resource() { return resource_; }
 
  private:
   // Allow PciRegionAllocator / Device to duplicate the resource for use further
@@ -87,6 +87,7 @@ class PciAllocation {
   //    IO permission bits.
   // This is only needed for PciRegionAllocators because PciRootAllocators do not
   // hold a backing PciAllocation object.
+  const zx::resource resource_;
   friend class PciRegionAllocator;
   friend class Device;
   const zx::resource& resource() const { return resource_; }
@@ -95,22 +96,23 @@ class PciAllocation {
 class PciRootAllocation final : public PciAllocation {
  public:
   PciRootAllocation(const ddk::PcirootProtocolClient client, const pci_address_space_t type,
-                    zx::resource&& resource, zx_paddr_t base, size_t size)
+                    zx::resource resource, zx::eventpair ep, zx_paddr_t base, size_t size)
       : PciAllocation(std::move(resource)),
         pciroot_client_(client),
-        type_(type),
+        ep_(std::move(ep)),
         base_(base),
         size_(size) {}
-  ~PciRootAllocation() final { pciroot_client_.FreeAddressSpace(base_, size_, type_); }
+  ~PciRootAllocation() final = default;
 
   zx_paddr_t base() const final { return base_; }
   size_t size() const final { return size_; }
 
  private:
   const ddk::PcirootProtocolClient pciroot_client_;
-  const pci_address_space_t type_;
+  zx::eventpair ep_;
   const zx_paddr_t base_;
   const size_t size_;
+  // The platform bus driver is notified the allocation is free when this eventpair is closed.
 };
 
 class PciRegionAllocation final : public PciAllocation {

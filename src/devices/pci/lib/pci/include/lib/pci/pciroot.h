@@ -51,7 +51,6 @@ class PcirootBase : public ddk::Device<PcirootBase>,
   virtual zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t PcirootGetPciIrqInfo(pci_irq_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
 
   // If |true| is returned by the Pciroot implementation then the bus driver
   // will send all config space reads and writes over the Pciroot protocol
@@ -102,15 +101,37 @@ class PcirootBase : public ddk::Device<PcirootBase>,
     // syscalls, so this likely suits most platforms.
     return root_host_->AllocateMsi(msi_cnt, allocation);
   }
-  // These methods correspond to address space reservations needed by the bus
-  // driver for providing a place to map bridges and bars.
-  virtual zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t len,
+
+  // Allocate out of the IO / MMIO32 allocators if required, otherwise try to use whichever
+  // MMIO allocator can fulfill the given request of specified base and size.
+  virtual zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t size,
                                              pci_address_space_t type, bool low, uint64_t* out_base,
-                                             zx::resource* resource) {
-    return ZX_ERR_NOT_SUPPORTED;
+                                             zx::resource* out_resource,
+                                             zx::eventpair* out_eventpair) {
+    if (type == PCI_ADDRESS_SPACE_IO) {
+      auto result = root_host_->AllocateIoWindow(in_base, size, out_resource, out_eventpair);
+      if (result.is_ok()) {
+        *out_base = result.value();
+      }
+      return result.status_value();
+    }
+
+    if (!low) {
+      auto result = root_host_->AllocateMmio64Window(in_base, size, out_resource, out_eventpair);
+      if (result.is_ok()) {
+        *out_base = result.value();
+      }
+      return result.status_value();
+    }
+
+    auto result = root_host_->AllocateMmio32Window(in_base, size, out_resource, out_eventpair);
+    if (result.is_ok()) {
+      *out_base = result.value();
+    }
+    return result.status_value();
   }
 
-  zx_status_t PcirootFreeAddressSpace(uint64_t base, size_t len, pci_address_space_t type) {
+  zx_status_t PcirootFreeAddressSpace(uint64_t base, size_t size, pci_address_space_t type) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
