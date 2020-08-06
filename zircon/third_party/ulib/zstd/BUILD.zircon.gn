@@ -36,7 +36,7 @@ config("zstd-config") {
       [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
-zstd_sources = [
+zstd_common_sources = [
   "$zstd/lib/common/debug.c",
   "$zstd/lib/common/entropy_common.c",
   "$zstd/lib/common/error_private.c",
@@ -44,6 +44,9 @@ zstd_sources = [
   "$zstd/lib/common/pool.c",
   "$zstd/lib/common/threading.c",
   "$zstd/lib/common/xxhash.c",
+]
+
+zstd_compress_sources = [
   "$zstd/lib/compress/fse_compress.c",
   "$zstd/lib/compress/hist.c",
   "$zstd/lib/compress/huf_compress.c",
@@ -56,18 +59,22 @@ zstd_sources = [
   "$zstd/lib/compress/zstd_ldm.c",
   "$zstd/lib/compress/zstd_opt.c",
   "$zstd/lib/compress/zstdmt_compress.c",
-  "$zstd/lib/decompress/huf_decompress.c",
-  "$zstd/lib/decompress/zstd_ddict.c",
-  "$zstd/lib/decompress/zstd_decompress.c",
-  "$zstd/lib/decompress/zstd_decompress_block.c",
   "$zstd/lib/dictBuilder/cover.c",
   "$zstd/lib/dictBuilder/divsufsort.c",
   "$zstd/lib/dictBuilder/fastcover.c",
   "$zstd/lib/dictBuilder/zdict.c",
 ]
 
+zstd_decompress_sources = [
+  "$zstd/lib/decompress/huf_decompress.c",
+  "$zstd/lib/decompress/zstd_ddict.c",
+  "$zstd/lib/decompress/zstd_decompress.c",
+  "$zstd/lib/decompress/zstd_decompress_block.c",
+]
+
 zx_library("zstd") {
   host = true
+  static = true
 
   # Exported as a static library as the config above cannot be conveyed via the
   # exporting mechanism but is absolutely necessary in order to properly compile
@@ -75,7 +82,8 @@ zx_library("zstd") {
   sdk = "static"
   sdk_headers = [ "zstd/zstd.h" ]
 
-  sources = zstd_sources + [ "$zstd/lib/common/zstd_common.c" ]
+  sources = zstd_common_sources + zstd_compress_sources +
+            zstd_decompress_sources + [ "$zstd/lib/common/zstd_common.c" ]
 
   configs += [ ":zstd-config" ]
 
@@ -90,19 +98,22 @@ zx_library("zstd") {
   configs += [ "$zx_build/public/gn/config:optimize_speed" ]
 }
 
-# The standalone varaint of this library does not depend malloc or free and is
-# suitable for use in userboot.
-zx_library("zstd-standalone") {
-  sources = zstd_sources + [ "zstd_common_standalone.c" ]
+# The standalone varaint of this library supports only decompression and does
+# not depend malloc or free so it is suitable for use in userboot and physboot.
+zx_library("zstd-decompress-standalone") {
+  static = true
+
+  sources = zstd_common_sources + zstd_decompress_sources +
+            [ "zstd_common_standalone.c" ]
 
   defines = [
-    # The dynamic dispatch between the two implementations creates writable data,
-    # which is incompatible with being linked into userboot.
-    "HUF_FORCE_DECOMPRESS_X2=",
+    # The dynamic dispatch between the two implementations creates writable
+    # data, which is incompatible with being linked into userboot or physboot.
+    "HUF_FORCE_DECOMPRESS_X2",
 
     # Removes some dead code that was causing the library to attempt to link
     # against malloc and free.
-    "ZSTDLIB_STANDALONE=",
+    "ZSTDLIB_STANDALONE",
   ]
 
   configs += [ ":zstd-config" ]
@@ -133,6 +144,8 @@ config("zstd-seekable-public-config") {
 
 zx_library("zstdseek") {
   host = true
+  static = true
+
   sources = [
     "$zstd/contrib/seekable_format/zstdseek_compress.c",
     "$zstd/contrib/seekable_format/zstdseek_decompress.c",

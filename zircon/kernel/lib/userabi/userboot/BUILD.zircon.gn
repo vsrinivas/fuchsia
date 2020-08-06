@@ -109,7 +109,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/third_party/ulib/musl/src/exit:abort",
       "$zx/third_party/ulib/musl/src/string:minimal_str",
       "$zx/third_party/ulib/musl/src/string:stdmem",
-      "$zx/third_party/ulib/zstd:zstd-standalone",
+      "$zx/third_party/ulib/zstd:zstd-decompress-standalone",
     ]
   }
 
