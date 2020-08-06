@@ -432,9 +432,6 @@ template("package") {
           }
         }
         url += url_resource_path
-      } else {
-        assert(!defined(test.log_settings),
-               "Only test components can define 'log_settings'.")
       }
 
       if (!is_disabled) {
