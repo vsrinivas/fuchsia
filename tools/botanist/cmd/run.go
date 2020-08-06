@@ -17,7 +17,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -269,7 +268,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if conn != nil {
 			defer conn.Close()
 		}
-		return r.runAgainstTarget(ctx, t0, args, socketPath)
+		err := r.runAgainstTarget(ctx, t0, args, socketPath)
+		if err != nil {
+			return fmt.Errorf("command %v failed: %w", args, err)
+		}
+		return nil
 	})
 
 	return eg.Wait()
@@ -438,12 +441,7 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	r.blobURL = os.ExpandEnv(r.blobURL)
 	r.repoURL = os.ExpandEnv(r.repoURL)
 	if err := r.execute(ctx, expandedArgs); err != nil {
-		var errExit *exec.ExitError
-		if errors.As(err, &errExit) {
-			logger.Errorf(ctx, "command %v failed: %v", expandedArgs, errExit)
-		} else {
-			logger.Errorf(ctx, "%v", err)
-		}
+		logger.Errorf(ctx, "%v", err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
