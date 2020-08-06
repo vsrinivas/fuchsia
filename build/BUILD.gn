@@ -721,7 +721,6 @@ group("deprecated_package_underscore") {
     "//src/virtualization/tests:guest_integration_tests_utils",
     "//src/virtualization/tests:guest_unit_tests",
     "//src/virtualization/tests:termina_integration_tests",
-    "//third_party/asio:asio_unittests",
     "//third_party/boringssl:boringssl_fuzzers_pkg",
     "//third_party/boringssl:boringssl_tests",
     "//third_party/boringssl:boringssl_tool",

@@ -42,7 +42,6 @@ group("all") {
     "//garnet/packages/examples:http",
     "//garnet/packages/examples:inspection",
     "//garnet/packages/examples:intl",
-    "//garnet/packages/examples:netstack",
     "//garnet/packages/examples:overnet",
     "//garnet/packages/examples:rust",
     "//garnet/packages/examples:scenic",
@@ -59,11 +58,6 @@ group("all") {
 group("eth-rs") {
   testonly = true
   public_deps = [ "//examples/rust/eth-rs:eth-rs" ]
-}
-
-group("netstack") {
-  testonly = true
-  public_deps = [ "//garnet/examples/network:nc" ]
 }
 
 group("http") {
