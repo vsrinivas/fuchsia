@@ -16,6 +16,28 @@ pub struct Task<T> {
 
 impl Task<()> {
     /// Detach this task so that it can run independently in the background.
+    ///
+    /// *Note*: this is usually not what you want. This API severs the control flow from the
+    /// caller, making it impossible to return values (including errors). If your goal is to run
+    /// multiple futures concurrently, consider if futures combinators such as
+    ///
+    /// * [`futures::future::join`]
+    /// * [`futures::future::select`]
+    /// * [`futures::select`]
+    ///
+    /// their error-aware variants
+    ///
+    /// * [`futures::future::try_join`]
+    /// * [`futures::future::try_select`]
+    ///
+    /// or their stream counterparts
+    ///
+    /// * [`futures::stream::StreamExt::for_each`]
+    /// * [`futures::stream::StreamExt::for_each_concurrent`]
+    /// * [`futures::stream::TryStreamExt::try_for_each`]
+    /// * [`futures::stream::TryStreamExt::try_for_each_concurrent`]
+    ///
+    /// can meet your needs.
     pub fn detach(self) {
         self.remote_handle.forget();
     }
