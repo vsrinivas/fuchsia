@@ -34,6 +34,7 @@ group("tests") {
     "pwm:tests",
     "ram:tests",
     "rtc:tests",
+    "securemem:tests",
     "serial:tests",
     "shareddma:tests",
     "spi:tests",

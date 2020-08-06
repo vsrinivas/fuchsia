@@ -24,7 +24,6 @@ common_test_contents = [
   "//src/devices/power/drivers/as370-power:as370-power-test",
   "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test",
   "//src/devices/power/drivers/power:power-test",
-  "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test",
   "//src/devices/serial/drivers/uart16550:uart16550-test",
   "//src/devices/spi/drivers/mtk-spi:mtk-spi-test",
   "//src/devices/sysmem/tests/sysmem",
