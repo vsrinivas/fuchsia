@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("command.gni")
+import("plugins.gni")
 
 # Defines a FFX plugin
 #
@@ -70,22 +72,72 @@ template("ffx_plugin") {
   if (defined(invoker.name)) {
     output_name = invoker.name
   }
+  suite_name = output_name + "_suite"
+  tests_deps = []
 
   if (host_toolchain == current_toolchain) {
+    args_deps = []
+    if (defined(invoker.args_deps)) {
+      args_deps += invoker.args_deps
+    }
+
+    p_deps = []
+    if (defined(invoker.plugin_deps)) {
+      foreach(d, invoker.plugin_deps) {
+        dep = d + "_suite"
+        p_deps += [ dep ]
+      }
+
+      foreach(d, invoker.plugin_deps) {
+        dep = d + "_args"
+        args_deps += [ dep ]
+      }
+
+      sub_cmd_gen = output_name + "_sub_command_gen"
+      command(sub_cmd_gen) {
+        output_name = "cmd_args.rs"
+        plugin_deps = invoker.plugin_deps
+      }
+
+      sub_cmd = output_name + "_sub_command"
+      rustc_library(sub_cmd) {
+        source_root = "$target_gen_dir/cmd_args.rs"
+        deps = args_deps + [
+                 ":" + sub_cmd_gen,
+                 "//third_party/rust_crates:argh",
+               ]
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "name",
+                                 "deps",
+                                 "args_deps",
+                                 "extra_deps",
+                                 "args_source_root",
+                                 "source_root",
+                                 "target_name",
+                               ])
+      }
+
+      args_deps += [ ":" + sub_cmd ]
+    }
+
     args = output_name + "_args"
     args_source_root = "src/args.rs"
     if (defined(invoker.args_source_root)) {
       args_source_root = invoker.args_source_root
     }
 
-    args_deps = []
-    if (defined(invoker.args_deps)) {
-      args_deps += invoker.args_deps
+    extra_deps = []
+    if (defined(invoker.extra_deps)) {
+      foreach(d, invoker.extra_deps) {
+        extra_deps += [ d ]
+      }
     }
 
     rustc_library(args) {
       source_root = args_source_root
-      deps = args_deps + [
+      deps = args_deps + extra_deps + [
                "//src/developer/ffx/core:lib",
                "//third_party/rust_crates:argh",
              ]
@@ -107,8 +159,6 @@ template("ffx_plugin") {
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//src/connectivity/overnet/lib/hoist",
       "//src/developer/ffx/core:lib",
-      "//src/developer/ffx:ffx_lib_args",
-      "//src/developer/ffx:ffx_lib_sub_command",
       "//src/developer/ffx/config:lib",
       "//src/diagnostics/lib/selectors",
       "//src/lib/fidl/rust/fidl",
@@ -122,8 +172,71 @@ template("ffx_plugin") {
       lib_deps += invoker.deps
     }
 
-    rustc_library(output_name) {
-      deps = lib_deps
+    file_source_root = "src/lib.rs"
+    if (defined(invoker.source_root)) {
+      file_source_root = invoker.source_root
+    }
+
+    source_exists = exec_script("//src/developer/ffx/build/file_exists.py",
+                                [
+                                  "-file_name",
+                                  rebase_path(file_source_root),
+                                ],
+                                "list lines",
+                                [ "//src/developer/ffx/build/file_exists.py" ])
+
+    plugins_name = output_name + "_plugins"
+    execution_lib = output_name
+    includes_execution = "false"
+    if (source_exists == [ "true" ]) {
+      includes_execution = "true"
+    }
+
+    plugins(plugins_name) {
+      output_name = "plugins.rs"
+      args = args
+      if (defined(invoker.plugin_deps)) {
+        sub_command = sub_cmd
+      }
+      execution_lib = execution_lib
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "output_name",
+                               "args",
+                             ])
+    }
+
+    suite_deps = lib_deps + p_deps
+    suite_deps += [
+      ":" + args,
+      ":" + plugins_name,
+    ]
+    if (defined(invoker.plugin_deps)) {
+      suite_deps += [ ":" + sub_cmd ]
+    }
+
+    if (source_exists == [ "true" ]) {
+      rustc_library(output_name) {
+        deps = lib_deps
+        non_rust_deps = [ "//third_party/boringssl" ]
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "name",
+                                 "deps",
+                                 "non_rust_deps",
+                                 "target_name",
+                               ])
+      }
+      suite_deps += [ ":" + execution_lib ]
+      tests_deps += [ ":" + output_name + "_test" ]
+    }
+
+    rustc_library(suite_name) {
+      source_root = "$target_gen_dir/plugins.rs"
+      deps = suite_deps
       non_rust_deps = [ "//third_party/boringssl" ]
       forward_variables_from(invoker,
                              "*",
@@ -136,11 +249,19 @@ template("ffx_plugin") {
     }
   }
 
+  if (defined(invoker.plugin_deps)) {
+    foreach(d, invoker.plugin_deps) {
+      test = get_label_info(d, "dir")
+      test_name = get_label_info(d, "name")
+      tests_deps += [ test + ":" + test_name + "_tests" ]
+    }
+  }
+
   group(output_name + "_tests") {
     testonly = true
-    deps = [
-      ":" + args + "_test($host_toolchain)",
-      ":" + output_name + "_test($host_toolchain)",
-    ]
+    deps = tests_deps + [
+             ":" + args + "_test($host_toolchain)",
+             ":" + suite_name + "_test($host_toolchain)",
+           ]
   }
 }

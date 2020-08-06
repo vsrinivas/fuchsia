@@ -25,34 +25,9 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/ffx/packaging:ffx_packaging",
       "//src/developer/ffx/plugins/component:ffx_component",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
-      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite",
-      "//src/developer/ffx/plugins/target:ffx_target_suite",
+      "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin",
+      "//src/developer/ffx/plugins/target:ffx_target",
       "//src/developer/ffx/plugins/zxdb:ffx_zxdb_plugin",
-    ]
-
-    deps = [
-      "config:lib",
-      "core:lib",
-      "daemon:lib",
-      "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-      "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
-      "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
-      "//src/connectivity/overnet/lib/hoist",
-      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_args",
-      "//src/developer/ffx/plugins/daemon:ffx_daemon_suite_sub_command",
-      "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
-      "//src/lib/fidl/rust/fidl",
-      "//src/lib/fuchsia-async",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:argh",
-
-      # "//third_party/rust_crates:async-std",
-      # "//third_party/rust_crates:chrono",
-      "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:log",
-      "//third_party/rust_crates:simplelog",
     ]
   }
 }

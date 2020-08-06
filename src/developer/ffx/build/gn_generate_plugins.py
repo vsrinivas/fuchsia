@@ -34,11 +34,20 @@ def main(args_list=None):
     parser.add_argument(
         '--deps',
         help='Comma-seperated libraries to generate code from',
-        required=True)
+        required=False)
 
     parser.add_argument('--args', help='args lib', required=True)
 
-    parser.add_argument('--sub_command', help='sub command lib', required=True)
+    parser.add_argument('--sub_command', help='sub command lib', required=False)
+
+    parser.add_argument(
+        '--includes_execution', help='includes execution code', required=True)
+
+    parser.add_argument(
+        '--includes_subcommands', help='includes subcommands', required=True)
+
+    parser.add_argument(
+        '--execution_lib', help='name of execution lib', required=True)
 
     if args_list:
         args = parser.parse_args(args_list)
@@ -51,14 +60,21 @@ def main(args_list=None):
         trim_blocks=True,
         lstrip_blocks=True)
     template = env.get_template('plugins.md')
-    libraries = args.deps.split(',')
-    plugins = map(wrap_deps, libraries)
+    if args.deps:
+        libraries = args.deps.split(',')
+        plugins = map(wrap_deps, libraries)
+    else:
+        libraries = ""
+        plugins = []
     with open(args.out, 'w') as file:
         file.write(
             template.render(
                 plugins=plugins,
                 suite_subcommand_lib=args.sub_command,
-                suite_args_lib=args.args))
+                suite_args_lib=args.args,
+                includes_subcommands=args.includes_subcommands,
+                includes_execution=args.includes_execution,
+                execution_lib=args.execution_lib))
 
 
 if __name__ == '__main__':
