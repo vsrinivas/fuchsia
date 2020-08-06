@@ -6,9 +6,13 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("ninjalog") {
+  deps = [ "//tools/build/compdb" ]
 }
 
 go_test("ninjalog_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjalog" ]
-  deps = [ ":ninjalog" ]
+  deps = [
+    ":ninjalog",
+    "//tools/build/compdb",
+  ]
 }

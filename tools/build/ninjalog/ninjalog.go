@@ -6,6 +6,7 @@ package ninjalog
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/build/compdb"
 )
 
 // Step is one step in ninja_log file.
@@ -25,10 +28,12 @@ type Step struct {
 	// htts://github.com/martine/ninja/blob/master/src/timestamp.h
 	Restat  int
 	Out     string
-	CmdHash string
+	CmdHash uint64
 
 	// other outs for the same CmdHash if dedup'ed.
 	Outs []string
+	// compilation database command
+	Command *compdb.Command
 }
 
 // Duration reports step's duration.
@@ -220,12 +225,16 @@ func lineToStep(line string) (Step, error) {
 	step.End = time.Duration(e) * time.Millisecond
 	step.Restat = int(rs)
 	step.Out = fields[3]
-	step.CmdHash = fields[4]
+	ch, err := strconv.ParseUint(fields[4], 16, 64)
+	if err != nil {
+		return step, fmt.Errorf("bad hash %s:%w", fields[4], err)
+	}
+	step.CmdHash = ch
 	return step, nil
 }
 
 func stepToLine(s Step) string {
-	return fmt.Sprintf("%d\t%d\t%d\t%s\t%s",
+	return fmt.Sprintf("%d\t%d\t%d\t%s\t%x",
 		s.Start.Nanoseconds()/int64(time.Millisecond),
 		s.End.Nanoseconds()/int64(time.Millisecond),
 		s.Restat,
@@ -256,7 +265,7 @@ func Dump(w io.Writer, steps []Step) error {
 // Dedup only returns the first step for these steps.
 // steps will be sorted by start time.
 func Dedup(steps []Step) []Step {
-	m := make(map[string]*Step)
+	m := make(map[uint64]*Step)
 	sort.Sort(Steps(steps))
 	var dedup []Step
 	for _, s := range steps {
@@ -268,6 +277,69 @@ func Dedup(steps []Step) []Step {
 		m[s.CmdHash] = &dedup[len(dedup)-1]
 	}
 	return dedup
+}
+
+// MurmurHash64A computes Murmur hash using the same exact
+// algorithm and seed that is used by Ninja in .ninja_log.
+// See https://github.com/ninja-build/ninja/blob/cc79afb/src/build_log.cc#L64
+func MurmurHash64A(data []byte) uint64 {
+	const seed = uint64(0xDECAFBADDECAFBAD)
+	const m = uint64(0xc6a4a7935bd1e995)
+	const r = 47
+	var h = seed ^ (uint64(len(data)) * m)
+	for len(data) >= 8 {
+		k := binary.LittleEndian.Uint64(data[0:])
+		k *= m
+		k ^= k >> r
+		k *= m
+		h ^= k
+		h *= m
+		data = data[8:]
+	}
+	switch len(data) & 7 {
+	case 7:
+		h ^= uint64(data[6]) << 48
+		fallthrough
+	case 6:
+		h ^= uint64(data[5]) << 40
+		fallthrough
+	case 5:
+		h ^= uint64(data[4]) << 32
+		fallthrough
+	case 4:
+		h ^= uint64(data[3]) << 24
+		fallthrough
+	case 3:
+		h ^= uint64(data[2]) << 16
+		fallthrough
+	case 2:
+		h ^= uint64(data[1]) << 8
+		fallthrough
+	case 1:
+		h ^= uint64(data[0])
+		h *= m
+	}
+	h ^= h >> r
+	h *= m
+	h ^= h >> r
+	return h
+}
+
+// Populate the steps with information from the compilation database.
+func Populate(steps []Step, commands []compdb.Command) []Step {
+	m := make(map[uint64]compdb.Command)
+	// TODO(phosek): consider computing hashes in parallel
+	for _, c := range commands {
+		m[MurmurHash64A([]byte(c.Command))] = c
+	}
+	var populated []Step
+	for _, s := range steps {
+		if c, ok := m[s.CmdHash]; ok {
+			s.Command = &c
+		}
+		populated = append(populated, s)
+	}
+	return populated
 }
 
 // TotalTime returns startup time and end time of ninja, and accumulated time

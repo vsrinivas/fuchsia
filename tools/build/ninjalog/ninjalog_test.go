@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/build/compdb"
 )
 
 var (
@@ -30,43 +32,43 @@ var (
 			Start:   76 * time.Millisecond,
 			End:     187 * time.Millisecond,
 			Out:     "resources/inspector/devtools_extension_api.js",
-			CmdHash: "75430546595be7c2",
+			CmdHash: 0x75430546595be7c2,
 		},
 		{
 			Start:   80 * time.Millisecond,
 			End:     284 * time.Millisecond,
 			Out:     "gen/autofill_regex_constants.cc",
-			CmdHash: "fa33c8d7ce1d8791",
+			CmdHash: 0xfa33c8d7ce1d8791,
 		},
 		{
 			Start:   78 * time.Millisecond,
 			End:     286 * time.Millisecond,
 			Out:     "gen/angle/commit_id.py",
-			CmdHash: "4ede38e2c1617d8c",
+			CmdHash: 0x4ede38e2c1617d8c,
 		},
 		{
 			Start:   79 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "gen/angle/copy_compiler_dll.bat",
-			CmdHash: "9fb635ad5d2c1109",
+			CmdHash: 0x9fb635ad5d2c1109,
 		},
 		{
 			Start:   141 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "PepperFlash/manifest.json",
-			CmdHash: "324f0a0b77c37ef",
+			CmdHash: 0x324f0a0b77c37ef,
 		},
 		{
 			Start:   142 * time.Millisecond,
 			End:     288 * time.Millisecond,
 			Out:     "PepperFlash/libpepflashplayer.so",
-			CmdHash: "1e2c2b7845a4d4fe",
+			CmdHash: 0x1e2c2b7845a4d4fe,
 		},
 		{
 			Start:   287 * time.Millisecond,
 			End:     290 * time.Millisecond,
 			Out:     "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
-			CmdHash: "b211d373de72f455",
+			CmdHash: 0xb211d373de72f455,
 		},
 	}
 
@@ -75,43 +77,43 @@ var (
 			Start:   76 * time.Millisecond,
 			End:     187 * time.Millisecond,
 			Out:     "resources/inspector/devtools_extension_api.js",
-			CmdHash: "75430546595be7c2",
+			CmdHash: 0x75430546595be7c2,
 		},
 		{
 			Start:   78 * time.Millisecond,
 			End:     286 * time.Millisecond,
 			Out:     "gen/angle/commit_id.py",
-			CmdHash: "4ede38e2c1617d8c",
+			CmdHash: 0x4ede38e2c1617d8c,
 		},
 		{
 			Start:   79 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "gen/angle/copy_compiler_dll.bat",
-			CmdHash: "9fb635ad5d2c1109",
+			CmdHash: 0x9fb635ad5d2c1109,
 		},
 		{
 			Start:   80 * time.Millisecond,
 			End:     284 * time.Millisecond,
 			Out:     "gen/autofill_regex_constants.cc",
-			CmdHash: "fa33c8d7ce1d8791",
+			CmdHash: 0xfa33c8d7ce1d8791,
 		},
 		{
 			Start:   141 * time.Millisecond,
 			End:     287 * time.Millisecond,
 			Out:     "PepperFlash/manifest.json",
-			CmdHash: "324f0a0b77c37ef",
+			CmdHash: 0x324f0a0b77c37ef,
 		},
 		{
 			Start:   142 * time.Millisecond,
 			End:     288 * time.Millisecond,
 			Out:     "PepperFlash/libpepflashplayer.so",
-			CmdHash: "1e2c2b7845a4d4fe",
+			CmdHash: 0x1e2c2b7845a4d4fe,
 		},
 		{
 			Start:   287 * time.Millisecond,
 			End:     290 * time.Millisecond,
 			Out:     "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
-			CmdHash: "b211d373de72f455",
+			CmdHash: 0xb211d373de72f455,
 		},
 	}
 
@@ -199,6 +201,44 @@ func TestParseEmptyLine(t *testing.T) {
 	}
 	if !reflect.DeepEqual(njl, want) {
 		t.Errorf("Parse()=%v; want=%v", njl, want)
+	}
+}
+
+func TestParsePopulate(t *testing.T) {
+	const testCase = `# ninja log v5
+0	10	0	file.stamp	42bba4133f0fb12c
+`
+
+	njl, err := Parse(".ninja_log", strings.NewReader(testCase))
+	if err != nil {
+		t.Errorf(`Parse(%q)=_, %v; want=_, <nil>`, testCase, err)
+	}
+
+	steps := Populate(njl.Steps, []compdb.Command{
+		{
+			Directory: "out",
+			Command:   "touch file.stamp",
+			File:      "file",
+			Output:    "file.stamp",
+		},
+	})
+
+	want := []Step{
+		{
+			Start:   0 * time.Millisecond,
+			End:     10 * time.Millisecond,
+			Out:     "file.stamp",
+			CmdHash: 0x42bba4133f0fb12c,
+			Command: &compdb.Command{
+				Directory: "out",
+				Command:   "touch file.stamp",
+				File:      "file",
+				Output:    "file.stamp",
+			},
+		},
+	}
+	if !reflect.DeepEqual(steps, want) {
+		t.Errorf("Parse(%q)=%v; want=%v", testCase, njl, want)
 	}
 }
 
@@ -319,7 +359,7 @@ func TestDedup(t *testing.T) {
 			Start:   302 * time.Millisecond,
 			End:     5764 * time.Millisecond,
 			Out:     out,
-			CmdHash: "a551cc46f8c21e5a",
+			CmdHash: 0xa551cc46f8c21e5a,
 		})
 	}
 	got := Dedup(steps)
@@ -333,7 +373,7 @@ func TestDedup(t *testing.T) {
 			"gen/ui/keyboard/webui/keyboard.mojom.h",
 			"gen/ui/keyboard/webui/keyboard.mojom.js",
 		},
-		CmdHash: "a551cc46f8c21e5a",
+		CmdHash: 0xa551cc46f8c21e5a,
 	})
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Dedup=%v; want=%v", got, want)
@@ -346,7 +386,7 @@ func TestFlow(t *testing.T) {
 		Start:   187 * time.Millisecond,
 		End:     21304 * time.Millisecond,
 		Out:     "obj/third_party/pdfium/core/src/fpdfdoc/fpdfdoc.doc_formfield.o",
-		CmdHash: "2ac7111aa1ae86af",
+		CmdHash: 0x2ac7111aa1ae86af,
 	})
 
 	flow := Flow(steps)
@@ -357,13 +397,13 @@ func TestFlow(t *testing.T) {
 				Start:   76 * time.Millisecond,
 				End:     187 * time.Millisecond,
 				Out:     "resources/inspector/devtools_extension_api.js",
-				CmdHash: "75430546595be7c2",
+				CmdHash: 0x75430546595be7c2,
 			},
 			{
 				Start:   187 * time.Millisecond,
 				End:     21304 * time.Millisecond,
 				Out:     "obj/third_party/pdfium/core/src/fpdfdoc/fpdfdoc.doc_formfield.o",
-				CmdHash: "2ac7111aa1ae86af",
+				CmdHash: 0x2ac7111aa1ae86af,
 			},
 		},
 		{
@@ -371,13 +411,13 @@ func TestFlow(t *testing.T) {
 				Start:   78 * time.Millisecond,
 				End:     286 * time.Millisecond,
 				Out:     "gen/angle/commit_id.py",
-				CmdHash: "4ede38e2c1617d8c",
+				CmdHash: 0x4ede38e2c1617d8c,
 			},
 			{
 				Start:   287 * time.Millisecond,
 				End:     290 * time.Millisecond,
 				Out:     "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
-				CmdHash: "b211d373de72f455",
+				CmdHash: 0xb211d373de72f455,
 			},
 		},
 		{
@@ -385,7 +425,7 @@ func TestFlow(t *testing.T) {
 				Start:   79 * time.Millisecond,
 				End:     287 * time.Millisecond,
 				Out:     "gen/angle/copy_compiler_dll.bat",
-				CmdHash: "9fb635ad5d2c1109",
+				CmdHash: 0x9fb635ad5d2c1109,
 			},
 		},
 		{
@@ -393,7 +433,7 @@ func TestFlow(t *testing.T) {
 				Start:   80 * time.Millisecond,
 				End:     284 * time.Millisecond,
 				Out:     "gen/autofill_regex_constants.cc",
-				CmdHash: "fa33c8d7ce1d8791",
+				CmdHash: 0xfa33c8d7ce1d8791,
 			},
 		},
 		{
@@ -401,7 +441,7 @@ func TestFlow(t *testing.T) {
 				Start:   141 * time.Millisecond,
 				End:     287 * time.Millisecond,
 				Out:     "PepperFlash/manifest.json",
-				CmdHash: "324f0a0b77c37ef",
+				CmdHash: 0x324f0a0b77c37ef,
 			},
 		},
 		{
@@ -409,7 +449,7 @@ func TestFlow(t *testing.T) {
 				Start:   142 * time.Millisecond,
 				End:     288 * time.Millisecond,
 				Out:     "PepperFlash/libpepflashplayer.so",
-				CmdHash: "1e2c2b7845a4d4fe",
+				CmdHash: 0x1e2c2b7845a4d4fe,
 			},
 		},
 	}
@@ -425,25 +465,25 @@ func TestWeightedTime(t *testing.T) {
 			Start:   0 * time.Millisecond,
 			End:     3 * time.Millisecond,
 			Out:     "target-a",
-			CmdHash: "hash-target-a",
+			CmdHash: 0xa,
 		},
 		{
 			Start:   2 * time.Millisecond,
 			End:     5 * time.Millisecond,
 			Out:     "target-b",
-			CmdHash: "hash-target-b",
+			CmdHash: 0xb,
 		},
 		{
 			Start:   2 * time.Millisecond,
 			End:     8 * time.Millisecond,
 			Out:     "target-c",
-			CmdHash: "hash-target-c",
+			CmdHash: 0xc,
 		},
 		{
 			Start:   2 * time.Millisecond,
 			End:     3 * time.Millisecond,
 			Out:     "target-d",
-			CmdHash: "hash-target-d",
+			CmdHash: 0xd,
 		},
 	}
 

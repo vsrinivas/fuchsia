@@ -7,7 +7,10 @@ import("//build/go/go_library.gni")
 
 go_library("main") {
   source_dir = "cmd"
-  deps = [ "//tools/build/ninjalog" ]
+  deps = [
+    "//tools/build/compdb",
+    "//tools/build/ninjalog",
+  ]
 }
 
 go_binary("ninjatrace") {

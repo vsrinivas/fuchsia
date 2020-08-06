@@ -20,11 +20,13 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 
+	"go.fuchsia.dev/fuchsia/tools/build/compdb"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjalog"
 )
 
 var (
 	filename   = flag.String("filename", ".ninja_log", "filename of .ninja_log")
+	compdbPath = flag.String("compdb", "", "filename of compile_commands.json")
 	traceJSON  = flag.String("trace-json", "trace.json", "output filename of trace.json")
 	cpuprofile = flag.String("cpuprofile", "", "file to write cpu profile")
 )
@@ -51,7 +53,20 @@ func convert(fname string) ([]ninjalog.Trace, error) {
 	if err != nil {
 		return nil, err
 	}
+	// TODO: Dedup and Populate could be methods on NinjaLog.
 	steps := ninjalog.Dedup(njl.Steps)
+	if *compdbPath != "" {
+		f, err := os.Open(*compdbPath)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		commands, err := compdb.Parse(f)
+		if err != nil {
+			return nil, err
+		}
+		steps = ninjalog.Populate(steps, commands)
+	}
 	flow := ninjalog.Flow(steps)
 	return ninjalog.ToTraces(flow, 1), nil
 }
