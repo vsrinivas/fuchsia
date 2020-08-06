@@ -74,14 +74,14 @@ async fn main() -> Result<(), Error> {
     let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
 
     match command.cmd {
-        CommandEnum::If(cmd) => do_if(cmd.if_cmd, &stack).await,
-        CommandEnum::Fwd(cmd) => do_fwd(cmd.fwd_cmd, stack).await,
-        CommandEnum::Route(cmd) => do_route(cmd.route_cmd, netstack).await,
-        CommandEnum::Filter(cmd) => do_filter(cmd.filter_cmd, filter).await,
-        CommandEnum::Log(cmd) => do_log(cmd.log_cmd, log).await,
-        CommandEnum::Stat(cmd) => do_stat(cmd.stat_cmd).await,
-        CommandEnum::Metric(cmd) => do_metric(cmd.metric_cmd, netstack).await,
-        CommandEnum::Dhcp(cmd) => do_dhcp(cmd.dhcp_cmd, netstack).await,
+        CommandEnum::If(If { if_cmd: cmd }) => do_if(cmd, &stack).await,
+        CommandEnum::Fwd(Fwd { fwd_cmd: cmd }) => do_fwd(cmd, stack).await,
+        CommandEnum::Route(Route { route_cmd: cmd }) => do_route(cmd, netstack).await,
+        CommandEnum::Filter(Filter { filter_cmd: cmd }) => do_filter(cmd, filter).await,
+        CommandEnum::Log(crate::opts::Log { log_cmd: cmd }) => do_log(cmd, log).await,
+        CommandEnum::Stat(Stat { stat_cmd: cmd }) => do_stat(cmd).await,
+        CommandEnum::Metric(Metric { metric_cmd: cmd }) => do_metric(cmd, netstack).await,
+        CommandEnum::Dhcp(Dhcp { dhcp_cmd: cmd }) => do_dhcp(cmd, netstack).await,
     }
 }
 
