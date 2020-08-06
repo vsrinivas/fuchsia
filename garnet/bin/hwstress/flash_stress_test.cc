@@ -31,9 +31,10 @@ constexpr size_t kBlockSize = 1024;
 constexpr size_t kDefaultRamDiskSize = 64 * 1024 * 1024;
 constexpr size_t kDefaultFvmSliceSize = 1024 * 1024;
 constexpr size_t kTestSize = 4 * 1024 * 1024;
-constexpr size_t kVmoSize = 64 * 1024 * 8; /*kTransferSize * kMaxInFlightRequests*/
+// We deliberately select something that is not a multiple of kTransferSize.
+constexpr size_t kTransferSize = 768 * 1024;
+constexpr size_t kVmoSize = kTransferSize * /*kMaxInFlightRequests*/ 8;
 constexpr size_t kSectorSize = 512;
-constexpr size_t kTransferSize = 64 * 1024;
 
 class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
  public:
@@ -86,8 +87,7 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
 
   void ServerLoop() {
     std::vector<block_fifo_request_t> reqs;
-    size_t prev_dev_offset = 0;
-    bool first = true;
+    size_t expected_offset = 0;
     while (true) {
       zx_signals_t pending;
       // We want to test what happens if the block device sends requests back in a
@@ -108,15 +108,9 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
         ZX_ASSERT(request.vmoid == kVmoId.id);
         // Check that the data is correct and that it is being written to the correct device
         // location.
-        if (first) {
-          ZX_ASSERT(request.dev_offset == 0ULL);
-          prev_dev_offset = request.dev_offset;
-          first = false;
-        } else {
-          ZX_ASSERT(prev_dev_offset == request.dev_offset - request.length);
-          ZX_ASSERT(request.dev_offset < device_size_ * kBlockSize);
-          prev_dev_offset = request.dev_offset;
-        }
+        ZX_ASSERT(request.dev_offset == expected_offset);
+        expected_offset = request.dev_offset + request.length;
+        ZX_ASSERT(request.dev_offset < device_size_ * kBlockSize);
         if (request.opcode == BLOCKIO_WRITE) {
           uint64_t expected_value = (request.dev_offset * kBlockSize) / kSectorSize;
           uint64_t found_value =
@@ -141,7 +135,7 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
               uint64_t value = (request.dev_offset * kBlockSize + kSectorSize * i) / kSectorSize;
               // If requested, simulate an incorrect read when we are half way through the test.
               if (introduce_incorrect_reads_ &&
-                  request.dev_offset * kBlockSize == device_size_ / 2) {
+                  request.dev_offset * kBlockSize + i * kSectorSize == device_size_ / 2) {
                 value++;
               }
               WriteSectorData(vmo_addr_ + request.vmo_offset * kBlockSize + kSectorSize * i, value);

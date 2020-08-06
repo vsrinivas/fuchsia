@@ -104,11 +104,9 @@ zx_status_t ReceiveFifoResponse(const zx::fifo& fifo, block_fifo_response_t* res
 
 zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t transfer_size,
                     bool is_write_test) {
-  ZX_ASSERT(bytes_to_test % transfer_size == 0);
-  ZX_ASSERT(transfer_size % kSectorSize == 0);
-  size_t send_count = bytes_to_test / transfer_size;
-  size_t receive_count = send_count;
-  size_t num_sectors = transfer_size / kSectorSize;
+  ZX_ASSERT(bytes_to_test % device.info.block_size == 0);
+  size_t bytes_to_send = bytes_to_test;
+  size_t bytes_to_receive = bytes_to_test;
 
   size_t blksize = device.info.block_size;
   size_t vmo_byte_offset = 0;
@@ -129,10 +127,10 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
     vmo_byte_offset += transfer_size;
   }
 
-  while (receive_count > 0) {
+  while (bytes_to_receive > 0) {
     // Ensure we are ready to either write to or read from the FIFO.
     zx_signals_t flags = ZX_FIFO_PEER_CLOSED;
-    if (!ready_to_send.empty() && send_count > 0) {
+    if (!ready_to_send.empty() && bytes_to_send > 0) {
       flags |= ZX_FIFO_WRITABLE;
     }
     if (ready_to_send.size() < kMaxInFlightRequests) {
@@ -149,11 +147,13 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
 
     // If the FIFO is writable send a request unless we have kMaxInFlightRequests in flight,
     // or have finished reading/writing.
-    if ((pending_signals & ZX_FIFO_WRITABLE) != 0 && !ready_to_send.empty() && send_count > 0) {
+    if ((pending_signals & ZX_FIFO_WRITABLE) != 0 && !ready_to_send.empty() && bytes_to_send > 0) {
       reqid_t reqid = ready_to_send.front();
       reqs[reqid].dev_offset = dev_off / blksize;
+      reqs[reqid].length = std::min(transfer_size, bytes_to_send) / blksize;
       if (is_write_test) {
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
+        size_t num_sectors = reqs[reqid].length * blksize / kSectorSize;
         for (size_t i = 0; i < num_sectors; i++) {
           uint64_t value = (reqs[reqid].dev_offset * blksize + kSectorSize * i) / 512;
           WriteSectorData(device.vmo_addr + vmo_byte_offset + kSectorSize * i, value);
@@ -165,7 +165,7 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
       }
       dev_off += transfer_size;
       ready_to_send.pop();
-      send_count--;
+      bytes_to_send -= reqs[reqid].length * blksize;
       continue;
     }
 
@@ -177,17 +177,18 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
       if (r != ZX_OK) {
         return r;
       }
-      receive_count--;
 
       reqid_t reqid = resp.reqid;
+      bytes_to_receive -= reqs[reqid].length * blksize;
       if (!is_write_test) {
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
+        size_t num_sectors = reqs[reqid].length * blksize / kSectorSize;
         for (size_t i = 0; i < num_sectors; i++) {
           uint64_t value = (reqs[reqid].dev_offset * blksize + kSectorSize * i) / 512;
           VerifySectorData(device.vmo_addr + vmo_byte_offset + kSectorSize * i, value);
         }
       }
-      if (send_count > 0) {
+      if (bytes_to_send > 0) {
         ready_to_send.push(reqid);
       }
       continue;
@@ -341,7 +342,8 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   }
   device.info = *block_info;
 
-  size_t actual_transfer_size = std::min(kDefaultTransferSize, device.info.max_transfer_size);
+  size_t actual_transfer_size =
+      RoundDown(std::min(kDefaultTransferSize, device.info.max_transfer_size), kSectorSize);
   device.vmo_size = actual_transfer_size * kMaxInFlightRequests;
 
   if (SetupBlockFifo(partition_path, &device) != ZX_OK) {

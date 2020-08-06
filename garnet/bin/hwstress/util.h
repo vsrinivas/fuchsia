@@ -28,6 +28,9 @@ inline uint64_t RepeatByte(uint8_t v) { return v * 0x0101'0101'0101'0101ul; }
 // Round up the given value |n| so that it is a multiple of |k|.
 inline uint64_t RoundUp(uint64_t n, uint64_t k) { return ((n + (k - 1)) / k) * k; }
 
+// Round down the given value |n| so that it is a multiple of |k|.
+inline uint64_t RoundDown(uint64_t n, uint64_t k) { return (n / k) * k; }
+
 // Functions to simplify constants.
 inline constexpr uint64_t kiB(uint64_t n) { return n * 1024ul; }
 inline constexpr uint64_t MiB(uint64_t n) { return n * 1024ul * 1024ul; }
