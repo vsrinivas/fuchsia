@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/process/c/fidl.h>
+#include <fuchsia/process/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
@@ -25,7 +25,8 @@ TEST(DirectoryTest, ServiceConnect) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, fdio_service_connect("/", h2.release()));
 
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  ASSERT_OK(fdio_service_connect("/svc/" fuchsia_process_Launcher_Name, h1.release()));
+  std::string path = std::string("/svc/") + ::llcpp::fuchsia::process::Launcher::Name;
+  ASSERT_OK(fdio_service_connect(path.c_str(), h1.release()));
 }
 
 TEST(DirectoryTest, Open) {
@@ -41,8 +42,10 @@ TEST(DirectoryTest, Open) {
 
   zx::channel h3, h4;
   ASSERT_OK(zx::channel::create(0, &h3, &h4));
-  ASSERT_OK(fdio_service_connect_at(h2.get(), fuchsia_process_Launcher_Name, h3.release()));
-  ASSERT_OK(fdio_open_at(h2.get(), fuchsia_process_Launcher_Name, kReadFlags, h4.release()));
+  ASSERT_OK(
+      fdio_service_connect_at(h2.get(), ::llcpp::fuchsia::process::Launcher::Name, h3.release()));
+  ASSERT_OK(
+      fdio_open_at(h2.get(), ::llcpp::fuchsia::process::Launcher::Name, kReadFlags, h4.release()));
 
   h3.reset(fdio_service_clone(h2.get()));
   ASSERT_TRUE(h3.is_valid());
