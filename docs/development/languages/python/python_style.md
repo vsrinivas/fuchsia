@@ -11,10 +11,21 @@ Fuchsia Python file will also comply with the Google style guide, but a Google
 Python file might not comply with this guide. See [refinements](#Refinements)
 below for details.
 
-## Python 2 vs 3
+## Python versions
 
-Lean towards a Python 3 style where the languages differ, but continue to
-support both versions.
+### Scripts invoked by the build
+
+Scripts invoked by the build (GN or Ninja) should use `python3.8` in the shebang:
+`#!/usr/bin/env python3.8`.
+
+Both `fx` and the continuous integration infrastructure ensure that that
+executable will be in the path during GN and Ninja invocations, so it's safe to
+use in that context.
+
+### Other scripts
+
+Scripts which are invoked directly should use `python` in the shebang and be
+compatible with both 2 and 3: `#!/usr/bin/env python`.
 
 Developers working on Fuchsia modules may use various platforms. Some platforms
 include Python 2.x and not Python 3.x and vice versa. Until Python 3.x is
@@ -37,9 +48,9 @@ used.
 
 ## Use Unicode for Text
 
-While Python 2.x is supported, explicitly declare text strings as unicode and
-binary data as bytes, using `u""`, `unicode()`, `unichr()` and  `b""`,
-`bytes()`, `byte()` respectively.
+In scripts that support Python 2.x (see [Python versions](#python-versions)),
+explicitly declare text strings as unicode and binary data as bytes, using
+`u""`, `unicode()`, `unichr()` and  `b""`, `bytes()`, `byte()` respectively.
 Python 3.x defaults to using Unicode for strings, so this guideline will be
 removed when support for Python 2 is dropped.
 
@@ -78,7 +89,8 @@ Avoid creating single line statements, even with `if` statements.
 
 ## [Type Annotations](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#319-type-annotations)
 
-While Python 2.x is supported, type annotations will not be used.
+In scripts that support Python 2.x (see [Python versions](#python-versions)),
+type annotations will not be used.
 
 ## [Strings](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#310-strings)
 
@@ -93,5 +105,4 @@ within Fuchsia. Being consistent within one file or directory is not much
 consistency.
 
 Within third_party, the intent is to follow the existing style for that project
-or library.
-Look for a style guide within that library as appropriate.
+or library. Look for a style guide within that library as appropriate.
