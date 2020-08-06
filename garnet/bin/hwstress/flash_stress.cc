@@ -32,26 +32,25 @@ namespace {
 
 constexpr uint32_t kMaxInFlightRequests = 8;
 constexpr uint32_t kDefaultTransferSize = 1024 * 1024;
-constexpr uint32_t kSectorSize = 512;
 constexpr uint32_t kMinFvmFreeSpace = 16 * 1024 * 1024;
 constexpr uint32_t kMinPartitionFreeSpace = 2 * 1024 * 1024;
 
-void WriteSectorData(zx_vaddr_t start, uint64_t value) {
-  uint64_t num_words = kSectorSize / sizeof(value);
+void WriteBlockData(zx_vaddr_t start, uint32_t block_size, uint64_t value) {
+  uint64_t num_words = block_size / sizeof(value);
   uint64_t* data = reinterpret_cast<uint64_t*>(start);
   for (uint64_t i = 0; i < num_words; i++) {
     data[i] = value;
   }
 }
 
-void VerifySectorData(zx_vaddr_t start, uint64_t value) {
-  uint64_t num_words = kSectorSize / sizeof(value);
+void VerifyBlockData(zx_vaddr_t start, uint32_t block_size, uint64_t value) {
+  uint64_t num_words = block_size / sizeof(value);
   uint64_t* data = reinterpret_cast<uint64_t*>(start);
   for (uint64_t i = 0; i < num_words; i++) {
     if (unlikely(data[i] != value)) {
       ZX_PANIC("Found error: expected 0x%016" PRIX64 ", got 0x%016" PRIX64 " at offset %" PRIu64
                "\n",
-               value, data[i], value * kSectorSize + i * sizeof(value));
+               value, data[i], value * block_size + i * sizeof(value));
     }
   }
 }
@@ -153,10 +152,9 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
       reqs[reqid].length = std::min(transfer_size, bytes_to_send) / blksize;
       if (is_write_test) {
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
-        size_t num_sectors = reqs[reqid].length * blksize / kSectorSize;
-        for (size_t i = 0; i < num_sectors; i++) {
-          uint64_t value = (reqs[reqid].dev_offset * blksize + kSectorSize * i) / 512;
-          WriteSectorData(device.vmo_addr + vmo_byte_offset + kSectorSize * i, value);
+        for (size_t i = 0; i < reqs[reqid].length; i++) {
+          uint64_t value = reqs[reqid].dev_offset + i;
+          WriteBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, blksize, value);
         }
       }
       zx_status_t r = SendFifoRequest(device.fifo, reqs[reqid]);
@@ -182,10 +180,9 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
       bytes_to_receive -= reqs[reqid].length * blksize;
       if (!is_write_test) {
         vmo_byte_offset = reqs[reqid].vmo_offset * blksize;
-        size_t num_sectors = reqs[reqid].length * blksize / kSectorSize;
-        for (size_t i = 0; i < num_sectors; i++) {
-          uint64_t value = (reqs[reqid].dev_offset * blksize + kSectorSize * i) / 512;
-          VerifySectorData(device.vmo_addr + vmo_byte_offset + kSectorSize * i, value);
+        for (size_t i = 0; i < reqs[reqid].length; i++) {
+          uint64_t value = reqs[reqid].dev_offset + i;
+          VerifyBlockData(device.vmo_addr + vmo_byte_offset + blksize * i, blksize, value);
         }
       }
       if (bytes_to_send > 0) {
@@ -342,8 +339,8 @@ bool StressFlash(StatusLine* status, const CommandLineArgs& args, zx::duration d
   }
   device.info = *block_info;
 
-  size_t actual_transfer_size =
-      RoundDown(std::min(kDefaultTransferSize, device.info.max_transfer_size), kSectorSize);
+  size_t actual_transfer_size = RoundDown(
+      std::min(kDefaultTransferSize, device.info.max_transfer_size), device.info.block_size);
   device.vmo_size = actual_transfer_size * kMaxInFlightRequests;
 
   if (SetupBlockFifo(partition_path, &device) != ZX_OK) {

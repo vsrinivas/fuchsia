@@ -27,14 +27,13 @@
 namespace hwstress {
 namespace {
 
-constexpr size_t kBlockSize = 1024;
+constexpr size_t kBlockSize = 512;
 constexpr size_t kDefaultRamDiskSize = 64 * 1024 * 1024;
 constexpr size_t kDefaultFvmSliceSize = 1024 * 1024;
 constexpr size_t kTestSize = 4 * 1024 * 1024;
 // We deliberately select something that is not a multiple of kTransferSize.
 constexpr size_t kTransferSize = 768 * 1024;
 constexpr size_t kVmoSize = kTransferSize * /*kMaxInFlightRequests*/ 8;
-constexpr size_t kSectorSize = 512;
 
 class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
  public:
@@ -112,7 +111,7 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
         expected_offset = request.dev_offset + request.length;
         ZX_ASSERT(request.dev_offset < device_size_ * kBlockSize);
         if (request.opcode == BLOCKIO_WRITE) {
-          uint64_t expected_value = (request.dev_offset * kBlockSize) / kSectorSize;
+          uint64_t expected_value = request.dev_offset;
           uint64_t found_value =
               reinterpret_cast<uint64_t*>(vmo_addr_ + request.vmo_offset * kBlockSize)[0];
           ZX_ASSERT(found_value == expected_value);
@@ -130,15 +129,14 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
         std::shuffle(std::begin(reqs), std::end(reqs), std::default_random_engine());
         for (block_fifo_request_t request : reqs) {
           if (request.opcode == BLOCKIO_READ) {
-            size_t num_sectors = kTransferSize / kSectorSize;
-            for (size_t i = 0; i < num_sectors; i++) {
-              uint64_t value = (request.dev_offset * kBlockSize + kSectorSize * i) / kSectorSize;
+            for (size_t i = 0; i < request.length; i++) {
+              uint64_t value = request.dev_offset + i;
               // If requested, simulate an incorrect read when we are half way through the test.
               if (introduce_incorrect_reads_ &&
-                  request.dev_offset * kBlockSize + i * kSectorSize == device_size_ / 2) {
+                  (request.dev_offset + i) * kBlockSize == device_size_ / 2) {
                 value++;
               }
-              WriteSectorData(vmo_addr_ + request.vmo_offset * kBlockSize + kSectorSize * i, value);
+              WriteSectorData(vmo_addr_ + (request.vmo_offset + i) * kBlockSize, value);
             }
           }
           block_fifo_response_t response = {
@@ -154,7 +152,7 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
   }
 
   void WriteSectorData(zx_vaddr_t start, uint64_t value) {
-    uint64_t num_words = kSectorSize / sizeof(value);
+    uint64_t num_words = kBlockSize / sizeof(value);
     uint64_t* data = reinterpret_cast<uint64_t*>(start);
     for (uint64_t i = 0; i < num_words; i++) {
       data[i] = value;
@@ -238,6 +236,26 @@ TEST(Flash, ReadErrorFlashIo) {
   block.StartServer();
   ASSERT_DEATH({ FlashIo(device, kTestSize, kTransferSize, /*is_write_test=*/false); }, "");
 
+  block.CloseServer();
+}
+
+TEST(Flash, SingleBlock) {
+  testing::LoopbackConnectionFactory factory;
+
+  // Create a fake block device and a connection to it.
+  FakeBlock block(false, kBlockSize);
+
+  BlockDevice device = {
+      .device = factory.CreateSyncPtrTo<fuchsia::hardware::block::Block>(&block),
+  };
+
+  device.vmo_size = kVmoSize;
+  device.info.block_size = kBlockSize;
+
+  ASSERT_EQ(SetupBlockFifo("/dev/fake", &device), ZX_OK);
+
+  block.StartServer();
+  ASSERT_EQ(FlashIo(device, kBlockSize, kBlockSize, /*is_write_test=*/true), ZX_OK);
   block.CloseServer();
 }
 
