@@ -608,11 +608,20 @@ impl<'a> ValidationContext<'a> {
         if capability.directory.is_some() && capability.rights.is_none() {
             return Err(Error::validate("\"rights\" should be present with \"directory\""));
         }
-        if capability.storage.is_some() && capability.from.is_none() {
-            return Err(Error::validate("\"from\" should be present with \"storage\""));
-        }
-        if capability.storage.is_some() && capability.path.is_none() {
-            return Err(Error::validate("\"path\" should be present with \"storage\""));
+        if capability.storage.is_some() {
+            if capability.from.is_none() {
+                return Err(Error::validate("\"from\" should be present with \"storage\""));
+            }
+            if capability.path.is_none() && capability.backing_dir.is_none() {
+                return Err(Error::validate(
+                    "One of \"path\" or \"backing_dir\" must be present with \"storage\"",
+                ));
+            }
+            if capability.path.is_some() && capability.backing_dir.is_some() {
+                return Err(Error::validate(
+                    "\"path\" and \"backing_dir\" may not both be present with \"storage\"",
+                ));
+            }
         }
         if capability.runner.is_some() && capability.from.is_none() {
             return Err(Error::validate("\"from\" should be present with \"runner\""));
@@ -3312,7 +3321,7 @@ mod tests {
                     {
                         "storage": "c",
                         "from": "self",
-                        "path": "/storage",
+                        "backing_dir": "storage",
                     },
                 ],
                 "children": [
@@ -3351,6 +3360,27 @@ mod tests {
                     } ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"capabilities\" source \"#missing\" does not appear in \"children\""
+        ),
+        test_cml_storage_missing_path_or_backing_dir(
+            json!({
+                    "capabilities": [ {
+                        "storage": "minfs",
+                        "from": "self",
+                    } ]
+                }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "One of \"path\" or \"backing_dir\" must be present with \"storage\""
+
+        ),
+        test_cml_storage_both_path_and_backing_dir(
+            json!({
+                    "capabilities": [ {
+                        "storage": "minfs",
+                        "from": "self",
+                        "path": "/minfs",
+                        "backing_dir": "minfs",
+                    } ]
+                }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" and \"backing_dir\" may not both be present with \"storage\""
         ),
         test_cml_runner(
             json!({

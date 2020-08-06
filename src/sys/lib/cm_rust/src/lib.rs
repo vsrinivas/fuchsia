@@ -639,7 +639,7 @@ fsys::StorageDecl,
 {
     name: String,
     source: StorageDirectorySource,
-    source_path: CapabilityPath,
+    source_path: CapabilityNameOrPath,
 });
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
 {
@@ -2048,7 +2048,12 @@ mod tests {
                    }),
                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                        name: Some("memfs".to_string()),
-                       source_path: Some("/memfs".to_string()),
+                       source_path: Some("data".to_string()),
+                       source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                   }),
+                   fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                       name: Some("memfs2".to_string()),
+                       source_path: Some("/data".to_string()),
                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                    }),
                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
@@ -2283,7 +2288,12 @@ mod tests {
                         }),
                         CapabilityDecl::Storage(StorageDecl {
                             name: "memfs".to_string(),
-                            source_path: "/memfs".try_into().unwrap(),
+                            source_path: "data".try_into().unwrap(),
+                            source: StorageDirectorySource::Parent,
+                        }),
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: "memfs2".to_string(),
+                            source_path: "/data".try_into().unwrap(),
                             source: StorageDirectorySource::Parent,
                         }),
                         CapabilityDecl::Runner(RunnerDecl {
@@ -2481,7 +2491,7 @@ mod tests {
                 },
                 fsys::StorageDecl {
                     name: Some("minfs".to_string()),
-                    source_path: Some("/minfs".to_string()),
+                    source_path: Some("minfs".to_string()),
                     source: Some(fsys::Ref::Child(fsys::ChildRef {
                         name: "foo".to_string(),
                         collection: None,
@@ -2492,12 +2502,12 @@ mod tests {
             result = vec![
                 StorageDecl {
                     name: "minfs".to_string(),
-                    source_path: CapabilityPath::try_from("/minfs").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("/minfs").unwrap(),
                     source: StorageDirectorySource::Parent,
                 },
                 StorageDecl {
                     name: "minfs".to_string(),
-                    source_path: CapabilityPath::try_from("/minfs").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("minfs").unwrap(),
                     source: StorageDirectorySource::Child("foo".to_string()),
                 },
             ],

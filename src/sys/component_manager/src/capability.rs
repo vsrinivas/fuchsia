@@ -208,7 +208,12 @@ impl InternalCapability {
 
     pub fn builtin_from_storage_decl(decl: &StorageDecl) -> Result<Self, Error> {
         if decl.source == StorageDirectorySource::Parent {
-            Ok(InternalCapability::Directory(decl.source_path.clone()))
+            match &decl.source_path {
+                CapabilityNameOrPath::Path(source_path) => {
+                    Ok(InternalCapability::Directory(source_path.clone()))
+                }
+                CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
+            }
         } else {
             Err(Error::InvalidBuiltinCapability {})
         }
@@ -536,12 +541,7 @@ impl ComponentCapability {
             ) => source_name == &expose.target_name,
             // Directory exposed to me that matches a `storage` declaration which consumes it.
             (ComponentCapability::Storage(parent_storage), ExposeDecl::Directory(expose)) => {
-                match (&parent_storage.source_path, &expose.target_path) {
-                    (source_path, CapabilityNameOrPath::Path(target_path)) => {
-                        source_path == target_path
-                    }
-                    _ => false,
-                }
+                parent_storage.source_path == expose.target_path
             }
             _ => false,
         })
@@ -622,7 +622,7 @@ impl ComponentCapability {
                 (ComponentCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
                     Self::is_offer_protocol_or_directory_match(
                         child_moniker,
-                        &CapabilityNameOrPath::Path(child_storage.source_path.clone()),
+                        &child_storage.source_path,
                         &offer.target,
                         &offer.target_path,
                     )
@@ -871,7 +871,10 @@ mod tests {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),
             source: StorageDirectorySource::Parent,
-            source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            source_path: CapabilityNameOrPath::Path(CapabilityPath {
+                dirname: "".to_string(),
+                basename: "".to_string(),
+            }),
         });
         capability.find_expose_service_sources(&default_component_decl());
     }
@@ -1038,7 +1041,10 @@ mod tests {
         let capability = ComponentCapability::Storage(StorageDecl {
             name: "".to_string(),
             source: StorageDirectorySource::Parent,
-            source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
+            source_path: CapabilityNameOrPath::Path(CapabilityPath {
+                dirname: "".to_string(),
+                basename: "".to_string(),
+            }),
         });
         let moniker = ChildMoniker::new("".to_string(), None, 0);
         capability.find_offer_service_sources(&default_component_decl(), &moniker);

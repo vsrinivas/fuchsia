@@ -1881,6 +1881,15 @@ mod tests {
                             "source": {
                                 "self": {}
                             },
+                            "source_path": "data"
+                        }
+                    },
+                    {
+                        "storage": {
+                            "name": "memfs2",
+                            "source": {
+                                "self": {}
+                            },
                             "source_path": "/memfs"
                         }
                     },
@@ -1918,6 +1927,11 @@ mod tests {
                     }),
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                         name: Some("memfs".to_string()),
+                        source_path: Some("data".to_string()),
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                    }),
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                        name: Some("memfs2".to_string()),
                         source_path: Some("/memfs".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                     }),

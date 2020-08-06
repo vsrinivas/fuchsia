@@ -935,7 +935,12 @@ impl<'a> ValidationContext<'a> {
             }
             self.all_storage_and_sources.insert(name, source_child_name);
         }
-        check_path(storage.source_path.as_ref(), "StorageDecl", "source_path", &mut self.errors);
+        check_name_or_path(
+            storage.source_path.as_ref(),
+            "StorageDecl",
+            "source_path",
+            &mut self.errors,
+        );
     }
 
     fn validate_runner_decl(&mut self, runner: &'a fsys::RunnerDecl) {

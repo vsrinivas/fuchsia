@@ -140,7 +140,7 @@ pub struct Directory {
 pub struct Storage {
     pub name: Name,
     pub source: Ref,
-    pub source_path: Path,
+    pub source_path: NameOrPath,
 }
 
 /// A runner capability. See [`RunnerDecl`].

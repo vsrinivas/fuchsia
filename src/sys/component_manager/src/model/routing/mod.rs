@@ -386,7 +386,15 @@ async fn route_storage_capability<'a>(
     // Find the path and source of the directory consumed by the storage capability.
     let (dir_source_path, dir_source_realm, cap_state) = match storage_decl.source {
         StorageDirectorySource::Self_ => {
-            (storage_decl.source_path, Some(source_realm), pos.cap_state)
+            let source_path =
+                if let CapabilityNameOrPath::Path(source_path) = storage_decl.source_path {
+                    source_path
+                } else {
+                    return Err(ModelError::unsupported(
+                        "Name-based directories are not supported yet",
+                    ));
+                };
+            (source_path, Some(source_realm), pos.cap_state)
         }
         StorageDirectorySource::Parent => {
             let capability = ComponentCapability::Storage(storage_decl);

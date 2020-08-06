@@ -529,6 +529,7 @@ pub struct Capability {
     pub from: Option<CapabilityFromRef>,
     pub path: Option<Path>,
     pub rights: Option<Rights>,
+    pub backing_dir: Option<Name>,
 }
 
 #[derive(Deserialize, Debug)]
