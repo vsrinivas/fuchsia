@@ -5,7 +5,7 @@
 //! test steps
 
 use {
-    crate::{BlackoutError, RebootError, Seed},
+    crate::{BlackoutError, RebootError, Seed, SshAuth},
     std::{
         fs::OpenOptions,
         io::Write,
@@ -16,11 +16,38 @@ use {
     },
 };
 
-static SSH_OPTIONS: &'static [&str] = &["-o", "ConnectTimeout=100"];
+#[rustfmt::skip]
+/// ssh options for connecting to a target machine.
+static SSH_OPTIONS: &'static [&str] = &[
+    // use the fuchsia user
+    "-o", "User=fuchsia",
+    // don't bother with any of the known hosts stuff
+    "-o", "UserKnownHostsFile=/dev/null",
+    "-o", "StrictHostKeyChecking=no",
+    "-o", "CheckHostIP=no",
+    // don't forward anything
+    "-o", "ForwardAgent=no",
+    "-o", "ForwardX11=no",
+    // allow the ssh connection to be reused
+    "-o", "ControlPersist=yes",
+    "-o", "ControlMaster=auto",
+    "-o", "ControlPath=/tmp/fuchsia--%r@%h:%p",
+    // the next three control how long ssh will wait in different situations before giving up.
+    // wait 100 seconds for the server to be routable. overrides the system default tcp timeout.
+    "-o", "ConnectTimeout=100",
+    // send a ping to the server every 10 seconds if no data has been recieved from the server
+    "-o", "ServerAliveInterval=10",
+    // send 6 of those pings before giving up. this is equivalent to a timeout of about 60 seconds
+    // before giving up the connection, when the server is routable but we aren't getting responses
+    // from the server yet.
+    "-o", "ServerAliveCountMax=6",
+];
 
-fn ssh(target: &str) -> Command {
-    let mut command = Command::new("fx");
-    command.arg("ssh").args(SSH_OPTIONS).arg(target);
+fn ssh(target: &str, auth: &SshAuth) -> Command {
+    let mut command = Command::new("ssh");
+    command.args(SSH_OPTIONS);
+    command.args(auth.args());
+    command.arg(target);
     command
 }
 
@@ -48,9 +75,9 @@ fn hard_reboot(dev: impl AsRef<Path>) -> Result<(), RebootError> {
 }
 
 /// Reboot the target system using `dm reboot`.
-fn soft_reboot(target: &str) -> Result<(), RebootError> {
+fn soft_reboot(target: &str, auth: &SshAuth) -> Result<(), RebootError> {
     // ignore the return value because it's garbage
-    let _ = ssh(target).arg("dm").arg("reboot").status()?;
+    let _ = ssh(target, auth).arg("dm").arg("reboot").status()?;
     Ok(())
 }
 
@@ -63,15 +90,23 @@ trait Runner {
 /// run a target binary on a target device over ssh.
 struct CmdRunner {
     target: String,
+    auth: SshAuth,
     bin: String,
     seed: Seed,
     block_device: String,
 }
 
 impl CmdRunner {
-    fn new(target: &str, bin: &str, seed: Seed, block_device: &str) -> Box<dyn Runner> {
+    fn new(
+        target: &str,
+        auth: &SshAuth,
+        bin: &str,
+        seed: Seed,
+        block_device: &str,
+    ) -> Box<dyn Runner> {
         Box::new(CmdRunner {
             target: target.into(),
+            auth: auth.clone(),
             bin: bin.into(),
             seed,
             block_device: block_device.into(),
@@ -79,7 +114,7 @@ impl CmdRunner {
     }
 
     fn run_bin(&self) -> Command {
-        let mut command = ssh(&self.target);
+        let mut command = ssh(&self.target, &self.auth);
         command.arg(&self.bin).arg(self.seed.to_string()).arg(&self.block_device);
         command
     }
@@ -128,8 +163,14 @@ pub struct SetupStep {
 
 impl SetupStep {
     /// Create a new operation step.
-    pub fn new(target: &str, bin: &str, seed: Seed, block_device: &str) -> Self {
-        Self { runner: CmdRunner::new(target, bin, seed, block_device) }
+    pub(crate) fn new(
+        target: &str,
+        auth: &SshAuth,
+        bin: &str,
+        seed: Seed,
+        block_device: &str,
+    ) -> Self {
+        Self { runner: CmdRunner::new(target, auth, bin, seed, block_device) }
     }
 }
 
@@ -149,14 +190,15 @@ pub struct LoadStep {
 
 impl LoadStep {
     /// Create a new test step.
-    pub fn new(
+    pub(crate) fn new(
         target: &str,
+        auth: &SshAuth,
         bin: &str,
         seed: Seed,
         block_device: &str,
         duration: Duration,
     ) -> Self {
-        Self { runner: CmdRunner::new(target, bin, seed, block_device), duration }
+        Self { runner: CmdRunner::new(target, auth, bin, seed, block_device), duration }
     }
 }
 
@@ -185,8 +227,14 @@ pub struct OperationStep {
 
 impl OperationStep {
     /// Create a new operation step.
-    pub fn new(target: &str, bin: &str, seed: Seed, block_device: &str) -> Self {
-        Self { runner: CmdRunner::new(target, bin, seed, block_device) }
+    pub(crate) fn new(
+        target: &str,
+        auth: &SshAuth,
+        bin: &str,
+        seed: Seed,
+        block_device: &str,
+    ) -> Self {
+        Self { runner: CmdRunner::new(target, auth, bin, seed, block_device) }
     }
 }
 
@@ -197,19 +245,17 @@ impl TestStep for OperationStep {
     }
 }
 
-/// A test step for rebooting the target machine. This uses the configured reboot mechanism. It waits
-/// for 30 seconds before returning to make sure the target machine is back up before returning.
-///
-/// TODO(34504): instead of waiting 30 seconds, we should have a retry loop on the ssh attempt.
+/// A test step for rebooting the target machine. This uses the configured reboot mechanism.
 pub struct RebootStep {
     target: String,
+    auth: SshAuth,
     reboot_type: RebootType,
 }
 
 impl RebootStep {
     /// Create a new reboot step.
-    pub fn new(target: &str, reboot_type: &RebootType) -> Self {
-        Self { target: target.into(), reboot_type: reboot_type.clone() }
+    pub(crate) fn new(target: &str, auth: &SshAuth, reboot_type: &RebootType) -> Self {
+        Self { target: target.into(), auth: auth.clone(), reboot_type: reboot_type.clone() }
     }
 }
 
@@ -217,7 +263,7 @@ impl TestStep for RebootStep {
     fn execute(&self) -> Result<(), BlackoutError> {
         println!("rebooting device...");
         match &self.reboot_type {
-            RebootType::Software => soft_reboot(&self.target)?,
+            RebootType::Software => soft_reboot(&self.target, &self.auth)?,
             RebootType::Hardware(relay) => hard_reboot(&relay)?,
         }
         Ok(())
@@ -236,21 +282,27 @@ impl VerifyStep {
     /// Create a new verify step. Verification is done in a retry loop, attempting to run the
     /// verification command `num_retries` times and sleeping for `retry_timeout` duration in between
     /// each attempt.
-    pub fn new(
+    pub(crate) fn new(
         target: &str,
+        auth: &SshAuth,
         bin: &str,
         seed: Seed,
         block_device: &str,
         num_retries: u32,
         retry_timeout: Duration,
     ) -> Self {
-        Self { runner: CmdRunner::new(target, bin, seed, block_device), num_retries, retry_timeout }
+        Self {
+            runner: CmdRunner::new(target, auth, bin, seed, block_device),
+            num_retries,
+            retry_timeout,
+        }
     }
 }
 
 impl TestStep for VerifyStep {
     fn execute(&self) -> Result<(), BlackoutError> {
         let mut last_ssh_error = Ok(());
+        let start_time = std::time::Instant::now();
         for i in 1..self.num_retries + 1 {
             println!("verifying device...(attempt #{})", i);
             match self.runner.run("verify") {
@@ -270,6 +322,8 @@ impl TestStep for VerifyStep {
                 Err(e) => return Err(e),
             }
         }
+        let elapsed = std::time::Instant::now().duration_since(start_time);
+        println!("stopping verification attempt after {}s", elapsed.as_secs());
         // we failed to ssh into the device too many times in a row. something's wrong.
         last_ssh_error
     }

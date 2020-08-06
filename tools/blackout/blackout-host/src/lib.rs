@@ -139,6 +139,16 @@ pub struct CommonOpts {
     /// Run the test until a verification failure is detected, then exit.
     #[structopt(short = "f", long, requires = "iterations")]
     pub run_until_failure: bool,
+    /// Path to the ssh private key to use when authenticating with the target device. If neither
+    /// this flag or the --ssh-agent flag is set, the test will open `$FUCHSIA_DIR/.ssh/pkey` if
+    /// `$FUCHSIA_DIR` exists, otherwise it will attempt to open `$CWD/.ssh/pkey`. If none of these
+    /// attempts succeed the test will fail to run.
+    #[structopt(short = "k", long)]
+    pub ssh_key: Option<String>,
+    /// Use the ssh agent to authenticate with the target device. If both this option and --ssh-key
+    /// are provided, --ssk-key will take precedence.
+    #[structopt(short = "a", long)]
+    pub ssh_agent: bool,
 }
 
 /// the seed for a run of the test.
@@ -182,6 +192,23 @@ enum RunMode {
     IterationsUntilFailure(u64),
 }
 
+/// method for authenticating over ssh
+#[derive(Clone, Debug)]
+enum SshAuth {
+    Agent,
+    PKey(String),
+}
+
+impl SshAuth {
+    /// generate the required ssh args for using the auth method
+    fn args(&self) -> Vec<String> {
+        match &self {
+            SshAuth::Agent => vec![],
+            SshAuth::PKey(key) => vec!["-o".into(), format!("IdentityFile={}", key)],
+        }
+    }
+}
+
 /// Unconfigured test. Knows how to configure itself based on the set of common options.
 pub struct UnconfiguredTest {
     package: &'static str,
@@ -197,6 +224,7 @@ pub struct Test {
     block_device: String,
     reboot_type: RebootType,
     run_mode: RunMode,
+    auth: SshAuth,
     steps: Vec<Box<dyn TestStep>>,
 }
 
@@ -211,8 +239,15 @@ impl fmt::Display for Test {
     block_device: {:?},
     reboot_type: {:?},
     run_mode: {:?},
+    auth: {:?},
 }}",
-            self.target, self.bin, self.seed, self.block_device, self.reboot_type, self.run_mode,
+            self.target,
+            self.bin,
+            self.seed,
+            self.block_device,
+            self.reboot_type,
+            self.run_mode,
+            self.auth,
         )
     }
 }
@@ -243,6 +278,19 @@ impl UnconfiguredTest {
                 (Some(iterations), false) => RunMode::Iterations(iterations),
                 (Some(iterations), true) => RunMode::IterationsUntilFailure(iterations),
             },
+            auth: match (opts.ssh_key, opts.ssh_agent) {
+                (Some(key), _) => SshAuth::PKey(key),
+                (None, true) => SshAuth::Agent,
+                (None, false) => {
+                    if let Ok(fuchsia_dir) = std::env::var("FUCHSIA_DIR") {
+                        SshAuth::PKey(format!("{}/.ssh/pkey", fuchsia_dir))
+                    } else if let Ok(cwd) = std::env::current_dir() {
+                        SshAuth::PKey(format!("{}/.ssh/pkey", cwd.to_str().unwrap()))
+                    } else {
+                        panic!("can't figure out where to get private key - use --ssh-key");
+                    }
+                }
+            },
             steps: Vec::new(),
         }
     }
@@ -262,6 +310,7 @@ impl Test {
     pub fn setup_step(mut self) -> Self {
         self.steps.push(Box::new(SetupStep::new(
             &self.target,
+            &self.auth,
             &self.bin,
             self.seed.clone(),
             &self.block_device,
@@ -275,6 +324,7 @@ impl Test {
     pub fn load_step(mut self, duration: Duration) -> Self {
         self.steps.push(Box::new(LoadStep::new(
             &self.target,
+            &self.auth,
             &self.bin,
             self.seed.clone(),
             &self.block_device,
@@ -288,6 +338,7 @@ impl Test {
     pub fn operation_step(mut self) -> Self {
         self.steps.push(Box::new(OperationStep::new(
             &self.target,
+            &self.auth,
             &self.bin,
             self.seed.clone(),
             &self.block_device,
@@ -300,7 +351,7 @@ impl Test {
     /// TODO(34504): instead of waiting for 30 seconds, we should have a retry loop around the ssh in
     /// the verification step.
     pub fn reboot_step(mut self) -> Self {
-        self.steps.push(Box::new(RebootStep::new(&self.target, &self.reboot_type)));
+        self.steps.push(Box::new(RebootStep::new(&self.target, &self.auth, &self.reboot_type)));
         self
     }
 
@@ -311,6 +362,7 @@ impl Test {
     pub fn verify_step(mut self, num_retries: u32, retry_timeout: Duration) -> Self {
         self.steps.push(Box::new(VerifyStep::new(
             &self.target,
+            &self.auth,
             &self.bin,
             self.seed.clone(),
             &self.block_device,
@@ -464,6 +516,8 @@ mod tests {
             relay: None,
             iterations,
             run_until_failure,
+            ssh_key: Some("/fake/ssh/key".into()),
+            ssh_agent: false,
         };
         test.add_options(opts)
     }

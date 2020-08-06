@@ -29,7 +29,7 @@ mod tests {
             .setup_step()
             .load_step(Duration::from_secs(5))
             .reboot_step()
-            .verify_step(10, Duration::from_secs(1))
+            .verify_step(20, Duration::from_secs(15))
             .run()
             .expect("test failure");
     }

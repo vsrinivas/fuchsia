@@ -119,5 +119,9 @@ group("tests") {
 
 group("integration") {
   testonly = true
-  public_deps = [ ":blobfs-fsck-soft-host_test($host_toolchain)" ]
+  public_deps = [
+    ":blobfs-fsck-soft-host_test($host_toolchain)",
+    ":blobfs-fsck-soft-target",
+    "//garnet/packages/prod:run",
+  ]
 }
