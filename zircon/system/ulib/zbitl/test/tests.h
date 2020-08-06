@@ -30,6 +30,9 @@
 //   ```
 //  void Create(std::string_view, storage_type* zbi)
 //   ```
+//   The StorageIo object can store state if storage_type is a non-owning
+//   type referring to some different underlying type holding the contents.
+//   Only one Create call will be made per StorageIo object.
 // * a means of reading the payload of an item:
 //   ```
 //  void ReadPayload(const storage_type& zbi, const zbi_header_t& header, payload_type payload)

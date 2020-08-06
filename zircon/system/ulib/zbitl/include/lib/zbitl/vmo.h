@@ -57,6 +57,34 @@ struct StorageTraits<zx::vmo> {
                                          bool (*)(void*, ByteView), void*);
 };
 
+template <>
+struct StorageTraits<zx::unowned_vmo> {
+  using Owned = StorageTraits<zx::vmo>;
+
+  using error_type = Owned::error_type;
+  using payload_type = Owned::payload_type;
+
+  static auto Capacity(const zx::unowned_vmo& vmo) { return Owned::Capacity(*vmo); }
+
+  static auto Header(const zx::unowned_vmo& vmo, uint32_t offset) {
+    return Owned::Header(*vmo, offset);
+  }
+
+  static auto Payload(const zx::unowned_vmo& vmo, uint32_t offset, uint32_t length) {
+    return Owned::Payload(*vmo, offset, length);
+  }
+
+  template <typename Callback>
+  static auto Read(const zx::unowned_vmo& vmo, payload_type payload, uint32_t length,
+                   Callback&& callback) {
+    return Owned::Read(*vmo, payload, length, std::forward<Callback>(callback));
+  }
+
+  static auto Write(const zx::unowned_vmo& vmo, uint32_t offset, ByteView data) {
+    return Owned::Write(*vmo, offset, data);
+  }
+};
+
 }  // namespace zbitl
 
 #endif  // LIB_ZBITL_VMO_H_

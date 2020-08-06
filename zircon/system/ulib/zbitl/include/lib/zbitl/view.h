@@ -134,7 +134,7 @@ class View {
     }
 
    private:
-    using TraitsHeader = decltype(Traits::Header(std::declval<Storage&>(), 0));
+    using TraitsHeader = decltype(Traits::Header(std::declval<View>().storage(), 0));
     static constexpr bool kCopy =
         std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type, zbi_header_t>>;
     static constexpr bool kReference =
