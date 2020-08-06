@@ -37,6 +37,7 @@ where the path before the '=' is the destination path in the package, and the
 path after the '=' is the source file (rebased to the root build directory).
 """
 
+from collections import defaultdict
 import argparse
 import json
 import os
@@ -67,38 +68,35 @@ def main():
     sysmgr_lines = [line for line in lines if line.startswith('data/sysmgr/')]
     sysmgr_config_files = [line.split('=')[1] for line in sysmgr_lines]
 
-    # Parse all config files
-    configs = []
-    for config_file in sysmgr_config_files:
-        with open(config_file, 'r') as f:
-            configs.append(json.load(f))
-
+    # Parse all config files.
+    #
     # Build a list of all conflicts, rather than
     # failing immediately on the first conflict. This allows us to print a more
     # useful build failure so that developers don't need to play whack-a-mole with
     # multiple conflicts.
-    seen_services = {}
-    service_conflicts = {}
-    for config in configs:
-        services = config.get('services')
-        if not services:
-            continue
-        for service in services.keys():
-            if service in seen_services:
-                if not service in service_conflicts:
-                    service_conflicts[service] = [seen_services[service]]
-                service_conflicts[service].append(config_file)
-            else:
-                seen_services[service] = config_file
+    configs = []
+    files_by_service = defaultdict(list)
+    for config_file in sysmgr_config_files:
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+            configs.append(config)
+
+            services = config.get('services')
+            if services:
+                for service in services.keys():
+                    files_by_service[service].append(config_file)
 
     # If any conflicts were detected, print a useful error message and then
     # exit.
-    if service_conflicts:
-        print('Error: conflicts detected in sysmgr configuration')
-        for service, config_files in list(service_conflicts.items()):
+    service_conflicts = False
+    for service, config_files in files_by_service.items():
+        if len(config_files) > 1:
             print(
-                'Duplicate configuration for service {} in files: {}'.format(
-                    service, ', '.join(config_files)))
+                'Duplicate sysmgr configuration for service {} in files: {}'.
+                format(service, ', '.join(config_files)))
+            service_conflicts = True
+
+    if service_conflicts:
         return 1
 
     # Create a single merged configuration analogous to sysmgr's init itself.
