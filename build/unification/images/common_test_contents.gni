@@ -15,7 +15,6 @@ common_test_contents = [
   "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-test",
   "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test",
   "//src/devices/clock/drivers/msm8x53-clk:msm8x53-clk-test",
-  "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-test",
   "//src/devices/lib/as370/test:audio-dsp-test",
   "//src/devices/lib/as370/test:syn-audio-in-test",
   "//src/devices/nand/drivers/ram-nand:ram-nand-test",

@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "aml-axg-gpio:tests",
     "as370-gpio:tests",
     "gpio:tests",
     "mt-8167:tests",
