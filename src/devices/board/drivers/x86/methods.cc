@@ -43,6 +43,7 @@ static zx_status_t uuid_str_to_uint8_buf(const char* uuid_str, uint8_t* uuid) {
 zx_status_t acpi_bbn_call(ACPI_HANDLE dev_obj, uint8_t* out_bbn) {
   uint64_t tmp = 0;
   ACPI_STATUS status = acpi_evaluate_integer(dev_obj, "_BBN", &tmp);
+
   // BBN is returned in the lower 8 bits
   *out_bbn = tmp & 0xFF;
   return acpi_to_zx_status(status);

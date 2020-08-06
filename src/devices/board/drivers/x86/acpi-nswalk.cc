@@ -27,6 +27,7 @@
 #include "acpi.h"
 #include "dev.h"
 #include "errors.h"
+#include "i2c.h"
 #include "iommu.h"
 #include "methods.h"
 #include "nhlt.h"
@@ -569,24 +570,42 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
           return AE_ERROR;
         }
 
-        // Is this an Intel HDA audio device?  If so, attempt to find the NHLT
-        // and publish it as metadata for the driver to pick up later on.
+        // Is this an HDAS (Intel HDA audio controller) or I2Cx (I2C bus) device node
+        // under PCI?  If so, attempt to publish their relevant metadata so that the
+        // device driver can access it when the PCI device itself is finally
+        // published.
         //
         // TODO(fxb/56832): Remove this when we have a better way to manage driver
         // dependencies on ACPI.
         constexpr uint32_t kHDAS_Id = make_fourcc('H', 'D', 'A', 'S');
-        if (info->Name == kHDAS_Id) {
+        constexpr uint32_t kI2Cx_Id = make_fourcc('I', '2', 'C', 0);
+        constexpr uint32_t kI2Cx_Mask = make_fourcc(0xFF, 0xFF, 0xFF, 0x00);
+
+        if ((info->Name == kHDAS_Id) || ((info->Name & kI2Cx_Mask) == kI2Cx_Id)) {
           // We must have already seen at least one PCI root due to traversal order.
           if (!last_pci_bbn.has_value()) {
-            zxlogf(ERROR, "acpi: Found HDAS node, but no prior PCI root was discovered!");
+            zxlogf(WARNING,
+                   "acpi: Found HDAS/I2Cx node (\"%s\"), but no prior PCI root was discovered!",
+                   fourcc_to_string(info->Name).str);
           } else if (!(info->Valid & ACPI_VALID_ADR)) {
-            zxlogf(ERROR, "acpi: no valid ADR found for HDA device");
+            zxlogf(WARNING, "acpi: no valid ADR found for device \"%s\"",
+                   fourcc_to_string(info->Name).str);
           } else {
-            // Attaching metadata to the HDAS device /dev/sys/pci/...
-            zx_status_t status = nhlt_publish_metadata(sys_root, last_pci_bbn.bbn(),
-                                                       (uint64_t)info->Address, object);
-            if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
-              zxlogf(ERROR, "acpi: failed to publish NHLT metadata");
+            if (info->Name == kHDAS_Id) {
+              // Attaching metadata to the HDAS device /dev/sys/pci/...
+              zx_status_t status = nhlt_publish_metadata(
+                  sys_root, last_pci_bbn.bbn(), static_cast<uint64_t>(info->Address), object);
+              if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
+                zxlogf(ERROR, "acpi: failed to publish NHLT metadata");
+              }
+            } else {
+              // Attaching metadata to the I2Cx device /dev/sys/pci/...
+              zx_status_t status =
+                  I2cBusPublishMetadata(sys_root, last_pci_bbn.bbn(),
+                                        static_cast<uint64_t>(info->Address), *info, object);
+              if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
+                zxlogf(ERROR, "acpi: failed to publish I2C metadata");
+              }
             }
           }
         }

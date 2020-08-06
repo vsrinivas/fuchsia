@@ -172,6 +172,18 @@ ACPI_STATUS WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object, uint3
   return ::AcpiWalkNamespace(type, start_object, max_depth, Descent, Ascent, &cbk, nullptr);
 }
 
+
+// A utility function which can be used to invoke the ACPICA library's
+// AcpiWalkResources function, but with an arbitrary Callable instead of needing
+// to use C-style callbacks with context pointers.
+template <typename Callable>
+ACPI_STATUS WalkResources(ACPI_HANDLE object, const char* resource_name, Callable cbk) {
+  auto Thunk = [](ACPI_RESOURCE* res, void* ctx) -> ACPI_STATUS {
+    return (*static_cast<Callable*>(ctx))(res);
+  };
+  return ::AcpiWalkResources(object, const_cast<char*>(resource_name), Thunk, &cbk);
+}
+
 // ExtractHidToDevProps and ExtractCidToDevProps
 //
 // These functions will take an ACPI_DEVICE_INFO structure, and attempt to
