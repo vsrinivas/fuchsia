@@ -246,7 +246,7 @@ impl Shell {
                 true
             }
             Ok(result) => {
-                println!("{}", result);
+                println!("{}", serde_json::to_string_pretty(&result).unwrap());
                 true
             }
         }
