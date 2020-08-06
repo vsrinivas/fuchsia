@@ -306,15 +306,23 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
         buf: &[u8],
         mut sender: std::net::SocketAddr,
     ) -> Result<Option<(&S::Socket, std::net::SocketAddr, Vec<u8>)>, Error> {
-        log::info!("received message from: {}", sender);
         let msg = match Message::from_buffer(buf) {
-            Ok(msg) => msg,
+            Ok(msg) => {
+                log::debug!("parsed message from {}: {:?}", sender, msg);
+                msg
+            }
             Err(e) => {
-                log::error!("failed to parse message from {}: {}", sender, e);
+                log::warn!("failed to parse message from {}: {}", sender, e);
                 return Ok(None);
             }
         };
-        log::info!("parsed message: {:?}", msg);
+
+        let typ = msg.get_dhcp_type();
+        if sender.ip().is_unspecified() {
+            log::info!("processing {:?} from {}", typ, msg.chaddr);
+        } else {
+            log::info!("processing {:?} from {}", typ, sender);
+        }
 
         // This call should not block because the server is single-threaded.
         let result = self.server.borrow_mut().dispatch_message(msg);
@@ -331,12 +339,17 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
                 log::info!("allocated address: {}", addr);
                 Ok(None)
             }
-            Ok(ServerAction::SendResponse(message, dest)) => {
-                log::info!("generated response: {:?}", message);
+            Ok(ServerAction::SendResponse(message, dst)) => {
+                log::debug!("generated response: {:?}", message);
 
+                let typ = message.get_dhcp_type();
                 // Check if server returned an explicit destination ip.
-                if let Some(addr) = dest {
+                if let Some(addr) = dst {
+                    log::info!("sending {:?} to {}", typ, addr);
+
                     sender.set_ip(IpAddr::V4(addr));
+                } else {
+                    log::info!("sending {:?} to {}", typ, message.chaddr);
                 }
                 let src =
                     get_server_id_from(&message).ok_or(ServerError::MissingServerIdentifier)?;
@@ -365,7 +378,7 @@ async fn define_msg_handling_loop_future(
             .context("failed to handle buffer")?
         {
             sock.send_to(&response, dst).await.context("unable to send response")?;
-            log::info!("response sent to: {}", dst);
+            log::info!("response sent to {}: {} bytes", dst, response.len());
         }
     }
 }
