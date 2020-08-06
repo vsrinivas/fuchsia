@@ -262,7 +262,7 @@ impl PackageDataCollector {
                     let url = format!("{}#{}", pkg.url, path);
                     components.insert(
                         url.clone(),
-                        Component { id: idx, url: url.clone(), version: 0, inferred: false },
+                        Component { id: idx, url: url.clone(), version: 1, inferred: false },
                     );
 
                     let mani = {
@@ -303,7 +303,7 @@ impl PackageDataCollector {
                     Component {
                         id: idx,
                         url: pkg_url.clone(),
-                        version: 0, // FIXME:
+                        version: 1,
                         inferred: true,
                     },
                 );
@@ -332,7 +332,7 @@ impl PackageDataCollector {
                             Component {
                                 id: idx,
                                 url: url.clone(),
-                                version: 0, // FIXME:
+                                version: 1,
                                 inferred: true,
                             },
                         );
