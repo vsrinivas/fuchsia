@@ -45,7 +45,6 @@ namespace modular {
 
 class ModuleContextImpl;
 class ModuleControllerImpl;
-class StoryModelMutator;
 class StoryProviderImpl;
 class StoryStorage;
 class StoryVisibilitySystem;
@@ -55,10 +54,9 @@ class StoryVisibilitySystem;
 // the story.
 class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
-  StoryControllerImpl(SessionStorage* session_storage, StoryStorage* story_storage,
-                      std::unique_ptr<StoryMutator> story_mutator,
-                      std::unique_ptr<StoryObserver> story_observer,
-                      StoryProviderImpl* story_provider_impl, inspect::Node* story_inspect_node);
+  StoryControllerImpl(std::string story_id, SessionStorage* session_storage,
+                      StoryStorage* story_storage, StoryProviderImpl* story_provider_impl,
+                      inspect::Node* story_inspect_node);
   ~StoryControllerImpl() override;
 
   // Called by StoryProviderImpl.
@@ -79,7 +77,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void DeleteModule(const std::vector<std::string>& module_path, fit::function<void()> done);
 
   // Called by ModuleContextImpl.
-  fidl::StringPtr GetStoryId() const;
+  fuchsia::modular::StoryState runtime_state() const { return runtime_state_; }
 
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
@@ -192,9 +190,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Misc internal helpers.
   void SetRuntimeState(fuchsia::modular::StoryState new_state);
-  void NotifyStoryWatchers(const fuchsia::modular::storymodel::StoryModel& model);
-  void NotifyOneStoryWatcher(const fuchsia::modular::storymodel::StoryModel& model,
-                             fuchsia::modular::StoryWatcher* watcher);
+  void NotifyStoryWatchers();
+  void NotifyOneStoryWatcher(fuchsia::modular::StoryWatcher* watcher);
   void ProcessPendingStoryShellViews();
 
   bool IsExternalModule(const std::vector<std::string>& module_path);
@@ -220,18 +217,14 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // such path is known to the story.
   RunningModInfo* FindAnchor(RunningModInfo* running_mod_info);
 
-  // The ID of the story, copied from |story_observer_| for convenience in
-  // transitioning clients.
   const std::string story_id_;
+  fuchsia::modular::StoryState runtime_state_ = fuchsia::modular::StoryState::STOPPED;
 
   StoryProviderImpl* const story_provider_impl_;  // Not owned.
   SessionStorage* const session_storage_;         // Not owned.
   StoryStorage* const story_storage_;             // Not owned.
 
   inspect::Node* story_inspect_node_;  // Not owned.
-
-  std::unique_ptr<StoryMutator> story_mutator_;
-  std::unique_ptr<StoryObserver> story_observer_;
 
   // Implements the primary service provided here:
   // fuchsia::modular::StoryController.

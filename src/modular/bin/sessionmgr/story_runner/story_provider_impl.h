@@ -122,6 +122,9 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   static fuchsia::modular::StoryInfo StoryInfo2ToStoryInfo(
       const fuchsia::modular::StoryInfo2& story_info_2);
 
+  // Called by StoryProviderImpl when the StoryState changes.
+  void NotifyStoryStateChange(std::string story_id);
+
  private:
   // |fuchsia::modular::StoryProvider|
   void GetController(std::string story_id,
@@ -142,9 +145,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   void OnStoryStorageDeleted(std::string story_id);
   void OnStoryStorageUpdated(std::string story_id,
                              fuchsia::modular::internal::StoryData story_data);
-
-  // Called indirectly through observation of loaded StoryModels. Calls NotifyStoryWatchers().
-  void NotifyStoryStateChange(std::string story_id);
 
   void NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
                            fuchsia::modular::StoryState story_state);
@@ -194,13 +194,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
     // whole process and take advantage of fit::scope to auto-cancel tasks when
     // |this| dies.
     std::unique_ptr<fit::executor> executor;
-
-    // StoryRuntime itself contains a StoryModelOwner and manages systems with
-    // asynchronous initialization and teardown operations.
-    std::unique_ptr<StoryModelOwner> model_owner;
-
-    // This allows us to observe changes to the StoryModel owned by |runtime|.
-    std::unique_ptr<StoryObserver> model_observer;
 
     std::unique_ptr<StoryControllerImpl> controller_impl;
     std::shared_ptr<StoryStorage> storage;

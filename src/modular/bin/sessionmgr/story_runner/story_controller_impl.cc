@@ -33,7 +33,6 @@
 #include "src/modular/bin/sessionmgr/annotations.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
-#include "src/modular/bin/sessionmgr/story/model/story_observer.h"
 #include "src/modular/bin/sessionmgr/story_runner/module_context_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/module_controller_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
@@ -768,19 +767,16 @@ class StoryControllerImpl::StartCall : public Operation<> {
   OperationQueue operation_queue_;
 };
 
-StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
+StoryControllerImpl::StoryControllerImpl(std::string story_id,
+                                         SessionStorage* const session_storage,
                                          StoryStorage* const story_storage,
-                                         std::unique_ptr<StoryMutator> story_mutator,
-                                         std::unique_ptr<StoryObserver> story_observer,
                                          StoryProviderImpl* const story_provider_impl,
                                          inspect::Node* story_inspect_node)
-    : story_id_(story_observer->model().name()),
+    : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
       story_inspect_node_(story_inspect_node),
-      story_mutator_(std::move(story_mutator)),
-      story_observer_(std::move(story_observer)),
       story_shell_context_impl_{story_id_, story_provider_impl},
       weak_factory_(this) {
   story_storage_->SubscribeModuleDataUpdated([this](fuchsia::modular::ModuleData module_data) {
@@ -795,10 +791,6 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
     OnModuleDataUpdated(std::move(module_data));
     return StoryStorage::NotificationInterest::CONTINUE;
   });
-
-  story_observer_->RegisterListener([this](const fuchsia::modular::storymodel::StoryModel& model) {
-    NotifyStoryWatchers(model);
-  });
 }
 
 StoryControllerImpl::~StoryControllerImpl() = default;
@@ -809,7 +801,7 @@ void StoryControllerImpl::Connect(
 }
 
 bool StoryControllerImpl::IsRunning() {
-  switch (story_observer_->model().runtime_state()) {
+  switch (runtime_state_) {
     case fuchsia::modular::StoryState::RUNNING:
       return true;
     case fuchsia::modular::StoryState::STOPPING:
@@ -835,8 +827,6 @@ void StoryControllerImpl::DeleteModule(const std::vector<std::string>& module_pa
   operation_queue_.Add(
       std::make_unique<DeleteModuleCall>(story_storage_, module_path, std::move(done)));
 }
-
-fidl::StringPtr StoryControllerImpl::GetStoryId() const { return story_observer_->model().name(); }
 
 void StoryControllerImpl::ProcessPendingStoryShellViews() {
   // NOTE(mesch): As it stands, this machinery to send modules in traversal
@@ -907,7 +897,7 @@ void StoryControllerImpl::GetInfo(GetInfoCallback callback) {
     auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_);
     FX_CHECK(story_info_2);
     auto story_info = modular::StoryProviderImpl::StoryInfo2ToStoryInfo(*story_info_2);
-    callback(std::move(story_info), story_observer_->model().runtime_state());
+    callback(std::move(story_info), runtime_state_);
   }));
 }
 
@@ -920,7 +910,7 @@ void StoryControllerImpl::GetInfo2(GetInfo2Callback callback) {
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)] {
     auto story_info_2 = story_provider_impl_->GetCachedStoryInfo(story_id_);
     FX_CHECK(story_info_2);
-    callback(std::move(*story_info_2), story_observer_->model().runtime_state());
+    callback(std::move(*story_info_2), runtime_state_);
   }));
 }
 
@@ -939,7 +929,7 @@ void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
 
 void StoryControllerImpl::Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) {
   auto ptr = watcher.Bind();
-  NotifyOneStoryWatcher(story_observer_->model(), ptr.get());
+  NotifyOneStoryWatcher(ptr.get());
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
@@ -963,20 +953,19 @@ void StoryControllerImpl::DetachView(fit::function<void()> done) {
 }
 
 void StoryControllerImpl::SetRuntimeState(const fuchsia::modular::StoryState new_state) {
-  story_mutator_->set_runtime_state(new_state);
+  runtime_state_ = new_state;
+  NotifyStoryWatchers();
+  story_provider_impl_->NotifyStoryStateChange(story_id_);
 }
 
-void StoryControllerImpl::NotifyStoryWatchers(
-    const fuchsia::modular::storymodel::StoryModel& model) {
+void StoryControllerImpl::NotifyStoryWatchers() {
   for (auto& i : watchers_.ptrs()) {
-    NotifyOneStoryWatcher(model, (*i).get());
+    NotifyOneStoryWatcher((*i).get());
   }
 }
 
-void StoryControllerImpl::NotifyOneStoryWatcher(
-    const fuchsia::modular::storymodel::StoryModel& model,
-    fuchsia::modular::StoryWatcher* watcher) {
-  watcher->OnStateChange(model.runtime_state());
+void StoryControllerImpl::NotifyOneStoryWatcher(fuchsia::modular::StoryWatcher* watcher) {
+  watcher->OnStateChange(runtime_state_);
 }
 
 void StoryControllerImpl::EraseRunningModInfo(std::vector<std::string> module_path) {

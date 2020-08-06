@@ -116,22 +116,11 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
       .storage = std::move(story_storage), .current_data = std::move(story_data),
     };
 
-    container.model_owner = std::make_unique<StoryModelOwner>(
-        story_id_, container.executor.get(), std::make_unique<NoopStoryModelStorage>());
-    container.model_observer = container.model_owner->NewObserver();
     container.InitializeInspect(story_id_, session_inspect_node_);
 
-    container.controller_impl = std::make_unique<StoryControllerImpl>(
-        session_storage_, container.storage.get(), container.model_owner->NewMutator(),
-        container.model_owner->NewObserver(), story_provider_impl_, container.story_node.get());
-    // Register a listener on the StoryModel so that we can signal
-    // our watchers when relevant data changes.
-    container.model_observer->RegisterListener(
-        [id = story_id_, story_provider = story_provider_impl_](
-            const fuchsia::modular::storymodel::StoryModel& model) {
-          story_provider->NotifyStoryStateChange(id);
-        });
-
+    container.controller_impl =
+        std::make_unique<StoryControllerImpl>(story_id_, session_storage_, container.storage.get(),
+                                              story_provider_impl_, container.story_node.get());
     auto it =
         story_provider_impl_->story_runtime_containers_.emplace(story_id_, std::move(container));
     story_runtime_container_ = &it.first->second;
@@ -281,10 +270,10 @@ void StoryProviderImpl::Watch(
     const auto& container = item.second;
     FX_CHECK(container.current_data->has_story_info());
     watcher_ptr->OnChange(StoryInfo2ToStoryInfo(container.current_data->story_info()),
-                          container.model_observer->model().runtime_state(),
+                          container.controller_impl->runtime_state(),
                           fuchsia::modular::StoryVisibilityState::DEFAULT);
     watcher_ptr->OnChange2(CloneStruct(container.current_data->story_info()),
-                           container.model_observer->model().runtime_state(),
+                           container.controller_impl->runtime_state(),
                            fuchsia::modular::StoryVisibilityState::DEFAULT);
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
@@ -407,8 +396,7 @@ void StoryProviderImpl::NotifyStoryStateChange(std::string story_id) {
     // from here.
     return;
   }
-  NotifyStoryWatchers(it->second.current_data.get(),
-                      it->second.model_observer->model().runtime_state());
+  NotifyStoryWatchers(it->second.current_data.get(), it->second.controller_impl->runtime_state());
 }
 
 // |fuchsia::modular::StoryProvider|
@@ -480,7 +468,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(std::string story_id,
   auto it = story_runtime_containers_.find(story_data.story_info().id());
   if (it != story_runtime_containers_.end()) {
     auto& container = it->second;
-    runtime_state = container.model_observer->model().runtime_state();
+    runtime_state = container.controller_impl->runtime_state();
     container.current_data = CloneOptional(story_data);
     container.ResetInspect();
   } else {
