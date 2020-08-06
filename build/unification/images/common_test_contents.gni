@@ -26,7 +26,6 @@ common_test_contents = [
   "//src/devices/serial/drivers/uart16550:uart16550-test",
   "//src/devices/spi/drivers/mtk-spi:mtk-spi-test",
   "//src/devices/sysmem/tests/sysmem",
-  "//src/devices/tests/crash-device",
   "//src/devices/tests/devfs",
   "//src/devices/tests/devhost-test",
   "//src/devices/tests/mock-device",
