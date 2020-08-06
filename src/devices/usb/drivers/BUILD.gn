@@ -9,6 +9,7 @@ group("tests") {
     "aml-usb-phy-v2:tests",
     "dwc2:tests",
     "usb-hub-rewrite:tests",
+    "usb-peripheral:tests",
     "usb-virtual-bus:tests",
     "xhci-rewrite:tests",
   ]
