@@ -22,7 +22,8 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/auxdata.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/i2c.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -581,7 +582,7 @@ zx_status_t intel_serialio_i2c_reset_controller(intel_serialio_i2c_device_t* dev
       usleep(10);
     }
     if (!retry) {
-      printf("i2c-controller: timed out waiting for device idle\n");
+      zxlogf(ERROR, "i2c-controller: timed out waiting for device idle");
       return ZX_ERR_TIMED_OUT;
     }
   }
@@ -713,24 +714,52 @@ static zx_status_t intel_serialio_i2c_device_specific_init(intel_serialio_i2c_de
 }
 
 static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent, pci_protocol_t* pci) {
-  // get child info from aux data, max 4
-  // TODO: this seems nonstandard to device model
-  auxdata_i2c_device_t childdata[4];
-  memset(childdata, 0, sizeof(childdata));
+  // Try to fetch our metadata so that we know who is on the bus.
+  acpi_i2c_device_t* devices = NULL;
+  size_t metadata_size;
+  zx_status_t status =
+      device_get_metadata_size(parent->pcidev, DEVICE_METADATA_ACPI_I2C_DEVICES, &metadata_size);
 
-  size_t actual;
-  zx_status_t status = pci_get_auxdata(pci, "i2c-child", childdata, sizeof(childdata), &actual);
-  if (status != ZX_OK) {
-    return;
+  if ((status == ZX_ERR_NOT_FOUND) || ((status == ZX_OK) && !metadata_size)) {
+    // No metadata means that there are no devices on this bus.  For now, we do
+    // nothing, but it might be a good idea to (someday) put the hardware into a
+    // low power state if we can, and perhaps even unload the driver at that
+    // point.
+    goto finished;
   }
 
-  auxdata_i2c_device_t* child = &childdata[0];
-  uint32_t count = actual / sizeof(auxdata_i2c_device_t);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "i2c: failed to fetch metadata size (status %d)", status);
+    goto finished;
+  }
+
+  if (metadata_size % sizeof(acpi_i2c_device_t)) {
+    zxlogf(ERROR, "i2c: metadata size %zu is not a multiple of device size %zu", metadata_size,
+           sizeof(acpi_i2c_device_t));
+    goto finished;
+  }
+
+  size_t count = metadata_size / sizeof(acpi_i2c_device_t);
+  devices = calloc(count, sizeof(acpi_i2c_device_t));
+  if (!devices) {
+    zxlogf(ERROR, "i2c: Failed to allocate %zu bytes to hold metadata for %zu device%s.",
+           metadata_size, count, count == 1 ? "" : "s");
+    goto finished;
+  }
+
+  status = device_get_metadata(parent->pcidev, DEVICE_METADATA_ACPI_I2C_DEVICES, devices,
+                               metadata_size, NULL);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "i2c: failed to fetch metadata (status %d)", status);
+    goto finished;
+  }
+
+  acpi_i2c_device_t* child = &devices[0];
   uint32_t bus_speed = 0;
   while (count--) {
     zxlogf(DEBUG,
-           "i2c: got child[%u] bus_controller=%d ten_bit=%d address=0x%x bus_speed=%u"
-           " protocol_id=0x%08x\n",
+           "i2c: got child[%zu] bus_controller=%d ten_bit=%d address=0x%x bus_speed=%u"
+           " protocol_id=0x%08x",
            count, child->is_bus_controller, child->ten_bit, child->address, child->bus_speed,
            child->protocol_id);
 
@@ -746,6 +775,11 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent, pci_
         parent, child->ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS, child->address,
         child->protocol_id, child->props, child->propcount);
     child += 1;
+  }
+
+finished:
+  if (devices != NULL) {
+    free(devices);
   }
 }
 
@@ -866,7 +900,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
 
   zxlogf(INFO,
          "initialized intel serialio i2c driver, "
-         "reg=%p regsize=%ld\n",
+         "reg=%p regsize=%ld",
          device->regs, device->mmio.size);
 
   intel_serialio_add_devices(device, &pci);
