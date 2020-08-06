@@ -4,57 +4,23 @@
 
 import("clang.gni")
 
-# This file is provided by the toolchain to describe the runtime
-# dependencies implied by linking a binary based on --target and other
-# compiler switches.  The file contains a JSON array of objects that map to
-# the following GN schema.  Each entry matches a single compilation mode
-# and yields all the runtime dependencies implied by that mode.
-#
-# Type: list(scope)
-#
-#   target
-#     Required: --target tuple a la ${toolchain.target_tuple}.
-#     Type: string
-#
-#   cflags
-#     Optional: List of compilation flags that select this mode,
-#     e.g. "-fsanitizer=..." and the like.
-#     Type: list(string)
-#     Default: []
-#
-#   ldflags
-#     Optional: Link-time flags that select this mode.
-#     This is either [ "-static-libstdc++" ] or [].
-#     Type: list(string)
-#     Default: []
-#
-#   runtime
-#     Required: List of runtime files needed by binaries in this mode.
-#     Type: list(scope)
-#
-#       soname
-#         Required: `DT_SONAME` string in the ELF shared library.
-#         Type: string
-#
-#       dist
-#         Required: File to load to satisfy $soname `DT_NEEDED` entries.
-#         Type: path relative to JSON file's directory
-#
-#       debug
-#         Optional: Unstripped or separate debug file matching $dist.
-#         Type: path relative to JSON file's directory
-#
-_clang_runtime_file = "$clang_lib_dir/runtime.json"
-clang_runtime = read_file(_clang_runtime_file, "json")
+_clang_lib_dir = "$clang_tool_dir/../lib"
 
-# This is the prefix of labels generated for targets to generate Breakpad
-# symbols for toolchain-provided debug files.
-clang_runtime_breakpad_syms_label = "$zx/public/gn/toolchain:_clang.breakpad."
+_clang_runtime_file = "$_clang_lib_dir/runtime.json"
+_clang_runtime = read_file(_clang_runtime_file, "json")
 
-# This is where those files go.
-clang_runtime_breakpad_syms_dir =
-    get_label_info("$clang_runtime_breakpad_syms_label($default_toolchain)",
-                   "target_out_dir") + "/clang-runtime.sym"
+# Toolchain spec for use with toolchain_runtime_deps().
+clang_toolchain_spec = {
+  runtime = _clang_runtime
+  runtime_file = _clang_runtime_file
+  lib_dir = _clang_lib_dir
+  version_string = clang_version_string
+  version_description = clang_version_description
+  flag_vars = [
+    "cflags",
+    "ldflags",
+  ]
+}
 
 # Provide deps required by toolchain-provided runtime libraries.
 #
@@ -66,11 +32,103 @@ clang_runtime_breakpad_syms_dir =
 # the toolchain in $clang_runtime to select for things like instrumentation
 # and shared vs static linking of the standard C++ library.
 #
-# Parameters
+# ## Parameters
 #
-#   cflags, ldflags
-#     Required: Flags to match in the runtimes manifest.
-#     Type: list(string)
+# * toolchain_spec
+#   - Required: Path information about the compiler runtimes.
+#   - Type: scope with the following:
+#
+#     * runtime
+#       - Required: The contents of the runtimes manifest (runtime.json).
+#         See below for the schema.
+#       - Type: scope
+#
+#     * runtime_file
+#       - Required: The path to runtime.json from which `runtime` was read.
+#       - Type: file
+#
+#     * flag_vars
+#       - Required: The set of flags to match on in the runtimes manifest.
+#       - Example: `[ "cflags", "ldflags" ]`
+#       - Type: list(string)
+#
+#     * lib_dir
+#       - Required: The base path for all libraries in runtime.json.
+#       - Type: string
+#
+#     * version_string
+#       - Required: A string that changes every time the toolchain is updated,
+#         so we know when to force a recompile.
+#       - Type: string
+#
+#     * version_description
+#       - Required: Something that can lead a human to find the specific toolchain,
+#         such as a source repository URL and revision identifier. If not available,
+#         supply an empty string.
+#       - Type: string
+#
+# * <flag variables>
+#   - Required: Flags to match in the runtimes manifest. Should have a value for
+#     every flag in toolchain_spec.flag_vars.
+#   - Example: `cflags = [] ldflags = [ "-static-libstdc++" ]`
+#   - Type: list(string)
+#
+# * zx_publish
+#   - Optional: Whether to publish a zx_manifest for this runtime.
+#   - Type: bool
+#   - Default: false
+#
+# ## runtime.json
+#
+# This file is provided by the toolchain to describe the runtime
+# dependencies implied by linking a binary based on --target and other
+# compiler switches.  The file contains a JSON array of objects that map to
+# the following GN schema.  Each entry matches a single compilation mode
+# and yields all the runtime dependencies implied by that mode.
+#
+# Type: list(scope)
+#
+# * target
+#   - Required: --target tuple a la `${toolchain.target_tuple}`.
+#   - Type: string
+#
+# * cflags
+#   - Optional: List of compilation flags that select this mode,
+#     e.g. `"-fsanitizer=..."` and the like.
+#     If not specified, cflags are ignored during selection.
+#   - Type: list(string)
+#
+# * ldflags
+#   - Optional: Link-time flags that select this mode.
+#     This is usually either `[ "-static-libstdc++" ]` or `[]`.
+#     If not specified, ldflags are ignored during selection.
+#   - Type: list(string)
+#
+# * runtime
+#   - Required: List of runtime files needed by binaries in this mode.
+#   - Type: list(scope)
+#
+#     * name
+#       - Optional: A stable name for the library to use when publishing a
+#         zx_manifest. If omitted, soname is used.
+#       - Type: string
+#
+#     * soname
+#       - Required: `DT_SONAME` string in the ELF shared library.
+#       - Type: string
+#
+#     * dist
+#       - Required: File to load to satisfy $soname `DT_NEEDED` entries.
+#       - Type: path relative to `${toolchain_spec.lib_dir}`
+#
+#     * debug
+#       - Optional: Unstripped or separate debug file matching $dist.
+#       - Type: path relative to `${toolchain_spec.lib_dir}`
+#
+#     * breakpad
+#       - Required if `debug` is present and `toolchain.use_breakpad` is true:
+#         Path to breakpad .sym file.
+#       - Type: path relative to `${toolchain_spec.lib_dir}`
 #
 template("toolchain_runtime_deps") {
   # TODO(fxb/3367): remove this attribute.
@@ -82,6 +140,8 @@ template("toolchain_runtime_deps") {
                              "testonly",
                              "visibility",
                            ])
+
+    toolchain_spec = invoker.toolchain_spec
 
     # This information comes out the same in the main and the shlib
     # toolchains.  But we don't want two copies to appear in the metadata
@@ -96,47 +156,30 @@ template("toolchain_runtime_deps") {
       if (defined(toolchain.shlib) && defined(visibility)) {
         visibility += [ ":$target_name" ]
       }
+
       match = false
-      foreach(config, clang_runtime) {
-        if (!defined(config.cflags)) {
-          config.cflags = []
+      match_flags = {
+        forward_variables_from(invoker, toolchain_spec.flag_vars)
+      }
+      foreach(config, toolchain_spec.runtime) {
+        # Clear value from last iteration.
+        config_flags = {
         }
-        if (!defined(config.ldflags)) {
-          config.ldflags = []
+        config_flags = {
+          forward_variables_from(config, toolchain_spec.flag_vars)
         }
-        if (config.target + [ toolchain.target_tuple ] -
-            [ toolchain.target_tuple ] != config.target &&
-            invoker.cflags == config.cflags &&
-            invoker.ldflags == config.ldflags) {
+        if (config_flags == match_flags &&
+            config.target + [ toolchain.target_tuple ] -
+            [ toolchain.target_tuple ] != config.target) {
+          assert(match == false,
+                 "${toolchain_spec.runtime_file} has multiple matches for" +
+                     " --target=${toolchain.target_tuple} + $invoker")
           match = config
         }
       }
       assert(match != false,
-             "$_clang_runtime_file has no match for" +
+             "${toolchain_spec.runtime_file} has no match for" +
                  " --target=${toolchain.target_tuple} + $invoker")
-
-      if (toolchain.breakpad_syms) {
-        # Rewrite the data as if it had Breakpad symbols in it.  Maybe one day
-        # we'll have the toolchain package provide them.  For now, BUILD.gn
-        # generates a target in the default toolchain for each unique debug
-        # file in clang_runtime and this generates deps on those targets and
-        # refers to their output.
-        deps = []
-        runtime = []
-        foreach(lib, match.runtime) {
-          if (defined(lib.debug) && !defined(lib.breakpad)) {
-            lib.breakpad =
-                rebase_path("$clang_runtime_breakpad_syms_dir/${lib.debug}",
-                            clang_lib_dir)
-            deps += [ clang_runtime_breakpad_syms_label +
-                      string_join(".", string_split(lib.debug, "/")) +
-                      "($default_toolchain)" ]
-          }
-          runtime += [ lib ]
-        }
-      } else {
-        runtime = match.runtime
-      }
 
       toolchain_label = get_label_info(":$target_name", "toolchain")
       not_needed([ "toolchain_label" ])  # In case the for loop below is empty.
@@ -145,80 +188,87 @@ template("toolchain_runtime_deps") {
         binaries = []
         manifest_lines = []
         zx_manifest = []
-        foreach(lib, runtime) {
-          # For build_api_module("binaries") in $zx/BUILD.gn.
-          binaries += [
+      }
+      foreach(lib, match.runtime) {
+        # For build_api_module("binaries") in $zx/BUILD.gn.
+        metadata.binaries += [
+          {
+            cpu = current_cpu
+            os = current_os
+            environment = toolchain.environment
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            type = "shared_library"
+            dist = rebase_path(lib.dist, root_build_dir, toolchain_spec.lib_dir)
+            if (defined(lib.debug)) {
+              debug =
+                  rebase_path(lib.debug, root_build_dir, toolchain_spec.lib_dir)
+              if (toolchain.breakpad_syms) {
+                breakpad = rebase_path(lib.breakpad,
+                                       root_build_dir,
+                                       toolchain_spec.lib_dir)
+              }
+            }
+
+            target_tuple = match.target
+            forward_variables_from(match, toolchain_spec.flag_vars)
+
+            if (toolchain_spec.version_string != "") {
+              toolchain_id = toolchain_spec.version_string
+            }
+            if (toolchain_spec.version_description != "") {
+              toolchain_version = toolchain_spec.version_description
+            }
+          },
+        ]
+
+        if (defined(lib.soname)) {
+          soname = lib.soname
+        } else {
+          soname = get_path_info(lib.dist, "file")
+        }
+
+        # This is the main purpose of the whole target.
+        metadata.manifest_lines +=
+            [ "lib/${toolchain.libprefix}${soname}=" +
+              rebase_path(lib.dist, root_build_dir, toolchain_spec.lib_dir) ]
+
+        # Make the manifest describing this library available to the build
+        # API module for unification.
+        # The manifest is not published for fuzzer variants.
+        if (defined(invoker.zx_publish) && invoker.zx_publish &&
+            string_replace(toolchain_label, "fuzzer", "") == toolchain_label) {
+          if (defined(lib.name)) {
+            lib_name = lib.name
+          } else {
+            lib_name = soname
+          }
+          zx_manifest_name = "$target_gen_dir/$lib_name.zx_manifest.txt"
+          write_file(zx_manifest_name,
+                     [ "lib/${toolchain.libprefix}${soname}=" +
+                           rebase_path(lib.dist,
+                                       root_build_dir,
+                                       toolchain_spec.lib_dir) ],
+                     "list lines")
+          metadata.zx_manifest += [
             {
+              label = get_label_info(":$target_name", "label_with_toolchain")
+              name = "lib.$lib_name"
+              if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
+                  toolchain.tags) {
+                name += toolchain.variant_suffix
+              }
+              name = string_replace(name, "+", "p")
+              toolchain = toolchain_label
+              path = rebase_path(zx_manifest_name, root_build_dir)
               cpu = current_cpu
               os = current_os
-              environment = toolchain.environment
-              label = get_label_info(":$target_name", "label_with_toolchain")
-              type = "shared_library"
-              dist = rebase_path(lib.dist, root_build_dir, clang_lib_dir)
-              if (defined(lib.debug)) {
-                debug = rebase_path(lib.debug, root_build_dir, clang_lib_dir)
-              }
-              if (defined(lib.breakpad)) {
-                breakpad =
-                    rebase_path(lib.breakpad, root_build_dir, clang_lib_dir)
-              }
-
-              target_tuple = match.target
-              cflags = match.cflags
-              ldflags = match.ldflags
-
-              if (clang_version_string != "") {
-                toolchain_id = clang_version_string
-              }
-              if (clang_version_description != "") {
-                toolchain_version = clang_version_description
-              }
             },
           ]
-
-          # This is the main purpose of the whole target.
-          manifest_lines +=
-              [ "lib/${toolchain.libprefix}${lib.soname}=" +
-                rebase_path(lib.dist, root_build_dir, clang_lib_dir) ]
-
-          # Make the manifest describing this library available to the build
-          # API module for unification.
-          # The manifest is not published for fuzzer variants.
-          if (defined(invoker.zx_publish) && invoker.zx_publish &&
-              string_replace(toolchain_label, "fuzzer", "") ==
-              toolchain_label) {
-            write_file(
-                "$target_gen_dir/${lib.soname}.zx_manifest.txt",
-                [ "lib/${toolchain.libprefix}${lib.soname}=" +
-                      rebase_path(lib.dist, root_build_dir, clang_lib_dir) ],
-                "list lines")
-            zx_manifest += [
-              {
-                label = get_label_info(":$target_name", "label_with_toolchain")
-                name = "lib.${lib.soname}"
-                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
-                    toolchain.tags) {
-                  name += toolchain.variant_suffix
-                }
-                name = string_replace(name, "+", "p")
-                toolchain = toolchain_label
-                path =
-                    rebase_path("$target_gen_dir/${lib.soname}.zx_manifest.txt",
-                                root_build_dir)
-                cpu = current_cpu
-                os = current_os
-              },
-            ]
-          }
         }
       }
     } else {
       public_deps = [ ":$target_name(${toolchain.shlib})" ]
-      not_needed(invoker,
-                 [
-                   "cflags",
-                   "ldflags",
-                 ])
+      not_needed(invoker, toolchain_spec.flag_vars)
     }
   }
 }

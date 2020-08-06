@@ -29,19 +29,12 @@ clang_version_string = clang_tool_dir
 if (clang_tool_dir == "" && use_prebuilt_clang) {
   _prebuilt_clang_dir = "$prebuilt_dir/third_party/clang/$host_platform"
   clang_tool_dir = "$_prebuilt_clang_dir/bin"
-  _prebuilt_cipd_version =
+  _prebuilt_clang_cipd_version =
       read_file("$_prebuilt_clang_dir/.versions/clang.cipd_version", "json")
-  clang_version_string = _prebuilt_cipd_version.instance_id
+  clang_version_string = _prebuilt_clang_cipd_version.instance_id
 }
 
-clang_lib_dir = "$clang_tool_dir/../lib"
-
 # Human-readable identifier for the toolchain version.
-#
-# clang_version_string is useful for Fuchsia standard prebuilts, since it's
-# the CIPD instance ID that can be looked up to find the compiler build.
-# clang_version_description is something that can lead a human to find the
-# specific toolchain, such as a source repository URL and revision identifier.
 #
 # TODO(mcgrathr): Make this the same repo/revision info from `clang --version`.
 # e.g., clang_version_description = read_file("$_clang_lib_dir/VERSION")
