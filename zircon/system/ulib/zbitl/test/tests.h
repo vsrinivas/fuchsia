@@ -174,7 +174,7 @@ void TestMutation() {
     switch (num_items++) {
       case 0:
         EXPECT_STR_EQ("hello world", contents.c_str());
-        ASSERT_TRUE(it.Replace({.type = ZBI_TYPE_DISCARD}).is_ok());
+        ASSERT_TRUE(view.EditHeader(it, {.type = ZBI_TYPE_DISCARD}).is_ok());
         break;
     }
   }

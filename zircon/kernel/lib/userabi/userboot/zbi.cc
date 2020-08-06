@@ -81,7 +81,7 @@ zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
       // designated initializers without all fields, but doesn't (in C++?).
       zbi_header_t discard{};
       discard.type = ZBI_TYPE_DISCARD;
-      if (auto ok = it.Replace(discard); ok.is_error()) {
+      if (auto ok = zbi.EditHeader(it, discard); ok.is_error()) {
         check(log, ok.error_value(), "zx_vmo_write failed on ZBI VMO\n");
       }
 

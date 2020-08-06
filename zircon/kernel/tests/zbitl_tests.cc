@@ -108,7 +108,7 @@ bool MutationTest() {
         // designated initializers without all fields, but doesn't (in C++?).
         zbi_header_t discard{};
         discard.type = ZBI_TYPE_DISCARD;
-        ASSERT_TRUE(it.Replace(discard).is_ok());
+        ASSERT_TRUE(zbi.EditHeader(it, discard).is_ok());
         break;
     }
     EXPECT_TRUE(header->flags & ZBI_FLAG_VERSION);

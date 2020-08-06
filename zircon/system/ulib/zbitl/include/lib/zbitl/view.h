@@ -312,32 +312,6 @@ class View {
       return offset_ - ZBI_ALIGN(header_->length);
     }
 
-    // Replace this item's header with a new one.  This never changes the
-    // existing item's length (nor its payload), and always writes a header
-    // that passes Checking::kStrict.  So the header can be `{.type = XYZ}`
-    // alone or whatever fields and flags matter.  Note this returns only the
-    // storage error type, not an Error since no ZBI format errors are possible
-    // here, only a storage failure to update.
-    //
-    // This method is not available if zbitl::StorageTraits<storage_type>
-    // doesn't support mutation.
-    template <typename T = Traits, typename = std::void_t<decltype(T::Write(
-                                       std::declval<storage_type&>(), 0, AsBytes(nullptr, 0)))>>
-    fitx::result<typename Traits::error_type> Replace(zbi_header_t header) {
-      Assert(__func__);
-      header = SanitizeHeader(header);
-      header.length = header_->length;
-      auto result = Traits::Write(view_->storage(), item_offset(), AsBytes(header));
-      // Make the next operator*() consistent with the new header if it worked.
-      // For kReference storage types, the change is reflected intrinsically.
-      if constexpr (header_type::kCopy) {
-        if (result.is_ok()) {
-          header_.stored_ = header;
-        }
-      }
-      return result;
-    }
-
    private:
     // The default-constructed state is almost the same as the end() state:
     // nothing but operator==() should ever be called if view_ is nullptr.
@@ -472,6 +446,43 @@ class View {
       }
     }
     return limit_;
+  }
+
+  // Replace an item's header with a new one, using an iterator into this
+  // view..  This never changes the existing item's length (nor its payload),
+  // and always writes a header that passes Checking::kStrict.  So the header
+  // can be `{.type = XYZ}` alone or whatever fields and flags matter.  Note
+  // this returns only the storage error type, not an Error since no ZBI
+  // format errors are possible here, only a storage failure to update.
+  //
+  // This method is not available if zbitl::StorageTraits<storage_type>
+  // doesn't support mutation.
+  template <  // SFINAE check for Traits::Write method.
+      typename T = Traits,
+      typename = std::void_t<decltype(
+          T::Write(std::declval<std::reference_wrapper<storage_type>>().get(), 0, ByteView{}))>>
+  fitx::result<typename Traits::error_type> EditHeader(const iterator& item, zbi_header_t header) {
+    item.Assert(__func__);
+    header = SanitizeHeader(header);
+    header.length = item.header_->length;
+    return Traits::Write(storage(), item.item_offset(), AsBytes(header));
+  }
+
+  // When the iterator is mutable and not a temporary, make the next
+  // operator*() consistent with the new header if it worked.  For kReference
+  // storage types, the change is reflected intrinsically.
+  template <  // SFINAE check for Traits::Write method.
+      typename T = Traits,
+      typename = std::void_t<decltype(
+          T::Write(std::declval<std::reference_wrapper<storage_type>>().get(), 0, ByteView{}))>>
+  fitx::result<typename Traits::error_type> EditHeader(iterator& item, zbi_header_t header) {
+    auto result = EditHeader(const_cast<const iterator&>(item), header);
+    if constexpr (header_type::kCopy) {
+      if (result.is_ok()) {
+        item.header_.stored_ = header;
+      }
+    }
+    return result;
   }
 
  private:
