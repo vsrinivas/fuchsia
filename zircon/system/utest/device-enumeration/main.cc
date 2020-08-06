@@ -262,6 +262,11 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "class/light/000",
       // RAM (DDR) control.
       "sys/platform/05:03:24/ram",
+
+      // Power Device.
+      "aml-power-impl-composite",
+      "composite-pd-armcore",
+      "composite-pd-armcore/power-0",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

@@ -98,29 +98,30 @@ class Astro : public AstroType {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Astro);
 
   zx_status_t AudioInit();
+  zx_status_t BacklightInit();
   zx_status_t BluetoothInit();
   zx_status_t ButtonsInit();
   zx_status_t CanvasInit();
   zx_status_t ClkInit();
+  zx_status_t CpuInit();
   zx_status_t DisplayInit();
   zx_status_t GpioInit();
   zx_status_t I2cInit();
   zx_status_t LightInit();
   zx_status_t MaliInit();
+  zx_status_t PowerInit();
   zx_status_t PwmInit();
+  zx_status_t RamCtlInit();
   zx_status_t RawNandInit();
   zx_status_t SdioInit();
-  zx_status_t Start();
   zx_status_t SecureMemInit();
+  zx_status_t Start();
   zx_status_t SysmemInit();
   zx_status_t TeeInit();
   zx_status_t ThermalInit();
   zx_status_t TouchInit();
   zx_status_t UsbInit();
   zx_status_t VideoInit();
-  zx_status_t BacklightInit();
-  zx_status_t CpuInit();
-  zx_status_t RamCtlInit();
   int Thread();
 
   uint32_t GetBoardRev(void);
