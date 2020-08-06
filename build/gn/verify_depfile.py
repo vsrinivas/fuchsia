@@ -24,8 +24,11 @@ def parse_depfile(depfile_path):
     # The depfile format looks like `target: dep1 dep2 dep3...`
     # We assume the target is the one we care about and that dep1, dep2, dep3, etc. are
     # source files.
+    #
+    # We use `os.path.relpath` to convert paths like '../../out/default/foo/bar' to the
+    # canonical 'foo/bar', which is how the expected inputs are expressed.
     return set(
-        os.path.normpath(source)
+        os.path.relpath(os.path.normpath(source))
         for source in line[line.find(':') + 1:].split(' ')
         if source.strip())
 
