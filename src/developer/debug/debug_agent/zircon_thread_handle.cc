@@ -94,7 +94,7 @@ debug_ipc::ExceptionRecord ZirconThreadHandle::GetExceptionRecord() const {
 std::unique_ptr<SuspendHandle> ZirconThreadHandle::Suspend() {
   zx::suspend_token token;
   thread_.suspend(&token);
-  return std::make_unique<ZirconSuspendHandle>(std::move(token));
+  return std::make_unique<ZirconSuspendHandle>(std::move(token), thread_koid_);
 }
 
 bool ZirconThreadHandle::WaitForSuspension(zx::time deadline) const {

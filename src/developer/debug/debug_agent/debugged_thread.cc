@@ -363,10 +363,13 @@ void DebuggedThread::ClientResume(const debug_ipc::ResumeRequest& request) {
 
 void DebuggedThread::InternalResumeException() {
   if (!in_exception()) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this)
+                      << "Resuming from exception but there is no exception, skipping.";
     return;
   }
 
   if (run_mode_ == debug_ipc::ResumeRequest::How::kForwardAndContinue) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming from exception (second chance).";
     zx_status_t status =
         exception_handle_->SetStrategy(debug_ipc::ExceptionStrategy::kSecondChance);
     if (status != ZX_OK) {
@@ -374,6 +377,7 @@ void DebuggedThread::InternalResumeException() {
                         << zx_status_get_string(status);
     }
   } else {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming from exception (handled).";
     zx_status_t status = exception_handle_->SetState(ZX_EXCEPTION_STATE_HANDLED);
     if (status != ZX_OK) {
       DEBUG_LOG(Thread) << ThreadPreamble(this)

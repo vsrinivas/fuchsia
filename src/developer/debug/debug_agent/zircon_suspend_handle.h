@@ -13,11 +13,12 @@ namespace debug_agent {
 
 class ZirconSuspendHandle : public SuspendHandle {
  public:
-  explicit ZirconSuspendHandle(zx::suspend_token token) : token_(std::move(token)) {}
-  ~ZirconSuspendHandle() override {}
+  ZirconSuspendHandle(zx::suspend_token token, zx_koid_t thread_koid);
+  ~ZirconSuspendHandle() override;
 
  private:
   zx::suspend_token token_;
+  zx_koid_t thread_koid_;
 };
 
 }  // namespace debug_agent

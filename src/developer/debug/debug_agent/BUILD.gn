@@ -70,6 +70,8 @@ static_library("lib") {
     "zircon_limbo_provider.h",
     "zircon_process_handle.cc",
     "zircon_process_handle.h",
+    "zircon_suspend_handle.cc",
+    "zircon_suspend_handle.h",
     "zircon_system_interface.cc",
     "zircon_system_interface.h",
     "zircon_thread_handle.cc",
