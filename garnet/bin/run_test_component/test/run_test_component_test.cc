@@ -254,7 +254,7 @@ void run_component(const std::string& component_url, std::vector<const char*>& a
   ASSERT_GE(len, 0) << strerror(errno);
   ASSERT_LT(len, 4096);
 
-  *output = std::string(buf);
+  *output = std::string(buf, len);
 }
 
 void run_logging_component(std::string log_level, std::string* output) {
@@ -297,7 +297,12 @@ TEST_F(RunFixture, TestOutput) {
   run_component(
       "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/component_to_test_standard_out.cmx",
       empty, 0, &got);
+  std::string str_containing_null_bytes = "writing zeros: ";
+  std::vector<char> buf = {0, 10, 0};
+  str_containing_null_bytes.append(buf.data(), 3);
+  str_containing_null_bytes.append(", and some bytes\n");
   EXPECT_NE(got.find("writing to stdout\n"), std::string::npos) << "got: " << got;
+  EXPECT_NE(got.find(str_containing_null_bytes), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("writing to stderr\n"), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("writing second message to stdout\n"), std::string::npos) << "got: " << got;
   EXPECT_NE(got.find("INFO: my info message."), std::string::npos) << "got: " << got;

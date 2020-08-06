@@ -4,6 +4,8 @@
 fn main() {
     fuchsia_syslog::init().expect("initializing logging");
     println!("writing to stdout");
+    // check that we can handle zeros dumped to stdout.
+    println!("writing zeros: \0\n\0, and some bytes");
     eprintln!("writing to stderr");
     log::info!("my info message.");
     println!("writing second message to stdout");

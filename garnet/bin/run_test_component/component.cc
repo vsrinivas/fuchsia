@@ -33,7 +33,8 @@ void AddOutputFileDescriptor(int fileno, FILE* out_file, async_dispatcher_t* dis
   output_collector->CollectOutput(
       [out_file, dispatcher](std::string s) {
         async::PostTask(dispatcher, [s = std::move(s), out_file]() {
-          fprintf(out_file, "%s", s.c_str());
+          // don't use fprintf as that truncates the output on first zero.
+          fwrite(s.data(), 1, s.length(), out_file);
           fflush(out_file);
         });
       },
