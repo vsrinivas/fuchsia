@@ -27,7 +27,7 @@ class TestBti : public ddk::Device<TestBti, ddk::Messageable>,
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   void GetKoid(GetKoidCompleter::Sync completer);
-  void Crash(CrashCompleter::Sync) { *reinterpret_cast<uint8_t*>(1) = 0; }
+  void Crash(CrashCompleter::Sync) { __builtin_abort(); }
 };
 
 zx_status_t TestBti::Create(void*, zx_device_t* parent) {
