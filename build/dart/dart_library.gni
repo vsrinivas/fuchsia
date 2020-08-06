@@ -71,6 +71,11 @@ declare_args() {
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
 #
+#TODO(soscar): add implementation for this after landing fxr/414362, fxr/414057
+#   disable_strict_deps_check (optional) (placeholder)
+#     No new libraries should be using this and existing usages should be removed (fxb/57840)
+#     Prevents strict dependency check from being run on this target.
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
@@ -412,6 +417,8 @@ if (current_toolchain == dart_toolchain) {
       public_deps = group_deps
 
       metadata = _metadata
+
+      not_needed(invoker, [ "disable_strict_deps_check" ])
     }
 
     ################################################
