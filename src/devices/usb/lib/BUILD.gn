@@ -4,10 +4,5 @@
 
 group("tests") {
   testonly = true
-
-  deps = [
-    "bin:tests",
-    "drivers:tests",
-    "lib:tests",
-  ]
+  deps = [ "usb:tests" ]
 }
