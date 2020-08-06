@@ -114,19 +114,19 @@ class PciRootHost {
   // Creates a backing pair of eventpair endpoints used to store and track if a
   // process dies while holding a window allocation, allowing the worker thread
   // to add the resources back to the allocation pool.
-  zx_status_t RecordAllocation(RegionAllocator::Region::UPtr region, zx::eventpair* out_endpoint)
+  zx_status_t RecordAllocation(PciAddressWindow region, zx::eventpair* out_endpoint)
       __TA_REQUIRES(lock_);
 
-  RegionAllocator mmio32_alloc_;
-  RegionAllocator mmio64_alloc_;
-  RegionAllocator io_alloc_;
+  PciAllocator mmio32_alloc_;
+  PciAllocator mmio64_alloc_;
+  PciAllocator io_alloc_;
   std::vector<McfgAllocation> mcfgs_;
 
   // For each allocation of address space handed out to a PCI Bus Driver we store an
   // eventpair peer as well as the Region uptr itself. This allows us to tell if a downstream
   // process dies or frees their window allocation.
   struct WindowAllocation {
-    WindowAllocation(zx::eventpair host_peer, RegionAllocator::Region::UPtr allocated_region)
+    WindowAllocation(zx::eventpair host_peer, PciAddressWindow allocated_region)
         : host_peer_(std::move(host_peer)), allocated_region_(std::move(allocated_region)) {}
     ~WindowAllocation() {
       zxlogf(DEBUG, "releasing [%#lx - %#lx]", allocated_region_->base,

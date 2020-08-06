@@ -2,94 +2,110 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/vmo.h>
 #include <stdint.h>
+#include <zircon/errors.h>
+#include <zircon/syscalls/types.h>
 
-#include <memory>
+#include <array>
+#include <limits>
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
+#include "ddk/protocol/pciroot.h"
 #include "qemu-bus.h"
+#include "qemu-pciroot.h"
 #include "qemu-virt.h"
-#include "zircon/errors.h"
-#include "zircon/syscalls/types.h"
-
 namespace board_qemu_arm64 {
 
+zx_status_t QemuArm64Pciroot::Create(PciRootHost* root_host, QemuArm64Pciroot::Context ctx,
+                                     zx_device_t* parent, const char* name) {
+  auto pciroot = new QemuArm64Pciroot(root_host, std::move(ctx), parent, name);
+  return pciroot->DdkAdd(name);
+}
+
+zx_status_t QemuArm64Pciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t QemuArm64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
+  *info = context_.info;
+  return ZX_OK;
+}
+
 zx_status_t QemuArm64::PciInit() {
-  zx_status_t status;
+  zx_status_t status = pci_root_host_.Mmio32().AddRegion(
+      {.base = PCIE_MMIO_BASE_PHYS, .size = PCIE_MMIO_SIZE}, RegionAllocator::AllowOverlap::No);
 
-  zx_pci_init_arg_t* arg1;
-  size_t arg_size = sizeof(*arg1) + sizeof(arg1->addr_windows[0]);  // room for one addr window
-  fbl::AllocChecker ac;
-  std::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[arg_size]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  auto* arg = reinterpret_cast<zx_pci_init_arg_t*>(buf.get());
-
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  status = zx_pci_add_subtract_io_range(get_root_resource(), true /* mmio */, PCIE_MMIO_BASE_PHYS,
-                                        PCIE_MMIO_SIZE, true /* add */);
   if (status != ZX_OK) {
-    return status;
-  }
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  status = zx_pci_add_subtract_io_range(get_root_resource(), false /* pio */, PCIE_PIO_BASE_PHYS,
-                                        PCIE_PIO_SIZE, true /* add */);
-  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to add MMIO region { %#lx - %#lx } to PCI root allocator: %s",
+           PCIE_MMIO_BASE_PHYS, PCIE_MMIO_BASE_PHYS + PCIE_MMIO_SIZE, zx_status_get_string(status));
     return status;
   }
 
-  // initialize our swizzle table
-  zx_pci_irq_swizzle_lut_t* lut = &arg->dev_pin_to_global_irq;
-  for (unsigned dev_id = 0; dev_id < ZX_PCI_MAX_DEVICES_PER_BUS; dev_id++) {
-    for (unsigned func_id = 0; func_id < ZX_PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
-      for (unsigned pin = 0; pin < ZX_PCI_MAX_LEGACY_IRQ_PINS; pin++) {
-        (*lut)[dev_id][func_id][pin] = PCIE_INT_BASE + (pin + dev_id) % ZX_PCI_MAX_LEGACY_IRQ_PINS;
-      }
-    }
-  }
-  arg->num_irqs = 0;
-  arg->addr_window_count = 1;
-  arg->addr_windows[0].cfg_space_type = PCI_CFG_SPACE_TYPE_MMIO;
-  arg->addr_windows[0].has_ecam = true;
-  arg->addr_windows[0].base = PCIE_ECAM_BASE_PHYS;
-  arg->addr_windows[0].size = PCIE_ECAM_SIZE;
-  arg->addr_windows[0].bus_start = 0;
-  arg->addr_windows[0].bus_end = (PCIE_ECAM_SIZE / ZX_PCI_ECAM_BYTE_PER_BUS) - 1;
+  status = pci_root_host_.Mmio64().AddRegion(
+      {.base = PCIE_MMIO_HIGH_BASE_PHYS, .size = PCIE_MMIO_HIGH_SIZE},
+      RegionAllocator::AllowOverlap::No);
 
-  // Please do not use get_root_resource() in new code. See ZX-1467.
-  status = zx_pci_init(get_root_resource(), arg, static_cast<uint32_t>(arg_size));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: error %d in zx_pci_init", __func__, status);
+    zxlogf(ERROR, "Failed to add MMIO region { %#lx - %#lx } to PCI root allocator: %s",
+           PCIE_MMIO_HIGH_BASE_PHYS, PCIE_MMIO_HIGH_BASE_PHYS + PCIE_MMIO_HIGH_SIZE,
+           zx_status_get_string(status));
     return status;
   }
 
+  if ((status = pci_root_host_.Io().AddRegion({.base = PCIE_PIO_BASE_PHYS, .size = PCIE_PIO_SIZE},
+                                              RegionAllocator::AllowOverlap::No)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to add IO region { %#lx - %#lx } to the PCI root allocator: %s",
+           PCIE_PIO_BASE_PHYS, PCIE_PIO_BASE_PHYS + PCIE_PIO_SIZE, zx_status_get_string(status));
+    return status;
+  }
+
+  McfgAllocation pci0_mcfg = {
+      .address = PCIE_ECAM_BASE_PHYS,
+      .pci_segment = 0,
+      .start_bus_number = 0,
+      .end_bus_number = (PCIE_ECAM_SIZE / ZX_PCI_ECAM_BYTE_PER_BUS) - 1,
+  };
+
+  pci_root_host_.mcfgs().push_back(pci0_mcfg);
   return ZX_OK;
 }
 
 zx_status_t QemuArm64::PciAdd() {
-  constexpr pbus_bti_t kPciBtis[] = {
-      {
-          .iommu_index = 0,
-          .bti_id = 0,
-      },
-  };
-
-  pbus_dev_t pci_dev = {};
-  pci_dev.name = "pci";
-  pci_dev.vid = PDEV_VID_GENERIC;
-  pci_dev.pid = PDEV_PID_GENERIC;
-  pci_dev.did = PDEV_DID_KPCI;
-  pci_dev.bti_list = kPciBtis;
-  pci_dev.bti_count = countof(kPciBtis);
-
-  auto status = pbus_.DeviceAdd(&pci_dev);
+  McfgAllocation pci0_mcfg = {};
+  zx_status_t status = pci_root_host_.GetSegmentMcfgAllocation(0, &pci0_mcfg);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
+    zxlogf(ERROR, "Couldn't retrieve the MMCFG for segment group %u: %s", 0,
+           zx_status_get_string(status));
+    return status;
+  }
+
+  // There's no dynamic configuration for this platform, so just grabbing the same mcfg
+  // created in Init is adequate.
+  std::array<char, 8> name = {"pci0"};
+  QemuArm64Pciroot::Context ctx = {};
+  ctx.info.start_bus_num = pci0_mcfg.start_bus_number;
+  ctx.info.end_bus_num = pci0_mcfg.end_bus_number;
+  ctx.info.segment_group = pci0_mcfg.pci_segment;
+  memcpy(ctx.info.name, name.data(), name.size());
+
+  zxlogf(DEBUG, "%s ecam { %#lx - %#lx }\n", name.data(), PCIE_ECAM_BASE_PHYS,
+         PCIE_ECAM_BASE_PHYS + PCIE_ECAM_SIZE);
+  zx::vmo ecam_vmo = {};
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  status = zx::vmo::create_physical(*zx::unowned_resource(get_root_resource()), PCIE_ECAM_BASE_PHYS,
+                                    PCIE_ECAM_SIZE, &ecam_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  ctx.info.ecam_vmo = ecam_vmo.release();
+  status = QemuArm64Pciroot::Create(&pci_root_host_, ctx, parent_, name.data());
+  if (status != ZX_OK) {
     return status;
   }
 
