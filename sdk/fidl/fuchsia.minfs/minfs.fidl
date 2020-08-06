@@ -8,6 +8,7 @@ using zx;
 using fuchsia.storage.metrics;
 
 /// Describes metrics about the running Minfs instance.
+[ForDeprecatedCBindings]
 struct Metrics {
     fuchsia.storage.metrics.FsMetrics fs_metrics;
 
@@ -46,6 +47,7 @@ struct MountState {
 };
 
 /// Describes a contiguous run of allocated blocks.
+[ForDeprecatedCBindings]
 struct BlockRegion {
     uint64 offset;
     uint64 length;

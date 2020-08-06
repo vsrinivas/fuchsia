@@ -9,6 +9,7 @@ using zx;
 // Matches the value of ZBI_PARTITION_GUID_LEN.
 const uint32 GUID_LEN = 16;
 
+[ForDeprecatedCBindings]
 struct PartitionInfo {
     /// Partition type GUID.
     array<uint8>:GUID_LEN partition_guid;
@@ -18,6 +19,7 @@ struct PartitionInfo {
     uint32 partition_block_count;
 };
 
+[ForDeprecatedCBindings]
 struct ReadWriteOperation {
     /// Memory object describing buffer to read into or write from.
     zx.handle:VMO vmo;

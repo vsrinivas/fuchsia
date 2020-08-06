@@ -20,6 +20,7 @@ const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 64;
 /// Constraints on BufferCollection parameters.  These constraints can be
 /// specified per-participant.  The sysmem service implements aggregation of
 /// constraints from multiple participants.
+[ForDeprecatedCBindings]
 struct BufferCollectionConstraints {
     /// The usage is only meant as a hint to help sysmem choose a more optimal
     /// PixelFormat or similar when multiple compatible options exist.
@@ -115,6 +116,7 @@ struct BufferCollectionConstraints {
     array<ImageFormatConstraints>:MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS image_format_constraints;
 };
 
+[ForDeprecatedCBindings]
 struct BufferCollectionConstraintsAuxBuffers {
     /// If true, a secure heap may only be selected if all participants with
     /// BufferMemoryConstraints specify allow_clear_aux_buffers_for_secure.  If
@@ -141,6 +143,7 @@ struct BufferCollectionConstraintsAuxBuffers {
     bool allow_clear_aux_buffers_for_secure;
 };
 
+[ForDeprecatedCBindings]
 struct VmoBuffer {
     /// The same VMO can be used by more than one CodecBuffer (only of the same
     /// buffer_lifetime_ordinal), but each vmo handle must be a separate handle.
@@ -157,6 +160,7 @@ struct VmoBuffer {
 
 /// Information about a buffer collection and its buffers.
 // TODO(fxb/32119): change struct to table
+[ForDeprecatedCBindings]
 struct BufferCollectionInfo_2 {
     /// The total number of buffers.
     uint32 buffer_count;
@@ -181,6 +185,7 @@ struct BufferCollectionInfo_2 {
     array<VmoBuffer>:MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS buffers;
 };
 
+[ForDeprecatedCBindings]
 struct SingleBufferInfo {
     SingleBufferSettings settings;
     VmoBuffer buffer;
@@ -191,6 +196,7 @@ struct SingleBufferInfo {
 /// differ from the rest of the buffers in the collection, and the single
 /// buffer's settings are delivered via OnSingleBufferAllocated() using this
 /// struct:
+[ForDeprecatedCBindings]
 struct SingleBufferSettings {
     BufferMemorySettings buffer_settings;
 
@@ -220,6 +226,7 @@ enum HeapType : uint64 {
     GOLDFISH_DEVICE_LOCAL = 0x1000000000020000;
 };
 
+[ForDeprecatedCBindings]
 struct BufferMemoryConstraints {
     uint32 min_size_bytes = 0;
     /// 0 is treated as 0xFFFFFFFF.
@@ -262,6 +269,7 @@ enum CoherencyDomain {
     INACCESSIBLE = 2;
 };
 
+[ForDeprecatedCBindings]
 struct BufferMemorySettings {
     uint32 size_bytes;
     bool is_physically_contiguous;
@@ -274,6 +282,7 @@ struct BufferMemorySettings {
 
 /// Describes constraints on layout of image data in buffers.
 // TODO(fxb/32119): change struct to table
+[ForDeprecatedCBindings]
 struct ImageFormatConstraints {
     /// The PixelFormat for which the following constraints apply.  A
     /// participant may have more than one PixelFormat that's supported, in
@@ -401,6 +410,7 @@ struct ImageFormatConstraints {
 
 /// Describes how an image is represented.
 // TODO(fxb/32119): change struct to table
+[ForDeprecatedCBindings]
 struct ImageFormat_2 {
     /// Pixel format.
     PixelFormat pixel_format;

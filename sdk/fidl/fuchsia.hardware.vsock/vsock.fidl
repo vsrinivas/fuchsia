@@ -9,6 +9,7 @@ using zx;
 // Vsock address where 'local' always means the driver and 'remote' always means
 // the device. As such there is no 'local_cid' as it can only ever be the driver cid
 // and so specifying is redundant and a source of errors.
+[ForDeprecatedCBindings]
 struct Addr {
     uint32 local_port;
     uint32 remote_cid;

@@ -26,6 +26,7 @@ const uint32 MAX_PARAM_DATA = 64;
 const uint32 MAX_NAME_LENGTH = 30;
 
 /// Configuration of an ethertap device.
+[ForDeprecatedCBindings]
 struct Config {
     /// Ethertap options, a bit mask of OPT_* constants.
     uint32 options;

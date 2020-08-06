@@ -4,10 +4,12 @@
 
 library fidl.types.test;
 
+[ForDeprecatedCBindings]
 struct CopyableStruct {
     int32 x;
 };
 
+[ForDeprecatedCBindings]
 struct MoveOnlyStruct {
     handle h;
 };
@@ -15,15 +17,18 @@ struct MoveOnlyStruct {
 const uint32 ARRAY_OF_STRUCT_COUNT = 32;
 const uint32 ARRAY_OF_INT_COUNT = 64;
 
+[ForDeprecatedCBindings]
 struct StructWithArrays {
     array<CopyableStruct>:ARRAY_OF_STRUCT_COUNT array_of_struct;
     array<int32>:ARRAY_OF_INT_COUNT array_of_int;
     int32 x;
 };
 
+[ForDeprecatedCBindings]
 struct EmptyStruct {
 };
 
+[ForDeprecatedCBindings]
 struct StructWithSubStruct {
     CopyableStruct s;
 };

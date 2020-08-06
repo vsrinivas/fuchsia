@@ -24,6 +24,7 @@ enum ScreenLayout : uint32 {
     ROW_LR_COLUMN_TB = 2;
 };
 
+[ForDeprecatedCBindings]
 struct DotmatrixDisplayConfig {
     /// The screen's width in pixels.
     uint32 width;

@@ -15,6 +15,7 @@ enum Class : uint32 {
     TEST = 4; // Test device.
 };
 
+[ForDeprecatedCBindings]
 struct Info {
     uint32 page_size; // Read/write unit size, in bytes.
     uint32 pages_per_block; // Erase block size, in pages.

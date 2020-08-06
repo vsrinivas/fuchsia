@@ -156,6 +156,7 @@ protocol DeviceController {
 };
 
 /// Protocol for controlling a devhost process from the devcoordinator
+[ForDeprecatedCBindings]
 protocol DevhostController {
     /// Create a device in the devhost that only implements the device protocol
     /// and claims to support the given `protocol_id`.  This device will communicate

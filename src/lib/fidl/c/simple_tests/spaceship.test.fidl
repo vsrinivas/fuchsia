@@ -41,6 +41,7 @@ bits Shields : uint8 {
     AFT = 8;
 };
 
+[ForDeprecatedCBindings]
 struct FuelLevel {
     uint32 reaction_mass;
 };

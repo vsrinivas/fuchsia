@@ -21,6 +21,7 @@ enum SegmentType {
 /// Segment header for a serialized SubordinateTransfer.
 /// TODO(ZX-3029): Avoid requiring serialization and have SubordinateTransfer take an argument of
 /// `vector<Segment>:MAX_SEGMENTS` instead once we have better support in the C bindings or for C++.
+[ForDeprecatedCBindings]
 struct Segment {
     uint32 type;
     uint32 len;

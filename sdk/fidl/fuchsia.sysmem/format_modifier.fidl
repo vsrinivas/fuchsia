@@ -4,6 +4,7 @@
 
 library fuchsia.sysmem;
 
+[ForDeprecatedCBindings]
 struct FormatModifier {
     /// The upper 8 bits are a vendor code as allocated in FormatModifierVendor
     /// enum.  The lower 56 bits are vendor-defined.

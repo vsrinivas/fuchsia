@@ -8,6 +8,7 @@ using fuchsia.hardware.block.partition as partition;
 
 /// VolumeInfo describes characteristics of either a single Volume, or all
 /// Volumes combined.
+[ForDeprecatedCBindings]
 struct VolumeInfo {
     /// Size of a single slice, in bytes.
     uint64 slice_size;
@@ -25,6 +26,7 @@ struct VolumeInfo {
 /// VolumeManagerInfo describes the properties of the existing volume manager.
 /// This properties are specific for the VolumeManager and are not specific
 /// to each Volume.
+[ForDeprecatedCBindings]
 struct VolumeManagerInfo {
     /// Size of a single slice, in bytes.
     uint64 slice_size;
@@ -90,6 +92,7 @@ const uint32 MAX_SLICE_REQUESTS = 16;
 ///
 /// These ranges are returned in an ordered container, which implicitly describes the
 /// starting offset, starting from the "index zero" slice.
+[ForDeprecatedCBindings]
 struct VsliceRange {
     /// True if the virtual slices are allocated, false otherwise.
     bool allocated;

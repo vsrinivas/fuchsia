@@ -9,6 +9,7 @@ using zx;
 const uint32 MAX_PARTITIONS = 10;
 const uint32 NAME_LEN = 32;
 
+[ForDeprecatedCBindings]
 struct Partition {
     /// GUID specifying the format and use of data stored in the partition.
     array<uint8>:GUID_LEN type_guid;
@@ -34,6 +35,7 @@ struct Partition {
     bool bbt;
 };
 
+[ForDeprecatedCBindings]
 struct PartitionMap {
     array<uint8>:GUID_LEN device_guid;
 
@@ -43,6 +45,7 @@ struct PartitionMap {
 };
 
 /// Defines how a newly created ram-nand volume should operate.
+[ForDeprecatedCBindings]
 struct RamNandInfo {
     /// VMO to use as backing store for nand device. Size should match size of `nand_info`.
     /// If a vmo is not provided, the device will create its own buffer and initialize it to be

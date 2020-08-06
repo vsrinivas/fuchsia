@@ -14,6 +14,7 @@ enum DataPatternType : uint8 {
     RANDOM = 2;
 };
 
+[ForDeprecatedCBindings]
 struct BulkTestParams {
     /// The type of data to transfer.
     DataPatternType data_pattern;
@@ -21,6 +22,7 @@ struct BulkTestParams {
     uint64 len;
 };
 
+[ForDeprecatedCBindings]
 struct PacketOptions {
     /// Whether to request a callback for the transfer.
     bool set_cb;
@@ -30,6 +32,7 @@ struct PacketOptions {
     bool expect_cb;
 };
 
+[ForDeprecatedCBindings]
 struct IsochTestParams {
     /// The type of data to transfer.
     DataPatternType data_pattern;
@@ -47,6 +50,7 @@ struct IsochTestParams {
     uint64 packet_opts_len;
 };
 
+[ForDeprecatedCBindings]
 struct SgEntry {
     /// Number of bytes in the scatter gather entry.
     uint64 length;
@@ -54,6 +58,7 @@ struct SgEntry {
     uint64 offset;
 };
 
+[ForDeprecatedCBindings]
 struct SgList {
     // A vector would break the current requirement for a simple C binding.
     array<SgEntry>:MAX_SG_SEGMENTS entries;
@@ -61,6 +66,7 @@ struct SgList {
     uint64 len;
 };
 
+[ForDeprecatedCBindings]
 struct IsochResult {
     /// Number of packets loopbacked successfully.
     uint64 num_passed;

@@ -23,6 +23,7 @@ const uint32 FLAG_TRIM_SUPPORT = 0x00000008;
 const uint32 MAX_TRANSFER_UNBOUNDED = 0xFFFFFFFF;
 
 /// Describes metatadata about a block device.
+[ForDeprecatedCBindings]
 struct BlockInfo {
     /// The number of blocks in this block device.
     uint64 block_count;
@@ -43,6 +44,7 @@ struct BlockInfo {
 /// Describes statistics about the operations on the block device since boot.
 /// storage_metrics.CallStat.bytes_transferred is number of bytes requested
 /// to be transferred.
+[ForDeprecatedCBindings]
 struct BlockStats {
     /// The stats about read from the device.
     storage_metrics.CallStat read;
@@ -66,6 +68,7 @@ struct BlockStats {
 /// A client-identifier to a VMO.
 /// This value may be utilized by clients to refer to a VMO which is being held
 /// by a block device server.
+[ForDeprecatedCBindings]
 struct VmoId {
     uint16 id;
 };

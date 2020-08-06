@@ -20,6 +20,7 @@ using zx;
 /// Instead the character is read from the read() input path.
 const uint32 FEATURE_RAW = 1;
 
+[ForDeprecatedCBindings]
 struct WindowSize {
     uint32 width;
     uint32 height;

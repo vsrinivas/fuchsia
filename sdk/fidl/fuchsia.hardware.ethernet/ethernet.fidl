@@ -6,6 +6,7 @@ library fuchsia.hardware.ethernet;
 
 using zx;
 
+[ForDeprecatedCBindings]
 struct MacAddress {
     array<uint8>:6 octets;
 };
@@ -15,12 +16,14 @@ const uint32 INFO_FEATURE_WLAN = 0x00000001;
 const uint32 INFO_FEATURE_SYNTH = 0x00000002;
 const uint32 INFO_FEATURE_LOOPBACK = 0x00000004;
 
+[ForDeprecatedCBindings]
 struct Info {
     uint32 features;
     uint32 mtu;
     MacAddress mac;
 };
 
+[ForDeprecatedCBindings]
 struct Fifos {
     // handles for the rx and tx fifo
     zx.handle:FIFO rx;

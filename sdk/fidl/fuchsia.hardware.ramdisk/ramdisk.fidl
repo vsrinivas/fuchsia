@@ -13,6 +13,7 @@ const uint32 RAMDISK_FLAG_RESUME_ON_WAKE = 0xFF000001;
 
 /// Counters for the number of write requests since the last call to either
 /// "SleepAfter" or "Wake". All units are in individual blocks.
+[ForDeprecatedCBindings]
 struct BlockWriteCounts {
     uint64 received;
     uint64 successful;
@@ -54,6 +55,7 @@ const uint32 GUID_LEN = 16;
 
 /// An array of bytes interpreted as a GUID. Wrapped in a struct to
 /// allow optional GUIDs.
+[ForDeprecatedCBindings]
 struct GUID {
     array<uint8>:GUID_LEN value;
 };

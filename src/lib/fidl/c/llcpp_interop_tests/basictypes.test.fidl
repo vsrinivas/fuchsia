@@ -6,6 +6,7 @@ library fidl.test.llcpp.basictypes;
 
 using zx;
 
+[ForDeprecatedCBindings]
 struct SimpleStruct {
     int32 field;
     zx.handle:EVENTPAIR ep;

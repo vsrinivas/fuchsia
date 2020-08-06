@@ -963,6 +963,7 @@ Libraries::Libraries() {
   AddAttributeSchema("Layout", AttributeSchema::Deprecated()),
   AddAttributeSchema("ForDeprecatedCBindings", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
+    AttributeSchema::Placement::kStructDecl,
   }, {
     "",
   },

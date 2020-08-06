@@ -26,6 +26,7 @@ union NodeInfo {
 
 /// The default protocol, interface information must be acquired some
 /// other way.
+[ForDeprecatedCBindings]
 struct Service {
 };
 
@@ -35,6 +36,7 @@ const uint32 FILE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
 const uint32 FILE_SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
 
 /// The object may be cast to interface 'File'.
+[ForDeprecatedCBindings]
 struct FileObject {
     /// An optional event which transmits information about an object's readability
     /// or writability. This event relays information about the underlying object, not
@@ -51,10 +53,12 @@ struct FileObject {
 };
 
 /// The object may be cast to interface 'Directory'.
+[ForDeprecatedCBindings]
 struct DirectoryObject {
 };
 
 /// The object is accompanied by a pipe.
+[ForDeprecatedCBindings]
 struct Pipe {
     zx.handle:SOCKET socket;
 };
@@ -63,6 +67,7 @@ struct Pipe {
 /// Although a VMO is returned as a part of this structure, this underlying object
 /// may represent multiple Vmofiles. To identify the logical portion of the VMO
 /// that represents the single file, an offset and length parameter are also supplied.
+[ForDeprecatedCBindings]
 struct Vmofile {
     /// The VMO which backs this file.
     zx.handle:VMO vmo;
@@ -84,6 +89,7 @@ const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3
 const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
 
 /// The object may be cast to interface 'Device'.
+[ForDeprecatedCBindings]
 struct Device {
     /// An optional event which transmits information about a device's state.
     ///
@@ -92,17 +98,20 @@ struct Device {
 };
 
 /// The object may be cast to interface 'Tty'
+[ForDeprecatedCBindings]
 struct Tty {
     zx.handle:EVENTPAIR? event;
 };
 
 /// The object may be cast to interface [`fuchsia.posix.socket.DatagramSocket`].
+[ForDeprecatedCBindings]
 struct DatagramSocket {
     /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
     zx.handle:EVENTPAIR event;
 };
 
 /// The object may be cast to interface [`fuchsia.posix.socket.StreamSocket`].
+[ForDeprecatedCBindings]
 struct StreamSocket {
     zx.handle:SOCKET socket;
 };
@@ -264,6 +273,7 @@ const uint32 MODE_TYPE_SOCKET = 0x0C000;
 const uint32 MODE_TYPE_SERVICE = 0x10000;
 
 /// NodeAttributes defines generic information about a filesystem node.
+[ForDeprecatedCBindings]
 struct NodeAttributes {
     /// Protection bits and node type information describe in 'mode'.
     uint32 mode;
@@ -599,6 +609,7 @@ const uint32 MOUNT_CREATE_FLAG_REPLACE = 0x00000001;
 
 const uint64 MAX_FS_NAME_BUFFER = 32;
 
+[ForDeprecatedCBindings]
 struct FilesystemInfo {
     /// The number of data bytes which may be stored in a filesystem.
     uint64 total_bytes;

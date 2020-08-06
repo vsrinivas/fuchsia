@@ -11,6 +11,7 @@ const uint32 MAX_STRING_DESCRIPTORS = 255;
 
 const uint32 MAX_STRING_LENGTH = 127;
 
+[ForDeprecatedCBindings]
 struct FunctionDescriptor {
     uint8 interface_class;
     uint8 interface_subclass;

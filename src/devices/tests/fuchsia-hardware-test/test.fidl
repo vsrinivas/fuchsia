@@ -6,6 +6,7 @@ library fuchsia.hardware.test;
 
 using zx;
 
+[ForDeprecatedCBindings]
 protocol Device {
     GetChannel() -> (zx.handle:CHANNEL ch);
 };

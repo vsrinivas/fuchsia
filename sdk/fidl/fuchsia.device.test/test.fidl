@@ -10,6 +10,7 @@ using zx;
 const string CONTROL_DEVICE = "/dev/test/test";
 
 /// Returns the result summary of a test run
+[ForDeprecatedCBindings]
 struct TestReport {
     /// Total number of tests
     uint32 test_count;

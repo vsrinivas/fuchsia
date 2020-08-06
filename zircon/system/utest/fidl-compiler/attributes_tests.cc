@@ -444,7 +444,6 @@ enum MyEnum {
     MyMember = 5;
 };
 
-[ForDeprecatedCBindings]
 struct MyStruct {
     [ForDeprecatedCBindings]
     int32 MyMember;
@@ -471,7 +470,7 @@ protocol MyProtocol {
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 11);
+  ASSERT_EQ(errors.size(), 10);
   ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "ForDeprecatedCBindings");
 }

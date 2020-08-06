@@ -15,6 +15,7 @@ const uint8 POWER_STATE_DISCHARGING = 0x2;
 const uint8 POWER_STATE_CHARGING = 0x4;
 const uint8 POWER_STATE_CRITICAL = 0x8;
 
+[ForDeprecatedCBindings]
 struct SourceInfo {
     PowerType type;
     uint8 state;
@@ -27,6 +28,7 @@ enum BatteryUnit {
     MA = 1;
 };
 
+[ForDeprecatedCBindings]
 struct BatteryInfo {
     /// capacity unit. all voltage fields are in millivolts
     BatteryUnit unit;

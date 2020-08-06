@@ -6,6 +6,7 @@ library fuchsia.sysmem;
 
 /// Describes how an image is represented.
 // TODO(fxb/32119): change struct to table
+[ForDeprecatedCBindings]
 struct ImageFormat {
     /// Row width in pixels.
     uint32 width;
@@ -26,6 +27,7 @@ struct ImageFormat {
     array<ImagePlane>:4 planes;
 };
 
+[ForDeprecatedCBindings]
 struct ImagePlane {
     /// Byte offset of the start of the plane from the beginning of the image.
     uint32 byte_offset;

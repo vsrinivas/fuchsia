@@ -13,6 +13,7 @@ using zx;
 /// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
 /// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 /// and its size.
+[ForDeprecatedCBindings]
 struct Buffer {
     /// The vmo that contains the buffer.
     zx.handle:VMO vmo;

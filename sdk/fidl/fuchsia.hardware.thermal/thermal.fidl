@@ -29,6 +29,7 @@ enum PowerDomain : uint32 {
 };
 
 /// scpi_opp_t is typedef'd to this.
+[ForDeprecatedCBindings]
 struct OperatingPoint {
     /// The device's operating points.
     array<OperatingPointEntry>:MAX_DVFS_OPPS opp;
@@ -39,6 +40,7 @@ struct OperatingPoint {
 };
 
 /// scpi_opp_entry_t is typedef'd to this.
+[ForDeprecatedCBindings]
 struct OperatingPointEntry {
     /// The operating point frequency in Hz.
     uint32 freq_hz;
@@ -47,6 +49,7 @@ struct OperatingPointEntry {
 };
 
 /// Temperature units are degrees Celsius.
+[ForDeprecatedCBindings]
 struct ThermalInfo {
     /// State is a bitmask of `THERMAL_STATE_`* values.
     uint32 state;
@@ -61,6 +64,7 @@ struct ThermalInfo {
 };
 
 /// Temperature units are degrees Celsius.
+[ForDeprecatedCBindings]
 struct ThermalTemperatureInfo {
     /// The temperature must rise to up_temp to get to this trip point.
     float32 up_temp_celsius;
@@ -76,6 +80,7 @@ struct ThermalTemperatureInfo {
     uint32 gpu_clk_freq_source;
 };
 
+[ForDeprecatedCBindings]
 struct ThermalDeviceInfo {
     /// Active cooling support.
     bool active_cooling;
