@@ -27,7 +27,6 @@ common_test_contents = [
   "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test",
   "//src/devices/serial/drivers/uart16550:uart16550-test",
   "//src/devices/spi/drivers/mtk-spi:mtk-spi-test",
-  "//src/devices/spi/drivers/spi:spi-test",
   "//src/devices/sysmem/tests/sysmem",
   "//src/devices/tests/crash-device",
   "//src/devices/tests/devfs",
