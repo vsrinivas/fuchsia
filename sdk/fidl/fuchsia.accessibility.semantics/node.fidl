@@ -147,5 +147,14 @@ table Node {
     7: fuchsia.ui.gfx.BoundingBox location;
 
     /// Transform from parent coordinate space to local space. 4x4 for compatibility with scenic.
+    /// This matrix is required to have the form
+    ///
+    ///  [ Sx   0    0    Tx ]
+    ///  [ 0    Sy   0    Ty ]
+    ///  [ 0    0    Sz   Tz ]
+    ///  [ 0    0    0    1  ]
+    ///
+    ///  where Sx, Sy, and Sz are scale factors and Tx, Ty, Tz are the translation factors for
+    ///  the x, y, and z components
     8: fuchsia.ui.gfx.mat4 transform;
 };
