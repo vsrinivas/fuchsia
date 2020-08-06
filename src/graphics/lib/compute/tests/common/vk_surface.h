@@ -76,7 +76,7 @@ typedef struct
   const char *                  window_title;
 } vk_surface_config_t;
 
-// Create a new presentaiton surface handle. On success, return a non-null
+// Create a new presentation surface handle. On success, return a non-null
 // pointer. On failure, return NULL after printing an error message to stderr()
 // explaining the problem.
 extern vk_surface_t *

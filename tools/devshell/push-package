@@ -29,7 +29,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 fx-config-read
 
 fx-warn "fx push-package is deprecated and should not be used"
-fx-warn "The notion of 'push' is falsified in this implementaiton and does not really exist."
+fx-warn "The notion of 'push' is falsified in this implementation and does not really exist."
 fx-warn "Users can simply 'fx run <component-url>' in order to affect cache updates."
 sleep 5
 
