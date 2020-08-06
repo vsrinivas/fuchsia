@@ -364,7 +364,9 @@ unittest_package("sample-setui-config-test") {
     {
       name = "setui_config_test"
       args = [
+        "-s",
         "/pkg/data/service_configuration.json",
+        "-f",
         "/pkg/data/service_flags.json",
         "-l",
         "/pkg/data/light_sensor_configuration.json",

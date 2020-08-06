@@ -27,8 +27,6 @@ fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
 
 fn main() -> Result<(), Error> {
     let matches = App::new("setui_config_tests")
-        .arg(Arg::with_name("service_configuration").index(1).required(false))
-        .arg(Arg::with_name("controller_flag").index(2).required(false))
         .arg(
             Arg::with_name("light_sensor_configs")
                 .short("l")
@@ -41,16 +39,14 @@ fn main() -> Result<(), Error> {
                 .short("s")
                 .takes_value(true)
                 .multiple(true)
-                .min_values(0)
-                .conflicts_with("service_configuration"),
+                .min_values(0),
         )
         .arg(
             Arg::with_name("controller_flags")
                 .short("f")
                 .takes_value(true)
                 .multiple(true)
-                .min_values(0)
-                .conflicts_with("controller_flag"),
+                .min_values(0),
         )
         .arg(
             Arg::with_name("light_hardware_configs")
@@ -61,19 +57,11 @@ fn main() -> Result<(), Error> {
         )
         .get_matches();
 
-    for config in matches
-        .value_of_os("service_configuration")
-        .into_iter()
-        .chain(matches.values_of_os("service_configurations").into_iter().flatten())
-    {
+    for config in matches.values_of_os("service_configurations").into_iter().flatten() {
         read_config::<EnabledServicesConfiguration>(config)?;
     }
 
-    for config in matches
-        .value_of_os("controller_flag")
-        .into_iter()
-        .chain(matches.values_of_os("controller_flags").into_iter().flatten())
-    {
+    for config in matches.values_of_os("controller_flags").into_iter().flatten() {
         read_config::<ServiceFlags>(config)?;
     }
 
