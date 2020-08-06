@@ -278,9 +278,6 @@ impl CapabilityId {
             };
         } else if let Some(OneOrMany::Many(protocols)) = clause.protocol() {
             return match clause_type {
-                cml::RoutingClauseType::Capability => {
-                    panic!("can't have capability clause with many protocols")
-                }
                 cml::RoutingClauseType::Use if protocols.len() == 1 => match &protocols[0] {
                     cml::NameOrPath::Path(protocol) => {
                         Ok(vec![CapabilityId::UsedProtocol(cml::alias_or_path(alias, protocol)?)])
@@ -316,6 +313,20 @@ impl CapabilityId {
                                 CapabilityId::UsedProtocol(protocol)
                             }
                         })
+                        .collect())
+                }
+                cml::RoutingClauseType::Capability if protocols.len() == 1 => {
+                    Ok(vec![CapabilityId::Protocol(protocols[0].clone())])
+                }
+                cml::RoutingClauseType::Capability => {
+                    if path.is_some() {
+                        return Err(Error::validate(
+                            "\"path\" field can only be specified when one `protocol` is supplied.",
+                        ));
+                    }
+                    Ok(protocols
+                        .iter()
+                        .map(|protocol: &cml::NameOrPath| CapabilityId::Protocol(protocol.clone()))
                         .collect())
                 }
                 _ if protocols.len() == 1 => Ok(vec![CapabilityId::Protocol(
@@ -3202,6 +3213,27 @@ mod tests {
                 ],
             }),
             Ok(())
+        ),
+        test_cml_protocol_multi(
+            json!({
+                "capabilities": [
+                    {
+                        "protocol": ["a", "b", "c"],
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_protocol_multi_invalid_path(
+            json!({
+                "capabilities": [
+                    {
+                        "protocol": ["a", "b", "c"],
+                        "path": "/minfs",
+                    },
+                ],
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"path\" field can only be specified when one `protocol` is supplied."
         ),
         test_cml_protocol_all_valid_chars(
             json!({

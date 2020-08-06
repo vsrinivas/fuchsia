@@ -439,7 +439,13 @@ impl Document {
     pub fn all_protocol_names(&self) -> Vec<&Name> {
         self.capabilities
             .as_ref()
-            .map(|c| c.iter().filter_map(|c| c.protocol.as_ref()).collect())
+            .map(|c| {
+                c.iter()
+                    .filter_map(|c| c.protocol.as_ref())
+                    .map(|p| p.to_vec().into_iter())
+                    .flatten()
+                    .collect()
+            })
             .unwrap_or_else(|| vec![])
     }
 
@@ -515,7 +521,7 @@ pub struct ResolverRegistration {
 #[serde(deny_unknown_fields)]
 pub struct Capability {
     pub service: Option<Name>,
-    pub protocol: Option<Name>,
+    pub protocol: Option<OneOrMany<Name>>,
     pub directory: Option<Name>,
     pub storage: Option<Name>,
     pub runner: Option<Name>,
@@ -653,7 +659,12 @@ impl CapabilityClause for Capability {
         &self.service
     }
     fn protocol(&self) -> Option<OneOrMany<NameOrPath>> {
-        self.protocol.as_ref().map(|n| OneOrMany::One(NameOrPath::Name(n.clone())))
+        self.protocol.as_ref().map(|o| match o {
+            OneOrMany::One(n) => OneOrMany::One(NameOrPath::Name(n.clone())),
+            OneOrMany::Many(v) => {
+                OneOrMany::Many(v.iter().map(|n| NameOrPath::Name(n.clone())).collect())
+            }
+        })
     }
     fn directory(&self) -> Option<NameOrPath> {
         self.directory.as_ref().map(|n| NameOrPath::Name(n.clone()))

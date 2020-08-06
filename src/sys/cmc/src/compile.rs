@@ -545,15 +545,19 @@ fn translate_capabilities(
                 capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
             out_capabilities.push(fsys::CapabilityDecl::Service(fsys::ServiceDecl {
                 name: Some(n.clone().into()),
-                source_path: Some(source_path.clone().into()),
-            }));
-        } else if let Some(n) = &capability.protocol {
-            let source_path =
-                capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
-            out_capabilities.push(fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
-                name: Some(n.clone().into()),
                 source_path: Some(source_path.into()),
             }));
+        } else if let Some(protocol) = &capability.protocol {
+            for n in protocol.to_vec() {
+                let source_path = capability
+                    .path
+                    .clone()
+                    .unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
+                out_capabilities.push(fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                    name: Some(n.clone().into()),
+                    source_path: Some(source_path.into()),
+                }));
+            }
         } else if let Some(n) = &capability.directory {
             let source_path =
                 capability.path.clone().unwrap_or_else(|| format!("/svc/{}", n).parse().unwrap());
@@ -2329,6 +2333,9 @@ mod tests {
                         "protocol": "myprotocol2",
                     },
                     {
+                        "protocol": [ "myprotocol3", "myprotocol4" ],
+                    },
+                    {
                         "directory": "mydirectory",
                         "path": "/directory",
                         "rights": [ "connect" ],
@@ -2379,6 +2386,18 @@ mod tests {
                         fsys::ProtocolDecl {
                             name: Some("myprotocol2".to_string()),
                             source_path: Some("/svc/myprotocol2".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Protocol (
+                        fsys::ProtocolDecl {
+                            name: Some("myprotocol3".to_string()),
+                            source_path: Some("/svc/myprotocol3".to_string()),
+                        }
+                    ),
+                    fsys::CapabilityDecl::Protocol (
+                        fsys::ProtocolDecl {
+                            name: Some("myprotocol4".to_string()),
+                            source_path: Some("/svc/myprotocol4".to_string()),
                         }
                     ),
                     fsys::CapabilityDecl::Directory (
