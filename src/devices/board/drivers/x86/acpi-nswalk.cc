@@ -39,13 +39,25 @@
 
 namespace {
 
-const char* hid_from_acpi_devinfo(const ACPI_DEVICE_INFO* info) {
-  const char* hid = nullptr;
-  if ((info->Valid & ACPI_VALID_HID) && (info->HardwareId.Length > 0) &&
-      ((info->HardwareId.Length - 1) <= sizeof(uint64_t))) {
-    hid = (const char*)info->HardwareId.String;
+const std::string_view hid_from_acpi_devinfo(const ACPI_DEVICE_INFO& info) {
+  if ((info.Valid & ACPI_VALID_HID) && (info.HardwareId.Length > 0) &&
+      ((info.HardwareId.Length - 1) <= sizeof(uint64_t))) {
+    // ACPICA string lengths include the NULL terminator.
+    return std::string_view{info.HardwareId.String, info.HardwareId.Length - 1};
   }
-  return hid;
+
+  return std::string_view{};
+}
+
+const std::string_view cid_from_acpi_devinfo(const ACPI_DEVICE_INFO& info) {
+  if ((info.Valid & ACPI_VALID_CID) && (info.CompatibleIdList.Count > 0) &&
+      (info.CompatibleIdList.Ids[0].Length > 0)) {
+    // ACPICA string lengths include the NULL terminator.
+    return std::string_view{info.CompatibleIdList.Ids[0].String,
+                            info.CompatibleIdList.Ids[0].Length - 1};
+  }
+
+  return std::string_view{};
 }
 
 void acpi_apply_workarounds(ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
@@ -121,9 +133,8 @@ class LastPciBbnTracker {
     // Are we descending into a device node which has a hardware ID, and does
     // that hardware ID indicate a PCI/PCIe bus?  If so, try to extract the base
     // bus number and stash it as our last seen PCI bus number.
-    const char* hid = hid_from_acpi_devinfo(&obj_info);
-    if ((hid != nullptr) && (!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
-                             !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
+    const std::string_view hid = hid_from_acpi_devinfo(obj_info);
+    if ((hid == PCI_EXPRESS_ROOT_HID_STRING) || (hid == PCI_ROOT_HID_STRING)) {
       uint8_t bbn;
       zx_status_t status = acpi_bbn_call(object, &bbn);
 
@@ -640,22 +651,15 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
 
         // Extract pointers to the hardware ID and the compatible ID if present.
         // If there is no hardware ID, just skip the device.
-        const char* hid = hid_from_acpi_devinfo(info.get());
-        if (hid == nullptr) {
+        const std::string_view hid = hid_from_acpi_devinfo(*info);
+        const std::string_view cid = cid_from_acpi_devinfo(*info);
+        if (hid.empty()) {
           return AE_OK;
-        }
-        const char* cid = nullptr;
-        if ((info->Valid & ACPI_VALID_CID) && (info->CompatibleIdList.Count > 0) &&
-            // IDs may be 7 or 8 bytes, and Length includes the null byte
-            (info->CompatibleIdList.Ids[0].Length == HID_LENGTH ||
-             info->CompatibleIdList.Ids[0].Length == HID_LENGTH + 1)) {
-          cid = (const char*)info->CompatibleIdList.Ids[0].String;
         }
 
         // Now, if we recognize the HID, go ahead and deal with publishing the
         // device.
-        if ((!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
-             !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH))) {
+        if ((hid == PCI_EXPRESS_ROOT_HID_STRING) || (hid == PCI_ROOT_HID_STRING)) {
           if (!published_pci_bus) {
             if (pci_init(sys_root, platform_bus, object, info.get()) == ZX_OK) {
               published_pci_bus = true;
@@ -664,29 +668,27 @@ zx_status_t publish_acpi_devices(zx_device_t* platform_bus, zx_device_t* sys_roo
                      fourcc_to_string(info->Name).str);
             }
           }
-        } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
+        } else if (hid == BATTERY_HID_STRING) {
           battery_init(acpi_root, object);
-        } else if (!memcmp(hid, LID_HID_STRING, HID_LENGTH)) {
+        } else if (hid == LID_HID_STRING) {
           lid_init(acpi_root, object);
-        } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {
+        } else if (hid == PWRSRC_HID_STRING) {
           pwrsrc_init(acpi_root, object);
-        } else if (!memcmp(hid, EC_HID_STRING, HID_LENGTH)) {
+        } else if (hid == EC_HID_STRING) {
           ec_init(acpi_root, object);
-        } else if (!memcmp(hid, GOOGLE_TBMC_HID_STRING, HID_LENGTH)) {
+        } else if (hid == GOOGLE_TBMC_HID_STRING) {
           tbmc_init(acpi_root, object);
-        } else if (!memcmp(hid, GOOGLE_CROS_EC_HID_STRING, HID_LENGTH)) {
+        } else if (hid == GOOGLE_CROS_EC_HID_STRING) {
           cros_ec_lpc_init(acpi_root, object);
-        } else if (!memcmp(hid, DPTF_THERMAL_HID_STRING, HID_LENGTH)) {
+        } else if (hid == DPTF_THERMAL_HID_STRING) {
           thermal_init(acpi_root, info.get(), object);
-        } else if (!memcmp(hid, I8042_HID_STRING, HID_LENGTH) ||
-                   (cid && !memcmp(cid, I8042_HID_STRING, HID_LENGTH))) {
+        } else if ((hid == I8042_HID_STRING) || (cid == I8042_HID_STRING)) {
           PublishAcpiDevice(acpi_root, platform_bus, "i8042", object, info.get());
-        } else if (!memcmp(hid, RTC_HID_STRING, HID_LENGTH) ||
-                   (cid && !memcmp(cid, RTC_HID_STRING, HID_LENGTH))) {
+        } else if ((hid == RTC_HID_STRING) || (cid == RTC_HID_STRING)) {
           PublishAcpiDevice(acpi_root, platform_bus, "rtc", object, info.get());
-        } else if (!memcmp(hid, GOLDFISH_PIPE_HID_STRING, HID_LENGTH)) {
+        } else if (hid == GOLDFISH_PIPE_HID_STRING) {
           PublishAcpiDevice(acpi_root, platform_bus, "goldfish", object, info.get());
-        } else if (!memcmp(hid, SERIAL_HID_STRING, HID_LENGTH)) {
+        } else if (hid == SERIAL_HID_STRING) {
           PublishAcpiDevice(acpi_root, platform_bus, "serial", object, info.get());
         }
         return AE_OK;
