@@ -29,6 +29,7 @@ struct SettingHandler {
     state_tx: UnboundedSender<State>,
     next_response: Option<(SettingRequest, SettingResponseResult)>,
     done_tx: Option<oneshot::Sender<()>>,
+    proxy_signature: handler::message::Signature,
 }
 
 impl SettingHandler {
@@ -45,7 +46,7 @@ impl SettingHandler {
         self.messenger
             .message(
                 handler::Payload::Changed(self.setting_type),
-                Audience::Address(handler::Address::Registry),
+                Audience::Messenger(self.proxy_signature),
             )
             .send()
             .ack();
@@ -64,6 +65,7 @@ impl SettingHandler {
     fn create(
         messenger: handler::message::Messenger,
         mut receptor: handler::message::Receptor,
+        proxy_signature: handler::message::Signature,
         setting_type: SettingType,
         state_tx: UnboundedSender<State>,
         done_tx: Option<oneshot::Sender<()>>,
@@ -74,6 +76,7 @@ impl SettingHandler {
             state_tx,
             next_response: None,
             done_tx,
+            proxy_signature,
         }));
 
         let handler_clone = handler.clone();
@@ -170,7 +173,7 @@ async fn test_notify() {
 
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
-    let registry_signature = RegistryImpl::create(
+    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
@@ -184,8 +187,14 @@ async fn test_notify() {
     let (handler_messenger, handler_receptor) =
         handler_factory.lock().await.create(setting_type).await;
     let (state_tx, mut state_rx) = futures::channel::mpsc::unbounded::<State>();
-    let handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
+    let handler = SettingHandler::create(
+        handler_messenger,
+        handler_receptor,
+        proxy_handler_signature,
+        setting_type,
+        state_tx,
+        None,
+    );
 
     // Send a listen state and make sure sink is notified.
     {
@@ -255,7 +264,7 @@ async fn test_request() {
     let handler_messenger_factory = handler::message::create_hub();
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
-    let registry_signature = RegistryImpl::create(
+    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
@@ -269,8 +278,14 @@ async fn test_request() {
     let (handler_messenger, handler_receptor) =
         handler_factory.lock().await.create(setting_type).await;
     let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
-    let handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
+    let handler = SettingHandler::create(
+        handler_messenger,
+        handler_receptor,
+        proxy_handler_signature,
+        setting_type,
+        state_tx,
+        None,
+    );
     let request_id = 42;
 
     handler.lock().await.set_next_response(SettingRequest::Get, Ok(None));
@@ -310,7 +325,7 @@ async fn test_generation() {
 
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let registry_signature = RegistryImpl::create(
+    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
@@ -323,8 +338,14 @@ async fn test_generation() {
     let (handler_messenger, handler_receptor) =
         handler_factory.lock().await.create(setting_type).await;
     let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
-    let _handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
+    let _handler = SettingHandler::create(
+        handler_messenger,
+        handler_receptor,
+        proxy_handler_signature,
+        setting_type,
+        state_tx,
+        None,
+    );
 
     // Send initial request.
     let _ = get_response(
@@ -372,7 +393,7 @@ async fn test_regeneration() {
 
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
-    let registry_signature = RegistryImpl::create(
+    let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
@@ -389,6 +410,7 @@ async fn test_regeneration() {
     let handler = SettingHandler::create(
         handler_messenger,
         handler_receptor,
+        proxy_handler_signature,
         setting_type,
         state_tx,
         Some(done_tx),
@@ -439,8 +461,14 @@ async fn test_regeneration() {
     let (handler_messenger, handler_receptor) =
         handler_factory.lock().await.create(setting_type).await;
     let (state_tx, _) = futures::channel::mpsc::unbounded::<State>();
-    let _handler =
-        SettingHandler::create(handler_messenger, handler_receptor, setting_type, state_tx, None);
+    let _handler = SettingHandler::create(
+        handler_messenger,
+        handler_receptor,
+        proxy_handler_signature,
+        setting_type,
+        state_tx,
+        None,
+    );
 
     // Send followup request.
     assert!(

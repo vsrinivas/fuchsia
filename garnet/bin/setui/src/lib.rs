@@ -456,7 +456,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .expect("could not create inspect");
 
     // Creates registry, used to register handlers for setting types.
-    let registry_signature = RegistryImpl::create(
+    let (registry_signature, _registry_handler_signature) = RegistryImpl::create(
         handler_factory,
         registry_messenger_factory.clone(),
         setting_handler_messenger_factory,

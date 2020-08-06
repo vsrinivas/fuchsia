@@ -4,7 +4,7 @@
 #[cfg(test)]
 use {
     crate::agent::restore_agent,
-    crate::internal::handler::{message, Address, Payload},
+    crate::internal::handler::{message, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::registry::base::{Command, ContextBuilder, State},
     crate::registry::device_storage::DeviceStorageFactory,
@@ -128,8 +128,7 @@ async fn test_write_notify() {
     let factory = message::create_hub();
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
-    let (messenger, _) =
-        factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+    let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
     let context = ContextBuilder::new(
         SettingType::Accessibility,
         InMemoryStorageFactory::create(),
@@ -281,8 +280,7 @@ async fn test_event_propagation() {
     let factory = message::create_hub();
     let setting_type = SettingType::Unknown;
 
-    let (messenger, _) =
-        factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+    let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
     let (invocations_tx, _invocations_rx) = unbounded::<HashMap<State, u8>>();
     let (handler_messenger, handler_receptor) =
@@ -356,8 +354,7 @@ async fn verify_controller_state(state: State, n: u8) {
     let factory = message::create_hub();
     let setting_type = SettingType::Audio;
 
-    let (messenger, _) =
-        factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+    let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
     let (event_tx, mut event_rx) = unbounded::<State>();
     let (invocations_tx, mut invocations_rx) = unbounded::<HashMap<State, u8>>();
     let (handler_messenger, handler_receptor) =
@@ -432,8 +429,7 @@ async fn test_unimplemented_error() {
     for setting_type in get_all_setting_types() {
         let factory = message::create_hub();
 
-        let (messenger, _) =
-            factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+        let (messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
         let (handler_messenger, handler_receptor) =
             factory.create(MessengerType::Unbound).await.unwrap();
         let signature = handler_messenger.get_signature();

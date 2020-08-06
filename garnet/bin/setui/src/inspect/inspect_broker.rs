@@ -205,8 +205,7 @@ mod tests {
 
         let messenger_factory = create_hub();
 
-        let (registry, _) =
-            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+        let (registry, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         let setting_handler_address = Address::Handler(1);
         let (_, mut setting_handler_receptor) = messenger_factory
@@ -270,8 +269,8 @@ mod tests {
 
         let messenger_factory = create_hub();
 
-        let (_, _) =
-            messenger_factory.create(MessengerType::Addressable(Address::Registry)).await.unwrap();
+        let (registry_messenger_client, _) =
+            messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         let setting_handler_address = Address::Handler(1);
         let (setting_handler, setting_handler_receptor) = messenger_factory
@@ -285,7 +284,10 @@ mod tests {
 
         // Setting handler notifies registry of setting changed.
         setting_handler
-            .message(Payload::Changed(SettingType::Intl), Audience::Address(Address::Registry))
+            .message(
+                Payload::Changed(SettingType::Intl),
+                Audience::Messenger(registry_messenger_client.get_signature()),
+            )
             .send();
 
         // Inspect broker sends get request to setting handler, handler replies with value.
