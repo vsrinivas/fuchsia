@@ -24,7 +24,6 @@ benchmark("Union/LastSet/16") {
 
 // Union with 256 possible tags that has 256th tag set
 benchmark("Union/LastSet/256") {
-    bindings_denylist = [rust],
     value = Union256Struct{
         u: Union256{
             field256: 1,

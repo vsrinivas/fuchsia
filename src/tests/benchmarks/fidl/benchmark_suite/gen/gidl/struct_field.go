@@ -31,7 +31,7 @@ func init() {
 				},
 				// Dart has a 256 argument limit and all struct fields are passed into
 				// the constructor.
-				Denylist: []config.Binding{config.Dart, config.Rust},
+				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

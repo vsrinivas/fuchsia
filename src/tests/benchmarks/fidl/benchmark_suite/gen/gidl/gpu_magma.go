@@ -24,7 +24,6 @@ func init() {
 					"num_command_bytes": 128,
 					"num_semaphores":    8,
 				},
-				Denylist: []config.Binding{config.Rust},
 			},
 			{
 				Name: "GPUMagma/ExecuteImmediateCommandsRequest/CommandByte1024/Semaphore32",
@@ -35,7 +34,7 @@ func init() {
 					"num_semaphores":    32,
 				},
 				// GIDL currently generates output that is slow to compile in clang.
-				Denylist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust},
+				Denylist: []config.Binding{config.LLCPP, config.HLCPP},
 			},
 		},
 	})

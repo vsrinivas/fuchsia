@@ -37,12 +37,10 @@ union Union16 {
     16: uint8 field16;
 };
 
-[BindingsDenylist = "rust"]
 struct Union256Struct {
     Union256 u;
 };
 
-[BindingsDenylist = "rust"]
 union Union256 {
     1: uint8 field1;
     2: uint8 field2;

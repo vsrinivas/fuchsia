@@ -37,12 +37,11 @@ table Table16 {
     16: uint8 field16;
 };
 
-[BindingsDenylist = "dart, rust"]
+[BindingsDenylist = "dart"]
 struct Table256Struct {
     Table256 value;
 };
 
-[BindingsDenylist = "rust"]
 table Table256 {
     1: uint8 field1;
     2: uint8 field2;

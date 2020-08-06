@@ -25,7 +25,7 @@ struct StructField16 {
     uint8 field16;
 };
 
-[BindingsDenylist = "dart, rust"]
+[BindingsDenylist = "dart"]
 struct StructField256 {
     uint8 field1;
     uint8 field2;
