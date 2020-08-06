@@ -48,13 +48,19 @@ class Node<T extends Title> extends AnyNode {
   @override
   final List<AnyNode> children;
 
-  Node({this.title, this.children});
+  Node({this.title, this.children = const []});
 
   /// Creates a simple node with plain text as title, and no children.
   // Use static methods due to https://github.com/dart-lang/sdk/issues/26391
   // ignore: prefer_constructors_over_static_methods
   static Node<StyledString> plain(String plain) =>
       Node(title: StyledString.plain(plain), children: []);
+
+  @override
+  String toString() => '''$runtimeType(
+    title: $title,
+    children: $children
+)''';
 }
 
 // Styled string ---------------------------------------------------------------
@@ -88,6 +94,9 @@ class Plain implements StringPiece {
 
   @override
   int get hashCode => text.hashCode;
+
+  @override
+  String toString() => 'Plain(text: $text)';
 }
 
 enum Color { white, green, gray }
@@ -128,6 +137,16 @@ class SizeRecord extends Title {
   final Tally tally;
 
   SizeRecord({this.name, this.tally});
+
+  @override
+  bool operator ==(Object other) =>
+      other is SizeRecord && other.name == name && other.tally == tally;
+
+  @override
+  int get hashCode => name.hashCode ^ tally.hashCode;
+
+  @override
+  String toString() => 'SizeRecord(name: \'$name\', tally: $tally)';
 }
 
 class UniqueSymbolSizeRecord extends SizeRecord {

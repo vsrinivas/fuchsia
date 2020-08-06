@@ -19,6 +19,7 @@ import 'code_category.dart';
 import 'crates.dart';
 import 'dump_names.dart';
 import 'source_lang.dart';
+import 'unique_symbol.dart';
 
 /// A context object that allows queries to temporarily stow information
 /// related to a particular compile unit, at the same time ensuring separation
@@ -282,4 +283,5 @@ const List<QueryFactory> allQueries = [
   QueryFactory(SourceLangQuery, SourceLangQuery.description),
   QueryFactory(DumpNamesQuery, DumpNamesQuery.description),
   QueryFactory(CratesQuery, CratesQuery.description),
+  QueryFactory(UniqueSymbolQuery, UniqueSymbolQuery.description),
 ];

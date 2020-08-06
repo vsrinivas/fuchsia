@@ -42,3 +42,18 @@ R flatMap<T, R>(T input, R Function(T) fn) {
   else
     return null;
 }
+
+class Pair<T> {
+  final T a;
+  final T b;
+
+  Pair(this.a, this.b);
+}
+
+Iterable<Pair<T>> zip<T>(Iterable<T> iterableA, Iterable<T> iterableB) sync* {
+  final iterA = iterableA.iterator;
+  final iterB = iterableB.iterator;
+  while (iterA.moveNext() && iterB.moveNext()) {
+    yield Pair<T>(iterA.current, iterB.current);
+  }
+}
