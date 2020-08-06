@@ -19,7 +19,6 @@ common_test_contents = [
   "//src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-test",
   "//src/devices/lib/as370/test:audio-dsp-test",
   "//src/devices/lib/as370/test:syn-audio-in-test",
-  "//src/devices/lib/mt8167/test:mt8167-audio-lib-test",
   "//src/devices/nand/drivers/ram-nand:ram-nand-test",
   "//src/devices/power/drivers/as370-power:as370-power-test",
   "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test",
