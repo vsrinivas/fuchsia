@@ -6,9 +6,12 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 
 use anyhow::Context as _;
-use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{
+    io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, TryFutureExt as _,
+    TryStreamExt as _,
+};
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6};
-use netemul::EnvironmentUdpSocket as _;
+use netemul::{EnvironmentTcpListener as _, EnvironmentTcpStream as _, EnvironmentUdpSocket as _};
 use netstack_testing_macros::variants_test;
 use packet::Serializer;
 use packet_formats;
@@ -66,7 +69,7 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
     let net = sandbox.create_network("net").await.context("failed to create network")?;
 
     let client = sandbox
-        .create_netstack_environment::<Netstack2, _>(name)
+        .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
         .context("failed to create client environment")?;
 
     const CLIENT_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.2);
@@ -83,7 +86,7 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .await
         .context("client failed to join network")?;
     let server = sandbox
-        .create_netstack_environment::<Netstack2, _>("test_udp_socket_server")
+        .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
         .context("failed to create server environment")?;
     let _server_ep = server
         .join_network::<E, _>(
@@ -98,6 +101,109 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) -> Result {
         .context("server failed to join network")?;
 
     run_udp_socket_test(&server, SERVER_IP, &client, CLIENT_IP).await
+}
+
+async fn run_tcp_socket_test(
+    server: &netemul::TestEnvironment<'_>,
+    server_addr: fidl_fuchsia_net::IpAddress,
+    client: &netemul::TestEnvironment<'_>,
+    client_addr: fidl_fuchsia_net::IpAddress,
+) -> Result {
+    let fidl_fuchsia_net_ext::IpAddress(client_addr) = client_addr.into();
+    let client_addr = std::net::SocketAddr::new(client_addr, 1234);
+
+    let fidl_fuchsia_net_ext::IpAddress(server_addr) = server_addr.into();
+    let server_addr = std::net::SocketAddr::new(server_addr, 8080);
+
+    // We pick a payload that is small enough to be guaranteed to fit in a TCP segment so both the
+    // client and server can read the entire payload in a single `read`.
+    const PAYLOAD: &'static str = "Hello World";
+
+    let listener = fuchsia_async::net::TcpListener::listen_in_env(server, server_addr)
+        .await
+        .context("failed to create server socket")?;
+
+    let server_fut = async {
+        let (_, mut stream, from) = listener.accept().await.context("accept failed")?;
+
+        let mut buf = [0u8; 1024];
+        let read_count =
+            stream.read(&mut buf).await.context("read from tcp server stream failed")?;
+
+        assert_eq!(from.ip(), client_addr.ip());
+        assert_eq!(read_count, PAYLOAD.as_bytes().len());
+        assert_eq!(&buf[..read_count], PAYLOAD.as_bytes());
+
+        let write_count =
+            stream.write(PAYLOAD.as_bytes()).await.context("write to tcp server stream failed")?;
+        assert_eq!(write_count, PAYLOAD.as_bytes().len());
+
+        Result::Ok(())
+    };
+
+    let client_fut = async {
+        let mut stream = fuchsia_async::net::TcpStream::connect_in_env(client, server_addr)
+            .await
+            .context("failed to create client socket")?;
+
+        let write_count =
+            stream.write(PAYLOAD.as_bytes()).await.context("write to tcp client stream failed")?;
+
+        assert_eq!(write_count, PAYLOAD.as_bytes().len());
+
+        let mut buf = [0u8; 1024];
+        let read_count =
+            stream.read(&mut buf).await.context("read from tcp client stream failed")?;
+
+        assert_eq!(read_count, PAYLOAD.as_bytes().len());
+        assert_eq!(&buf[..read_count], PAYLOAD.as_bytes());
+
+        Result::Ok(())
+    };
+
+    let ((), ()) = futures::future::try_join(client_fut, server_fut).await?;
+    Ok(())
+}
+
+#[variants_test]
+async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) -> Result {
+    const CLIENT_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.2);
+    const SERVER_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+
+    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let net = sandbox.create_network("net").await.context("failed to create network")?;
+
+    let client = sandbox
+        .create_netstack_environment::<Netstack2, _>(format!("{}_client", name))
+        .context("failed to create client environment")?;
+    let _client_ep = client
+        .join_network::<E, _>(
+            &net,
+            "client",
+            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                addr: CLIENT_IP,
+                prefix_len: 24,
+            }),
+        )
+        .await
+        .context("client failed to join network")?;
+
+    let server = sandbox
+        .create_netstack_environment::<Netstack2, _>(format!("{}_server", name))
+        .context("failed to create server environment")?;
+    let _server_ep = server
+        .join_network::<E, _>(
+            &net,
+            "server",
+            netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
+                addr: SERVER_IP,
+                prefix_len: 24,
+            }),
+        )
+        .await
+        .context("server failed to join network")?;
+
+    run_tcp_socket_test(&server, SERVER_IP, &client, CLIENT_IP).await
 }
 
 // Helper function to add ip device to stack.
@@ -161,10 +267,10 @@ fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
 async fn test_ip_endpoints_socket() -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let client = sandbox
-        .create_netstack_environment::<Netstack2, _>("test_ip_endpoints_client")
+        .create_netstack_environment::<Netstack2, _>("test_ip_endpoints_socket_client")
         .context("failed to create client environment")?;
     let server = sandbox
-        .create_netstack_environment::<Netstack2, _>("test_ip_endpoints_server")
+        .create_netstack_environment::<Netstack2, _>("test_ip_endpoints_socket_server")
         .context("failed to create server environment")?;
 
     let tun = client

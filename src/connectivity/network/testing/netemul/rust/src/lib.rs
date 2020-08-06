@@ -325,7 +325,7 @@ impl<'a> TestEnvironment<'a> {
         self.environment.remove_device(path).context("remove device")
     }
 
-    /// Creates a [`socket2::Socket`] backed by the implementation of
+    /// Creates a Datagram [`socket2::Socket`] backed by the implementation of
     /// `fuchsia.posix.socket/Provider` in this environment.
     pub async fn datagram_socket(
         &self,
@@ -337,6 +337,26 @@ impl<'a> TestEnvironment<'a> {
             .context("failed to connect to socket provider")?;
         let sock = socket_provider
             .datagram_socket(domain, proto)
+            .await
+            .context("failed to call socket")?
+            .map_err(|e| std::io::Error::from_raw_os_error(e.into_primitive()))
+            .context("failed to create socket")?;
+
+        Ok(fdio::create_fd(sock.into()).context("failed to create fd")?)
+    }
+
+    /// Creates a Stream [`socket2::Socket`] backed by the implementation of
+    /// `fuchsia.posix.socket/Provider` in this environment.
+    pub async fn stream_socket(
+        &self,
+        domain: fidl_fuchsia_posix_socket::Domain,
+        proto: fidl_fuchsia_posix_socket::StreamSocketProtocol,
+    ) -> Result<socket2::Socket> {
+        let socket_provider = self
+            .connect_to_service::<posix_socket::ProviderMarker>()
+            .context("failed to connect to socket provider")?;
+        let sock = socket_provider
+            .stream_socket(domain, proto)
             .await
             .context("failed to call socket")?
             .map_err(|e| std::io::Error::from_raw_os_error(e.into_primitive()))
@@ -624,6 +644,16 @@ impl<'a> TestInterface<'a> {
     }
 }
 
+/// Get the [`socket2::Domain`] for `addr`.
+fn get_socket2_domain(addr: &std::net::SocketAddr) -> fidl_fuchsia_posix_socket::Domain {
+    let domain = match addr {
+        std::net::SocketAddr::V4(_) => fidl_fuchsia_posix_socket::Domain::Ipv4,
+        std::net::SocketAddr::V6(_) => fidl_fuchsia_posix_socket::Domain::Ipv6,
+    };
+
+    domain
+}
+
 /// Trait describing UDP sockets that can be bound in a testing environment.
 pub trait EnvironmentUdpSocket: Sized {
     /// Creates a UDP socket in `env` bound to `addr`.
@@ -639,12 +669,11 @@ impl EnvironmentUdpSocket for std::net::UdpSocket {
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
-            let domain = match &addr {
-                std::net::SocketAddr::V4(_) => fidl_fuchsia_posix_socket::Domain::Ipv4,
-                std::net::SocketAddr::V6(_) => fidl_fuchsia_posix_socket::Domain::Ipv6,
-            };
             let sock = env
-                .datagram_socket(domain, fidl_fuchsia_posix_socket::DatagramSocketProtocol::Udp)
+                .datagram_socket(
+                    get_socket2_domain(&addr),
+                    fidl_fuchsia_posix_socket::DatagramSocketProtocol::Udp,
+                )
                 .await
                 .context("failed to create socket")?;
 
@@ -669,5 +698,91 @@ impl EnvironmentUdpSocket for fuchsia_async::net::UdpSocket {
                 )
             })
             .boxed_local()
+    }
+}
+
+/// Trait describing TCP listeners bound in a testing environment.
+pub trait EnvironmentTcpListener: Sized {
+    /// Creates a TCP listener in `env` bound to `addr`.
+    fn listen_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
+}
+
+impl EnvironmentTcpListener for std::net::TcpListener {
+    fn listen_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
+        async move {
+            let sock = env
+                .stream_socket(
+                    get_socket2_domain(&addr),
+                    fidl_fuchsia_posix_socket::StreamSocketProtocol::Tcp,
+                )
+                .await
+                .context("failed to create server socket")?;
+
+            let () = sock.bind(&addr.into()).context("failed to bind server socket")?;
+            // Use 128 for the listen() backlog, same as the original implementation of TcpListener
+            // in Rust std (see https://doc.rust-lang.org/src/std/sys_common/net.rs.html#386).
+            let () = sock.listen(128).context("failed to listen on server socket")?;
+
+            Result::Ok(sock.into_tcp_listener())
+        }
+        .boxed_local()
+    }
+}
+
+impl EnvironmentTcpListener for fuchsia_async::net::TcpListener {
+    fn listen_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
+        std::net::TcpListener::listen_in_env(env, addr)
+            .and_then(|listener| {
+                futures::future::ready(
+                    fuchsia_async::net::TcpListener::from_std(listener)
+                        .context("failed to create fuchsia_async socket"),
+                )
+            })
+            .boxed_local()
+    }
+}
+
+/// Trait describing TCP streams in a testing environment.
+pub trait EnvironmentTcpStream: Sized {
+    /// Creates a TCP stream in `env` connected to `addr`.
+    fn connect_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
+
+    // TODO: Implement this trait for std::net::TcpListener.
+}
+
+impl EnvironmentTcpStream for fuchsia_async::net::TcpStream {
+    fn connect_in_env<'a>(
+        env: &'a TestEnvironment<'a>,
+        addr: std::net::SocketAddr,
+    ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
+        async move {
+            let sock = env
+                .stream_socket(
+                    get_socket2_domain(&addr),
+                    fidl_fuchsia_posix_socket::StreamSocketProtocol::Tcp,
+                )
+                .await
+                .context("failed to create socket")?;
+
+            let stream = fuchsia_async::net::TcpStream::connect_from_raw(addr, sock)
+                .context("failed to create client tcp stream")?
+                .await
+                .context("failed to connect to server")?;
+
+            Result::Ok(stream)
+        }
+        .boxed_local()
     }
 }

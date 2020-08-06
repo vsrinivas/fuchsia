@@ -18,6 +18,7 @@ use {
         marker::Unpin,
         net::{self, SocketAddr},
         ops::Deref,
+        os::unix::io::FromRawFd as _,
         pin::Pin,
     },
 };
@@ -157,6 +158,18 @@ impl Deref for TcpStream {
 }
 
 impl TcpStream {
+    /// Creates a new `TcpStream` connected to a specific socket address from an already existing
+    /// socket descriptor.
+    pub fn connect_from_raw(
+        addr: SocketAddr,
+        socket: impl std::os::unix::io::IntoRawFd,
+    ) -> io::Result<TcpConnector> {
+        // This is safe because `into_raw_fd()` consumes ownership of the socket, so we are
+        // guaranteed that the returned value is not shared among more than one owner at this point.
+        let socket = unsafe { socket2::Socket::from_raw_fd(socket.into_raw_fd()) };
+        Self::from_socket2(addr, socket)
+    }
+
     /// Creates a new `TcpStream` connected to a specific socket address.
     /// This function returns a future which resolves to an `io::Result<TcpStream>`.
     pub fn connect(addr: SocketAddr) -> io::Result<TcpConnector> {
@@ -166,6 +179,11 @@ impl TcpStream {
         };
         let socket =
             socket2::Socket::new(domain, socket2::Type::stream(), Some(socket2::Protocol::tcp()))?;
+        Self::from_socket2(addr, socket)
+    }
+
+    /// Creates a new `TcpStream` from the socket definition in `socket` connected to `addr`.
+    fn from_socket2(addr: SocketAddr, socket: socket2::Socket) -> io::Result<TcpConnector> {
         let () = socket.set_nonblocking(true)?;
         let addr = addr.into();
         let () = match socket.connect(&addr) {
