@@ -20,6 +20,7 @@ syslog_headers = [
   "lib/syslog/wire_format.h",
 ]
 
+
 zx_library("syslog") {
   sdk = "shared"
   sdk_publishable = true
@@ -59,4 +60,9 @@ zx_library("syslog-static") {
     "//zircon/public/lib/zx",
   ]
   defines = [ "SYSLOG_STATIC" ]
+}
+
+zx_library("syslog-headers") {
+  sdk = "static"
+  sdk_headers = syslog_headers
 }
