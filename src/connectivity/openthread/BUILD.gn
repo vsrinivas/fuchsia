@@ -4,10 +4,7 @@
 
 group("openthread") {
   testonly = true
-  deps = [
-    "drivers",
-    "ot-stack",
-  ]
+  deps = [ "ot-stack" ]
 }
 
 group("tests") {

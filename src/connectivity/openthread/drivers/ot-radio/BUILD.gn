@@ -5,10 +5,33 @@
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+import("config.gni")
 
+# Labels for board specific driver
+# Should be pointed to by individual board file
+ot_radio_driver("sherlock") {
+  board = "sherlock"
+  firmware_type = "release"
+}
+
+ot_radio_driver("sherlock-mfg") {
+  board = "sherlock"
+  firmware_type = "development"
+}
+
+ot_radio_driver("luis") {
+  board = "luis"
+  firmware_type = "release"
+}
+
+ot_radio_driver("luis-mfg") {
+  board = "luis"
+  firmware_type = "development"
+}
+
+# Existing code, kept for compatibility until board files are
+#  updated.
 if (internal_access) {
-  # TODO (paragdixit), make this conditional based on 'fx set'
-  # command for fct product else use release binary
   firmware_name = "ot-ncp-app-development.bin"
 }
 
