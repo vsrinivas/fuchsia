@@ -15,7 +15,10 @@ driver_module("amlogic-clk") {
     "//build/config/fuchsia:static_cpp_standard_library",
     "//build/unification/config:zircon-migrated",
   ]
-  sources = [ "aml-clk.cc" ]
+  sources = [
+    "aml-clk.cc",
+    "aml-fclk-rates.cc",
+  ]
   deps = [
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -46,6 +49,7 @@ test("amlogic-clk-test") {
   sources = [
     "aml-clk-test.cc",
     "aml-clk.cc",
+    "aml-fclk-rates.cc",
   ]
   deps = [
     "//sdk/banjo/ddk.protocol.clockimpl",

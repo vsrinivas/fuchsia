@@ -12,6 +12,7 @@ enum class aml_clk_type : uint16_t {
   kMesonPll = (1 << 1),
   kMesonMux = (1 << 2),
   kMesonMuxRo = (1 << 3),
+  kMesonCpuClk = (1 << 4),
 };
 
 // Create a clock ID based on a type and an index

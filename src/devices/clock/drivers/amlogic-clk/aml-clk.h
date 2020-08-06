@@ -11,6 +11,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <optional>
+#include <vector>
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
@@ -30,6 +31,10 @@ class PBusProtocolClient;
 
 namespace amlogic_clock {
 
+class MesonPllClock;
+class MesonCpuClock;
+class MesonRateClock;
+
 class AmlClock;
 using DeviceType = ddk::Device<AmlClock, ddk::UnbindableNew, ddk::Messageable>;
 
@@ -38,6 +43,8 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
   AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer dosbus_mmio,
            std::optional<ddk::MmioBuffer> msr_mmio, uint32_t device_id);
+  ~AmlClock();
+
   // Performs the object initialization.
   static zx_status_t Create(zx_device_t* device);
 
@@ -81,6 +88,10 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   // returns ZX_OK if the preconditions are met.
   zx_status_t IsSupportedMux(const uint32_t id, const uint16_t supported_mask);
 
+  // Find the MesonRateClock that corresponds to clk. If ZX_OK is returned
+  // `out` is populated with a pointer to the target clock.
+  zx_status_t GetMesonRateClock(const uint32_t clk, MesonRateClock** out);
+
   void InitHiu();
 
   // IO MMIO
@@ -97,8 +108,11 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   const meson_clk_mux_t* muxes_ = nullptr;
   size_t mux_count_ = 0;
 
+  // Cpu Clocks.
+  std::vector<MesonCpuClock> cpu_clks_;
+
   aml_hiu_dev_t hiudev_;
-  aml_pll_dev_t plldev_[HIU_PLL_COUNT];
+  std::unique_ptr<MesonPllClock> pllclk_[HIU_PLL_COUNT];
 
   // Clock Table
   const char* const* clk_table_ = nullptr;

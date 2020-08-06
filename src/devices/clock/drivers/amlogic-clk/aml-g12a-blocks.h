@@ -240,6 +240,10 @@ static constexpr meson_clk_msr_t g12a_clk_msr = {
     .reg2_offset = (0x3 << 2),
 };
 
+static constexpr meson_cpu_clk_t g12a_cpu_clks[] = {
+    {.reg = kHhiSysCpuClkCntl0, .pll = SYS_PLL, .initial_hz = 1'200'000'000},
+};
+
 // This clock table is meant only for CLK-MEASURE
 // Indexes here, correspond to actual clk mux
 // values written to measure respective clk.

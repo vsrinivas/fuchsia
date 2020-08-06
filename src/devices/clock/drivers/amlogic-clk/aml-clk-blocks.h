@@ -35,4 +35,10 @@ typedef struct meson_clk_mux {
                            // since indices must always be in the range [0, n_inputs).
 } meson_clk_mux_t;
 
+typedef struct meson_cpu_clk {
+  uint32_t reg;
+  hhi_plls_t pll;
+  uint32_t initial_hz;
+} meson_cpu_clk_t;
+
 #endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_BLOCKS_H_

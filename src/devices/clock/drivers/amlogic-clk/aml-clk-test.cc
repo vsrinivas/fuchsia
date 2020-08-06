@@ -25,6 +25,12 @@ namespace {
 constexpr uint64_t kilohertz(uint64_t hz) { return hz * 1000; }
 constexpr uint64_t megahertz(uint64_t hz) { return kilohertz(hz) * 1000; }
 constexpr uint64_t gigahertz(uint64_t hz) { return megahertz(hz) * 1000; }
+
+constexpr uint32_t kCpuClkSupportedFrequencies[] = {
+    100'000'000,   250'000'000,   500'000'000,   667'000'000,   1'000'000'000, 1'200'000'000,
+    1'398'000'000, 1'512'000'000, 1'608'000'000, 1'704'000'000, 1'896'000'000,
+};
+
 }  // namespace
 
 class AmlClockTest : public AmlClock {
@@ -32,6 +38,7 @@ class AmlClockTest : public AmlClock {
   AmlClockTest(mmio_buffer_t mmio_buffer, mmio_buffer_t dosbus_buffer, uint32_t did)
       : AmlClock(nullptr, ddk::MmioBuffer(mmio_buffer), ddk::MmioBuffer(dosbus_buffer),
                  std::nullopt, did) {}
+  ~AmlClockTest() = default;
 };
 
 std::tuple<std::unique_ptr<uint8_t[]>, mmio_buffer_t> MakeDosbusMmio() {
@@ -329,6 +336,76 @@ TEST(ClkTestAml, Sm1Mux) {
   st = clk.ClockImplGetInput(kTestMux, &out_input);
   EXPECT_OK(st);
   EXPECT_EQ(out_input, newParentIdx);
+}
+
+TEST(ClkTestAml, TestCpuClkSetRate) {
+  constexpr uint32_t kTestCpuClk = g12a_clk::CLK_SYS_CPU_CLK;
+
+  auto regs = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+  mmio_buffer_t buffer;
+  buffer.vaddr = FakeMmioPtr(regs.get());
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+
+  zx_status_t st;
+  for (size_t i = 0; i < countof(kCpuClkSupportedFrequencies); i++) {
+    st = clk.ClockImplSetRate(kTestCpuClk, kCpuClkSupportedFrequencies[i]);
+    EXPECT_OK(st);
+
+    st = clk.ClockImplSetRate(kTestCpuClk, kCpuClkSupportedFrequencies[i] + 1);
+    EXPECT_NOT_OK(st);
+  }
+}
+
+TEST(ClkTestAml, TestCpuClkQuerySupportedRates) {
+  constexpr uint32_t kTestCpuClk = g12a_clk::CLK_SYS_CPU_CLK;
+  constexpr uint32_t kJustOver1GHz = gigahertz(1) + 1;
+
+  auto regs = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+  mmio_buffer_t buffer;
+  buffer.vaddr = FakeMmioPtr(regs.get());
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+
+  uint64_t rate;
+  zx_status_t st = clk.ClockImplQuerySupportedRate(kTestCpuClk, kJustOver1GHz, &rate);
+  EXPECT_OK(st);
+  EXPECT_EQ(rate, gigahertz(1));
+}
+
+TEST(ClkTestAml, TestCpuClkGetRate) {
+  constexpr uint32_t kTestCpuClk = g12a_clk::CLK_SYS_CPU_CLK;
+  constexpr uint32_t kOneGHz = gigahertz(1);
+
+  auto regs = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+  mmio_buffer_t buffer;
+  buffer.vaddr = FakeMmioPtr(regs.get());
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+  zx_status_t st;
+
+  st = clk.ClockImplSetRate(kTestCpuClk, kOneGHz);
+  EXPECT_OK(st);
+
+  uint64_t rate;
+  st = clk.ClockImplGetRate(kTestCpuClk, &rate);
+  EXPECT_OK(st);
+  EXPECT_EQ(rate, kOneGHz);
 }
 
 }  // namespace amlogic_clock

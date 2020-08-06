@@ -16,9 +16,11 @@
 #include <ddktl/protocol/platform/bus.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <hwreg/bitfields.h>
 #include <soc/aml-meson/aml-clk-common.h>
 
 #include "aml-axg-blocks.h"
+#include "aml-fclk.h"
 #include "aml-g12a-blocks.h"
 #include "aml-g12b-blocks.h"
 #include "aml-gxl-blocks.h"
@@ -33,6 +35,327 @@ static constexpr uint32_t kMsrMmio = 2;
 
 #define MSR_WAIT_BUSY_RETRIES 5
 #define MSR_WAIT_BUSY_TIMEOUT_US 10000
+
+class SysCpuClkControl : public hwreg::RegisterBase<SysCpuClkControl, uint32_t> {
+ public:
+  DEF_BIT(29, busy_cnt);
+  DEF_BIT(28, busy);
+  DEF_BIT(26, dyn_enable);
+  DEF_FIELD(25, 20, mux1_divn_tcnt);
+  DEF_BIT(18, postmux1);
+  DEF_FIELD(17, 16, premux1);
+  DEF_BIT(15, manual_mux_mode);
+  DEF_BIT(14, manual_mode_post);
+  DEF_BIT(13, manual_mode_pre);
+  DEF_BIT(12, force_update_t);
+  DEF_BIT(11, final_mux_sel);
+  DEF_BIT(10, final_dyn_mux_sel);
+  DEF_FIELD(9, 4, mux0_divn_tcnt);
+  DEF_BIT(3, rev);
+  DEF_BIT(2, postmux0);
+  DEF_FIELD(1, 0, premux0);
+
+  static auto Get(uint32_t offset) { return hwreg::RegisterAddr<SysCpuClkControl>(offset); }
+};
+
+class MesonRateClock {
+ public:
+  virtual zx_status_t SetRate(const uint32_t hz) = 0;
+  virtual zx_status_t QuerySupportedRate(const uint64_t max_rate, uint64_t* result) = 0;
+  virtual zx_status_t GetRate(uint64_t* result) = 0;
+  virtual ~MesonRateClock() {}
+};
+
+class MesonPllClock : public MesonRateClock {
+ public:
+  explicit MesonPllClock(const hhi_plls_t pll_num, aml_hiu_dev_t* hiudev)
+      : pll_num_(pll_num), hiudev_(hiudev) {}
+  ~MesonPllClock() = default;
+
+  void Init();
+
+  // Implement MesonRateClock
+  zx_status_t SetRate(const uint32_t hz) final override;
+  zx_status_t QuerySupportedRate(const uint64_t max_rate, uint64_t* result) final override;
+  zx_status_t GetRate(uint64_t* result) final override;
+
+  zx_status_t Toggle(const bool enable);
+
+ private:
+  const hhi_plls_t pll_num_;
+  aml_pll_dev_t pll_;
+  aml_hiu_dev_t* hiudev_;
+};
+
+void MesonPllClock::Init() {
+  s905d2_pll_init_etc(hiudev_, &pll_, pll_num_);
+
+  const hhi_pll_rate_t* rate_table = s905d2_pll_get_rate_table(pll_num_);
+  const size_t rate_table_size = s905d2_get_rate_table_count(pll_num_);
+
+  // Make sure that the rate table is sorted in strictly ascending order.
+  for (size_t i = 0; i < rate_table_size - 1; i++) {
+    ZX_ASSERT(rate_table[i].rate < rate_table[i + 1].rate);
+  }
+}
+
+zx_status_t MesonPllClock::SetRate(const uint32_t hz) { return s905d2_pll_set_rate(&pll_, hz); }
+
+zx_status_t MesonPllClock::QuerySupportedRate(const uint64_t max_rate, uint64_t* result) {
+  // Find the largest rate that does not exceed `max_rate`
+
+  // Start by getting the rate tables.
+  const hhi_pll_rate_t* rate_table = s905d2_pll_get_rate_table(pll_num_);
+  const size_t rate_table_size = s905d2_get_rate_table_count(pll_num_);
+  const hhi_pll_rate_t* best_rate = nullptr;
+
+  // The rate table is already sorted in ascending order so pick the largest
+  // element that does not exceed max_rate.
+  for (size_t i = 0; i < rate_table_size; i++) {
+    if (rate_table[i].rate <= max_rate) {
+      best_rate = &rate_table[i];
+    } else {
+      break;
+    }
+  }
+
+  if (best_rate == nullptr) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  *result = best_rate->rate;
+  return ZX_OK;
+}
+
+zx_status_t MesonPllClock::GetRate(uint64_t* result) { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t MesonPllClock::Toggle(const bool enable) {
+  if (enable) {
+    return s905d2_pll_ena(&pll_);
+  } else {
+    s905d2_pll_disable(&pll_);
+    return ZX_OK;
+  }
+}
+
+class MesonCpuClock : public MesonRateClock {
+ public:
+  explicit MesonCpuClock(const ddk::MmioBuffer* hiu, const uint32_t offset, MesonPllClock* sys_pll,
+                         const uint32_t initial_rate)
+      : hiu_(hiu), offset_(offset), sys_pll_(sys_pll), current_rate_hz_(initial_rate) {}
+  ~MesonCpuClock() = default;
+
+  // Implement MesonRateClock
+  zx_status_t SetRate(const uint32_t hz) final override;
+  zx_status_t QuerySupportedRate(const uint64_t max_rate, uint64_t* result) final override;
+  zx_status_t GetRate(uint64_t* result) final override;
+
+ private:
+  zx_status_t ConfigCpuFixedPll(const uint32_t new_rate);
+  zx_status_t ConfigureSysPLL(uint32_t new_rate);
+  zx_status_t WaitForBusyCpu();
+
+  static constexpr uint32_t kFrequencyThresholdHz = 1'000'000'000;
+  // Final Mux for selecting clock source.
+  static constexpr uint32_t kFixedPll = 0;
+  static constexpr uint32_t kSysPll = 1;
+
+  static constexpr uint32_t kSysCpuWaitBusyRetries = 5;
+  static constexpr uint32_t kSysCpuWaitBusyTimeoutUs = 10'000;
+
+  const ddk::MmioBuffer* hiu_;
+  const uint32_t offset_;
+
+  MesonPllClock* sys_pll_;
+
+  uint32_t current_rate_hz_;
+};
+
+zx_status_t MesonCpuClock::SetRate(const uint32_t hz) {
+  zx_status_t status;
+
+  if (hz > kFrequencyThresholdHz && current_rate_hz_ > kFrequencyThresholdHz) {
+    // Switching between two frequencies both higher than 1GHz.
+    // In this case, as per the datasheet it is recommended to change
+    // to a frequency lower than 1GHz first and then switch to higher
+    // frequency to avoid glitches.
+
+    // Let's first switch to 1GHz
+    status = SetRate(kFrequencyThresholdHz);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: failed to set CPU freq to intermediate freq, status = %d", __func__,
+             status);
+      return status;
+    }
+
+    // Now let's set SYS_PLL rate to hz.
+    status = ConfigureSysPLL(hz);
+
+  } else if (hz > kFrequencyThresholdHz && current_rate_hz_ <= kFrequencyThresholdHz) {
+    // Switching from a frequency lower than 1GHz to one greater than 1GHz.
+    // In this case we just need to set the SYS_PLL to required rate and
+    // then set the final mux to 1 (to select SYS_PLL as the source.)
+
+    // Now let's set SYS_PLL rate to hz.
+    status = ConfigureSysPLL(hz);
+
+  } else {
+    // Switching between two frequencies below 1GHz.
+    // In this case we change the source and dividers accordingly
+    // to get the required rate from MPLL and do not touch the
+    // final mux.
+    status = ConfigCpuFixedPll(hz);
+  }
+
+  if (status == ZX_OK) {
+    current_rate_hz_ = hz;
+  } else {
+    zxlogf(ERROR, "%s: Failed to set rate, st = %d", __func__, status);
+  }
+
+  return status;
+}
+
+zx_status_t MesonCpuClock::ConfigureSysPLL(uint32_t new_rate) {
+  // This API also validates if the new_rate is valid.
+  // So no need to validate it here.
+  zx_status_t status = sys_pll_->SetRate(new_rate);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to set SYS_PLL rate, status = %d", __func__, status);
+    return status;
+  }
+
+  // Now we need to change the final mux to select input as SYS_PLL.
+  status = WaitForBusyCpu();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to wait for busy, status = %d", __func__, status);
+    return status;
+  }
+
+  // Select the final mux.
+  auto sys_cpu_ctrl0 = SysCpuClkControl::Get(offset_).ReadFrom(&*hiu_);
+  sys_cpu_ctrl0.set_final_mux_sel(kSysPll).WriteTo(&*hiu_);
+
+  return status;
+}
+
+zx_status_t MesonCpuClock::QuerySupportedRate(const uint64_t max_rate, uint64_t* result) {
+  // Cpu Clock supported rates fall into two categories based on whether they're below
+  // or above the 1GHz threshold. This method scans both the syspll and the fclk to
+  // determine the maximum rate that does not exceed `max_rate`.
+  uint64_t syspll_rate;
+  zx_status_t syspll_status = sys_pll_->QuerySupportedRate(max_rate, &syspll_rate);
+
+  const aml_fclk_rate_table_t* fclk_rate_table = s905d2_fclk_get_rate_table();
+  size_t rate_count = s905d2_fclk_get_rate_table_count();
+
+  uint64_t fclk_rate = 0;
+  zx_status_t fclk_status = ZX_ERR_NOT_FOUND;
+  for (size_t i = 0; i < rate_count; i++) {
+    if (fclk_rate_table[i].rate > fclk_rate && fclk_rate_table[i].rate <= max_rate) {
+      fclk_rate = fclk_rate_table[i].rate;
+      fclk_status = ZX_OK;
+    }
+  }
+
+  // 4 cases: rate supported by syspll only, rate supported by fclk only
+  //          rate supported by neither or rate supported by both.
+  if (syspll_status == ZX_OK && fclk_status != ZX_OK) {
+    // Case 1
+    *result = syspll_rate;
+    return ZX_OK;
+  } else if (syspll_status != ZX_OK && fclk_status == ZX_OK) {
+    // Case 2
+    *result = fclk_rate;
+    return ZX_OK;
+  } else if (syspll_status != ZX_OK && fclk_status != ZX_OK) {
+    // Case 3
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  // Case 4
+  if (syspll_rate > kFrequencyThresholdHz) {
+    *result = syspll_rate;
+  } else {
+    *result = fclk_rate;
+  }
+  return ZX_OK;
+}
+
+zx_status_t MesonCpuClock::GetRate(uint64_t* result) {
+  if (result == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  *result = current_rate_hz_;
+  return ZX_OK;
+}
+
+// NOTE: This block doesn't modify the MPLL, it just programs the muxes &
+// dividers to get the new_rate in the sys_pll_div block. Refer fig. 6.6 Multi
+// Phase PLLS for A53 & A73 in the datasheet.
+zx_status_t MesonCpuClock::ConfigCpuFixedPll(const uint32_t new_rate) {
+  const aml_fclk_rate_table_t* fclk_rate_table = s905d2_fclk_get_rate_table();
+  size_t rate_count = s905d2_fclk_get_rate_table_count();
+  size_t i;
+
+  // Validate if the new_rate is available
+  for (i = 0; i < rate_count; i++) {
+    if (new_rate == fclk_rate_table[i].rate) {
+      break;
+    }
+  }
+  if (i == rate_count) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t status = WaitForBusyCpu();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to wait for busy, status = %d", __func__, status);
+    return status;
+  }
+
+  auto sys_cpu_ctrl0 = SysCpuClkControl::Get(offset_).ReadFrom(&*hiu_);
+
+  if (sys_cpu_ctrl0.final_dyn_mux_sel()) {
+    // Dynamic mux 1 is in use, we setup dynamic mux 0
+    sys_cpu_ctrl0.set_final_dyn_mux_sel(0)
+        .set_mux0_divn_tcnt(fclk_rate_table[i].mux_div)
+        .set_postmux0(fclk_rate_table[i].postmux)
+        .set_premux0(fclk_rate_table[i].premux);
+  } else {
+    // Dynamic mux 0 is in use, we setup dynamic mux 1
+    sys_cpu_ctrl0.set_final_dyn_mux_sel(1)
+        .set_mux1_divn_tcnt(fclk_rate_table[i].mux_div)
+        .set_postmux1(fclk_rate_table[i].postmux)
+        .set_premux1(fclk_rate_table[i].premux);
+  }
+
+  // Select the final mux.
+  sys_cpu_ctrl0.set_final_mux_sel(kFixedPll).WriteTo(&*hiu_);
+
+  return ZX_OK;
+}
+
+zx_status_t MesonCpuClock::WaitForBusyCpu() {
+  auto sys_cpu_ctrl0 = SysCpuClkControl::Get(offset_).ReadFrom(&*hiu_);
+
+  // Wait till we are not busy.
+  for (uint32_t i = 0; i < kSysCpuWaitBusyRetries; i++) {
+    sys_cpu_ctrl0 = SysCpuClkControl::Get(offset_).ReadFrom(&*hiu_);
+
+    if (sys_cpu_ctrl0.busy()) {
+      // Wait a little bit before trying again.
+      zx_nanosleep(zx_deadline_after(ZX_USEC(kSysCpuWaitBusyTimeoutUs)));
+      continue;
+    } else {
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_TIMED_OUT;
+}
+
+AmlClock::~AmlClock() = default;
 
 AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer dosbus_mmio,
                    std::optional<ddk::MmioBuffer> msr_mmio, uint32_t device_id)
@@ -64,6 +387,13 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
       gate_count_ = countof(g12a_clk_gates);
 
       InitHiu();
+
+      constexpr size_t cpu_clk_count = countof(g12a_cpu_clks);
+      cpu_clks_.reserve(cpu_clk_count);
+      for (size_t i = 0; i < cpu_clk_count; i++) {
+        cpu_clks_.emplace_back(&hiu_mmio_, g12a_cpu_clks[i].reg, &*pllclk_[g12a_cpu_clks[i].pll],
+                               g12a_cpu_clks[i].initial_hz);
+      }
 
       break;
     }
@@ -170,14 +500,7 @@ zx_status_t AmlClock::ClkTogglePll(uint32_t clk, const bool enable) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  aml_pll_dev_t* target = &plldev_[clk];
-
-  if (enable) {
-    return s905d2_pll_ena(target);
-  } else {
-    s905d2_pll_disable(target);
-    return ZX_OK;
-  }
+  return pllclk_[clk]->Toggle(enable);
 }
 
 zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
@@ -247,68 +570,53 @@ zx_status_t AmlClock::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
 }
 
 zx_status_t AmlClock::ClockImplSetRate(uint32_t clk, uint64_t hz) {
-  // Determine which clock type we're trying to control.
-  aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
-  const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
+  zxlogf(TRACE, "%s: clk = %u, hz = %lu", __func__, clk, hz);
 
-  if (clkid >= HIU_PLL_COUNT) {
+  if (hz >= UINT32_MAX) {
+    zxlogf(ERROR, "%s: requested rate exceeds uint32_max, clk = %u, rate = %lu", __func__, clk, hz);
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (type != aml_clk_common::aml_clk_type::kMesonPll) {
-    // For now, only Meson PLLs support rate operation.
-    return ZX_ERR_NOT_SUPPORTED;
+  MesonRateClock* target_clock;
+  zx_status_t st = GetMesonRateClock(clk, &target_clock);
+  if (st != ZX_OK) {
+    return st;
   }
 
-  aml_pll_dev_t* target = &plldev_[clkid];
-
-  return s905d2_pll_set_rate(target, hz);
+  return target_clock->SetRate(static_cast<uint32_t>(hz));
 }
 
 zx_status_t AmlClock::ClockImplQuerySupportedRate(uint32_t clk, uint64_t max_rate,
                                                   uint64_t* out_best_rate) {
-  // Determine which clock type we're trying to control.
-  aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
-  const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
-
-  if (clkid >= HIU_PLL_COUNT) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (type != aml_clk_common::aml_clk_type::kMesonPll) {
-    // For now, only Meson PLLs support rate operation.
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  zxlogf(TRACE, "%s: clk = %u, max_rate = %lu", __func__, clk, max_rate);
 
   if (out_best_rate == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  const hhi_plls_t pllid = static_cast<hhi_plls_t>(clkid);
-  const hhi_pll_rate_t* rate_table = s905d2_pll_get_rate_table(pllid);
-  const size_t rate_table_size = s905d2_get_rate_table_count(pllid);
-  const hhi_pll_rate_t* best_rate = nullptr;
-
-  for (size_t i = 0; i < rate_table_size; i++) {
-    if (rate_table[i].rate <= max_rate) {
-      best_rate = &rate_table[i];
-    } else {
-      break;
-    }
+  MesonRateClock* target_clock;
+  zx_status_t st = GetMesonRateClock(clk, &target_clock);
+  if (st != ZX_OK) {
+    return st;
   }
 
-  // Couldn't find a rate lower than or equal to max_rate.
-  if (!best_rate) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  *out_best_rate = best_rate->rate;
-
-  return ZX_OK;
+  return target_clock->QuerySupportedRate(max_rate, out_best_rate);
 }
 
-zx_status_t AmlClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t AmlClock::ClockImplGetRate(uint32_t clk, uint64_t* out_current_rate) {
+  zxlogf(TRACE, "%s: clk = %u", __func__, clk);
+
+  if (out_current_rate == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  MesonRateClock* target_clock;
+  zx_status_t st = GetMesonRateClock(clk, &target_clock);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  return target_clock->GetRate(out_current_rate);
 }
 
 zx_status_t AmlClock::IsSupportedMux(const uint32_t id, const uint16_t kSupportedMask) {
@@ -348,8 +656,8 @@ zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
   const meson_clk_mux_t& mux = muxes_[index];
 
   if (idx >= mux.n_inputs) {
-    zxlogf(ERROR, "%s: mux input index out of bounds, max = %u, idx = %u.", __func__,
-           mux.n_inputs, idx);
+    zxlogf(ERROR, "%s: mux input index out of bounds, max = %u, idx = %u.", __func__, mux.n_inputs,
+           idx);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -496,6 +804,34 @@ void AmlClock::Register(const ddk::PBusProtocolClient& pbus) {
   pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
 }
 
+zx_status_t AmlClock::GetMesonRateClock(const uint32_t clk, MesonRateClock** out) {
+  aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
+  const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
+
+  switch (type) {
+    case aml_clk_common::aml_clk_type::kMesonPll:
+      if (clkid >= HIU_PLL_COUNT) {
+        zxlogf(ERROR, "%s: HIU PLL out of range, clkid = %hu.", __func__, clkid);
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      *out = pllclk_[clkid].get();
+      return ZX_OK;
+    case aml_clk_common::aml_clk_type::kMesonCpuClk:
+      if (clkid >= cpu_clks_.size()) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      *out = &cpu_clks_[clkid];
+      return ZX_OK;
+    default:
+      zxlogf(ERROR, "%s: Unsupported clock type, type = 0x%hx\n", __func__, type);
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  __UNREACHABLE;
+}
+
 zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {
   auto dev = static_cast<AmlClock*>(ctx);
   fuchsia_hardware_clock_FrequencyInfo info;
@@ -524,7 +860,8 @@ void AmlClock::InitHiu() {
   s905d2_hiu_init_etc(&hiudev_, static_cast<MMIO_PTR uint8_t*>(hiu_mmio_.get()));
   for (unsigned int pllnum = 0; pllnum < HIU_PLL_COUNT; pllnum++) {
     const hhi_plls_t pll = static_cast<hhi_plls_t>(pllnum);
-    s905d2_pll_init_etc(&hiudev_, &plldev_[pllnum], pll);
+    pllclk_[pllnum] = std::make_unique<MesonPllClock>(pll, &hiudev_);
+    pllclk_[pllnum]->Init();
   }
 }
 
