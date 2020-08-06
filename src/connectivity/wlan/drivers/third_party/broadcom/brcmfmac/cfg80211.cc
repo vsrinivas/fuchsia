@@ -3551,7 +3551,11 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
   }
   BRCMF_INFO("brcmfmac:   band_id: %s", band_id_str);
 
-  ZX_ASSERT(band->num_rates <= WLAN_INFO_BAND_INFO_MAX_RATES);
+  if (band->num_rates > WLAN_INFO_BAND_INFO_MAX_RATES) {
+    BRCMF_ERR("Number of rates reported (%zu) exceeds limit (%d), truncating",
+              band->num_rates, WLAN_INFO_BAND_INFO_MAX_RATES);
+    band->num_rates = WLAN_INFO_BAND_INFO_MAX_RATES;
+  }
   char rates_str[WLAN_INFO_BAND_INFO_MAX_RATES * 6 + 1];
   char* str = rates_str;
   for (unsigned i = 0; i < band->num_rates; i++) {
@@ -3561,7 +3565,11 @@ static void brcmf_dump_band_caps(wlanif_band_capabilities_t* band) {
 
   BRCMF_INFO("brcmfmac:     base_frequency: %d", band->base_frequency);
 
-  ZX_ASSERT(band->num_channels <= WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+  if (band->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
+    BRCMF_ERR("Number of channels reported (%zu) exceeds limit (%d), truncating",
+              band->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+    band->num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
+  }
   char channels_str[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * 4 + 1];
   str = channels_str;
   for (unsigned i = 0; i < band->num_channels; i++) {
