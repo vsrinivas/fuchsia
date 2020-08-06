@@ -759,7 +759,7 @@ pub trait EnvironmentTcpStream: Sized {
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
 
-    // TODO: Implement this trait for std::net::TcpListener.
+    // TODO: Implement this trait for std::net::TcpStream.
 }
 
 impl EnvironmentTcpStream for fuchsia_async::net::TcpStream {
@@ -776,7 +776,7 @@ impl EnvironmentTcpStream for fuchsia_async::net::TcpStream {
                 .await
                 .context("failed to create socket")?;
 
-            let stream = fuchsia_async::net::TcpStream::connect_from_raw(addr, sock)
+            let stream = fuchsia_async::net::TcpStream::connect_from_raw(sock, addr)
                 .context("failed to create client tcp stream")?
                 .await
                 .context("failed to connect to server")?;
