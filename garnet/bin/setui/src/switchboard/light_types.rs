@@ -25,8 +25,8 @@ pub struct LightGroup {
     pub light_type: LightType,
     pub lights: Vec<LightState>,
 
-    /// Each light in the underlying fuchsia.hardware.light has a unique index, we need to remember
-    /// the index of the lights in this light group in order to write values back.
+    /// Each light in the underlying fuchsia.hardware.light API has a unique, fixed index. We need
+    /// to remember the index of the lights in this light group in order to write values back.
     pub hardware_index: Vec<u32>,
 }
 

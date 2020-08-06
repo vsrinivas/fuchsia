@@ -74,6 +74,7 @@ mod privacy;
 mod setup;
 
 pub use display::LightSensorConfig;
+pub use light::light_hardware_configuration::LightHardwareConfiguration;
 
 pub mod agent;
 pub mod config;

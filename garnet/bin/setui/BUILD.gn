@@ -140,6 +140,7 @@ rustc_library("lib") {
     "src/light.rs",
     "src/light/light_controller.rs",
     "src/light/light_fidl_handler.rs",
+    "src/light/light_hardware_configuration.rs",
     "src/message.rs",
     "src/message/action_fuse.rs",
     "src/message/base.rs",
@@ -352,6 +353,10 @@ unittest_package("sample-setui-config-test") {
       path = rebase_path("src/tests/testdata/light_sensor_configuration.json")
       dest = "light_sensor_configuration.json"
     },
+    {
+      path = rebase_path("src/tests/testdata/light_hardware_configuration.json")
+      dest = "light_hardware_configuration.json"
+    },
   ]
 
   tests = [
@@ -362,6 +367,8 @@ unittest_package("sample-setui-config-test") {
         "/pkg/data/service_flags.json",
         "-l",
         "/pkg/data/light_sensor_configuration.json",
+        "--light_hardware_config",
+        "/pkg/data/light_hardware_configuration.json",
       ]
     },
   ]

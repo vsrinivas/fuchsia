@@ -5,7 +5,9 @@
 use anyhow::{Context, Error};
 use clap::{App, Arg};
 use serde::de::DeserializeOwned;
-use settings::{EnabledServicesConfiguration, LightSensorConfig, ServiceFlags};
+use settings::{
+    EnabledServicesConfiguration, LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
+};
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Read;
@@ -49,6 +51,13 @@ fn main() -> Result<(), Error> {
                 .min_values(0)
                 .conflicts_with("controller_flag"),
         )
+        .arg(
+            Arg::with_name("light_hardware_configs")
+                .long("light_hardware_config")
+                .takes_value(true)
+                .multiple(true)
+                .min_values(0),
+        )
         .get_matches();
 
     for config in matches
@@ -69,6 +78,10 @@ fn main() -> Result<(), Error> {
 
     for config in matches.values_of_os("light_sensor_configs").into_iter().flatten() {
         read_config::<LightSensorConfig>(config)?;
+    }
+
+    for config in matches.values_of_os("light_hardware_configs").into_iter().flatten() {
+        read_config::<LightHardwareConfiguration>(config)?;
     }
 
     Ok(())

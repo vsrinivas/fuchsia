@@ -1,0 +1,16 @@
+{
+  "light_groups": [
+    {
+      "name": "TEST_LIGHT_GROUP",
+      "hardware_index": [
+        1,
+        2
+      ],
+      "light_type": "Rgb",
+      "persist": false,
+      "disable_conditions": [
+        "MicSwitch"
+      ]
+    }
+  ]
+}
