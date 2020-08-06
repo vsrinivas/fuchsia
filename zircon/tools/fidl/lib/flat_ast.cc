@@ -1981,8 +1981,10 @@ bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
 bool Library::ResolveConstant(Constant* constant, const Type* type) {
   assert(constant != nullptr);
 
-  if (constant->IsResolved())
-    return true;
+  // Prevent re-entry.
+  if (constant->compiled)
+    return constant->IsResolved();
+  constant->compiled = true;
 
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
@@ -2990,38 +2992,62 @@ bool Library::CompileEnum(Enum* enum_declaration) {
   auto primitive_type = static_cast<const PrimitiveType*>(enum_declaration->subtype_ctor->type);
   enum_declaration->type = primitive_type;
   switch (primitive_type->subtype) {
-    case types::PrimitiveSubtype::kInt8:
-      if (!ValidateEnumMembers<int8_t>(enum_declaration))
+    case types::PrimitiveSubtype::kInt8: {
+      int8_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<int8_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_signed = unknown_value;
       break;
-    case types::PrimitiveSubtype::kInt16:
-      if (!ValidateEnumMembers<int16_t>(enum_declaration))
+    }
+    case types::PrimitiveSubtype::kInt16: {
+      int16_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<int16_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_signed = unknown_value;
       break;
-    case types::PrimitiveSubtype::kInt32:
-      if (!ValidateEnumMembers<int32_t>(enum_declaration))
+    }
+    case types::PrimitiveSubtype::kInt32: {
+      int32_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<int32_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_signed = unknown_value;
       break;
-    case types::PrimitiveSubtype::kInt64:
-      if (!ValidateEnumMembers<int64_t>(enum_declaration))
+    }
+    case types::PrimitiveSubtype::kInt64: {
+      int64_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<int64_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_signed = unknown_value;
       break;
-    case types::PrimitiveSubtype::kUint8:
-      if (!ValidateEnumMembers<uint8_t>(enum_declaration))
+    }
+    case types::PrimitiveSubtype::kUint8: {
+      uint8_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<uint8_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_unsigned = unknown_value;
       break;
-    case types::PrimitiveSubtype::kUint16:
-      if (!ValidateEnumMembers<uint16_t>(enum_declaration))
+    }
+    case types::PrimitiveSubtype::kUint16: {
+      uint16_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<uint16_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_unsigned = unknown_value;
       break;
-    case types::PrimitiveSubtype::kUint32:
-      if (!ValidateEnumMembers<uint32_t>(enum_declaration))
+    }
+    case types::PrimitiveSubtype::kUint32: {
+      uint32_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<uint32_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_unsigned = unknown_value;
       break;
-    case types::PrimitiveSubtype::kUint64:
-      if (!ValidateEnumMembers<uint64_t>(enum_declaration))
+    }
+    case types::PrimitiveSubtype::kUint64: {
+      uint64_t unknown_value;
+      if (!ValidateEnumMembersAndCalcUnknownValue<uint64_t>(enum_declaration, &unknown_value))
         return false;
+      enum_declaration->unknown_value_unsigned = unknown_value;
       break;
+    }
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
@@ -3527,11 +3553,25 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
 }
 
 template <typename MemberType>
-bool Library::ValidateEnumMembers(Enum* enum_decl) {
+bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
+                                                     MemberType* out_unknown_value) {
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Enum members must be an integral type!");
 
-  auto validator = [enum_decl](
+  auto unknown_value = std::numeric_limits<MemberType>::max();
+  for (const auto& member : enum_decl->members) {
+    if (!ResolveConstant(member.value.get(), enum_decl->subtype_ctor->type)) {
+      return Fail(ErrCouldNotResolveMember, member.name, std::string("enum"));
+    }
+    auto attributes = member.attributes.get();
+    if (attributes && attributes->HasAttribute("Unknown")) {
+      unknown_value =
+          static_cast<const NumericConstantValue<MemberType>&>(member.value->Value()).value;
+    }
+  }
+  *out_unknown_value = unknown_value;
+
+  auto validator = [enum_decl, unknown_value](
                        MemberType member,
                        const raw::AttributeList* attributes) -> std::unique_ptr<Diagnostic> {
     switch (enum_decl->strictness) {
@@ -3543,16 +3583,15 @@ bool Library::ValidateEnumMembers(Enum* enum_decl) {
         return nullptr;
     }
 
-    constexpr auto kMax = std::numeric_limits<MemberType>::max();
-
-    if (member != kMax)
+    if (member != unknown_value)
       return nullptr;
 
     if (attributes && attributes->HasAttribute("Unknown"))
       return nullptr;
 
-    return Reporter::MakeError(ErrFlexibleEnumMemberWithMaxValue, std::to_string(kMax),
-                               std::to_string(kMax), std::to_string(kMax), std::to_string(kMax));
+    return Reporter::MakeError(ErrFlexibleEnumMemberWithMaxValue, std::to_string(unknown_value),
+                               std::to_string(unknown_value), std::to_string(unknown_value),
+                               std::to_string(unknown_value));
   };
 
   if (!ValidateMembers<Enum, MemberType>(enum_decl, validator))

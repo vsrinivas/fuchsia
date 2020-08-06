@@ -50,7 +50,7 @@ flexible enum Foo : uint8 {
   ASSERT_ERR(errors[0], fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
-TEST(FlexibleEnum, MaxValueWithoutUnknown) {
+TEST(FlexibleEnum, MaxValueWithoutUnknownUnsigned) {
   std::string fidl_library = R"FIDL(
 library example;
 
@@ -69,6 +69,69 @@ flexible enum Foo : uint8 {
   ASSERT_EQ(errors.size(), 1);
 
   ASSERT_ERR(errors[0], fidl::ErrFlexibleEnumMemberWithMaxValue);
+}
+
+TEST(FlexibleEnum, MaxValueWithoutUnknownSigned) {
+  std::string fidl_library = R"FIDL(
+library example;
+
+flexible enum Foo : int8 {
+  ZERO = 0;
+  ONE = 1;
+  MAX = 127;
+};
+)FIDL";
+
+  TestLibrary library(
+      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  ASSERT_FALSE(library.Compile());
+
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+
+  ASSERT_ERR(errors[0], fidl::ErrFlexibleEnumMemberWithMaxValue);
+}
+
+TEST(FlexibleEnum, CanUseMaxValueIfOtherIsUnknownUnsigned) {
+  std::string fidl_library = R"FIDL(
+library example;
+
+flexible enum Foo : uint8 {
+  ZERO = 0;
+  [Unknown] ONE = 1;
+  MAX = 255;
+};
+)FIDL";
+
+  TestLibrary library(
+      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  ASSERT_TRUE(library.Compile());
+
+  auto foo_enum = library.LookupEnum("Foo");
+  ASSERT_NOT_NULL(foo_enum);
+  EXPECT_EQ(foo_enum->unknown_value_signed, 0);
+  EXPECT_EQ(foo_enum->unknown_value_unsigned, 1u);
+}
+
+TEST(FlexibleEnum, CanUseMaxValueIfOtherIsUnknownSigned) {
+  std::string fidl_library = R"FIDL(
+library example;
+
+flexible enum Foo : int8 {
+  ZERO = 0;
+  [Unknown] ONE = 1;
+  MAX = 127;
+};
+)FIDL";
+
+  TestLibrary library(
+      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  ASSERT_TRUE(library.Compile());
+
+  auto foo_enum = library.LookupEnum("Foo");
+  ASSERT_NOT_NULL(foo_enum);
+  EXPECT_EQ(foo_enum->unknown_value_signed, 1);
+  EXPECT_EQ(foo_enum->unknown_value_unsigned, 0);
 }
 
 TEST(FlexibleUnion, MultipleUnknown) {

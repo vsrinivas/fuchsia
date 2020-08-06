@@ -196,6 +196,10 @@ struct Enum final : public TypeDecl {
 
   // Set during compilation.
   const PrimitiveType* type = nullptr;
+  // Set only for flexible enums, and either is set depending on signedness of
+  // underlying enum type.
+  int64_t unknown_value_signed = 0;
+  uint64_t unknown_value_unsigned = 0;
 };
 
 struct Bits final : public TypeDecl {
@@ -847,7 +851,7 @@ class Library {
   template <typename MemberType>
   bool ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask);
   template <typename MemberType>
-  bool ValidateEnumMembers(Enum* enum_decl);
+  bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
 
   void VerifyDeclAttributes(Decl* decl);
 

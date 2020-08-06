@@ -303,6 +303,9 @@ struct Constant {
 
   const Kind kind;
   const SourceSpan span;
+  // compiled tracks whether we attempted to resolve this constant, to avoid
+  // resolving twice a constant which cannot be resolved.
+  bool compiled = false;
 
  protected:
   std::unique_ptr<ConstantValue> value_;
