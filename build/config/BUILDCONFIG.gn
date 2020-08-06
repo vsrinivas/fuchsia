@@ -21,6 +21,12 @@ zx = "//zircon"
 zx_build = "//build/unification/zn_build"
 
 declare_args() {
+  # If set, the build will produce compilation analysis dumps, used for code
+  # cross-referencing in code search.  The extra work done during analysis
+  # is only needed for cross-referencing builds, so we're keeping the flag
+  # and the analysis overhead turned off by default.
+  is_analysis = false
+
   # Debug build.
   is_debug = true
 
@@ -195,6 +201,10 @@ default_common_binary_configs = [
   "//build/config:rust_2018_idioms",
   "//build/config:werror",
 ]
+
+if (is_analysis) {
+  default_common_binary_configs += [ "//build/config:rust_analysis" ]
+}
 
 if (is_debug) {
   default_common_binary_configs += [ "//build/config:debug" ]

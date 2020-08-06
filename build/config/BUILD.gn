@@ -34,6 +34,14 @@ if (!is_fuchsia) {
   enable_frame_pointers = false
 }
 
+# Turns on the rust compilation analysis generator. This will produce a
+# directory $OUT/save-analysis-temp, which will dump all the source analysis
+# that the compiler collected while analyzing the source.  This config is
+# included conditionally, see //build/config/BUILDCONFIG.gn for details.
+config("rust_analysis") {
+  rustflags = [ "-Zsave-analysis" ]
+}
+
 config("rust_edition_2018") {
   rustflags = [ "--edition=2018" ]
 }
