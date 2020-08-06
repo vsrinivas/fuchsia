@@ -7,11 +7,15 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("hid-buttons") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = []
   deps = [
     ":common",
@@ -20,7 +24,7 @@ driver_module("hid-buttons") {
 }
 
 source_set("common") {
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "hid-buttons.cc" ]
 
   public_deps = [
@@ -44,8 +48,10 @@ source_set("common") {
 }
 
 test("hid-buttons-test") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/unification/config:zircon-migrated",
+  ]
   output_name = "hid-buttons-test"
   sources = [ "hid-buttons-test.cc" ]
   deps = [

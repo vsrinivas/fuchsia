@@ -7,7 +7,10 @@ import("//build/test/test_package.gni")
 
 test("exception") {
   output_name = "exception-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/unification/config:zircon-migrated",
+    "//build/config:all_source",
+  ]
   sources = [
     "exception.cc",
     "exception_to_string.cc",

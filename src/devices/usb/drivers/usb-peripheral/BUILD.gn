@@ -5,11 +5,15 @@
 import("//build/config/fuchsia/rules.gni")
 
 driver_module("usb-peripheral") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [
     "usb-function.cc",
     "usb-peripheral.cc",
@@ -30,7 +34,7 @@ driver_module("usb-peripheral") {
   ]
 
   # Set default configuration here, rather than relying on usbctl to do it.
-  defines += [
+  defines = [
     "USB_DEVICE_VID=0x18D1",
     "USB_DEVICE_PID=0xA020",
     "USB_DEVICE_MANUFACTURER=\"Zircon\"",

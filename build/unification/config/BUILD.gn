@@ -18,15 +18,5 @@ config("zircon-migrated") {
     "-Wno-sign-conversion",
   ]
 
-  defines = [
-    "_ALL_SOURCE",
-    "ZX_ASSERT_LEVEL=2",
-  ]
-}
-
-# The following config is applied to source C/C++ libraries imported from ZN so
-# that they are as optimized as in the ZN build.
-
-config("zircon-library") {
-  defines = [ "_ALL_SOURCE" ]
+  defines = [ "ZX_ASSERT_LEVEL=2" ]
 }

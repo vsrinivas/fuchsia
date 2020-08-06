@@ -7,8 +7,10 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("virtio_block") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   if (is_fuchsia) {
@@ -25,7 +27,7 @@ driver_module("virtio_block") {
 }
 
 source_set("block_lib") {
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "block.cc" ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.block",
@@ -35,7 +37,7 @@ source_set("block_lib") {
 }
 
 source_set("scsi_lib") {
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "scsi.cc" ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.block",
@@ -46,8 +48,10 @@ source_set("scsi_lib") {
 }
 
 driver_module("virtio_scsi") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   if (is_fuchsia) {

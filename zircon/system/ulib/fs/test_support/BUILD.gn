@@ -19,6 +19,7 @@ zx_library("test_support") {
   sdk = "source"
   testonly = true
 
+  configs += [ "//build/config:all_source" ]
   sources = [
     "environment.cc",
     "fixtures.cc",

@@ -8,7 +8,10 @@ test("futex-ownership") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/unification/config:zircon-migrated",
+    "//build/config:all_source",
+  ]
   sources = [
     "bad-handle.cc",
     "ownership.cc",

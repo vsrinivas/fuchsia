@@ -183,6 +183,7 @@ test("blobfs-integration") {
   if (configs + fdio_config - fdio_config != configs) {
     configs -= fdio_config
   }
+  configs += [ "//build/config:all_source" ]
   sources = [
     "integration/blobfs_integration_test.cc",
     "integration/fdio_test.cc",

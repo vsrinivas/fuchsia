@@ -66,8 +66,10 @@ source_set("common") {
     "//zircon/system/ulib/zxio",
   ]
 
-  defines = [ "_ALL_SOURCE=1" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
 }
 
 shared_library("driver") {

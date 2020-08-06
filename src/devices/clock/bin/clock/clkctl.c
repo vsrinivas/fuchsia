@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
+#include <libgen.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

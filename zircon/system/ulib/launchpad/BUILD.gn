@@ -27,7 +27,7 @@ zx_library("launchpad") {
     "launchpad.c",
     "vmo.cc",
   ]
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",

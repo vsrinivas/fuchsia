@@ -79,8 +79,10 @@ static_library("usb-virtual-bus") {
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
 }
 
 executable("test_bin") {

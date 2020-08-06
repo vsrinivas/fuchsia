@@ -62,11 +62,15 @@ config("private_config") {
 }
 
 driver_module("platform-bus-x86") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ ":private_config" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    ":private_config",
+  ]
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }

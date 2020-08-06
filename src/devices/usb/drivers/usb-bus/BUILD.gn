@@ -6,8 +6,10 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
 driver_module("usb-bus") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   if (is_fuchsia) {
@@ -21,7 +23,7 @@ driver_module("usb-bus") {
 }
 
 source_set("common") {
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "usb-device.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.usb.composite",

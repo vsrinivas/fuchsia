@@ -21,6 +21,7 @@ test("scsilib-disk-test") {
       configs -= fdio_config
     }
   }
+  configs += [ "//build/config:all_source" ]
   sources = [ "scsilib-disk-test.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.block",

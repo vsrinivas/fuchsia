@@ -8,11 +8,15 @@ import("//build/test/test_package.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("ethernet") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "ethernet.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.ethernet",
@@ -33,6 +37,7 @@ driver_module("ethernet") {
 test("ethernet-unittest") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ethernet-unittest"
+  configs += [ "//build/config:all_source" ]
   sources = [
     "ethernet-test.cc",
     "ethernet.cc",

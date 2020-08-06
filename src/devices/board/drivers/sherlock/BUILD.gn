@@ -12,8 +12,10 @@ template("sherlock_driver") {
   driver_module(target_name) {
     forward_variables_from(invoker, "*")
 
-    defines = [ "_ALL_SOURCE" ]
-    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+    configs += [
+      "//build/config:all_source",
+      "//build/config/fuchsia:enable_zircon_asserts",
+    ]
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
     if (is_fuchsia) {

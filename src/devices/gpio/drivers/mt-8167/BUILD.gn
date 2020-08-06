@@ -7,11 +7,15 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("mt-8167") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [
     "binding.cc",
     "mt8167-gpio.cc",
@@ -35,7 +39,10 @@ driver_module("mt-8167") {
 }
 
 test("mtk-gpio") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/unification/config:zircon-migrated",
+    "//build/config:all_source",
+  ]
   sources = [
     "mt8167-gpio-test.cc",
     "mt8167-gpio.cc",

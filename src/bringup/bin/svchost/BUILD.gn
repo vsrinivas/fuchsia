@@ -34,7 +34,7 @@ zx_library("crashsvc") {
 
   public_deps = [ "//zircon/public/lib/zx" ]
 
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 executable("svchost") {

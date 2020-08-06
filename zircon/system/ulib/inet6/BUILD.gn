@@ -33,7 +33,7 @@ zx_library("inet6") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zircon-internal",
   ]
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 zx_library("netifc-discover") {

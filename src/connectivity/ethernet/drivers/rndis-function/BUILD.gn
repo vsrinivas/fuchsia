@@ -14,7 +14,7 @@ bind_rules("bind") {
 }
 
 source_set("rndis-function-lib") {
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "rndis_function.cc",
     "rndis_function.h",
@@ -37,11 +37,15 @@ driver_module("rndis-function") {
   # visibility = [ ":*" ]
   output_name = "rndis-function"
 
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   deps = [
     ":rndis-function-lib",
     "//src/devices/lib/driver",

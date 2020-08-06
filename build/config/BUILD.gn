@@ -601,3 +601,7 @@ config("icf") {
     ldflags = [ "-Wl,--icf=all" ]
   }
 }
+
+config("all_source") {
+  defines = [ "_ALL_SOURCE" ]
+}

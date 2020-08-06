@@ -7,11 +7,15 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("sdmmc") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [
     "mmc.cc",
     "sd.cc",
@@ -50,6 +54,7 @@ driver_module("sdmmc") {
 test("sdmmc-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "sdmmc-test"
+  configs += [ "//build/config:all_source" ]
   sources = [
     "fake-sdmmc-device.cc",
     "mmc.cc",

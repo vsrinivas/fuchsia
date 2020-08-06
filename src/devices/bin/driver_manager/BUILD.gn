@@ -97,7 +97,7 @@ source_set("lib") {
     "//zircon/system/ulib/svc",
   ]
 
-  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 executable("driver_manager") {
@@ -108,7 +108,7 @@ executable("driver_manager") {
     "//src/sys/lib/stdout-to-debuglog/cpp",
   ]
 
-  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 test("driver-manager-test") {

@@ -237,7 +237,7 @@ executable("server_daemon_test") {
     "//zircon/system/ulib/fzl",
   ]
 
-  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 fidl("fuchsia.netemul.guest") {
@@ -278,7 +278,7 @@ executable("guest_discovery_service_bin") {
   ]
 
   # Enables thrd_create_with_name in <threads.h>.
-  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 package("guest_discovery_service") {

@@ -33,11 +33,13 @@ simple_drivers = [
 ]
 
 driver_module("test-board") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [
     "test-audio-codec.cc",
     "test-board.cc",
@@ -62,11 +64,13 @@ driver_module("test-board") {
 }
 
 driver_module("test-gpio") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/gpio.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.gpio",
@@ -82,11 +86,13 @@ driver_module("test-gpio") {
 }
 
 driver_module("test-power") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/power.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -102,11 +108,13 @@ driver_module("test-power") {
 }
 
 driver_module("test-clock") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/clock.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.clock",
@@ -122,11 +130,13 @@ driver_module("test-clock") {
 }
 
 driver_module("test-i2c") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/i2c.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.i2c",
@@ -142,11 +152,13 @@ driver_module("test-i2c") {
 }
 
 driver_module("test-spi") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/spi.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -162,11 +174,13 @@ driver_module("test-spi") {
 }
 
 driver_module("test-audio-codec") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/audio-codec.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.codec",
@@ -181,11 +195,13 @@ driver_module("test-audio-codec") {
 }
 
 driver_module("test-pwm") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/pwm.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -200,11 +216,13 @@ driver_module("test-pwm") {
 }
 
 driver_module("test-rpmb") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "test/rpmb.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -220,11 +238,13 @@ driver_module("test-rpmb") {
 
 foreach(driver, simple_drivers) {
   driver_module("test-$driver") {
-    defines = [ "_ALL_SOURCE" ]
-    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-    configs += [ "//build/unification/config:zircon-migrated" ]
+    configs += [
+      "//build/config:all_source",
+      "//build/config/fuchsia:enable_zircon_asserts",
+      "//build/config/fuchsia:static_cpp_standard_library",
+      "//build/unification/config:zircon-migrated",
+    ]
     sources = [ "test/$driver.c" ]
     deps = [
       "//sdk/banjo/ddk.protocol.clock",

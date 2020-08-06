@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("virtio") {
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "backends/fake.h",
     "backends/pci.cc",

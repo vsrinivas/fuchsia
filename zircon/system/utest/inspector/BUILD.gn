@@ -16,7 +16,10 @@ import("//build/test/test_package.gni")
 
 test("inspector") {
   output_name = "inspector-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/unification/config:zircon-migrated",
+    "//build/config:all_source",
+  ]
   sources = [ "print_debug_info.cc" ]
 
   deps = [

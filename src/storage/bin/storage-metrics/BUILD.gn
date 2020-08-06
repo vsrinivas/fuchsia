@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 executable("storage-metrics") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/unification/config:zircon-migrated",
+    "//build/config:all_source",
+  ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",

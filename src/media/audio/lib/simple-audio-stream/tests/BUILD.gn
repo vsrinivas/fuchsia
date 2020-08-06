@@ -6,7 +6,7 @@ import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
 test("sa-unittest-bin") {
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   testonly = true
   sources = [ "sas-test.cc" ]
   deps = [

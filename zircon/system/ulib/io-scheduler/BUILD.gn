@@ -24,7 +24,7 @@ zx_library("io-scheduler") {
     "io-scheduler/worker.h",
   ]
   static = true
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "scheduler.cc",
     "stream.cc",

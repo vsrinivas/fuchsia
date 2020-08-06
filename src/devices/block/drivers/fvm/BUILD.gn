@@ -5,11 +5,15 @@
 import("//build/config/fuchsia/rules.gni")
 
 driver_module("fvm") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   deps = [
     ":shared",
     "//src/devices/lib/driver",
@@ -19,7 +23,7 @@ driver_module("fvm") {
 # Also used by test/.
 source_set("shared") {
   visibility = [ "./*" ]
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "fvm.c",
     "fvm.cc",

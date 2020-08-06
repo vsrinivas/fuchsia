@@ -7,11 +7,15 @@ import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
 driver_module("hidctl") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "hidctl.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.hidbus",
@@ -28,6 +32,7 @@ driver_module("hidctl") {
 executable("hidctl-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   testonly = true
+  configs += [ "//build/config:all_source" ]
   sources = [
     "hidctl-test.cc",
     "hidctl.cc",

@@ -6,11 +6,15 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
 driver_module("ahci") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   deps = [
     ":shared",
     "//src/devices/lib/driver",
@@ -28,6 +32,7 @@ test("ahci-unittest") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "ahci-unittest"
+  configs += [ "//build/config:all_source" ]
   sources = [
     "test/fake-bus.cc",
     "test/main.cc",
@@ -46,7 +51,7 @@ test("ahci-unittest") {
 
 source_set("shared") {
   visibility = [ "./*" ]
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "bus.cc",
     "controller.cc",

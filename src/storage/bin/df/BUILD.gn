@@ -3,7 +3,10 @@
 # found in the LICENSE file.
 
 executable("df") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/unification/config:zircon-migrated",
+    "//build/config:all_source",
+  ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",

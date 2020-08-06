@@ -67,8 +67,10 @@ source_set("user_pci.proxy") {
 
 if (platform_enable_user_pci) {
   driver_module("bus-pci") {
-    defines = [ "_ALL_SOURCE" ]
-    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+    configs += [
+      "//build/config:all_source",
+      "//build/config/fuchsia:enable_zircon_asserts",
+    ]
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
     if (is_fuchsia) {
@@ -82,8 +84,10 @@ if (platform_enable_user_pci) {
   }
 
   driver_module("bus-pci.proxy") {
-    defines = [ "_ALL_SOURCE" ]
-    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+    configs += [
+      "//build/config:all_source",
+      "//build/config/fuchsia:enable_zircon_asserts",
+    ]
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
     if (is_fuchsia) {
@@ -93,8 +97,10 @@ if (platform_enable_user_pci) {
   }
 } else {
   driver_module("bus-pci") {
-    defines = [ "_ALL_SOURCE" ]
-    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+    configs += [
+      "//build/config:all_source",
+      "//build/config/fuchsia:enable_zircon_asserts",
+    ]
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
     if (is_fuchsia) {
@@ -114,8 +120,10 @@ if (platform_enable_user_pci) {
   }
 
   driver_module("bus-pci.proxy") {
-    defines = [ "_ALL_SOURCE" ]
-    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+    configs += [
+      "//build/config:all_source",
+      "//build/config/fuchsia:enable_zircon_asserts",
+    ]
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
     if (is_fuchsia) {

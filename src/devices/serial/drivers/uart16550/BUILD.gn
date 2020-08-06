@@ -7,8 +7,10 @@ import("//build/test.gni")
 
 driver_module("uart16550") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   deps = [
     ":common",
     "//src/devices/lib/driver",
@@ -17,9 +19,11 @@ driver_module("uart16550") {
 
 source_set("common") {
   visibility = [ ":*" ]
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/unification/config:zircon-migrated",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   sources = [ "uart16550.cc" ]
   deps = [ "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c" ]
   public_deps = [

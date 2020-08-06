@@ -101,7 +101,7 @@ source_set("lib") {
     "//zircon/third_party/rapidjson",
   ]
 
-  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 source_set("appmgr_for_test") {

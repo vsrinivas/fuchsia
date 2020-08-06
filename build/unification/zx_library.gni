@@ -90,8 +90,6 @@ template("zx_library") {
 
     forward_variables_from(extra_target_args, "*")
 
-    configs += [ "//build/unification/config:zircon-library" ]
-
     # Binaries depending on migrated libraries cannot be marked as testonly, and
     # therefore neither can the libraries themselves.
     # See fxb/44278 for more info.

@@ -25,6 +25,7 @@ zx_library("as370") {
     "soc/as370/syn-audio-in.h",
     "soc/as370/syn-audio-out.h",
   ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "audio-dsp.cc",
     "syn-audio-in.cc",

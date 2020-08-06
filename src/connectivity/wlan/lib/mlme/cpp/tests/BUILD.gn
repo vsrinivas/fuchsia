@@ -64,8 +64,10 @@ executable("ap_mlme_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
   # TODO(46856): Fix the leaks and remove this.
@@ -86,8 +88,10 @@ executable("client_mlme_tests") {
     "//third_party/googletest:gtest",
   ]
 
-  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
 
   # TODO(46856): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
@@ -154,8 +158,10 @@ executable("mesh_tests") {
   # TODO(46752): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
 }
 
 executable("service_tests") {

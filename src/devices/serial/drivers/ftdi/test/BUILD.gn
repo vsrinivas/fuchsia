@@ -28,10 +28,8 @@ test("ftdi-i2c-test") {
 }
 
 source_set("common") {
-  defines = [
-    "_ALL_SOURCE",
-    "TEST",
-  ]
+  configs += [ "//build/config:all_source" ]
+  defines = [ "TEST" ]
   include_dirs = [ ".." ]
   sources = [
     "../ftdi-i2c.cc",

@@ -18,6 +18,7 @@ zx_library("async-loop") {
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/loop.h" ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "loop.c" ]
   public_deps = [
     # <lib/async-loop/loop.h> has #include <lib/async/dispatcher.h>.

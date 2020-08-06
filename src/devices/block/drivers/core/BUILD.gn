@@ -6,11 +6,15 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
 driver_module("core") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   output_name = "block.core"
   deps = [
     ":shared",
@@ -51,7 +55,7 @@ test("core-unittest") {
 
 source_set("shared") {
   visibility = [ "./*" ]
-  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "block-device.cc",
     "iobuffer.cc",

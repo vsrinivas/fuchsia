@@ -8,11 +8,13 @@ import("//build/test/test_package.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 driver_module("usb-virtual-bus") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "usb-virtual-bus.cc",
     "usb-virtual-device.cc",
@@ -40,11 +42,13 @@ driver_module("usb-virtual-bus") {
 }
 
 driver_module("virtual-bus-tester") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "host.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
@@ -62,11 +66,13 @@ driver_module("virtual-bus-tester") {
 }
 
 driver_module("virtual-bus-tester-function") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "peripheral.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.usb",
@@ -118,7 +124,10 @@ isolated_devmgr_unittest_package("usb-virtual-bus-test-package") {
 }
 
 test("usb-virtual-bus-unit-test") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [
     "usb-virtual-bus-unit-test.cc",
     "usb-virtual-bus.cc",

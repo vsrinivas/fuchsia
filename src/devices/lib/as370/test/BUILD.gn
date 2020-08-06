@@ -11,7 +11,10 @@ test("syn-audio-in-test") {
     testonly = false
   }
   if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
+    configs += [
+      "//build/unification/config:zircon-migrated",
+      "//build/config:all_source",
+    ]
   }
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]

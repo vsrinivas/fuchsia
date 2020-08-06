@@ -15,7 +15,7 @@ source_set("device") {
     "virtio_queue.cc",
     "virtio_queue.h",
   ]
-  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config:all_source" ]
   public_deps = [
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/syslog/cpp",
@@ -399,7 +399,7 @@ executable("device_tests") {
     "//zircon/system/ulib/virtio",
   ]
 
-  defines = [ "_ALL_SOURCE=1" ]
+  configs += [ "//build/config:all_source" ]
 }
 
 source_set("qcow_test_data") {

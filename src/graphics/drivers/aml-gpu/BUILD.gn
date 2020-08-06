@@ -6,8 +6,10 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test/test_package.gni")
 
 source_set("sources") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }

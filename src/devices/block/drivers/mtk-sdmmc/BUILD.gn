@@ -7,11 +7,15 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("mtk-sdmmc") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
   sources = [ "mtk-sdmmc.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.block",
@@ -38,6 +42,7 @@ driver_module("mtk-sdmmc") {
 test("mtk-sdmmc-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mtk-sdmmc-test"
+  configs += [ "//build/config:all_source" ]
   sources = [
     "mtk-sdmmc-test.cc",
     "mtk-sdmmc.cc",

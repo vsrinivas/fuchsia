@@ -254,7 +254,6 @@ template("zircon_library") {
                            ])
     public_configs = [ ":$library.config" ]
     if (!is_prebuilt) {
-      configs += [ "//build/unification/config:zircon-library" ]
       if (defined(invoker.disable_ubsan) && invoker.disable_ubsan) {
         configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
       }

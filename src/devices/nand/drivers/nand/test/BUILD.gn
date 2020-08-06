@@ -33,10 +33,8 @@ test("nand-unittest") {
 # with the driver().  But that requires moving the #ifndef TEST code out
 # of ../nand.cpp into a file only built into the driver and not "common".
 source_set("common") {
-  defines = [
-    "TEST",
-    "_ALL_SOURCE",
-  ]
+  configs += [ "//build/config:all_source" ]
+  defines = [ "TEST" ]
   include_dirs = [ ".." ]
   sources = [ "../nand.cc" ]
   deps = [

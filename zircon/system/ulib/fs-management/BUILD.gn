@@ -27,6 +27,7 @@ if (is_fuchsia) {
       "fs-management/mount.h",
     ]
     shared = true
+    configs += [ "//build/config:all_source" ]
     sources = [
       "admin.cc",
       "fsck.cc",
