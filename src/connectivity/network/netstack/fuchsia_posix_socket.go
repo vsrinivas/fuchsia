@@ -979,6 +979,9 @@ func (s *datagramSocketImpl) SendMsg2(_ fidl.Context, addr []uint8, data []uint8
 		if err != nil {
 			return socket.DatagramSocketSendMsg2ResultWithErr(tcpipErrorToCode(tcpip.ErrBadAddress)), nil
 		}
+		if s.endpoint.netProto == ipv4.ProtocolNumber && len(addr.Addr) == header.IPv6AddressSize {
+			return socket.DatagramSocketSendMsg2ResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
+		}
 		writeOpts.To = &addr
 	}
 	// TODO(https://fxbug.dev/21106): do something with control.

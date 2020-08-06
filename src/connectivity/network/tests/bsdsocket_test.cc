@@ -2490,6 +2490,54 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
 
 class DatagramSendTest : public ::testing::TestWithParam<enum sendMethod> {};
 
+TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromAF_INET) {
+  enum sendMethod sendMethod = GetParam();
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+  ASSERT_EQ(bind(fd.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0) << strerror(errno);
+
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(fd.get(), (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  struct sockaddr_in6 addr6 = {};
+  addr6.sin6_family = AF_INET6;
+  addr6.sin6_port = addr.sin_port;
+  addr6.sin6_addr.s6_addr[10] = 0xff;
+  addr6.sin6_addr.s6_addr[11] = 0xff;
+  memcpy(&addr6.sin6_addr.s6_addr[12], &addr.sin_addr.s_addr, sizeof(addr.sin_addr.s_addr));
+
+  char buf[INET6_ADDRSTRLEN];
+  ASSERT_TRUE(IN6_IS_ADDR_V4MAPPED(&addr6.sin6_addr))
+      << inet_ntop(addr6.sin6_family, &addr6.sin6_addr, buf, sizeof(buf));
+
+  switch (sendMethod) {
+    case sendMethod::SENDTO: {
+      ASSERT_EQ(sendto(fd.get(), NULL, 0, 0, (const struct sockaddr*)&addr6, sizeof(addr6)), -1);
+      ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
+      break;
+    }
+    case sendMethod::SENDMSG: {
+      struct msghdr msghdr = {};
+      msghdr.msg_name = &addr6;
+      msghdr.msg_namelen = sizeof(addr6);
+      ASSERT_EQ(sendmsg(fd.get(), &msghdr, 0), -1);
+      ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
+      break;
+    }
+    default: {
+      FAIL() << "unexpected test variant";
+      break;
+    }
+  }
+}
+
 TEST_P(DatagramSendTest, DatagramSend) {
   enum sendMethod sendMethod = GetParam();
   int recvfd;
