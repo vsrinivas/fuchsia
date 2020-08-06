@@ -10,6 +10,7 @@ import 'queries/index.dart';
 import 'queries/mock_query.dart';
 import 'render/ast.dart';
 import 'run_queries.dart';
+import 'testing_util.dart';
 import 'types.dart';
 
 class SimpleQuery extends MockQuery {
@@ -38,24 +39,7 @@ class SimpleQuery extends MockQuery {
 
 void main() {
   // See the `//scripts/codesize:bloaty_reports` target in `BUILD.gn`.
-  final buildDirTestData =
-      Directory('${Directory(Platform.environment['PWD']).absolute.path}/'
-          'host_x64/test_data/codesize');
-  Directory testData;
-  if (buildDirTestData.existsSync()) {
-    // Running in `fx test` mode or infra.
-    testData = buildDirTestData;
-  } else {
-    // Running from `pub run test`.
-    final sourceDir = Platform.environment['FUCHSIA_DIR'];
-    if (sourceDir == null)
-      throw Exception('Missing the FUCHSIA_DIR environment variable.');
-    testData = Directory(
-        '${Directory(sourceDir).absolute.path}/scripts/codesize/testdata');
-  }
-  if (!testData.existsSync()) {
-    throw Exception('Cannot find the $testData folder.');
-  }
+  Directory testData = locateTestData();
   Query mock() => SimpleQuery([]);
   group('QueryRunner', () {
     test('Empty', () async {

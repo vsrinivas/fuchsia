@@ -15,6 +15,8 @@ library ast;
 
 import 'dart:core';
 
+import 'package:collection/collection.dart';
+
 import '../codesize.dart';
 
 /// Anything that could be used as the content of a row.
@@ -26,6 +28,15 @@ abstract class Title {}
 abstract class AnyNode {
   Title get title;
   List<AnyNode> get children;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AnyNode &&
+      other.title == title &&
+      const ListEquality().equals(other.children, children);
+
+  @override
+  int get hashCode => title.hashCode ^ const ListEquality().hash(children);
 }
 
 /// The building block of the hierarchial AST.
@@ -56,6 +67,14 @@ class StyledString extends Title implements StringPiece {
   StyledString(this.details);
 
   StyledString.plain(String plain) : details = ([Plain(plain)]);
+
+  @override
+  bool operator ==(Object other) =>
+      other is StyledString &&
+      const ListEquality().equals(other.details, details);
+
+  @override
+  int get hashCode => const ListEquality().hash(details);
 }
 
 /// Plain text.
@@ -63,6 +82,12 @@ class Plain implements StringPiece {
   final String text;
 
   Plain(this.text);
+
+  @override
+  bool operator ==(Object other) => other is Plain && other.text == text;
+
+  @override
+  int get hashCode => text.hashCode;
 }
 
 enum Color { white, green, gray }
@@ -82,6 +107,18 @@ class AddColor extends StyledString {
   AddColor.gray(StringPiece piece)
       : color = Color.gray,
         super([piece]);
+
+  @override
+  bool operator ==(Object other) =>
+      other is AddColor &&
+      const ListEquality().equals(other.details, details) &&
+      other.color == color;
+
+  @override
+  int get hashCode => const ListEquality().hash(details) ^ color.hashCode;
+
+  @override
+  String toString() => 'AddColor(color: $color, piece: ${details.first})';
 }
 
 // Custom title components -----------------------------------------------------
@@ -100,4 +137,23 @@ class UniqueSymbolSizeRecord extends SizeRecord {
   UniqueSymbolSizeRecord(
       {StyledString name, Tally tally, this.categories, this.rustCrates})
       : super(name: name, tally: tally);
+
+  @override
+  bool operator ==(Object other) =>
+      other is UniqueSymbolSizeRecord &&
+      other.name == name &&
+      other.tally == tally &&
+      const ListEquality().equals(other.categories, categories) &&
+      const ListEquality().equals(other.rustCrates, rustCrates);
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      tally.hashCode ^
+      const ListEquality().hash(categories) ^
+      const ListEquality().hash(rustCrates);
+
+  @override
+  String toString() => 'UniqueSymbolSizeRecord(name: \'$name\', tally: $tally'
+      ', categories: $categories, rustCrates: $rustCrates)';
 }

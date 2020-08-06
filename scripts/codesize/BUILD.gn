@@ -40,6 +40,7 @@ dart_test("codesize_tests") {
     "queries/categories/fidl_rust.dart",
     "queries/categories/untraceable.dart",
     "queries/code_category.dart",
+    "queries/crates.dart",
     "queries/dump_names.dart",
     "queries/index.dart",
     "queries/mock_query.dart",
@@ -59,11 +60,13 @@ dart_test("codesize_tests") {
     "cli_test.dart",
     "queries/categories/fidl_cpp_test.dart",
     "queries/categories/fidl_rust_test.dart",
+    "queries/crates_test.dart",
     "reflect_test.dart",
     "render/terminal_test.dart",
     "render/tsv_test.dart",
     "run_queries_test.dart",
     "symbols/cache_test.dart",
+    "testing_util.dart",
   ]
 
   # Note: keep in sync with `codesize.packages`.

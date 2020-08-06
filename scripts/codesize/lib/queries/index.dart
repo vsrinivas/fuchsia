@@ -16,6 +16,7 @@ import '../render/ast.dart';
 import '../types.dart';
 import 'categories/categories.dart';
 import 'code_category.dart';
+import 'crates.dart';
 import 'dump_names.dart';
 import 'source_lang.dart';
 
@@ -98,6 +99,13 @@ class Tally implements Comparable {
   Tally operator +(Tally other) {
     return Tally(size + other.size, count + other.count);
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Tally && other.size == size && other.count == count;
+
+  @override
+  int get hashCode => size.hashCode ^ count.hashCode;
 
   Tally mergeWith(Tally other) {
     size += other.size;
@@ -273,4 +281,5 @@ const List<QueryFactory> allQueries = [
   QueryFactory(CodeCategoryQuery, CodeCategoryQuery.description),
   QueryFactory(SourceLangQuery, SourceLangQuery.description),
   QueryFactory(DumpNamesQuery, DumpNamesQuery.description),
+  QueryFactory(CratesQuery, CratesQuery.description),
 ];
