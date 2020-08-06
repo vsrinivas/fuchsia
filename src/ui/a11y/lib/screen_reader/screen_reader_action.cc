@@ -7,6 +7,10 @@
 #include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <string>
+
+#include "fuchsia/accessibility/semantics/cpp/fidl.h"
+
 namespace a11y {
 namespace {
 
@@ -76,6 +80,35 @@ fit::promise<> ScreenReaderAction::BuildSpeechTaskFromNodePromise(zx_koid_t view
     auto* speaker = screen_reader_context_->speaker();
     FX_DCHECK(speaker);
     return speaker->SpeakNodePromise(node, {.interrupt = true});
+  });
+}
+
+fit::promise<> ScreenReaderAction::BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid,
+                                                                       uint32_t node_id) {
+  return fit::make_promise([this, node_id, view_koid]() mutable -> fit::promise<> {
+    const auto* node = action_context_->semantics_source->GetSemanticNode(view_koid, node_id);
+    if (!node) {
+      FX_LOGS(INFO) << "ScreenReaderAction: No node found for node id:" << node_id;
+      return fit::make_error_promise();
+    }
+
+    if (!node->has_role() || (node->role() != fuchsia::accessibility::semantics::Role::SLIDER)) {
+      FX_LOGS(INFO) << "ScreenReaderAction: Node is not slider. Nothing to send to TTS.";
+      return fit::make_error_promise();
+    }
+
+    if (!node->has_states() || !node->states().has_range_value()) {
+      FX_LOGS(INFO)
+          << "ScreenReaderAction: Slider node is missing |range_value|. Nothing to send to TTS.";
+      return fit::make_error_promise();
+    }
+
+    auto* speaker = screen_reader_context_->speaker();
+    FX_DCHECK(speaker);
+
+    Utterance utterance;
+    utterance.set_message(std::to_string(static_cast<int>(node->states().range_value())));
+    return speaker->SpeakMessagePromise(std::move(utterance), {.interrupt = true});
   });
 }
 

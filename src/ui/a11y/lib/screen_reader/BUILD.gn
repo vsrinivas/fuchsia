@@ -4,6 +4,8 @@
 
 source_set("screen_reader") {
   sources = [
+    "change_range_value_action.cc",
+    "change_range_value_action.h",
     "default_action.cc",
     "default_action.h",
     "explore_action.cc",

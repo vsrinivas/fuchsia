@@ -71,10 +71,29 @@ class MockSemanticProvider {
   // Returns true if channel is closed.
   bool IsChannelClosed();
 
+  // Sets |slider_delta_| which is used to increment or decrement slider range_value.
+  void SetSliderDelta(uint32_t slider_delta);
+
+  // Set slider node which is used to update semantic tree when Increment or Decrement action is
+  // called.
+  void SetSliderNode(fuchsia::accessibility::semantics::Node new_node);
+
+  // Sets the status of OnAccessibilityActionRequestedCallback.
+  void SetOnAccessibilityActionCallbackStatus(bool status);
+
+  // Returns true if a call to OnAccessibilityActionRequested() is made.
+  bool OnAccessibilityActionRequestedCalled() const;
+
  private:
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
+
+  // Value by which the slider is incremented or decremented.
+  uint32_t slider_delta_ = 1;
+
+  // Slider node used for updating semantic tree when Increment or Decrement action is called.
+  fuchsia::accessibility::semantics::Node slider_node_;
 
   // ViewRef of the Semantic Tree.
   zx::eventpair eventpair_peer_;

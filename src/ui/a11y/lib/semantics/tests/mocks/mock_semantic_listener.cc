@@ -21,9 +21,15 @@ void MockSemanticListener::OnAccessibilityActionRequested(
     uint32_t node_id, fuchsia::accessibility::semantics::Action action,
     fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
         callback) {
+  on_accessibility_action_requested_called_ = true;
   received_action_ = action;
   action_node_id_ = node_id;
-  callback(true);
+
+  if (action == fuchsia::accessibility::semantics::Action::INCREMENT ||
+      action == fuchsia::accessibility::semantics::Action::DECREMENT) {
+    slider_value_action_callback_(node_id, action);
+  }
+  callback(on_accessibility_action_callback_status_);
 }
 
 void MockSemanticListener::HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) {
@@ -50,5 +56,17 @@ fuchsia::accessibility::semantics::Action MockSemanticListener::GetRequestedActi
 }
 
 uint32_t MockSemanticListener::GetRequestedActionNodeId() const { return action_node_id_; }
+
+void MockSemanticListener::SetSliderValueActionCallback(SliderValueActionCallback callback) {
+  slider_value_action_callback_ = std::move(callback);
+}
+
+void MockSemanticListener::SetOnAccessibilityActionCallbackStatus(bool status) {
+  on_accessibility_action_callback_status_ = status;
+}
+
+bool MockSemanticListener::OnAccessibilityActionRequestedCalled() const {
+  return on_accessibility_action_requested_called_;
+}
 
 }  // namespace accessibility_test

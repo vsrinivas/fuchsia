@@ -65,6 +65,11 @@ class ScreenReaderAction {
   // necessary to build an utterance.
   fit::promise<> BuildSpeechTaskFromNodePromise(zx_koid_t view_koid, uint32_t node_id);
 
+  // Returns a promise that from a node_id and view_koid, builds a speech task to speak the range
+  // control's |range_value|. An error is thrown if the semantic tree or the semantic node are
+  // missing data necessary to build an utterance.
+  fit::promise<> BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid, uint32_t node_id);
+
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   ActionContext* action_context_;
 

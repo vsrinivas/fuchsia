@@ -8,6 +8,7 @@
 
 #include <cstdint>
 
+#include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 
 namespace accessibility_test {
@@ -35,6 +36,20 @@ MockSemanticProvider::MockSemanticProvider(
                                     semantic_listener_bindings_.AddBinding(&semantic_listener_),
                                     tree_ptr_.NewRequest());
   commit_failed_ = false;
+
+  semantic_listener_.SetSliderValueActionCallback(
+      [this](uint32_t node_id, fuchsia::accessibility::semantics::Action action) {
+        fuchsia::accessibility::semantics::States state;
+        state.set_range_value(slider_node_.states().range_value() + slider_delta_);
+        slider_node_.set_states(std::move(state));
+
+        std::vector<fuchsia::accessibility::semantics::Node> update_nodes;
+        update_nodes.push_back(std::move(slider_node_));
+
+        // Update the node created above.
+        UpdateSemanticNodes(std::move(update_nodes));
+        CommitUpdates();
+      });
 }
 
 void MockSemanticProvider::UpdateSemanticNodes(
@@ -81,5 +96,21 @@ uint32_t MockSemanticProvider::GetRequestedActionNodeId() const {
 }
 
 bool MockSemanticProvider::IsChannelClosed() { return !tree_ptr_.channel().is_valid(); }
+
+void MockSemanticProvider::SetSliderDelta(uint32_t new_slider_delta) {
+  slider_delta_ = new_slider_delta;
+}
+
+void MockSemanticProvider::SetSliderNode(fuchsia::accessibility::semantics::Node new_node) {
+  slider_node_ = std::move(new_node);
+}
+
+void MockSemanticProvider::SetOnAccessibilityActionCallbackStatus(bool status) {
+  return semantic_listener_.SetOnAccessibilityActionCallbackStatus(status);
+}
+
+bool MockSemanticProvider::OnAccessibilityActionRequestedCalled() const {
+  return semantic_listener_.OnAccessibilityActionRequestedCalled();
+}
 
 }  // namespace accessibility_test

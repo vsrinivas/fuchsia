@@ -11,6 +11,7 @@ executable("screen_reader_tests") {
   testonly = true
 
   sources = [
+    "change_range_value_action_unittest.cc",
     "default_action_unittest.cc",
     "explore_action_unittest.cc",
     "one_finger_swipe_action_unittest.cc",

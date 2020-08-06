@@ -25,6 +25,11 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
 
   ~MockSemanticListener() override = default;
 
+  // Callback which will be used to update the slide node in semantic tree, when slider value is
+  // incremented or decremented.
+  using SliderValueActionCallback =
+      fit::function<void(uint32_t node_id, fuchsia::accessibility::semantics::Action)>;
+
   // |fuchsia::accessibility::semantics::SemanticListener|
   void OnAccessibilityActionRequested(
       uint32_t node_id, fuchsia::accessibility::semantics::Action action,
@@ -60,6 +65,16 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   // Returns node_id on which action is called.
   uint32_t GetRequestedActionNodeId() const;
 
+  // Sets |slider_value_action_callback_| which is used for updating the node when slider is
+  // incremented or decremented.
+  void SetSliderValueActionCallback(SliderValueActionCallback callback);
+
+  // Sets the status of OnAccessibilityActionRequestedCallback.
+  void SetOnAccessibilityActionCallbackStatus(bool status);
+
+  // Returns true if a call to OnAccessibilityActionRequested() is made.
+  bool OnAccessibilityActionRequestedCalled() const;
+
   void Bind(fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener);
   void SetSemanticsEnabled(bool enabled) { semantics_enabled_ = enabled; }
   bool GetSemanticsEnabled() const { return semantics_enabled_; }
@@ -70,7 +85,16 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   // Node id which will be returned when HitTest() is called.
   std::optional<uint32_t> hit_test_node_id_ = 1;
 
+  // Callback for updating the node when the slider is incremented or decremented.
+  SliderValueActionCallback slider_value_action_callback_;
+
   bool semantics_enabled_ = false;
+
+  // Stores the status of OnAccessibilityActionRequestedCallback.
+  bool on_accessibility_action_callback_status_ = true;
+
+  // Tracks if OnAccessibilityActionRequested() is called.
+  bool on_accessibility_action_requested_called_ = false;
 
   fuchsia::accessibility::semantics::Action received_action_;
 
