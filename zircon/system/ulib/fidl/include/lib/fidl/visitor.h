@@ -186,6 +186,12 @@ constexpr bool CheckVisitorInterface() {
   static_assert(std::is_base_of<Visitor, ImplSubType>::value,
                 "ImplSubType should inherit from fidl::Visitor");
 
+  // kOnlyWalkResources:
+  // - When true, the walker will only walk resource types, where possible.
+  // - When false, the walker will walk all types.
+  static_assert(std::is_same<decltype(ImplSubType::kOnlyWalkResources), const bool>::value,
+                "ImplSubType must declare constexpr bool kOnlyWalkResources");
+
   // kContinueAfterConstraintViolation:
   // - When true, the walker will continue when constraints (e.g. string length) are violated.
   // - When false, the walker will stop upon first error of any kind.

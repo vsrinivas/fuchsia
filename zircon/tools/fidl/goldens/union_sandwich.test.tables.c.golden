@@ -32,9 +32,9 @@ static const struct FidlXUnionField Fields55test_fidl_unionsandwich_UnionSize8Al
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize8Alignment4NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields55test_fidl_unionsandwich_UnionSize8Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize8Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructElement Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize8Alignment4Table)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize8Alignment4Table)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = {.tag=kFidlTypeStruct, .elements=Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4, .element_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize8Alignment4"};
 
@@ -47,9 +47,9 @@ static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize36A
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize36Alignment4NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize36Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize36Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructElement Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize36Alignment4Table)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize36Alignment4Table)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = {.tag=kFidlTypeStruct, .elements=Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4, .element_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize36Alignment4"};
 
@@ -62,9 +62,9 @@ static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize12A
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize12Alignment4NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize12Alignment4NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize12Alignment4", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructElement Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize12Alignment4Table)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize12Alignment4Table)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = {.tag=kFidlTypeStruct, .elements=Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4, .element_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize12Alignment4"};
 
@@ -79,9 +79,9 @@ static const struct FidlXUnionField Fields56test_fidl_unionsandwich_UnionSize24A
 };
 const struct FidlCodedXUnion test_fidl_unionsandwich_UnionSize24Alignment8NullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields56test_fidl_unionsandwich_UnionSize24Alignment8NullableRef, .nullable=kFidlNullability_Nullable, .name="test.fidl.unionsandwich/UnionSize24Alignment8", .strictness=kFidlStrictness_Strict};
 static const struct FidlStructElement Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize24Alignment8Table)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&test_fidl_unionsandwich_UnionSize24Alignment8Table)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = {.tag=kFidlTypeStruct, .elements=Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8, .element_count=3u, .size=40u, .name="test.fidl.unionsandwich/SandwichUnionSize24Alignment8"};
 

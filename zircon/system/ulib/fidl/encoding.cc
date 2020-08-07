@@ -90,6 +90,7 @@ class FidlEncoder final
 
   using Position = Position;
 
+  static constexpr bool kOnlyWalkResources = false;
   static constexpr bool kContinueAfterConstraintViolation = true;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {

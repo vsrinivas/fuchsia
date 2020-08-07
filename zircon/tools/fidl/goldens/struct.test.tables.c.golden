@@ -11,13 +11,13 @@ static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFi
 
 
 static const struct FidlStructElement Fields21fidl_test_json_Simple[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=1u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=1u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_SimpleTable = {.tag=kFidlTypeStruct, .elements=Fields21fidl_test_json_Simple, .element_count=1u, .size=2u, .name="fidl.test.json/Simple"};
 
 static const struct FidlStructElement Fields26fidl_test_json_BasicStruct[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_BasicStructTable = {.tag=kFidlTypeStruct, .elements=Fields26fidl_test_json_BasicStruct, .element_count=2u, .size=24u, .name="fidl.test.json/BasicStruct"};
 

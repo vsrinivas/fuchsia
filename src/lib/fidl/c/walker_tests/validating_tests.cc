@@ -1479,13 +1479,19 @@ TEST(Primitives, validate_primitives_struct) {
   static const FidlCodedPrimitive kFloat64Type = {.tag = kFidlTypePrimitive,
                                                   .type = kFidlCodedPrimitiveSubtype_Float64};
   static const struct FidlStructElement kFields[] = {
-      FidlStructElement::Field(&kBoolType, 0u),     FidlStructElement::Field(&kInt8Type, 1u),
-      FidlStructElement::Field(&kInt16Type, 2u),    FidlStructElement::Field(&kInt32Type, 4u),
-      FidlStructElement::Field(&kInt64Type, 8u),    FidlStructElement::Field(&kUint8Type, 16u),
-      FidlStructElement::Padding16(16u, 0x00ff),    FidlStructElement::Field(&kUint16Type, 18u),
-      FidlStructElement::Field(&kUint32Type, 20u),  FidlStructElement::Field(&kUint64Type, 24u),
-      FidlStructElement::Field(&kFloat32Type, 32u), FidlStructElement::Padding32(36u, 0xffffffff),
-      FidlStructElement::Field(&kFloat64Type, 40u),
+      FidlStructElement::Field(&kBoolType, 0u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt8Type, 1u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt16Type, 2u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt32Type, 4u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt64Type, 8u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kUint8Type, 16u, kFidlIsResource_NotResource),
+      FidlStructElement::Padding16(16u, 0x00ff),
+      FidlStructElement::Field(&kUint16Type, 18u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kUint32Type, 20u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kUint64Type, 24u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kFloat32Type, 32u, kFidlIsResource_NotResource),
+      FidlStructElement::Padding32(36u, 0xffffffff),
+      FidlStructElement::Field(&kFloat64Type, 40u, kFidlIsResource_NotResource),
   };
   static const FidlCodedStruct kPrimitiveStructCodingTable = {
       .tag = kFidlTypeStruct,

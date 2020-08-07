@@ -41,6 +41,7 @@ class FidlHandleCloser final
 
   using Position = Position;
 
+  static constexpr bool kOnlyWalkResources = true;
   static constexpr bool kContinueAfterConstraintViolation = true;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {

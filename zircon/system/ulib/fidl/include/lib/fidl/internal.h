@@ -76,14 +76,25 @@ static const FidlStructElementType kFidlStructElementType_Padding64 = (uint8_t)2
 static const FidlStructElementType kFidlStructElementType_Padding32 = (uint8_t)3u;
 static const FidlStructElementType kFidlStructElementType_Padding16 = (uint8_t)4u;
 
-struct FidlStructField {
+typedef bool FidlIsResource;
+static const FidlIsResource kFidlIsResource_Resource = true;
+static const FidlIsResource kFidlIsResource_NotResource = false;
+
+struct FidlStructElementHeader {
   FidlStructElementType element_type;
+  FidlIsResource is_resource;
+};
+
+struct FidlStructField {
+  struct FidlStructElementHeader header;
+
   uint32_t offset;
   const fidl_type_t* field_type;
 };
 
 struct FidlStructPadding {
-  FidlStructElementType element_type;
+  struct FidlStructElementHeader header;
+
   uint32_t offset;
   // Masks with 0xff on bytes with padding and 0x00 otherwsie.
   // They are used by VisitInternalPadding to zero (encoding) and validate (decoding)
@@ -98,17 +109,22 @@ struct FidlStructPadding {
 // A struct element is either a field or padding.
 struct FidlStructElement {
   union {
-    FidlStructElementType element_type;
+    struct FidlStructElementHeader header;
     struct FidlStructField field;
     struct FidlStructPadding padding;
   };
 
 #ifdef __cplusplus
-  static constexpr FidlStructElement Field(const fidl_type* type, uint32_t offset) {
+  static constexpr FidlStructElement Field(const fidl_type* type, uint32_t offset,
+                                           FidlIsResource is_resource) {
     return FidlStructElement{
         .field =
             FidlStructField{
-                .element_type = kFidlStructElementType_Field,
+                .header =
+                    FidlStructElementHeader{
+                        .element_type = kFidlStructElementType_Field,
+                        .is_resource = is_resource,
+                    },
                 .offset = offset,
                 .field_type = type,
             },
@@ -118,7 +134,11 @@ struct FidlStructElement {
     return FidlStructElement{
         .padding =
             FidlStructPadding{
-                .element_type = kFidlStructElementType_Padding64,
+                .header =
+                    FidlStructElementHeader{
+                        .element_type = kFidlStructElementType_Padding64,
+                        .is_resource = kFidlIsResource_NotResource,
+                    },
                 .offset = offset,
                 .mask_64 = mask,
             },
@@ -128,7 +148,11 @@ struct FidlStructElement {
     return FidlStructElement{
         .padding =
             FidlStructPadding{
-                .element_type = kFidlStructElementType_Padding32,
+                .header =
+                    FidlStructElementHeader{
+                        .element_type = kFidlStructElementType_Padding32,
+                        .is_resource = kFidlIsResource_NotResource,
+                    },
                 .offset = offset,
                 .mask_32 = mask,
             },
@@ -138,7 +162,11 @@ struct FidlStructElement {
     return FidlStructElement{
         .padding =
             FidlStructPadding{
-                .element_type = kFidlStructElementType_Padding16,
+                .header =
+                    FidlStructElementHeader{
+                        .element_type = kFidlStructElementType_Padding16,
+                        .is_resource = kFidlIsResource_NotResource,
+                    },
                 .offset = offset,
                 .mask_16 = mask,
             },
@@ -469,6 +497,7 @@ static_assert(std::is_standard_layout<FidlCodedArrayNew>::value, "");
 static_assert(std::is_standard_layout<FidlCodedVector>::value, "");
 static_assert(std::is_standard_layout<FidlCodedString>::value, "");
 static_assert(std::is_standard_layout<FidlCodedHandle>::value, "");
+static_assert(std::is_standard_layout<FidlStructElement>::value, "");
 #endif  // __cplusplus
 
 static_assert(offsetof(struct FidlCodedStruct, tag) == 0, "");
@@ -499,5 +528,7 @@ static_assert(sizeof(struct FidlCodedHandle) == 12, "");
 static_assert(sizeof(struct FidlStructField) == 16, "");
 static_assert(sizeof(struct FidlTableField) == 16, "");
 static_assert(sizeof(struct FidlXUnionField) == 8, "");
+
+static_assert(sizeof(struct FidlStructElement) == 16, "");
 
 #endif  // LIB_FIDL_INTERNAL_H_

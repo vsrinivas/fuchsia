@@ -23,84 +23,84 @@ extern const struct FidlCodedStruct fidl_test_padding_Padding1ByteEndTable;
 
 
 static const struct FidlStructElement Fields36fidl_test_padding_Padding7ByteMiddle[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding7ByteMiddleTable = {.tag=kFidlTypeStruct, .elements=Fields36fidl_test_padding_Padding7ByteMiddle, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding7ByteMiddle"};
 
 static const struct FidlStructElement Fields33fidl_test_padding_Padding7ByteEnd[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=8u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=8u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding7ByteEndTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_padding_Padding7ByteEnd, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding7ByteEnd"};
 
 static const struct FidlStructElement Fields36fidl_test_padding_Padding6ByteMiddle[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709486080ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709486080ul}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding6ByteMiddleTable = {.tag=kFidlTypeStruct, .elements=Fields36fidl_test_padding_Padding6ByteMiddle, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding6ByteMiddle"};
 
 static const struct FidlStructElement Fields33fidl_test_padding_Padding6ByteEnd[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=8u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709486080ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=8u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709486080ul}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding6ByteEndTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_padding_Padding6ByteEnd, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding6ByteEnd"};
 
 static const struct FidlStructElement Fields36fidl_test_padding_Padding5ByteMiddle[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073692774400ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073692774400ul}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding5ByteMiddleTable = {.tag=kFidlTypeStruct, .elements=Fields36fidl_test_padding_Padding5ByteMiddle, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding5ByteMiddle"};
 
 static const struct FidlStructElement Fields33fidl_test_padding_Padding5ByteEnd[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=8u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073692774400ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=8u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073692774400ul}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding5ByteEndTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_padding_Padding5ByteEnd, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding5ByteEnd"};
 
 static const struct FidlStructElement Fields36fidl_test_padding_Padding4ByteMiddle[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding4ByteMiddleTable = {.tag=kFidlTypeStruct, .elements=Fields36fidl_test_padding_Padding4ByteMiddle, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding4ByteMiddle"};
 
 static const struct FidlStructElement Fields33fidl_test_padding_Padding4ByteEnd[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=12u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=12u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding4ByteEndTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_padding_Padding4ByteEnd, .element_count=1u, .size=16u, .name="fidl.test.padding/Padding4ByteEnd"};
 
 static const struct FidlStructElement Fields47fidl_test_padding_Padding4ByteAlignmentLength12[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding16, .mask_16=65280u}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=10u, .element_type=kFidlStructElementType_Padding16, .mask_16=65535u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=10u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65535u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding4ByteAlignmentLength12Table = {.tag=kFidlTypeStruct, .elements=Fields47fidl_test_padding_Padding4ByteAlignmentLength12, .element_count=2u, .size=12u, .name="fidl.test.padding/Padding4ByteAlignmentLength12"};
 
 static const struct FidlStructElement Fields36fidl_test_padding_Padding3ByteMiddle[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967040u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967040u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding3ByteMiddleTable = {.tag=kFidlTypeStruct, .elements=Fields36fidl_test_padding_Padding3ByteMiddle, .element_count=1u, .size=8u, .name="fidl.test.padding/Padding3ByteMiddle"};
 
 static const struct FidlStructElement Fields33fidl_test_padding_Padding3ByteEnd[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967040u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967040u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding3ByteEndTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_padding_Padding3ByteEnd, .element_count=1u, .size=8u, .name="fidl.test.padding/Padding3ByteEnd"};
 
 static const struct FidlStructElement Fields36fidl_test_padding_Padding2ByteMiddle[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=2u, .element_type=kFidlStructElementType_Padding16, .mask_16=65535u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=2u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65535u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding2ByteMiddleTable = {.tag=kFidlTypeStruct, .elements=Fields36fidl_test_padding_Padding2ByteMiddle, .element_count=1u, .size=8u, .name="fidl.test.padding/Padding2ByteMiddle"};
 
 static const struct FidlStructElement Fields33fidl_test_padding_Padding2ByteEnd[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=6u, .element_type=kFidlStructElementType_Padding16, .mask_16=65535u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=6u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65535u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding2ByteEndTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_padding_Padding2ByteEnd, .element_count=1u, .size=8u, .name="fidl.test.padding/Padding2ByteEnd"};
 
 static const struct FidlStructElement Fields46fidl_test_padding_Padding2ByteAlignmentLength6[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .element_type=kFidlStructElementType_Padding16, .mask_16=65280u}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding16, .mask_16=65280u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding2ByteAlignmentLength6Table = {.tag=kFidlTypeStruct, .elements=Fields46fidl_test_padding_Padding2ByteAlignmentLength6, .element_count=2u, .size=6u, .name="fidl.test.padding/Padding2ByteAlignmentLength6"};
 
 static const struct FidlStructElement Fields36fidl_test_padding_Padding1ByteMiddle[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .element_type=kFidlStructElementType_Padding16, .mask_16=65280u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding1ByteMiddleTable = {.tag=kFidlTypeStruct, .elements=Fields36fidl_test_padding_Padding1ByteMiddle, .element_count=1u, .size=4u, .name="fidl.test.padding/Padding1ByteMiddle"};
 
 static const struct FidlStructElement Fields33fidl_test_padding_Padding1ByteEnd[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=2u, .element_type=kFidlStructElementType_Padding16, .mask_16=65280u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=2u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}}
 };
 const struct FidlCodedStruct fidl_test_padding_Padding1ByteEndTable = {.tag=kFidlTypeStruct, .elements=Fields33fidl_test_padding_Padding1ByteEnd, .element_count=1u, .size=4u, .name="fidl.test.padding/Padding1ByteEnd"};
 

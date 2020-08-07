@@ -44,15 +44,15 @@ static const struct FidlCodedHandle HandlesocketnonnullableTable = {.tag=kFidlTy
 
 extern const struct FidlCodedStruct test_name_ChannelProtocolMutateSocketRequestTable;
 static const struct FidlStructElement Fields44test_name_ChannelProtocolMutateSocketRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&HandlesocketnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&HandlesocketnonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct test_name_ChannelProtocolMutateSocketRequestTable = {.tag=kFidlTypeStruct, .elements=Fields44test_name_ChannelProtocolMutateSocketRequest, .element_count=2u, .size=24u, .name="test.name/ChannelProtocolMutateSocketRequest"};
 
 extern const struct FidlCodedStruct test_name_ChannelProtocolMutateSocketResponseTable;
 static const struct FidlStructElement Fields45test_name_ChannelProtocolMutateSocketResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&HandlesocketnonnullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&HandlesocketnonnullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=20u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct test_name_ChannelProtocolMutateSocketResponseTable = {.tag=kFidlTypeStruct, .elements=Fields45test_name_ChannelProtocolMutateSocketResponse, .element_count=2u, .size=24u, .name="test.name/ChannelProtocolMutateSocketResponse"};
 
@@ -72,19 +72,19 @@ static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFi
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 static const struct FidlStructElement Fields68test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable = {.tag=kFidlTypeStruct, .elements=Fields68test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponse, .element_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseNoRequestWithResponseResponse"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 static const struct FidlStructElement Fields67test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable = {.tag=kFidlTypeStruct, .elements=Fields67test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequest, .element_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseWithRequestNoResponseRequest"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 static const struct FidlStructElement Fields70test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable = {.tag=kFidlTypeStruct, .elements=Fields70test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, .element_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest"};
 
@@ -93,13 +93,13 @@ const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestE
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 static const struct FidlStructElement Fields69test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable = {.tag=kFidlTypeStruct, .elements=Fields69test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequest, .element_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseWithRequestWithResponseRequest"};
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 static const struct FidlStructElement Fields70test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable = {.tag=kFidlTypeStruct, .elements=Fields70test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponse, .element_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseWithRequestWithResponseResponse"};
 
@@ -108,7 +108,7 @@ const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnEmptyRespo
 
 extern const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 static const struct FidlStructElement Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct test_name_WithAndWithoutRequestResponseOnWithResponseEventTable = {.tag=kFidlTypeStruct, .elements=Fields58test_name_WithAndWithoutRequestResponseOnWithResponseEvent, .element_count=1u, .size=32u, .name="test.name/WithAndWithoutRequestResponseOnWithResponseEvent"};
 
@@ -117,7 +117,7 @@ const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructRequestTab
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructResponseTable;
 static const struct FidlStructElement Fields49test_name_WithErrorSyntaxResponseAsStructResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable)}}
 };
 const struct FidlCodedStruct test_name_WithErrorSyntaxResponseAsStructResponseTable = {.tag=kFidlTypeStruct, .elements=Fields49test_name_WithErrorSyntaxResponseAsStructResponse, .element_count=1u, .size=40u, .name="test.name/WithErrorSyntaxResponseAsStructResponse"};
 
@@ -126,7 +126,7 @@ const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveRequestTab
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 static const struct FidlStructElement Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable)}}
 };
 const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable = {.tag=kFidlTypeStruct, .elements=Fields49test_name_WithErrorSyntaxErrorAsPrimitiveResponse, .element_count=1u, .size=40u, .name="test.name/WithErrorSyntaxErrorAsPrimitiveResponse"};
 
@@ -135,7 +135,7 @@ const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumRequestTable = 
 
 extern const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 static const struct FidlStructElement Fields44test_name_WithErrorSyntaxErrorAsEnumResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable)}}
 };
 const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumResponseTable = {.tag=kFidlTypeStruct, .elements=Fields44test_name_WithErrorSyntaxErrorAsEnumResponse, .element_count=1u, .size=40u, .name="test.name/WithErrorSyntaxErrorAsEnumResponse"};
 

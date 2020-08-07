@@ -52,7 +52,8 @@ const FidlCodedHandle NonnullableChannelType = {
     .handle_rights = 0,
 };
 const FidlStructElement NonnullableChannelMessageFields[] = {
-    FidlStructElement::Field(&NonnullableChannelType, offsetof(NonnullableChannelMessage, channel)),
+    FidlStructElement::Field(&NonnullableChannelType, offsetof(NonnullableChannelMessage, channel),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(offsetof(NonnullableChannelMessage, channel) + 4, 0xffffffff),
 };
 const FidlCodedStruct NonnullableChannelMessageType = {
@@ -125,7 +126,8 @@ const FidlCodedStructPointer OptionalPointerType = {
     .struct_type = &InlinePODStructType.coded_struct(),
 };
 const FidlStructElement OutOfLineMessageTypeFields[] = {
-    FidlStructElement::Field(&OptionalPointerType, offsetof(OutOfLineMessage, optional)),
+    FidlStructElement::Field(&OptionalPointerType, offsetof(OutOfLineMessage, optional),
+                             kFidlIsResource_NotResource),
 };
 const FidlCodedStruct OutOfLineMessageType = {
     .tag = kFidlTypeStruct,

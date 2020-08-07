@@ -45,8 +45,10 @@ struct Type;
 struct StructType;
 
 struct StructField {
-  StructField(uint32_t offset, const Type* type) : offset(offset), type(type) {}
+  StructField(bool is_resource, uint32_t offset, const Type* type)
+      : is_resource(is_resource), offset(offset), type(type) {}
 
+  bool is_resource;
   const uint32_t offset;
   const Type* type;
 };

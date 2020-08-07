@@ -9,7 +9,7 @@ static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFi
 
 extern const struct FidlCodedStruct fidl_test_json_superfooRequestTable;
 static const struct FidlStructElement Fields30fidl_test_json_superfooRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_superfooRequestTable = {.tag=kFidlTypeStruct, .elements=Fields30fidl_test_json_superfooRequest, .element_count=1u, .size=32u, .name="fidl.test.json/superfooRequest"};
 
@@ -18,7 +18,7 @@ const struct FidlCodedStruct fidl_test_json_superfooResponseTable = {.tag=kFidlT
 
 extern const struct FidlCodedStruct fidl_test_json_subfooRequestTable;
 static const struct FidlStructElement Fields28fidl_test_json_subfooRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_subfooRequestTable = {.tag=kFidlTypeStruct, .elements=Fields28fidl_test_json_subfooRequest, .element_count=1u, .size=32u, .name="fidl.test.json/subfooRequest"};
 

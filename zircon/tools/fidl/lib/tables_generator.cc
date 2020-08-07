@@ -381,9 +381,17 @@ void TablesGenerator::Generate(const coded::Type* type, CastToFidlType cast_to_f
 }
 
 void TablesGenerator::Generate(const coded::StructField& field) {
-  Emit(&tables_file_, "/*FidlStructField*/{.element_type=");
+  Emit(&tables_file_, "/*FidlStructField*/{.header=");
+  Emit(&tables_file_, "/*FidlStructElementHeader*/{.element_type=");
   Emit(&tables_file_, "kFidlStructElementType_Field");
   Emit(&tables_file_, ", ");
+  Emit(&tables_file_, ".is_resource=");
+  if (field.is_resource) {
+    Emit(&tables_file_, "kFidlIsResource_Resource");
+  } else {
+    Emit(&tables_file_, "kFidlIsResource_NotResource");
+  }
+  Emit(&tables_file_, "},");
   Emit(&tables_file_, ".offset=");
   Emit(&tables_file_, field.offset);
   Emit(&tables_file_, ", ");
@@ -395,23 +403,23 @@ void TablesGenerator::Generate(const coded::StructField& field) {
 void TablesGenerator::Generate(const coded::StructPadding& padding) {
   Emit(&tables_file_, "/*FidlStructPadding*/{.offset=");
   Emit(&tables_file_, padding.offset);
-  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, ", .header=/*FidlStructElementHeader*/{");
   if (std::holds_alternative<uint64_t>(padding.mask)) {
     Emit(&tables_file_, ".element_type=");
     Emit(&tables_file_, "kFidlStructElementType_Padding64");
-    Emit(&tables_file_, ", ");
+    Emit(&tables_file_, ",.is_resource=kFidlIsResource_NotResource},");
     Emit(&tables_file_, ".mask_64=");
     Emit(&tables_file_, std::get<uint64_t>(padding.mask));
   } else if (std::holds_alternative<uint32_t>(padding.mask)) {
     Emit(&tables_file_, ".element_type=");
     Emit(&tables_file_, "kFidlStructElementType_Padding32");
-    Emit(&tables_file_, ", ");
+    Emit(&tables_file_, ",.is_resource=kFidlIsResource_NotResource},");
     Emit(&tables_file_, ".mask_32=");
     Emit(&tables_file_, std::get<uint32_t>(padding.mask));
   } else if (std::holds_alternative<uint16_t>(padding.mask)) {
     Emit(&tables_file_, ".element_type=");
     Emit(&tables_file_, "kFidlStructElementType_Padding16");
-    Emit(&tables_file_, ", ");
+    Emit(&tables_file_, ",.is_resource=kFidlIsResource_NotResource},");
     Emit(&tables_file_, ".mask_16=");
     Emit(&tables_file_, std::get<uint16_t>(padding.mask));
   } else {

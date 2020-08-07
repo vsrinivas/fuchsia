@@ -236,7 +236,8 @@ const FidlCodedVector unbounded_too_large_nullable_vector_of_handles = {
 static const FidlStructElement unbounded_too_large_nullable_vector_of_handles_fields[] = {
     FidlStructElement::Field(&unbounded_too_large_nullable_vector_of_handles,
                              offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
-                                      inline_struct.vector)),
+                                      inline_struct.vector),
+                             true),
 };
 const FidlCodedStruct unbounded_too_large_nullable_vector_of_handles_message_type = {
     .tag = kFidlTypeStruct,

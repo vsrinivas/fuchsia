@@ -24,12 +24,12 @@ const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlyi
 const struct FidlCodedBits values_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=8ul, .name="values/Bits"};
 
 static const struct FidlStructElement Fields13values_Struct[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=24u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=24u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967040u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=28u, .field_type=(fidl_type_t*)(&values_EnumTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=32u, .field_type=(fidl_type_t*)(&values_BitsTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=24u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=24u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967040u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=28u, .field_type=(fidl_type_t*)(&values_EnumTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=32u, .field_type=(fidl_type_t*)(&values_BitsTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct values_StructTable = {.tag=kFidlTypeStruct, .elements=Fields13values_Struct, .element_count=6u, .size=40u, .name="values/Struct"};
 

@@ -212,7 +212,8 @@ const FidlCodedVector bounded_2_nullable_vector_of_uint32 = {
 // Handle messages.
 static const FidlStructElement nonnullable_handle_message_elements[] = {
     FidlStructElement::Field(&nonnullable_handle,
-                             offsetof(nonnullable_handle_message_layout, inline_struct.handle)),
+                             offsetof(nonnullable_handle_message_layout, inline_struct.handle),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(
         offsetof(nonnullable_handle_message_layout, inline_struct.handle) + 4, 0xffffffff),
 };
@@ -226,7 +227,8 @@ const FidlCodedStruct nonnullable_handle_message_type = {
 
 static const FidlStructElement nonnullable_channel_message_elements[] = {
     FidlStructElement::Field(&nonnullable_channel_handle,
-                             offsetof(nonnullable_handle_message_layout, inline_struct.handle)),
+                             offsetof(nonnullable_handle_message_layout, inline_struct.handle),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(
         offsetof(nonnullable_handle_message_layout, inline_struct.handle) + 4, 0xffffffff),
 
@@ -242,13 +244,16 @@ const FidlCodedStruct nonnullable_channel_message_type = {
 static const FidlStructElement multiple_nonnullable_handles_fields[] = {
     FidlStructElement::Field(
         &nonnullable_handle,
-        offsetof(multiple_nonnullable_handles_message_layout, inline_struct.handle_0)),
+        offsetof(multiple_nonnullable_handles_message_layout, inline_struct.handle_0),
+        kFidlIsResource_Resource),
     FidlStructElement::Field(
         &nonnullable_channel_handle,
-        offsetof(multiple_nonnullable_handles_message_layout, inline_struct.handle_1)),
+        offsetof(multiple_nonnullable_handles_message_layout, inline_struct.handle_1),
+        kFidlIsResource_Resource),
     FidlStructElement::Field(
         &nonnullable_vmo_handle,
-        offsetof(multiple_nonnullable_handles_message_layout, inline_struct.handle_2)),
+        offsetof(multiple_nonnullable_handles_message_layout, inline_struct.handle_2),
+        kFidlIsResource_Resource),
 };
 const FidlCodedStruct multiple_nonnullable_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -260,7 +265,8 @@ const FidlCodedStruct multiple_nonnullable_handles_message_type = {
 
 static const FidlStructElement nullable_handle_fields[] = {
     FidlStructElement::Field(&nullable_handle,
-                             offsetof(nullable_handle_message_layout, inline_struct.handle)),
+                             offsetof(nullable_handle_message_layout, inline_struct.handle),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(
         offsetof(nonnullable_handle_message_layout, inline_struct.handle) + 4, 0xffffffff),
 };
@@ -273,14 +279,18 @@ const FidlCodedStruct nullable_handle_message_type = {
 };
 
 static const FidlStructElement multiple_nullable_handles_fields[] = {
-    FidlStructElement::Field(&nullable_handle, offsetof(multiple_nullable_handles_message_layout,
-                                                        inline_struct.handle_0)),
+    FidlStructElement::Field(
+        &nullable_handle,
+        offsetof(multiple_nullable_handles_message_layout, inline_struct.handle_0),
+        kFidlIsResource_Resource),
     FidlStructElement::Field(
         &nullable_channel_handle,
-        offsetof(multiple_nullable_handles_message_layout, inline_struct.handle_1)),
+        offsetof(multiple_nullable_handles_message_layout, inline_struct.handle_1),
+        kFidlIsResource_Resource),
     FidlStructElement::Field(
         &nullable_vmo_handle,
-        offsetof(multiple_nullable_handles_message_layout, inline_struct.handle_2)),
+        offsetof(multiple_nullable_handles_message_layout, inline_struct.handle_2),
+        kFidlIsResource_Resource),
 };
 const FidlCodedStruct multiple_nullable_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -294,7 +304,8 @@ const FidlCodedStruct multiple_nullable_handles_message_type = {
 static const FidlStructElement array_of_nonnullable_handles_fields[] = {
     FidlStructElement::Field(
         &array_of_four_nonnullable_handles,
-        offsetof(array_of_nonnullable_handles_message_layout, inline_struct.handles)),
+        offsetof(array_of_nonnullable_handles_message_layout, inline_struct.handles),
+        kFidlIsResource_Resource),
 };
 const FidlCodedStruct array_of_nonnullable_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -307,7 +318,8 @@ const FidlCodedStruct array_of_nonnullable_handles_message_type = {
 static const FidlStructElement array_of_nullable_handles_fields[] = {
     FidlStructElement::Field(
         &array_of_five_nullable_handles,
-        offsetof(array_of_nullable_handles_message_layout, inline_struct.handles)),
+        offsetof(array_of_nullable_handles_message_layout, inline_struct.handles),
+        kFidlIsResource_Resource),
 };
 const FidlCodedStruct array_of_nullable_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -320,7 +332,8 @@ const FidlCodedStruct array_of_nullable_handles_message_type = {
 static const FidlStructElement array_of_array_of_nonnullable_handles_fields[] = {
     FidlStructElement::Field(
         &array_of_three_arrays_of_four_nonnullable_handles,
-        offsetof(array_of_array_of_nonnullable_handles_message_layout, inline_struct.handles)),
+        offsetof(array_of_array_of_nonnullable_handles_message_layout, inline_struct.handles),
+        true),
 };
 const FidlCodedStruct array_of_array_of_nonnullable_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -332,7 +345,8 @@ const FidlCodedStruct array_of_array_of_nonnullable_handles_message_type = {
 
 static const FidlStructElement out_of_line_fields[] = {
     FidlStructElement::Field(&array_of_four_nonnullable_handles,
-                             offsetof(array_of_nonnullable_handles, handles)),
+                             offsetof(array_of_nonnullable_handles, handles),
+                             kFidlIsResource_Resource),
 
 };
 static const FidlCodedStruct out_of_line_type = {
@@ -350,7 +364,8 @@ static const FidlCodedStructPointer out_of_line_pointer_type = {
 static const FidlStructElement out_of_line_array_of_nonnullable_handles_fields[] = {
     FidlStructElement::Field(&out_of_line_pointer_type,
                              offsetof(out_of_line_array_of_nonnullable_handles_message_layout,
-                                      inline_struct.maybe_array)),
+                                      inline_struct.maybe_array),
+                             true),
 };
 const FidlCodedStruct out_of_line_array_of_nonnullable_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -364,7 +379,8 @@ const FidlCodedStruct out_of_line_array_of_nonnullable_handles_message_type = {
 static const FidlStructElement unbounded_nonnullable_string_fields[] = {
     FidlStructElement::Field(
         &unbounded_nonnullable_string,
-        offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string)),
+        offsetof(unbounded_nonnullable_string_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 
 };
 const FidlCodedStruct unbounded_nonnullable_string_message_type = {
@@ -378,7 +394,8 @@ const FidlCodedStruct unbounded_nonnullable_string_message_type = {
 static const FidlStructElement unbounded_nullable_string_fields[] = {
     FidlStructElement::Field(
         &unbounded_nullable_string,
-        offsetof(unbounded_nullable_string_message_layout, inline_struct.string)),
+        offsetof(unbounded_nullable_string_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 
 };
 const FidlCodedStruct unbounded_nullable_string_message_type = {
@@ -392,7 +409,8 @@ const FidlCodedStruct unbounded_nullable_string_message_type = {
 static const FidlStructElement bounded_32_nonnullable_string_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nonnullable_string,
-        offsetof(bounded_32_nonnullable_string_message_layout, inline_struct.string)),
+        offsetof(bounded_32_nonnullable_string_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 
 };
 const FidlCodedStruct bounded_32_nonnullable_string_message_type = {
@@ -406,7 +424,8 @@ const FidlCodedStruct bounded_32_nonnullable_string_message_type = {
 static const FidlStructElement bounded_32_nullable_string_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nullable_string,
-        offsetof(bounded_32_nullable_string_message_layout, inline_struct.string)),
+        offsetof(bounded_32_nullable_string_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 };
 const FidlCodedStruct bounded_32_nullable_string_message_type = {
     .tag = kFidlTypeStruct,
@@ -419,11 +438,13 @@ const FidlCodedStruct bounded_32_nullable_string_message_type = {
 static const FidlStructElement multiple_nonnullable_strings_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nonnullable_string,
-        offsetof(multiple_nonnullable_strings_message_layout, inline_struct.string)),
+        offsetof(multiple_nonnullable_strings_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 
     FidlStructElement::Field(
         &bounded_32_nonnullable_string,
-        offsetof(multiple_nonnullable_strings_message_layout, inline_struct.string2)),
+        offsetof(multiple_nonnullable_strings_message_layout, inline_struct.string2),
+        kFidlIsResource_NotResource),
 };
 const FidlCodedStruct multiple_nonnullable_strings_message_type = {
     .tag = kFidlTypeStruct,
@@ -436,11 +457,13 @@ const FidlCodedStruct multiple_nonnullable_strings_message_type = {
 static const FidlStructElement multiple_nullable_strings_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nullable_string,
-        offsetof(multiple_nullable_strings_message_layout, inline_struct.string)),
+        offsetof(multiple_nullable_strings_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 
     FidlStructElement::Field(
         &bounded_32_nullable_string,
-        offsetof(multiple_nullable_strings_message_layout, inline_struct.string2)),
+        offsetof(multiple_nullable_strings_message_layout, inline_struct.string2),
+        kFidlIsResource_NotResource),
 };
 const FidlCodedStruct multiple_nullable_strings_message_type = {
     .tag = kFidlTypeStruct,
@@ -453,11 +476,13 @@ const FidlCodedStruct multiple_nullable_strings_message_type = {
 static const FidlStructElement multiple_short_nonnullable_strings_fields[] = {
     FidlStructElement::Field(
         &bounded_4_nonnullable_string,
-        offsetof(multiple_short_nonnullable_strings_message_layout, inline_struct.string)),
+        offsetof(multiple_short_nonnullable_strings_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 
     FidlStructElement::Field(
         &bounded_32_nonnullable_string,
-        offsetof(multiple_short_nonnullable_strings_message_layout, inline_struct.string2)),
+        offsetof(multiple_short_nonnullable_strings_message_layout, inline_struct.string2),
+        kFidlIsResource_NotResource),
 };
 const FidlCodedStruct multiple_short_nonnullable_strings_message_type = {
     .tag = kFidlTypeStruct,
@@ -470,11 +495,13 @@ const FidlCodedStruct multiple_short_nonnullable_strings_message_type = {
 static const FidlStructElement multiple_short_nullable_strings_fields[] = {
     FidlStructElement::Field(
         &bounded_4_nullable_string,
-        offsetof(multiple_short_nullable_strings_message_layout, inline_struct.string)),
+        offsetof(multiple_short_nullable_strings_message_layout, inline_struct.string),
+        kFidlIsResource_NotResource),
 
     FidlStructElement::Field(
         &bounded_32_nullable_string,
-        offsetof(multiple_short_nullable_strings_message_layout, inline_struct.string2)),
+        offsetof(multiple_short_nullable_strings_message_layout, inline_struct.string2),
+        kFidlIsResource_NotResource),
 };
 const FidlCodedStruct multiple_short_nullable_strings_message_type = {
     .tag = kFidlTypeStruct,
@@ -488,7 +515,8 @@ const FidlCodedStruct multiple_short_nullable_strings_message_type = {
 static const FidlStructElement unbounded_nonnullable_vector_of_handles_fields[] = {
     FidlStructElement::Field(
         &unbounded_nonnullable_vector_of_handles,
-        offsetof(unbounded_nonnullable_vector_of_handles_message_layout, inline_struct.vector)),
+        offsetof(unbounded_nonnullable_vector_of_handles_message_layout, inline_struct.vector),
+        true),
 
 };
 const FidlCodedStruct unbounded_nonnullable_vector_of_handles_message_type = {
@@ -502,7 +530,8 @@ const FidlCodedStruct unbounded_nonnullable_vector_of_handles_message_type = {
 static const FidlStructElement unbounded_nullable_vector_of_handles_fields[] = {
     FidlStructElement::Field(
         &unbounded_nullable_vector_of_handles,
-        offsetof(unbounded_nullable_vector_of_handles_message_layout, inline_struct.vector)),
+        offsetof(unbounded_nullable_vector_of_handles_message_layout, inline_struct.vector),
+        kFidlIsResource_Resource),
 
 };
 const FidlCodedStruct unbounded_nullable_vector_of_handles_message_type = {
@@ -516,7 +545,8 @@ const FidlCodedStruct unbounded_nullable_vector_of_handles_message_type = {
 static const FidlStructElement bounded_32_nonnullable_vector_of_handles_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nonnullable_vector_of_handles,
-        offsetof(bounded_32_nonnullable_vector_of_handles_message_layout, inline_struct.vector)),
+        offsetof(bounded_32_nonnullable_vector_of_handles_message_layout, inline_struct.vector),
+        true),
 
 };
 const FidlCodedStruct bounded_32_nonnullable_vector_of_handles_message_type = {
@@ -530,7 +560,8 @@ const FidlCodedStruct bounded_32_nonnullable_vector_of_handles_message_type = {
 static const FidlStructElement bounded_32_nullable_vector_of_handles_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nullable_vector_of_handles,
-        offsetof(bounded_32_nullable_vector_of_handles_message_layout, inline_struct.vector)),
+        offsetof(bounded_32_nullable_vector_of_handles_message_layout, inline_struct.vector),
+        kFidlIsResource_Resource),
 
 };
 const FidlCodedStruct bounded_32_nullable_vector_of_handles_message_type = {
@@ -544,10 +575,12 @@ const FidlCodedStruct bounded_32_nullable_vector_of_handles_message_type = {
 static const FidlStructElement multiple_nonnullable_vectors_of_handles_fields[] = {
     FidlStructElement::Field(
         &bounded_2_nonnullable_vector_of_handles,
-        offsetof(multiple_nonnullable_vectors_of_handles_message_layout, inline_struct.vector)),
+        offsetof(multiple_nonnullable_vectors_of_handles_message_layout, inline_struct.vector),
+        true),
     FidlStructElement::Field(
         &unbounded_nonnullable_vector_of_handles,
-        offsetof(multiple_nonnullable_vectors_of_handles_message_layout, inline_struct.vector2)),
+        offsetof(multiple_nonnullable_vectors_of_handles_message_layout, inline_struct.vector2),
+        true),
 };
 const FidlCodedStruct multiple_nonnullable_vectors_of_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -560,10 +593,12 @@ const FidlCodedStruct multiple_nonnullable_vectors_of_handles_message_type = {
 static const FidlStructElement multiple_nullable_vectors_of_handles_fields[] = {
     FidlStructElement::Field(
         &bounded_2_nullable_vector_of_handles,
-        offsetof(multiple_nullable_vectors_of_handles_message_layout, inline_struct.vector)),
+        offsetof(multiple_nullable_vectors_of_handles_message_layout, inline_struct.vector),
+        kFidlIsResource_Resource),
     FidlStructElement::Field(
         &unbounded_nullable_vector_of_handles,
-        offsetof(multiple_nullable_vectors_of_handles_message_layout, inline_struct.vector2)),
+        offsetof(multiple_nullable_vectors_of_handles_message_layout, inline_struct.vector2),
+        kFidlIsResource_Resource),
 };
 const FidlCodedStruct multiple_nullable_vectors_of_handles_message_type = {
     .tag = kFidlTypeStruct,
@@ -576,7 +611,8 @@ const FidlCodedStruct multiple_nullable_vectors_of_handles_message_type = {
 static const FidlStructElement unbounded_nonnullable_vector_of_uint32_fields[] = {
     FidlStructElement::Field(
         &unbounded_nonnullable_vector_of_uint32,
-        offsetof(unbounded_nonnullable_vector_of_uint32_message_layout, inline_struct.vector)),
+        offsetof(unbounded_nonnullable_vector_of_uint32_message_layout, inline_struct.vector),
+        false),
 
 };
 const FidlCodedStruct unbounded_nonnullable_vector_of_uint32_message_type = {
@@ -590,7 +626,8 @@ const FidlCodedStruct unbounded_nonnullable_vector_of_uint32_message_type = {
 static const FidlStructElement unbounded_nullable_vector_of_uint32_fields[] = {
     FidlStructElement::Field(
         &unbounded_nullable_vector_of_uint32,
-        offsetof(unbounded_nullable_vector_of_uint32_message_layout, inline_struct.vector)),
+        offsetof(unbounded_nullable_vector_of_uint32_message_layout, inline_struct.vector),
+        kFidlIsResource_NotResource),
 
 };
 const FidlCodedStruct unbounded_nullable_vector_of_uint32_message_type = {
@@ -604,7 +641,8 @@ const FidlCodedStruct unbounded_nullable_vector_of_uint32_message_type = {
 static const FidlStructElement bounded_32_nonnullable_vector_of_uint32_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nonnullable_vector_of_uint32,
-        offsetof(bounded_32_nonnullable_vector_of_uint32_message_layout, inline_struct.vector)),
+        offsetof(bounded_32_nonnullable_vector_of_uint32_message_layout, inline_struct.vector),
+        false),
 
 };
 const FidlCodedStruct bounded_32_nonnullable_vector_of_uint32_message_type = {
@@ -618,7 +656,8 @@ const FidlCodedStruct bounded_32_nonnullable_vector_of_uint32_message_type = {
 static const FidlStructElement bounded_32_nullable_vector_of_uint32_fields[] = {
     FidlStructElement::Field(
         &bounded_32_nullable_vector_of_uint32,
-        offsetof(bounded_32_nullable_vector_of_uint32_message_layout, inline_struct.vector)),
+        offsetof(bounded_32_nullable_vector_of_uint32_message_layout, inline_struct.vector),
+        kFidlIsResource_NotResource),
 
 };
 const FidlCodedStruct bounded_32_nullable_vector_of_uint32_message_type = {
@@ -632,10 +671,12 @@ const FidlCodedStruct bounded_32_nullable_vector_of_uint32_message_type = {
 static const FidlStructElement multiple_nonnullable_vectors_of_uint32_fields[] = {
     FidlStructElement::Field(
         &bounded_2_nonnullable_vector_of_uint32,
-        offsetof(multiple_nonnullable_vectors_of_uint32_message_layout, inline_struct.vector)),
+        offsetof(multiple_nonnullable_vectors_of_uint32_message_layout, inline_struct.vector),
+        false),
     FidlStructElement::Field(
         &unbounded_nonnullable_vector_of_uint32,
-        offsetof(multiple_nonnullable_vectors_of_uint32_message_layout, inline_struct.vector2)),
+        offsetof(multiple_nonnullable_vectors_of_uint32_message_layout, inline_struct.vector2),
+        false),
 };
 const FidlCodedStruct multiple_nonnullable_vectors_of_uint32_message_type = {
     .tag = kFidlTypeStruct,
@@ -648,10 +689,12 @@ const FidlCodedStruct multiple_nonnullable_vectors_of_uint32_message_type = {
 static const FidlStructElement multiple_nullable_vectors_of_uint32_fields[] = {
     FidlStructElement::Field(
         &bounded_2_nullable_vector_of_uint32,
-        offsetof(multiple_nullable_vectors_of_uint32_message_layout, inline_struct.vector)),
+        offsetof(multiple_nullable_vectors_of_uint32_message_layout, inline_struct.vector),
+        kFidlIsResource_NotResource),
     FidlStructElement::Field(
         &unbounded_nullable_vector_of_uint32,
-        offsetof(multiple_nullable_vectors_of_uint32_message_layout, inline_struct.vector2)),
+        offsetof(multiple_nullable_vectors_of_uint32_message_layout, inline_struct.vector2),
+        kFidlIsResource_NotResource),
 };
 const FidlCodedStruct multiple_nullable_vectors_of_uint32_message_type = {
     .tag = kFidlTypeStruct,
@@ -663,7 +706,8 @@ const FidlCodedStruct multiple_nullable_vectors_of_uint32_message_type = {
 
 // Struct messages.
 static const FidlStructElement struct_level_3_fields[] = {
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_3, handle_3)),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_3, handle_3),
+                             kFidlIsResource_Resource),
 };
 static const FidlCodedStruct struct_level_3_struct = {
     .tag = kFidlTypeStruct,
@@ -673,8 +717,10 @@ static const FidlCodedStruct struct_level_3_struct = {
     .name = "struct_level_3",
 };
 static const FidlStructElement struct_level_2_fields[] = {
-    FidlStructElement::Field(&struct_level_3_struct, offsetof(struct_level_2, l3)),
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_2, handle_2)),
+    FidlStructElement::Field(&struct_level_3_struct, offsetof(struct_level_2, l3),
+                             kFidlIsResource_NotResource),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_2, handle_2),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(offsetof(struct_level_2, handle_2) + 4, 0xffffffff),
 };
 static const FidlCodedStruct struct_level_2_struct = {
@@ -685,9 +731,11 @@ static const FidlCodedStruct struct_level_2_struct = {
     .name = "struct_level_2",
 };
 static const FidlStructElement struct_level_1_fields[] = {
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_1, handle_1)),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_1, handle_1),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(offsetof(struct_level_1, handle_1) + 4, 0xffffffff),
-    FidlStructElement::Field(&struct_level_2_struct, offsetof(struct_level_1, l2)),
+    FidlStructElement::Field(&struct_level_2_struct, offsetof(struct_level_1, l2),
+                             kFidlIsResource_NotResource),
 };
 static const FidlCodedStruct struct_level_1_struct = {
     .tag = kFidlTypeStruct,
@@ -697,8 +745,10 @@ static const FidlCodedStruct struct_level_1_struct = {
     .name = "struct_level_1",
 };
 static const FidlStructElement struct_level_0_fields[] = {
-    FidlStructElement::Field(&struct_level_1_struct, offsetof(struct_level_0, l1)),
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_0, handle_0)),
+    FidlStructElement::Field(&struct_level_1_struct, offsetof(struct_level_0, l1),
+                             kFidlIsResource_NotResource),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_level_0, handle_0),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(offsetof(struct_level_0, handle_0) + 4, 0xffffffff),
 };
 const FidlCodedStruct struct_level_0_struct = {
@@ -710,7 +760,8 @@ const FidlCodedStruct struct_level_0_struct = {
 };
 static const FidlStructElement nested_structs_fields[] = {
     FidlStructElement::Field(&struct_level_0_struct,
-                             offsetof(nested_structs_message_layout, inline_struct.l0)),
+                             offsetof(nested_structs_message_layout, inline_struct.l0),
+                             kFidlIsResource_NotResource),
 
 };
 const FidlCodedStruct nested_structs_message_type = {
@@ -723,7 +774,8 @@ const FidlCodedStruct nested_structs_message_type = {
 
 // Struct pointer messages.
 static const FidlStructElement struct_ptr_level_3_fields[] = {
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_3, handle_3)),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_3, handle_3),
+                             kFidlIsResource_Resource),
 };
 static const FidlCodedStruct struct_ptr_level_3_struct = {
     .tag = kFidlTypeStruct,
@@ -738,11 +790,13 @@ static const FidlCodedStructPointer struct_ptr_level_3_struct_pointer = {
 };
 static const FidlStructElement struct_ptr_level_2_fields[] = {
     FidlStructElement::Field(&struct_ptr_level_3_struct_pointer,
-                             offsetof(struct_ptr_level_2, l3_present)),
+                             offsetof(struct_ptr_level_2, l3_present), kFidlIsResource_NotResource),
     FidlStructElement::Field(&struct_ptr_level_3_struct_pointer,
-                             offsetof(struct_ptr_level_2, l3_absent)),
-    FidlStructElement::Field(&struct_ptr_level_3_struct, offsetof(struct_ptr_level_2, l3_inline)),
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_2, handle_2)),
+                             offsetof(struct_ptr_level_2, l3_absent), kFidlIsResource_NotResource),
+    FidlStructElement::Field(&struct_ptr_level_3_struct, offsetof(struct_ptr_level_2, l3_inline),
+                             kFidlIsResource_NotResource),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_2, handle_2),
+                             kFidlIsResource_Resource),
 };
 static const FidlCodedStruct struct_ptr_level_2_struct = {
     .tag = kFidlTypeStruct,
@@ -756,13 +810,15 @@ static const FidlCodedStructPointer struct_ptr_level_2_struct_pointer = {
     .struct_type = &struct_ptr_level_2_struct.coded_struct(),
 };
 static const FidlStructElement struct_ptr_level_1_fields[] = {
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_1, handle_1)),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_1, handle_1),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(offsetof(struct_ptr_level_1, handle_1) + 4, 0xffffffff),
     FidlStructElement::Field(&struct_ptr_level_2_struct_pointer,
-                             offsetof(struct_ptr_level_1, l2_present)),
-    FidlStructElement::Field(&struct_ptr_level_2_struct, offsetof(struct_ptr_level_1, l2_inline)),
+                             offsetof(struct_ptr_level_1, l2_present), kFidlIsResource_NotResource),
+    FidlStructElement::Field(&struct_ptr_level_2_struct, offsetof(struct_ptr_level_1, l2_inline),
+                             kFidlIsResource_NotResource),
     FidlStructElement::Field(&struct_ptr_level_2_struct_pointer,
-                             offsetof(struct_ptr_level_1, l2_absent)),
+                             offsetof(struct_ptr_level_1, l2_absent), kFidlIsResource_NotResource),
 };
 static const FidlCodedStruct struct_ptr_level_1_struct = {
     .tag = kFidlTypeStruct,
@@ -777,12 +833,14 @@ static const FidlCodedStructPointer struct_ptr_level_1_struct_pointer = {
 };
 static const FidlStructElement struct_ptr_level_0_fields[] = {
     FidlStructElement::Field(&struct_ptr_level_1_struct_pointer,
-                             offsetof(struct_ptr_level_0, l1_absent)),
-    FidlStructElement::Field(&struct_ptr_level_1_struct, offsetof(struct_ptr_level_0, l1_inline)),
-    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_0, handle_0)),
+                             offsetof(struct_ptr_level_0, l1_absent), kFidlIsResource_NotResource),
+    FidlStructElement::Field(&struct_ptr_level_1_struct, offsetof(struct_ptr_level_0, l1_inline),
+                             kFidlIsResource_NotResource),
+    FidlStructElement::Field(&nonnullable_handle, offsetof(struct_ptr_level_0, handle_0),
+                             kFidlIsResource_Resource),
     FidlStructElement::Padding32(offsetof(struct_ptr_level_0, handle_0) + 4, 0xffffffff),
     FidlStructElement::Field(&struct_ptr_level_1_struct_pointer,
-                             offsetof(struct_ptr_level_0, l1_present)),
+                             offsetof(struct_ptr_level_0, l1_present), kFidlIsResource_NotResource),
 };
 static const FidlCodedStruct struct_ptr_level_0_struct = {
     .tag = kFidlTypeStruct,
@@ -797,11 +855,14 @@ const FidlCodedStructPointer struct_ptr_level_0_struct_pointer = {
 };
 static const FidlStructElement nested_struct_ptrs_fields[] = {
     FidlStructElement::Field(&struct_ptr_level_0_struct,
-                             offsetof(nested_struct_ptrs_inline_data, l0_inline)),
+                             offsetof(nested_struct_ptrs_inline_data, l0_inline),
+                             kFidlIsResource_NotResource),
     FidlStructElement::Field(&struct_ptr_level_0_struct_pointer,
-                             offsetof(nested_struct_ptrs_inline_data, l0_absent)),
+                             offsetof(nested_struct_ptrs_inline_data, l0_absent),
+                             kFidlIsResource_NotResource),
     FidlStructElement::Field(&struct_ptr_level_0_struct_pointer,
-                             offsetof(nested_struct_ptrs_inline_data, l0_present)),
+                             offsetof(nested_struct_ptrs_inline_data, l0_present),
+                             kFidlIsResource_NotResource),
 };
 const FidlCodedStruct nested_struct_ptrs_message_type = {
     .tag = kFidlTypeStruct,

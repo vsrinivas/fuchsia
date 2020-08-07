@@ -16,8 +16,8 @@ extern const struct FidlCodedBits example_ExampleBitsTable;
 
 extern const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable;
 static const struct FidlStructElement Fields36example_ExampleProtocolMethodRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&exampleusing_EmptyTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&exampleusing_EmptyTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
 const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=Fields36example_ExampleProtocolMethodRequest, .element_count=2u, .size=24u, .name="example/ExampleProtocolMethodRequest"};
 

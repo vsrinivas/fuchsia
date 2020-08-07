@@ -8,25 +8,25 @@ extern const struct FidlCodedStruct fidl_test_json_EmptyTable;
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendRequestTable;
 static const struct FidlStructElement Fields39fidl_test_json_EmptyProtocolSendRequest[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendRequestTable = {.tag=kFidlTypeStruct, .elements=Fields39fidl_test_json_EmptyProtocolSendRequest, .element_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolSendRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolReceiveEventTable;
 static const struct FidlStructElement Fields40fidl_test_json_EmptyProtocolReceiveEvent[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolReceiveEventTable = {.tag=kFidlTypeStruct, .elements=Fields40fidl_test_json_EmptyProtocolReceiveEvent, .element_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolReceiveEvent"};
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveRequestTable;
 static const struct FidlStructElement Fields49fidl_test_json_EmptyProtocolSendAndReceiveRequest[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveRequestTable = {.tag=kFidlTypeStruct, .elements=Fields49fidl_test_json_EmptyProtocolSendAndReceiveRequest, .element_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolSendAndReceiveRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveResponseTable;
 static const struct FidlStructElement Fields50fidl_test_json_EmptyProtocolSendAndReceiveResponse[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .element_type=kFidlStructElementType_Padding64, .mask_64=18446744073709551360ul}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
 const struct FidlCodedStruct fidl_test_json_EmptyProtocolSendAndReceiveResponseTable = {.tag=kFidlTypeStruct, .elements=Fields50fidl_test_json_EmptyProtocolSendAndReceiveResponse, .element_count=1u, .size=24u, .name="fidl.test.json/EmptyProtocolSendAndReceiveResponse"};
 

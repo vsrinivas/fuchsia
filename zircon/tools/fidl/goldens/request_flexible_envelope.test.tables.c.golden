@@ -13,25 +13,25 @@ static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFi
 
 extern const struct FidlCodedStruct fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
 static const struct FidlStructElement Fields59fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_StrictFooTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_StrictFooTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable = {.tag=kFidlTypeStruct, .elements=Fields59fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest, .element_count=1u, .size=40u, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 static const struct FidlStructElement Fields60fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_FlexibleFooTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_FlexibleFooTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable = {.tag=kFidlTypeStruct, .elements=Fields60fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse, .element_count=1u, .size=40u, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse"};
 
 extern const struct FidlCodedStruct fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 static const struct FidlStructElement Fields59fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_FlexibleFooTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_FlexibleFooTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable = {.tag=kFidlTypeStruct, .elements=Fields59fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest, .element_count=1u, .size=40u, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictRequest"};
 
 extern const struct FidlCodedStruct fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 static const struct FidlStructElement Fields60fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_StrictFooTable)}}
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&fidl_test_json_StrictFooTable)}}
 };
 const struct FidlCodedStruct fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable = {.tag=kFidlTypeStruct, .elements=Fields60fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse, .element_count=1u, .size=40u, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse"};
 

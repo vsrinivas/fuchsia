@@ -102,6 +102,7 @@ class FidlDecoder final : public BaseVisitor<Byte> {
   using CountPointer = typename BaseVisitor<Byte>::CountPointer;
   using EnvelopePointer = typename BaseVisitor<Byte>::EnvelopePointer;
 
+  static constexpr bool kOnlyWalkResources = false;
   static constexpr bool kContinueAfterConstraintViolation = false;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {

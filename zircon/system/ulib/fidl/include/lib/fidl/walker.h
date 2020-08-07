@@ -366,7 +366,11 @@ Result Walker<VisitorImpl>::WalkStruct(const FidlCodedStruct* coded_struct,
                                        OutOfLineDepth depth) {
   for (uint32_t i = 0; i < coded_struct->element_count; i++) {
     const FidlStructElement& element = coded_struct->elements[i];
-    switch (element.element_type) {
+    if (VisitorImpl::kOnlyWalkResources) {
+      if (!element.header.is_resource)
+        continue;
+    }
+    switch (element.header.element_type) {
       case kFidlStructElementType_Field: {
         const FidlStructField& field = element.field;
         Position field_position = position + field.offset;

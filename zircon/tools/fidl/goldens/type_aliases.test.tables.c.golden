@@ -29,17 +29,17 @@ static bool EnumValidatorFor_example_obj_type(uint64_t v) { return (v == 0ul) ||
 const struct FidlCodedEnum example_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_example_obj_type, .name="example/obj_type"};
 
 static const struct FidlStructElement Fields29example_ExampleOfUseOfAliases[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=8u, .field_type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=24u, .field_type=(fidl_type_t*)(&Vector5nonnullable6uint32Table)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=40u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable27String4294967295nonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=56u, .field_type=(fidl_type_t*)(&Vector9nonnullable27String4294967295nonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=72u, .field_type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=88u, .field_type=(fidl_type_t*)(&Vector5nonnullable28someotherlibrary_ReferenceMeTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=104u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=108u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.element_type=kFidlStructElementType_Field, .offset=112u, .field_type=(fidl_type_t*)(&HandlehandlenullableTable)}},
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=116u, .element_type=kFidlStructElementType_Padding32, .mask_32=4294967295u}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=24u, .field_type=(fidl_type_t*)(&Vector5nonnullable6uint32Table)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=40u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable27String4294967295nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=56u, .field_type=(fidl_type_t*)(&Vector9nonnullable27String4294967295nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=72u, .field_type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=88u, .field_type=(fidl_type_t*)(&Vector5nonnullable28someotherlibrary_ReferenceMeTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=104u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=108u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=112u, .field_type=(fidl_type_t*)(&HandlehandlenullableTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=116u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct example_ExampleOfUseOfAliasesTable = {.tag=kFidlTypeStruct, .elements=Fields29example_ExampleOfUseOfAliases, .element_count=11u, .size=120u, .name="example/ExampleOfUseOfAliases"};
 
