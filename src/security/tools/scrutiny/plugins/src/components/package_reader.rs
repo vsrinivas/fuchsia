@@ -13,7 +13,7 @@ use {
 };
 
 // Constants/Statics
-pub const CM_EXTENSIONS: &[&str] = &[".cm", ".cmx"];
+pub const CM_EXTENSIONS: &[&str] = &[".cmx"];
 
 /// Trait that defines functions for the retrieval of the bytes that define package definitions.
 /// Used primarily to allow for nicer testing via mocking out the backing `fx serve` instance.
@@ -181,7 +181,7 @@ mod tests {
         let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
         path_content_map.insert("meta/contents", (contents_b.len() as u64, Box::new(contents_b)));
         path_content_map.insert("meta/foo.cmx", (foo_b.len() as u64, Box::new(foo_b)));
-        path_content_map.insert("meta/bar.cm", (bar_b.len() as u64, Box::new(bar_b)));
+        path_content_map.insert("meta/bar.cmx", (bar_b.len() as u64, Box::new(bar_b)));
         path_content_map.insert("meta/baz", (baz_b.len() as u64, Box::new(baz_b)));
         path_content_map.insert("grr.cmx", (baz_b.len() as u64, Box::new(baz_b)));
         let mut target = Cursor::new(Vec::new());
@@ -208,7 +208,7 @@ mod tests {
             panic!("Expected results sandbox to be Some()");
         }
 
-        if let Some(sb) = &result.cms["meta/bar.cm"].sandbox {
+        if let Some(sb) = &result.cms["meta/bar.cmx"].sandbox {
             if let Some(services) = &sb.services {
                 assert_eq!(services[0], "aries");
                 assert_eq!(services[1], "taurus");
