@@ -1392,6 +1392,70 @@ TEST(Sysmem, CpuUsageAndInaccessibleDomainFails) {
   ASSERT_NE(status, ZX_OK, "");
 }
 
+TEST(Sysmem, SystemRamHeapSupportsAllDomains) {
+  zx_status_t status;
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  fuchsia_sysmem_CoherencyDomain domains[] = {
+      fuchsia_sysmem_CoherencyDomain_CPU,
+      fuchsia_sysmem_CoherencyDomain_RAM,
+      fuchsia_sysmem_CoherencyDomain_INACCESSIBLE,
+  };
+
+  for (const fuchsia_sysmem_CoherencyDomain domain : domains) {
+    zx::channel token_client;
+    zx::channel token_server;
+    status = zx::channel::create(0, &token_client, &token_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client.get(),
+                                                              token_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator_client.get(), token_client.release(), collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+    constraints->usage.vulkan = fuchsia_sysmem_VULKAN_IMAGE_USAGE_TRANSFER_DST;
+    constraints->min_buffer_count_for_camping = 1;
+    constraints->has_buffer_memory_constraints = true;
+    constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = 4 * 1024,
+        .max_size_bytes = 4 * 1024,
+        .physically_contiguous_required = true,
+        .secure_required = false,
+        .ram_domain_supported = (domain == fuchsia_sysmem_CoherencyDomain_RAM),
+        .cpu_domain_supported = (domain == fuchsia_sysmem_CoherencyDomain_CPU),
+        .inaccessible_domain_supported = (domain == fuchsia_sysmem_CoherencyDomain_INACCESSIBLE),
+        .heap_permitted_count = 1,
+        .heap_permitted = {fuchsia_sysmem_HeapType_SYSTEM_RAM}};
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
+    // usage.cpu != 0 && inaccessible_domain_supported is expected to result in failure to
+    // allocate.
+    ASSERT_EQ(status, ZX_OK, "Failed Allocate(): domain supported = %u", domain);
+
+    ASSERT_EQ(domain, buffer_collection_info->settings.buffer_settings.coherency_domain,
+              "Coherency domain doesn't match constraints");
+  }
+}
+
 TEST(Sysmem, RequiredSize) {
   zx_status_t status;
   zx::channel allocator_client;
@@ -2251,6 +2315,73 @@ TEST(Sysmem, HeapAmlogicSecure) {
       // the data will be present in the VMO, and the encrypted parts will be all 0xFF.  The point
       // of the aux VMO is to allow reading and parsing the non-encypted parts using REE CPU.
       ASSERT_TRUE(aux_tester.IsReadFromSecureAThing());
+    }
+  }
+}
+
+TEST(Sysmem, HeapAmlogicSecureOnlySupportsInaccessible) {
+  if (!is_board_with_amlogic_secure()) {
+    return;
+  }
+
+  fuchsia_sysmem_CoherencyDomain domains[] = {
+      fuchsia_sysmem_CoherencyDomain_CPU,
+      fuchsia_sysmem_CoherencyDomain_RAM,
+      fuchsia_sysmem_CoherencyDomain_INACCESSIBLE,
+  };
+
+  for (const fuchsia_sysmem_CoherencyDomain domain : domains) {
+    zx::channel collection_client;
+    zx_status_t status = make_single_participant_collection(&collection_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+    constraints->usage.video = fuchsia_sysmem_videoUsageHwDecoder;
+    constexpr uint32_t kBufferCount = 4;
+    constraints->min_buffer_count_for_camping = kBufferCount;
+    constraints->has_buffer_memory_constraints = true;
+    constexpr uint32_t kBufferSizeBytes = 64 * 1024;
+    constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = kBufferSizeBytes,
+        .max_size_bytes = 128 * 1024,
+        .physically_contiguous_required = true,
+        .secure_required = true,
+        .ram_domain_supported = (domain == fuchsia_sysmem_CoherencyDomain_RAM),
+        .cpu_domain_supported = (domain == fuchsia_sysmem_CoherencyDomain_CPU),
+        .inaccessible_domain_supported = (domain == fuchsia_sysmem_CoherencyDomain_INACCESSIBLE),
+        .heap_permitted_count = 1,
+        .heap_permitted = {fuchsia_sysmem_HeapType_AMLOGIC_SECURE},
+    };
+    ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx_status_t allocation_status;
+    BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
+
+    if (domain == fuchsia_sysmem_CoherencyDomain_INACCESSIBLE) {
+      // This is the first round-trip to/from sysmem.  A failure here can be due
+      // to any step above failing async.
+      ASSERT_EQ(status, ZX_OK, "");
+      ASSERT_EQ(allocation_status, ZX_OK, "");
+
+      EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
+      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
+      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true,
+                "");
+      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+                fuchsia_sysmem_CoherencyDomain_INACCESSIBLE, "");
+      EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
+                fuchsia_sysmem_HeapType_AMLOGIC_SECURE, "");
+      EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+    } else {
+      ASSERT_TRUE(status != ZX_OK || allocation_status != ZX_OK,
+                  "Sysmem should not allocate memory from secure heap with coherency domain %u",
+                  domain);
     }
   }
 }

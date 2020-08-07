@@ -6,6 +6,26 @@ library fuchsia.sysmem;
 
 using zx;
 
+/// Sysmem Heaps can have different support for different coherency
+/// domains. This table contains the support status for each coherency
+/// domain of a Heap.
+///
+/// Each member property should correspond to a coherency domain defined
+/// in the CoherencyDomain enum.
+table CoherencyDomainSupport {
+    1: bool cpu_supported;
+    2: bool ram_supported;
+    3: bool inaccessible_supported;
+};
+
+/// Memory properties for a sysmem Heap.
+/// Heaps send its properties to sysmem device at registration time based
+/// on which sysmem can select the correct Heap to use.
+table HeapProperties {
+    /// Status of support for coherency domains.
+    1: CoherencyDomainSupport coherency_domain_support;
+};
+
 /// Manages resources on a specific sysmem heap.
 protocol Heap {
     /// Request a new memory allocation of `size` on heap.
@@ -48,4 +68,15 @@ protocol Heap {
 
     /// Destroy previously created resources.
     DestroyResource(uint64 id) -> ();
+
+    /// This event is triggered when the Heap is registered. Properties
+    /// of this Heap will be sent to the sysmem device in the event.
+    ///
+    /// Implementations should guarantee that this event should be sent
+    /// immediately when it binds to a channel, and this event should be
+    /// triggered only once per Heap instance.
+    // TODO(57690): Remove this event and pass in HeapProperties when
+    // registering sysmem Heaps after we migrate sysmem banjo proxying
+    // to FIDL.
+    -> OnRegister(HeapProperties properties);
 };

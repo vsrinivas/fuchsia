@@ -40,8 +40,6 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override;
   void Delete(zx::vmo parent_vmo) override;
 
-  bool CoherencyDomainIsInaccessible() override { return !is_cpu_accessible_; }
-
   zx_status_t GetPhysicalMemoryInfo(uint64_t* base, uint64_t* size) override {
     *base = start_;
     *size = size_;

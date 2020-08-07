@@ -26,6 +26,23 @@ static const char* kTag = "device-local-heap";
 
 static const char* kThreadName = "goldfish_device_local_heap_thread";
 
+llcpp::fuchsia::sysmem::HeapProperties GetDeviceLocalHeapProperties() {
+  auto coherency_domain_support =
+      std::make_unique<llcpp::fuchsia::sysmem::CoherencyDomainSupport>();
+  *coherency_domain_support =
+      llcpp::fuchsia::sysmem::CoherencyDomainSupport::Builder(
+          std::make_unique<llcpp::fuchsia::sysmem::CoherencyDomainSupport::Frame>())
+          .set_cpu_supported(std::make_unique<bool>(false))
+          .set_ram_supported(std::make_unique<bool>(false))
+          .set_inaccessible_supported(std::make_unique<bool>(true))
+          .build();
+
+  return llcpp::fuchsia::sysmem::HeapProperties::Builder(
+             std::make_unique<llcpp::fuchsia::sysmem::HeapProperties::Frame>())
+      .set_coherency_domain_support(std::move(coherency_domain_support))
+      .build();
+}
+
 }  // namespace
 
 // static
@@ -81,7 +98,9 @@ void Heap::Bind(zx::channel server_request) {
     if (!result.is_ok()) {
       zxlogf(ERROR, "[%s] Cannot bind to channel: status: %d", kTag, result.error());
       control_->RemoveHeap(this);
+      return;
     }
+    result.value()->OnRegister(GetDeviceLocalHeapProperties());
   });
 }
 

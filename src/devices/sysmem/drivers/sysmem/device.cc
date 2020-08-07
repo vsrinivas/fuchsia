@@ -7,6 +7,7 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
@@ -33,8 +34,31 @@ using sysmem_driver::MemoryAllocator;
 namespace sysmem_driver {
 namespace {
 
+// Helper function to build owned HeapProperties table with coherency doman support.
+llcpp::fuchsia::sysmem::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
+    bool cpu_supported, bool ram_supported, bool inaccessible_supported) {
+  using llcpp::fuchsia::sysmem::CoherencyDomainSupport;
+  using llcpp::fuchsia::sysmem::HeapProperties;
+
+  auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
+  *coherency_domain_support =
+      CoherencyDomainSupport::Builder(std::make_unique<CoherencyDomainSupport::Frame>())
+          .set_cpu_supported(std::make_unique<bool>(cpu_supported))
+          .set_ram_supported(std::make_unique<bool>(ram_supported))
+          .set_inaccessible_supported(std::make_unique<bool>(inaccessible_supported))
+          .build();
+
+  return HeapProperties::Builder(std::make_unique<HeapProperties::Frame>())
+      .set_coherency_domain_support(std::move(coherency_domain_support))
+      .build();
+}
+
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
+  SystemRamMemoryAllocator()
+      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(true /*cpu*/, true /*ram*/,
+                                                                      true /*inaccessible*/)) {}
+
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
     zx_status_t status = zx::vmo::create(size, 0, parent_vmo);
@@ -52,14 +76,14 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
   virtual void Delete(zx::vmo parent_vmo) override {
     // ~parent_vmo
   }
-
-  bool CoherencyDomainIsInaccessible() override { return false; }
 };
 
 class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
  public:
   explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
-      : parent_device_(parent_device) {}
+      : MemoryAllocator(BuildHeapPropertiesWithCoherencyDomainSupport(true /*cpu*/, true /*ram*/,
+                                                                      true /*inaccessible*/)),
+        parent_device_(parent_device) {}
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
@@ -102,20 +126,22 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
     // ~vmo
   }
 
-  bool CoherencyDomainIsInaccessible() override { return false; }
-
  private:
   Owner* const parent_device_;
 };
 
 class ExternalMemoryAllocator : public MemoryAllocator {
  public:
-  ExternalMemoryAllocator(zx::channel connection, std::unique_ptr<async::Wait> wait_for_close)
-      : heap_(std::move(connection)), wait_for_close_(std::move(wait_for_close)) {}
+  ExternalMemoryAllocator(fidl::Client<llcpp::fuchsia::sysmem::Heap> heap,
+                          std::unique_ptr<async::Wait> wait_for_close,
+                          llcpp::fuchsia::sysmem::HeapProperties properties)
+      : MemoryAllocator(std::move(properties)),
+        heap_(std::move(heap)),
+        wait_for_close_(std::move(wait_for_close)) {}
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
-    auto result = heap_.AllocateVmo(size);
+    auto result = heap_->AllocateVmo_Sync(size);
     if (!result.ok() || result.value().s != ZX_OK) {
       DRIVER_ERROR("HeapAllocate() failed - status: %d status2: %d", result.status(),
                    result.value().s);
@@ -139,7 +165,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return status;
     }
 
-    auto result = heap_.CreateResource(std::move(child_vmo_copy));
+    auto result = heap_->CreateResource_Sync(std::move(child_vmo_copy));
     if (!result.ok() || result.value().s != ZX_OK) {
       DRIVER_ERROR("HeapCreateResource() failed - status: %d status2: %d", result.status(),
                    result.value().s);
@@ -157,7 +183,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return;
     }
     auto id = it->second;
-    auto result = heap_.DestroyResource(id);
+    auto result = heap_->DestroyResource_Sync(id);
     if (!result.ok()) {
       DRIVER_ERROR("HeapDestroyResource() failed - status: %d", result.status());
       // fall-through - this can only fail because resource has
@@ -167,14 +193,10 @@ class ExternalMemoryAllocator : public MemoryAllocator {
     // ~parent_vmo
   }
 
-  bool CoherencyDomainIsInaccessible() override {
-    // TODO(reveman): Add support for CPU/RAM domains to external heaps.
-    return true;
-  }
-
  private:
-  llcpp::fuchsia::sysmem::Heap::SyncClient heap_;
+  fidl::Client<llcpp::fuchsia::sysmem::Heap> heap_;
   std::unique_ptr<async::Wait> wait_for_close_;
+
   // From parent vmo handle to ID.
   std::map<zx_handle_t, uint64_t> allocations_;
 };
@@ -383,10 +405,30 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
           return;
         }
 
-        // This replaces any previously registered allocator for heap (also cancels the old wait).
-        // This behavior is preferred as it avoids a potential race-condition during heap restart.
-        allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(std::move(heap_connection),
-                                                                      std::move(wait_for_close));
+        auto heap_client = std::make_unique<fidl::Client<llcpp::fuchsia::sysmem::Heap>>();
+        auto heap_client_ptr = heap_client.get();
+        status = heap_client_ptr->Bind(
+            std::move(heap_connection), loop_.dispatcher(),
+            [this, heap](fidl::UnbindInfo info, zx::channel channel) {
+              if (info.reason != fidl::UnbindInfo::Reason::kPeerClosed &&
+                  info.reason != fidl::UnbindInfo::Reason::kClose) {
+                DRIVER_ERROR("Heap failed: reason %d status %d\n", static_cast<int>(info.reason),
+                             info.status);
+                allocators_.erase(heap);
+              }
+            },
+            {.on_register = [this, heap, wait_for_close = std::move(wait_for_close),
+                             heap_client = std::move(heap_client)](
+                                llcpp::fuchsia::sysmem::HeapProperties properties) mutable {
+              // A heap should not be registered twice.
+              ZX_DEBUG_ASSERT(heap_client);
+              // This replaces any previously registered allocator for heap (also cancels the old
+              // wait). This behavior is preferred as it avoids a potential race-condition during
+              // heap restart.
+              allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(
+                  std::move(*heap_client), std::move(wait_for_close), std::move(properties));
+            }});
+        ZX_ASSERT(status == ZX_OK);
       });
 }
 
@@ -601,6 +643,12 @@ MemoryAllocator* Device::GetAllocator(
     return nullptr;
   }
   return iter->second.get();
+}
+
+const llcpp::fuchsia::sysmem::HeapProperties& Device::GetHeapProperties(
+    llcpp::fuchsia::sysmem2::HeapType heap) const {
+  ZX_DEBUG_ASSERT(allocators_.find(heap) != allocators_.end());
+  return allocators_.at(heap)->heap_properties();
 }
 
 Device::SecureMemConnection::SecureMemConnection(zx::channel connection,

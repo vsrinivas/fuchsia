@@ -4,6 +4,7 @@
 
 #include "logical_buffer_collection.h"
 
+#include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-make-tracking/make_tracking.h>
@@ -20,6 +21,7 @@
 
 #include "buffer_collection.h"
 #include "buffer_collection_token.h"
+#include "device.h"
 #include "koid_util.h"
 #include "macros.h"
 #include "usage_pixel_format_cost.h"
@@ -1494,40 +1496,49 @@ bool LogicalBufferCollection::IsColorSpaceEqual(
   return a.type() == b.type();
 }
 
-static llcpp::fuchsia::sysmem2::HeapType GetHeap(
-    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& constraints) {
+static fit::result<llcpp::fuchsia::sysmem2::HeapType, zx_status_t> GetHeap(
+    const llcpp::fuchsia::sysmem2::BufferMemoryConstraints::Builder& constraints, Device* device) {
   if (constraints.secure_required()) {
     // TODO(37452): Generalize this.
     //
     // checked previously
     ZX_DEBUG_ASSERT(!constraints.secure_required() || IsSecurePermitted(constraints));
     if (IsHeapPermitted(constraints, llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE)) {
-      return llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE;
+      return fit::ok(llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE);
     } else {
       ZX_DEBUG_ASSERT(
           IsHeapPermitted(constraints, llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE_VDEC));
-      return llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE_VDEC;
+      return fit::ok(llcpp::fuchsia::sysmem2::HeapType::AMLOGIC_SECURE_VDEC);
     }
   }
   if (IsHeapPermitted(constraints, llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM)) {
-    return llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM;
+    return fit::ok(llcpp::fuchsia::sysmem2::HeapType::SYSTEM_RAM);
   }
-  ZX_DEBUG_ASSERT(constraints.heap_permitted().count());
-  return constraints.heap_permitted()[0];
+
+  for (size_t i = 0; i < constraints.heap_permitted().count(); ++i) {
+    auto heap = constraints.heap_permitted()[i];
+    const auto& heap_properties = device->GetHeapProperties(heap);
+    if (heap_properties.has_coherency_domain_support() &&
+        ((heap_properties.coherency_domain_support().cpu_supported() &&
+          constraints.cpu_domain_supported()) ||
+         (heap_properties.coherency_domain_support().ram_supported() &&
+          constraints.ram_domain_supported()) ||
+         (heap_properties.coherency_domain_support().inaccessible_supported() &&
+          constraints.inaccessible_domain_supported()))) {
+      return fit::ok(heap);
+    }
+  }
+  return fit::error(ZX_ERR_NOT_FOUND);
 }
 
 static fit::result<llcpp::fuchsia::sysmem2::CoherencyDomain> GetCoherencyDomain(
     const llcpp::fuchsia::sysmem2::BufferCollectionConstraints::Builder& constraints,
     MemoryAllocator* memory_allocator) {
   ZX_DEBUG_ASSERT(constraints.has_buffer_memory_constraints());
-  // The heap not being accessible from the CPU can force Inaccessible as the only
-  // potential option.
-  if (memory_allocator->CoherencyDomainIsInaccessible()) {
-    if (!constraints.buffer_memory_constraints().inaccessible_domain_supported()) {
-      return fit::error();
-    }
-    return fit::ok(llcpp::fuchsia::sysmem2::CoherencyDomain::INACCESSIBLE);
-  }
+
+  using llcpp::fuchsia::sysmem2::CoherencyDomain;
+  const auto& heap_properties = memory_allocator->heap_properties();
+  ZX_DEBUG_ASSERT(heap_properties.has_coherency_domain_support());
 
   // Display prefers RAM coherency domain for now.
   if (constraints.usage().display() != 0) {
@@ -1540,18 +1551,18 @@ static fit::result<llcpp::fuchsia::sysmem2::CoherencyDomain> GetCoherencyDomain(
     }
   }
 
-  // If none of the above cases apply, then prefer CPU, RAM, Inaccessible
-  // in that order.
-
-  if (constraints.buffer_memory_constraints().cpu_domain_supported()) {
-    return fit::ok(llcpp::fuchsia::sysmem2::CoherencyDomain::CPU);
+  if (heap_properties.coherency_domain_support().cpu_supported() &&
+      constraints.buffer_memory_constraints().cpu_domain_supported()) {
+    return fit::ok(CoherencyDomain::CPU);
   }
 
-  if (constraints.buffer_memory_constraints().ram_domain_supported()) {
-    return fit::ok(llcpp::fuchsia::sysmem2::CoherencyDomain::RAM);
+  if (heap_properties.coherency_domain_support().ram_supported() &&
+      constraints.buffer_memory_constraints().ram_domain_supported()) {
+    return fit::ok(CoherencyDomain::RAM);
   }
 
-  if (constraints.buffer_memory_constraints().inaccessible_domain_supported()) {
+  if (heap_properties.coherency_domain_support().inaccessible_supported() &&
+      constraints.buffer_memory_constraints().inaccessible_domain_supported()) {
     // Intentionally permit treating as Inaccessible if we reach here, even
     // if the heap permits CPU access.  Only domain in common among
     // participants is Inaccessible.
@@ -1614,7 +1625,15 @@ LogicalBufferCollection::Allocate() {
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
   }
-  buffer_settings.set_heap(sysmem::MakeTracking(&allocator_, GetHeap(buffer_constraints)));
+
+  auto result_get_heap = GetHeap(buffer_constraints, parent_device_);
+  if (!result_get_heap.is_ok()) {
+    LogError("Can not find a heap permitted by buffer constraints, error %d",
+             result_get_heap.error());
+    return fit::error(result_get_heap.error());
+  }
+  buffer_settings.set_heap(sysmem::MakeTracking(&allocator_, result_get_heap.value()));
+
   // We can't fill out buffer_settings yet because that also depends on
   // ImageFormatConstraints.  We do need the min and max from here though.
   min_size_bytes = buffer_constraints.min_size_bytes();
@@ -1925,7 +1944,11 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   // deallocations to be done before failing an new allocation.
   //
   // TODO(ZX-4817): Zero secure/protected VMOs.
-  if (!allocator->CoherencyDomainIsInaccessible()) {
+  // TODO(57182): Add a flag to skip the clear process if Heap does the clearing itself.
+  const auto& heap_properties = allocator->heap_properties();
+  ZX_DEBUG_ASSERT(heap_properties.has_coherency_domain_support());
+  if (heap_properties.coherency_domain_support().cpu_supported() ||
+      heap_properties.coherency_domain_support().ram_supported()) {
     uint64_t offset = 0;
     while (offset < info.size_bytes) {
       uint64_t bytes_to_write = std::min(sizeof(kZeroes), info.size_bytes - offset);

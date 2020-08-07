@@ -8,6 +8,9 @@
 
 namespace sysmem_driver {
 
+MemoryAllocator::MemoryAllocator(llcpp::fuchsia::sysmem::HeapProperties properties)
+    : heap_properties_(std::move(properties)) {}
+
 MemoryAllocator::~MemoryAllocator() {
   for (auto& it : destroy_callbacks_) {
     it.second();

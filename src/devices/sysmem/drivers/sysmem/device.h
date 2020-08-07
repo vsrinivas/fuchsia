@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
@@ -98,6 +99,13 @@ class Device final : public DdkDeviceType,
   MemoryAllocator* GetAllocator(
       const llcpp::fuchsia::sysmem2::BufferMemorySettings::Builder& settings);
 
+  // Get heap properties of a specific memory heap allocator.
+  //
+  // Clients should guarantee that the heap is valid and already registered
+  // to sysmem driver.
+  const llcpp::fuchsia::sysmem::HeapProperties& GetHeapProperties(
+      llcpp::fuchsia::sysmem2::HeapType heap) const;
+
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   const zx_device_t* device() const { return zxdev_; }
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
@@ -156,6 +164,13 @@ class Device final : public DdkDeviceType,
 
   // This map contains all registered memory allocators.
   std::map<llcpp::fuchsia::sysmem2::HeapType, std::unique_ptr<MemoryAllocator>> allocators_;
+
+  // Some memory allocators need to be registered with properties before
+  // we can use them to allocate memory. We keep this map to store all the
+  // unregistered allocators.
+  std::map<MemoryAllocator*,
+           std::pair<llcpp::fuchsia::sysmem2::HeapType, std::unique_ptr<MemoryAllocator>>>
+      unregistered_allocators_;
 
   // This map contains only the secure allocators, if any.  The pointers are owned by allocators_.
   //

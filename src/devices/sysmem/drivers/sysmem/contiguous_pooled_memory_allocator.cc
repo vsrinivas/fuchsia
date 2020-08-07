@@ -4,6 +4,8 @@
 
 #include "contiguous_pooled_memory_allocator.h"
 
+#include <fuchsia/sysmem/llcpp/fidl.h>
+
 #include <ddk/trace/event.h>
 #include <fbl/string_printf.h>
 
@@ -11,10 +13,32 @@
 
 namespace sysmem_driver {
 
+namespace {
+
+llcpp::fuchsia::sysmem::HeapProperties BuildHeapProperties(bool is_cpu_accessible) {
+  using llcpp::fuchsia::sysmem::CoherencyDomainSupport;
+  using llcpp::fuchsia::sysmem::HeapProperties;
+
+  auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
+  *coherency_domain_support =
+      CoherencyDomainSupport::Builder(std::make_unique<CoherencyDomainSupport::Frame>())
+          .set_cpu_supported(std::make_unique<bool>(is_cpu_accessible))
+          .set_ram_supported(std::make_unique<bool>(is_cpu_accessible))
+          .set_inaccessible_supported(std::make_unique<bool>(true))
+          .build();
+
+  return HeapProperties::Builder(std::make_unique<HeapProperties::Frame>())
+      .set_coherency_domain_support(std::move(coherency_domain_support))
+      .build();
+}
+
+}  // namespace
+
 ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
     Owner* parent_device, const char* allocation_name, inspect::Node* parent_node, uint64_t pool_id,
     uint64_t size, bool is_cpu_accessible, bool is_ready, async_dispatcher_t* dispatcher)
-    : parent_device_(parent_device),
+    : MemoryAllocator(BuildHeapProperties(is_cpu_accessible)),
+      parent_device_(parent_device),
       allocation_name_(allocation_name),
       pool_id_(pool_id),
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
