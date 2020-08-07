@@ -224,23 +224,24 @@ bool is_board_astro() { return GetBoardName() == "astro"; }
 
 bool is_board_sherlock() { return GetBoardName() == "sherlock"; }
 
-bool is_board_astro_or_sherlock() {
+bool is_board_luis() { return GetBoardName() == "luis"; }
+
+bool is_board_astro_sherlock_or_luis() {
   if (is_board_astro()) {
     return true;
   }
   if (is_board_sherlock()) {
     return true;
   }
+  if (is_board_luis()) {
+    return true;
+  }
   return false;
 }
 
-// TODO(37686): (or jbauman) Change to is_board_astro_or_sherlock() once
-// AMLOGIC_SECURE is working on sherlock.
-bool is_board_with_amlogic_secure() { return is_board_astro_or_sherlock(); }
+bool is_board_with_amlogic_secure() { return is_board_astro_sherlock_or_luis(); }
 
-// TODO(37686): (or jbauman) Change to is_board_astro_or_sherlock() once
-// AMLOGIC_SECURE_VDEC is working on sherlock.
-bool is_board_with_amlogic_secure_vdec() { return is_board_astro_or_sherlock(); }
+bool is_board_with_amlogic_secure_vdec() { return is_board_astro_sherlock_or_luis(); }
 
 void nanosleep_duration(zx::duration duration) {
   zx_status_t status = zx::nanosleep(zx::deadline_after(duration));
