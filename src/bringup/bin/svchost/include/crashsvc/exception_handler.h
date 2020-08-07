@@ -20,15 +20,27 @@ class ExceptionHandler {
 
   void Handle(zx::exception exception, const zx_exception_info_t& info);
 
+  // Exposed for testing.
+  bool ConnectedToServer() const;
+
  private:
-  void SetUpClient(zx::channel client = zx::channel{});
+  void SetUpClient(zx::channel client_endpoint = zx::channel{});
+
+  // Send |server_endpoit_| to the server of fuchsia.exception.Handler.
+  void ConnectToServer();
+
   void OnUnbind(fidl::UnbindInfo info, zx::channel channel);
 
   async_dispatcher_t* dispatcher_;
   zx_handle_t exception_handler_svc_;
 
-  bool is_bound_;
-  fidl::Client<llcpp::fuchsia::exception::Handler> handler_;
+  // Becomes true if exceptions cannot be sent to the exception handling service. Once we reach that
+  // state, we will never handle exceptions again.
+  bool drop_exceptions_;
+  fidl::Client<llcpp::fuchsia::exception::Handler> connection_;
+
+  // The other endpoint of the |connection_|'s channel before it has been sent to the server.
+  zx::channel server_endpoint_;
 };
 
 #endif  // SRC_BRINGUP_BIN_SVCHOST_INCLUDE_CRASHSVC_EXCEPTION_HANDLER_H_

@@ -371,7 +371,12 @@ TEST(ExceptionHandlerTest, ExceptionHandlerReconnects) {
 
   // Simulates crashsvc losing connection with fuchsia.exception.Handler.
   ASSERT_OK(test_svc.exception_handler().Unbind());
+
+  RunUntil([&handler] { return !handler.ConnectedToServer(); });
   ASSERT_FALSE(test_svc.exception_handler().HasClient());
+
+  // Create an invalid exception to trigger the reconnection logic.
+  handler.Handle(zx::exception{}, zx_exception_info_t{});
 
   RunUntil([&test_svc] { return test_svc.exception_handler().HasClient(); });
   ASSERT_TRUE(test_svc.exception_handler().HasClient());
