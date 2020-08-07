@@ -15,7 +15,7 @@ static const pbus_dev_t cpu_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "nelson-cpu";
   dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
+  dev.pid = PDEV_PID_AMLOGIC_S905D3;
   dev.did = PDEV_DID_AMLOGIC_CPU;
   return dev;
 }();
