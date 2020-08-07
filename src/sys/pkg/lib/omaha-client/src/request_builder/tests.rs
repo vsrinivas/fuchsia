@@ -32,6 +32,8 @@ fn test_simple_request() {
             .with_cohort(Cohort::new("some-channel"))
             .build(),
     )
+    .session_id(GUID::from_u128(1))
+    .request_id(GUID::from_u128(2))
     .build_intermediate();
 
     // Assert that all the request fields are accurate (this is in their order of declaration)
@@ -41,6 +43,8 @@ fn test_simple_request() {
     assert_eq!(request.updater_version, config.updater.version.to_string());
     assert_eq!(request.install_source, InstallSource::OnDemand);
     assert_eq!(request.is_machine, true);
+    assert_eq!(request.session_id, Some(GUID::from_u128(1)));
+    assert_eq!(request.request_id, Some(GUID::from_u128(2)));
 
     // Just test that the config OS object was passed through (as opposed to manually comparing
     // all the fields)

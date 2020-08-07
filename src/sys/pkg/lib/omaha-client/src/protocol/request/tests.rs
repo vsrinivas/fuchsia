@@ -15,6 +15,8 @@ fn basic_serialization_test() {
             "updaterversion": "1.0",
             "installsource": "ondemand",
             "ismachine": true,
+            "requestid": "{00000000-0000-0000-0000-000000000000}",
+            "sessionid": "{00000000-0000-0000-0000-000000000000}",
             "os": {
                 "platform": "some_platform",
                 "version": "4.5",
@@ -38,6 +40,8 @@ fn basic_serialization_test() {
             updater_version: "1.0".to_string(),
             install_source: InstallSource::OnDemand,
             is_machine: true,
+            request_id: Some(GUID::default()),
+            session_id: Some(GUID::default()),
             os: OS {
                 platform: "some_platform".to_string(),
                 version: "4.5".to_string(),
@@ -67,6 +71,8 @@ fn basic_serialization_test_app_with_extras() {
             "updaterversion": "1.0",
             "installsource": "ondemand",
             "ismachine": true,
+            "requestid": "{00000000-0000-0000-0000-000000000000}",
+            "sessionid": "{00000000-0000-0000-0000-000000000000}",
             "os": {
                 "platform": "some_platform",
                 "version": "4.5",
@@ -100,6 +106,8 @@ fn basic_serialization_test_app_with_extras() {
             updater_version: "1.0".to_string(),
             install_source: InstallSource::OnDemand,
             is_machine: true,
+            request_id: Some(GUID::default()),
+            session_id: Some(GUID::default()),
             os: OS {
                 platform: "some_platform".to_string(),
                 version: "4.5".to_string(),
@@ -157,6 +165,8 @@ fn basic_serialization_test_app_with_extras_will_overwrite_protocol_fields() {
             updater_version: "1.0".to_string(),
             install_source: InstallSource::OnDemand,
             is_machine: true,
+            request_id: None,
+            session_id: None,
             os: OS {
                 platform: "some_platform".to_string(),
                 version: "4.5".to_string(),
@@ -207,6 +217,8 @@ fn basic_ping_serialization_test() {
             updater_version: "1.0".to_string(),
             install_source: InstallSource::ScheduledTask,
             is_machine: true,
+            request_id: None,
+            session_id: None,
             os: OS {
                 platform: "some_platform".to_string(),
                 version: "4.5".to_string(),
@@ -263,6 +275,8 @@ fn basic_event_serialization_test() {
             updater_version: "1.0".to_string(),
             install_source: InstallSource::OnDemand,
             is_machine: true,
+            request_id: None,
+            session_id: None,
             os: OS {
                 platform: "some_platform".to_string(),
                 version: "4.5".to_string(),
@@ -333,6 +347,8 @@ fn multiple_event_serialization_test() {
             updater_version: "1.0".to_string(),
             install_source: InstallSource::OnDemand,
             is_machine: true,
+            request_id: None,
+            session_id: None,
             os: OS {
                 platform: "some_platform".to_string(),
                 version: "4.5".to_string(),
@@ -380,6 +396,8 @@ fn all_fields_serialization_test() {
             "updaterversion": "1.0",
             "installsource": "ondemand",
             "ismachine": true,
+            "requestid": "{00000000-0000-0000-0000-000000000000}",
+            "sessionid": "{00000000-0000-0000-0000-000000000000}",
             "os": {
                 "platform": "some_platform",
                 "version": "4.5",
@@ -425,6 +443,8 @@ fn all_fields_serialization_test() {
             updater_version: "1.0".to_string(),
             install_source: InstallSource::OnDemand,
             is_machine: true,
+            request_id: Some(GUID::default()),
+            session_id: Some(GUID::default()),
             os: OS {
                 platform: "some_platform".to_string(),
                 version: "4.5".to_string(),

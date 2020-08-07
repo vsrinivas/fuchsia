@@ -11,7 +11,7 @@ use crate::{
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
     protocol::{
         self,
-        request::{Event, EventErrorCode, EventResult, EventType},
+        request::{Event, EventErrorCode, EventResult, EventType, GUID},
         response::{parse_json_response, OmahaStatus, Response},
     },
     request_builder::{self, RequestBuilder, RequestParams},
@@ -550,11 +550,14 @@ where
         for app in &apps {
             request_builder = request_builder.add_update_check(app).add_ping(app);
         }
+        let session_id = GUID::new();
+        request_builder = request_builder.session_id(session_id.clone());
 
         let update_check_start_time = Instant::now();
         let mut omaha_request_attempt = 1;
         let max_omaha_request_attempts = 3;
         let (_parts, data) = loop {
+            request_builder = request_builder.request_id(GUID::new());
             match Self::do_omaha_request(&mut self.http, &request_builder).await {
                 Ok(res) => {
                     break res;
@@ -610,7 +613,7 @@ where
                     errorcode: Some(EventErrorCode::ParseResponse),
                     ..Event::default()
                 };
-                self.report_omaha_event(&request_params, event, &apps).await;
+                self.report_omaha_event(&request_params, event, &apps, &session_id).await;
                 return Err(UpdateCheckError::ResponseParser(err));
             }
         };
@@ -645,6 +648,7 @@ where
                         &request_params,
                         EventErrorCode::ConstructInstallPlan,
                         &apps,
+                        &session_id,
                         co,
                     )
                     .await;
@@ -667,7 +671,7 @@ where
                         event_result: EventResult::UpdateDeferred,
                         ..Event::default()
                     };
-                    self.report_omaha_event(&request_params, event, &apps).await;
+                    self.report_omaha_event(&request_params, event, &apps, &session_id).await;
 
                     self.set_state(State::InstallationDeferredByPolicy, co).await;
                     return Ok(Self::make_response(
@@ -679,15 +683,26 @@ where
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
                     // report_error emits InstallationError, need to emit InstallingUpdate first
                     self.set_state(State::InstallingUpdate, co).await;
-                    self.report_error(&request_params, EventErrorCode::DeniedByPolicy, &apps, co)
-                        .await;
+                    self.report_error(
+                        &request_params,
+                        EventErrorCode::DeniedByPolicy,
+                        &apps,
+                        &session_id,
+                        co,
+                    )
+                    .await;
                     return Ok(Self::make_response(response, update_check::Action::DeniedByPolicy));
                 }
             }
 
             self.set_state(State::InstallingUpdate, co).await;
-            self.report_success_event(&request_params, EventType::UpdateDownloadStarted, &apps)
-                .await;
+            self.report_success_event(
+                &request_params,
+                EventType::UpdateDownloadStarted,
+                &apps,
+                &session_id,
+            )
+            .await;
 
             let install_plan_id = install_plan.id();
             let update_start_time = SystemTime::from(self.time_source.now());
@@ -711,7 +726,14 @@ where
             let (install_result, ()) = future::join(perform_install, yield_progress).await;
             if let Err(e) = install_result {
                 warn!("Installation failed: {}", e);
-                self.report_error(&request_params, EventErrorCode::Installation, &apps, co).await;
+                self.report_error(
+                    &request_params,
+                    EventErrorCode::Installation,
+                    &apps,
+                    &session_id,
+                    co,
+                )
+                .await;
 
                 match SystemTime::from(self.time_source.now()).duration_since(update_start_time) {
                     Ok(duration) => self.report_metrics(Metrics::FailedUpdateDuration(duration)),
@@ -723,12 +745,23 @@ where
                 ));
             }
 
-            self.report_success_event(&request_params, EventType::UpdateDownloadFinished, &apps)
-                .await;
+            self.report_success_event(
+                &request_params,
+                EventType::UpdateDownloadFinished,
+                &apps,
+                &session_id,
+            )
+            .await;
 
             // TODO: Verify downloaded update if needed.
 
-            self.report_success_event(&request_params, EventType::UpdateComplete, &apps).await;
+            self.report_success_event(
+                &request_params,
+                EventType::UpdateComplete,
+                &apps,
+                &session_id,
+            )
+            .await;
 
             let update_finish_time = SystemTime::from(self.time_source.now());
             match update_finish_time.duration_since(update_start_time) {
@@ -773,6 +806,7 @@ where
         request_params: &'a RequestParams,
         errorcode: EventErrorCode,
         apps: &'a Vec<App>,
+        session_id: &GUID,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
         self.set_state(State::InstallationError, co).await;
@@ -782,7 +816,7 @@ where
             errorcode: Some(errorcode),
             ..Event::default()
         };
-        self.report_omaha_event(&request_params, event, apps).await;
+        self.report_omaha_event(&request_params, event, apps, session_id).await;
     }
 
     /// Report a successful event to Omaha, for example download started, download finished, etc.
@@ -791,9 +825,10 @@ where
         request_params: &'a RequestParams,
         event_type: EventType,
         apps: &'a Vec<App>,
+        session_id: &GUID,
     ) {
         let event = Event { event_type, event_result: EventResult::Success, ..Event::default() };
-        self.report_omaha_event(&request_params, event, apps).await;
+        self.report_omaha_event(&request_params, event, apps, session_id).await;
     }
 
     /// Report the given |event| to Omaha, errors occurred during reporting are logged but not
@@ -803,11 +838,13 @@ where
         request_params: &'a RequestParams,
         event: Event,
         apps: &'a Vec<App>,
+        session_id: &GUID,
     ) {
         let mut request_builder = RequestBuilder::new(&self.config, &request_params);
         for app in apps {
             request_builder = request_builder.add_event(app, &event);
         }
+        request_builder = request_builder.session_id(session_id.clone()).request_id(GUID::new());
         if let Err(e) = Self::do_omaha_request(&mut self.http, &request_builder).await {
             warn!("Unable to report event to Omaha: {:?}", e);
         }
@@ -1125,7 +1162,10 @@ mod tests {
                 ..Event::default()
             };
             let apps = state_machine.app_set.to_vec().await;
-            request_builder = request_builder.add_event(&apps[0], &event);
+            request_builder = request_builder
+                .add_event(&apps[0], &event)
+                .session_id(GUID::from_u128(0))
+                .request_id(GUID::from_u128(2));
             assert_request(state_machine.http, request_builder).await;
         });
     }
@@ -1160,7 +1200,10 @@ mod tests {
                 ..Event::default()
             };
             let apps = state_machine.app_set.to_vec().await;
-            request_builder = request_builder.add_event(&apps[0], &event);
+            request_builder = request_builder
+                .add_event(&apps[0], &event)
+                .session_id(GUID::from_u128(0))
+                .request_id(GUID::from_u128(2));
             assert_request(state_machine.http, request_builder).await;
         });
     }
@@ -1199,7 +1242,10 @@ mod tests {
                 ..Event::default()
             };
             let apps = state_machine.app_set.to_vec().await;
-            request_builder = request_builder.add_event(&apps[0], &event);
+            request_builder = request_builder
+                .add_event(&apps[0], &event)
+                .session_id(GUID::from_u128(0))
+                .request_id(GUID::from_u128(3));
             assert_request(state_machine.http, request_builder).await;
         });
     }
@@ -1242,7 +1288,10 @@ mod tests {
                 ..Event::default()
             };
             let apps = state_machine.app_set.to_vec().await;
-            request_builder = request_builder.add_event(&apps[0], &event);
+            request_builder = request_builder
+                .add_event(&apps[0], &event)
+                .session_id(GUID::from_u128(0))
+                .request_id(GUID::from_u128(2));
             assert_request(state_machine.http, request_builder).await;
         });
     }
@@ -1285,7 +1334,10 @@ mod tests {
                 ..Event::default()
             };
             let apps = state_machine.app_set.to_vec().await;
-            request_builder = request_builder.add_event(&apps[0], &event);
+            request_builder = request_builder
+                .add_event(&apps[0], &event)
+                .session_id(GUID::from_u128(0))
+                .request_id(GUID::from_u128(2));
             assert_request(state_machine.http, request_builder).await;
         });
     }
@@ -1359,7 +1411,9 @@ mod tests {
             let expected_request_builder =
                 RequestBuilder::new(&state_machine.config, &request_params)
                     .add_update_check(&apps[0])
-                    .add_ping(&apps[0]);
+                    .add_ping(&apps[0])
+                    .session_id(GUID::from_u128(2))
+                    .request_id(GUID::from_u128(3));
             // Check that the second update check used the new app.
             assert_request(last_request_viewer, expected_request_builder).await;
         });

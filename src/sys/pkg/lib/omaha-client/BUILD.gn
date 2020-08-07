@@ -27,6 +27,7 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_repr",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:uuid",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]

@@ -10,7 +10,7 @@ use crate::{
     configuration::Config,
     protocol::{
         request::{
-            Event, InstallSource, Ping, Request, RequestWrapper, UpdateCheck, HEADER_APP_ID,
+            Event, InstallSource, Ping, Request, RequestWrapper, UpdateCheck, GUID, HEADER_APP_ID,
             HEADER_INTERACTIVITY, HEADER_UPDATER_NAME,
         },
         PROTOCOL_V3,
@@ -135,6 +135,9 @@ pub struct RequestBuilder<'a> {
     // The applications to include in this request, with their associated update checks, pings, and
     // events to report.
     app_entries: Vec<AppEntry>,
+
+    request_id: Option<GUID>,
+    session_id: Option<GUID>,
 }
 
 /// The RequestBuilder is a stateful builder for protocol::request::Request objects.  After being
@@ -155,7 +158,13 @@ impl<'a> RequestBuilder<'a> {
     /// Constructor for creating a new RequestBuilder based on the Updater configuration and the
     /// parameters for the current request.
     pub fn new(config: &'a Config, params: &RequestParams) -> Self {
-        RequestBuilder { config, params: params.clone(), app_entries: Vec::new() }
+        RequestBuilder {
+            config,
+            params: params.clone(),
+            app_entries: Vec::new(),
+            request_id: None,
+            session_id: None,
+        }
     }
 
     /// Insert the given app (with its cohort), and run the associated closure on it.  If the app
@@ -206,6 +215,16 @@ impl<'a> RequestBuilder<'a> {
         self
     }
 
+    /// Set the request id of the request.
+    pub fn request_id(self, request_id: GUID) -> Self {
+        Self { request_id: Some(request_id), ..self }
+    }
+
+    /// Set the session id of the request.
+    pub fn session_id(self, session_id: GUID) -> Self {
+        Self { session_id: Some(session_id), ..self }
+    }
+
     /// This function constructs the protocol::request::Request object from this Builder.
     ///
     /// Note that the builder is not consumed in the process, and can be used afterward.
@@ -250,6 +269,8 @@ impl<'a> RequestBuilder<'a> {
                     updater_version: self.config.updater.version.to_string(),
                     install_source: self.params.source.clone(),
                     is_machine: true,
+                    request_id: self.request_id.clone(),
+                    session_id: self.session_id.clone(),
                     os: self.config.os.clone(),
                     apps,
                 },
@@ -258,8 +279,8 @@ impl<'a> RequestBuilder<'a> {
     }
 }
 
-/// As the name implies, this is an itermediate that can be used to construct an http::Request from
-/// the data that's in the Builder.  It allows for type-aware inspection of the constructed protcol
+/// As the name implies, this is an intermediate that can be used to construct an http::Request from
+/// the data that's in the Builder.  It allows for type-aware inspection of the constructed protocol
 /// request, as well as the full construction of the http request (uri, headers, body).
 ///
 /// This struct owns all of it's data, so that they can be moved directly into the constructed http

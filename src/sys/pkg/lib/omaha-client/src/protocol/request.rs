@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::protocol::Cohort;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use serde_repr::Serialize_repr;
 use std::collections::HashMap;
 
@@ -56,6 +56,20 @@ pub struct Request {
     /// This is the 'ismachine' attribute of the request object.
     #[serde(rename = "ismachine")]
     pub is_machine: bool,
+
+    /// The randomly generated GUID for a single Omaha request.
+    ///
+    /// This is the 'requestid' attribute of the request object.
+    #[serde(rename = "requestid")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<GUID>,
+
+    /// The randomly generated GUID for all Omaha requests in an update session.
+    ///
+    /// This is the 'sessionid' attribute of the request object.
+    #[serde(rename = "sessionid")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<GUID>,
 
     /// Information about the device operating system.
     ///
@@ -329,5 +343,54 @@ pub enum EventErrorCode {
 impl Default for EventErrorCode {
     fn default() -> Self {
         EventErrorCode::ParseResponse
+    }
+}
+
+/// The GUID used in Omaha protocol for sessionid and requestid.
+///
+/// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#guids
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct GUID {
+    uuid: uuid::Uuid,
+}
+
+impl GUID {
+    /// Creates a new random GUID.
+    #[cfg(not(test))]
+    pub fn new() -> Self {
+        Self { uuid: uuid::Uuid::new_v4() }
+    }
+
+    // For unit tests, creates GUID using a thread local counter, so that for every test case,
+    // the first GUID will be {00000000-0000-0000-0000-000000000000},
+    // and the second will be {00000000-0000-0000-0000-000000000001}, and so on.
+    #[cfg(test)]
+    pub fn new() -> Self {
+        thread_local! {
+            static COUNTER: std::cell::RefCell<u128> =
+            std::cell::RefCell::new(0);
+        }
+        COUNTER.with(|counter| {
+            let mut counter = counter.borrow_mut();
+            let guid = Self::from_u128(*counter);
+            *counter += 1;
+            guid
+        })
+    }
+
+    #[cfg(test)]
+    pub fn from_u128(n: u128) -> Self {
+        // TODO: use uuid::Uuid::from_u128() when it's available.
+        Self { uuid: uuid::Uuid::from_slice(&n.to_be_bytes()).unwrap() }
+    }
+}
+
+// Wrap the uuid in {}.
+impl Serialize for GUID {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{{{}}}", self.uuid))
     }
 }
