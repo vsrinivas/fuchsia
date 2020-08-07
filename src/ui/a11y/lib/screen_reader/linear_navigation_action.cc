@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/screen_reader/one_finger_swipe_action.h"
+#include "src/ui/a11y/lib/screen_reader/linear_navigation_action.h"
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/scope.h>
@@ -13,17 +13,18 @@
 #include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
-OneFingerSwipeAction::OneFingerSwipeAction(ActionContext* action_context,
-                                           ScreenReaderContext* screen_reader_context,
-                                           OneFingerSwipeActionType action_type)
-    : ScreenReaderAction(action_context, screen_reader_context), action_type_(action_type) {}
 
-OneFingerSwipeAction::~OneFingerSwipeAction() = default;
+LinearNavigationAction::LinearNavigationAction(ActionContext* action_context,
+                                               ScreenReaderContext* screen_reader_context,
+                                               LinearNavigationDirection action_type)
+    : ScreenReaderAction(action_context, screen_reader_context), direction_(action_type) {}
 
-void OneFingerSwipeAction::Run(ActionData process_data) {
+LinearNavigationAction::~LinearNavigationAction() = default;
+
+void LinearNavigationAction::Run(ActionData process_data) {
   auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
   if (!a11y_focus) {
-    FX_LOGS(INFO) << "Swipe Action: No view is in focus.";
+    FX_LOGS(INFO) << "Linear Navigation Action: No view is in focus.";
     return;
   }
 
@@ -31,7 +32,7 @@ void OneFingerSwipeAction::Run(ActionData process_data) {
 
   // Get the new node base on ActionType.
   const fuchsia::accessibility::semantics::Node* new_node;
-  switch (action_type_) {
+  switch (direction_) {
     case kNextAction:
       new_node = action_context_->semantics_source->GetNextNode(
           a11y_focus->view_ref_koid, a11y_focus->node_id,
