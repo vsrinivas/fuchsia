@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/hwstress"
+    },
+    "sandbox": {
+        "dev": [
+            "class",
+            "sys"
+        ],
+        "services": [
+            "fuchsia.kernel.Stats",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

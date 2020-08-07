@@ -59,7 +59,10 @@ executable("bin") {
   deps = [ ":lib" ]
 }
 
-package("hwstress") {
+# Traditional CLI package.
+package("hwstress_cli") {
+  package_name = "hwstress-cli"
+
   deps = [ ":bin" ]
 
   binaries = [
@@ -68,6 +71,42 @@ package("hwstress") {
       name = "hwstress"
     },
   ]
+}
+
+# CFv1 package.
+package("hwstress_pkg") {
+  package_name = "hwstress"
+
+  deps = [ ":bin" ]
+
+  binaries = [
+    {
+      name = "hwstress"
+    },
+  ]
+
+  # We generate an in-package CMX file for the top-level "hwstress"
+  # binary, and also for each style of test we run.
+  #
+  # This is to help automated tests seperate logs for the different
+  # styles of test, where currently the CFv1 component name is the
+  # only mechanism we have to do this.
+  meta = []
+  foreach(name,
+          [
+            "hwstress",
+            "cpu",
+            "memory",
+            "flash",
+            "led",
+          ]) {
+    meta += [
+      {
+        path = rebase_path("meta/hwstress.cmx")
+        dest = name + ".cmx"
+      },
+    ]
+  }
 }
 
 # Tests using CFv1.
@@ -148,5 +187,13 @@ group("tests") {
   public_deps = [
     ":hwstress_test_pkg",
     "//src/lib/isolated_devmgr/v2_component",
+  ]
+}
+
+group("hwstress") {
+  testonly = true
+  public_deps = [
+    ":hwstress_cli",
+    ":hwstress_pkg",
   ]
 }
