@@ -177,6 +177,11 @@ config("compiler") {
         # regardless of this switch.
         cflags += [ "-mno-outline-atomics" ]
       }
+    } else if (current_cpu == "riscv64") {
+      compiler_flags += [
+        "-march=rv64gc",
+        "-mno-relax",
+      ]
     } else if (current_cpu == "x64") {
       if (!is_gcc) {
         # TODO(fxrev.dev/485257): Enable for GCC when it supports march=x86-64-v2
