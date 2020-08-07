@@ -122,10 +122,15 @@ class FidlDecoder final : public BaseVisitor<Byte> {
       return Status::kMemoryError;
     }
     {
-      auto status = ValidatePadding(&bytes_[next_out_of_line_ + inline_size],
-                                    new_offset - next_out_of_line_ - inline_size);
-      if (status != Status::kSuccess) {
-        return status;
+      if (inline_size % FIDL_ALIGNMENT != 0) {
+        // Validate the last 8-byte block.
+        const uint64_t* block_end = reinterpret_cast<const uint64_t*>(&bytes_[new_offset]) - 1;
+        uint64_t padding_len = new_offset - next_out_of_line_ - inline_size;
+        uint64_t padding_mask = ~0ull << (64 - 8 * padding_len);
+        auto status = ValidatePadding(block_end, padding_mask);
+        if (status != Status::kSuccess) {
+          return status;
+        }
       }
     }
     if (unlikely(pointee_type == PointeeType::kString)) {
@@ -233,12 +238,7 @@ class FidlDecoder final : public BaseVisitor<Byte> {
 
   template <typename MaskType>
   Status VisitInternalPadding(Position padding_position, MaskType mask) {
-    const MaskType* padding_ptr = padding_position.template Get<const MaskType>();
-    if ((*padding_ptr & mask) != 0) {
-      SetError("non-zero padding bytes detected");
-      return Status::kConstraintViolationError;
-    }
-    return Status::kSuccess;
+    return ValidatePadding(padding_position.template Get<const MaskType>(), mask);
   }
 
   EnvelopeCheckpoint EnterEnvelope() {
@@ -312,12 +312,11 @@ class FidlDecoder final : public BaseVisitor<Byte> {
     *out_error_msg_ = error;
   }
 
-  Status ValidatePadding(const uint8_t* padding_ptr, uint32_t padding_length) {
-    for (uint32_t i = 0; i < padding_length; i++) {
-      if (unlikely(padding_ptr[i] != 0)) {
-        SetError("non-zero padding bytes detected");
-        return Status::kConstraintViolationError;
-      }
+  template <typename MaskType>
+  Status ValidatePadding(const MaskType* padding_ptr, MaskType mask) {
+    if ((*padding_ptr & mask) != 0) {
+      SetError("non-zero padding bytes detected");
+      return Status::kConstraintViolationError;
     }
     return Status::kSuccess;
   }
