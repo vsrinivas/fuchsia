@@ -4,6 +4,11 @@
 
 import("//build/unification/zx_library.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}
+
 zx_library("as370") {
   sdk = "source"
   sdk_headers = [

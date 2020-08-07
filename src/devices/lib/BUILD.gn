@@ -14,6 +14,7 @@ group("lib") {
 group("tests") {
   testonly = true
   deps = [
+    "as370:tests",
     "dev-operation:tests",
     "dma-buffer:tests",
     "driver:tests",
