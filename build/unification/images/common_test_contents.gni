@@ -16,7 +16,6 @@ common_test_contents = [
   "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test",
   "//src/devices/clock/drivers/msm8x53-clk:msm8x53-clk-test",
   "//src/devices/nand/drivers/ram-nand:ram-nand-test",
-  "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test",
   "//src/devices/power/drivers/power:power-test",
   "//src/devices/spi/drivers/mtk-spi:mtk-spi-test",
   "//src/devices/sysmem/tests/sysmem",

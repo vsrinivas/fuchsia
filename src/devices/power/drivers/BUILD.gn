@@ -7,6 +7,7 @@ group("tests") {
 
   deps = [
     "as370-power:tests",
+    "msm8x53-power:tests",
     "mtk-power:tests",
     "vs680-power:tests",
     "aml-meson-power:tests",
