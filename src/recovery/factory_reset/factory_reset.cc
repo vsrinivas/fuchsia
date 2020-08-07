@@ -101,7 +101,7 @@ void FactoryReset::Reset(ResetCallback callback) {
   }
 
   // Reboot to initiate the recovery.
-  admin_->Reboot(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST,
+  admin_->Reboot(fuchsia::hardware::power::statecontrol::RebootReason::FACTORY_DATA_RESET,
                  [callback{std::move(callback)}](
                      fuchsia::hardware::power::statecontrol::Admin_Reboot_Result status) {
                    if (status.is_err()) {

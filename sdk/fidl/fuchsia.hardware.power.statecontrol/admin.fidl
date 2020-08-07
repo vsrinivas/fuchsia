@@ -94,6 +94,7 @@ enum RebootReason {
     USER_REQUEST = 1;
     SYSTEM_UPDATE = 2;
     HIGH_TEMPERATURE = 3;
+    FACTORY_DATA_RESET = 6;
 
     /// Sessionmgr has failed.
     SESSION_FAILURE = 4;

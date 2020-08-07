@@ -52,7 +52,7 @@ class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_
               RebootCallback callback) override {
     ASSERT_FALSE(suspend_called_);
     suspend_called_ = true;
-    ASSERT_EQ(fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST, req);
+    ASSERT_EQ(fuchsia::hardware::power::statecontrol::RebootReason::FACTORY_DATA_RESET, req);
     callback(fuchsia::hardware::power::statecontrol::Admin_Reboot_Result::WithResponse(
         fuchsia::hardware::power::statecontrol::Admin_Reboot_Response(ZX_OK)));
   }
