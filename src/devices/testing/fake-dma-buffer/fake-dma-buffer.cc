@@ -78,7 +78,10 @@ class BufferFactoryImpl : public dma_buffer::BufferFactory {
     fake->alignment_log2 = alignment_log2;
     fake->enable_cache = true;
     fake->size = size;
-    fake->backing_storage = std::move(real_vmo);
+    status = real_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &fake->backing_storage);
+    if (status != ZX_OK) {
+      return status;
+    }
     fake->virt = virt;
     fake->contiguous = true;
     fake->bti = bti.get();
