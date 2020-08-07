@@ -65,7 +65,7 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
 
   auto vpm = std::make_unique<VPartitionManager>(dev, block_info, block_op_size, &bp);
 
-  zx_status_t status = vpm->DdkAdd("fvm", DEVICE_ADD_INVISIBLE);
+  zx_status_t status = vpm->DdkAdd("fvm");
   if (status != ZX_OK) {
     fprintf(stderr, "fvm: ERROR: block device '%s': failed to DdkAdd: %s\n", device_get_name(dev),
             zx_status_get_string(status));
@@ -547,7 +547,9 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
       }
 
       // Remove device, VPartition if this was a request to release all slices.
-      vp->DdkRemoveDeprecated();
+      if (vp->zxdev()) {
+        vp->DdkAsyncRemove();
+      }
       auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
       entry->Release();
       vp->KillLocked();
