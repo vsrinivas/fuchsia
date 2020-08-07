@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/build_id.gni")
+import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
@@ -206,6 +207,10 @@ config("static_cpp_standard_library") {
   ldflags = [ "-static-libstdc++" ]
 }
 
+config("dynamic_rust_standard_library") {
+  rustflags = [ "-Cprefer-dynamic" ]
+}
+
 # Configure a larger (2MB) stack size for Rust binaries.
 #
 # Currently, threads created by Rust's libstd have a hardcoded default stack
@@ -222,4 +227,8 @@ config("integer-paranoia") {
     "-fsanitize=integer-divide-by-zero,signed-integer-overflow",
     "-fsanitize-undefined-trap-on-error",
   ]
+}
+
+config("libunwind") {
+  libs = [ clang_libunwind ]
 }

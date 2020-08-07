@@ -18,8 +18,11 @@ FUZZER_VARIANT_SUFFIX = '-fuzzer'
 RUST_VARIANT_PREFIX = 'rust-'
 
 
-def binary_info(filename):
-    return elfinfo.get_elf_info(filename, [ZIRCON_DRIVER_IDENT])
+def binary_info(filename, fallback_soname=None):
+    info = elfinfo.get_elf_info(filename, [ZIRCON_DRIVER_IDENT])
+    if info and not info.soname:
+        return info.with_soname(fallback_soname or os.path.basename(filename))
+    return info
 
 
 def is_driver(info):
@@ -43,6 +46,11 @@ class variant(namedtuple(
             # Variants without their own toolchain libraries wind up placing
             # vanilla toolchain libraries in the variant target lib directory
             # so they should be accepted even though they don't really match.
+            return True
+        if info.soname.startswith('libstd-') or info.soname.startswith(
+                'libtest-'):
+            # Same as above, but for Rust. Rust doesn't have any
+            # variant-specific runtimes, currently.
             return True
         if self.runtime:
             return self.runtime in info.needed or info.soname == self.runtime

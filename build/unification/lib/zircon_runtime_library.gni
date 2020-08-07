@@ -26,9 +26,20 @@ template("zircon_runtime_library") {
     name += "." + string_replace(toolchain_variant.name, "-fuzzer", "")
   }
 
+  # TODO(tmandry): Remove fallback logic once clang toolchain rolls.
+  fallback_name = false
+  if (defined(invoker.fallback)) {
+    fallback_name = "lib.${invoker.fallback}"
+    if (toolchain_variant.instrumented && toolchain_variant.name != "") {
+      # Fuzzers just use the base variant.
+      fallback_name +=
+          "." + string_replace(toolchain_variant.name, "-fuzzer", "")
+    }
+  }
+
   artifact = false
   foreach(entry, zircon_artifacts) {
-    if (entry.name == name) {
+    if (entry.name == name || entry.name == fallback_name) {
       assert(artifact == false, "Duplicate Zircon library: $name")
       artifact = entry
     }
@@ -63,6 +74,7 @@ template("zircon_runtime_library") {
                                  "json")
 
   group(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
     metadata = {
       # Used by the distribution_manifest template.
       distribution_entries_barrier = []

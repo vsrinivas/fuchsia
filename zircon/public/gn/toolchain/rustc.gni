@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/prebuilt.gni")
+import("breakpad.gni")
+
+declare_args() {
+  # Directory where the Rust toolchain binary ("rustc") is found.  If this is
+  # "", then the prebuilt rustc is used.  Using a system compiler is not
+  # supported.  This toolchain is expected to support both Fuchsia targets and
+  # the host.
+  rustc_tool_dir = ""
+}
+
+# This is a string identifying the particular toolchain version in use.  Its
+# only purpose is to be unique enough that it changes when switching to a new
+# toolchain, so that recompilations with the new compiler can be triggered.
+#
+# When using the prebuilt, the CIPD instance ID of the prebuilt is perfect.
+# When not using the prebuilt, there isn't a quick way to extract the compiler
+# version.  But at least changing the setting to a different compiler will
+# change the string.
+if (rustc_tool_dir == "") {
+  _prebuilt_rustc_dir = "$prebuilt_dir/third_party/rust/$host_platform"
+  rustc_tool_dir = "$_prebuilt_rustc_dir/bin"
+  _prebuilt_rustc_cipd_version =
+      read_file("$_prebuilt_rustc_dir/.versions/rust.cipd_version", "json")
+  rustc_version_string = _prebuilt_rustc_cipd_version.instance_id
+}
+
+# Human-readable identifier for the toolchain version.
+#
+# TODO(tmandry): Make this the same repo/revision info from `rustc --version`.
+# e.g., clang_version_description = read_file("$_rustc_lib_dir/VERSION")
+rustc_version_description = ""

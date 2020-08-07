@@ -194,6 +194,18 @@ template("rustc_test") {
       deps += invoker.test_deps
     }
 
+    data_deps = []
+    if (is_fuchsia) {
+      # Dynamic linking applies to not only to libstd but to libtest as well,
+      # which means we must depend on it as a data_dep to get it in our
+      # package.
+      _dynamic_rust_config =
+          [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+      if (configs + _dynamic_rust_config - _dynamic_rust_config != configs) {
+        data_deps += [ "//build/unification/lib/toolchain:libtest" ]
+      }
+    }
+
     sources = _sources
 
     if (is_linux || is_mac) {

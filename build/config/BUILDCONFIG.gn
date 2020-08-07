@@ -262,11 +262,15 @@ default_executable_configs = default_common_binary_configs + [
                                "//build/config:default_libs",
                              ]
 
-# The fdio config is added here so that it can later be removed from default
-# configs for targets which do not need it. This cannot be done when the config
-# is added transitively.
+# These config are added here so that they can later be removed from default
+# configs for targets which do not need them. This cannot be done when the
+# configs are added transitively.
 if (current_os == "fuchsia") {
   default_executable_configs += [ "//build/config/fuchsia:fdio_config" ]
+
+  # TODO(57585): Enable this for shared and (non-rlib) static libraries as well.
+  default_executable_configs +=
+      [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 }
 default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
 
@@ -1159,17 +1163,33 @@ template("variant_target") {
           data_deps = []
         }
         data_deps += [ "//build/unification/lib/sysroot" ]
-        should_add_toolchain_deps = true
+        should_add_cpp_runtime = true
         if (defined(configs)) {
           # Do not add runtime dependencies if compiling statically.
           static_cpp_config =
               [ "//build/config/fuchsia:static_cpp_standard_library" ]
           if (configs + static_cpp_config - static_cpp_config != configs) {
-            should_add_toolchain_deps = false
+            should_add_cpp_runtime = false
           }
         }
-        if (should_add_toolchain_deps) {
-          data_deps += [ "//build/unification/lib/toolchain" ]
+        if (should_add_cpp_runtime) {
+          data_deps += [ "//build/unification/lib/toolchain:cpp" ]
+        }
+
+        should_add_rust_runtime = false
+        if (defined(invoker.crate_root)) {
+          should_add_rust_runtime = true
+        }
+        dynamic_rust_config =
+            [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+        if (!defined(configs) ||
+            configs + dynamic_rust_config - dynamic_rust_config == configs) {
+          # For rustc, static linking is the default. So we only add a runtime if
+          # the dynamic linking config is present.
+          should_add_rust_runtime = false
+        }
+        if (should_add_rust_runtime) {
+          data_deps += [ "//build/unification/lib/toolchain:rust" ]
         }
       }
     }

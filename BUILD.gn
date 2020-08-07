@@ -8,6 +8,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
 import("//build/info/info.gni")
+import("//build/rust/config.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
@@ -115,6 +116,9 @@ declare_args() {
       # dependencies on toolchain updates only if it knows it's using the
       # prebuilt.
       clang_tool_dir = rebase_path(clang_prefix, "", root_build_dir)
+    }
+    if (rustc_prefix != default_rustc_prefix) {
+      rustc_tool_dir = rebase_path(rustc_prefix, "", root_build_dir)
     }
     if (host_os == "mac") {
       mac_sdk_path = mac_sdk_path

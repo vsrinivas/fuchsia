@@ -191,14 +191,9 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 
             # Translate the SONAME to a target file name.
             target = context.variant.soname_target(soname)
-            if add_auxiliary(target, auxiliary):
+            if add_auxiliary(target, False):
                 # We found it in an existing manifest.
                 continue
-
-            # An auxiliary's dependencies must all be auxiliaries too.
-            assert not auxiliary, (
-                "missing '%s' needed by auxiliary %r via %r" %
-                (target, binary, context.root_dependent))
 
             # Check if it's elsewhere in the input set.
             lib = unexamined_binaries.get(target)
@@ -280,7 +275,7 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
 # stripped files), a list of binary_info (all debug files), and a boolean
 # saying whether any new stripped output files were written in the process.
 def strip_binary_manifest(
-        manifest, stripped_dir, build_id_dir, clang_lib_dir, examined):
+        manifest, stripped_dir, build_id_dir, toolchain_lib_dirs, examined):
     new_output = False
 
     def find_debug_file(filename):
@@ -294,9 +289,10 @@ def strip_binary_manifest(
             debugfile = filename[:-6]
         elif os.path.exists(filename + '.debug'):
             debugfile = filename + '.debug'
-        elif os.path.realpath(filename).startswith(
-                os.path.realpath(clang_lib_dir)):
-            build_id_dir = os.path.join(clang_lib_dir, 'debug', '.build-id')
+        elif (lib_dir := next((dir for dir in toolchain_lib_dirs if
+                os.path.realpath(filename).startswith(os.path.realpath(dir) + os.sep)),
+                None)):
+            build_id_dir = os.path.join(lib_dir, 'debug', '.build-id')
             if not os.path.exists(build_id_dir):
                 return None
             info = elfinfo.get_elf_info(filename)
@@ -304,7 +300,8 @@ def strip_binary_manifest(
                 build_id_dir, info.build_id[:2], info.build_id[2:] + '.debug')
             if not os.path.exists(debugfile):
                 return None
-            return binary_info(debugfile)
+            # Pass filename as fallback so we don't fallback to the build-id entry name.
+            return binary_info(debugfile, fallback_soname=os.path.basename(filename))
         else:
             dir, file = os.path.split(filename)
             if file.endswith('.so') or '.so.' in file:
@@ -406,7 +403,7 @@ def emit_manifests(args, selected, unselected, input_binaries):
     # stripped files are implicit outputs (there's no such thing as a depfile
     # for outputs, only for inputs).
     binaries, debug_files, force_update = strip_binary_manifest(
-        binaries, args.stripped_dir, args.build_id_dir, args.clang_lib_dir,
+        binaries, args.stripped_dir, args.build_id_dir, args.toolchain_lib_dir,
         examined)
 
     # Collate groups.
@@ -468,10 +465,11 @@ is used for shared libraries and the like.
         metavar='DIR',
         help='.build-id directory to populate when stripping')
     parser.add_argument(
-        '--clang-lib-dir',
-        required=False,
+        '--toolchain-lib-dir',
+        default=[],
+        action='append',
         metavar='DIR',
-        help='Path to Clang library directory')
+        help='Path to a toolchain library directory (multiple allowed)')
     parser.add_argument(
         '--depfile', metavar='DEPFILE', help='Ninja depfile to write')
     parser.add_argument(

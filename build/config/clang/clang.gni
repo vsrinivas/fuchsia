@@ -23,15 +23,15 @@ if (current_cpu == "arm64") {
 }
 
 if (is_fuchsia) {
-  clang_target = "${clang_cpu}-fuchsia"
+  clang_target = "${clang_cpu}-unknown-fuchsia"
 } else if (is_linux) {
-  clang_target = "${clang_cpu}-linux-gnu"
+  clang_target = "${clang_cpu}-unknown-linux-gnu"
 } else if (is_mac) {
   clang_target = "${clang_cpu}-apple-darwin"
 } else if (current_cpu == "wasm32" && current_os == "unknown") {
   clang_target = "${clang_cpu}-unknown-unknown"
 } else if (current_os == "win") {
-  clang_target = "${clang_cpu}-windows-msvc"
+  clang_target = "${clang_cpu}-pc-windows-msvc"
 } else {
   assert(false, "OS not supported")
 }
@@ -45,3 +45,16 @@ clang_resource_dir =
                 ],
                 "trim string",
                 [])
+
+# We only provide dynamic runtime libs on Fuchsia.
+if (is_fuchsia) {
+  # TODO(57729): Get this information from runtime.json instead.
+  clang_libunwind =
+      exec_script(rebase_path("$clang_prefix/clang++", "", root_build_dir),
+                  [
+                    "--target=$clang_target",
+                    "-print-file-name=libunwind.so",
+                  ],
+                  "trim string",
+                  [])
+}

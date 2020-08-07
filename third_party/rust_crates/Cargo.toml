@@ -365,6 +365,10 @@ env_vars = ["OUT_DIR=../../../../compat/valico"]
 # These don't have build.rs scripts, but they rely on Cargo populating the environment variables
 #
 # Keep this sorted alphabetically, please.
+[[gn.crate.backtrace."0.3.42"]]
+platform = "cfg(target_os = \"fuchsia\")"
+configs = [ "//build/config/fuchsia:libunwind" ]
+
 [[gn.crate.handlebars."2.0.0-beta.2"]]
 # pest relies on this being set to find the grammar file
 env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars" ]
@@ -386,7 +390,6 @@ configs = [ "//src/lib/icu:version" ]
 [[gn.crate.rust_icu_utext."0.3.0"]]
 configs = [ "//src/lib/icu:version" ]
 
-
 [[gn.crate.unic-common."0.9.0"]]
 env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-common\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
 [[gn.crate.unic-ucd-version."0.9.0"]]
@@ -400,8 +403,7 @@ env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-ucd-blo
 [[gn.crate.trust_dns_resolver."0.19.2"]]
 env_vars = [ "CARGO_PKG_VERSION=\\\"0.19.2\\\"" ]
 
-
-# These dependencies have build.rs scripts, but dummy invokations indicating they
+# These dependencies have build.rs scripts, but dummy invocations indicating they
 # do not need to be run are sufficient for our build
 #
 # Keep this sorted alphabetically, please.

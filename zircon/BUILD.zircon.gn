@@ -599,6 +599,7 @@ if (toolchain.environment == "user") {
       variant = variant
       deps = [
         "$zx/public/gn/config:shared-libc++-deps",
+        "$zx/public/gn/config:shared-ruststd-deps",
         "$zx/system/ulib",
       ]
       foreach(dep, toolchain.implicit_deps) {

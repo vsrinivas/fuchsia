@@ -243,6 +243,7 @@ rustc_binary("bin") {
   configs += [ "//build/config/lto:thinlto" ]
   configs -= [ "//build/config/lto:thinlto" ]
   configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   deps = [
     ":lib",

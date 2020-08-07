@@ -1206,6 +1206,9 @@ rust_library("backtrace-v0_3_42") {
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
+  if (is_fuchsia) {
+    configs += [ "//build/config/fuchsia:libunwind" ]
+  }
 
   deps = []
   deps += [ ":backtrace-sys-v0_1_32" ]

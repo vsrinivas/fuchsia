@@ -3,13 +3,14 @@
 # found in the LICENSE file.
 
 import("clang.gni")
+import("rustc.gni")
 
 _clang_lib_dir = "$clang_tool_dir/../lib"
 
 _clang_runtime_file = "$_clang_lib_dir/runtime.json"
 _clang_runtime = read_file(_clang_runtime_file, "json")
 
-# Toolchain spec for use with toolchain_runtime_deps().
+# Clang toolchain spec for use with toolchain_runtime_deps().
 clang_toolchain_spec = {
   runtime = _clang_runtime
   runtime_file = _clang_runtime_file
@@ -20,6 +21,21 @@ clang_toolchain_spec = {
     "cflags",
     "ldflags",
   ]
+}
+
+_rustc_lib_dir = "$rustc_tool_dir/../lib"
+
+_rustc_runtime_file = "$_rustc_lib_dir/runtime.json"
+_rustc_runtime = read_file(_rustc_runtime_file, "json")
+
+# Rust toolchain spec for use with toolchain_runtime_deps().
+rustc_toolchain_spec = {
+  runtime = _rustc_runtime
+  runtime_file = _rustc_runtime_file
+  lib_dir = _rustc_lib_dir
+  version_string = rustc_version_string
+  version_description = rustc_version_description
+  flag_vars = [ "rustflags" ]
 }
 
 # Provide deps required by toolchain-provided runtime libraries.

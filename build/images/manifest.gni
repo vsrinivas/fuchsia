@@ -3,10 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
+import("//build/rust/config.gni")
 
 declare_args() {
   # Path to Clang lib directory.
   clang_lib_dir = rebase_path("${clang_prefix}/../lib", root_build_dir)
+
+  # Path to rustc lib directory.
+  rustc_lib_dir = rebase_path("${rustc_prefix}/../lib", root_build_dir)
 
   # Extra args to globally apply to the manifest generation script.
   extra_manifest_args = []
@@ -184,7 +188,8 @@ template("generate_manifest") {
              "--depfile=" + rebase_path(depfile, root_build_dir),
              "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
              "--build-id-dir=" + rebase_path("$root_build_dir/.build-id"),
-             "--clang-lib-dir=" + clang_lib_dir,
+             "--toolchain-lib-dir=" + clang_lib_dir,
+             "--toolchain-lib-dir=" + rustc_lib_dir,
              "@{{response_file_name}}",
            ]
     response_file_contents = []

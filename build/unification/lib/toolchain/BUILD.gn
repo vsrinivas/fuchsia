@@ -4,24 +4,34 @@
 
 import("//build/unification/lib/zircon_runtime_library.gni")
 
-compiler_libs = [
-  "libcpp.so.2",
-  "libcppabi.so.1",
-  "libunwind.so.1",
+# TODO(tmandry): Remove fallback and associated logic once clang toolchain rolls.
+# fallback is needed for clang soft migration.
+cpp_libs = [
+  {
+    name = "libcxx"
+    fallback = "libcpp.so.2"
+  },
+  {
+    name = "libcxxabi"
+    fallback = "libcppabi.so.1"
+  },
+  {
+    name = "libunwind"
+    fallback = "libunwind.so.1"
+  },
 ]
 
-toolchain_deps = []
+cpp_deps = []
 
-foreach(lib, compiler_libs) {
-  label = "//build/unification/images:$lib"
-  out_dir = get_label_info(label, "target_out_dir")
-  name = get_label_info(label, "name")
-
-  zircon_runtime_library(lib) {
-    library = lib
+foreach(lib, cpp_libs) {
+  zircon_runtime_library(lib.name) {
+    library = lib.name
+    if (defined(lib.fallback)) {
+      fallback = lib.fallback
+    }
+    visibility = [ ":*" ]
   }
-
-  toolchain_deps += [ ":$lib" ]
+  cpp_deps += [ ":${lib.name}" ]
 }
 
 if (toolchain_variant.instrumented) {
@@ -39,10 +49,24 @@ if (toolchain_variant.instrumented) {
     zircon_runtime_library(name) {
       library = lib
     }
-    toolchain_deps += [ ":$name" ]
+    cpp_deps += [ ":$name" ]
   }
 }
 
-group("toolchain") {
-  deps = toolchain_deps
+group("cpp") {
+  deps = cpp_deps
+}
+
+zircon_runtime_library("libstd") {
+  library = "libstd"
+  visibility = [ ":*" ]
+}
+
+group("rust") {
+  deps = [ ":libstd" ]
+}
+
+# Included directly by test templates.
+zircon_runtime_library("libtest") {
+  library = "libtest"
 }

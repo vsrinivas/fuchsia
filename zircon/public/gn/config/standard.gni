@@ -172,6 +172,10 @@ standard_environments = [
         add = [ "$zx/public/gn/config:shared-libc++-deps" ]
         remove = [ "$zx/public/gn/config:static-libc++-deps" ]
       },
+
+      # Currently there's no config in the zircon build for making the
+      # Rust standard library static.
+      "$zx/public/gn/config:shared-ruststd-deps",
     ]
     shlib = true
     strip = "--strip-sections"

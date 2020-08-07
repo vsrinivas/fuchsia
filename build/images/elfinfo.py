@@ -333,17 +333,23 @@ class elf_info(namedtuple(
 
     def rename(self, filename):
         assert os.path.samefile(self.filename, filename)
+        return self._replace(filename=filename)
+
+    def with_soname(self, soname):
+        return self._replace(soname=soname)
+
+    def copy(self):
+        return self._replace()
+
+    def _replace(self, **kwargs):
         # Copy the tuple.
-        clone = self.__class__(filename, *self[1:])
+        clone = self.__class__(*super()._replace(**kwargs))
         # Copy the lazy state.
         clone.elf = self.elf
         if self.get_sources == clone.get_sources:
             raise Exception("uninitialized elf_info object!")
         clone.get_sources = self.get_sources
         return clone
-
-    def copy(self):
-        return self.rename(self.filename)
 
     # This is replaced with a closure by the creator in get_elf_info.
     def get_sources(self):

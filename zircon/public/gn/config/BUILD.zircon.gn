@@ -5,6 +5,7 @@
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/clang.gni")
 import("$zx/public/gn/toolchain/goma.gni")
+import("$zx/public/gn/toolchain/rustc.gni")
 import("$zx/public/gn/toolchain/toolchain_runtime_deps.gni")
 import("levels.gni")
 
@@ -807,6 +808,17 @@ if (is_fuchsia) {
     toolchain_spec = clang_toolchain_spec
     cflags = toolchain.runtime_deps_cflags
     ldflags = []
+    zx_publish = true
+  }
+
+  toolchain_runtime_deps("static-ruststd-deps") {
+    toolchain_spec = rustc_toolchain_spec
+    rustflags = toolchain.runtime_deps_rustflags
+  }
+
+  toolchain_runtime_deps("shared-ruststd-deps") {
+    toolchain_spec = rustc_toolchain_spec
+    rustflags = toolchain.runtime_deps_rustflags + [ "-Cprefer-dynamic" ]
     zx_publish = true
   }
 }
