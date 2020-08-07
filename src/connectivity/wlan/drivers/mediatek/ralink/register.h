@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_REGISTER_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_MEDIATEK_RALINK_REGISTER_H_
 
-#include <wlan/common/bitfield.h>
-
 #include <type_traits>
+
+#include <wlan/common/bitfield.h>
 
 namespace ralink {
 

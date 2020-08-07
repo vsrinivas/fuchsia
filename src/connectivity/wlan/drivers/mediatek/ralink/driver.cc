@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdint.h>
+
+#include <future>
+#include <thread>
+#include <vector>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <usb/usb.h>
 #include <wlan/common/logging.h>
-
-#include <stdint.h>
-#include <future>
-#include <thread>
-#include <vector>
 
 #include "device.h"
 
