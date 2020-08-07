@@ -18,7 +18,6 @@ common_test_contents = [
   "//src/devices/lib/as370/test:audio-dsp-test",
   "//src/devices/lib/as370/test:syn-audio-in-test",
   "//src/devices/nand/drivers/ram-nand:ram-nand-test",
-  "//src/devices/power/drivers/as370-power:as370-power-test",
   "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test",
   "//src/devices/power/drivers/power:power-test",
   "//src/devices/serial/drivers/uart16550:uart16550-test",
