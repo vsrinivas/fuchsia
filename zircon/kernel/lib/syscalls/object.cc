@@ -558,7 +558,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         stats.data_aborts = cpu->gstats.data_aborts;
         stats.smc_instructions = cpu->gstats.smc_instructions;
         stats.interrupts = cpu->gstats.interrupts;
-#else
+#elif __x86_64__
         stats.vmcall_instructions = cpu->gstats.vmcall_instructions;
         stats.pause_instructions = cpu->gstats.pause_instructions;
         stats.xsetbv_instructions = cpu->gstats.xsetbv_instructions;

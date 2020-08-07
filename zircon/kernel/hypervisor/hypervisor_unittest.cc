@@ -49,6 +49,8 @@ static zx_status_t create_gpas(ktl::unique_ptr<hypervisor::GuestPhysicalAddressS
   return hypervisor::GuestPhysicalAddressSpace::Create(1 /* vmid */, gpas);
 #elif ARCH_X86
   return hypervisor::GuestPhysicalAddressSpace::Create(gpas);
+#elif ARCH_RISCV64
+  return hypervisor::GuestPhysicalAddressSpace::Create(gpas);
 #endif
 }
 

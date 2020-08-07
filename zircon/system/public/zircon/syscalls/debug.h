@@ -154,6 +154,25 @@ typedef struct zx_thread_state_debug_regs {
 
 } zx_thread_state_debug_regs_t;
 
+#elif defined(__riscv)
+
+typedef struct zx_thread_state_general_regs {
+  uint64_t r[2];
+  uint64_t placeholder;
+} zx_thread_state_general_regs_t;
+
+typedef struct zx_thread_state_fp_regs {
+  uint64_t placeholder;
+} zx_thread_state_fp_regs_t;
+
+typedef struct zx_thread_state_vector_regs {
+  uint8_t reserved;
+} zx_thread_state_vector_regs_t;
+
+typedef struct zx_thread_state_debug_regs {
+  uint8_t reserved;
+} zx_thread_state_debug_regs_t;
+
 #endif
 
 // Value for ZX_THREAD_STATE_SINGLE_STEP. The value can be 0 (not single-stepping), or 1

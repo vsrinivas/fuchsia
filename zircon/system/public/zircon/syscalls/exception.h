@@ -109,6 +109,15 @@ typedef struct zx_arm64_exc_data {
     uint8_t padding2[8];
 } zx_arm64_exc_data_t;
 
+typedef struct zx_riscv64_exc_data_v1 {
+    uint32_t placeholder;
+} zx_riscv64_exc_data_v1_t;
+
+typedef struct zx_riscv64_exc_data {
+    uint32_t placeholder;
+    uint8_t padding2[20];
+} zx_riscv64_exc_data_t;
+
 typedef struct zx_exception_context_v1 {
     struct {
         union {
@@ -116,6 +125,10 @@ typedef struct zx_exception_context_v1 {
             struct {
               zx_arm64_exc_data_v1_t arm_64;
               uint8_t padding1[8];
+            };
+            struct {
+              zx_riscv64_exc_data_v1_t  riscv_64;
+              uint8_t padding2[20];
             };
         } u;
     } arch;
@@ -129,6 +142,7 @@ typedef struct zx_exception_context {
         union {
             zx_x86_64_exc_data_t x86_64;
             zx_arm64_exc_data_t arm_64;
+            zx_riscv64_exc_data_t riscv_64;
         } u;
     } arch;
     uint32_t synth_code;

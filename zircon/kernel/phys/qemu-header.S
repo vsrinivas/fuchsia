@@ -17,6 +17,8 @@
   b _start
 #elif defined(__x86_64__) || defined(__i386__)
   jmp _start
+#elif defined(__riscv)
+  j _start
 #else
 #error "what machine??"
 #endif

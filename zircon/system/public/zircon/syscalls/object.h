@@ -580,10 +580,19 @@ typedef struct zx_x86_64_info_guest_stats {
     uint64_t vmcall_instructions;
 } zx_x86_64_info_guest_stats_t;
 
+typedef struct zx_riscv64_info_guest_stats_t {
+    uint32_t cpu_number;
+    uint32_t flags;
+    uint64_t vm_entries;
+    uint64_t vm_exits;
+} zx_riscv64_info_guest_stats_t;
+
 #if defined(__aarch64__)
 typedef zx_arm64_info_guest_stats_t zx_info_guest_stats_t;
 #elif defined(__x86_64__)
 typedef zx_x86_64_info_guest_stats_t zx_info_guest_stats_t;
+#elif defined(__riscv)
+typedef zx_riscv64_info_guest_stats_t zx_info_guest_stats_t;
 #endif
 
 // Info on the runtime of a task.
