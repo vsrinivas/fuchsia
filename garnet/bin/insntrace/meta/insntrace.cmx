@@ -4,12 +4,15 @@
     },
     "sandbox": {
         "dev": [
-            "misc",
             "sys/cpu-trace"
         ],
         "features": [
             "isolated-persistent-storage",
             "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.tracing.kernel.Controller",
+            "fuchsia.tracing.kernel.Reader"
         ]
     }
 }

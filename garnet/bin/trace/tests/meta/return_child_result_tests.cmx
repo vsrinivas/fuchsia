@@ -10,7 +10,11 @@
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ]
-            }
+            },
+            "system-services": [
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader"
+            ]
         }
     },
     "program": {

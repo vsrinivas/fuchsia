@@ -73,6 +73,7 @@ group("tests") {
     "//zircon/system/ulib/inet6/test:inet6-test-package",
     "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-package",
     "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-package",
+    "//zircon/system/ulib/ktrace/test:ktrace-test-package",
     "//zircon/system/ulib/launchpad/test:launchpad-package",
     "//zircon/system/ulib/lockdep/test:lockdep-test-package",
     "//zircon/system/ulib/memfs/test:memfs-tests-package",
