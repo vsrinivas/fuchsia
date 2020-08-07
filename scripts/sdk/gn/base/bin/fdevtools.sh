@@ -72,7 +72,7 @@ LABEL_DEVTOOLS="$(echo "${VER_DEVTOOLS}" | tr ':/' '_')"
 
 # Can download Fuchsia DevTools from CIPD with either "latest" or a CIPD hash
 echo "Downloading Fuchsia DevTools ${VER_DEVTOOLS} with CIPD"
-TEMP_ENSURE=$(mktemp /tmp/fuchsia_devtools_cipd_XXXXXX.ensure)
+TEMP_ENSURE=$(mktemp /tmp/fuchsia_devtools_cipd.ensure.XXXXXX)
 cat << end > "${TEMP_ENSURE}"
 \$ServiceURL https://chrome-infra-packages.appspot.com/
 fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $VER_DEVTOOLS
@@ -98,7 +98,32 @@ if [[ "${PRIVATE_KEY_FILE}" != "" ]]; then
   FDT_SSH_KEY="${PRIVATE_KEY_FILE}"
   export FDT_SSH_KEY
 fi
-echo "Starting system_monitor with FDT_ARGS=[${FDT_ARGS[*]}] and environment:"
+echo "Starting Fuchsia DevTools with FDT_ARGS=[${FDT_ARGS[*]}] and environment:"
 env | grep FDT_
 
-"${FDT_DIR}/system_monitor/linux/system_monitor" "${FDT_ARGS[@]}"
+LINUX_BINARY="system_monitor/linux/fuchsia_devtools"
+LINUX_BINARY_OLD="system_monitor/linux/system_monitor"
+MAC_ZIP="fuchsia_devtools/macos/macos.zip"
+MAC_UNZIP_DIR="fuchsia_devtools/macos-extracted"
+MAC_BINARY="fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
+
+if is-mac; then
+  if [[ ! -d "${FDT_DIR}/${MAC_UNZIP_DIR}" ]]; then
+    if ! unzip -qq "${FDT_DIR}/${MAC_ZIP}" -d "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"; then
+      rm -rf "${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
+      fx-error "Downloaded archive for ${LABEL_DEVTOOLS} failed to extract"
+      exit 1
+    fi
+    mv "${FDT_DIR}/${MAC_UNZIP_DIR}-temp" "${FDT_DIR}/${MAC_UNZIP_DIR}"
+  fi
+  open "${FDT_DIR}/${MAC_BINARY}" "--args" "${FDT_ARGS[@]}"
+else
+  if [[ -x "${FDT_DIR}/${LINUX_BINARY}" ]]; then
+    "${FDT_DIR}/${LINUX_BINARY}" "${FDT_ARGS[@]}"
+  elif [[ -x "${FDT_DIR}/${LINUX_BINARY_OLD}" ]]; then
+    "${FDT_DIR}/${LINUX_BINARY_OLD}" "${FDT_ARGS[@]}"
+  else
+    echo "Failed to find Fuchsia DevTools binary."
+    exit 1
+  fi
+fi
