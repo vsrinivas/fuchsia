@@ -44,7 +44,6 @@ group("all") {
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:network-speed-test",
-    "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:run",
@@ -213,7 +212,6 @@ group("drivers") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:bluetooth_drivers",
-    "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan_drivers",
     "//src/camera/drivers:all",
@@ -324,11 +322,6 @@ group("memory_monitor") {
 group("network-speed-test") {
   testonly = true
   public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
-}
-
-group("openthread") {
-  testonly = true
-  public_deps = [ "//src/connectivity/openthread/drivers/ot-radio:openthread" ]
 }
 
 group("ralink") {
