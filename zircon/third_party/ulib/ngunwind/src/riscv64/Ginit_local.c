@@ -1,7 +1,6 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2008 CodeSourcery
+   Copyright (C) 2011-2013 Linaro Limited
 
 This file is part of libunwind.
 
@@ -24,27 +23,21 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "unwind_i.h"
+#include "init.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+PROTECTED int
+unw_init_local (unw_cursor_t *cursor, unw_context_t *uc)
+{
+  struct cursor *c = (struct cursor *) cursor;
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
+  if (!tdep_init_done)
+    tdep_init ();
 
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
+  Debug (1, "(cursor=%p)\n", c);
 
-#if defined(__cplusplus)
+  c->dwarf.as = unw_local_addr_space;
+  c->dwarf.as_arg = uc;
+
+  return common_init (c, 1);
 }
-#endif

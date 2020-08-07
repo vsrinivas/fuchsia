@@ -1,7 +1,7 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2010, 2011 by FERMI NATIONAL ACCELERATOR LABORATORY
+   Copyright (C) 2014 CERN and Aalto University
+        Contributed by Filip Nyback
 
 This file is part of libunwind.
 
@@ -24,27 +24,10 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "unwind_i.h"
+#include "dwarf_i.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
-
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
-
-#if defined(__cplusplus)
+HIDDEN void
+tdep_stash_frame (struct dwarf_cursor *d, struct dwarf_reg_state *rs)
+{
 }
-#endif

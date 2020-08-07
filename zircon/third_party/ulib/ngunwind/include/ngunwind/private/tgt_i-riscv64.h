@@ -1,7 +1,7 @@
 /* libunwind - a platform-independent unwind library
    Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+        Contributed by David Mosberger-Tang <davidm@hpl.hp.com>
+   Copyright (C) 2013 Linaro Limited
 
 This file is part of libunwind.
 
@@ -24,27 +24,24 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#ifndef RISCV64_LIBUNWIND_I_H
+#define RISCV64_LIBUNWIND_I_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+/* Target-dependent definitions that are internal to libunwind but need
+   to be shared with target-independent code.  */
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
+#include "elf64.h"
 
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
+typedef enum
+  {
+    UNW_RISCV64_FRAME_PLACEHOLDER
+  }
+unw_tdep_frame_type_t;
 
-#if defined(__cplusplus)
-}
-#endif
+typedef enum
+  {
+    RISCV64_SCF_PLACEHOLDER,
+  }
+unw_tdep_sigcontext_format_t;
+
+#endif /* RISCV64_LIBUNWIND_I_H */

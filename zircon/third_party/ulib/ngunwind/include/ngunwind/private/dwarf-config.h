@@ -58,6 +58,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 /****************************************************************************/
 
+#elif UNW_TARGET_RISCV64
+
+#define DWARF_NUM_PRESERVED_REGS        0
+
+#define dwarf_to_unw_regnum(reg) (((reg) <= UNW_RISCV64_PLACEHOLDER) ? (reg) : 0)
+
 #else
 # error "Unsupported arch"
 #endif

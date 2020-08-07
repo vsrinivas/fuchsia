@@ -1,7 +1,5 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2008 CodeSourcery
 
 This file is part of libunwind.
 
@@ -24,27 +22,18 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "unwind_i.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+PROTECTED int
+unw_get_proc_info (unw_cursor_t *cursor, unw_proc_info_t *pi)
+{
+  struct cursor *c = (struct cursor *) cursor;
+  int ret;
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
+  ret = dwarf_make_proc_info (&c->dwarf);
+  if (ret < 0)
+    return ret;
 
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
-
-#if defined(__cplusplus)
+  *pi = c->dwarf.pi;
+  return 0;
 }
-#endif

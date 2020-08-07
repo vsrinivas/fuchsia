@@ -1,7 +1,6 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2012 Tommi Rantala <tt.rantala@gmail.com>
+   Copyright (C) 2013 Linaro Limited
 
 This file is part of libunwind.
 
@@ -24,27 +23,27 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "unwind_i.h"
+#include "offsets.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
+PROTECTED int
+unw_is_signal_frame (unw_cursor_t *cursor)
+{
+#ifdef __linux__
+  return 1;
+#elif defined (__Fuchsia__)
+  return 0;
 #else
-#error "Unsupported arch"
+  return -UNW_ENOINFO;
 #endif
-
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
-
-#if defined(__cplusplus)
 }
+
+PROTECTED int
+unw_handle_signal_frame (unw_cursor_t *cursor)
+{
+#ifdef __linux__
+  return 1;
+#else
+  return -UNW_EBADFRAME;
 #endif
+}

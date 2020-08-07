@@ -1,7 +1,6 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2008 CodeSourcery
+   Copyright (C) 2013 Linaro Limited
 
 This file is part of libunwind.
 
@@ -24,27 +23,15 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#ifndef unwind_i_h
+#define unwind_i_h
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+#include <stdint.h>
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
+#include "libunwind_i.h"
 
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
+extern void riscv64_local_addr_space_init (void);
+extern int riscv64_local_resume (unw_addr_space_t as, unw_cursor_t *cursor,
+                             void *arg);
 
-#if defined(__cplusplus)
-}
-#endif
+#endif /* unwind_i_h */

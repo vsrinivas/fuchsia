@@ -1,7 +1,5 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2008 CodeSourcery
 
 This file is part of libunwind.
 
@@ -24,27 +22,36 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include <string.h>
+#include <stdlib.h>
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+#include "unwind_i.h"
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
+PROTECTED unw_addr_space_t
+unw_create_addr_space (unw_accessors_t *a, int byte_order)
+{
+  unw_addr_space_t as;
 
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
+  /*
+   * ARM supports little-endian and big-endian.
+   */
+  if (byte_order != 0 && byte_order != __LITTLE_ENDIAN
+      && byte_order != __BIG_ENDIAN)
+    return NULL;
 
-#if defined(__cplusplus)
+  as = malloc (sizeof (*as));
+  if (!as)
+    return NULL;
+
+  memset (as, 0, sizeof (*as));
+
+  as->acc = *a;
+
+  /* Default to little-endian for ARM.  */
+  if (byte_order == 0 || byte_order == __LITTLE_ENDIAN)
+    as->big_endian = 0;
+  else
+    as->big_endian = 1;
+
+  return as;
 }
-#endif

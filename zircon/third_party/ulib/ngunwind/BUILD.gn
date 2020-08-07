@@ -112,6 +112,23 @@ zx_library("ngunwind") {
       "src/x86_64/fuchsia.c",
       "src/x86_64/regname.c",
     ]
+  } else if (current_cpu == "riscv64") {
+    sources += [
+      "src/elf64.c",
+      "src/riscv64/Gcreate_addr_space.c",
+      "src/riscv64/Gget_proc_info.c",
+      "src/riscv64/Gget_save_loc.c",
+      "src/riscv64/Gglobal.c",
+      "src/riscv64/Ginit.c",
+      "src/riscv64/Ginit_local.c",
+      "src/riscv64/Ginit_remote.c",
+      "src/riscv64/Gregs.c",
+      "src/riscv64/Gsignal_frame.c",
+      "src/riscv64/Gstash_frame.c",
+      "src/riscv64/Gstep.c",
+      "src/riscv64/fuchsia.c",
+      "src/riscv64/regname.c",
+    ]
   }
 
   # Compile this with frame pointers so that if we crash

@@ -314,6 +314,8 @@ unw_tdep_frame_t;
 # include "tgt_i-aarch64.h"
 #elif defined __x86_64__
 # include "tgt_i-x86_64.h"
+#elif defined __riscv
+# include "tgt_i-riscv64.h"
 #else
 # error "Unsupported arch"
 #endif

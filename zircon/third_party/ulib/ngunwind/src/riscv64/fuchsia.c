@@ -1,7 +1,5 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright 2016 The Fuchsia Authors. All rights reserved.
 
 This file is part of libunwind.
 
@@ -24,27 +22,42 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "fuchsia_i.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
-
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
-
-#if defined(__cplusplus)
-}
-#endif
+HIDDEN const int fuchsia_greg_offset[] =
+{
+    0x000,
+    0x008,
+    0x010,
+    0x018,
+    0x020,
+    0x028,
+    0x030,
+    0x038,
+    0x040,
+    0x048,
+    0x050,
+    0x058,
+    0x060,
+    0x068,
+    0x070,
+    0x078,
+    0x080,
+    0x088,
+    0x090,
+    0x098,
+    0x0a0,
+    0x0a8,
+    0x0b0,
+    0x0b8,
+    0x0c0,
+    0x0c8,
+    0x0d0,
+    0x0d8,
+    0x0e0,
+    0x0e8,
+    0x0f0,
+    0x0f8,
+    0x100,
+    0x108,
+};

@@ -1,7 +1,7 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2008 CodeSourcery
+   Copyright (C) 2012 Tommi Rantala <tt.rantala@gmail.com>
+   Copyright (C) 2013 Linaro Limited
 
 This file is part of libunwind.
 
@@ -24,27 +24,31 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "unwind_i.h"
+#include "dwarf_i.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+HIDDEN define_lock (riscv64_lock);
+HIDDEN int tdep_init_done;
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
+HIDDEN void
+tdep_init (void)
+{
+  intrmask_t saved_mask;
 
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
+  sigfillset (&unwi_full_mask);
 
-#if defined(__cplusplus)
+  lock_acquire (&riscv64_lock, saved_mask);
+  {
+    if (tdep_init_done)
+      /* another thread else beat us to it... */
+      goto out;
+
+    mi_init ();
+
+    dwarf_init ();
+
+    tdep_init_done = 1; /* signal that we're initialized... */
+  }
+ out:
+  lock_release (&riscv64_lock, saved_mask);
 }
-#endif

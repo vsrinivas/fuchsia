@@ -1,7 +1,6 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2012 Tommi Rantala <tt.rantala@gmail.com>
+   Copyright (C) 2013 Linaro Limited
 
 This file is part of libunwind.
 
@@ -24,27 +23,20 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "unwind_i.h"
+#include "dwarf_i.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+static inline int
+common_init (struct cursor *c, unsigned use_prev_instr)
+{
+  c->dwarf.args_size = 0;
+  c->dwarf.ret_addr_column = 0;
+  c->dwarf.stash_frames = 0;
+  c->dwarf.use_prev_instr = use_prev_instr;
+  c->dwarf.pi_valid = 0;
+  c->dwarf.pi_is_dynamic = 0;
+  c->dwarf.hint = 0;
+  c->dwarf.prev_rs = 0;
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
-
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
-
-#if defined(__cplusplus)
+  return 0;
 }
-#endif

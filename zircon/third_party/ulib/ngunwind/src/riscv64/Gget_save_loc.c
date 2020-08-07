@@ -1,7 +1,7 @@
 /* libunwind - a platform-independent unwind library
-   Copyright (C) 2001-2005 Hewlett-Packard Co
-   Copyright (C) 2007 David Mosberger-Tang
-        Contributed by David Mosberger-Tang <dmosberger@gmail.com>
+   Copyright (C) 2008 CodeSourcery
+   Copyright (C) 2012 Tommi Rantala <tt.rantala@gmail.com>
+   Copyright (C) 2013 Linaro Limited
 
 This file is part of libunwind.
 
@@ -24,27 +24,38 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
-#pragma once
+#include "unwind_i.h"
+#include "dwarf_i.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+PROTECTED int
+unw_get_save_loc (unw_cursor_t *cursor, int reg, unw_save_loc_t *sloc)
+{
+  dwarf_loc_t loc;
 
-#if defined __arm__
-#include "private/tgt-arm.h"
-#elif defined __aarch64__
-#include "private/tgt-aarch64.h"
-#elif defined __x86_64__
-#include "private/tgt-x86_64.h"
-#elif defined __riscv
-#include "private/tgt-riscv64.h"
-#else
-#error "Unsupported arch"
-#endif
+  switch (reg)
+    {
+    default:
+      loc = DWARF_NULL_LOC;     /* default to "not saved" */
+      break;
+    }
 
-#include "private/libunwind-dynamic.h"
-#include "private/libunwind-common.h"
+  memset (sloc, 0, sizeof (*sloc));
 
-#if defined(__cplusplus)
+  if (DWARF_IS_NULL_LOC (loc))
+    {
+      sloc->type = UNW_SLT_NONE;
+      return 0;
+    }
+
+  if (DWARF_IS_REG_LOC (loc))
+    {
+      sloc->type = UNW_SLT_REG;
+      sloc->u.regnum = DWARF_GET_LOC (loc);
+    }
+  else
+    {
+      sloc->type = UNW_SLT_MEMORY;
+      sloc->u.addr = DWARF_GET_LOC (loc);
+    }
+  return 0;
 }
-#endif
