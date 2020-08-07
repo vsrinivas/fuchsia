@@ -99,6 +99,7 @@ common_image_contents = [
   "//src/devices/clock/drivers/clock",
   "//src/devices/cpu/bin/cpuctl",
   "//src/devices/cpu/drivers/aml-cpu",
+  "//src/devices/cpu/drivers/aml-cpu-legacy",
   "//src/devices/fw/drivers/qcom-pil",
   "//src/devices/gpio/bin/gpioutil",
   "//src/devices/gpio/drivers/aml-axg-gpio",

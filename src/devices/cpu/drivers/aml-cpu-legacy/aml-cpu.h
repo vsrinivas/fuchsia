@@ -29,8 +29,11 @@ class AmlCpu : public DeviceType,
                fuchsia_cpuctrl::Device::Interface {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpu);
-  explicit AmlCpu(zx_device_t* device, fuchsia_thermal::Device::SyncClient thermal_client)
-      : DeviceType(device), thermal_client_(std::move(thermal_client)) {}
+  AmlCpu(zx_device_t* device, fuchsia_thermal::Device::SyncClient thermal_client,
+         size_t power_domain_index)
+      : DeviceType(device),
+        thermal_client_(std::move(thermal_client)),
+        power_domain_index_(power_domain_index) {}
 
   static zx_status_t Create(void* context, zx_device_t* device);
 
@@ -55,6 +58,7 @@ class AmlCpu : public DeviceType,
  private:
   zx_status_t GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* out);
   fuchsia_thermal::Device::SyncClient thermal_client_;
+  size_t power_domain_index_;
 
  protected:
   inspect::Inspector inspector_;

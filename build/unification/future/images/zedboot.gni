@@ -114,6 +114,7 @@ zedboot_deps += [
   "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/clock/drivers/clock",
   "//src/devices/cpu/drivers/aml-cpu",
+  "//src/devices/cpu/drivers/aml-cpu-legacy",
   "//src/devices/fw/drivers/qcom-pil",
   "//src/devices/gpio/drivers/aml-axg-gpio",
   "//src/devices/gpio/drivers/aml-gxl-gpio",

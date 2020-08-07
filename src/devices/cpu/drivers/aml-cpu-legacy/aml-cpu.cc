@@ -9,6 +9,7 @@
 #include <lib/mmio/mmio.h>
 
 #include <memory>
+#include <optional>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -19,8 +20,11 @@
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/thermal.h>
 
+#include "fuchsia/hardware/thermal/llcpp/fidl.h"
+
 namespace {
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
+using llcpp::fuchsia::hardware::thermal::MAX_DVFS_DOMAINS;
 using llcpp::fuchsia::hardware::thermal::PowerDomain;
 
 constexpr size_t kFragmentPdev = 0;
@@ -34,6 +38,28 @@ uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_
 
   // Operating points are indexed 0 to N-1.
   return static_cast<uint16_t>(n_operating_points - pstate - 1);
+}
+
+std::optional<amlogic_cpu::fuchsia_thermal::Device::SyncClient> CreateFidlClient(
+    const ddk::ThermalProtocolClient& protocol_client, zx_status_t* status) {
+  // This channel pair will be used to talk to the Thermal Device's FIDL
+  // interface.
+  zx::channel channel_local, channel_remote;
+  *status = zx::channel::create(0, &channel_local, &channel_remote);
+  if (*status != ZX_OK) {
+    zxlogf(ERROR, "aml-cpu: Failed to create channel pair, st = %d\n", *status);
+    return {};
+  }
+
+  // Pass one end of the channel to the Thermal driver. The thermal driver will
+  // serve its FIDL interface over this channel.
+  *status = protocol_client.Connect(std::move(channel_remote));
+  if (*status != ZX_OK) {
+    zxlogf(ERROR, "aml-cpu: failed to connect to thermal driver, st = %d\n", *status);
+    return {};
+  }
+
+  return amlogic_cpu::fuchsia_thermal::Device::SyncClient(std::move(channel_local));
 }
 
 }  // namespace
@@ -68,34 +94,20 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   // The Thermal Driver is our parent and it exports an interface with one
   // method (Connect) which allows us to connect to its FIDL interface.
-  zx_device_t* device = devices[kFragmentThermal];
-  ddk::ThermalProtocolClient thermal_client;
-  status = ddk::ThermalProtocolClient::CreateFromDevice(device, &thermal_client);
+  zx_device_t* thermal_device = devices[kFragmentThermal];
+  ddk::ThermalProtocolClient thermal_protocol_client;
+  status = ddk::ThermalProtocolClient::CreateFromDevice(thermal_device, &thermal_protocol_client);
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: Failed to get thermal protocol client, st = %d", status);
     return status;
   }
 
-  // This channel pair will be used to talk to the Thermal Device's FIDL
-  // interface.
-  zx::channel channel_local, channel_remote;
-  status = zx::channel::create(0, &channel_local, &channel_remote);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to create channel pair, st = %d", status);
+  auto thermal_fidl_client = CreateFidlClient(thermal_protocol_client, &status);
+  if (!thermal_fidl_client) {
     return status;
   }
 
-  // Pass one end of the channel to the Thermal driver. The thermal driver will
-  // serve its FIDL interface over this channel.
-  status = thermal_client.Connect(std::move(channel_remote));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: failed to connect to thermal driver, st = %d", status);
-    return status;
-  }
-
-  fuchsia_thermal::Device::SyncClient thermal_fidl_client(std::move(channel_local));
-
-  auto device_info = thermal_fidl_client.GetDeviceInfo();
+  auto device_info = thermal_fidl_client->GetDeviceInfo();
   if (device_info.status() != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: failed to get device info, st = %d", device_info.status());
     return device_info.status();
@@ -103,54 +115,84 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
   const fuchsia_thermal::ThermalDeviceInfo* info = device_info->info.get();
 
-  // Hack: Only support one DVFS domain in this driver. When only one domain is
-  // supported, it is published as the "Big" domain, so we check that the Little
-  // domain is unpopulated.
-  constexpr size_t kLittleDomainIndex = 1u;
-  static_assert(static_cast<size_t>(PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) ==
-                kLittleDomainIndex);
-  if (info->opps[kLittleDomainIndex].count != 0) {
-    zxlogf(ERROR, "aml-cpu: this driver only supports one dvfs domain.");
-    return ZX_ERR_INTERNAL;
+  // Ensure there is at least one non-empty power domain. We expect one to exist if this function
+  // has been called.
+  {
+    bool found_nonempty_domain = false;
+    for (size_t i = 0; i < MAX_DVFS_DOMAINS; i++) {
+      if (info->opps[i].count > 0) {
+        found_nonempty_domain = true;
+        break;
+      }
+    }
+    if (!found_nonempty_domain) {
+      zxlogf(ERROR, "aml-cpu: No cpu devices were created; all power domains are empty\n");
+      return ZX_ERR_INTERNAL;
+    }
   }
 
-  // Make sure we don't have more operating points than available performance states.
-  const fuchsia_thermal::OperatingPoint& opps = info->opps[0];
-  if (opps.count > MAX_DEVICE_PERFORMANCE_STATES) {
-    zxlogf(ERROR, "aml-cpu: cpu device has more operating points than we support");
-    return ZX_ERR_INTERNAL;
+  // Look up the CPU version.
+  uint32_t cpu_version_packed = 0;
+  {
+    zx_device_t* platform_device = devices[kFragmentPdev];
+    ddk::PDev pdev_client(platform_device);
+
+    // Map AOBUS registers
+    std::optional<ddk::MmioBuffer> mmio_buffer;
+
+    if ((status = pdev_client.MapMmio(0, &mmio_buffer)) != ZX_OK) {
+      zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", status);
+      return status;
+    }
+
+    cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
   }
 
-  const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
-  zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating points", opps.count);
+  // Create an AmlCpu for each power domain with nonempty operating points.
+  for (size_t i = 0; i < MAX_DVFS_DOMAINS; i++) {
+    const fuchsia_thermal::OperatingPoint& opps = info->opps[i];
 
-  zx_device_t* platform_device = devices[kFragmentPdev];
-  ddk::PDev pdev_client(platform_device);
+    // If this domain is empty, don't create a driver.
+    if (opps.count == 0) {
+      continue;
+    }
 
-  // Map AOBUS registers
-  std::optional<ddk::MmioBuffer> mmio_buffer;
+    if (opps.count > MAX_DEVICE_PERFORMANCE_STATES) {
+      zxlogf(ERROR, "aml-cpu: cpu power domain %zu has more operating points than we support\n", i);
+      return ZX_ERR_INTERNAL;
+    }
 
-  if ((status = pdev_client.MapMmio(0, &mmio_buffer)) != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", status);
-    return status;
+    const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
+    zxlogf(INFO, "aml-cpu: Creating CPU Device for domain %zu with %u operating points\n", i,
+           opps.count);
+
+    // If the FIDL client has been previously consumed, create a new one. Then build the CPU device
+    // and consume the FIDL client.
+    if (!thermal_fidl_client) {
+      thermal_fidl_client = CreateFidlClient(thermal_protocol_client, &status);
+      if (!thermal_fidl_client) {
+        return status;
+      }
+    }
+    auto cpu_device = std::make_unique<AmlCpu>(thermal_device, std::move(*thermal_fidl_client), i);
+    thermal_fidl_client.reset();
+
+    cpu_device->SetCpuInfo(cpu_version_packed);
+
+    status = cpu_device->DdkAdd(ddk::DeviceAddArgs("cpu")
+                                    .set_flags(DEVICE_ADD_NON_BINDABLE)
+                                    .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
+                                    .set_performance_states({perf_states, perf_state_count})
+                                    .set_inspect_vmo(cpu_device->inspector_.DuplicateVmo()));
+
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "aml-cpu: Failed to add cpu device for domain %zu, st = %d\n", i, status);
+      return status;
+    }
+
+    // Intentionally leak this device because it's owned by the driver framework.
+    __UNUSED auto unused = cpu_device.release();
   }
-
-  auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(thermal_fidl_client));
-  uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
-  cpu_device->SetCpuInfo(cpu_version_packed);
-
-  status = cpu_device->DdkAdd(ddk::DeviceAddArgs("cpu")
-                                  .set_flags(DEVICE_ADD_NON_BINDABLE)
-                                  .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
-                                  .set_performance_states({perf_states, perf_state_count})
-                                  .set_inspect_vmo(cpu_device->inspector_.DuplicateVmo()));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to add cpu device, st = %d", status);
-    return status;
-  }
-
-  // Intentionally leak this device because it's owned by the driver framework.
-  __UNUSED auto unused = cpu_device.release();
 
   return ZX_OK;
 }
@@ -169,7 +211,7 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
 
   status = GetThermalOperatingPoints(&opps);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get Thermal operating points, st = %d", __func__, status);
     return status;
   }
 
@@ -181,7 +223,7 @@ zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* o
   const uint16_t pstate = PstateToOperatingPoint(requested_state, opps.count);
 
   const auto result =
-      thermal_client_.SetDvfsOperatingPoint(pstate, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+      thermal_client_.SetDvfsOperatingPoint(pstate, static_cast<PowerDomain>(power_domain_index_));
 
   if (!result.ok() || result->status != ZX_OK) {
     zxlogf(ERROR, "%s: failed to set dvfs operating point.", __func__);
@@ -204,7 +246,7 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
 
   status = GetThermalOperatingPoints(&opps);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d", __func__, status);
+    zxlogf(ERROR, "%s: Failed to get Thermal operating points, st = %d", __func__, status);
     completer.ReplyError(status);
   }
 
@@ -233,13 +275,7 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* o
 
   fuchsia_thermal::ThermalDeviceInfo* info = result->info.get();
 
-  // We only support one DVFS cluster on Astro.
-  if (info->opps[1].count != 0) {
-    zxlogf(ERROR, "%s: thermal driver reported more than one dvfs domain?", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  memcpy(out, &info->opps[0], sizeof(*out));
+  memcpy(out, &info->opps[power_domain_index_], sizeof(*out));
   return ZX_OK;
 }
 
@@ -279,6 +315,6 @@ static constexpr zx_driver_ops_t aml_cpu_driver_ops = []() {
 ZIRCON_DRIVER_BEGIN(aml_cpu, aml_cpu_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_CPU),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_CPU),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
 ZIRCON_DRIVER_END(aml_cpu)
