@@ -9,6 +9,8 @@
 
 #include <iomanip>
 
+#include <ffl/string.h>
+
 #include "src/media/audio/audio_core/audio_clock.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
@@ -192,23 +194,23 @@ void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix
     auto underflow_msec = static_cast<double>(underflow_duration.to_nsecs()) / ZX_MSEC(1);
     if ((kUnderflowErrorInterval > 0) && (underflow_count % kUnderflowErrorInterval == 0)) {
       FX_LOGS(ERROR) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                     << kUnderflowErrorInterval << "): source-start 0x" << std::hex
-                     << frac_source_start.raw_value() << " missed mix-point 0x"
-                     << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                     << kUnderflowErrorInterval << "): source-start "
+                     << ffl::Format(frac_source_start).c_str() << " missed mix-point "
+                     << ffl::Format(frac_source_mix_point).c_str() << " by " << std::setprecision(4)
                      << underflow_msec << " ms";
 
     } else if ((kUnderflowInfoInterval > 0) && (underflow_count % kUnderflowInfoInterval == 0)) {
-      FX_LOGS(INFO) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                    << kUnderflowInfoInterval << "): source-start 0x" << std::hex
-                    << frac_source_start.raw_value() << " missed mix-point 0x"
-                    << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
-                    << underflow_msec << " ms";
+      FX_LOGS(ERROR) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
+                     << kUnderflowInfoInterval << "): source-start "
+                     << ffl::Format(frac_source_start).c_str() << " missed mix-point "
+                     << ffl::Format(frac_source_mix_point).c_str() << " by " << std::setprecision(4)
+                     << underflow_msec << " ms";
 
     } else if ((kUnderflowTraceInterval > 0) && (underflow_count % kUnderflowTraceInterval == 0)) {
       FX_LOGS(TRACE) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                     << kUnderflowTraceInterval << "): source-start 0x" << std::hex
-                     << frac_source_start.raw_value() << " missed mix-point 0x"
-                     << frac_source_mix_point.raw_value() << " by " << std::setprecision(4)
+                     << kUnderflowTraceInterval << "): source-start "
+                     << ffl::Format(frac_source_start).c_str() << " missed mix-point "
+                     << ffl::Format(frac_source_mix_point).c_str() << " by " << std::setprecision(4)
                      << underflow_msec << " ms";
     }
   }
@@ -227,23 +229,20 @@ void PacketQueue::ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_
           (partial_underflow_count % kUnderflowErrorInterval == 0)) {
         FX_LOGS(WARNING) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
                          << kUnderflowErrorInterval << "): shifted by "
-                         << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                         << abs(frac_source_offset.raw_value()) << " source subframes and "
-                         << std::dec << dest_mix_offset << " mix (output) frames";
+                         << ffl::Format(frac_source_offset).c_str() << " source frames and "
+                         << dest_mix_offset << " mix (output) frames";
       } else if ((kUnderflowInfoInterval > 0) &&
                  (partial_underflow_count % kUnderflowInfoInterval == 0)) {
         FX_LOGS(INFO) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
                       << kUnderflowInfoInterval << "): shifted by "
-                      << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                      << abs(frac_source_offset.raw_value()) << " source subframes and " << std::dec
+                      << ffl::Format(frac_source_offset).c_str() << " source frames and "
                       << dest_mix_offset << " mix (output) frames";
       } else if ((kUnderflowTraceInterval > 0) &&
                  (partial_underflow_count % kUnderflowTraceInterval == 0)) {
         FX_LOGS(TRACE) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
                        << kUnderflowTraceInterval << "): shifted by "
-                       << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
-                       << abs(frac_source_offset.raw_value()) << " source subframes and "
-                       << std::dec << dest_mix_offset << " mix (output) frames";
+                       << ffl::Format(frac_source_offset).c_str() << " source frames and "
+                       << dest_mix_offset << " mix (output) frames";
       }
     }
   } else {
