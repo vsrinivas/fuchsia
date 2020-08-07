@@ -24,6 +24,10 @@ pub async fn test_lowpanctl() {
     test_lowpanctl_form_network().await;
     test_lowpanctl_energy_scan().await;
     test_lowpanctl_network_scan().await;
+    test_lowpanctl_set_active().await;
+    test_lowpanctl_get_credential().await;
+    test_lowpanctl_get_supported_channels().await;
+    test_lowpanctl_get_supported_network_types().await;
 }
 
 pub async fn test_lowpanctl_status() {
@@ -108,6 +112,30 @@ pub async fn test_lowpanctl_form_network() {
     test_lowpanctl_command(vec!["form".to_string(), "--name".to_string(), "some_name".to_string()])
         .await
         .expect("Call to `lowpanctl form` failed.");
+}
+
+pub async fn test_lowpanctl_set_active() {
+    test_lowpanctl_command(vec!["set-active".to_string(), "true".to_string()])
+        .await
+        .expect("Call to `lowpanctl set-active` failed.");
+}
+
+pub async fn test_lowpanctl_get_credential() {
+    test_lowpanctl_command(vec!["get-credential".to_string()])
+        .await
+        .expect("Call to `lowpanctl get-credential` failed.");
+}
+
+pub async fn test_lowpanctl_get_supported_channels() {
+    test_lowpanctl_command(vec!["get-supported-channels".to_string()])
+        .await
+        .expect("Call to `lowpanctl get-supported-channels` failed.");
+}
+
+pub async fn test_lowpanctl_get_supported_network_types() {
+    test_lowpanctl_command(vec!["get-supported-network-types".to_string()])
+        .await
+        .expect("Call to `lowpanctl get-supported-network-types` failed.");
 }
 
 pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {

@@ -8,6 +8,9 @@ use fuchsia_async as fasync;
 pub mod context;
 pub mod energy_scan_command;
 pub mod form_command;
+pub mod get_credential;
+pub mod get_supported_channels;
+pub mod get_supported_network_types;
 pub mod invocation;
 pub mod join_command;
 pub mod leave_command;
@@ -17,6 +20,7 @@ pub mod network_scan_command;
 pub mod provision_command;
 pub mod repeat_command;
 pub mod reset_command;
+pub mod set_active_comamnd;
 pub mod status_command;
 
 use context::*;

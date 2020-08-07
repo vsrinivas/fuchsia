@@ -12,8 +12,10 @@ use fidl_fuchsia_lowpan_device::{
     DeviceState, EnergyScanParameters, EnergyScanResult, NetworkScanParameters,
     ProvisioningMonitorMarker, ProvisioningMonitorRequest, ProvisioningProgress,
 };
+use fuchsia_zircon_status as zx_status;
 use futures::stream::BoxStream;
 use futures::FutureExt;
+use hex;
 
 /// A dummy LoWPAN Driver implementation, for testing.
 #[derive(Debug, Copy, Clone, Default)]
@@ -44,13 +46,20 @@ impl Driver for DummyDevice {
     async fn get_supported_network_types(&self) -> ZxResult<Vec<String>> {
         fx_log_info!("Got get_supported_network_types command");
 
-        Ok(vec![])
+        Ok(vec!["network_type_0".to_string(), "network_type_1".to_string()])
     }
 
     async fn get_supported_channels(&self) -> ZxResult<Vec<ChannelInfo>> {
         fx_log_info!("Got get_supported_channels command");
-
-        Ok(vec![])
+        let channel_info = ChannelInfo {
+            id: Some("id".to_string()),
+            index: Some(20),
+            max_transmit_power: Some(-100),
+            spectrum_center_frequency: Some(2450000000),
+            spectrum_bandwidth: Some(2000000),
+            masked_by_regulatory_domain: Some(false),
+        };
+        Ok(vec![channel_info])
     }
 
     async fn form_network(
@@ -145,7 +154,11 @@ impl Driver for DummyDevice {
     async fn get_credential(&self) -> ZxResult<Option<fidl_fuchsia_lowpan::Credential>> {
         fx_log_info!("Got get credential command");
 
-        Ok(None)
+        let res: Vec<u8> = hex::decode("000102030405060708090a0b0c0d0f".to_string())
+            .map_err(|_| zx_status::Status::INTERNAL)?
+            .to_vec();
+
+        Ok(Some(fidl_fuchsia_lowpan::Credential::MasterKey(res)))
     }
 
     async fn get_factory_mac_address(&self) -> ZxResult<Vec<u8>> {

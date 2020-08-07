@@ -21,6 +21,7 @@ rustc_library("lowpan_driver_common") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",

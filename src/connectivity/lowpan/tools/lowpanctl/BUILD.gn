@@ -39,6 +39,9 @@ rustc_binary("bin") {
     "src/context.rs",
     "src/energy_scan_command.rs",
     "src/form_command.rs",
+    "src/get_credential.rs",
+    "src/get_supported_channels.rs",
+    "src/get_supported_network_types.rs",
     "src/invocation.rs",
     "src/join_command.rs",
     "src/leave_command.rs",
@@ -49,6 +52,7 @@ rustc_binary("bin") {
     "src/provision_command.rs",
     "src/repeat_command.rs",
     "src/reset_command.rs",
+    "src/set_active_comamnd.rs",
     "src/status_command.rs",
   ]
 }
