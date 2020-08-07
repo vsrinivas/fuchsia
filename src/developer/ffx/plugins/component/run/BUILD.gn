@@ -10,7 +10,6 @@ ffx_plugin("ffx_component_run") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/diagnostics/lib/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:async-std",

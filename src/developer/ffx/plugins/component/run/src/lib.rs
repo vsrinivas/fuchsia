@@ -7,13 +7,11 @@ use {
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerMarker, FileDescriptor, LaunchInfo,
-        LauncherMarker, TerminationReason::*,
+        TerminationReason::*,
     },
     futures::StreamExt,
-    selectors::parse_selector,
     signal_hook,
     std::sync::{Arc, Mutex},
 };
@@ -22,9 +20,9 @@ use {
 // rather than redefining it here.
 const HANDLE_TYPE_FILE_DESCRIPTOR: i32 = 0x30;
 
-#[ffx_plugin()]
+#[ffx_plugin(fidl_fuchsia_sys::LauncherProxy = "core/appmgr:out:fuchsia.sys.Launcher")]
 pub async fn run_component(
-    remote_proxy: RemoteControlProxy,
+    launcher_proxy: fidl_fuchsia_sys::LauncherProxy,
     run: RunComponentCommand,
 ) -> Result<()> {
     let (control_proxy, control_server_end) = create_proxy::<ComponentControllerMarker>()?;
@@ -74,16 +72,6 @@ pub async fn run_component(
             }
         })?;
     }
-
-    let (launcher_proxy, server_end) = create_proxy::<LauncherMarker>()?;
-    let selector = parse_selector("core/appmgr:out:fuchsia.sys.Launcher").unwrap();
-
-    match remote_proxy.connect(selector, server_end.into_channel()).await? {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("Failed to connect to RCS. {:?}", e);
-        }
-    };
 
     let out_fd = FileDescriptor {
         type0: HANDLE_TYPE_FILE_DESCRIPTOR,
@@ -145,18 +133,12 @@ pub async fn run_component(
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*,
-        fidl::endpoints::RequestStream,
-        fidl::handle::AsyncChannel,
-        fidl_fuchsia_developer_remotecontrol::{
-            RemoteControlMarker, RemoteControlRequest, ServiceMatch,
-        },
-        fidl_fuchsia_sys::{LauncherRequest, LauncherRequestStream},
-        futures::TryStreamExt,
-    };
+    use {super::*, fidl_fuchsia_sys::LauncherRequest, futures::TryStreamExt};
 
-    fn setup_fake_launcher_service(mut stream: LauncherRequestStream) {
+    fn setup_fake_launcher_service() -> fidl_fuchsia_sys::LauncherProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_sys::LauncherMarker>().unwrap();
+
         fuchsia_async::Task::spawn(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
@@ -186,40 +168,6 @@ mod test {
             }
         })
         .detach();
-    }
-
-    fn setup_fake_remote_server() -> RemoteControlProxy {
-        let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-
-        fuchsia_async::Task::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
-                println!("got a thing {:?}", req);
-                match req {
-                    Some(RemoteControlRequest::Connect {
-                        selector: _,
-                        service_chan,
-                        responder,
-                    }) => {
-                        setup_fake_launcher_service(LauncherRequestStream::from_channel(
-                            AsyncChannel::from_channel(service_chan).unwrap(),
-                        ));
-                        responder
-                            .send(&mut Ok(ServiceMatch {
-                                moniker: vec![],
-                                subdir: String::from(""),
-                                service: String::from(""),
-                            }))
-                            .unwrap();
-                    }
-                    _ => {
-                        println!("got a unrcog thing {:?}", req);
-                        assert!(false)
-                    }
-                }
-            }
-        })
-        .detach();
 
         proxy
     }
@@ -229,9 +177,9 @@ mod test {
         let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx".to_string();
         let args = vec!["test1".to_string(), "test2".to_string()];
         let run_cmd = RunComponentCommand { url, args };
-        let remote_proxy = setup_fake_remote_server();
+        let launcher_proxy = setup_fake_launcher_service();
         let _response =
-            run_component(remote_proxy, run_cmd).await.expect("getting tests should not fail");
+            run_component(launcher_proxy, run_cmd).await.expect("getting tests should not fail");
         Ok(())
     }
 }
