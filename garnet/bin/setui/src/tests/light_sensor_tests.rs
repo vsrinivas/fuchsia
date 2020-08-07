@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
 use {
-    crate::display::{light_sensor_testing::*, LIGHT_SENSOR_SERVICE_NAME},
+    crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME},
     crate::registry::device_storage::testing::*,
     crate::switchboard::base::SettingType,
     crate::EnvironmentBuilder,
     anyhow::format_err,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_settings::*,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
-    futures::prelude::*,
+    fuchsia_zircon as zx,
+    futures::future::{self, BoxFuture},
 };
 
 const ENV_NAME: &str = "settings_service_light_sensor_test_environment";
@@ -29,28 +27,17 @@ async fn test_light_sensor() {
         }
 
         let stream_result =
-            ServerEnd::<fidl_fuchsia_hardware_input::DeviceMarker>::new(channel).into_stream();
+            ServerEnd::<fidl_fuchsia_input_report::InputDeviceMarker>::new(channel).into_stream();
 
         if stream_result.is_err() {
             return Box::pin(async { Err(format_err!("could not connect to service")) });
         }
 
-        let mut stream = stream_result.unwrap();
-
-        let data = get_mock_sensor_response();
-        fasync::Task::spawn(async move {
-            while let Some(request) = stream.try_next().await.unwrap() {
-                if let fidl_fuchsia_hardware_input::DeviceRequest::GetReport {
-                    type_: _,
-                    id: _,
-                    responder,
-                } = request
-                {
-                    responder.send(0, &data).unwrap();
-                }
-            }
-        })
-        .detach();
+        let stream = stream_result.unwrap();
+        let (sensor_axes, data_fn) = light_sensor_testing::get_mock_sensor_response();
+        light_sensor_testing::spawn_mock_sensor_with_data(stream, sensor_axes, move || {
+            future::ready(data_fn())
+        });
 
         Box::pin(async { Ok(()) })
     };
@@ -65,13 +52,13 @@ async fn test_light_sensor() {
     let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
     let data = display_service.watch_light_sensor2(0.0).await.expect("watch completed");
 
-    assert_eq!(data.illuminance_lux, Some(TEST_LUX_VAL.into()));
+    assert_eq!(data.illuminance_lux, Some(light_sensor_testing::TEST_LUX_VAL as f32));
     assert_eq!(
         data.color,
         Some(fidl_fuchsia_ui_types::ColorRgb {
-            red: TEST_RED_VAL.into(),
-            green: TEST_GREEN_VAL.into(),
-            blue: TEST_BLUE_VAL.into(),
+            red: light_sensor_testing::TEST_RED_VAL as f32,
+            green: light_sensor_testing::TEST_GREEN_VAL as f32,
+            blue: light_sensor_testing::TEST_BLUE_VAL as f32,
         })
     );
 }

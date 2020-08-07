@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "dev": [
-            "class/input",
+            "class/input-report",
             "class/light"
         ],
         "features": [
@@ -18,6 +18,7 @@
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.hardware.light.Light",
             "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.input.report.InputDevice",
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.UsageReporter",

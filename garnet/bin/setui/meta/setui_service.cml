@@ -12,6 +12,7 @@
                 "/svc/fuchsia.devicesettings.DeviceSettingsManager",
                 "/svc/fuchsia.hardware.light.Light",
                 "/svc/fuchsia.hardware.power.statecontrol.Admin",
+                "/svc/fuchsia.input.report.InputDevice",
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.media.audio.VolumeControl",
                 "/svc/fuchsia.media.AudioCore",
@@ -27,7 +28,7 @@
             from: "parent",
         },
         {
-            directory: "/dev/class/input",
+            directory: "/dev/class/input-report",
             from: "parent",
             rights: [ "r*" ],
         },

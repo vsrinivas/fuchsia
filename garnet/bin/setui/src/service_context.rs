@@ -175,6 +175,10 @@ impl ServiceContext {
             publisher: self.make_publisher().await,
         })
     }
+
+    pub async fn wrap_proxy<P: Proxy>(&self, proxy: P) -> ExternalServiceProxy<P> {
+        ExternalServiceProxy { proxy, publisher: self.make_publisher().await }
+    }
 }
 
 /// A wrapper around a proxy, used to track disconnections.
@@ -182,7 +186,7 @@ impl ServiceContext {
 /// This wraps any type implementing `Proxy`. Whenever any call returns a
 /// `ClientChannelClosed` error, this wrapper publishes a closed event for
 /// the wrapped proxy.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ExternalServiceProxy<P>
 where
     P: Proxy,
