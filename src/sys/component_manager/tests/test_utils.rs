@@ -53,7 +53,7 @@ pub static COMPONENT_MANAGER_URL: &str =
 /// There will be multiple component managers and they must all run in isolated environments.
 ///
 /// The hub is required to access the Events FIDL service exposed by
-/// component manager when the "--debug" flag is passed in.
+/// component manager when the debug mode is enabled in component manager config.
 ///
 /// Usage: /src/sys/component_manager/tests contains multiple tests such as
 /// routing, base_resolver and shutdown which use this class.
@@ -255,7 +255,7 @@ async fn create_isolated_environment(
 
 /// Use the provided launcher from the isolated environment to startup component manager.
 /// Attach any provided directory handles. Component manager is provided the URL of the
-/// v2 component to start and the debug flag. Blocks until the out directory of component
+/// v2 component to start and the config. Blocks until the out directory of component
 /// manager is set up.
 async fn launch_component_manager(
     launcher: LauncherProxy,
@@ -273,12 +273,7 @@ async fn launch_component_manager(
         options.add_handle_to_namespace(dir.0, dir.1);
     }
 
-    let mut args = vec![
-        "--config".to_string(),
-        config.to_string(),
-        root_component_url.to_string(),
-        "--debug".to_string(),
-    ];
+    let mut args = vec!["--config".to_string(), config.to_string(), root_component_url.to_string()];
     if let Some(runtime_config) = runtime_config {
         args.extend(vec!["--runtime-config".to_string(), runtime_config]);
     }

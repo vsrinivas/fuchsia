@@ -59,7 +59,7 @@ test_package("security-policy-critical-integration-test") {
     ":exit_on_command",
     ":security_policy_critical_integration_test_bin",
     "//src/sys/component_manager:bin",
-    "//src/sys/component_manager:component_manager_config",
+    "//src/sys/component_manager:component_manager_test_config",
   ]
 
   tests = [
@@ -105,8 +105,7 @@ test_package("security-policy-critical-integration-test") {
       dest = "cm_config.json"
     },
     {
-      path =
-          "${root_gen_dir}/src/sys/component_manager/component_manager_config"
+      path = "${root_gen_dir}/src/sys/component_manager/component_manager_test_config"
       dest = "component_manager_config"
     },
   ]

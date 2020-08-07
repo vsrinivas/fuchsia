@@ -1,7 +1,6 @@
 {
     "program": {
         "args": [
-            "--debug",
             "--config",
             "/pkg/data/component_manager_config"
         ],

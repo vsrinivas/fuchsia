@@ -25,14 +25,6 @@ pub struct Arguments {
     /// component_manager.
     pub maintain_utc_clock: bool,
 
-    /// If true, component manager will be in debug mode. In this mode, the BlockingEventSource FIDL
-    /// service will be exposed via the ServiceFs directory (usually the out dir). ComponentManager
-    /// will not start until it is resumed by the BlockingEventSource FIDL API.
-    ///
-    /// This is done so that an external component (say an integration test) can subscribe to
-    /// events before the root component has started.
-    pub debug: bool,
-
     /// URL of the root component to launch.
     pub root_component_url: String,
 
@@ -63,8 +55,6 @@ impl Arguments {
                 args.use_builtin_process_launcher = true;
             } else if arg == "--maintain-utc-clock" {
                 args.maintain_utc_clock = true;
-            } else if arg == "--debug" {
-                args.debug = true;
             } else if arg == "--runtime-config" {
                 args.runtime_config = iter.next();
                 if args.runtime_config.is_none() {
@@ -129,7 +119,6 @@ mod tests {
         let dummy_url2 = || "fuchsia-pkg://fuchsia.com/pkg#meta/component2.cm".to_string();
         let unknown_flag = || "--unknown".to_string();
         let use_builtin_launcher = || "--use-builtin-process-launcher".to_string();
-        let debug = || "--debug".to_string();
         let maintain_utc_clock = || "--maintain-utc-clock".to_string();
 
         // Zero or multiple positional arguments is an error; must be exactly one URL.
@@ -185,19 +174,12 @@ mod tests {
             }
         );
         assert_eq!(
-            Arguments::new(vec![
-                config(),
-                config_filename(),
-                dummy_url(),
-                use_builtin_launcher(),
-                debug()
-            ])
-            .expect("Unexpected error with option"),
+            Arguments::new(vec![config(), config_filename(), dummy_url(), use_builtin_launcher(),])
+                .expect("Unexpected error with option"),
             Arguments {
                 config: config_filename(),
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
-                debug: true,
                 ..Default::default()
             }
         );
@@ -207,7 +189,6 @@ mod tests {
                 config_filename(),
                 dummy_url(),
                 use_builtin_launcher(),
-                debug(),
                 maintain_utc_clock()
             ])
             .expect("Unexpected error with option"),
@@ -215,7 +196,6 @@ mod tests {
                 config: config_filename(),
                 use_builtin_process_launcher: true,
                 root_component_url: dummy_url(),
-                debug: true,
                 maintain_utc_clock: true,
                 ..Default::default()
             }

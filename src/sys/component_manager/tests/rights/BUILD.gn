@@ -131,13 +131,12 @@ test_package("rights_integration_test") {
     ":rights_integration_test_bin",
     ":use_dir_rights",
     ":use_storage",
-    "//src/sys/component_manager:component_manager_config",
+    "//src/sys/component_manager:component_manager_test_config",
   ]
 
   resources = [
     {
-      path =
-          "${root_gen_dir}/src/sys/component_manager/component_manager_config"
+      path = "${root_gen_dir}/src/sys/component_manager/component_manager_test_config"
       dest = "component_manager_config"
     },
   ]

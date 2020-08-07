@@ -12,7 +12,6 @@ import("//src/sys/build/components.gni")
 
 template("component_manager") {
   deps = [
-    ":component_manager_config_resource",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
@@ -271,7 +270,10 @@ rustc_binary("bin") {
 # as a v1 Component for interactive testing purposes through the shell. This
 # will eventually go away.
 fuchsia_component("component-manager-cmp") {
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":component_manager_test_config_resource",
+  ]
   component_name = "component_manager"
   manifest = "meta/component_manager.cmx"
 }
@@ -284,6 +286,7 @@ fuchsia_component("component-manager-tests-cmp") {
   testonly = true
   deps = [
     ":component_manager_test",
+    ":component_manager_test_config_resource",
     "//src/lib/process_builder:test_util",
   ]
   component_name = "component_manager_tests"
@@ -299,6 +302,7 @@ fuchsia_component("component-manager-boot-env-tests-cmp") {
   testonly = true
   deps = [
     ":component_manager_boot_env_test",
+    ":component_manager_test_config_resource",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
   ]
@@ -334,10 +338,20 @@ component_config("component_manager_config") {
   source = "config.json"
 }
 
+component_config("component_manager_test_config") {
+  source = "test_config.json"
+}
+
 resource("component_manager_config_resource") {
   sources = [ "$target_gen_dir/component_manager_config" ]
   outputs = [ "data/component_manager_config" ]
   deps = [ ":component_manager_config" ]
+}
+
+resource("component_manager_test_config_resource") {
+  sources = [ "$target_gen_dir/component_manager_test_config" ]
+  outputs = [ "data/component_manager_config" ]
+  deps = [ ":component_manager_test_config" ]
 }
 
 resource("component_manager_config_bootfs") {

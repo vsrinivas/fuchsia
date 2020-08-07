@@ -55,13 +55,12 @@ test_package("base_resolver_test") {
     ":root_component_bin",
     "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
     "//src/sys/component_manager:bin",
-    "//src/sys/component_manager:component_manager_config",
+    "//src/sys/component_manager:component_manager_test_config",
   ]
 
   resources = [
     {
-      path =
-          "${root_gen_dir}/src/sys/component_manager/component_manager_config"
+      path = "${root_gen_dir}/src/sys/component_manager/component_manager_test_config"
       dest = "component_manager_config"
     },
   ]

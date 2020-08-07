@@ -283,7 +283,7 @@ pub struct BuiltinEnvironment {
 impl BuiltinEnvironment {
     async fn new(
         model: Arc<Model>,
-        _config: Config,
+        config: Config,
         args: Arguments,
         runtime_config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
@@ -423,10 +423,9 @@ impl BuiltinEnvironment {
         };
         model.root_realm.hooks.install(event_registry.hooks()).await;
 
-        // TODO(viktard): use config.debug instead
-        let execution_mode = match args.debug {
-            false => ExecutionMode::Production,
-            true => ExecutionMode::Debug,
+        let execution_mode = match config.debug {
+            Some(true) => ExecutionMode::Debug,
+            _ => ExecutionMode::Production,
         };
 
         // Set up the event source factory.
@@ -443,8 +442,7 @@ impl BuiltinEnvironment {
         ));
         model.root_realm.hooks.install(event_stream_provider.hooks()).await;
 
-        // TODO(viktard): use config.debug instead
-        let event_logger = if args.debug {
+        let event_logger = if config.debug.unwrap_or(false) {
             let event_logger = Arc::new(EventLogger::new());
             model.root_realm.hooks.install(event_logger.hooks()).await;
             Some(event_logger)
