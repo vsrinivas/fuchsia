@@ -21,9 +21,6 @@ test("devcoordinator-namespace") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(46870): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("devcoordinator-namespace-package") {
