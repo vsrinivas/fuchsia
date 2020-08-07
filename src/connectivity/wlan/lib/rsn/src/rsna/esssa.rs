@@ -12,8 +12,7 @@ use crate::key::{gtk::Gtk, ptk::Ptk};
 use crate::rsna::{
     Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
-use crate::Error;
-use anyhow::{bail, format_err};
+use anyhow::format_err;
 use eapol;
 use log::{error, info};
 use std::collections::HashSet;
@@ -366,23 +365,13 @@ impl EssSa {
         frame: eapol::KeyFrameRx<B>,
     ) -> Result<(), anyhow::Error> {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
-        let result = Dot11VerifiedKeyFrame::from_frame(
+        let verified_frame = Dot11VerifiedKeyFrame::from_frame(
             frame,
             &self.role,
             &self.negotiated_protection,
             self.key_replay_counter,
-        );
-        // TODO(hahnr): The status should not be pushed as an update but instead as a Result.
-        let verified_frame = match result {
-            Err(e) => match e.downcast_ref::<Error>() {
-                Some(Error::WrongAesKeywrapKey) => {
-                    update_sink.push(SecAssocUpdate::Status(SecAssocStatus::WrongPassword));
-                    return Ok(());
-                }
-                _ => bail!(e),
-            },
-            other => other,
-        }?;
+        )?;
+
         // Safe: frame was just verified.
         let raw_frame = verified_frame.unsafe_get_raw();
 
