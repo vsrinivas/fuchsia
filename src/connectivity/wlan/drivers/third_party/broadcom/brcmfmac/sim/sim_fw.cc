@@ -196,6 +196,17 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     case BRCMF_C_GET_VAR:
       return BcdcVarOp(ifidx, dcmd, data, len, dcmd->cmd == BRCMF_C_SET_VAR);
       break;
+    case BRCMF_C_GET_BANDLIST: {
+      const uint32_t bandlist[] = {
+        2, // Number of bands
+        WLC_BAND_2G,
+        WLC_BAND_5G,
+      };
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(bandlist))) == ZX_OK) {
+        memcpy(data, bandlist, sizeof(bandlist));
+      }
+      break;
+    }
     case BRCMF_C_GET_REVINFO: {
       struct brcmf_rev_info_le rev_info;
       hw_.GetRevInfo(&rev_info);
