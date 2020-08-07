@@ -6,4 +6,5 @@
 standard_fuchsia_cpus = [
   "arm64",
   "x64",
+  "riscv64",
 ]
