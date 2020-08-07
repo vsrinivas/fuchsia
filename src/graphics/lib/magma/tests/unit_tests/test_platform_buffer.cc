@@ -517,6 +517,48 @@ class TestPlatformBuffer {
     EXPECT_FALSE(wc_buffer->Write(&kValue, 0, sizeof(kValue)));
     EXPECT_FALSE(wc_buffer->Read(&value_out, 0, sizeof(value_out)));
   }
+
+  static void Children() {
+    std::unique_ptr<magma::PlatformBuffer> buffer =
+        magma::PlatformBuffer::Create(magma::page_size(), "test");
+    ASSERT_TRUE(buffer);
+
+    EXPECT_FALSE(buffer->HasChildren());
+
+    constexpr uint32_t kConstant = 0x1234abcd;
+    void* ptr;
+    ASSERT_TRUE(buffer->MapCpu(&ptr));
+    *reinterpret_cast<uint32_t*>(ptr) = kConstant;
+    EXPECT_TRUE(buffer->UnmapCpu());
+
+    uint32_t buffer_handle;
+    EXPECT_TRUE(buffer->CreateChild(&buffer_handle));
+    EXPECT_TRUE(buffer->HasChildren());
+
+    auto child1 = magma::PlatformBuffer::Import(buffer_handle);
+    ASSERT_TRUE(child1);
+
+    ASSERT_TRUE(child1->MapCpu(&ptr));
+    EXPECT_EQ(kConstant, *reinterpret_cast<uint32_t*>(ptr));
+    *reinterpret_cast<uint32_t*>(ptr) = kConstant + 1;
+    EXPECT_TRUE(child1->UnmapCpu());
+
+    EXPECT_TRUE(buffer->CreateChild(&buffer_handle));
+    EXPECT_TRUE(buffer->HasChildren());
+
+    auto child2 = magma::PlatformBuffer::Import(buffer_handle);
+    ASSERT_TRUE(child2);
+
+    ASSERT_TRUE(child2->MapCpu(&ptr));
+    EXPECT_EQ(kConstant + 1, *reinterpret_cast<uint32_t*>(ptr));
+    EXPECT_TRUE(child2->UnmapCpu());
+
+    child1.reset();
+    EXPECT_TRUE(buffer->HasChildren());
+
+    child2.reset();
+    EXPECT_FALSE(buffer->HasChildren());
+  }
 };
 
 TEST(PlatformBuffer, Basic) {
@@ -556,6 +598,8 @@ TEST(PlatformBuffer, CleanCacheMapped) {
 }
 
 TEST(PlatformBuffer, ReadWrite) { TestPlatformBuffer::ReadWrite(); }
+
+TEST(PlatformBuffer, Children) { TestPlatformBuffer::Children(); }
 
 #if defined(__Fuchsia__)
 

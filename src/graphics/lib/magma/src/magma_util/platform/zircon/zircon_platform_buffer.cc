@@ -425,6 +425,31 @@ bool ZirconPlatformBuffer::Write(const void* buffer, uint64_t offset, uint64_t l
   return DRETF(status == ZX_OK, "Write failed with status: %d", status);
 }
 
+bool ZirconPlatformBuffer::CreateChild(uint32_t* handle_out) {
+  zx::vmo child;
+  zx_status_t status = vmo_.create_child(ZX_VMO_CHILD_SLICE, 0, /*offset*/
+                                         size_, &child);
+
+  if (status != ZX_OK)
+    return DRETF(false, "zx_cmo_create_child failed: %d", status);
+
+  *handle_out = child.release();
+  return true;
+}
+
+bool ZirconPlatformBuffer::HasChildren() const {
+  zx_signals_t observed;
+  zx_status_t status =
+      vmo_.wait_one(ZX_VMO_ZERO_CHILDREN, zx::deadline_after(zx::duration(0)), &observed);
+  if (status == ZX_ERR_TIMED_OUT)
+    return true;
+  DASSERT(status == ZX_OK);
+  DASSERT(observed & ZX_VMO_ZERO_CHILDREN);
+  return false;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 uint64_t PlatformBuffer::MinimumMappableAddress() {
   return MappingAddressRange::CreateDefault()->Base();
 }

@@ -62,6 +62,12 @@ class PlatformBuffer {
   // On success, duplicate of the underlying handle which is owned by the caller.
   virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
 
+  // Creates a duplicate handle whose lifetime can be tracked with HasChildren.
+  virtual bool CreateChild(uint32_t* handle_out) = 0;
+
+  // Returns true if one or more child buffers exist.
+  virtual bool HasChildren() const = 0;
+
   // Ensures the specified pages are backed by real memory.
   // note: the implementation of this function is required to be threadsafe.
   virtual bool CommitPages(uint32_t start_page_index, uint32_t page_count) const = 0;

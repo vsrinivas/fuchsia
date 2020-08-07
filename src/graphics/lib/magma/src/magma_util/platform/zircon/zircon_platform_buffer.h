@@ -65,6 +65,12 @@ class ZirconPlatformBuffer : public PlatformBuffer {
     return true;
   }
 
+  // Creates a duplicate handle whose lifetime can be tracked with HasChildren.
+  bool CreateChild(uint32_t* handle_out) override;
+
+  // Returns true if one or more child buffers exist.
+  bool HasChildren() const override;
+
   // PlatformBuffer implementation
   bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
   bool MapCpu(void** addr_out, uintptr_t alignment) override;
