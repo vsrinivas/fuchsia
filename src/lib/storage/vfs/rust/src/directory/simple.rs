@@ -311,10 +311,6 @@ where
             modification_time: 0,
         })
     }
-
-    fn close(&self) -> Result<(), Status> {
-        Ok(())
-    }
 }
 
 impl<Connection> DirectlyMutable for Simple<Connection>

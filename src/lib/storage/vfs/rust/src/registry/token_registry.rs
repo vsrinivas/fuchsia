@@ -345,10 +345,6 @@ mod tests {
             fn unregister_watcher(self: Arc<Self>, _key: usize) {
                 panic!("Not implemented!")
             }
-
-            fn close(&self) -> Result<(), Status> {
-                panic!("Not implemented!");
-            }
         }
 
         impl MutableDirectory for MockDirectory {

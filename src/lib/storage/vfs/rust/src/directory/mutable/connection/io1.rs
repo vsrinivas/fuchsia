@@ -8,12 +8,9 @@ use crate::{
     common::send_on_open_with_error,
     directory::{
         common::new_connection_validate_flags,
-        connection::{
-            io1::{
-                handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
-                DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
-            },
-            util::OpenDirectory,
+        connection::io1::{
+            handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
+            DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
         },
         entry::DirectoryEntry,
         entry_container::MutableDirectory,
@@ -70,7 +67,7 @@ pub struct MutableConnection {
 impl DerivedConnection for MutableConnection {
     type Directory = dyn MutableConnectionClient;
 
-    fn new(scope: ExecutionScope, directory: OpenDirectory<Self::Directory>, flags: u32) -> Self {
+    fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self {
         MutableConnection { base: BaseConnection::<Self>::new(scope, directory, flags) }
     }
 
@@ -81,7 +78,6 @@ impl DerivedConnection for MutableConnection {
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let directory = OpenDirectory::new(directory);
         let flags = match new_connection_validate_flags(flags, mode) {
             Ok(updated) => updated,
             Err(status) => {
@@ -113,10 +109,10 @@ impl DerivedConnection for MutableConnection {
         let connection = Self::new(scope.clone(), directory, flags);
 
         let task = handle_requests::<Self>(requests, connection);
-        // If we fail to send the task to the executor, it is probably shut down or is in the
+        // If we failed to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently).  So there is nothing
-        // for us to do - the connection will be closed automatically when the connection object is
-        // dropped.
+        // for us to do, but to ignore the request.  Connection will be closed when the connection
+        // object is dropped.
         let _ = scope.spawn(Box::pin(task));
     }
 
@@ -154,10 +150,6 @@ impl DerivedConnection for MutableConnection {
                 }
             }
         })
-    }
-
-    fn get_directory(&self) -> &Self::Directory {
-        self.base.directory.as_ref()
     }
 }
 
@@ -348,7 +340,6 @@ mod tests {
         Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
         SetAttr { id: u32, flags: u32, attrs: NodeAttributes },
         Sync,
-        Close,
     }
 
     #[derive(Debug)]
@@ -422,10 +413,6 @@ mod tests {
         fn unregister_watcher(self: Arc<Self>, _key: usize) {
             panic!("Not implemented");
         }
-
-        fn close(&self) -> Result<(), Status> {
-            self.env.handle_event(MutableDirectoryAction::Close)
-        }
     }
 
     impl MutableDirectory for MockDirectory {
@@ -481,7 +468,7 @@ mod tests {
 
     struct TestEnv {
         cur_id: Mutex<u32>,
-        scope: ExecutionScope,
+        token_registry: Arc<token_registry::Simple>,
         events: Mutex<Vec<MutableDirectoryAction>>,
     }
 
@@ -494,10 +481,7 @@ mod tests {
     impl TestEnv {
         pub fn new() -> Arc<Self> {
             let token_registry = token_registry::Simple::new();
-            let scope = ExecutionScope::build(Box::new(fasync::EHandle::local()))
-                .token_registry(token_registry)
-                .new();
-            Arc::new(TestEnv { cur_id: Mutex::new(0), scope, events: Mutex::new(vec![]) })
+            Arc::new(TestEnv { cur_id: Mutex::new(0), token_registry, events: Mutex::new(vec![]) })
         }
 
         pub fn handle_event(&self, event: MutableDirectoryAction) -> Result<(), Status> {
@@ -509,12 +493,15 @@ mod tests {
             self: Arc<Self>,
             flags: u32,
         ) -> (Arc<MockDirectory>, DirectoryProxy) {
+            let scope = ExecutionScope::build(Box::new(fasync::EHandle::local()))
+                .token_registry(self.token_registry.clone())
+                .new();
             let mut cur_id = self.cur_id.lock().unwrap();
             let dir = MockDirectory::new(*cur_id, self.clone());
             *cur_id += 1;
             let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
             MutableConnection::create_connection(
-                self.scope.clone(),
+                scope,
                 dir.clone(),
                 flags,
                 0,
@@ -622,27 +609,5 @@ mod tests {
         assert_eq!(Status::from_raw(status), Status::OK);
         let events = env.events.lock().unwrap();
         assert_eq!(*events, vec![MutableDirectoryAction::Sync]);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_close() {
-        let env = TestEnv::new();
-        let (_dir, proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let status = proxy.close().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
-        let events = env.events.lock().unwrap();
-        assert_eq!(*events, vec![MutableDirectoryAction::Close]);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_implicit_close() {
-        let env = TestEnv::new();
-        let (_dir, _proxy) = env.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-
-        env.scope.shutdown();
-        env.scope.wait().await;
-
-        let events = env.events.lock().unwrap();
-        assert_eq!(*events, vec![MutableDirectoryAction::Close]);
     }
 }

@@ -4,8 +4,8 @@
 
 //! Module holding different kinds of files and their building blocks.
 use {
-    crate::directory::entry::DirectoryEntry, async_trait::async_trait,
-    fidl_fuchsia_io::NodeAttributes, fidl_fuchsia_mem::Buffer, fuchsia_zircon::Status,
+    async_trait::async_trait, fidl_fuchsia_io::NodeAttributes, fidl_fuchsia_mem::Buffer,
+    fuchsia_zircon::Status,
 };
 
 /// File nodes with per-connection buffers.
@@ -22,7 +22,7 @@ pub mod connection;
 
 /// Trait used for all files.
 #[async_trait]
-pub trait File: Sync + Send + DirectoryEntry {
+pub trait File: Sync + Send {
     /// Called when the file is going to be accessed, typically by a new connection.
     /// Flags is the same as the flags passed to `fidl_fuchsia_io.Node/Open`.
     /// The following flags are handled by the connection and do not need to be handled inside

@@ -693,10 +693,6 @@ impl Directory for FatDirectory {
             modification_time,
         })
     }
-
-    fn close(&self) -> Result<(), Status> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]

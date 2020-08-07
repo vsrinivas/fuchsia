@@ -267,8 +267,4 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
             modification_time: 0,
         })
     }
-
-    fn close(&self) -> Result<(), Status> {
-        Ok(())
-    }
 }
