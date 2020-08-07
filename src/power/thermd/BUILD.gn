@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 
-if (target_cpu == "x64") {
+if (target_cpu == "x64" || target_cpu == "riscv64") {
   executable("bin") {
     output_name = "thermd"
 
