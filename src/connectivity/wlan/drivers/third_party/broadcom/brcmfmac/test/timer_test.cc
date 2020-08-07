@@ -48,18 +48,19 @@ class TimerTest : public testing::Test {
   TimerTest() {}
 
   void SetUp() override;
-  brcmf_pub* GetFakeDrvr() { return fake_drvr_.get(); }
+  void TearDown() override;
+  brcmf_pub* GetFakeDrvr() { return fake_drvr_; }
   WorkQueue* GetQueue() { return queue_.get(); }
 
  private:
   std::unique_ptr<async::Loop> dispatcher_loop_;
   std::unique_ptr<WorkQueue> queue_;
-  std::unique_ptr<brcmf_pub> fake_drvr_;
+  brcmf_pub* fake_drvr_;
 };
 
 // Setup the dispatcher and work queue
 void TimerTest::SetUp() {
-  fake_drvr_ = std::make_unique<brcmf_pub>();
+  fake_drvr_ = new brcmf_pub();
   dispatcher_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = dispatcher_loop_->StartThread("test-timer-worker", nullptr);
   EXPECT_EQ(status, ZX_OK);
@@ -69,6 +70,8 @@ void TimerTest::SetUp() {
   // The timer must be standard layout in order to use containerof
   ASSERT_TRUE(std::is_standard_layout<Timer>::value);
 }
+
+void TimerTest::TearDown() { delete fake_drvr_; }
 
 static void test_timer_handler(void* data) {
   struct TestTimerCfg* cfg = static_cast<decltype(cfg)>(data);
