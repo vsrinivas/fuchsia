@@ -280,6 +280,7 @@ class __OWNER(void) GPArena {
     HeadNode(FreeNode* h, uint64_t g) : head(h), gen(g) {}
   };
   ktl::atomic<HeadNode> head_node_{};
+#ifndef __riscv
 #ifdef __clang__
   static_assert(ktl::atomic<HeadNode>::is_always_lock_free, "atomic<HeadNode> not lock free");
 #else
@@ -287,6 +288,7 @@ class __OWNER(void) GPArena {
   // know that at this point. Instead we ensure HeadNode is 16bytes so ensure our atomics will be
   // the ones used.
   static_assert(sizeof(HeadNode) == 16, "HeadNode must be 16 bytes");
+#endif
 #endif
 };
 
