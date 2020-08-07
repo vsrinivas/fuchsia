@@ -125,7 +125,9 @@ TEST_F(LinearNavigationActionTest, NoTreeInFocus) {
   EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_FALSE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->message_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->message_ids()[0], fuchsia::intl::l10n::MessageIds::NO_FOCUS_ALERT);
 }
 
 // When next node is not found, the Linear Navigation Action should do nothing.

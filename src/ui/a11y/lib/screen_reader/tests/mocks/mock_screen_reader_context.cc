@@ -24,6 +24,13 @@ fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessagePromise(
   return fit::make_ok_promise();
 }
 
+fit::promise<> MockScreenReaderContext::MockSpeaker::SpeakMessageByIdPromise(
+    fuchsia::intl::l10n::MessageIds message_id, Options options) {
+  received_speak_ = true;
+  message_ids_.push_back(message_id);
+  return fit::make_ok_promise();
+}
+
 fit::promise<> MockScreenReaderContext::MockSpeaker::CancelTts() {
   received_cancel_ = true;
   messages_.clear();

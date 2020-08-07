@@ -23,7 +23,11 @@ LinearNavigationAction::~LinearNavigationAction() = default;
 
 void LinearNavigationAction::Run(ActionData process_data) {
   auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
-  if (!a11y_focus) {
+  if (!a11y_focus || a11y_focus->view_ref_koid == ZX_KOID_INVALID) {
+    auto* speaker = screen_reader_context_->speaker();
+    auto promise = speaker->SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds::NO_FOCUS_ALERT,
+                                                    {.interrupt = true, .save_utterance = false});
+    screen_reader_context_->executor()->schedule_task(std::move(promise));
     FX_LOGS(INFO) << "Linear Navigation Action: No view is in focus.";
     return;
   }

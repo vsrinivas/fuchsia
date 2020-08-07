@@ -31,6 +31,10 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
                                        Options options) override;
 
     // |Speaker|
+    fit::promise<> SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds message_id,
+                                           Options options) override;
+
+    // |Speaker|
     fit::promise<> CancelTts() override;
 
     // Returns true whether any speak request was done.
@@ -43,10 +47,13 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     std::vector<std::string>& messages() { return messages_; }
     // Returns the vector that collects all node IDs to be described by SpeakPromise().
     std::vector<uint32_t>& node_ids() { return node_ids_; }
+    // Returns the vector that collects all message IDs to be spoken by |SpeakMessageByIdPromise|
+    std::vector<fuchsia::intl::l10n::MessageIds>& message_ids() { return message_ids_; }
 
    private:
     std::vector<std::string> messages_;
     std::vector<uint32_t> node_ids_;
+    std::vector<fuchsia::intl::l10n::MessageIds> message_ids_;
     bool received_speak_ = false;
     bool received_cancel_ = false;
   };
