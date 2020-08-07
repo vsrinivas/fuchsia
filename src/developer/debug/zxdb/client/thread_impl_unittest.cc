@@ -123,7 +123,7 @@ TEST_F(ThreadImplTest, Frames) {
 
   // Resuming the thread should clear the frames.
   mock_remote_api()->set_resume_quits_loop(true);
-  thread->Continue();
+  thread->Continue(false);
   EXPECT_EQ(0u, thread->GetStack().size());
   EXPECT_FALSE(thread->GetStack().has_all_frames());
   loop().Run();

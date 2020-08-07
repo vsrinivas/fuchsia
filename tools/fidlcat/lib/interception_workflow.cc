@@ -82,14 +82,14 @@ void InterceptingThreadObserver::OnThreadStopped(zxdb::Thread* thread, const zxd
         FX_LOGS(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
                        << ':' << thread->GetKoid() << ": Internal error: breakpoint "
                        << settings.locations[0].name.components()[0].name() << " not managed";
-        thread->Continue();
+        thread->Continue(false);
         return;
       }
       workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall);
       return;
     }
   }
-  thread->Continue();
+  thread->Continue(false);
 }
 
 void InterceptingThreadObserver::Register(int64_t koid, SyscallDecoder* decoder) {
@@ -509,7 +509,7 @@ namespace {
 class AlwaysContinue {
  public:
   explicit AlwaysContinue(zxdb::Thread* thread) : thread_(thread) {}
-  ~AlwaysContinue() { thread_->Continue(); }
+  ~AlwaysContinue() { thread_->Continue(false); }
 
  private:
   zxdb::Thread* thread_;

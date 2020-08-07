@@ -32,7 +32,7 @@ class MockThread : public Thread, public Stack::Delegate {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [on_paused = std::move(on_paused)]() mutable { on_paused(); });
   }
-  void Continue() override {}
+  void Continue(bool forward_exception) override {}
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     fit::callback<void(const Err&)> on_continue) override {}
   void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override {}

@@ -304,7 +304,7 @@ bool SyscallDecoder::StepToReturnAddress() {
 
   // Restarts the stopped thread. When the breakpoint will be reached (at the
   // end of the syscall), LoadSyscallReturnValue will be called.
-  thread->Continue();
+  thread->Continue(false);
   return true;
 }
 

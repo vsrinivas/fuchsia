@@ -18,12 +18,14 @@ namespace zxdb {
 
 namespace {
 
+constexpr int kForwardSwitchID = 0;
+
 const char kContinueShortHelp[] = "continue / c: Continue a suspended thread or process.";
 const char kContinueHelp[] =
-    R"(continue / c
+    R"(continue / c [ --forward / -f ]
 
   When a thread is stopped at an exception or a breakpoint, "continue" will
-  continue execution.
+  continue the execution.
 
   See "pause" to stop a running thread or process.
 
@@ -46,10 +48,20 @@ const char kContinueHelp[] =
   all threads other than the specified one (which the user might want to step
   while everything else is going).
 
+Options
+
+  --forward | -f
+      This is a directive that the relevant exception(s) should not be marked
+      as handled, but rather forwarded as 'second-chance' in which the
+      process-level handler is given a chance to resolve the exception before
+      the debugger inspects it again.
+
 Examples
 
   c
+  c -f
   continue
+  continue --forward
       Continue all processes and threads.
 
   pr c
@@ -59,7 +71,10 @@ Examples
       no process index is specified).
 
   t c
+  t c -f
   thread continue
+  thread continue --forward
+  pr -f
   pr 2 t 4 c
   process 2 thread 4 continue
       Continue only one thread (the current process and thread are implicit
@@ -70,17 +85,19 @@ Err RunVerbContinue(ConsoleContext* context, const Command& cmd) {
   if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread}); err.has_error())
     return err;
 
+  bool forward = cmd.HasSwitch(kForwardSwitchID);
+
   if (cmd.HasNoun(Noun::kThread)) {
-    cmd.thread()->Continue();
+    cmd.thread()->Continue(forward);
   } else if (cmd.HasNoun(Noun::kProcess)) {
     Process* process = cmd.target()->GetProcess();
     if (!process)
       return Err("Process not running, can't continue.");
-    process->Continue();
+    process->Continue(forward);
   } else {
     if (Err err = VerifySystemHasRunningProcess(&context->session()->system()); err.has_error())
       return err;
-    context->session()->system().Continue();
+    context->session()->system().Continue(forward);
   }
 
   return Err();
@@ -89,8 +106,10 @@ Err RunVerbContinue(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 VerbRecord GetContinueVerbRecord() {
-  return VerbRecord(&RunVerbContinue, {"continue", "cont", "c"}, kContinueShortHelp, kContinueHelp,
-                    CommandGroup::kStep, SourceAffinity::kSource);
+  VerbRecord record{&RunVerbContinue, {"continue", "cont", "c"}, kContinueShortHelp,
+                    kContinueHelp,    CommandGroup::kStep,       SourceAffinity::kSource};
+  record.switches.emplace_back(kForwardSwitchID, false, "forward", 'f');
+  return record;
 }
 
 }  // namespace zxdb

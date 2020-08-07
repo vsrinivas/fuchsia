@@ -29,7 +29,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   debug_ipc::ThreadRecord::State GetState() const override;
   debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const override;
   void Pause(fit::callback<void()> on_paused) override;
-  void Continue() override;
+  void Continue(bool forward_exception) override;
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     fit::callback<void(const Err&)> on_continue) override;
   void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override;

@@ -593,7 +593,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
   if (FilterConditionalBreakpoints(&info)) {
     // For simplicity, we're resuming all threads right now.
     // TODO(dangyi): It's better to continue only the affected threads.
-    system_.Continue();
+    system_.Continue(false);
   } else {
     // This is the main notification of an exception.
     thread->OnException(info);
@@ -663,7 +663,7 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
   found_target->ProcessCreatedAsComponent(notify.koid, notify.name);
 
   // Now that the target is created, we can resume the process and make the first thread to execute.
-  found_target->process()->Continue();
+  found_target->process()->Continue(false);
 }
 
 void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {

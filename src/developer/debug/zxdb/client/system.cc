@@ -675,7 +675,7 @@ void System::Pause(fit::callback<void()> on_paused) {
       });
 }
 
-void System::Continue() {
+void System::Continue(bool forward) {
   // Tell each process to continue as it desires.
   //
   // It would be more efficient to tell the backend to resume all threads in all processes but the
@@ -684,7 +684,7 @@ void System::Continue() {
   // step in a range).
   for (const auto& target : targets_) {
     if (Process* process = target->GetProcess())
-      process->Continue();
+      process->Continue(forward);
   }
 }
 

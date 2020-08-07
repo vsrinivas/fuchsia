@@ -126,7 +126,7 @@ class System : public ClientObject,
   void Pause(fit::callback<void()> on_paused);
 
   // Applies to all threads of all debugged processes.
-  void Continue();
+  void Continue(bool forward);
 
   // Whether there's a download pending for the given build ID.
   bool HasDownload(const std::string& build_id);

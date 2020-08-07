@@ -56,8 +56,11 @@ class Thread : public ClientObject {
   // synchronous suspending and because a different continue message could race with the reply.
   virtual void Pause(fit::callback<void()> on_paused) = 0;
 
-  // Resumes only this thread.
-  virtual void Continue() = 0;
+  // Continues the thread, optionally forwarding the associated exception as
+  // second-chance, allowing the process-level handler a chance to resolve the
+  // exception before sending it back to the debugger; else, the exception is
+  // marked as handled and the thread is resumed.
+  virtual void Continue(bool forward_exception) = 0;
 
   // Continues the thread using the given ThreadController. This is used to implement the more
   // complex forms of stepping.

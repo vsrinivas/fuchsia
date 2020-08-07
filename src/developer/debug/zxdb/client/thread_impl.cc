@@ -74,13 +74,14 @@ void ThreadImpl::Pause(fit::callback<void()> on_paused) {
       });
 }
 
-void ThreadImpl::Continue() {
+void ThreadImpl::Continue(bool forward_exception) {
   debug_ipc::ResumeRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koids.push_back(koid_);
 
   if (controllers_.empty()) {
-    request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
+    request.how = forward_exception ? debug_ipc::ResumeRequest::How::kForwardAndContinue
+                                    : debug_ipc::ResumeRequest::How::kResolveAndContinue;
   } else {
     // When there are thread controllers, ask the most recent one for how to continue.
     //
@@ -142,7 +143,7 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
           NotifyControllerDone(controller_ptr);  // Remove the controller.
         } else {
           controller_ptr->Log("Initialized, continuing...");
-          Continue();
+          Continue(false);
         }
         on_continue(err);
       });
@@ -308,7 +309,7 @@ void ThreadImpl::OnException(const StopInfo& info) {
       observer.OnThreadStopped(this, external_info);
   } else {
     // Controllers all say to continue.
-    Continue();
+    Continue(false);
   }
 }
 

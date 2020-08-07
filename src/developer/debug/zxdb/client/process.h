@@ -118,7 +118,8 @@ class Process : public ClientObject {
   virtual void Pause(fit::callback<void()> on_paused) = 0;
 
   // Applies to all threads in the process.
-  virtual void Continue() = 0;
+  // See Thread::Continue() for more detail on the forwarding of exceptions.
+  virtual void Continue(bool forward_exceptions) = 0;
 
   // The callback does NOT mean the step has completed, but rather the setup for the function was
   // successful. Symbols and breakpoint setup can cause asynchronous failures.

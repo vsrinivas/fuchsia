@@ -54,7 +54,7 @@ void MockProcess::Pause(fit::callback<void()> on_paused) {
                                    [on_paused = std::move(on_paused)]() mutable { on_paused(); });
 }
 
-void MockProcess::Continue() {}
+void MockProcess::Continue(bool forward_exceptions) {}
 
 void MockProcess::ContinueUntil(std::vector<InputLocation> location,
                                 fit::callback<void(const Err&)> cb) {

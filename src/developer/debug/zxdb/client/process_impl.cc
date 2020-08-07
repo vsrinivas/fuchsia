@@ -132,7 +132,7 @@ void ProcessImpl::Pause(fit::callback<void()> on_paused) {
       });
 }
 
-void ProcessImpl::Continue() {
+void ProcessImpl::Continue(bool forward_exceptions) {
   // Tell each thread to continue as it desires.
   //
   // It would be more efficient to tell the backend to resume all threads in the process but the
@@ -140,7 +140,7 @@ void ProcessImpl::Continue() {
   // thread could have a controller that wants to continue in a specific way (like single-step or
   // step in a range).
   for (const auto& [koid, thread] : threads_)
-    thread->Continue();
+    thread->Continue(forward_exceptions);
 }
 
 void ProcessImpl::ContinueUntil(std::vector<InputLocation> locations,
@@ -237,7 +237,7 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
     observer.DidCreateThread(thread_ptr);
 
   if (resume)
-    thread_ptr->Continue();
+    thread_ptr->Continue(false);
 }
 
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {

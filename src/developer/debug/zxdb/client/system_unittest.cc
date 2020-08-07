@@ -134,7 +134,7 @@ TEST_F(SystemTest, GlobalContinue) {
   InjectException(break_notification);
 
   // Continue globally. This should in turn update the thread.
-  session().system().Continue();
+  session().system().Continue(false);
 
   // Both threads should have been resumed in the backend.
   EXPECT_EQ(2, sink()->GetAndResetResumeCount());

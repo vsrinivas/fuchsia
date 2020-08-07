@@ -424,7 +424,7 @@ void SyscallDecoderDispatcher::DeleteDecoder(SyscallDecoder* decoder) {
   if (!decoder->aborted()) {
     zxdb::Thread* thread = decoder->get_thread();
     if (thread != nullptr) {
-      thread->Continue();
+      thread->Continue(false);
     }
   }
   syscall_decoders_.erase(decoder->fidlcat_thread()->koid());
@@ -433,7 +433,7 @@ void SyscallDecoderDispatcher::DeleteDecoder(SyscallDecoder* decoder) {
 void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
   zxdb::Thread* thread = decoder->get_thread();
   if (thread != nullptr) {
-    thread->Continue();
+    thread->Continue(false);
   }
   exception_decoders_.erase(decoder->thread_id());
 }
