@@ -42,6 +42,9 @@ pub enum SwitchboardError {
     #[error("Unhandled type: {0:?}")]
     UnhandledType(SettingType),
 
+    #[error("Delivery error for type: {0:?} received by: {1:?}")]
+    DeliveryError(SettingType, SettingType),
+
     #[error("Unexpected error: {0}")]
     UnexpectedError(Cow<'static, str>),
 
