@@ -3,29 +3,61 @@
 // found in the LICENSE file.
 
 use {
-    crate::config_management::{Credential, NetworkConfig, NetworkIdentifier},
+    super::{StashNode, NODE_SEPARATOR},
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_stash as fidl_stash,
     fuchsia_component::client::connect_to_service,
-    log::error,
+    fuchsia_syslog::fx_log_err,
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
-    wlan_stash::{StashNode, NODE_SEPARATOR},
 };
 
-const STASH_PREFIX: &str = "config";
+pub const STASH_PREFIX: &str = "config";
 /// The name we store the persistent data of a network config under. The StashNode abstraction
 /// requires that writing to a StashNode is done as a named field, so we will store the network
 /// config's data under this name.
-const DATA: &str = "data";
+pub const DATA: &str = "data";
+
+/// The data that will be stored between reboots of a device. Used to convert the data between JSON
+/// and network config.
+#[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
+pub struct PersistentData {
+    pub credential: Credential,
+    pub has_ever_connected: bool,
+}
+
+/// The network identifier is the SSID and security policy of the network, and it is used to
+/// distinguish networks. It mirrors the NetworkIdentifier in fidl_fuchsia_wlan_policy.
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct NetworkIdentifier {
+    pub ssid: Vec<u8>,
+    pub security_type: SecurityType,
+}
+
+/// The security type of a network connection. It mirrors the fidl_fuchsia_wlan_policy SecurityType
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub enum SecurityType {
+    None,
+    Wep,
+    Wpa,
+    Wpa2,
+    Wpa3,
+}
+/// The credential of a network connection. It mirrors the fidl_fuchsia_wlan_policy Credential
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub enum Credential {
+    None,
+    Password(Vec<u8>),
+    Psk(Vec<u8>),
+}
 
 /// Manages access to the persistent storage or saved network configs through Stash
-pub struct Stash {
+pub struct PolicyStash {
     root: StashNode,
 }
 
-impl Stash {
+impl PolicyStash {
     /// Initialize new Stash with the ID provided by the Saved Networks Manager. The ID will
     /// identify stored values as being part of the same persistent storage.
     pub fn new_with_id(id: &str) -> Result<Self, Error> {
@@ -37,13 +69,12 @@ impl Stash {
             .create_accessor(false, accessor_server)
             .context("failed to create accessor")?;
         let root = StashNode::root(store).child(STASH_PREFIX);
-        Ok(Stash { root })
+        Ok(Self { root })
     }
 
     /// Initialize new Stash with a provided proxy in order to mock stash in unit tests.
-    #[cfg(test)]
     pub fn new_with_stash(proxy: fidl_stash::StoreAccessorProxy) -> Self {
-        Stash { root: StashNode::root(proxy) }
+        Self { root: StashNode::root(proxy).child(STASH_PREFIX) }
     }
 
     /// Update the network configs of a given network identifier to persistent storage, deleting
@@ -51,7 +82,7 @@ impl Stash {
     pub async fn write(
         &self,
         id: &NetworkIdentifier,
-        network_configs: &[NetworkConfig],
+        network_configs: &[PersistentData],
     ) -> Result<(), Error> {
         // write each config to a StashNode under the network identifier. The key of the StashNode
         // will be STASH_PREFIX#<net_id>#<index>
@@ -100,19 +131,16 @@ impl Stash {
     }
 
     /// Read persisting data of a given StashNode and use it to build a network config.
-    async fn read_config(
-        net_id: NetworkIdentifier,
-        stash_node: &StashNode,
-    ) -> Result<NetworkConfig, Error> {
+    async fn read_config(stash_node: &StashNode) -> Result<PersistentData, Error> {
         let fields = stash_node.fields().await?;
         let data = fields.get_str(DATA).ok_or_else(|| format_err!("failed to config's data"))?;
         let data: PersistentData = serde_json::from_str(data).map_err(|e| format_err!("{}", e))?;
-        data.into_config_with_id(net_id)
+        Ok(data)
     }
 
     /// Load all saved network configs from stash. Will create HashMap of network configs by SSID
     /// as saved in the stash. If something in stash can't be interpreted, we ignore it.
-    pub async fn load(&self) -> Result<HashMap<NetworkIdentifier, Vec<NetworkConfig>>, Error> {
+    pub async fn load(&self) -> Result<HashMap<NetworkIdentifier, Vec<PersistentData>>, Error> {
         // get all the children nodes of root, which represent the unique identifiers,
         let id_nodes = self.root.children().await?;
 
@@ -123,14 +151,14 @@ impl Stash {
             match self.id_from_key(&id_node) {
                 Ok(net_id) => {
                     for config_node in id_node.children().await? {
-                        match Self::read_config(net_id.clone(), &config_node).await {
+                        match Self::read_config(&config_node).await {
                             // If there is an error reading a saved network from stash, make a note
                             // but don't prevent wlancfg starting up.
                             Ok(network_config) => {
                                 config_list.push(network_config);
                             }
                             Err(e) => {
-                                error!("Error loading from stash: {:?}", e);
+                                fx_log_err!("Error loading from stash: {:?}", e);
                             }
                         }
                     }
@@ -141,7 +169,7 @@ impl Stash {
                     network_configs.insert(net_id, config_list);
                 }
                 Err(e) => {
-                    error!("Error reading network identifier from stash: {:?}", e);
+                    fx_log_err!("Error reading network identifier from stash: {:?}", e);
                     continue;
                 }
             }
@@ -161,53 +189,28 @@ impl Stash {
 
 /// Write the persisting values (not including network ID) of a network config to the provided
 /// stash node.
-fn write_config(stash_node: &mut StashNode, config: &NetworkConfig) -> Result<(), Error> {
-    let data = PersistentData::new(config.credential.clone(), config.has_ever_connected);
-    let data_str = serde_json::to_string(&data).map_err(|e| format_err!("{}", e))?;
+fn write_config(stash_node: &mut StashNode, persistent_data: &PersistentData) -> Result<(), Error> {
+    let data_str = serde_json::to_string(&persistent_data).map_err(|e| format_err!("{}", e))?;
     stash_node.write_str(DATA, data_str)
-}
-
-/// The data that will be stored between reboots of a device. Used to convert the data between JSON
-/// and network config
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct PersistentData {
-    credential: Credential,
-    has_ever_connected: bool,
-}
-
-impl PersistentData {
-    fn new(credential: Credential, has_ever_connected: bool) -> Self {
-        Self { credential, has_ever_connected }
-    }
-
-    /// Since Network Identifier is stored in the stash key and not in the stash value, we need
-    /// to combine network identifier with persistent data in order to make the network config.
-    fn into_config_with_id(self, network_id: NetworkIdentifier) -> Result<NetworkConfig, Error> {
-        let seen_in_passive = false;
-        NetworkConfig::new(network_id, self.credential, self.has_ever_connected, seen_in_passive)
-            .map_err(|e| format_err!("error creating network config from persistent data: {:?}", e))
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        crate::config_management::{Credential, NetworkIdentifier, SecurityType, PSK_BYTE_LEN},
-        fuchsia_async as fasync,
-    };
+    use {super::*, fuchsia_async as fasync};
+
+    /// The PSK provided must be the bytes form of the 64 hexadecimal character hash. This is a
+    /// duplicate of a definition in wlan/wlancfg/src, since I don't think there's a good way to
+    /// import just that constant.
+    pub const PSK_BYTE_LEN: usize = 32;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn write_and_read() {
         let stash = new_stash("write_and_read").await;
-        let cfg_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
-        let cfg = NetworkConfig::new(
-            cfg_id.clone(),
-            Credential::Password(b"password".to_vec()),
-            true,
-            false,
-        )
-        .expect("Failed to create network config");
+        let cfg_id = NetworkIdentifier { ssid: b"foo".to_vec(), security_type: SecurityType::Wpa2 };
+        let cfg = PersistentData {
+            credential: Credential::Password(b"password".to_vec()),
+            has_ever_connected: true,
+        };
 
         // Save a network config to the stash
         stash.write(&cfg_id, &vec![cfg.clone()]).await.expect("Failed writing to stash");
@@ -218,13 +221,10 @@ mod tests {
         assert_eq!(Some(&vec![cfg.clone()]), cfgs_from_stash.get(&cfg_id));
 
         // Overwrite the list of configs saved in stash
-        let cfg_2 = NetworkConfig::new(
-            NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2),
-            Credential::Password(b"other-password".to_vec()),
-            false,
-            false,
-        )
-        .expect("Failed to create network config");
+        let cfg_2 = PersistentData {
+            credential: Credential::Password(b"other-password".to_vec()),
+            has_ever_connected: false,
+        };
         stash
             .write(&cfg_id, &vec![cfg.clone(), cfg_2.clone()])
             .await
@@ -250,11 +250,11 @@ mod tests {
         let net_id_wpa = network_id("foo", SecurityType::Wpa);
         let net_id_wpa2 = network_id("foo", SecurityType::Wpa2);
         let net_id_wpa3 = network_id("foo", SecurityType::Wpa3);
-        let cfg_open = new_config(net_id_open.clone(), Credential::None);
-        let cfg_wep = new_config(net_id_wep.clone(), password.clone());
-        let cfg_wpa = new_config(net_id_wpa.clone(), password.clone());
-        let cfg_wpa2 = new_config(net_id_wpa2.clone(), password.clone());
-        let cfg_wpa3 = new_config(net_id_wpa3.clone(), password.clone());
+        let cfg_open = PersistentData { credential: Credential::None, has_ever_connected: false };
+        let cfg_wep = PersistentData { credential: password.clone(), has_ever_connected: false };
+        let cfg_wpa = PersistentData { credential: password.clone(), has_ever_connected: false };
+        let cfg_wpa2 = PersistentData { credential: password.clone(), has_ever_connected: false };
+        let cfg_wpa3 = PersistentData { credential: password.clone(), has_ever_connected: false };
 
         stash.write(&net_id_open, &vec![cfg_open.clone()]).await.expect("failed to write config");
         stash.write(&net_id_wep, &vec![cfg_wep.clone()]).await.expect("failed to write config");
@@ -283,9 +283,9 @@ mod tests {
         let password = Credential::Password(b"config-password".to_vec());
         let psk = Credential::Psk([65; PSK_BYTE_LEN].to_vec());
 
-        let cfg_none = new_config(net_id_none.clone(), Credential::None);
-        let cfg_password = new_config(net_id_password.clone(), password);
-        let cfg_psk = new_config(net_id_psk.clone(), psk);
+        let cfg_none = PersistentData { credential: Credential::None, has_ever_connected: false };
+        let cfg_password = PersistentData { credential: password, has_ever_connected: false };
+        let cfg_psk = PersistentData { credential: psk, has_ever_connected: false };
 
         // write each config to stash, then check that we see them when we load
         stash.write(&net_id_none, &vec![cfg_none.clone()]).await.expect("failed to write");
@@ -302,20 +302,17 @@ mod tests {
     async fn write_persists() {
         let stash_id = "write_persists";
         let stash = new_stash(stash_id).await;
-        let cfg_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
-        let cfg = NetworkConfig::new(
-            cfg_id.clone(),
-            Credential::Password(b"password".to_vec()),
-            true,
-            false,
-        )
-        .expect("Failed to create network config");
+        let cfg_id = NetworkIdentifier { ssid: b"foo".to_vec(), security_type: SecurityType::Wpa2 };
+        let cfg = PersistentData {
+            credential: Credential::Password(b"password".to_vec()),
+            has_ever_connected: true,
+        };
 
         // Save a network config to the stash
         stash.write(&cfg_id, &vec![cfg.clone()]).await.expect("Failed writing to stash");
 
         //create the stash again with same id
-        let stash = Stash::new_with_id(stash_id).expect("Failed to create new stash");
+        let stash = PolicyStash::new_with_id(stash_id).expect("Failed to create new stash");
 
         // Expect to read the same value back with the same key, should exist in new stash
         let cfgs_from_stash = stash.load().await.expect("Failed reading from stash");
@@ -326,22 +323,18 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn load_stash() {
         let store = new_stash("load_stash").await;
-        let foo_net_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
-        let cfg_foo = NetworkConfig::new(
-            foo_net_id.clone(),
-            Credential::Password(b"12345678".to_vec()),
-            true,
-            false,
-        )
-        .expect("Failed to create network config");
-        let bar_net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
-        let cfg_bar = NetworkConfig::new(
-            bar_net_id.clone(),
-            Credential::Password(b"qwertyuiop".to_vec()),
-            true,
-            false,
-        )
-        .expect("Failed to create network config");
+        let foo_net_id =
+            NetworkIdentifier { ssid: b"foo".to_vec(), security_type: SecurityType::Wpa2 };
+        let cfg_foo = PersistentData {
+            credential: Credential::Password(b"12345678".to_vec()),
+            has_ever_connected: true,
+        };
+        let bar_net_id =
+            NetworkIdentifier { ssid: b"bar".to_vec(), security_type: SecurityType::Wpa2 };
+        let cfg_bar = PersistentData {
+            credential: Credential::Password(b"qwertyuiop".to_vec()),
+            has_ever_connected: true,
+        };
 
         // Store two networks in our stash.
         store
@@ -366,8 +359,8 @@ mod tests {
 
         // write bad value directly to StashNode
         let some_net_id = network_id("foo", SecurityType::Wpa2);
-        let net_id_str =
-            Stash::serialize_key(&some_net_id).expect("failed to serialize network identifier");
+        let net_id_str = PolicyStash::serialize_key(&some_net_id)
+            .expect("failed to serialize network identifier");
         let mut config_node = stash.root.child(&net_id_str).child(&format!("{}", 0));
         let bad_value = "some bad value".to_string();
         config_node.write_str(DATA, bad_value).expect("failed to write to stashnode");
@@ -383,22 +376,18 @@ mod tests {
         let mut stash = new_stash(stash_id).await;
 
         // add some configs to the stash
-        let net_id_foo = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
-        let cfg_foo = NetworkConfig::new(
-            net_id_foo.clone(),
-            Credential::Password(b"qwertyuio".to_vec()),
-            true,
-            false,
-        )
-        .expect("Failed to create network config");
-        let net_id_bar = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
-        let cfg_bar = NetworkConfig::new(
-            net_id_bar.clone(),
-            Credential::Password(b"12345678".to_vec()),
-            false,
-            false,
-        )
-        .expect("Failed to create network config");
+        let net_id_foo =
+            NetworkIdentifier { ssid: b"foo".to_vec(), security_type: SecurityType::Wpa2 };
+        let cfg_foo = PersistentData {
+            credential: Credential::Password(b"qwertyuio".to_vec()),
+            has_ever_connected: true,
+        };
+        let net_id_bar =
+            NetworkIdentifier { ssid: b"bar".to_vec(), security_type: SecurityType::Wpa2 };
+        let cfg_bar = PersistentData {
+            credential: Credential::Password(b"12345678".to_vec()),
+            has_ever_connected: false,
+        };
         stash.write(&net_id_foo, &vec![cfg_foo.clone()]).await.expect("Failed to write to stash");
         stash.write(&net_id_bar, &vec![cfg_bar.clone()]).await.expect("Failed to write to stash");
 
@@ -415,14 +404,14 @@ mod tests {
         assert_eq!(0, configs_from_stash.len());
 
         // recreate stash and verify that clearing the stash persists
-        let stash = Stash::new_with_id(stash_id).expect("Failed to create new stash");
+        let stash = PolicyStash::new_with_id(stash_id).expect("Failed to create new stash");
         let configs_from_stash = stash.load().await.expect("Failed to read");
         assert_eq!(0, configs_from_stash.len());
     }
 
     // creates a new stash with the given ID and clears the values saved in the stash
-    async fn new_stash(stash_id: &str) -> Stash {
-        let mut stash = Stash::new_with_id(stash_id).expect("Failed to create new stash");
+    async fn new_stash(stash_id: &str) -> PolicyStash {
+        let mut stash = PolicyStash::new_with_id(stash_id).expect("Failed to create new stash");
         stash.root.delete().expect("failed to clear stash");
         stash.root.flush().await.expect("Failed to commit clearing stash");
         stash
@@ -434,25 +423,23 @@ mod tests {
 
         let net_id = network_id("foo", SecurityType::Wpa2);
         let credential = Credential::Password(b"password".to_vec());
-        let network_config = new_config(net_id.clone(), credential.clone());
+        let network_config =
+            PersistentData { credential: credential.clone(), has_ever_connected: false };
 
         // write to stash and check that the right thing is written under the right StashNode
         stash.write(&net_id, &vec![network_config]).await.expect("failed to write to stash");
         let net_id_str =
-            Stash::serialize_key(&net_id).expect("failed to serialize network identifier");
+            PolicyStash::serialize_key(&net_id).expect("failed to serialize network identifier");
         let expected_node = stash.root.child(&net_id_str).child(&format!("{}", 0));
         let fields = expected_node.fields().await.expect("failed to get fields");
         let data_actual = fields.get_str(&format!("{}", DATA));
-        let data_expected = serde_json::to_string(&PersistentData::new(credential, false))
-            .expect("failed to serialize data");
+        let data_expected =
+            serde_json::to_string(&PersistentData { credential, has_ever_connected: false })
+                .expect("failed to serialize data");
         assert_eq!(data_actual, Some(&data_expected));
     }
 
     fn network_id(ssid: impl Into<Vec<u8>>, security_type: SecurityType) -> NetworkIdentifier {
-        NetworkIdentifier::new(ssid.into(), security_type)
-    }
-
-    fn new_config(network_id: NetworkIdentifier, credential: Credential) -> NetworkConfig {
-        NetworkConfig::new(network_id, credential, false, false).expect("failed to create config")
+        NetworkIdentifier { ssid: ssid.into(), security_type }
     }
 }

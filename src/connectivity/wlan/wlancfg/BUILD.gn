@@ -78,7 +78,7 @@ rustc_binary("bin") {
     "src/config_management/config_manager.rs",
     "src/config_management/mod.rs",
     "src/config_management/network_config.rs",
-    "src/config_management/stash.rs",
+    "src/config_management/stash_conversion.rs",
     "src/legacy/deprecated_configuration.rs",
     "src/legacy/device.rs",
     "src/legacy/known_ess_store.rs",

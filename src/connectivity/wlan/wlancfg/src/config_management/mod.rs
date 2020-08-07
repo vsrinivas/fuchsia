@@ -6,4 +6,4 @@ mod config_manager;
 pub use config_manager::*;
 pub mod network_config;
 pub use network_config::*;
-mod stash;
+mod stash_conversion;

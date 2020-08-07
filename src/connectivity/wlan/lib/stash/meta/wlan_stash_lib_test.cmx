@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
                 "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
             }
         }
@@ -11,6 +12,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.stash.SecureStore",
             "fuchsia.stash.Store"
         ]
     }

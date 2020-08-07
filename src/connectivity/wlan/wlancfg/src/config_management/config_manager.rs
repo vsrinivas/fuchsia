@@ -8,7 +8,7 @@ use {
             Credential, FailureReason, NetworkConfig, NetworkConfigError, NetworkIdentifier,
             SecurityType,
         },
-        stash::Stash,
+        stash_conversion::*,
     },
     crate::legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
     anyhow::format_err,
@@ -21,6 +21,7 @@ use {
         fs, io,
         path::Path,
     },
+    wlan_stash::policy::PolicyStash as Stash,
 };
 
 /// The Saved Network Manager keeps track of saved networks and provides thread-safe access to
@@ -65,9 +66,30 @@ impl SavedNetworksManager {
         legacy_tmp_path: impl AsRef<Path>,
     ) -> Result<Self, anyhow::Error> {
         let mut stash = Stash::new_with_id(stash_id.as_ref())?;
-        let mut saved_networks = stash.load().await?;
+        let stashed_networks = stash.load().await?;
+        let mut saved_networks: HashMap<NetworkIdentifier, Vec<NetworkConfig>> = stashed_networks
+            .iter()
+            .map(|(network_id, persistent_data)| {
+                (
+                    NetworkIdentifier::from(network_id.clone()),
+                    persistent_data
+                        .iter()
+                        .filter_map(|data| {
+                            NetworkConfig::new(
+                                NetworkIdentifier::from(network_id.clone()),
+                                data.credential.clone().into(),
+                                data.has_ever_connected,
+                                false,
+                            )
+                            .ok()
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
+
         // Don't read legacy if stash is not empty; we have already migrated.
-        if stash.load().await?.is_empty() {
+        if saved_networks.is_empty() {
             Self::migrate_legacy(legacy_path.as_ref(), &mut stash, &mut saved_networks).await?;
         }
         // KnownEssStore will internally load from the correct path.
@@ -137,7 +159,12 @@ impl SavedNetworksManager {
         match Self::load_from_path(&legacy_storage_path) {
             Ok(legacy_saved_networks) => {
                 for (net_id, configs) in legacy_saved_networks {
-                    stash.write(&net_id, &configs).await?;
+                    stash
+                        .write(
+                            &net_id.clone().into(),
+                            &network_config_vec_to_persistent_data(&configs),
+                        )
+                        .await?;
                     saved_networks.insert(net_id, configs);
                 }
             }
@@ -219,7 +246,10 @@ impl SavedNetworksManager {
                 self.stash
                     .lock()
                     .await
-                    .write(&network_id, &network_configs)
+                    .write(
+                        &network_id.clone().into(),
+                        &network_config_vec_to_persistent_data(&network_configs),
+                    )
                     .await
                     .map_err(|_| NetworkConfigError::StashWriteError)?;
                 self.legacy_store
@@ -258,6 +288,7 @@ impl SavedNetworksManager {
     ) -> Result<(), NetworkConfigError> {
         let mut saved_networks = self.saved_networks.lock().await;
         let network_entry = saved_networks.entry(network_id.clone());
+
         if let Entry::Occupied(network_configs) = &network_entry {
             if network_configs.get().iter().any(|cfg| cfg.credential == credential) {
                 info!(
@@ -272,10 +303,14 @@ impl SavedNetworksManager {
         let network_configs = network_entry.or_default();
         evict_if_needed(network_configs);
         network_configs.push(network_config);
+
         self.stash
             .lock()
             .await
-            .write(&network_id, &network_configs)
+            .write(
+                &network_id.clone().into(),
+                &network_config_vec_to_persistent_data(&network_configs),
+            )
             .await
             .map_err(|_| NetworkConfigError::StashWriteError)?;
 
@@ -312,13 +347,19 @@ impl SavedNetworksManager {
                             if !network.has_ever_connected {
                                 network.has_ever_connected = true;
                                 // Update persistent storage since a config has changed.
-                                self.stash.lock().await.write(&id, &networks).await.unwrap_or_else(
-                                    |_| {
+                                self.stash
+                                    .lock()
+                                    .await
+                                    .write(
+                                        &id.into(),
+                                        &network_config_vec_to_persistent_data(&networks),
+                                    )
+                                    .await
+                                    .unwrap_or_else(|_| {
                                         info!(
                                         "Failed recording successful connect in persistent storage"
                                     );
-                                    },
-                                );
+                                    });
                             }
                         }
                         fidl_sme::ConnectResultCode::BadCredentials => {
