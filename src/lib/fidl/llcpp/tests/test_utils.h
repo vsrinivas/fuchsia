@@ -16,6 +16,12 @@
 #include <iostream>
 #include <vector>
 
+#ifndef __Fuchsia__
+// The current build rules for zircon/system/ulib/zircon don't allow linking
+// zx_status_get_string on host. Consider changing in the future.
+#define zx_status_get_string(status) ((status))
+#endif
+
 // Testing utilities indended for GIDL-generated conformance tests.
 namespace llcpp_conformance_utils {
 

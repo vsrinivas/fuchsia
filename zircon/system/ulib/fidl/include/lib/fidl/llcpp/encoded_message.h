@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/internal_callable_traits.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <zircon/assert.h>
 #include <zircon/fidl.h>
 
 #include <algorithm>
@@ -19,7 +20,6 @@
 
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>
-#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #endif
 

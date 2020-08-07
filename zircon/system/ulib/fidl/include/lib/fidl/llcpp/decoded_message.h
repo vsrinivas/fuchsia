@@ -8,6 +8,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/encoded_message.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <zircon/assert.h>
 #include <zircon/fidl.h>
 
 #include <type_traits>

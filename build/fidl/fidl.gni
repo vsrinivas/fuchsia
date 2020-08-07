@@ -56,6 +56,9 @@ import("//build/rust/toolchain.gni")
 #   experimental_flags (optional)
 #     A list of experimental fidlc features to enable.
 #
+#   host_llcpp (optional)
+#     A flag to enable or disable llcpp host generation.
+#
 #   non_fidl_deps (optional)
 #     A list of non-FIDL dependency targets, i.e. targets that don't contribute
 #     FIDL artifacts, but should be built before this target regardless.
@@ -78,6 +81,9 @@ template("fidl") {
   }
   if (defined(invoker.experimental_flags)) {
     not_needed(invoker, [ "experimental_flags" ])
+  }
+  if (defined(invoker.host_llcpp)) {
+    not_needed(invoker, [ "host_llcpp" ])
   }
 
   # Allow generated targets visibility to their dependant generated targets
@@ -175,7 +181,21 @@ template("fidl") {
       ]
     } else {
       hlcpp_public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
-      _llcpp_generators = []
+      if (defined(invoker.host_llcpp) && invoker.host_llcpp) {
+        _llcpp_generators = [
+          {
+            target_suffix = "llcpp"
+            fidlgen_generator = "llcpp"
+            output_stem = "llcpp/fidl"
+            additional_public_deps = [
+              "//zircon/public/lib/fidl-llcpp",
+              "//zircon/public/lib/fit",
+            ]
+          },
+        ]
+      } else {
+        _llcpp_generators = []
+      }
     }
 
     fidl_cpp(target_name) {

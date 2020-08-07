@@ -16,9 +16,6 @@ struct TestXUnionInTable {
     XUnionInTable value;
 };
 
-protocol EthernetDevice {
-};
-
 union IpAddressConfig {
     1: array<uint32>:6 padding_size_24_align_4;
     2: bool dhcp;

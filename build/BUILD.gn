@@ -372,7 +372,6 @@ group("deprecated_package_underscore") {
     "//src/lib/fake-clock/svc:tests",
     "//src/lib/fdio/rust:tests",
     "//src/lib/fidl/llcpp/tests:fidl_llcpp_builder_test",
-    "//src/lib/fidl/llcpp/tests:fidl_llcpp_conformance_test",
     "//src/lib/fidl/llcpp/tests:fidl_llcpp_types_test",
     "//src/lib/fidl_codec:fidl_codec_tests",
     "//src/lib/fidl_table_validation/fidl_table_validation_tests:fidl_table_validation_tests",
