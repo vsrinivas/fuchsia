@@ -21,6 +21,7 @@ use {
     futures::{StreamExt, TryStreamExt},
     log::{debug, error, info, warn},
     parking_lot::Mutex,
+    std::cmp,
     std::sync::Arc,
     time_metrics_registry::{self, TimeMetricDimensionEventType},
 };
@@ -145,7 +146,6 @@ async fn maintain_utc(
     }
 
     for i in 0.. {
-        let sleep_duration = zx::Duration::from_seconds(2i64.pow(i)); // exponential backoff
         info!("requesting roughtime service update the system time...");
         match time_service.update(1).await {
             Ok(Some(updated_time)) => {
@@ -171,15 +171,26 @@ async fn maintain_utc(
             Ok(None) => {
                 debug!(
                     "failed to update time, probably a network error. retrying in {}s.",
-                    sleep_duration.into_seconds()
+                    backoff_duration(i).into_seconds()
                 );
             }
             Err(why) => {
                 error!("couldn't make request to update time: {:?}", why);
             }
         }
-        fasync::Timer::new(sleep_duration.after_now()).await;
+        fasync::Timer::new(backoff_duration(i).after_now()).await;
     }
+}
+
+/// Returns the duration for which time synchronization should wait after failing to synchronize
+/// time. `attempt_index` is a zero-based index of the failed attempt, i.e. after the third failed
+/// attempt `attempt_index` = 2.
+fn backoff_duration(attempt_index: u32) -> zx::Duration {
+    // We make three tries at each interval before doubling, but never exceed 8 seconds (ie 2^3).
+    const TRIES_PER_EXPONENT: u32 = 3;
+    const MAX_EXPONENT: u32 = 3;
+    let exponent = cmp::min(attempt_index / TRIES_PER_EXPONENT, MAX_EXPONENT);
+    zx::Duration::from_seconds(2i64.pow(exponent))
 }
 
 /// Notifies waiting clients when the clock has been updated, wrapped in a lock to allow
@@ -433,5 +444,20 @@ mod tests {
             }
         );
         Ok(())
+    }
+
+    #[test]
+    fn backoff_sequence_matches_expectation() {
+        let expectation = vec![1, 1, 1, 2, 2, 2, 4, 4, 4, 8, 8, 8, 8, 8];
+        for i in 0..expectation.len() {
+            let expected = zx::Duration::from_seconds(expectation[i]);
+            let actual = backoff_duration(i as u32);
+
+            assert_eq!(
+                actual, expected,
+                "backoff after iteration {} should be {:?} but was {:?}",
+                i, expected, actual
+            );
+        }
     }
 }
