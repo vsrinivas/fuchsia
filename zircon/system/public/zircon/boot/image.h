@@ -406,6 +406,7 @@ typedef enum {
   ZBI_TOPOLOGY_ARCH_UNDEFINED = 0,  // Intended primarily for testing.
   ZBI_TOPOLOGY_ARCH_X86 = 1,
   ZBI_TOPOLOGY_ARCH_ARM = 2,
+  ZBI_TOPOLOGY_ARCH_RISCV = 3,
 } zbi_topology_architecture_t;
 
 typedef struct {
