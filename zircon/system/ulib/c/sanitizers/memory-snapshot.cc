@@ -374,6 +374,9 @@ class MemorySnapshot {
 #elif defined(__x86_64__)
   static constexpr auto kSpReg = &zx_thread_state_general_regs_t::rsp;
   static constexpr auto kThreadReg = &zx_thread_state_general_regs_t::fs_base;
+#elif defined(__riscv)
+  static constexpr auto kSpReg = &zx_thread_state_general_regs_t::placeholder;
+  static constexpr auto kThreadReg = &zx_thread_state_general_regs_t::placeholder;
 #else
 #error "what machine?"
 #endif
@@ -532,6 +535,7 @@ auto CurrentThreadRegs() {
   // Proxy for fs.base since rdfsbase isn't always available.
   __asm__("mov %%fs:0, %0" : "=r"(regs.fs_base));
   regs.gs_base = 0;  // Don't even try for gs.base.
+#elif defined(__riscv)
 #else
 #error "what machine?"
 #endif
