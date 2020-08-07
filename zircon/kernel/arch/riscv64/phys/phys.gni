@@ -1,0 +1,32 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/config/compiler.gni")
+
+# See //zircon/kernel/phys/BUILD.gn:kernel.phys.
+
+phys_configs = [
+  # With the MMU and caches disabled, misaligned accesses always fault.
+  # Tell the compiler to emit only aligned accesses, assuming the code
+  # obeys the C++ alignment rules.  The toolchain_variant.tags string can be
+  # matched to exclude assembly code that does unaligned accesses.
+  "//zircon/kernel/arch/riscv64/phys:strict-align",
+
+  # Compile as a position-independent executable. The code will apply its own
+  # fixups during initialization.
+  "//build/config/zircon:static-pie-compile",
+  "//build/config/zircon:static-pie-link",
+]
+
+phys_tags = [
+  "strict-align",
+  "static-pie",
+]
+
+phys_exclude_variant_tags = []
+
+phys_zbi_configs = [ "//zircon/kernel/phys:load-pic" ]
+
