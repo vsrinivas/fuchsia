@@ -105,6 +105,8 @@ generated_file("sysroot-meta-json") {
         arm64 = version_content
       } else if (target_cpu == "x64") {
         x64 = version_content
+      } else if (target_cpu == "riscv64") {
+        riscv64 = version_content
       } else {
         assert(false, "Unknown CPU type: $target_cpu")
       }
