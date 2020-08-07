@@ -52,6 +52,7 @@ if (current_toolchain == default_toolchain) {
       # Use shadow-call-stack rather than safe-stack for the kernel,
       # regardless of the compiler's default.
       "-fno-sanitize=safe-stack",
+      "-fno-stack-protector",
     ]
 
     # Assembly code needs to use `#if __has_feature(...)` so make sure

@@ -1,0 +1,30 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("$zx/kernel/params.gni")
+
+source_set("generic-riscv64") {
+  sources = [ "platform.cc" ]
+  deps = [
+    "$zx/kernel/dev/hw_rng",
+    "$zx/kernel/dev/pdev",
+    "$zx/kernel/lib/cbuf",
+    "$zx/kernel/lib/cmdline",
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/init",
+    "$zx/kernel/lib/lockdep",
+    "$zx/kernel/lib/memory_limit",
+    "$zx/kernel/lib/topology",
+    "$zx/kernel/object",
+    "$zx/kernel/vm",
+    "$zx/system/ulib/explicit-memory",
+  ]
+
+  public_deps = [
+    "$zx/system/ulib/affine",
+  ]
+}
