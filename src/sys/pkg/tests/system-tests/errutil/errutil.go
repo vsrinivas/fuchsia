@@ -5,10 +5,15 @@
 package errutil
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
+	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -21,9 +26,11 @@ func HandleError(ctx context.Context, serialSocketPath string, err error) error 
 		return nil
 	}
 
+	printGoBacktrace(ctx)
+
 	// We can't print the backtrace if we aren't connected to serial.
 	if serialSocketPath == "" {
-		logger.Warningf(ctx, "not to configured to serial, cannot dump process backtraces")
+		logger.Warningf(ctx, "not to configured to serial, cannot run serial commands")
 		return nil
 	}
 
@@ -33,38 +40,73 @@ func HandleError(ctx context.Context, serialSocketPath string, err error) error 
 	}
 	defer serial.Close()
 
-	logger.Infof(ctx, "printing all process backtraces to serial")
+	// Discard any of the output from the serial port.
+	go io.Copy(ioutil.Discard, serial)
 
-	// Print a marker before printing the threads to make it easier to tell
-	// where the traces start.
-	if err := run(ctx, serial, "echo '--- all process backtrace trace 1 ---' &\r\n"); err != nil {
+	if err := printSyslogs(ctx, serial); err != nil {
 		return err
 	}
 
-	// Add a newline before executing the command to get a fresh line. Also
-	// run it in the background in case `threads` hangs.
-	if err := run(ctx, serial, "threads --all-processes&\n"); err != nil {
-		return err
-	}
-
-	// Sleep for a period of time since we can't tell when `threads` has
-	// finished executing.
-	time.Sleep(60 * time.Second)
-
-	if err := run(ctx, serial, "echo '--- all process trace backtrace 2---' &\n"); err != nil {
+	if err := printDeviceProcessBacktraces(ctx, serial); err != nil {
 		return err
 	}
 
 	// dump the traces again so we can tell which trace might be hung.
-	logger.Infof(ctx, "printing all process backtraces to serial again")
-	if err := run(ctx, serial, "threads --all-processes&\n"); err != nil {
+	if err := printDeviceProcessBacktraces(ctx, serial); err != nil {
 		return err
 	}
 
-	if err := run(ctx, serial, "echo '------------------------------------' &\n"); err != nil {
+	return nil
+}
+
+func printSyslogs(ctx context.Context, serial net.Conn) error {
+	logger.Infof(ctx, "printing system logs to serial")
+
+	// Print syslog. This will also emit a newline before
+	// the command to get a fresh line, and print markers before and after
+	// the backtrace to make it easier to distinguish in the logs.
+	cmd := fmt.Sprintf("\n(echo '%s --- system logs ---' && /bin/log_listener --dump_logs yes && echo '------------------------------------') &\n", time.Now().Format(time.RFC3339Nano))
+
+	err := run(ctx, serial, cmd)
+	if err != nil {
 		return err
 	}
 
+	// We don't know how long it'll take to dump all threads, so sleep for
+	// a minute to give `threads` a chance to complete.
+	time.Sleep(60 * time.Second)
+
+	logger.Infof(ctx, "done waiting for backtraces to be printed")
+
+	return nil
+}
+
+func printGoBacktrace(ctx context.Context) {
+	logger.Infof(ctx, "printing go backtrace")
+
+	var buf bytes.Buffer
+	pprof.Lookup("goroutine").WriteTo(&buf, 1)
+
+	s := bufio.NewScanner(&buf)
+	for s.Scan() {
+		logger.Infof(ctx, "%s", s.Text())
+	}
+}
+
+func printDeviceProcessBacktraces(ctx context.Context, serial net.Conn) error {
+	logger.Infof(ctx, "printing all process backtraces to serial")
+
+	// Print all process backtraces. This will also emit a newline before
+	// the command to get a fresh line, and print markers before and after
+	// the backtrace to make it easier to distinguish in the logs.
+	cmd := fmt.Sprintf("\n(echo '%s --- all process backtrace ---' && threads --all-processes && echo '------------------------------------') &\n", time.Now().Format(time.RFC3339Nano))
+	err := run(ctx, serial, cmd)
+	if err != nil {
+		return err
+	}
+
+	// We don't know how long it'll take to dump all threads, so sleep for
+	// a minute to give `threads` a chance to complete.
 	time.Sleep(60 * time.Second)
 
 	logger.Infof(ctx, "done waiting for backtraces to be printed")
