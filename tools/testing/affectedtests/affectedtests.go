@@ -6,6 +6,7 @@ package affectedtests
 
 import (
 	"container/list"
+	"fmt"
 	"io"
 	"sort"
 	"strings"
@@ -49,35 +50,42 @@ func AffectedTests(srcs []string, testSpecs []build.TestSpec, dotFile io.Reader)
 	}
 
 	nodesToVisit := list.New()
-	for node, output := range graph.NodeToPath {
+	for id, node := range graph.Nodes {
 		// Cut leading "../../" to rebase output to root build dir
-		if !strings.HasPrefix(output, buildDirRelativePrefix) {
+		if !strings.HasPrefix(node.Path, buildDirRelativePrefix) {
 			continue
 		}
-		_, exists := srcsSet[output[len(buildDirRelativePrefix):]]
-		if exists {
-			nodesToVisit.PushBack(node)
+		if _, exists := srcsSet[node.Path[len(buildDirRelativePrefix):]]; exists {
+			nodesToVisit.PushBack(id)
 		}
 	}
 
 	nodesVisited := make(intSet)
 	for e := nodesToVisit.Front(); e != nil; e = e.Next() {
-		var node int64 = e.Value.(int64)
-		nodesVisited[node] = member
-		for _, node := range graph.Edges[node] {
-			_, exists := nodesVisited[node]
-			if !exists {
-				nodesToVisit.PushBack(node)
+		var nodeID int64 = e.Value.(int64)
+		nodesVisited[nodeID] = member
+
+		node := graph.Nodes[nodeID]
+		if node == nil {
+			return nil, fmt.Errorf("node %x not found in graph, this indicates a bug in graph traversal", nodeID)
+		}
+		for _, edge := range node.Outs {
+			for _, outputNodeID := range edge.Outputs {
+				if _, exists := nodesVisited[outputNodeID]; !exists {
+					nodesToVisit.PushBack(outputNodeID)
+				}
 			}
 		}
 	}
 
 	affectedTestStamps := make(stringSet)
-	for node := range nodesVisited {
-		output := graph.NodeToPath[node]
-		_, exists := testStampToNames[output]
-		if exists {
-			affectedTestStamps[output] = member
+	for nodeID := range nodesVisited {
+		node := graph.Nodes[nodeID]
+		if node == nil {
+			return nil, fmt.Errorf("node %x not found in graph, this indicates a bug in graph traversal", nodeID)
+		}
+		if _, exists := testStampToNames[node.Path]; exists {
+			affectedTestStamps[node.Path] = member
 		}
 	}
 
