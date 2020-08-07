@@ -16,12 +16,9 @@ use {
     },
 };
 
-const EXPECTED_SIGNATURE: &str = "ffx_plugin expects one of the following signatures:\n\
-(RemoteControlProxy, <YourArghCommand>) -> Result<(), anyhow::Error>\n\
-OR\n\
-(DaemonProxy, <YourArghCommand>) -> Result<(), anyhow::Error>\n\
-OR\n\
-(<YourArghCommand>) -> Result<(), anyhow::Error>";
+const EXPECTED_SIGNATURE: &str = "ffx_plugin expects at least the command created in the args.rs \
+                                  file and will accept FIDL proxies if mapped in the ffx_plugin \
+                                  annotation.";
 
 const UNRECOGNIZED_PARAMETER: &str = "If this is a proxy, make sure the parameter's type matches \
 the mapping passed into the ffx_plugin attribute.";
@@ -177,6 +174,12 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         outer_args.push(quote! {_remote_factory: R});
     }
 
+    if let Some(_) = proxies.experiment_key {
+        outer_args.push(quote! {is_experiment: E});
+    } else {
+        outer_args.push(quote! {_is_experiment: E});
+    }
+
     if let Some(c) = cmd_arg {
         outer_args.push(quote! {#c});
     } else {
@@ -192,7 +195,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                 },
                 Err(e) => {
                     log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                    Err(anyhow::anyhow!("There was an error getting proxies from the Remote Control Service: {}", e))
+                    anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
                 }
             }
         }
@@ -203,64 +206,103 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         }
     };
 
+    let gated_impl = if let Some(key) = proxies.experiment_key {
+        quote! {
+            if is_experiment(#key).await {
+                #implementation
+            } else {
+                println!("This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'", #key);
+                Ok(())
+            }
+        }
+    } else {
+        implementation
+    };
+
     Ok(quote! {
         #input
-        pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+        pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
             #outer_args
-        ) -> std::result::Result<(), anyhow::Error>
+        ) -> anyhow::Result<()>
             where
             D: FnOnce() -> DFut,
             DFut: std::future::Future<
-                Output = std::result::Result<
-                    fidl_fuchsia_developer_bridge::DaemonProxy,
-                    anyhow::Error
-                >,
+                Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
             >,
             R: FnOnce() -> RFut,
             RFut: std::future::Future<
-                Output = std::result::Result<
-                    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                    anyhow::Error,
+                Output = anyhow::Result<
+                    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                 >,
             >,
+            E: FnOnce(&'static str) -> EFut,
+            EFut: std::future::Future<Output = bool>,
         {
-            #implementation
+            #gated_impl
         }
     })
 }
 
 #[derive(Debug)]
 pub struct ProxyMap {
+    experiment_key: Option<String>,
     map: HashMap<String, String>,
+}
+
+impl Default for ProxyMap {
+    fn default() -> Self {
+        Self { experiment_key: None, map: HashMap::new() }
+    }
 }
 
 impl Parse for ProxyMap {
     fn parse(input: ParseStream<'_>) -> Result<Self, Error> {
+        let mut experiment_key = None;
         let mut map = HashMap::new();
-        let first_lookahead = input.lookahead1();
-        if !first_lookahead.peek(Ident) {
-            return Ok(Self { map });
-        }
-        while let Path(TypePath { path, .. }) = input.parse()? {
-            let _: Punct = input.parse()?;
-            if let Lit::Str(selection) = input.parse()? {
-                let lookahead = input.lookahead1();
-                // check for trailing comma
-                if lookahead.peek(Token!(,)) {
+        while !input.is_empty() {
+            if input.peek(Ident) {
+                // Dump the next parse since we got it via the peek
+                if let Path(TypePath { path, .. }) = input.parse()? {
                     let _: Punct = input.parse()?;
+                    if let Lit::Str(selection) = input.parse()? {
+                        if input.peek(Token!(,)) {
+                            // Parse the trailing comma
+                            let _: Punct = input.parse()?;
+                        }
+                        let _ = selectors::parse_selector(&selection.value()).map_err(|e| {
+                            Error::new(selection.span(), format!("Invalid selection string: {}", e))
+                        })?;
+                        map.insert(qualified_name(&path), selection.value());
+                    }
                 }
-                let _ = selectors::parse_selector(&selection.value()).map_err(|e| {
-                    Error::new(selection.span(), format!("Invalid selection string: {}", e))
-                })?;
-                map.insert(qualified_name(&path), selection.value());
-                let finish_lookahead = input.lookahead1();
-                if !finish_lookahead.peek(Ident) {
-                    return Ok(Self { map });
+            } else if input.peek(Lit) {
+                if let Lit::Str(found_key) = input.parse()? {
+                    // This must be the experiment key.
+                    if let Some(key) = experiment_key {
+                        // experiment_key was already found
+                        return Err(Error::new(
+                            found_key.span(),
+                            format!(
+                                "Experiment key set twice.  First found: {}, Second found: {}",
+                                key,
+                                found_key.value()
+                            ),
+                        ));
+                    } else {
+                        experiment_key = Some(format!("{}", found_key.value()));
+                        let lookahead = input.lookahead1();
+                        // check for trailing comma
+                        if lookahead.peek(Token!(,)) {
+                            // Parse the trailing comma
+                            let _: Punct = input.parse()?;
+                        }
+                    }
                 }
+            } else {
+                return Err(Error::new(Span::call_site(), "Invalid plugin inputs"));
             }
         }
-        // Fix span to properly highlight the incorrect service string
-        Err(Error::new(Span::call_site(), "Invalid proxy mapping"))
+        Ok(Self { map, experiment_key })
     }
 }
 
@@ -271,6 +313,7 @@ impl Parse for ProxyMap {
 mod test {
     use {
         super::*,
+        std::default::Default,
         syn::{
             parse::{Parse, ParseStream},
             parse2, parse_quote, ItemType,
@@ -311,31 +354,30 @@ mod test {
 
     #[test]
     fn test_ffx_plugin_with_just_a_command() -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
-            pub async fn echo(_cmd: EchoCommand) -> Result<(), Error> { Ok(()) }
+            pub async fn echo(_cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
                 _daemon_factory: D,
                 _remote_factory: R,
+                _is_experiment: E,
                 _cmd: EchoCommand
-            ) -> std::result::Result<(), anyhow::Error>
+            ) -> anyhow::Result<()>
                 where
                 D: FnOnce() -> DFut,
                 DFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_bridge::DaemonProxy,
-                        anyhow::Error
-                    >,
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
                 >,
                 R: FnOnce() -> RFut,
                 RFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                        anyhow::Error,
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                     >,
                 >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
             {
                 echo(_cmd).await
             }
@@ -348,33 +390,32 @@ mod test {
 
     #[test]
     fn test_ffx_plugin_with_a_daemon_proxy_and_command() -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(
                 daemon: DaemonProxy,
-                _cmd: EchoCommand) -> Result<(), Error> { Ok(()) }
+                _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
                 daemon_factory: D,
                 _remote_factory: R,
+                _is_experiment: E,
                 _cmd: EchoCommand
-            ) -> std::result::Result<(), anyhow::Error>
+            ) -> anyhow::Result<()>
                 where
                 D: FnOnce() -> DFut,
                 DFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_bridge::DaemonProxy,
-                        anyhow::Error
-                    >,
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
                 >,
                 R: FnOnce() -> RFut,
                 RFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                        anyhow::Error,
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                     >,
                 >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
             {
                 let daemon_proxy = daemon_factory().await?;
                 echo(daemon_proxy, _cmd).await
@@ -388,33 +429,32 @@ mod test {
 
     #[test]
     fn test_ffx_plugin_with_a_remote_proxy_and_command() -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(
                 remote: RemoteControlProxy,
-                _cmd: EchoCommand) -> Result<(), Error> { Ok(()) }
+                _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
                 _daemon_factory: D,
                 remote_factory: R,
+                _is_experiment: E,
                 _cmd: EchoCommand
-            ) -> std::result::Result<(), anyhow::Error>
+            ) -> anyhow::Result<()>
                 where
                 D: FnOnce() -> DFut,
                 DFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_bridge::DaemonProxy,
-                        anyhow::Error
-                    >,
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
                 >,
                 R: FnOnce() -> RFut,
                 RFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                        anyhow::Error,
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                     >,
                 >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
             {
                 let remote_proxy = remote_factory().await?;
                 echo(remote_proxy, _cmd).await
@@ -428,34 +468,33 @@ mod test {
 
     #[test]
     fn test_ffx_plugin_with_a_remote_proxy_and_daemon_proxy_and_command() -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(
                 daemon: DaemonProxy,
                 remote: RemoteControlProxy,
-                _cmd: EchoCommand) -> Result<(), Error> { Ok(()) }
+                _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
                 daemon_factory: D,
                 remote_factory: R,
+                _is_experiment: E,
                 _cmd: EchoCommand
-            ) -> std::result::Result<(), anyhow::Error>
+            ) -> anyhow::Result<()>
                 where
                 D: FnOnce() -> DFut,
                 DFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_bridge::DaemonProxy,
-                        anyhow::Error
-                    >,
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
                 >,
                 R: FnOnce() -> RFut,
                 RFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                        anyhow::Error,
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                     >,
                 >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
             {
                 let daemon_proxy = daemon_factory().await?;
                 let remote_proxy = remote_factory().await?;
@@ -471,34 +510,33 @@ mod test {
     #[test]
     fn test_ffx_plugin_with_a_remote_proxy_and_daemon_proxy_and_command_out_of_order(
     ) -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(
                 remote: RemoteControlProxy,
                 _cmd: EchoCommand,
-                daemon: DaemonProxy) -> Result<(), Error> { Ok(()) }
+                daemon: DaemonProxy) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
                 daemon_factory: D,
                 remote_factory: R,
+                _is_experiment: E,
                 _cmd: EchoCommand
-            ) -> std::result::Result<(), anyhow::Error>
+            ) -> anyhow::Result<()>
                 where
                 D: FnOnce() -> DFut,
                 DFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_bridge::DaemonProxy,
-                        anyhow::Error
-                    >,
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
                 >,
                 R: FnOnce() -> RFut,
                 RFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                        anyhow::Error,
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                     >,
                 >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
             {
                 let daemon_proxy = daemon_factory().await?;
                 let remote_proxy = remote_factory().await?;
@@ -515,34 +553,33 @@ mod test {
     fn test_ffx_plugin_with_proxy_map_and_command() -> Result<(), Error> {
         let mut map = HashMap::new();
         map.insert("TestProxy".to_string(), "test".to_string());
-        let proxies = ProxyMap { map };
+        let proxies = ProxyMap { map, ..Default::default() };
         let original: ItemFn = parse_quote! {
             pub async fn echo(
                 test: TestProxy,
                 cmd: WhateverCommand,
-                ) -> Result<(), Error> { Ok(()) }
+                ) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
                 _daemon_factory: D,
                 remote_factory: R,
+                _is_experiment: E,
                 cmd: WhateverCommand
-            ) -> std::result::Result<(), anyhow::Error>
+            ) -> anyhow::Result<()>
                 where
                 D: FnOnce() -> DFut,
                 DFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_bridge::DaemonProxy,
-                        anyhow::Error
-                    >,
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
                 >,
                 R: FnOnce() -> RFut,
                 RFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                        anyhow::Error,
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                     >,
                 >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
             {
                 let remote_proxy = remote_factory().await?;
                 let (test, test_server_end) =
@@ -556,7 +593,7 @@ mod test {
                     },
                     Err(e) => {
                         log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                        Err(anyhow::anyhow!("There was an error getting proxies from the Remote Control Service: {}", e))
+                        anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
                     }
                 }
             }
@@ -572,35 +609,34 @@ mod test {
         let mut map = HashMap::new();
         map.insert("TestProxy".to_string(), "test".to_string());
         map.insert("FooProxy".to_string(), "foo".to_string());
-        let proxies = ProxyMap { map };
+        let proxies = ProxyMap { map, ..Default::default() };
         let original: ItemFn = parse_quote! {
             pub async fn echo(
                 foo: FooProxy,
                 cmd: WhateverCommand,
                 test: TestProxy,
-                ) -> Result<(), Error> { Ok(()) }
+                ) -> anyhow::Result<()> { Ok(()) }
         };
         let plugin: ItemFn = parse_quote! {
-            pub async fn ffx_plugin_impl<D, R, DFut, RFut>(
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
                 _daemon_factory: D,
                 remote_factory: R,
+                _is_experiment: E,
                 cmd: WhateverCommand
-            ) -> std::result::Result<(), anyhow::Error>
+            ) -> anyhow::Result<()>
                 where
                 D: FnOnce() -> DFut,
                 DFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_bridge::DaemonProxy,
-                        anyhow::Error
-                    >,
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
                 >,
                 R: FnOnce() -> RFut,
                 RFut: std::future::Future<
-                    Output = std::result::Result<
-                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-                        anyhow::Error,
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                     >,
                 >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
             {
                 let remote_proxy = remote_factory().await?;
                 let (foo, foo_server_end) =
@@ -619,7 +655,7 @@ mod test {
                     },
                     Err(e) => {
                         log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                        Err(anyhow::anyhow!("There was an error getting proxies from the Remote Control Service: {}", e))
+                        anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
                     }
                 }
             }
@@ -631,8 +667,77 @@ mod test {
     }
 
     #[test]
+    fn test_ffx_plugin_with_multiple_proxy_map_and_command_and_experiment_key() -> Result<(), Error>
+    {
+        let mut map = HashMap::new();
+        map.insert("TestProxy".to_string(), "test".to_string());
+        map.insert("FooProxy".to_string(), "foo".to_string());
+        let experiment_key = Some("foo_key".to_string());
+        let proxies = ProxyMap { map, experiment_key };
+        let original: ItemFn = parse_quote! {
+            pub async fn echo(
+                foo: FooProxy,
+                cmd: WhateverCommand,
+                test: TestProxy,
+                ) -> anyhow::Result<()> { Ok(()) }
+        };
+        let plugin: ItemFn = parse_quote! {
+            pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut>(
+                _daemon_factory: D,
+                remote_factory: R,
+                is_experiment: E,
+                cmd: WhateverCommand
+            ) -> anyhow::Result<()>
+                where
+                D: FnOnce() -> DFut,
+                DFut: std::future::Future<
+                    Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
+                >,
+                R: FnOnce() -> RFut,
+                RFut: std::future::Future<
+                    Output = anyhow::Result<
+                        fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
+                    >,
+                >,
+                E: FnOnce(&'static str) -> EFut,
+                EFut: std::future::Future<Output = bool>,
+            {
+                if is_experiment("foo_key").await {
+                    let remote_proxy = remote_factory().await?;
+                    let (foo, foo_server_end) =
+                        fidl::endpoints::create_proxy::<FooMarker>()?;
+                    let foo_selector = selectors::parse_selector("foo")?;
+                    let foo_fut = remote_proxy
+                        .connect(foo_selector, foo_server_end.into_channel());
+                    let (test, test_server_end) =
+                        fidl::endpoints::create_proxy::<TestMarker>()?;
+                    let test_selector = selectors::parse_selector("test")?;
+                    let test_fut = remote_proxy
+                        .connect(test_selector, test_server_end.into_channel());
+                    match futures::try_join!(foo_fut, test_fut) {
+                        Ok(_) => {
+                            echo(foo, cmd, test).await
+                        },
+                        Err(e) => {
+                            log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
+                            anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
+                        }
+                    }
+                } else {
+                    println!("This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'", "foo_key");
+                    Ok(())
+                }
+            }
+        };
+        let result: WrappedFunction = parse2(ffx_plugin(original.clone(), proxies)?)?;
+        assert_eq!(original, result.original);
+        assert_eq!(plugin, result.plugin);
+        Ok(())
+    }
+
+    #[test]
     fn test_ffx_plugin_with_no_parameters_should_err() -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo() -> Result<(), Error> { Ok(()) }
         };
@@ -644,7 +749,7 @@ mod test {
 
     #[test]
     fn test_ffx_plugin_with_self_receiver_should_err() -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(self, cmd: EchoCommand) -> Result<(), Error> { Ok(()) }
         };
@@ -656,7 +761,7 @@ mod test {
 
     #[test]
     fn test_ffx_plugin_with_referenced_param_should_err() -> Result<(), Error> {
-        let proxies = ProxyMap { map: HashMap::new() };
+        let proxies = Default::default();
         let original: ItemFn = parse_quote! {
             pub async fn echo(proxy: &TestProxy, cmd: EchoCommand) -> Result<(), Error> { Ok(()) }
         };
@@ -745,6 +850,93 @@ mod test {
     #[test]
     fn test_invalid_input_should_err() -> Result<(), Error> {
         let result: Result<ProxyMap, Error> = parse2(quote! {test});
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_experiment_key_is_none_when_empty() -> Result<(), Error> {
+        let result: ProxyMap = parse2(quote! {})?;
+        assert_eq!(result.experiment_key, None);
+        Ok(())
+    }
+
+    #[test]
+    fn test_experiment_key_literal() -> Result<(), Error> {
+        let result: ProxyMap = parse2(quote! {"test"})?;
+        assert_eq!(result.experiment_key, Some("test".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_experiment_key_literal_with_trailing_comma() -> Result<(), Error> {
+        let result: ProxyMap = parse2(quote! {"test",})?;
+        assert_eq!(result.experiment_key, Some("test".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_experiment_key_before_mapping() -> Result<(), Error> {
+        let (test1_key, test1_value, test1_proxy_mapping) =
+            proxy_map_test_value("test1".to_string());
+        let (test2_key, test2_value, test2_proxy_mapping) =
+            proxy_map_test_value("test2".to_string());
+        let ex_key = "test_experimental_key".to_string();
+        let proxy_map: ProxyMap = parse_quote! {
+            #ex_key,
+            #test1_proxy_mapping,
+            #test2_proxy_mapping
+        };
+        assert_eq!(proxy_map.map.get(&test1_key), Some(&test1_value));
+        assert_eq!(proxy_map.map.get(&test2_key), Some(&test2_value));
+        assert_eq!(proxy_map.experiment_key, Some(ex_key));
+        Ok(())
+    }
+
+    #[test]
+    fn test_experiment_key_after_mapping() -> Result<(), Error> {
+        let (test1_key, test1_value, test1_proxy_mapping) =
+            proxy_map_test_value("test1".to_string());
+        let (test2_key, test2_value, test2_proxy_mapping) =
+            proxy_map_test_value("test2".to_string());
+        let ex_key = "test_experimental_key".to_string();
+        let proxy_map: ProxyMap = parse_quote! {
+            #test1_proxy_mapping,
+            #test2_proxy_mapping,
+            #ex_key,
+        };
+        assert_eq!(proxy_map.map.get(&test1_key), Some(&test1_value));
+        assert_eq!(proxy_map.map.get(&test2_key), Some(&test2_value));
+        assert_eq!(proxy_map.experiment_key, Some(ex_key));
+        Ok(())
+    }
+
+    #[test]
+    fn test_experiment_key_in_the_middle_of_the_mapping() -> Result<(), Error> {
+        let (test1_key, test1_value, test1_proxy_mapping) =
+            proxy_map_test_value("test1".to_string());
+        let (test2_key, test2_value, test2_proxy_mapping) =
+            proxy_map_test_value("test2".to_string());
+        let ex_key = "test_experimental_key".to_string();
+        let proxy_map: ProxyMap = parse_quote! {
+            #test1_proxy_mapping,
+            #ex_key,
+            #test2_proxy_mapping,
+        };
+        assert_eq!(proxy_map.map.get(&test1_key), Some(&test1_value));
+        assert_eq!(proxy_map.map.get(&test2_key), Some(&test2_value));
+        assert_eq!(proxy_map.experiment_key, Some(ex_key));
+        Ok(())
+    }
+
+    #[test]
+    fn test_multiple_experiment_keys_should_err() -> Result<(), Error> {
+        let ex_key = "test_experimental_key".to_string();
+        let ex_key_2 = "test_experimental_key_2".to_string();
+        let result: Result<ProxyMap, Error> = parse2(quote! {
+            #ex_key,
+            #ex_key_2,
+        });
         assert!(result.is_err());
         Ok(())
     }

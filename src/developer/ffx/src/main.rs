@@ -35,6 +35,10 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
         .map(|_| remote_proxy)
 }
 
+async fn is_experiment_subcommand_on(key: &'static str) -> bool {
+    ffx_config::get!(bool, key, false).await
+}
+
 fn get_log_name(subcommand: &Subcommand) -> &'static str {
     if let Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
         subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(_),
@@ -49,7 +53,13 @@ fn get_log_name(subcommand: &Subcommand) -> &'static str {
 async fn run() -> Result<()> {
     let app: Ffx = argh::from_env();
     setup_logger(get_log_name(&app.subcommand)).await;
-    ffx_lib_suite::ffx_plugin_impl(get_daemon_proxy, get_remote_proxy, app).await
+    ffx_lib_suite::ffx_plugin_impl(
+        get_daemon_proxy,
+        get_remote_proxy,
+        is_experiment_subcommand_on,
+        app,
+    )
+    .await
 }
 
 #[fuchsia_async::run_singlethreaded]

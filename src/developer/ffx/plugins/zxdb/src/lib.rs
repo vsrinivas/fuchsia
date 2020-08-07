@@ -10,6 +10,7 @@ use {
 };
 
 #[ffx_core::ffx_plugin(
+    "zxdb_enabled",
     fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
 )]
 pub async fn debug(
