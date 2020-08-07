@@ -90,6 +90,8 @@ size_t crashlog_to_string(ktl::span<char> target, zircon_crash_reason_t reason) 
   const char* arch = "x86_64";
 #elif defined(__aarch64__)
   const char* arch = "aarch64";
+#elif defined(__riscv)
+  const char* arch = "riscv64";
 #endif
   fprintf(&outfile,
           "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
