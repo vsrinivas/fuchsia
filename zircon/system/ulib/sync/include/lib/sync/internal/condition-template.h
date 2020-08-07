@@ -52,6 +52,7 @@ static inline void spin() {
   __asm__ __volatile__("pause" : : : "memory");
 #elif defined(__aarch64__)
   __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#elif defined(__riscv)
 #else
 #error Please define spin() for your architecture
 #endif
