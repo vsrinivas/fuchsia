@@ -455,19 +455,20 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .expect("could not create inspect");
 
-    // Creates registry, used to register handlers for setting types.
-    let (registry_signature, _registry_handler_signature) = RegistryImpl::create(
-        handler_factory,
-        registry_messenger_factory.clone(),
-        setting_handler_messenger_factory,
-    )
-    .await?;
-
     let mut proxies = HashMap::new();
 
     for setting_type in &components {
-        // For now, point all setting types to the registry.
-        proxies.insert(*setting_type, registry_signature);
+        proxies.insert(
+            *setting_type,
+            RegistryImpl::create(
+                *setting_type,
+                handler_factory.clone(),
+                registry_messenger_factory.clone(),
+                setting_handler_messenger_factory.clone(),
+            )
+            .await?
+            .0,
+        );
     }
 
     // Creates switchboard, handed to interface implementations to send messages

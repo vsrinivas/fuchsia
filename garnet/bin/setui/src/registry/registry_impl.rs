@@ -65,6 +65,8 @@ impl ControllerState {
 }
 
 pub struct RegistryImpl {
+    setting_type: SettingType,
+
     messenger_client: core::message::Messenger,
     /// Controllers that are currently active. Wrapped in an Arc/Mutex because
     /// it needs to be modified inside an fasync thread, and Self can't be passed
@@ -85,6 +87,7 @@ impl RegistryImpl {
     /// Creates a RegistryImpl that is listening to SettingAction from the
     /// provided receiver and will send responses/updates on the given sender.
     pub async fn create(
+        setting_type: SettingType,
         handler_factory: Arc<Mutex<dyn SettingHandlerFactory + Send + Sync>>,
         messenger_factory: core::message::Factory,
         controller_messenger_factory: handler::message::Factory,
@@ -114,6 +117,7 @@ impl RegistryImpl {
         // We must create handle here rather than return back the value as we
         // reference the registry in the async tasks below.
         let mut registry = Self {
+            setting_type,
             handler_factory,
             messenger_client: registry_messenger_client,
             active_controllers: HashMap::new(),
@@ -186,29 +190,27 @@ impl RegistryImpl {
         }
     }
 
-    async fn get_handler_signature(
-        &mut self,
-        setting_type: SettingType,
-    ) -> Option<handler::message::Signature> {
-        if !self.active_controllers.contains_key(&setting_type) {
+    async fn get_handler_signature(&mut self) -> Option<handler::message::Signature> {
+        if !self.active_controllers.contains_key(&self.setting_type) {
             // TODO(57374): Propagate error to event publisher.
             if let Ok(signature) = self
                 .handler_factory
                 .lock()
                 .await
                 .generate(
-                    setting_type,
+                    self.setting_type,
                     self.controller_messenger_factory.clone(),
                     self.controller_messenger_client.get_signature(),
                 )
                 .await
             {
-                self.active_controllers.insert(setting_type, ControllerState::create(signature));
+                self.active_controllers
+                    .insert(self.setting_type, ControllerState::create(signature));
             }
         }
 
         self.active_controllers
-            .get(&setting_type)
+            .get(&self.setting_type)
             .map(|controller_state| controller_state.signature)
     }
 
@@ -216,7 +218,7 @@ impl RegistryImpl {
     /// non-zero and we aren't already listening for changes to the type or there
     /// are no more listeners and we are actively listening.
     async fn process_listen(&mut self, setting_type: SettingType, size: u64) {
-        let optional_handler_signature = self.get_handler_signature(setting_type).await;
+        let optional_handler_signature = self.get_handler_signature().await;
         if optional_handler_signature.is_none() {
             return;
         }
@@ -288,7 +290,7 @@ impl RegistryImpl {
         request: SettingRequest,
         client: core::message::Client,
     ) {
-        match self.get_handler_signature(setting_type).await {
+        match self.get_handler_signature().await {
             None => {
                 client
                     .reply(core::Payload::Event(SettingEvent::Response(

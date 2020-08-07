@@ -174,6 +174,7 @@ async fn test_notify() {
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
     let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+        SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
@@ -265,6 +266,7 @@ async fn test_request() {
     let handler_factory = Arc::new(Mutex::new(FakeFactory::new(handler_messenger_factory.clone())));
 
     let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+        SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
@@ -326,6 +328,7 @@ async fn test_generation() {
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
     let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+        SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
@@ -394,6 +397,7 @@ async fn test_regeneration() {
     let (messenger_client, _) =
         messenger_factory.create(MessengerType::Addressable(Address::Switchboard)).await.unwrap();
     let (registry_signature, proxy_handler_signature) = RegistryImpl::create(
+        SettingType::Unknown,
         handler_factory.clone(),
         messenger_factory.clone(),
         handler_messenger_factory,
