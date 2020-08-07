@@ -202,7 +202,6 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
         fn moniker_from(path_string: &String) -> Result<Vec<String>, Error> {
             let res = selectors::parse_path_to_moniker(path_string)
                 .context("Path string needs to be a moniker");
-            println!("Moniker is {:?}", res);
             res
         }
 
