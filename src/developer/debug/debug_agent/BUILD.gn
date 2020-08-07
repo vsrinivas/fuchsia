@@ -98,6 +98,7 @@ static_library("lib") {
       "arch_arm64.cc",
       "debug_registers_arm64.cc",
     ]
+  } else if (current_cpu == "riscv64") {
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")
   }
@@ -250,6 +251,7 @@ test("unit_tests") {
       "arch_arm64_unittest.cc",
       "debug_registers_arm64_unittest.cc",
     ]
+  } else if (current_cpu == "riscv64") {
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")
   }
