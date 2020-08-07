@@ -11,6 +11,7 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/device/usb-peripheral.h>
+#include <zircon/errors.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
@@ -127,12 +128,11 @@ zx_status_t UsbPeripheral::Init() {
   UsbConfig* config =
       reinterpret_cast<UsbConfig*>(new (std::align_val_t(alignment), &ac) unsigned char[metasize]);
   if (!ac.check()) {
-    return ZX_OK;
+    return ZX_ERR_NO_MEMORY;
   }
   fbl::AutoCall call(
       [=]() { operator delete[](reinterpret_cast<char*>(config), std::align_val_t(alignment)); });
-  const uint32_t key = DEVICE_METADATA_USB_CONFIG;
-  status = device_get_metadata(parent(), key, config, metasize, &metasize);
+  status = device_get_metadata(parent(), DEVICE_METADATA_USB_CONFIG, config, metasize, &metasize);
   if (status != ZX_OK) {
     return ZX_OK;
   }
@@ -151,9 +151,40 @@ zx_status_t UsbPeripheral::Init() {
   if (status != ZX_OK) {
     return status;
   }
+  uint8_t raw_mac_addr[6];
+  status = device_get_metadata(parent(), DEVICE_METADATA_MAC_ADDRESS, &raw_mac_addr,
+                               sizeof(raw_mac_addr), &actual);
 
+  if (status != ZX_OK || actual != sizeof(raw_mac_addr)) {
+    zxlogf(INFO,
+           "Serial number/MAC address not found. Using generic (non-unique) serial number.\n");
+  } else {
+    char buffer[sizeof(raw_mac_addr) * 3];
+    snprintf(buffer, sizeof(buffer), "%02X%02X%02X%02X%02X%02X", raw_mac_addr[0], raw_mac_addr[1],
+             raw_mac_addr[2], raw_mac_addr[3], raw_mac_addr[4], raw_mac_addr[5]);
+    memcpy(config->serial, buffer, sizeof(buffer));
+  }
   max_str_len = strnlen(config->serial, sizeof(config->serial));
-  status = AllocStringDesc(fbl::String(config->serial, max_str_len), &device_desc_.iSerialNumber);
+  actual = 0;
+  char buffer[256];
+  size_t metadata_size;
+  status = device_get_metadata_size(parent(), DEVICE_METADATA_SERIAL_NUMBER, &metadata_size);
+  if (status == ZX_OK) {
+    if (metadata_size >= sizeof(buffer)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    status = device_get_metadata(parent(), DEVICE_METADATA_SERIAL_NUMBER, buffer, sizeof(buffer),
+                                 &actual);
+    if (actual >= sizeof(buffer)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    buffer[actual] = 0;
+  }
+  if ((status != ZX_OK) || (actual == 0)) {
+    status = AllocStringDesc(fbl::String(config->serial, max_str_len), &device_desc_.iSerialNumber);
+  } else {
+    status = AllocStringDesc(fbl::String(buffer, actual), &device_desc_.iSerialNumber);
+  }
   if (status != ZX_OK) {
     return status;
   }

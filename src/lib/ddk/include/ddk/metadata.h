@@ -29,6 +29,9 @@ static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 // type: usb_mode_t
 #define DEVICE_METADATA_USB_MODE 0x4D425355  // USBM
 
+#define DEVICE_METADATA_SERIAL_NUMBER 0x4e4c5253  // SRLN
+static_assert(DEVICE_METADATA_SERIAL_NUMBER == ZBI_TYPE_SERIAL_NUMBER, "");
+
 // Board-specific USB configuration
 // type: UsbConfig
 // fidl: usb-peripheral.fidl
