@@ -1407,7 +1407,7 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
   }
   // If Error Injection is enabled return with the appropriate status right away
   zx_status_t status;
-  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, ifidx)) {
+  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, nullptr, ifidx)) {
     return status;
   }
 
@@ -1613,8 +1613,13 @@ const char* kFirmwareCap =
 zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value_out,
                                    size_t value_len) {
   zx_status_t status;
-  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, ifidx)) {
-    memset(value_out, 0, value_len);
+  std::optional<const void*> err_inj_alt_value;
+  if (err_inj_.CheckIfErrInjIovarEnabled(name, &status, &err_inj_alt_value, ifidx)) {
+    if (err_inj_alt_value) {
+      memcpy(value_out, *err_inj_alt_value, value_len);
+    } else {
+      memset(value_out, 0, value_len);
+    }
     return status;
   }
 

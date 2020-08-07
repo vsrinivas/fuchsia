@@ -58,7 +58,8 @@ void SimErrorInjector::DelErrInjCmd(uint32_t cmd) {
 }
 
 void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
-                                      std::optional<uint16_t> ifidx) {
+                                      std::optional<uint16_t> ifidx,
+                                      std::optional<const void*> alt_data) {
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
     if (it->iovar.size() == strlen(iovar) + 1 &&
         (memcmp(iovar, it->iovar.data(), it->iovar.size()) == 0)) {
@@ -70,7 +71,7 @@ void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status,
       return;
     }
   }
-  ErrInjIovar err_inj_iovar(iovar, status, ifidx);
+  ErrInjIovar err_inj_iovar(iovar, status, ifidx, alt_data);
   iovars_.push_back(err_inj_iovar);
   BRCMF_DBG(SIMERRINJ, "Num entries in list: %lu\n", iovars_.size());
 }
@@ -105,6 +106,7 @@ bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_st
 }
 
 bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status,
+                                                 std::optional<const void*>* alt_value_out,
                                                  uint16_t ifidx) {
   for (auto it = iovars_.begin(); it != iovars_.end(); ++it) {
     if (((it->ifidx.has_value() && (it->ifidx == ifidx)) || !it->ifidx.has_value()) &&
@@ -112,6 +114,9 @@ bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t*
         (!std::memcmp(it->iovar.data(), iovar, it->iovar.size()))) {
       BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d iovar:%s", ifidx, it->ret_status,
                 iovar);
+      if (alt_value_out) {
+        *alt_value_out = it->alt_data;
+      }
       if (ret_status) {
         *ret_status = it->ret_status;
       }

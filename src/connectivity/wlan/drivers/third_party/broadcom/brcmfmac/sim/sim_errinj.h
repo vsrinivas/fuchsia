@@ -38,10 +38,11 @@ class SimErrorInjector {
   bool CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_status, uint16_t ifidx);
 
   // Iovar string command specific
-  void AddErrInjIovar(const char* iovar, zx_status_t ret_status,
-                      std::optional<uint16_t> ifidx = {});
+  void AddErrInjIovar(const char* iovar, zx_status_t ret_status, std::optional<uint16_t> ifidx = {},
+                      std::optional<const void*> alt_data = std::nullopt);
   void DelErrInjIovar(const char* iovar);
-  bool CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status, uint16_t ifidx);
+  bool CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t* ret_status,
+                                 std::optional<const void*>* alt_value_out, uint16_t ifidx);
 
   void SetSignalErrInj(bool enable);
   bool HandleRxFrameErrorInjection(uint8_t* buffer);
@@ -57,12 +58,21 @@ class SimErrorInjector {
   };
 
   struct ErrInjIovar {
-    std::optional<uint16_t> ifidx;
+    // Name of the iovar to override
     std::vector<uint8_t> iovar;
+
+    // If set, only apply this override on the specified interface
+    std::optional<uint16_t> ifidx;
+
+    // Status code to return when iovar is read
     zx_status_t ret_status;
 
-    ErrInjIovar(const char* iovar_str, zx_status_t status, std::optional<uint16_t> ifidx = {})
-        : ifidx(ifidx), iovar(strlen(iovar_str) + 1), ret_status(status) {
+    // If set, specifies the payload to return when the iovar is overridden.
+    std::optional<const void*> alt_data;
+
+    ErrInjIovar(const char* iovar_str, zx_status_t status, std::optional<uint16_t> ifidx = {},
+                std::optional<const void*> alt_data = std::nullopt)
+        : iovar(strlen(iovar_str) + 1), ifidx(ifidx), ret_status(status), alt_data(alt_data) {
       memcpy(iovar.data(), iovar_str, strlen(iovar_str) + 1);
     }
   };
