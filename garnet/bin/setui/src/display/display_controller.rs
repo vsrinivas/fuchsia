@@ -72,8 +72,8 @@ impl BrightnessManager for ExternalBrightnessControl {
             .connect::<BrightnessControlMarker>()
             .await
             .map(|brightness_service| Self { brightness_service })
-            .map_err(|_| ControllerError::InitFailure {
-                description: "could not connect to brightness service".into(),
+            .map_err(|_| {
+                ControllerError::InitFailure("could not connect to brightness service".into())
             })
     }
 

@@ -26,13 +26,13 @@ impl<T: DeviceStorageFactory + Send + Sync> StorageFactory for T {}
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ControllerError {
     #[error("Unimplemented Request")]
-    Unimplemented {},
-    #[error("Write failed. setting type: {setting_type:?}")]
-    WriteFailure { setting_type: SettingType },
-    #[error("Initialization failure: cause {description:?}")]
-    InitFailure { description: Cow<'static, str> },
-    #[error("Restoration of setting on controller startup failed: cause {description:?}")]
-    RestoreFailure { description: Cow<'static, str> },
+    Unimplemented,
+    #[error("Write failed. setting type: {0:?}")]
+    WriteFailure(SettingType),
+    #[error("Initialization failure: cause {0:?}")]
+    InitFailure(Cow<'static, str>),
+    #[error("Restoration of setting on controller startup failed: cause {0:?}")]
+    RestoreFailure(Cow<'static, str>),
 }
 
 pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;
@@ -295,7 +295,7 @@ pub mod persist {
                     self.notify().await;
                     Ok(UpdateState::Updated)
                 }
-                Err(_) => Err(ControllerError::WriteFailure { setting_type: self.setting_type }),
+                Err(_) => Err(ControllerError::WriteFailure(self.setting_type)),
             }
         }
     }
@@ -325,7 +325,7 @@ pub mod persist {
         write_through: bool,
     ) -> Result<UpdateState, SwitchboardError> {
         client.write(value, write_through).await.map_err(|e| {
-            if let ControllerError::WriteFailure { setting_type } = e {
+            if let ControllerError::WriteFailure(setting_type) = e {
                 SwitchboardError::StorageFailure(setting_type)
             } else {
                 SwitchboardError::UnexpectedError("client write failure".into())

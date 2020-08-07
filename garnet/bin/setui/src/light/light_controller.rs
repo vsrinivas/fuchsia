@@ -51,13 +51,10 @@ impl data_controller::Create<LightInfo> for LightController {
             .connect_device_path::<LightMarker>("/dev/class/light/*")
             .await
             .or_else(|e| {
-                Err(ControllerError::InitFailure {
-                    description: format!(
-                        "failed to connect to fuchsia.hardware.light with error: {:?}",
-                        e
-                    )
-                    .into(),
-                })
+                Err(ControllerError::InitFailure(
+                    format!("failed to connect to fuchsia.hardware.light with error: {:?}", e)
+                        .into(),
+                ))
             })?;
 
         Ok(LightController { client, light_proxy })
