@@ -27,6 +27,8 @@
 
 namespace camera {
 
+constexpr uint32_t kViewRequestTimeoutMs = 5000;
+
 // Returns an event such that when the event is signaled and the dispatcher executed, the provided
 // eventpair is closed. This can be used to bridge event- and eventpair-based fence semantics. If
 // this function returns an error, |eventpair| is closed immediately.
@@ -65,6 +67,7 @@ BufferCollage::BufferCollage()
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), view_provider_binding_(this) {
   SetStopOnError(scenic_);
   SetStopOnError(allocator_);
+  SetStopOnError(presenter_);
   view_provider_binding_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(DEBUG, status) << "ViewProvider client disconnected.";
     view_provider_binding_.Unbind();
@@ -80,7 +83,7 @@ BufferCollage::~BufferCollage() {
 
 fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
-    fit::closure stop_callback) {
+    fuchsia::ui::policy::PresenterHandle presenter, fit::closure stop_callback) {
   auto collage = std::unique_ptr<BufferCollage>(new BufferCollage);
   collage->start_time_ = zx::clock::get_monotonic();
 
@@ -91,6 +94,11 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     return fit::error(status);
   }
   status = collage->allocator_.Bind(std::move(allocator), collage->loop_.dispatcher());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+    return fit::error(status);
+  }
+  status = collage->presenter_.Bind(std::move(presenter), collage->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
@@ -111,6 +119,10 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
+
+  async::PostDelayedTask(collage->loop_.dispatcher(),
+                         fit::bind_member(collage.get(), &BufferCollage::MaybeTakeDisplay),
+                         zx::msec(kViewRequestTimeoutMs));
 
   return fit::ok(std::move(collage));
 }
@@ -266,6 +278,7 @@ void BufferCollage::Stop() {
   }
   scenic_ = nullptr;
   allocator_ = nullptr;
+  presenter_ = nullptr;
   view_ = nullptr;
   collection_views_.clear();
   loop_.Quit();
@@ -612,6 +625,18 @@ void BufferCollage::UpdateLayout() {
   }
 }
 
+void BufferCollage::MaybeTakeDisplay() {
+  if (view_) {
+    // View already created.
+    return;
+  }
+  FX_LOGS(WARNING) << "Component host did not create a view within " << kViewRequestTimeoutMs
+                   << "ms. camera-gym will now take over the display.";
+  auto tokens = scenic::NewViewTokenPair();
+  CreateView(std::move(tokens.first.value), nullptr, nullptr);
+  presenter_->PresentOrReplaceView(std::move(tokens.second), nullptr);
+}
+
 void BufferCollage::OnScenicError(zx_status_t status) {
   FX_PLOGS(ERROR, status) << "Scenic session error.";
   Stop();
@@ -645,7 +670,6 @@ void BufferCollage::CreateView(
     if (view_) {
       FX_LOGS(ERROR) << "Clients may only call this method once per view provider lifetime.";
       view_provider_binding_.Close(ZX_ERR_BAD_STATE);
-      Stop();
       return;
     }
     view_ = std::make_unique<scenic::View>(

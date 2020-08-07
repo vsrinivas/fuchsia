@@ -31,6 +31,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",

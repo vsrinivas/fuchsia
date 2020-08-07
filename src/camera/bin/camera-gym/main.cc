@@ -4,6 +4,7 @@
 
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -40,10 +41,16 @@ int main(int argc, char* argv[]) {
     FX_PLOGS(ERROR, status) << "Failed to request Scenic service.";
     return EXIT_FAILURE;
   }
+  fuchsia::ui::policy::PresenterHandle presenter;
+  context->svc()->Connect(presenter.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to request Presenter service.";
+    return EXIT_FAILURE;
+  }
 
   // Create the collage.
-  auto collage_result =
-      camera::BufferCollage::Create(std::move(scenic), std::move(allocator), [&] { loop.Quit(); });
+  auto collage_result = camera::BufferCollage::Create(std::move(scenic), std::move(allocator),
+                                                      std::move(presenter), [&] { loop.Quit(); });
   if (collage_result.is_error()) {
     FX_PLOGS(ERROR, collage_result.error()) << "Failed to create BufferCollage.";
     return EXIT_FAILURE;

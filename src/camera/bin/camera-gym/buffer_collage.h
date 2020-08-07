@@ -9,6 +9,7 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
@@ -63,7 +64,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // invoked exactly once if non-null.
   static fit::result<std::unique_ptr<BufferCollage>, zx_status_t> Create(
       fuchsia::ui::scenic::ScenicHandle scenic, fuchsia::sysmem::AllocatorHandle allocator,
-      fit::closure stop_callback = nullptr);
+      fuchsia::ui::policy::PresenterHandle presenter, fit::closure stop_callback = nullptr);
 
   // Returns the view request handler.
   fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider> GetHandler();
@@ -111,6 +112,10 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // Repositions scenic nodes to fit all collections on the screen.
   void UpdateLayout();
 
+  // If the host environment has not yet requested a view via the ViewProvider service, takes over
+  // the display and calls CreateView using a manually created view token.
+  void MaybeTakeDisplay();
+
   // |scenic::Session| callbacks.
   void OnScenicError(zx_status_t status);
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
@@ -123,6 +128,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   async::Loop loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::sysmem::AllocatorPtr allocator_;
+  fuchsia::ui::policy::PresenterPtr presenter_;
   fit::closure stop_callback_;
   std::unique_ptr<scenic::Session> session_;
   std::unique_ptr<scenic::View> view_;
