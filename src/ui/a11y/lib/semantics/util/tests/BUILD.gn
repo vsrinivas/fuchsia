@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":semantics_util_tests" ]
+}
+
+executable("semantics_util_tests") {
+  output_name = "semantics_util_tests"
+
+  testonly = true
+
+  sources = [ "semantic_transform_unittest.cc" ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/a11y/lib/semantics/util",
+  ]
+}

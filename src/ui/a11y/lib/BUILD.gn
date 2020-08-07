@@ -15,6 +15,7 @@ group("lib") {
     "screen_reader/focus",
     "screen_reader/util",
     "semantics",
+    "semantics/util",
     "tts",
     "view",
   ]
@@ -43,6 +44,7 @@ test_package("a11y_lib_tests") {
     "screen_reader/tests",
     "screen_reader/util/tests",
     "semantics/tests:unit",
+    "semantics/util/tests",
     "tts/tests",
     "view/tests",
     "//src/ui/a11y/lib/screen_reader/i18n:resources",
@@ -136,6 +138,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "semantics_tests"
+      environments = basic_envs
+    },
+    {
+      name = "semantics_util_tests"
       environments = basic_envs
     },
     {
