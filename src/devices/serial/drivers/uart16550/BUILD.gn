@@ -4,6 +4,12 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":uart16550-test-package" ]
+}
 
 driver_module("uart16550") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -41,9 +47,6 @@ source_set("common") {
 }
 
 test("uart16550-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "uart16550-test"
   sources = [ "uart16550-test.cc" ]
@@ -52,5 +55,15 @@ test("uart16550-test") {
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("uart16550-test-package") {
+  package_name = "uart16550-test"
+  deps = [ ":uart16550-test" ]
+  tests = [
+    {
+      name = "uart16550-test"
+    },
   ]
 }
