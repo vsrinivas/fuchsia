@@ -19,7 +19,6 @@
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/time/cpp/fidl.h>
-#include <fuchsia/tracing/kernel/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 
@@ -73,8 +72,6 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::sysmem::Allocator::Name_,
     fuchsia::time::Utc::Name_,
     fuchsia::tracing::provider::Registry::Name_,
-    fuchsia::tracing::kernel::Controller::Name_,
-    fuchsia::tracing::kernel::Reader::Name_,
     fuchsia::ui::policy::Presenter::Name_,
     fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::vulkan::loader::Loader::Name_,

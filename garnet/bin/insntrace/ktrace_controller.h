@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_INSNTRACE_KTRACE_CONTROLLER_H_
 #define GARNET_BIN_INSNTRACE_KTRACE_CONTROLLER_H_
 
-#include <fuchsia/tracing/kernel/cpp/fidl.h>
 #include <stdint.h>
+
+#include <fuchsia/tracing/kernel/cpp/fidl.h>
 
 namespace insntrace {
 
-zx_status_t OpenKtraceControllerChannel(
-    fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr);
+bool OpenKtraceChannel(fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr);
 
 bool RequestKtraceStart(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace,
                         uint32_t group_mask);

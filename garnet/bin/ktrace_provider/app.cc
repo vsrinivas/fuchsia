@@ -5,7 +5,7 @@
 #include "garnet/bin/ktrace_provider/app.h"
 
 #include <fcntl.h>
-#include <fuchsia/tracing/kernel/cpp/fidl.h>
+#include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
@@ -24,8 +24,8 @@
 namespace ktrace_provider {
 namespace {
 
-constexpr char kKtraceControllerSvc[] = "/svc/fuchsia.tracing.kernel.Controller";
-using fuchsia::tracing::kernel::Controller_SyncProxy;
+constexpr char kKTraceDev[] = "/dev/misc/ktrace";
+
 struct KTraceCategory {
   const char* name;
   uint32_t group;
@@ -49,16 +49,16 @@ constexpr char kRetainCategory[] = "kernel:retain";
 
 constexpr char kLogCategory[] = "log";
 
-zx::channel OpenKTraceController() {
-  int fd = open(kKtraceControllerSvc, O_WRONLY);
+zx::channel OpenKTrace() {
+  int fd = open(kKTraceDev, O_WRONLY);
   if (fd < 0) {
-    FX_LOGS(ERROR) << "Failed to open " << kKtraceControllerSvc << ": errno=" << errno;
+    FX_LOGS(ERROR) << "Failed to open " << kKTraceDev << ": errno=" << errno;
     return zx::channel();
   }
   zx::channel channel;
   zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get " << kKtraceControllerSvc
+    FX_LOGS(ERROR) << "Failed to get " << kKTraceDev
                    << " channel: " << zx_status_get_string(status);
     return zx::channel();
   }
@@ -73,21 +73,22 @@ void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status, zx_status_t 
   }
 }
 
-void RequestKtraceStop(Controller_SyncProxy& controller) {
+void RequestKtraceStop(const zx::channel& channel) {
   zx_status_t stop_status;
-  zx_status_t status = controller.Stop(&stop_status);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerStop(channel.get(), &stop_status);
   LogFidlFailure("stop", status, stop_status);
 }
 
-void RequestKtraceRewind(Controller_SyncProxy& controller) {
+void RequestKtraceRewind(const zx::channel& channel) {
   zx_status_t rewind_status;
-  zx_status_t status = controller.Rewind(&rewind_status);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerRewind(channel.get(), &rewind_status);
   LogFidlFailure("rewind", status, rewind_status);
 }
 
-void RequestKtraceStart(Controller_SyncProxy& controller, uint32_t group_mask) {
+void RequestKtraceStart(const zx::channel& channel, uint32_t group_mask) {
   zx_status_t start_status;
-  zx_status_t status = controller.Start(group_mask, &start_status);
+  zx_status_t status =
+      fuchsia_tracing_kernel_ControllerStart(channel.get(), group_mask, &start_status);
   LogFidlFailure("start", status, start_status);
 }
 
@@ -145,11 +146,10 @@ void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
 
   FX_LOGS(INFO) << "Starting ktrace";
 
-  zx::channel channel = OpenKTraceController();
+  zx::channel channel = OpenKTrace();
   if (!channel) {
     return;
   }
-  Controller_SyncProxy ktrace_controller(std::move(channel));
 
   context_ = trace_acquire_prolonged_context();
   if (!context_) {
@@ -158,11 +158,11 @@ void App::StartKTrace(uint32_t group_mask, bool retain_current_data) {
   }
   current_group_mask_ = group_mask;
 
-  RequestKtraceStop(ktrace_controller);
+  RequestKtraceStop(channel);
   if (!retain_current_data) {
-    RequestKtraceRewind(ktrace_controller);
+    RequestKtraceRewind(channel);
   }
-  RequestKtraceStart(ktrace_controller, group_mask);
+  RequestKtraceStart(channel, group_mask);
 
   FX_VLOGS(1) << "Ktrace started";
 }
@@ -176,10 +176,9 @@ void App::StopKTrace() {
   FX_LOGS(INFO) << "Stopping ktrace";
 
   {
-    zx::channel channel = OpenKTraceController();
+    zx::channel channel = OpenKTrace();
     if (channel) {
-      Controller_SyncProxy ktrace_controller(std::move(channel));
-      RequestKtraceStop(ktrace_controller);
+      RequestKtraceStop(channel);
     }
   }
 
@@ -187,13 +186,9 @@ void App::StopKTrace() {
   auto buffer_context = trace_acquire_context();
 
   DeviceReader reader;
-  if (reader.Init() == ZX_OK) {
-    Importer importer(buffer_context);
-    if (!importer.Import(reader)) {
-      FX_LOGS(ERROR) << "Errors encountered while importing ktrace data";
-    }
-  } else {
-    FX_LOGS(ERROR) << "Failed to initialize ktrace reader";
+  Importer importer(buffer_context);
+  if (!importer.Import(reader)) {
+    FX_LOGS(ERROR) << "Errors encountered while importing ktrace data";
   }
 
   trace_release_context(buffer_context);

@@ -81,7 +81,6 @@ executable("svchost") {
     "//zircon/system/ulib/kcounter",
     "//zircon/system/ulib/kernel-debug",
     "//zircon/system/ulib/kernel-mexec",
-    "//zircon/system/ulib/ktrace",
     "//zircon/system/ulib/logger",
     "//zircon/system/ulib/profile",
     "//zircon/system/ulib/svc",

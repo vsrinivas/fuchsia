@@ -44,7 +44,7 @@ executable("bin") {
   deps = [
     ":importer",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//sdk/fidl/fuchsia.tracing.kernel",
+    "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel_c",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",

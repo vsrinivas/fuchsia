@@ -110,8 +110,6 @@
                 "/svc/fuchsia.scheduler.ProfileProvider",
                 "/svc/fuchsia.sysinfo.SysInfo",
                 "/svc/fuchsia.thermal.Controller",
-                "/svc/fuchsia.tracing.kernel.Controller",
-                "/svc/fuchsia.tracing.kernel.Reader",
                 "/svc/fuchsia.virtualconsole.SessionManager",
             ],
             from: "#bootstrap",

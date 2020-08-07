@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_DEVICE_READER_H_
 #define GARNET_BIN_KTRACE_PROVIDER_DEVICE_READER_H_
 
-#include <fuchsia/tracing/kernel/cpp/fidl.h>
+#include <src/lib/files/unique_fd.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 
@@ -15,17 +15,13 @@ class DeviceReader : public Reader {
  public:
   DeviceReader();
 
-  zx_status_t Init();
-
  private:
-  static constexpr char kKtraceReaderSvc[] = "/svc/fuchsia.tracing.kernel.Reader";
   static constexpr size_t kChunkSize{16 * 4 * 1024};
 
-  std::tuple<zx_status_t, zx::channel> OpenKtraceReader();
   void ReadMoreData() override;
 
-  fuchsia::tracing::kernel::ReaderSyncPtr ktrace_reader_;
-  size_t offset_ = 0;
+  fbl::unique_fd fd_;
+
   char buffer_[kChunkSize];
 
   DeviceReader(const DeviceReader&) = delete;

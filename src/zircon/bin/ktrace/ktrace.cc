@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/tracing/kernel/cpp/fidl.h>
+#include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
@@ -16,11 +16,9 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 
-namespace {
-constexpr char kKtraceControllerSvc[] = "/svc/fuchsia.tracing.kernel.Controller";
-constexpr char kKtraceReaderSvc[] = "/svc/fuchsia.tracing.kernel.Reader";
+static const char kDevicePath[] = "/dev/misc/ktrace";
 
-constexpr char kUsage[] =
+static const char kUsage[] =
     "\
 Usage: ktrace [options] <control>\n\
 Where <control> is one of:\n\
@@ -36,12 +34,21 @@ Options:\n\
   --help  - Duh.\n\
 ";
 
-void PrintUsage(FILE* f) { fputs(kUsage, f); }
+static void PrintUsage(FILE* f) { fputs(kUsage, f); }
 
-zx::channel OpenKTraceReader() {
-  int fd{open(kKtraceReaderSvc, O_RDWR)};
+static fbl::unique_fd OpenKtraceDeviceAsFd() {
+  fbl::unique_fd fd{open(kDevicePath, O_RDWR)};
+  if (!fd.is_valid()) {
+    fprintf(stderr, "Cannot open trace device %s: %s\n", kDevicePath, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+  return fd;
+}
+
+static zx::channel OpenKtraceDeviceAsChannel() {
+  int fd{open(kDevicePath, O_RDWR)};
   if (fd < 0) {
-    fprintf(stderr, "Cannot open trace reader %s: %s\n", kKtraceReaderSvc, strerror(errno));
+    fprintf(stderr, "Cannot open trace device %s: %s\n", kDevicePath, strerror(errno));
     exit(EXIT_FAILURE);
   }
   zx::channel channel;
@@ -54,32 +61,16 @@ zx::channel OpenKTraceReader() {
   return channel;
 }
 
-zx::channel OpenKtraceController() {
-  int fd{open(kKtraceControllerSvc, O_RDWR)};
-  if (fd < 0) {
-    fprintf(stderr, "Cannot open trace controller %s: %s\n", kKtraceControllerSvc, strerror(errno));
-    exit(EXIT_FAILURE);
-  }
-  zx::channel channel;
-  zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    fprintf(stderr, "Unable to obtain channel handle from file descriptor: %s\n",
-            zx_status_get_string(status));
-    exit(EXIT_FAILURE);
-  }
-  return channel;
-}
-
-int LogFidlError(zx_status_t status) {
+static int LogFidlError(zx_status_t status) {
   fprintf(stderr, "Error in FIDL request: %s(%d)\n", zx_status_get_string(status), status);
   return EXIT_FAILURE;
 }
 
-int DoStart(uint32_t group_mask) {
-  fuchsia::tracing::kernel::ControllerSyncPtr controller;
-  controller.Bind(OpenKtraceController());
+static int DoStart(uint32_t group_mask) {
+  zx::channel channel{OpenKtraceDeviceAsChannel()};
   zx_status_t start_status;
-  zx_status_t status = controller->Start(group_mask, &start_status);
+  zx_status_t status =
+      fuchsia_tracing_kernel_ControllerStart(channel.get(), group_mask, &start_status);
   if (status != ZX_OK) {
     return LogFidlError(status);
   }
@@ -91,11 +82,10 @@ int DoStart(uint32_t group_mask) {
   return EXIT_SUCCESS;
 }
 
-int DoStop() {
-  fuchsia::tracing::kernel::ControllerSyncPtr controller;
-  controller.Bind(OpenKtraceController());
+static int DoStop() {
+  zx::channel channel{OpenKtraceDeviceAsChannel()};
   zx_status_t stop_status;
-  zx_status_t status = controller->Stop(&stop_status);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerStop(channel.get(), &stop_status);
   if (status != ZX_OK) {
     return LogFidlError(status);
   }
@@ -107,11 +97,10 @@ int DoStop() {
   return EXIT_SUCCESS;
 }
 
-int DoRewind() {
-  fuchsia::tracing::kernel::ControllerSyncPtr controller;
-  controller.Bind(OpenKtraceController());
+static int DoRewind() {
+  zx::channel channel{OpenKtraceDeviceAsChannel()};
   zx_status_t rewind_status;
-  zx_status_t status = controller->Rewind(&rewind_status);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerRewind(channel.get(), &rewind_status);
   if (status != ZX_OK) {
     return LogFidlError(status);
   }
@@ -123,12 +112,12 @@ int DoRewind() {
   return EXIT_SUCCESS;
 }
 
-int DoWritten() {
-  fuchsia::tracing::kernel::ReaderSyncPtr reader;
-  reader.Bind(OpenKTraceReader());
+static int DoWritten() {
+  zx::channel channel{OpenKtraceDeviceAsChannel()};
   zx_status_t written_status;
   uint64_t bytes_written;
-  zx_status_t status = reader->GetBytesWritten(&written_status, &bytes_written);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerGetBytesWritten(
+      channel.get(), &written_status, &bytes_written);
   if (status != ZX_OK) {
     return LogFidlError(status);
   }
@@ -141,9 +130,8 @@ int DoWritten() {
   return EXIT_SUCCESS;
 }
 
-int DoSave(const char* path) {
-  fuchsia::tracing::kernel::ReaderSyncPtr reader;
-  reader.Bind(OpenKTraceReader());
+static int DoSave(const char* path) {
+  fbl::unique_fd in_fd{OpenKtraceDeviceAsFd()};
   fbl::unique_fd out_fd(open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666));
   if (!out_fd.is_valid()) {
     fprintf(stderr, "Unable to open file for writing: %s, %s\n", path, strerror(errno));
@@ -151,24 +139,16 @@ int DoSave(const char* path) {
   }
 
   // Read/write this many bytes at a time.
-  std::vector<uint8_t> buf;
-  size_t read_size = 4096;
-  size_t offset = 0;
-  zx_status_t out_status;
-  zx_status_t status;
-  while ((status = reader->ReadAt(read_size, offset, &out_status, &buf)) == ZX_OK &&
-         out_status == ZX_OK) {
-    if (buf.size() == 0) {
-      break;
-    }
-    offset += buf.size();
-    size_t bytes_written = write(out_fd.get(), buf.data(), buf.size());
+  char buf[4096];
+  ssize_t bytes_read;
+  while ((bytes_read = read(in_fd.get(), buf, sizeof(buf))) > 0) {
+    ssize_t bytes_written = write(out_fd.get(), buf, bytes_read);
     if (bytes_written < 0) {
       fprintf(stderr, "I/O error saving buffer: %s\n", strerror(errno));
       return EXIT_FAILURE;
     }
-    if (bytes_written != buf.size()) {
-      fprintf(stderr, "Short write saving buffer: %zd vs %zd\n", bytes_written, buf.size());
+    if (bytes_written != bytes_read) {
+      fprintf(stderr, "Short write saving buffer: %zd vs %zd\n", bytes_written, bytes_read);
       return EXIT_FAILURE;
     }
   }
@@ -176,14 +156,13 @@ int DoSave(const char* path) {
   return EXIT_SUCCESS;
 }
 
-void EnsureNArgs(const fbl::String& cmd, int argc, int expected_argc) {
+static void EnsureNArgs(const fbl::String& cmd, int argc, int expected_argc) {
   if (argc != expected_argc) {
     fprintf(stderr, "Unexpected number of args for command %s\n", cmd.c_str());
     PrintUsage(stderr);
     exit(EXIT_FAILURE);
   }
 }
-}  // namespace
 
 int main(int argc, char** argv) {
   if (argc >= 2 && strcmp(argv[1], "--help") == 0) {

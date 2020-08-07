@@ -83,8 +83,6 @@
                 "/svc/fuchsia.sysinfo.SysInfo",
                 "/svc/fuchsia.thermal.Controller",
                 "/svc/fuchsia.time.Maintenance",
-                "/svc/fuchsia.tracing.kernel.Controller",
-                "/svc/fuchsia.tracing.kernel.Reader",
                 "/svc/fuchsia.virtualconsole.SessionManager",
             ],
             from: "parent",
