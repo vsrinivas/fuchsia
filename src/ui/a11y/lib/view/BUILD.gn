@@ -32,5 +32,6 @@ source_set("view") {
     "//src/lib/fxl",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/semantics/util",
   ]
 }

@@ -9,6 +9,8 @@
 
 #include <stack>
 
+#include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
+
 namespace a11y {
 
 ViewWrapper::ViewWrapper(fuchsia::ui::views::ViewRef view_ref,
@@ -52,14 +54,14 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
   // respectively. Tx, Ty, and Tz are the x, y, and z components of translation,
   // respectively.
   //
-  // In order to comput the transform matrix from the root node's coordinate
+  // In order to compute the transform matrix from the root node's coordinate
   // space to the focused node's coordinate space, we can simply compute the
   // cross product of the focused node's ancestors' transform matrices,
-  // beginning at the minimum-depth non-root ancestor (the root does not have a
-  // parent, so it does not need a transform):
+  // beginning at the focused node and up to the minimum-depth non-root ancestor
+  // (the root does not have a parent, so it does not need a transform):
   //
-  // [Focused node transform] = [depth 1 ancestor transform] x [depth 2 ancestor
-  // transform] x ... x [parent transform] x [focused node transform]
+  // [Focused node transform] = [focused node transform] x [parent transform] x ...
+  //   x [depth 2 ancestor transform] x [depth 1 ancestor transform]
   //
   // Assuming that the transform matrices are of the form described above, we
   // don't actually need to do the full matrix multiplications. The matrix
@@ -84,24 +86,17 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
     current_node_id = parent_node->node_id();
   }
 
-  std::array<float, 3> scale_vector({1.0f, 1.0f, 1.0f});
-  std::array<float, 3> translation_vector({0.f, 0.f, 0.f});
+  SemanticTransform transform;
   while (!nodes_to_visit.empty()) {
     auto current_node = nodes_to_visit.top();
     nodes_to_visit.pop();
 
-    auto local_transform = current_node->transform().matrix;
-    scale_vector[0] *= local_transform[0];
-    scale_vector[1] *= local_transform[5];
-    scale_vector[2] *= local_transform[10];
-
-    translation_vector[0] = (local_transform[0] * translation_vector[0]) + local_transform[12];
-    translation_vector[1] = (local_transform[5] * translation_vector[1]) + local_transform[13];
-    translation_vector[2] = (local_transform[10] * translation_vector[2]) + local_transform[14];
+    transform.ChainLocalTransform(current_node->transform());
   }
 
   auto bounding_box = annotated_node->location();
-  annotation_view_->DrawHighlight(bounding_box, scale_vector, translation_vector);
+  annotation_view_->DrawHighlight(bounding_box, transform.scale_vector(),
+                                  transform.translation_vector());
 }
 
 void ViewWrapper::ClearHighlights() { annotation_view_->DetachViewContents(); }
