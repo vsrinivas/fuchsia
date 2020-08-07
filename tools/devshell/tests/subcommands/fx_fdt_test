@@ -1,0 +1,94 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test fx fdt
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/fdt"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "tools/devshell/lib/vars.sh"
+)
+
+# shellcheck disable=SC2034
+BT_MOCKED_TOOLS=(
+  "bin/cipd"
+  "bin/open" # mock out MacOS' open command
+  "bin/unzip"
+)
+
+BT_MKDIR_DEPS=(
+  ".jiri_root"
+)
+
+declare fx
+
+BT_SET_UP() {
+  #FUCHSIA_DIR="${BT_TEMP_DIR}"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+
+  # Set up mocked replacements for system utils.
+  export PATH="${BT_TEMP_DIR}/bin:${PATH}"
+
+  cipd="${BT_TEMP_DIR}/bin/cipd"
+  unzip="${BT_TEMP_DIR}/bin/unzip"
+}
+
+# Test that prebuilt is run with no args works with new binary.
+TEST_noargs_uses_prebuilt_new_binary() {
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/system_monitor/linux/fuchsia_devtools"
+
+  BT_EXPECT ${fx} fdt
+}
+
+# Test that prebuilt is run with no args works with old binary.
+TEST_noargs_uses_prebuilt_old_binary() {
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/system_monitor/linux/system_monitor"
+
+  BT_EXPECT ${fx} fdt
+}
+
+# Test that prebuilt fails if not downloaded.
+TEST_prebuilt_unavailable() {
+  local out="${BT_TEMP_DIR}/_fx_test_output"
+
+  BT_EXPECT_FAIL ${fx} fdt > "${out}"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "JIRI"
+}
+
+# Test that CIPD is used to fetch "latest" with the new binary.
+TEST_uses_cipd_for_latest_new_binary() {
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos/macos.zip"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/system_monitor/linux/fuchsia_devtools"
+
+  BT_EXPECT ${fx} fdt latest
+
+  if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+    BT_EXPECT btf::does-mock-args-contain "${unzip}.mock_state" "-d ${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
+  fi
+  BT_EXPECT btf::does-mock-args-contain "${cipd}.mock_state" "ensure"
+}
+
+# Test that CIPD is used to fetch "latest" with the old binary.
+TEST_uses_cipd_for_latest_old_binary() {
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos/macos.zip"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
+  btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/system_monitor/linux/system_monitor"
+
+  BT_EXPECT ${fx} fdt latest
+
+  if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+    BT_EXPECT btf::does-mock-args-contain "${unzip}.mock_state" "-d ${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
+  fi
+  BT_EXPECT btf::does-mock-args-contain "${cipd}.mock_state" "ensure"
+}
+
+BT_RUN_TESTS "$@"

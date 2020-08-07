@@ -12,24 +12,78 @@
 ##             in //prebuilt will be used.
 ##             VERSION is either a CIPD hash or "latest".
 
-if [[ `uname -s` == "Darwin" ]]; then
-  echo "Fuchsia DevTools doesn't run on macOS."
-  echo "Please run Fuchsia DevTools from a Linux workstation."
-  exit 1
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+set -e
+
+PREBUILT_DIR="$FUCHSIA_DIR/prebuilt/gui_tools"
+DOWNLOAD_DIR="$FUCHSIA_DIR/prebuilt/gui_tools/download"
+
+# This is an old directory that was used for downloading CIPD files that we
+# don't want to use anymore. This script attempts to delete this directory if it
+# exists to cleanup old usage. This can be removed eventually.
+OLD_DOWNLOAD_DIR="$FUCHSIA_DIR/prebuilt/gui_tools/test_fuchsia_devtools"
+
+if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+  BINARY="Fuchsia DevTools.app"
+  ZIP="fuchsia_devtools/macos/macos.zip"
+  DOWNLOAD_ZIP="$DOWNLOAD_DIR/$ZIP"
+  DOWNLOAD_UNZIP_DIR="$DOWNLOAD_DIR/fuchsia_devtools/macos-extracted"
+  DOWNLOAD="$DOWNLOAD_UNZIP_DIR/$BINARY"
+  PREBUILT_ZIP="$PREBUILT_DIR/$ZIP"
+  PREBUILT_UNZIP_DIR="$PREBUILT_DIR/fuchsia_devtools/macos-extracted"
+  PREBUILT="$PREBUILT_UNZIP_DIR/$BINARY"
+else
+  # The _OLD values are to support a temporary transition where we are changing
+  # the name of the binary from system_monitor to fuchsia_devtools. Once that
+  # change is complete these will be removed.
+  BINARY_OLD="system_monitor/linux/system_monitor"
+  PREBUILT_OLD="$PREBUILT_DIR/$BINARY_OLD"
+  DOWNLOAD_OLD="$DOWNLOAD_DIR/$BINARY_OLD"
+
+  BINARY="system_monitor/linux/fuchsia_devtools"
+  PREBUILT="$PREBUILT_DIR/$BINARY"
+  DOWNLOAD="$DOWNLOAD_DIR/$BINARY"
 fi
 
+# Use prebuilt version if no arguments are passed.
 if [[ $# == 0 ]]; then
-  # Use prebuilt version.
-  system_monitor="$FUCHSIA_DIR/prebuilt/gui_tools/system_monitor/linux/system_monitor"
-  if [[ ! -x "$system_monitor" ]]; then
-    cat << end
+  if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+    # On the mac if we have already unzipped the prebuilt then open it.
+    if [[ -e "$PREBUILT" ]]; then
+      open "$PREBUILT"
+      exit 0
+    # On the mac if we have not unzipped the prebuilt then unzip first.
+    elif [[ -e "$PREBUILT_ZIP" ]]; then
+      rm -rf "${PREBUILT_UNZIP_DIR}"
+      if ! unzip -qq "${PREBUILT_ZIP}" -d "${PREBUILT_UNZIP_DIR}-temp"; then
+        rm -rf "${PREBUILT_UNZIP_DIR}-temp"
+        echo "Prebuilt archive failed to extract."
+        exit 1
+      fi
+      mv "${PREBUILT_UNZIP_DIR}-temp" "${PREBUILT_UNZIP_DIR}"
+      open "$PREBUILT"
+      exit 0
+    fi
+  else
+    # else we are on linux
+    # If the new prebuilt binary exists, run it.
+    if [[ -x "$PREBUILT" ]]; then
+      # Maybe add ` > /dev/null 2>&1 &` in the future.
+      exec "$PREBUILT"
+    # If the old prebuilt binary exists, run it.
+    elif [[ $HOST_PLATFORM == "linux-x64" ]] && [[ -x "$PREBUILT_OLD" ]]; then
+      # Maybe add ` > /dev/null 2>&1 &` in the future.
+      exec "$PREBUILT_OLD"
+    fi
+  fi
+  # We are on mac and don't have a zip file or we are linux and are missing
+  # a binary with either the old or new name. This should only happen if the
+  # jiri fetch for the prebuilt is not configured properly or has not run.
+  cat << end
 To use fdt, JIRI should download it. Please run the following commands:
  jiri init -fetch-optional=fuchsia_devtools && jiri fetch-packages --local-manifest=true
 end
-    exit 1;
-  fi
-  # Maybe add ` > /dev/null 2>&1 &` in the future.
-  exec "$system_monitor"
+  exit 1;
 fi
 
 # If a specific version of FDT is requested, it can be downloaded directly.
@@ -40,30 +94,35 @@ fi
 version="$1"
 shift
 
-# The "XXXXXX" will be replaced with a unique value.
-temp_file=$(mktemp /tmp/fuchsia_devtools_cipd_XXXXXX.ensure)
-
-cat << end > "$temp_file"
-\$ServiceURL https://chrome-infra-packages.appspot.com/
-
-fuchsia_internal/gui_tools/fuchsia_devtools/\${platform} $version
-end
-
-if [[ -z "$FUCHSIA_DIR" ]]; then
-  echo "Please define a FUCHSIA_DIR."
-  exit 1
+# Clean up the old location for downloading CIPD packages if it exists.
+if [[ -d "$OLD_DOWNLOAD_DIR" ]]; then
+  rm -rf "$OLD_DOWNLOAD_DIR"
 fi
 
-dev_tools="$FUCHSIA_DIR/prebuilt/gui_tools/test_fuchsia_devtools"
-cipd ensure -ensure-file "$temp_file" -root "$dev_tools"
-if ! `cipd ensure -ensure-file "$temp_file" -root "$dev_tools"`; then
-  rm "$temp_file"
+if ! echo 'fuchsia_internal/gui_tools/fuchsia_devtools/${platform}' "$version" | cipd ensure -ensure-file - -root "$DOWNLOAD_DIR"; then
   echo "Failed to download $version."
   exit 1
 fi
-rm "$temp_file"
 
-"$dev_tools/system_monitor/linux/system_monitor" $@
-# In the future, we should add the following to eliminate the terminal spam:
-#   > /dev/null 2>&1 &
-# For the near term, using this for debug output is important.
+if [[ $HOST_PLATFORM == "mac-x64" ]]; then
+  rm -rf "${DOWNLOAD_UNZIP_DIR}"
+  if ! unzip -qq "${DOWNLOAD_ZIP}" -d "${DOWNLOAD_UNZIP_DIR}-temp"; then
+    rm -rf "${DOWNLOAD_UNZIP_DIR}-temp"
+    echo "Downloaded archive for $version failed to extract."
+    exit 1
+  fi
+  mv "${DOWNLOAD_UNZIP_DIR}-temp" "${DOWNLOAD_UNZIP_DIR}"
+  open "$DOWNLOAD"
+else
+  # In the future, we should add the following to eliminate the terminal spam:
+  #   > /dev/null 2>&1 &
+  # For the near term, using this for debug output is important.
+  if [[ -x "$DOWNLOAD" ]]; then
+    "$DOWNLOAD" "$@"
+  elif [[ -x "$DOWNLOAD_OLD" ]]; then
+    "$DOWNLOAD_OLD" "$@"
+  else
+    echo "Failed to find Fuchsia DevTools binary."
+    exit 1
+  fi
+fi
