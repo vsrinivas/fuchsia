@@ -29,8 +29,7 @@ group("hw_dependent_tests") {
   deps = [
     "//src/media/codec/examples:h264_decoder_fuzzer_test",
     "//src/media/codec/examples:use-h264-multi-decoder-stream-switching-test",
-    # TODO(fxb/13483): This test flakes so far, but we should enable it as soon as we can.
-    #"//src/media/codec/examples:use-h264-multi-decoder-concurrent-stream-switching-test",
+    "//src/media/codec/examples:use-h264-multi-decoder-concurrent-stream-switching-test",
     "//src/media/codec/examples:use-h264-multi-decoder-test",
     "//src/media/codec/examples:use-vp9-decoder-stream-switching-test",
     "//src/media/codec/examples:use_h264_decoder_secure_input_output_test",

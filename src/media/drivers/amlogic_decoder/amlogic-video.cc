@@ -264,7 +264,8 @@ zx_status_t AmlogicVideo::EnsureSecmemSessionIsConnected() {
 
 void AmlogicVideo::InitializeStreamInput(bool use_parser) {
   uint32_t buffer_address = truncate_to_32(stream_buffer_->buffer().phys_base());
-  core_->InitializeStreamInput(use_parser, buffer_address, stream_buffer_->buffer().size());
+  auto buffer_size = stream_buffer_->buffer().size();
+  core_->InitializeStreamInput(use_parser, buffer_address, buffer_size);
 }
 
 zx_status_t AmlogicVideo::InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure) {
@@ -355,8 +356,8 @@ zx_status_t AmlogicVideo::InitializeEsParser() {
   return parser_->InitializeEsParser(current_instance_.get());
 }
 
-uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset) {
-  uint32_t read_offset = core_->GetReadOffset();
+uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(
+    uint32_t write_offset, uint32_t read_offset) {
   uint32_t available_space;
   if (read_offset > write_offset) {
     available_space = read_offset - write_offset;
@@ -367,6 +368,11 @@ uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offse
   // pointer, as that means the buffer is empty.
   available_space = available_space > 8 ? available_space - 8 : 0;
   return available_space;
+}
+
+uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset) {
+  uint32_t read_offset = core_->GetReadOffset();
+  return GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(write_offset, read_offset);
 }
 
 uint32_t AmlogicVideo::GetStreamBufferEmptySpace() {
@@ -417,28 +423,45 @@ void AmlogicVideo::SwapOutCurrentInstance() {
   TRACE_DURATION("media", "AmlogicVideo::SwapOutCurrentInstance", "current_instance_",
                  current_instance_.get());
   ZX_DEBUG_ASSERT(!!current_instance_);
-  // FrameWasOutput() is called during handling of kVp9CommandNalDecodeDone on
-  // the interrupt thread, which means the decoder HW is currently paused,
-  // which means it's ok to save the state before the stop+wait (without any
-  // explicit pause before the save here).  The decoder HW remains paused
-  // after the save, and makes no further progress until later after the
-  // restore.
-  if (!current_instance_->input_context()) {
-    current_instance_->InitializeInputContext();
-    if (core_->InitializeInputContext(current_instance_->input_context(),
-                                      current_instance_->decoder()->is_secure()) != ZX_OK) {
-      video_decoder_->CallErrorHandler();
-      // Continue trying to swap out.
+
+  // VP9:
+  //
+  // FrameWasOutput() is called during handling of kVp9CommandNalDecodeDone on the interrupt thread,
+  // which means the decoder HW is currently paused, which means it's ok to save the state before
+  // the stop+wait (without any explicit pause before the save here).  The decoder HW remains paused
+  // after the save, and makes no further progress until later after the restore.
+  //
+  // h264_multi_decoder:
+  //
+  // ShouldSaveInputContext() is true if the h264_multi_decoder made useful progress (decoded a
+  // picture).  If no useful progress was made, the lack of save here allows the state restore later
+  // to effectively back up and try decoding from the same location again, with more data present.
+  // This backing up to the previous saved state is the main way that separate SPS PPS and pictures
+  // split across packets are handled.  In other words, it's how the h264_multi_decoder handles
+  // stream-based input.
+  bool should_save = current_instance_->decoder()->ShouldSaveInputContext();
+  DLOG("should_save: %d", should_save);
+  if (should_save) {
+    if (!current_instance_->input_context()) {
+      current_instance_->InitializeInputContext();
+      if (core_->InitializeInputContext(current_instance_->input_context(),
+                                        current_instance_->decoder()->is_secure()) != ZX_OK) {
+        video_decoder_->CallErrorHandler();
+        // Continue trying to swap out.
+      }
     }
   }
   video_decoder_->SetSwappedOut();
-  if (current_instance_->input_context()) {
-    if (core_->SaveInputContext(current_instance_->input_context()) != ZX_OK) {
-      video_decoder_->CallErrorHandler();
-      // Continue trying to swap out.
+  if (should_save) {
+    if (current_instance_->input_context()) {
+      if (core_->SaveInputContext(current_instance_->input_context()) != ZX_OK) {
+        video_decoder_->CallErrorHandler();
+        // Continue trying to swap out.
+      }
     }
   }
   video_decoder_ = nullptr;
+  stream_buffer_ = nullptr;
   core_->StopDecoding();
   core_->WaitForIdle();
   core_ = nullptr;
@@ -453,6 +476,16 @@ void AmlogicVideo::TryToReschedule() {
   if (current_instance_ && !current_instance_->decoder()->CanBeSwappedOut()) {
     DLOG("Current instance can't be swapped out");
     return;
+  }
+
+  // This is used by h264_multi_decoder to swap out without saving, so that the next swap in will
+  // restore a previously-saved state again to re-attempt decode from that saved state's logical
+  // read start position.  Unlike the read position which backs up for re-decode, the write position
+  // is adjusted after restore to avoid overwriting data written since that save state was
+  // originally created.
+  if (current_instance_ && current_instance_->decoder()->MustBeSwappedOut()) {
+    DLOG("MustBeSwappedOut() is true");
+    SwapOutCurrentInstance();
   }
 
   if (current_instance_ && current_instance_->decoder()->test_hooks().force_context_save_restore) {
@@ -525,14 +558,17 @@ void AmlogicVideo::SwapInCurrentInstance() {
     // that spot.
     // Generally data will only be added after this decoder is swapped in, so
     // RestoreInputContext will handle that state.
-    core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() + stream_buffer_->data_size() +
-                              stream_buffer_->padding_size());
+    if (stream_buffer_->data_size() + stream_buffer_->padding_size() > 0) {
+      core_->UpdateWritePointer(stream_buffer_->buffer().phys_base() + stream_buffer_->data_size() +
+                                stream_buffer_->padding_size());
+    }
   } else {
     if (core_->RestoreInputContext(current_instance_->input_context()) != ZX_OK) {
       PowerOffForError();
       return;
     }
   }
+
   // Do InitializeHardware after setting up the input context, since for H264Multi the vififo can
   // start reading as soon as PowerCtlVld is set up (inside InitializeHardware), and we don't want
   // it to read incorrect data as we gradually set it up later.

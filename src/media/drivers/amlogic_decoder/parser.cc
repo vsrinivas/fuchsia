@@ -6,6 +6,8 @@
 
 #include <lib/trace/event.h>
 
+#include <limits>
+
 #include "decoder_core.h"
 #include "decoder_instance.h"
 #include "stream_buffer.h"
@@ -60,7 +62,7 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
   PfifoRdPtr::Get().FromValue(0).WriteTo(owner_->mmio()->parser);
   PfifoWrPtr::Get().FromValue(0).WriteTo(owner_->mmio()->parser);
   constexpr uint32_t kEsStartCodePattern = 0x00000100;
-  constexpr uint32_t kEsStartCodeMask = 0x0000ff00;
+  constexpr uint32_t kEsStartCodeMask = 0xffffff00;
   ParserSearchPattern::Get().FromValue(kEsStartCodePattern).WriteTo(owner_->mmio()->parser);
   ParserSearchMask::Get().FromValue(kEsStartCodeMask).WriteTo(owner_->mmio()->parser);
 
@@ -169,25 +171,12 @@ void Parser::SetOutputLocation(zx_paddr_t paddr, uint32_t len) {
 
 void Parser::SyncFromDecoderInstance(DecoderInstance* instance) {
   StreamBuffer* buffer = instance->stream_buffer();
-  uint32_t buffer_address = truncate_to_32(buffer->buffer().phys_base());
-  // Sync start and end pointers every time so using the same parser with multiple decoder instances
-  // is less error-prone.
-  ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(owner_->mmio()->parser);
-  ParserVideoEndPtr::Get()
-      .FromValue(buffer_address + buffer->buffer().size() - 8)
-      .WriteTo(owner_->mmio()->parser);
-  ParserVideoRp::Get()
-      .FromValue(instance->core()->GetReadOffset() + buffer_address)
-      .WriteTo(owner_->mmio()->parser);
-  ParserVideoWp::Get()
-      .FromValue(instance->core()->GetStreamInputOffset() + buffer_address)
-      .WriteTo(owner_->mmio()->parser);
-  // Keeps bytes in the same order as they were input.
-  ParserEsControl::Get()
-      .ReadFrom(owner_->mmio()->parser)
-      .set_video_manual_read_ptr_update(true)
-      .set_video_write_endianness(0x7)
-      .WriteTo(owner_->mmio()->parser);
+  uint32_t buffer_phys_address = truncate_to_32(buffer->buffer().phys_base());
+  size_t buffer_size = buffer->buffer().size();
+  ZX_DEBUG_ASSERT(buffer_size <= std::numeric_limits<uint32_t>::max());
+  uint32_t read_offset = instance->core()->GetReadOffset();
+  uint32_t write_offset = instance->core()->GetStreamInputOffset();
+  SyncFromBufferParameters(buffer_phys_address, buffer_size, read_offset, write_offset);
 }
 
 void Parser::SyncToDecoderInstance(DecoderInstance* instance) {
@@ -195,6 +184,26 @@ void Parser::SyncToDecoderInstance(DecoderInstance* instance) {
   // parsing.
   instance->core()->UpdateWritePointer(
       ParserVideoWp::Get().ReadFrom(owner_->mmio()->parser).reg_value());
+}
+
+void Parser::SyncFromBufferParameters(uint32_t buffer_phys_address, uint32_t buffer_size,
+                                      uint32_t read_offset, uint32_t write_offset) {
+  // Sync start and end pointers every time so using the same parser with multiple decoder instances
+  // and/or for multiple purposes is less error-prone.
+  ParserVideoStartPtr::Get().FromValue(buffer_phys_address).WriteTo(owner_->mmio()->parser);
+  ParserVideoEndPtr::Get()
+      .FromValue(buffer_phys_address + buffer_size - 8)
+      .WriteTo(owner_->mmio()->parser);
+  ParserVideoRp::Get().FromValue(read_offset + buffer_phys_address).WriteTo(owner_->mmio()->parser);
+  ParserVideoWp::Get()
+      .FromValue(write_offset + buffer_phys_address)
+      .WriteTo(owner_->mmio()->parser);
+  // Keeps bytes in the same order as they were input.
+  ParserEsControl::Get()
+      .ReadFrom(owner_->mmio()->parser)
+      .set_video_manual_read_ptr_update(true)
+      .set_video_write_endianness(0x7)
+      .WriteTo(owner_->mmio()->parser);
 }
 
 zx_status_t Parser::ParseVideo(const void* data, uint32_t len) {

@@ -75,8 +75,17 @@ class DecoderCore {
                                      uint32_t buffer_size) = 0;
   virtual void InitializeParserInput() = 0;
   virtual void InitializeDirectInput() = 0;
+  // The write offset points to just after the last thing that was written into
+  // the stream buffer.
+  //
+  // write_offset - offset into the stream buffer just after the last byte
+  //     written.
+  virtual void UpdateWriteOffset(uint32_t write_offset) = 0;
   // The write pointer points to just after the last thing that was written into
   // the stream buffer.
+  //
+  // write_pointer - physical pointer that must lie within the stream_buffer
+  //     just after the last byte written into the stream buffer.
   virtual void UpdateWritePointer(uint32_t write_pointer) = 0;
   // This is the offset between the start of the stream buffer and the write
   // pointer.

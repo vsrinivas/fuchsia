@@ -117,6 +117,7 @@ if (target_cpu == "arm64") {
       "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.c",
       "vdec1.cc",
       "vdec1.h",
+      "video_decoder.cc",
       "video_decoder.h",
       "video_firmware_session.cc",
       "video_firmware_session.h",

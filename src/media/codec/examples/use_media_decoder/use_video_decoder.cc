@@ -36,6 +36,13 @@ namespace {
 // circumstances it can be possible.
 constexpr bool kVerifySecureOutput = false;
 
+// Queue SPS and PPS separately from the subsequent picture slice.
+constexpr bool kH264SeparateSpsPps = true;
+
+// Force some splitting of frames across packet boundaries.  The remainder of the frame data will go
+// in subsequent packets.
+constexpr size_t kMaxFrameBytesPerPacket = 4ul * 1024;
+
 constexpr zx::duration kInStreamDeadlineDuration = zx::sec(30);
 
 // This example only has one stream_lifetime_ordinal which is 1.
@@ -167,7 +174,7 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
     ZX_ASSERT(is_start_code(bytes, byte_count, &start_code_size_bytes));
     ZX_ASSERT(start_code_size_bytes < byte_count);
     uint8_t nal_unit_type = bytes[start_code_size_bytes] & 0x1f;
-    if (!IsSliceNalUnitType(nal_unit_type)) {
+    if (!kH264SeparateSpsPps && !IsSliceNalUnitType(nal_unit_type)) {
       return true;
     }
 
@@ -201,6 +208,17 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
       uint32_t padding_length = tvp ? tvp->PaddingLength() : 0;
       size_t bytes_to_copy =
           std::min(byte_count - bytes_so_far, buffer.size_bytes() - padding_length);
+
+      // Force some frames to split across packet boundary.
+      //
+      // TODO(fxb/13483): Also cover more than one frame in a packet, and split headers.
+      //
+      // TODO(fxb/13483): Enable testing frames split across packets once SW decode can do that, or
+      // have this be gated on whether capability was requested of decoder and try requesting this
+      // capability then fall back to not this capability.
+      (void)kMaxFrameBytesPerPacket;
+      // bytes_to_copy = std::min(bytes_to_copy, kMaxFrameBytesPerPacket);
+
       packet->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
       packet->set_start_offset(0);
       packet->set_valid_length_bytes(bytes_to_copy);
@@ -223,7 +241,9 @@ uint64_t QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream,
       codec_client->QueueInputPacket(std::move(packet));
       bytes_so_far += bytes_to_copy;
     }
-    frame_count++;
+    if (IsSliceNalUnitType(nal_unit_type)) {
+      frame_count++;
+    }
     if (frame_count == test_params->frame_count) {
       return false;
     }
@@ -518,9 +538,9 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
         decoder_params.set_input_details(std::move(input_details));
         // This is required for timestamp_ish values to transit the
         // Codec.
+        //
+        // TODO(fxb/57706): We shouldn't need to promise this to have PTS(s) flow through.
         decoder_params.set_promise_separate_access_units_on_input(true);
-        // TODO(35200): Wire this up more fully.  Currently this is fake and consistency
-        // with codec capabilities is not enforced.
         if (params.is_secure_output) {
           decoder_params.set_secure_output_mode(fuchsia::mediacodec::SecureMemoryMode::ON);
         }
@@ -564,10 +584,8 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
         uint64_t stream_lifetime_ordinal = kStreamLifetimeOrdinal;
         uint64_t input_frame_pts_counter = 0;
         uint32_t frames_queued = 0;
-        for (uint32_t loop_ordinal = 0; loop_ordinal < loop_stream_count; ++loop_ordinal, stream_lifetime_ordinal += 2) {
-if (stream_lifetime_ordinal % keep_stream_modulo != 1) {
-  continue;
-}
+        for (uint32_t loop_ordinal = 0; loop_ordinal < loop_stream_count;
+             ++loop_ordinal, stream_lifetime_ordinal += 2) {
           switch (format) {
             case Format::kH264:
             case Format::kH264Multi:

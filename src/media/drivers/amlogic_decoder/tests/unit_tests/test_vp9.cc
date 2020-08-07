@@ -30,6 +30,7 @@ class FakeDecoderCore : public DecoderCore {
                              uint32_t buffer_size) override {}
   void InitializeParserInput() override {}
   void InitializeDirectInput() override {}
+  void UpdateWriteOffset(uint32_t write_offset) override {}
   void UpdateWritePointer(uint32_t write_pointer) override {}
   uint32_t GetStreamInputOffset() override { return 0; }
   uint32_t GetReadOffset() override { return 0; }

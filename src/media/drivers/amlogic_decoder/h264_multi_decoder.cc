@@ -6,6 +6,7 @@
 
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/trace/event.h>
+#include <zircon/syscalls.h>
 
 #include <cmath>
 #include <iterator>
@@ -13,6 +14,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "decoder_instance.h"
 #include "h264_utils.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/h264_decoder.h"
@@ -22,10 +24,28 @@
 #include "util.h"
 #include "watchdog.h"
 
+// TODO(fxb/13483): Currently there's one frame of latency imposed by the need for another NALU
+// after the last byte of a frame for that frame to generate a pic data done interrupt.  A client
+// can mitigate this by queueing an access unit delimeter NALU after each input frame's slice
+// NALU(s), but we should consider paying attention to access unit flags on the packet so that a
+// client delivering complete frames and never putting data from more than one frame in a single
+// packet can set the flag on the last packet of a frame and not see 1 frame latency.  The argument
+// against doing this is that nal_unit_type 9 is the h264 way to avoid the 1 frame latency, and
+// isn't very difficult for clients to add after each complete frame.
+
 namespace {
+
 // See VLD_PADDING_SIZE.
 constexpr uint32_t kPaddingSize = 1024;
 const uint8_t kPadding[kPaddingSize] = {};
+
+// See end_of_seq_rbsp() (empty) in h.264 spec.  The purpose of queueing this after the last input
+// data is to avoid the FW generating decode buf empty interrupt (which it does when the last byte
+// delivered to the FW is exactly the last byte of a frame), and instead generate pic data done
+// interrupt (which the FW does if it sees a new NALU after the last byte of a frame).
+const std::vector<uint8_t> kEOS = {0, 0, 0, 1, 0x0a};
+
+constexpr uint32_t kVdecFifoAlign = 8;
 
 // ISO 14496 part 10
 // VUI parameters: Table E-1 "Meaning of sample aspect ratio indicator"
@@ -45,6 +65,14 @@ enum class ChromaFormatIdc : uint32_t {
 };
 
 static constexpr uint32_t kMacroblockDimension = 16;
+
+// We just set ViffBitCnt to a very large value that can still safely be multiplied by 8, so that
+// GetConsumedBytes() can work for very large frames and/or lots of prefix padding zeroes.  The HW
+// doesn't seem to actually stop decoding if this hits zero, nor does the HW seem to care if this
+// doesn't reach zero at the end of a frame.
+constexpr uint32_t kBytesToDecode = 0x10000000;
+
+constexpr uint32_t kStreamBufferReadAlignment = 512;
 
 }  // namespace
 
@@ -79,7 +107,8 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
                              const media::H264Picture::Vector& ref_pic_listb1,
                              scoped_refptr<media::H264Picture> pic) override {
     DLOG("Got MultiAccelerator::SubmitFrameMetadata");
-    ZX_DEBUG_ASSERT(owner_->currently_decoding());
+    ZX_DEBUG_ASSERT(owner_->is_decoder_started());
+    ZX_DEBUG_ASSERT(!owner_->is_hw_active());
     auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
     if (!ref_pic)
       return Status::kFail;
@@ -94,7 +123,8 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
                      const media::H264Picture::Vector& ref_pic_list1,
                      scoped_refptr<media::H264Picture> pic, const uint8_t* data, size_t size,
                      const std::vector<media::SubsampleEntry>& subsamples) override {
-    ZX_DEBUG_ASSERT(owner_->currently_decoding());
+    ZX_DEBUG_ASSERT(owner_->is_decoder_started());
+    ZX_DEBUG_ASSERT(!owner_->is_hw_active());
     DLOG("Got MultiAccelerator::SubmitSlice");
     H264MultiDecoder::SliceData slice_data;
     // struct copy
@@ -111,7 +141,8 @@ class MultiAccelerator : public media::H264Decoder::H264Accelerator {
   }
 
   Status SubmitDecode(scoped_refptr<media::H264Picture> pic) override {
-    ZX_DEBUG_ASSERT(owner_->currently_decoding());
+    ZX_DEBUG_ASSERT(owner_->is_decoder_started());
+    ZX_DEBUG_ASSERT(!owner_->is_hw_active());
     auto ref_pic = static_cast<AmlogicH264Picture*>(pic.get())->internal_picture.lock();
     if (!ref_pic)
       return Status::kFail;
@@ -241,6 +272,11 @@ enum DecodeMode {
 // Actions written by CPU into DpbStatusReg to tell the firmware what to do.
 enum H264Action {
   // Start searching for the head of a frame to decode.
+  //
+  // Because the decode strategy for partial frames is to re-attempt frame decode later with more
+  // input data present, this is always the way we start searching for and decoding a frame.  There
+  // is no such thing as saving/restoring state in the middle of a frame decode - only re-attempting
+  // the decode from the same saved state again later with more input data.
   kH264ActionSearchHead = 0xf0,
 
   // Done responding to a config request.
@@ -251,6 +287,9 @@ enum H264Action {
 
   // Decode the first slice in a new picture.
   kH264ActionDecodeNewpic = 0xf3,
+
+  // Continue decoding.  IDK if we really need to use this.
+  kH264ActionDecodeStart = 0xff,
 };
 
 // Actions written by the firmware into DpbStatusReg before an interrupt to tell
@@ -262,11 +301,19 @@ enum H264Status {
   // Out of input data, so get more.
   kH264DataRequest = 0x12,
 
+  // The firmware was in the middle of processing a NALU, and it was potentially processing fine,
+  // but the firmware ran out of input data before processing was complete.  We handle this and
+  // kH264SearchBufEmpty the same way, by re-attempting decode starting at the same saved state
+  // again after adding more input data, in the hope that we'll get kH264PicDataDone before
+  // kH264DecodeBufEmpty or kH264SearchBufEmpty.
+  kH264DecodeBufEmpty = 0x20,
+
   // The firmware detected the hardware timed out while attempting to decode.
   kH264DecodeTimeout = 0x21,
 
-  // kH264ActionSearchHead wasn't able to find a frame to decode.
-  kH264SearchBufempty = 0x22,
+  // kH264ActionSearchHead wasn't able to find a frame to decode.  See kH264DecodeBufEmpty
+  // comments.
+  kH264SearchBufEmpty = 0x22,
 
   // Initialize the current set of reference frames and output buffer to be
   // decoded into.
@@ -288,7 +335,9 @@ H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvid
 H264MultiDecoder::~H264MultiDecoder() {
   if (owner_->IsDecoderCurrent(this)) {
     owner_->watchdog()->Cancel();
+    is_hw_active_ = false;
     owner_->core()->StopDecoding();
+    is_decoder_started_ = false;
     owner_->core()->WaitForIdle();
   }
   BarrierBeforeRelease();
@@ -436,6 +485,11 @@ void H264MultiDecoder::ResetHardware() {
       owner_->dosbus());
   DosSwReset0::Get().FromValue(0).WriteTo(owner_->dosbus());
 
+  // Reads are used for delaying running later code.
+  for (uint32_t i = 0; i < 3; i++) {
+    DosSwReset0::Get().ReadFrom(owner_->dosbus());
+  }
+
   DosSwReset0::Get().FromValue(0).set_vdec_pic_dc(1).set_vdec_dblk(1).WriteTo(owner_->dosbus());
   DosSwReset0::Get().FromValue(0).WriteTo(owner_->dosbus());
 
@@ -447,6 +501,9 @@ void H264MultiDecoder::ResetHardware() {
   auto temp = PowerCtlVld::Get().ReadFrom(owner_->dosbus());
   temp.set_reg_value(temp.reg_value() | (1 << 9) | (1 << 6));
   temp.WriteTo(owner_->dosbus());
+
+  is_hw_active_ = false;
+  is_decoder_started_ = false;
 }
 
 zx_status_t H264MultiDecoder::InitializeHardware() {
@@ -477,27 +534,31 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
     temp.set_reg_value(temp.reg_value() & ~(0xbf << 24));
     temp.WriteTo(owner_->dosbus());
   }
+  MdecPicDcCtrl::Get().ReadFrom(owner_->dosbus()).set_bit31(0).WriteTo(owner_->dosbus());
   MdecPicDcMuxCtrl::Get().ReadFrom(owner_->dosbus()).set_bit31(0).WriteTo(owner_->dosbus());
-  MdecExtIfCfg0::Get().FromValue(0).WriteTo(owner_->dosbus());
+  MdecExtIfCfg1::Get().FromValue(0).WriteTo(owner_->dosbus());
   MdecPicDcThresh::Get().FromValue(0x404038aa).WriteTo(owner_->dosbus());
 
   // Signal that the DPB hasn't been initialized yet.
   if (video_frames_.size() > 0) {
+    AvScratch7::Get()
+        .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
+                                         (video_frames_.size() << 16) |
+                                         (video_frames_.size() << 8)))
+        .WriteTo(owner_->dosbus());
     for (auto& frame : video_frames_) {
       AncNCanvasAddr::Get(frame->index)
           .FromValue((frame->uv_canvas->index() << 16) | (frame->uv_canvas->index() << 8) |
                      (frame->y_canvas->index()))
           .WriteTo(owner_->dosbus());
     }
-    AvScratch7::Get()
-        .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
-                                         (video_frames_.size() << 16) |
-                                         (video_frames_.size() << 8)))
-        .WriteTo(owner_->dosbus());
   } else {
     AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
     AvScratch9::Get().FromValue(0).WriteTo(owner_->dosbus());
   }
+
+  // The amlogic driver sets to kH264ActionDecodeStart if have_initialized_ essentially, but 0 seems
+  // to work fine here.
   DpbStatusReg::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   FrameCounterReg::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -518,18 +579,23 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
       .WriteTo(owner_->dosbus());
 
   LmemDumpAddr::Get().FromValue(truncate_to_32(lmem_->phys_base())).WriteTo(owner_->dosbus());
+
   DebugReg1::Get().FromValue(0).WriteTo(owner_->dosbus());
   DebugReg2::Get().FromValue(0).WriteTo(owner_->dosbus());
+  // The amlogic driver writes this again, so we do also.
+  MdecPicDcThresh::Get().FromValue(0x404038aa).WriteTo(owner_->dosbus());
   H264DecodeInfo::Get().FromValue(1 << 13).WriteTo(owner_->dosbus());
-  // TODO(fxb/13483): Use real values.
-  constexpr uint32_t kBytesToDecode = 100000;
-  H264DecodeSizeReg::Get().FromValue(kBytesToDecode).WriteTo(owner_->dosbus());
+  constexpr uint32_t kDummyDoesNothingBytesToDecode = 100000;
+  H264DecodeSizeReg::Get().FromValue(kDummyDoesNothingBytesToDecode).WriteTo(owner_->dosbus());
   ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
 
+  // configure aux buffer
   H264AuxAddr::Get().FromValue(truncate_to_32(aux_buf_->phys_base())).WriteTo(owner_->dosbus());
   H264AuxDataSize::Get()
       .FromValue(((kAuxBufPrefixSize / 16) << 16) | (kAuxBufSuffixSize / 16))
       .WriteTo(owner_->dosbus());
+
+  // configure decode mode
   H264DecodeModeReg::Get().FromValue(kDecodeModeMultiStreamBased).WriteTo(owner_->dosbus());
   H264DecodeSeqInfo::Get().FromValue(seq_info2_).WriteTo(owner_->dosbus());
   HeadPaddingReg::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -538,29 +604,46 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
 
   // TODO(fxb/13483): Set to 1 when SEI is supported.
   NalSearchCtl::Get().FromValue(0).WriteTo(owner_->dosbus());
+
   state_ = DecoderState::kWaitingForInputOrOutput;
   return ZX_OK;
 }
 
 void H264MultiDecoder::StartFrameDecode() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForInputOrOutput);
-  currently_decoding_ = true;
 
-  // For now, just use the decode size from InitializeHardware.
-  if (state_ == DecoderState::kWaitingForInputOrOutput) {
-    // TODO(fxb/13483): Use real value.
-    constexpr uint32_t kBytesToDecode = 100000;
-    ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
-    owner_->core()->StartDecoding();
+  if (unwrapped_consumed_bytes_decode_tried_ == unwrapped_consumed_bytes_ &&
+      unwrapped_write_offset_decode_tried_ == unwrapped_write_offset_) {
+    // If we see this print multiple times, we may need to mitigate this by doing OnFatalError() or
+    // by skipping some data of the stream (hopefully skipping past whatever is causing trouble).
+    //
+    // TODO(fxb/13483): For now this could potentially occur if there is pathological queueing of
+    // more PTS values than frames.  Probably do OnFatalError() here rather than keeping
+    // unreasonable # of PTS values or dumping PTS values.
+    LOG(WARNING, "no progress being made?");
   }
+  unwrapped_consumed_bytes_decode_tried_ = unwrapped_consumed_bytes_;
+  unwrapped_write_offset_decode_tried_ = unwrapped_write_offset_;
+
+  per_frame_attempt_seen_first_mb_in_slice_ = -1;
+
+  ZX_DEBUG_ASSERT(!is_decoder_started_);
+  ViffBitCnt::Get().FromValue(kBytesToDecode * 8).WriteTo(owner_->dosbus());
+  owner_->core()->StartDecoding();
+  is_decoder_started_ = true;
+
   DpbStatusReg::Get().FromValue(kH264ActionSearchHead).WriteTo(owner_->dosbus());
+
   state_ = DecoderState::kRunning;
+  is_hw_active_ = true;
   owner_->watchdog()->Start();
 }
 
 void H264MultiDecoder::ConfigureDpb() {
-  ZX_DEBUG_ASSERT(currently_decoding_);
+  ZX_DEBUG_ASSERT(is_decoder_started_);
+  ZX_DEBUG_ASSERT(is_hw_active_);
   owner_->watchdog()->Cancel();
+  is_hw_active_ = false;
 
   // The HW is told to continue decoding by writing DPB sizes to AvScratch0.  This can happen
   // immediately if the BufferCollection is already suitable, or after new sysmem allocation if
@@ -702,6 +785,7 @@ void H264MultiDecoder::ConfigureDpb() {
                                          (video_frames_.size() << 16) |
                                          (video_frames_.size() << 8)))
         .WriteTo(owner_->dosbus());
+    is_hw_active_ = true;
     owner_->watchdog()->Start();
     return;
   }
@@ -718,9 +802,15 @@ void H264MultiDecoder::ConfigureDpb() {
       return;
     }
 
+    // It'd be nice if this were consistenty available at slice interrupt time, but it isn't.  Stash
+    // it while we can.
+    chroma_format_idc_ = sequence_info.chroma_format_idc();
+
     state_ = DecoderState::kWaitingForConfigChange;
-    // Don't tell core to StopDecoding() - currently_decoding_ remains true.
-    ZX_DEBUG_ASSERT(currently_decoding_);
+    // Don't tell core to StopDecoding() - is_decoder_started_ remains true.  However is_hw_active_
+    // is false.
+    ZX_DEBUG_ASSERT(is_decoder_started_);
+    ZX_DEBUG_ASSERT(!is_hw_active_);
     if (!media_decoder_->Flush()) {
       LOG(ERROR, "!media_decoder_->Flush()");
       OnFatalError();
@@ -812,6 +902,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   ZX_DEBUG_ASSERT(owner_->IsDecoderCurrent(this));
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   owner_->watchdog()->Cancel();
+  is_hw_active_ = false;
   // Setup reference frames and output buffers before decoding.
   params_.ReadFromLmem(&*lmem_);
   DLOG("NAL unit type: %d\n", params_.data[HardwareRenderParams::kNalUnitType]);
@@ -828,11 +919,13 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
   // Don't need StreamInfo here - saved anything needed from there in ConfigureDpb().
   //
-  // SequenceInfo (aka AvScratch2, aka "seq_info")
-  const auto sequence_info = SequenceInfo::Get().ReadFrom(owner_->dosbus());
-  // CropInfo (aka AvScratch6, aka "crop_infor")
+  // SequenceInfo may not be reliable at slice header interrupt time, judging from how
+  // chroma_format_idc() portion wasn't when it was read here, so we used the stashed
+  // chroma_format_idc_ from ConfigureDpb() time instead.
+  //
+  // CropInfo (aka AvScratch6)
   const auto crop_info = CropInfo::Get().ReadFrom(owner_->dosbus());
-  // StreamInfo2 (aka AvScratchB, aka "param4" aka "reg_val")
+  // StreamInfo2 (aka AvScratchB)
   const auto stream_info2 = StreamInfo2::Get().ReadFrom(owner_->dosbus());
 
   // At this point, we queue some post-parsing NALUs to H264Decoder.  Specifically, SPS, PPS (TBD),
@@ -881,7 +974,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
       OnFatalError();
       return;
     }
-    sps->chroma_format_idc = sequence_info.chroma_format_idc();
+    sps->chroma_format_idc = chroma_format_idc_;
     // These aren't available from FW:
     // separate_colour_plane_flag
     // bit_depth_luma_minus8
@@ -1030,8 +1123,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
     ZX_DEBUG_ASSERT(sizeof(current_sps_) == sizeof(*sps.get()));
     if (memcmp(&current_sps_, sps.get(), sizeof(current_sps_))) {
-      // struct copy
-      current_sps_ = *sps;
+      memcpy(&current_sps_, sps.get(), sizeof(current_sps_));
       sps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264SPS>>(std::move(sps));
     } else {
       sps_nalu.reset();
@@ -1116,8 +1208,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // second_chroma_qp_index_offset not avaialble from FW.
     ZX_DEBUG_ASSERT(sizeof(current_pps_) == sizeof(*pps.get()));
     if (memcmp(&current_pps_, pps.get(), sizeof(current_pps_))) {
-      // struct copy
-      current_pps_ = *pps;
+      memcpy(&current_pps_, pps.get(), sizeof(current_pps_));
       pps_nalu->preparsed_header.emplace<std::unique_ptr<media::H264PPS>>(std::move(pps));
     } else {
       pps_nalu.reset();
@@ -1126,6 +1217,8 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
   // SliceHeader
   auto slice_nalu = std::make_unique<media::H264NALU>();
+  int frame_num = -1;
+  int first_mb_in_slice = -1;
   {  // scope slice
     ZX_DEBUG_ASSERT(!slice_nalu->data);
     ZX_DEBUG_ASSERT(!slice_nalu->size);
@@ -1143,10 +1236,13 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     ZX_DEBUG_ASSERT(!slice->nalu_size);
     ZX_DEBUG_ASSERT(!slice->header_bit_size);
     slice->first_mb_in_slice = params_.data[HardwareRenderParams::kFirstMbInSlice];
+    first_mb_in_slice = slice->first_mb_in_slice;
     slice->slice_type = params_.data[HardwareRenderParams::kSliceType];
     slice->pic_parameter_set_id = params_.data[HardwareRenderParams::kCurrentPpsId];
     ZX_DEBUG_ASSERT(!slice->colour_plane_id);
     slice->frame_num = params_.data[HardwareRenderParams::kFrameNum];
+    DLOG("slice->frame_num: %d", slice->frame_num);
+    frame_num = slice->frame_num;
     // interlaced not supported
     if (params_.data[HardwareRenderParams::kPictureStructureMmco] !=
         HardwareRenderParams::kPictureStructureMmcoFrame) {
@@ -1350,79 +1446,156 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     slice_nalu->preparsed_header.emplace<std::unique_ptr<media::H264SliceHeader>>(std::move(slice));
   }  // ~slice
 
-  if (sps_nalu) {
-    media_decoder_->QueuePreparsedNalu(std::move(sps_nalu));
+  ZX_DEBUG_ASSERT(frame_num != -1);
+  if (frame_num_ && frame_num_.value() != frame_num) {
+    // If we didn't get a pic data done after a previous slice before this new slice, then probably
+    // the input stream is broken (seen during fuzzing of the input stream).  For now we just fail
+    // when broken input data is detected.
+    //
+    // TODO(fxb/13483): Be more resilient to broken input data.
+    LOG(ERROR, "frame_num_ && frame_num_.value() != frame_num");
+    OnFatalError();
+    return;
   }
-  if (pps_nalu) {
-    media_decoder_->QueuePreparsedNalu(std::move(pps_nalu));
-  }
-  media_decoder_->QueuePreparsedNalu(std::move(slice_nalu));
+  frame_num_.emplace(frame_num);
 
-  media::AcceleratedVideoDecoder::DecodeResult decode_result;
-  bool decode_done = false;
-  while (!decode_done) {
-    decode_result = media_decoder_->Decode();
-    switch (decode_result) {
-      case media::AcceleratedVideoDecoder::kDecodeError:
-        LOG(ERROR, "kDecodeError");
-        OnFatalError();
-        return;
-      case media::AcceleratedVideoDecoder::kConfigChange:
-        // TODO: verify that the config change is a NOP vs. the previous ConfigureDpb().
-        continue;
-      case media::AcceleratedVideoDecoder::kRanOutOfStreamData:
-        decode_done = true;
-        break;
-      case media::AcceleratedVideoDecoder::kRanOutOfSurfaces:
-        // The pre-check in PumpDecoder() is intended to prevent this from happening.  If this were
-        // to happen, it'd very likely disrupt progress of any concurrent stream, since swapping out
-        // at a slice header isn't implemented so far (unknown whether saving/restoring state at a
-        // slice header is possible).
-        LOG(ERROR, "kRanOutOfSurfaces despite pre-check in PumpDecoder()");
-        OnFatalError();
-        ZX_DEBUG_ASSERT(!IsUnusedReferenceFrameAvailable());
-        return;
-      case media::AcceleratedVideoDecoder::kNeedContextUpdate:
-        LOG(ERROR, "kNeedContextUpdate is impossible");
-        OnFatalError();
-        return;
-      case media::AcceleratedVideoDecoder::kTryAgain:
-        LOG(ERROR, "kTryAgain despite this accelerator never indicating that");
-        OnFatalError();
-        return;
-      default:
-        LOG(ERROR, "unexpected decode_result: %u", decode_result);
-        OnFatalError();
-        return;
+  if (first_mb_in_slice <= per_frame_attempt_seen_first_mb_in_slice_) {
+    LOG(ERROR, "first_mb_in_slice out of order or repeated - broken input data");
+    OnFatalError();
+    return;
+  }
+  per_frame_attempt_seen_first_mb_in_slice_ = first_mb_in_slice;
+
+  if (first_mb_in_slice == per_frame_seen_first_mb_in_slice_) {
+    if (sps_nalu) {
+      LOG(ERROR, "no pic data done after slice header before new SPS - broken input data");
+      OnFatalError();
+      return;
+    }
+    if (pps_nalu) {
+      LOG(ERROR, "no pic data done after slice header before new PPS - broken input data");
+      OnFatalError();
+      return;
+    }
+    if (memcmp(slice_nalu->preparsed_header.get<std::unique_ptr<media::H264SliceHeader>>().get(),
+               &stashed_latest_slice_header_, sizeof(stashed_latest_slice_header_))) {
+      LOG(ERROR, "inconsistent slice data for same first_mb_in_slice - broken input data");
+      OnFatalError();
+      return;
     }
   }
-  ZX_DEBUG_ASSERT(decode_result == media::AcceleratedVideoDecoder::kRanOutOfStreamData);
+
+  if (first_mb_in_slice > per_frame_seen_first_mb_in_slice_) {
+    DLOG("first_mb_in_slice > per_frame_seen_first_mb_in_slice_");
+    memcpy(&stashed_latest_slice_header_,
+           slice_nalu->preparsed_header.get<std::unique_ptr<media::H264SliceHeader>>().get(),
+           sizeof(stashed_latest_slice_header_));
+    if (sps_nalu) {
+      media_decoder_->QueuePreparsedNalu(std::move(sps_nalu));
+    }
+    if (pps_nalu) {
+      media_decoder_->QueuePreparsedNalu(std::move(pps_nalu));
+    }
+    media_decoder_->QueuePreparsedNalu(std::move(slice_nalu));
+
+    media::AcceleratedVideoDecoder::DecodeResult decode_result;
+    bool decode_done = false;
+    while (!decode_done) {
+      decode_result = media_decoder_->Decode();
+      switch (decode_result) {
+        case media::AcceleratedVideoDecoder::kDecodeError:
+          LOG(ERROR, "kDecodeError");
+          OnFatalError();
+          return;
+        case media::AcceleratedVideoDecoder::kConfigChange:
+          // TODO: verify that the config change is a NOP vs. the previous ConfigureDpb().
+          continue;
+        case media::AcceleratedVideoDecoder::kRanOutOfStreamData:
+          decode_done = true;
+          break;
+        case media::AcceleratedVideoDecoder::kRanOutOfSurfaces:
+          // The pre-check in PumpDecoder() is intended to prevent this from happening.  If this
+          // were to happen, it'd very likely disrupt progress of any concurrent stream, since
+          // swapping out at a slice header isn't implemented so far (unknown whether
+          // saving/restoring state at a slice header is possible).
+          LOG(ERROR, "kRanOutOfSurfaces despite pre-check in PumpDecoder()");
+          OnFatalError();
+          ZX_DEBUG_ASSERT(!IsUnusedReferenceFrameAvailable());
+          return;
+        case media::AcceleratedVideoDecoder::kNeedContextUpdate:
+          LOG(ERROR, "kNeedContextUpdate is impossible");
+          OnFatalError();
+          return;
+        case media::AcceleratedVideoDecoder::kTryAgain:
+          LOG(ERROR, "kTryAgain despite this accelerator never indicating that");
+          OnFatalError();
+          return;
+        default:
+          LOG(ERROR, "unexpected decode_result: %u", decode_result);
+          OnFatalError();
+          return;
+      }
+    }
+    ZX_DEBUG_ASSERT(decode_result == media::AcceleratedVideoDecoder::kRanOutOfStreamData);
+    per_frame_seen_first_mb_in_slice_ = first_mb_in_slice;
+  }
 
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
 
-  // Configure the HW and decode the body of the slice.
-  current_frame_ = current_metadata_frame_;
+  // Set up to decode the current slice.
+  if (!current_frame_) {
+    current_frame_ = current_metadata_frame_;
+
+    // GetConsumedBytes() is observed to be 8 bytes into the frame.  The "kVdecFifoAlign" naming of
+    // that 8 bytes is only a guess however.
+    //
+    // TODO(fxb/13483): Try to find a more robust/official way to get the offset of byte 0 of the
+    // start code before the first slice of the picture, or at least verify that this 8 byte fixup
+    // works across all the streams we can throw at it.  jbauman@ suggests kOffsetDelimiterLo/Hi
+    // might be better.  In frame mode the PTS manager's ability to deal with lookup locations
+    // within a frame means the subtraction here wouldn't really be necessary, but for stream mode
+    // we could end up slipping a frame's PTS to the wrong frame if we don't have a precise frame
+    // start offset.
+    uint64_t unwrapped_start_of_frame_offset =
+        unwrapped_consumed_bytes_ + GetConsumedBytes() - kVdecFifoAlign;
+    DLOG("unwrapped_start_of_frame_offset: 0x%" PRIx64, unwrapped_start_of_frame_offset);
+    PtsManager::LookupResult lookup_result = pts_manager_->Lookup(unwrapped_start_of_frame_offset);
+
+    if (lookup_result.has_pts()) {
+      current_frame_->frame->has_pts = true;
+      current_frame_->frame->pts = lookup_result.pts();
+    } else {
+      current_frame_->frame->has_pts = false;
+      current_frame_->frame->pts = 0;
+    }
+  } else {
+    // We're relying on the HW to do a pic data done interrupt before switching to a new frame, even
+    // if the old frame didn't decode correctly.
+    ZX_DEBUG_ASSERT(current_frame_ == current_metadata_frame_);
+  }
   // We fed the media_decoder_ with pre-parsed SPS, PPS, SliceHeader, so the decoder will have
-  // indicated exactly 1 slice (or possibly indicated failure above).
-  ZX_DEBUG_ASSERT(slice_data_list_.size() == 1);
-  SliceData slice_data = std::move(slice_data_list_.front());
-  slice_data_list_.pop_front();
-  ZX_DEBUG_ASSERT(slice_data_list_.empty());
+  // indicated at least 1 slice for the current frame.
+  ZX_DEBUG_ASSERT(slice_data_map_.size() >= 1);
+  ZX_DEBUG_ASSERT(slice_data_map_.find(first_mb_in_slice) != slice_data_map_.end());
+  current_slice_data_ = &slice_data_map_[first_mb_in_slice];
+
+  // Configure the HW and decode the body of the current slice (corresponding to current_slice_data_
+  // and current_frame_).  We may repeat this part later if the client is splitting slices across
+  // packet boundaries.
 
   // The following checks are to try to ensure what the hardware's parsing matches what H264Decoder
   // processed from sps_nalu, pps_nalu, slice_nalu.
-
+  //
   // Slices 5-9 are equivalent for this purpose with slices 0-4 - see 7.4.3
   constexpr uint32_t kSliceTypeMod = 5;
-  ZX_DEBUG_ASSERT(slice_data.header.slice_type % kSliceTypeMod ==
+  ZX_DEBUG_ASSERT(current_slice_data_->header.slice_type % kSliceTypeMod ==
                   params_.data[HardwareRenderParams::kSliceType] % kSliceTypeMod);
-
   // Check for interlacing (already rejected above).
   constexpr uint32_t kPictureStructureFrame = 3;
   ZX_DEBUG_ASSERT(params_.data[HardwareRenderParams::kNewPictureStructure] ==
                   kPictureStructureFrame);
 
-  auto poc = poc_.ComputePicOrderCnt(&slice_data.sps, slice_data.header);
+  auto poc = poc_.ComputePicOrderCnt(&current_slice_data_->sps, current_slice_data_->header);
   if (!poc) {
     LOG(ERROR, "No poc");
     OnFatalError();
@@ -1457,7 +1630,7 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   current_frame_->info1 = poc.value();
   // Bottom field
   current_frame_->info2 = poc.value();
-  current_frame_->is_long_term_reference = slice_data.pic->long_term;
+  current_frame_->is_long_term_reference = current_slice_data_->pic->long_term;
 
   H264BufferInfoIndex::Get().FromValue(16).WriteTo(owner_->dosbus());
 
@@ -1480,9 +1653,9 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     H264BufferInfoData::Get().FromValue(video_frames_[i]->info1).WriteTo(owner_->dosbus());
     H264BufferInfoData::Get().FromValue(video_frames_[i]->info2).WriteTo(owner_->dosbus());
   }
-  if (!InitializeRefPics(slice_data.ref_pic_list0, 0))
+  if (!InitializeRefPics(current_slice_data_->ref_pic_list0, 0))
     return;
-  if (!InitializeRefPics(slice_data.ref_pic_list1, 8))
+  if (!InitializeRefPics(current_slice_data_->ref_pic_list1, 8))
     return;
 
   // Wait for the hardware to finish processing its current mbs.  Normally this should be quick, but
@@ -1503,15 +1676,16 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // direct 8x8 mode seems to store 1/4 the data, so the offsets need to be less as well.
     mv_size /= 4;
   }
-  uint32_t mv_byte_offset = slice_data.header.first_mb_in_slice * mv_size;
+  uint32_t mv_byte_offset = current_slice_data_->header.first_mb_in_slice * mv_size;
 
   H264CoMbWrAddr::Get()
       .FromValue(truncate_to_32(current_frame_->reference_mv_buffer.phys_base()) + mv_byte_offset)
       .WriteTo(owner_->dosbus());
 
   // 8.4.1.2.1 - co-located motion vectors come from RefPictList1[0] for frames.
-  if (slice_data.ref_pic_list1.size() > 0) {
-    auto* amlogic_picture = static_cast<AmlogicH264Picture*>(slice_data.ref_pic_list1[0].get());
+  if (current_slice_data_->ref_pic_list1.size() > 0) {
+    auto* amlogic_picture =
+        static_cast<AmlogicH264Picture*>(current_slice_data_->ref_pic_list1[0].get());
     if (amlogic_picture) {
       auto internal_picture = amlogic_picture->internal_picture.lock();
       if (!internal_picture) {
@@ -1528,11 +1702,12 @@ void H264MultiDecoder::HandleSliceHeadDone() {
 
   // TODO: Maybe we could do what H264Decoder::IsNewPrimaryCodedPicture() does to detect this, but
   // this seems to work for now, and I'm not aware of any specific cases where it doesn't work.
-  if (slice_data.header.first_mb_in_slice == 0) {
+  if (current_slice_data_->header.first_mb_in_slice == 0) {
     DpbStatusReg::Get().FromValue(kH264ActionDecodeNewpic).WriteTo(owner_->dosbus());
   } else {
     DpbStatusReg::Get().FromValue(kH264ActionDecodeSlice).WriteTo(owner_->dosbus());
   }
+  is_hw_active_ = true;
   owner_->watchdog()->Start();
 }
 
@@ -1542,22 +1717,44 @@ void H264MultiDecoder::FlushFrames() {
   DLOG("Got media decoder res %d", res);
 }
 
+uint32_t H264MultiDecoder::GetConsumedBytes() {
+  return kBytesToDecode - (ViffBitCnt::Get().ReadFrom(owner_->dosbus()).reg_value() + 7) / 8;
+}
+
 void H264MultiDecoder::DumpStatus() {
-  DLOG("ViffBitCnt: %d", ViffBitCnt::Get().ReadFrom(owner_->dosbus()).reg_value());
-  DLOG("Viifolevel: %d", VldMemVififoLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
-  DLOG("input offset: %d read offset: %d", owner_->core()->GetStreamInputOffset(),
-       owner_->core()->GetReadOffset());
+  auto viff_bit_cnt = ViffBitCnt::Get().ReadFrom(owner_->dosbus());
+  DLOG("ViffBitCnt: %x", viff_bit_cnt.reg_value());
+  DLOG("kBytesToDecode - (ViffBitCnt + 7) / 8: 0x%x",
+       kBytesToDecode - (viff_bit_cnt.reg_value() + 7) / 8);
+  DLOG("GetConsumedBytes(): 0x%x", GetConsumedBytes());
+  // Number of bytes that are in the fifo that RP has already moved past.
+  DLOG("Viifolevel: 0x%x", VldMemVififoLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("VldMemVififoBytesAvail: 0x%x",
+       VldMemVififoBytesAvail::Get().ReadFrom(owner_->dosbus()).reg_value());
+  uint32_t stream_input_offset = owner_->core()->GetStreamInputOffset();
+  uint32_t read_offset = owner_->core()->GetReadOffset();
+  DLOG("input offset: %d (0x%x) read offset: %d (0x%x)", stream_input_offset, stream_input_offset,
+       read_offset, read_offset);
   DLOG("Error status reg %d mbymbx reg %d",
        ErrorStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value(),
        MbyMbx::Get().ReadFrom(owner_->dosbus()).reg_value());
   DLOG("DpbStatusReg 0x%x", DpbStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("saved_state_starting_read_offset_: 0x%x", saved_state_starting_read_offset_);
 }
 
 void H264MultiDecoder::HandlePicDataDone() {
+  DLOG("HandlePicDataDone()");
   ZX_DEBUG_ASSERT(current_frame_);
+
   owner_->watchdog()->Cancel();
+  is_hw_active_ = false;
+
+  unwrapped_consumed_bytes_ += GetConsumedBytes();
+
   current_frame_ = nullptr;
   current_metadata_frame_ = nullptr;
+  per_frame_seen_first_mb_in_slice_ = -1;
+  frame_num_.reset();
 
   // Bring the decoder into sync that the frame is done decoding.  This way media_decoder_ can
   // output frames and do post-decode DPB or MMCO updates.  This pushes media_decoder_ from
@@ -1597,31 +1794,88 @@ void H264MultiDecoder::HandlePicDataDone() {
 
   OutputReadyFrames();
 
-  // Set currently_decoding_ to false _after_ OutputReadyFrames to avoid running body of PumpDecoder
-  // too early.
   state_ = DecoderState::kWaitingForInputOrOutput;
+  // In this path we StopDecoding() before potentially saving the input context.  This is different
+  // than other paths which save the state while !is_hw_active_ && is_decoder_started_, then
+  // StopDecoding().  IDK if saving before StopDecoding() in this path would work.
+  //
+  // TODO(fxb/13483): Check if flipping the order here helps with the decode output flake that looks
+  // like a loop filter issue (see use_h264_multi_decoder_flake_repro_test).
   owner_->core()->StopDecoding();
-  currently_decoding_ = false;
+  is_decoder_started_ = false;
 
-  ZX_DEBUG_ASSERT(slice_data_list_.empty());
+  slice_data_map_.clear();
 
+  // Force swap out, and do save input state, to persist the progress we just made decoding a frame.
+  //
+  // In part this can be thought of as forcing a checkpoint of the successful work accomplished so
+  // far.  We'll potentially restore from this checkpoint multiple times until we have enough input
+  // data to completely decode the next frame (so we need to save here so we can restore back to
+  // here if the next frame decode doesn't complete with input data available so far).  Typically
+  // we'll have enough input data to avoid excessive re-decodes.
+  //
+  // TODO(fxb/13483): Make the "typically" in the previous paragraph more true by doing the TODOs
+  // before PumpDecoder to put more input data into StreamBuffer if available before starting
+  // decode.
+  ZX_DEBUG_ASSERT(!force_swap_out_);
+  force_swap_out_ = true;
+  ZX_DEBUG_ASSERT(!should_save_input_context_);
+  should_save_input_context_ = true;
   owner_->TryToReschedule();
+  // Set these back to default state.
+  should_save_input_context_ = false;
+  force_swap_out_ = false;
   if (state_ == DecoderState::kWaitingForInputOrOutput) {
     PumpDecoder();
   }
+}
+
+void H264MultiDecoder::HandleBufEmpty() {
+  // This can happen if non-slice NALU(s) show up in a packet without any slice NALU(s).
+  state_ = DecoderState::kWaitingForInputOrOutput;
+  owner_->watchdog()->Cancel();
+  is_hw_active_ = false;
+
+  if (input_eos_queued_) {
+    // We've consumed all the input data, so complete EOS handling.
+    //
+    // This Flush() may output a few more frames.
+    if (!media_decoder_->Flush()) {
+      LOG(ERROR, "Flush failed");
+      OnFatalError();
+      return;
+    }
+    // This prevents ever swapping back in after the forced swap-out below.
+    sent_output_eos_to_client_ = true;
+    client_->OnEos();
+    // swap out is forced below
+  }
+
+  force_swap_out_ = true;
+  // We need (if not EOS) to re-attempt decode from the old saved read pointer, so don't save the
+  // current state.  Later we'll restore the old state with the old saved read pointer.  We haven't
+  // advanced our unwrapped virtual read pointers past the old saved read pointer, so those will be
+  // equal after restore.
+  ZX_DEBUG_ASSERT(!should_save_input_context_);
+  owner_->TryToReschedule();
+  force_swap_out_ = false;
+  PumpOrReschedule();
 }
 
 void H264MultiDecoder::OutputReadyFrames() {
   while (!frames_to_output_.empty()) {
     uint32_t index = frames_to_output_.front();
     frames_to_output_.pop_front();
+    DLOG("OnFrameReady()");
     client_->OnFrameReady(video_frames_[index]->frame);
   }
 }
 
 void H264MultiDecoder::HandleHardwareError() {
   owner_->watchdog()->Cancel();
+  is_hw_active_ = false;
   owner_->core()->StopDecoding();
+  is_decoder_started_ = false;
   // We need to reset the hardware here or for some malformed hardware streams (e.g.
   // bear_h264[638] = 44) the CPU will hang when trying to isolate VDEC1 power on shutdown.
   ResetHardware();
@@ -1635,7 +1889,8 @@ void H264MultiDecoder::HandleInterrupt() {
   VdecAssistMbox1ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
   uint32_t decode_status = DpbStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value();
   TRACE_DURATION("media", "H264MultiDecoder::HandleInterrupt", "decode_status", decode_status);
-  DLOG("Got H264MultiDecoder::HandleInterrupt, decode status: %x", decode_status);
+  DLOG("Got H264MultiDecoder::HandleInterrupt, decode status: 0x%x", decode_status);
+
   switch (decode_status) {
     case kH264ConfigRequest: {
       DpbStatusReg::Get().FromValue(kH264ActionConfigDone).WriteTo(owner_->dosbus());
@@ -1654,17 +1909,31 @@ void H264MultiDecoder::HandleInterrupt() {
       HandlePicDataDone();
       break;
     }
-    case kH264SearchBufempty:
-      // This can happen if non-slice NALU(s) show up in a packet without any slice NALU(s).
-      state_ = DecoderState::kWaitingForInputOrOutput;
-      owner_->watchdog()->Cancel();
-      owner_->core()->StopDecoding();
-      currently_decoding_ = false;
-      PumpDecoder();
+    case kH264SearchBufEmpty:
+    case kH264DecodeBufEmpty: {
+      HandleBufEmpty();
       break;
+    }
     case kH264DecodeTimeout:
       DECODE_ERROR("Decoder got kH264DecodeTimeout");
       HandleHardwareError();
+      break;
+    default:
+      // We can remove decoders while they're actively decoding.  The upside of that is we can
+      // stop doing useless work sooner so we can do useful work sooner.  The downside is the
+      // removal of an active decoder can leave in-flight an interrupt previously generated from the
+      // HW but not yet delivered to this method.
+      //
+      // If the interrupt got delivered when there was no active video_decoder_, then it got
+      // ignored which is fine.
+      //
+      // If we created or swapped in a new video_decoder_ before the stale interrupt is delivered,
+      // then we know because of the continuous video_decoder_lock() hold interval during swap-in
+      // that by the time that interrupt is delivered, the DpbStatusReg will have a value which is
+      // not any of the non-"default" values handled by this switch statement.  In this case the
+      // stale interrupt is ignored in this path here.
+      //
+      // ignore stale interrupt
       break;
   }
 }
@@ -1785,14 +2054,15 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
   hw_display_width_ = pending_display_width_;
   hw_display_height_ = pending_display_height_;
 
-  ZX_DEBUG_ASSERT(currently_decoding_);
+  ZX_DEBUG_ASSERT(is_decoder_started_);
   waiting_for_surfaces_ = false;
   state_ = DecoderState::kRunning;
-  // this tells hw to go - currently_decoding_ is still true
+  // this tells hw to go
   AvScratch0::Get()
       .FromValue(static_cast<uint32_t>((next_max_reference_size_ << 24) |
                                        (video_frames_.size() << 16) | (video_frames_.size() << 8)))
       .WriteTo(owner_->dosbus());
+  is_hw_active_ = true;
   owner_->watchdog()->Start();
 }
 
@@ -1803,22 +2073,13 @@ void H264MultiDecoder::SubmitFrameMetadata(ReferenceFrame* reference_frame,
 }
 
 void H264MultiDecoder::SubmitSliceData(SliceData data) {
-  // Only queue up data in a list instead of starting the decode in hardware. We could try to submit
-  // it now, but that makes it more difficult to swap out if we only receive data for a partial
-  // frame from the client and would want to try to swap out between slices.
-  slice_data_list_.push_back(data);
+  // The slices of a picture can get re-used during decode process more than once, if we don't get
+  // a pic data done interrupt this time.
+  slice_data_map_.emplace(std::make_pair(data.header.first_mb_in_slice, data));
 }
 
 void H264MultiDecoder::OutputFrame(ReferenceFrame* reference_frame, uint32_t pts_id) {
   ZX_DEBUG_ASSERT(reference_frame->in_use);
-  auto it = id_to_pts_map_.find(pts_id);
-  if (it != id_to_pts_map_.end()) {
-    reference_frame->frame->has_pts = true;
-    reference_frame->frame->pts = it->second;
-    id_to_pts_map_.erase(it);
-  } else {
-    LOG(INFO, "NO PTS FOR ID: %u", pts_id);
-  }
 #if 0
   // TODO(fxb/13483): Re-plumb this (not necessarily here).
   auto sar_size = media_decoder_->GetSarSize();
@@ -1861,18 +2122,35 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
       OnFatalError();
       return;
     }
-    if (length > owner_->GetStreamBufferEmptySpace()) {
+    uint32_t stream_buffer_empty_space =
+        owner_->GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(
+            owner_->core()->GetStreamInputOffset(), saved_state_starting_read_offset_);
+    if (length > stream_buffer_empty_space) {
       // We don't want the parser to hang waiting for output buffer space, since new space will
-      // never be released to it since we need to manually update the read pointer. TODO(fxb/13483):
-      // Handle copying only as much as can fit and waiting for kH264DataRequest to continue
-      // copying the remainder.
-      DECODE_ERROR("Empty space in stream buffer %d too small for video data (%lu)",
-                   owner_->GetStreamBufferEmptySpace(), length);
+      // never be released to it since we need to manually update the read pointer.
+      //
+      // Also, we don't want to overwrite any portion of the stream buffer which we may later need
+      // to re-decode.
+      //
+      // TODO(fxb/13483): Handle copying only as much as can fit, then copying more in later from
+      // the same input packet (a TODO for PumpDecoder()).  Convert this case into an assert.
+      //
+      // This may happen if a stream fails to provide any decode-able data within the size of the
+      // stream buffer.  This is currently how we partially mitigate the cost of the re-decode
+      // strategy should a client provide no useful input data.
+      //
+      // TODO(fxb/13483): Test, and possibly mitigate better, a hostile client providing 1 byte of
+      // useless data at a time, causing repeated re-decode of the whole stream buffer as it slowly
+      // grows to maximum size, before finally hitting this case and failing the stream.  The test
+      // should verify that the decoder remains reasonably avaialble to a competing concurrent
+      // well-behaved client providing a well-behaved stream.
+      DECODE_ERROR("Empty space in stream buffer %d too small for video data (0x%x)",
+                   stream_buffer_empty_space, length);
       OnFatalError();
       return;
     }
     owner_->parser()->SyncFromDecoderInstance(owner_->current_instance());
-    DLOG("data: %p phys_addr: %p length: %zx buffer_start_offset: %u", data, phys_addr, length,
+    DLOG("data: %p phys_addr: %p length: 0x%zx buffer_start_offset: %u", data, phys_addr, length,
          buffer_start_offset);
     if (phys_addr) {
       status = owner_->parser()->ParseVideoPhysical(phys_addr, length);
@@ -1900,11 +2178,11 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
       OnFatalError();
     }
   }
+  unwrapped_write_offset_ += length;
 }
 
 bool H264MultiDecoder::CanBeSwappedIn() {
   ZX_DEBUG_ASSERT(!in_pump_decoder_);
-  ZX_DEBUG_ASSERT(!is_async_pump_pending_);
   if (fatal_error_) {
     return false;
   }
@@ -1917,31 +2195,43 @@ bool H264MultiDecoder::CanBeSwappedIn() {
   if (waiting_for_input_) {
     return false;
   }
-  if (!video_frames_.empty() && !IsUnusedReferenceFrameAvailable()) {
-    waiting_for_surfaces_ = true;
-    return false;
-  }
-  if (!frame_data_provider_->HasMoreInputData()) {
-    waiting_for_input_ = true;
-    return false;
-  }
   return true;
 }
 
 bool H264MultiDecoder::CanBeSwappedOut() const {
   // TODO(fxb/13483): kWaitingForConfigChange ideally would allow swapping out decoder; VP9 doesn't
   // yet either, so punt for the moment.
-  return !is_async_pump_pending_ && state_ == DecoderState::kWaitingForInputOrOutput;
+  return force_swap_out_ ||
+         (!is_async_pump_pending_ && state_ == DecoderState::kWaitingForInputOrOutput);
 }
 
+bool H264MultiDecoder::MustBeSwappedOut() const { return force_swap_out_; }
+
+bool H264MultiDecoder::ShouldSaveInputContext() const { return should_save_input_context_; }
+
 void H264MultiDecoder::SetSwappedOut() {
-  ZX_DEBUG_ASSERT(!is_async_pump_pending_);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForInputOrOutput);
   ZX_DEBUG_ASSERT(CanBeSwappedOut());
+  is_async_pump_pending_ = false;
   state_ = DecoderState::kSwappedOut;
 }
 
 void H264MultiDecoder::SwappedIn() {
+  if (!stream_buffer_size_) {
+    // Stash this early when we know it's safe to do so, since it's convoluted to get.  This decoder
+    // deals with stream buffer details more than other decoders.
+    stream_buffer_size_ = owner_->current_instance()->stream_buffer()->buffer().size();
+    ZX_DEBUG_ASSERT(stream_buffer_size_ > kStreamBufferReadAlignment);
+    ZX_DEBUG_ASSERT(stream_buffer_size_ % kStreamBufferReadAlignment == 0);
+  }
+  saved_state_starting_read_offset_ = owner_->core()->GetReadOffset();
+
+  // Restore the most up-to-date write offset, even if we just restored an old save state, since we
+  // want to add more data to decode, not overwrite data we previously wrote.  This also immediately
+  // starts allowing the FIFO to fill using the data written previously, which is fine.  But reading
+  // from the FIFO won't happen until we tell the decoder to kH264ActionSearchHead.
+  owner_->core()->UpdateWriteOffset(unwrapped_write_offset_ % GetStreamBufferSize());
+
   // Ensure at least one PumpDecoder() before swapping out again.
   //
   // Also, don't pump decoder A synchronously here because we may already be in PumpDecoder() of a
@@ -1963,25 +2253,21 @@ void H264MultiDecoder::OnFatalError() {
   }
 }
 
-void H264MultiDecoder::ReceivedNewInput() {
-  waiting_for_input_ = false;
-  PumpOrReschedule();
-}
-
 void H264MultiDecoder::QueueInputEos() {
+  DLOG("QueueInputEos()");
   ZX_DEBUG_ASSERT(!input_eos_queued_);
   input_eos_queued_ = true;
   ZX_DEBUG_ASSERT(in_pump_decoder_);
   ZX_DEBUG_ASSERT(!sent_output_eos_to_client_);
   ZX_DEBUG_ASSERT(!frame_data_provider_->HasMoreInputData());
-  ZX_DEBUG_ASSERT(!currently_decoding_);
-  if (!media_decoder_->Flush()) {
-    LOG(ERROR, "Flush failed");
-    OnFatalError();
-    return;
-  }
-  sent_output_eos_to_client_ = true;
-  client_->OnEos();
+  ZX_DEBUG_ASSERT(!is_hw_active_);
+  SubmitDataToHardware(kEOS.data(), kEOS.size(), nullptr, 0);
+  SubmitDataToHardware(kPadding, kPaddingSize, nullptr, 0);
+}
+
+void H264MultiDecoder::ReceivedNewInput() {
+  waiting_for_input_ = false;
+  PumpOrReschedule();
 }
 
 void H264MultiDecoder::PropagatePotentialEos() {}
@@ -1993,30 +2279,70 @@ void H264MultiDecoder::RequestStreamReset() {
   owner_->TryToReschedule();
 }
 
+// TODO(fxb/13483): Overhaul PumpDecoder to do these things:
+//  * Separate into fill stream buffer vs. start decode stages.
+//  * As long as there's progress since last decode or more input to decode vs. last time we
+//    attempted decode, start decode even if no new data was added, or even if only data added was
+//    EOS.
+//  * Copy partial data from a packet into stream buffer.
+//  * Increase PTS-count-driven limit.
+//  * Allow more of the stream buffer to be used, and remove dependence on free space standoff >=
+//    max packet size.
+//  * Allow copying in multiple packets worth of data before starting decode, but put a packet count
+//    threshold on this proportional to the # of input packets that exist, and/or a time duration
+//    threshold spent copying into stream buffer.  This should balance avoiding excessive re-decode
+//    against a duration spike from spending too much time copying into stream buffer before
+//    attempting decode and relinquishing the HW to a concurrent stream.
 void H264MultiDecoder::PumpDecoder() {
   TRACE_DURATION("media", "H264MultiDecoder::PumpDecoder");
   ZX_DEBUG_ASSERT(!in_pump_decoder_);
   in_pump_decoder_ = true;
   auto set_not_in_pump_decoder = fit::defer([this] { in_pump_decoder_ = false; });
 
-  if (waiting_for_surfaces_ || waiting_for_input_ || currently_decoding_ ||
-      (state_ == DecoderState::kSwappedOut) || fatal_error_) {
+  if (waiting_for_surfaces_ || waiting_for_input_ || is_hw_active_ ||
+      (state_ == DecoderState::kSwappedOut) || sent_output_eos_to_client_ || fatal_error_) {
+    set_not_in_pump_decoder.call();
+    // Depending on case, this call is for swapping out, for swapping in, or is irrelevant.
     owner_->TryToReschedule();
     return;
   }
 
-  // Don't start the HW decoding a frame until we know we'll be able to fairly quickly get an
-  // empty frame to decode into.
-  if (!video_frames_.empty() && !IsUnusedReferenceFrameAvailable()) {
+  // Don't start the HW decoding a frame until we know we have a frame to decode into.
+  if (!video_frames_.empty() && !current_frame_ && !IsUnusedReferenceFrameAvailable()) {
     waiting_for_surfaces_ = true;
     set_not_in_pump_decoder.call();
     owner_->TryToReschedule();
     return;
   }
 
+  // If PtsManager is already holding many offsets after the consumed offset, consume more without
+  // adding more offsets to PtsManager.
+  if (pts_manager_->CountEntriesBeyond(unwrapped_consumed_bytes_) >=
+      PtsManager::kMaxEntriesDueToExtraDecoderDelay) {
+    StartFrameDecode();
+    return;
+  }
+
+  if (owner_->GetStreamBufferEmptySpace() <= GetStreamBufferSize() / 3) {
+    StartFrameDecode();
+    return;
+  }
+
+  if (input_eos_queued_) {
+    // consume the rest, until an out-of-data interrupt happens
+    StartFrameDecode();
+    return;
+  }
+
   // Now we try to get some input data.
   std::optional<DataInput> current_data_input = frame_data_provider_->ReadMoreInputData();
   if (!current_data_input) {
+    // Don't necessarily need more input to make progress.
+    if (unwrapped_write_offset_ != unwrapped_write_offset_decode_tried_ ||
+        unwrapped_consumed_bytes_ != unwrapped_consumed_bytes_decode_tried_) {
+      StartFrameDecode();
+      return;
+    }
     waiting_for_input_ = true;
     set_not_in_pump_decoder.call();
     owner_->TryToReschedule();
@@ -2026,32 +2352,18 @@ void H264MultiDecoder::PumpDecoder() {
   auto& current_input = current_data_input.value();
   if (current_input.is_eos) {
     QueueInputEos();
-    set_not_in_pump_decoder.call();
-    owner_->TryToReschedule();
+    StartFrameDecode();
     return;
   }
 
   ZX_DEBUG_ASSERT(!current_input.is_eos);
   ZX_DEBUG_ASSERT(current_input.data.empty() == !!current_input.codec_buffer);
   ZX_DEBUG_ASSERT(current_input.length != 0);
+
   if (current_input.pts) {
-    id_to_pts_map_[next_pts_id_] = current_input.pts.value();
-  }
-
-  // We'll call QueuePreparsedNalu() and Decode() during slice header done interrupt, but we can
-  // SetStreamId() here since it's convenient to do here and it's ok to set here even if we get
-  // 0-N slice headers in a packet since we have a max of one PTS per packet and it's ok for these
-  // IDs to be sparse.
-  media_decoder_->SetStreamId(next_pts_id_);
-
-  // Make this cycle in a reasonable way for int32_t.  Probably H264Decoder should change to use
-  // uint32_t for this, but it won't come up in practice because 2^31 doesn't overflow for longer
-  // than any plausible stream.  This handling is likely not enough on its own to achieve correct
-  // wrapping behavior overall (yet).
-  if (next_pts_id_ == std::numeric_limits<int32_t>::max()) {
-    next_pts_id_ = 0;
+    pts_manager_->InsertPts(unwrapped_write_offset_, /*has_pts=*/true, current_input.pts.value());
   } else {
-    ++next_pts_id_;
+    pts_manager_->InsertPts(unwrapped_write_offset_, /*has_pts=*/false, /*pts=*/0);
   }
 
   // Now we can submit all the data of this AU/packet plus padding to the HW decoder and start it
@@ -2064,13 +2376,11 @@ void H264MultiDecoder::PumpDecoder() {
   // instead of assuming it is true.  We may need to allow split NALUs.  We may need to allow
   // context switching any time we're not actively decoding which in future could be in the middle
   // of an AU that splits across multiple packets.  At the moment none of these are supported.
-  constexpr uint8_t kHeader[] = {0, 0, 1};
-  SubmitDataToHardware(kHeader, sizeof(kHeader), nullptr, 0);
   SubmitDataToHardware(current_input.data.data(), current_input.length, current_input.codec_buffer,
                        current_input.buffer_start_offset);
-  SubmitDataToHardware(kPadding, kPaddingSize, nullptr, 0);
 
-  // After this, we'll see an interrupt from the HW, either slice header done or out of data.
+  // After this, we'll see an interrupt from the HW, either slice header or one of the out-of-data
+  // interrupts.
   StartFrameDecode();
 
   // ~current_data_input recycles input packet
@@ -2105,4 +2415,9 @@ std::shared_ptr<H264MultiDecoder::ReferenceFrame> H264MultiDecoder::GetUnusedRef
 
 zx_status_t H264MultiDecoder::SetupProtection() {
   return owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kVdec, is_secure());
+}
+
+uint32_t H264MultiDecoder::GetStreamBufferSize() {
+  ZX_DEBUG_ASSERT(stream_buffer_size_);
+  return stream_buffer_size_;
 }

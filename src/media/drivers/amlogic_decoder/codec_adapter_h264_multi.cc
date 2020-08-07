@@ -29,8 +29,16 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, ui
 // per-packet buffer size up to fit the largest AUs we expect to decode, until
 // MTWN-249 is fixed, in case avcC format is used.
 constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
-// This is an arbitrary cap for now.
-constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
+
+// For the moment we rely on this being < 1/3 of kStreamBufferSize.
+//
+// TODO(fxb/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
+constexpr uint32_t kInputPerPacketBufferBytesMax = 1 * 1024 * 1024;
+
+// For the moment we rely on this being > 3 * kStreamBufferSize.
+//
+// TODO(fxb/13483): Remove this restriction by doing the TODOs listed just before PumpDecoder.
+constexpr uint32_t kStreamBufferSize = 4 * 1024 * 1024;
 
 }  // namespace
 
@@ -187,7 +195,7 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
         std::make_unique<DecoderInstance>(std::move(decoder), video_->vdec1_core());
     StreamBuffer* buffer = decoder_instance->stream_buffer();
     video_->AddNewDecoderInstance(std::move(decoder_instance));
-    if (video_->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, /*use_parser=*/IsOutputSecure(),
+    if (video_->AllocateStreamBuffer(buffer, kStreamBufferSize, /*use_parser=*/true,
                                      IsOutputSecure()) != ZX_OK) {
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;

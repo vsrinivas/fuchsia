@@ -34,6 +34,7 @@ class Vdec1 : public DecoderCore {
                              uint32_t buffer_size) override;
   void InitializeParserInput() override;
   void InitializeDirectInput() override;
+  void UpdateWriteOffset(uint32_t write_offset) override;
   void UpdateWritePointer(uint32_t write_pointer) override;
   uint32_t GetStreamInputOffset() override;
   uint32_t GetReadOffset() override;

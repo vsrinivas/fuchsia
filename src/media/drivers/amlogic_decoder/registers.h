@@ -259,6 +259,7 @@ DEFINE_REGISTER(AvScratchM, DosRegisterIo, 0x09d6)
 DEFINE_REGISTER(AvScratchN, DosRegisterIo, 0x09d7)
 
 DEFINE_REGISTER(MdecExtIfCfg0, DosRegisterIo, 0x09e4)
+DEFINE_REGISTER(MdecExtIfCfg1, DosRegisterIo, 0x09e5)
 
 DEFINE_REGISTER(Mpeg12Reg, DosRegisterIo, 0x0c01)
 DEFINE_REGISTER(PscaleCtrl, DosRegisterIo, 0x0911)

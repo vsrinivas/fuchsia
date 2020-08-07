@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PARSER_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PARSER_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PARSER_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PARSER_H_
 
 #include <lib/zx/bti.h>
 #include <lib/zx/event.h>
@@ -69,6 +69,9 @@ class Parser final {
   void SyncToDecoderInstance(DecoderInstance*);
 
  private:
+  void SyncFromBufferParameters(uint32_t buffer_phys_address, uint32_t buffer_size,
+                                uint32_t read_offset, uint32_t write_offset);
+
   Owner* owner_;
   zx::handle interrupt_handle_;
   std::unique_ptr<io_buffer_t> parser_input_;
@@ -91,4 +94,4 @@ class Parser final {
   std::thread parser_interrupt_thread_;
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_PARSER_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PARSER_H_

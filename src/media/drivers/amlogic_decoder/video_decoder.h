@@ -130,6 +130,11 @@ class VideoDecoder {
       ZX_PANIC("not yet implemented by subclass");
       return 0;
     }
+    [[nodiscard]] virtual uint32_t GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(
+        uint32_t write_offset, uint32_t read_offset) {
+      ZX_PANIC("not yet implemented by subclass");
+      return 0;
+    }
   };
 
   // The client of a video decoder is the component that receives (and allocates) output buffers.
@@ -153,10 +158,7 @@ class VideoDecoder {
     virtual const AmlogicDecoderTestHooks& __WARN_UNUSED_RESULT test_hooks() const = 0;
   };
 
-  VideoDecoder(Owner* owner, Client* client, bool is_secure)
-      : owner_(owner), client_(client), is_secure_(is_secure) {
-    pts_manager_ = std::make_unique<PtsManager>();
-  }
+  VideoDecoder(Owner* owner, Client* client, bool is_secure);
 
   virtual __WARN_UNUSED_RESULT zx_status_t Initialize() = 0;
   virtual __WARN_UNUSED_RESULT zx_status_t InitializeHardware() { return ZX_ERR_NOT_SUPPORTED; }
@@ -172,6 +174,14 @@ class VideoDecoder {
   virtual bool __WARN_UNUSED_RESULT CanBeSwappedIn() { return false; }
   // Returns true if the decoder is at a place where it can be swapped out.
   virtual bool __WARN_UNUSED_RESULT CanBeSwappedOut() const { return false; }
+  // h264_multi_decoder uses this to intentionally "swap out" without actually saving, to permit
+  // restoring from a previously saved state, to re-try decode from the same input location again.
+  // This is part of how stream style input is handled.
+  virtual bool __WARN_UNUSED_RESULT MustBeSwappedOut() const { return false; }
+  // h264_multi_decoder uses this to intentionally avoid saving when no useful progress was made, so
+  // the decoder can re-feed the same input data again with more appended to the end.  This is part
+  // of how stream style input is handled.
+  virtual bool __WARN_UNUSED_RESULT ShouldSaveInputContext() const { return true; }
   virtual void OnSignaledWatchdog() {}
   // Initialize hardware protection.
   virtual zx_status_t SetupProtection() { return ZX_ERR_NOT_SUPPORTED; }
@@ -186,6 +196,9 @@ class VideoDecoder {
     ZX_DEBUG_ASSERT(client_);
     return client_->test_hooks();
   }
+
+  // for debug logging
+  const uint32_t decoder_id_ = 0;
 
  protected:
   std::unique_ptr<PtsManager> pts_manager_;

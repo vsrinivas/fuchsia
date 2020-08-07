@@ -272,6 +272,11 @@ void HevcDec::InitializeDirectInput() {
   HevcStreamFifoCtl::Get().ReadFrom(mmio()->dosbus).set_stream_fifo_hole(1).WriteTo(mmio()->dosbus);
 }
 
+void HevcDec::UpdateWriteOffset(uint32_t write_offset) {
+  uint32_t buffer_start = HevcStreamStartAddr::Get().ReadFrom(mmio()->dosbus).reg_value();
+  UpdateWritePointer(buffer_start + write_offset);
+}
+
 void HevcDec::UpdateWritePointer(uint32_t write_pointer) {
   HevcStreamWrPtr::Get().FromValue(write_pointer).WriteTo(mmio()->dosbus);
   HevcStreamControl::Get()
