@@ -108,6 +108,7 @@ typedef struct {
     macro(ZBI_TYPE_CONTAINER, "CONTAINER", ".bin") \
     macro(ZBI_TYPE_KERNEL_X64, "KERNEL_X64", ".bin") \
     macro(ZBI_TYPE_KERNEL_ARM64, "KERNEL_ARM64", ".bin") \
+    macro(ZBI_TYPE_KERNEL_RISCV64, "KERNEL_RISCV64", ".bin") \
     macro(ZBI_TYPE_DISCARD, "DISCARD", ".bin") \
     macro(ZBI_TYPE_STORAGE_RAMDISK, "RAMDISK", ".bin") \
     macro(ZBI_TYPE_STORAGE_BOOTFS, "BOOTFS", ".bin") \
@@ -228,6 +229,7 @@ typedef struct {
 #define ZBI_TYPE_KERNEL_MASK (0x00FFFFFF)    // Mask to compare to the prefix.
 #define ZBI_TYPE_KERNEL_X64 (0x4c4e524b)     // KRNL
 #define ZBI_TYPE_KERNEL_ARM64 (0x384e524b)   // KRN8
+#define ZBI_TYPE_KERNEL_RISCV64 (0x394e524b) // KRN9
 #define ZBI_IS_KERNEL_BOOTITEM(x) (((x)&ZBI_TYPE_KERNEL_MASK) == ZBI_TYPE_KERNEL_PREFIX)
 
 #ifndef __ASSEMBLER__
