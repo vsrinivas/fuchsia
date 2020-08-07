@@ -3,54 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    super::{StashNode, NODE_SEPARATOR},
+    super::StashNode,
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_stash as fidl_stash,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::fx_log_err,
-    serde::{Deserialize, Serialize},
     std::collections::HashMap,
+    wlan_stash_constants::{NODE_SEPARATOR, POLICY_DATA_KEY, POLICY_STASH_PREFIX},
 };
 
-pub const STASH_PREFIX: &str = "config";
-/// The name we store the persistent data of a network config under. The StashNode abstraction
-/// requires that writing to a StashNode is done as a named field, so we will store the network
-/// config's data under this name.
-pub const DATA: &str = "data";
-
-/// The data that will be stored between reboots of a device. Used to convert the data between JSON
-/// and network config.
-#[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
-pub struct PersistentData {
-    pub credential: Credential,
-    pub has_ever_connected: bool,
-}
-
-/// The network identifier is the SSID and security policy of the network, and it is used to
-/// distinguish networks. It mirrors the NetworkIdentifier in fidl_fuchsia_wlan_policy.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-pub struct NetworkIdentifier {
-    pub ssid: Vec<u8>,
-    pub security_type: SecurityType,
-}
-
-/// The security type of a network connection. It mirrors the fidl_fuchsia_wlan_policy SecurityType
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-pub enum SecurityType {
-    None,
-    Wep,
-    Wpa,
-    Wpa2,
-    Wpa3,
-}
-/// The credential of a network connection. It mirrors the fidl_fuchsia_wlan_policy Credential
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub enum Credential {
-    None,
-    Password(Vec<u8>),
-    Psk(Vec<u8>),
-}
+pub use wlan_stash_constants::{
+    Credential, NetworkIdentifier, PersistentData, SecurityType, POLICY_STASH_ID,
+};
 
 /// Manages access to the persistent storage or saved network configs through Stash
 pub struct PolicyStash {
@@ -68,13 +33,13 @@ impl PolicyStash {
         store_client
             .create_accessor(false, accessor_server)
             .context("failed to create accessor")?;
-        let root = StashNode::root(store).child(STASH_PREFIX);
+        let root = StashNode::root(store).child(POLICY_STASH_PREFIX);
         Ok(Self { root })
     }
 
     /// Initialize new Stash with a provided proxy in order to mock stash in unit tests.
     pub fn new_with_stash(proxy: fidl_stash::StoreAccessorProxy) -> Self {
-        Self { root: StashNode::root(proxy).child(STASH_PREFIX) }
+        Self { root: StashNode::root(proxy).child(POLICY_STASH_PREFIX) }
     }
 
     /// Update the network configs of a given network identifier to persistent storage, deleting
@@ -85,7 +50,7 @@ impl PolicyStash {
         network_configs: &[PersistentData],
     ) -> Result<(), Error> {
         // write each config to a StashNode under the network identifier. The key of the StashNode
-        // will be STASH_PREFIX#<net_id>#<index>
+        // will be POLICY_STASH_PREFIX#<net_id>#<index>
         let id_key = Self::serialize_key(id)
             .map_err(|_| format_err!("failed to serialize network identifier"))?;
         let mut id_node = self.root.child(&id_key);
@@ -98,7 +63,7 @@ impl PolicyStash {
             let mut config_index = 0;
             for network_config in network_configs {
                 let mut config_node = id_node.child(&config_index.to_string());
-                write_config(&mut config_node, network_config)?;
+                Self::write_config(&mut config_node, network_config)?;
                 config_index += 1;
             }
         }
@@ -133,9 +98,21 @@ impl PolicyStash {
     /// Read persisting data of a given StashNode and use it to build a network config.
     async fn read_config(stash_node: &StashNode) -> Result<PersistentData, Error> {
         let fields = stash_node.fields().await?;
-        let data = fields.get_str(DATA).ok_or_else(|| format_err!("failed to config's data"))?;
+        let data = fields
+            .get_str(POLICY_DATA_KEY)
+            .ok_or_else(|| format_err!("failed to read config's data"))?;
         let data: PersistentData = serde_json::from_str(data).map_err(|e| format_err!("{}", e))?;
         Ok(data)
+    }
+
+    /// Write the persisting values (not including network ID) of a network config to the provided
+    /// stash node.
+    fn write_config(
+        stash_node: &mut StashNode,
+        persistent_data: &PersistentData,
+    ) -> Result<(), Error> {
+        let data_str = serde_json::to_string(&persistent_data).map_err(|e| format_err!("{}", e))?;
+        stash_node.write_str(POLICY_DATA_KEY, data_str)
     }
 
     /// Load all saved network configs from stash. Will create HashMap of network configs by SSID
@@ -185,13 +162,6 @@ impl PolicyStash {
         self.root.flush().await?;
         Ok(())
     }
-}
-
-/// Write the persisting values (not including network ID) of a network config to the provided
-/// stash node.
-fn write_config(stash_node: &mut StashNode, persistent_data: &PersistentData) -> Result<(), Error> {
-    let data_str = serde_json::to_string(&persistent_data).map_err(|e| format_err!("{}", e))?;
-    stash_node.write_str(DATA, data_str)
 }
 
 #[cfg(test)]
@@ -363,7 +333,7 @@ mod tests {
             .expect("failed to serialize network identifier");
         let mut config_node = stash.root.child(&net_id_str).child(&format!("{}", 0));
         let bad_value = "some bad value".to_string();
-        config_node.write_str(DATA, bad_value).expect("failed to write to stashnode");
+        config_node.write_str(POLICY_DATA_KEY, bad_value).expect("failed to write to stashnode");
 
         // check that load doesn't fail because of bad string
         let loaded_configs = stash.load().await.expect("failed to load stash");
@@ -432,7 +402,7 @@ mod tests {
             PolicyStash::serialize_key(&net_id).expect("failed to serialize network identifier");
         let expected_node = stash.root.child(&net_id_str).child(&format!("{}", 0));
         let fields = expected_node.fields().await.expect("failed to get fields");
-        let data_actual = fields.get_str(&format!("{}", DATA));
+        let data_actual = fields.get_str(&format!("{}", POLICY_DATA_KEY));
         let data_expected =
             serde_json::to_string(&PersistentData { credential, has_ever_connected: false })
                 .expect("failed to serialize data");

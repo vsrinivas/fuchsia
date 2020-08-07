@@ -13,6 +13,7 @@ rustc_library("wlan-stash") {
   edition = "2018"
 
   deps = [
+    ":wlan-stash-constants",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -30,6 +31,22 @@ rustc_library("wlan-stash") {
     "src/lib.rs",
     "src/policy.rs",
   ]
+}
+
+rustc_library("wlan-stash-constants") {
+  name = "wlan_stash_constants"
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "src/constants.rs"
+
+  deps = [
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [ "src/constants.rs" ]
 }
 
 test_package("wlan-stash-tests") {

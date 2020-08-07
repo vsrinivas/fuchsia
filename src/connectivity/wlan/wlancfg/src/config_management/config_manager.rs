@@ -21,7 +21,7 @@ use {
         fs, io,
         path::Path,
     },
-    wlan_stash::policy::PolicyStash as Stash,
+    wlan_stash::policy::{PolicyStash as Stash, POLICY_STASH_ID},
 };
 
 /// The Saved Network Manager keeps track of saved networks and provides thread-safe access to
@@ -40,7 +40,6 @@ pub struct SavedNetworksManager {
 /// networks with the same name.
 type NetworkConfigMap = HashMap<NetworkIdentifier, Vec<NetworkConfig>>;
 
-const STASH_ID: &str = "saved_networks";
 const MAX_CONFIGS_PER_SSID: usize = 1;
 
 impl SavedNetworksManager {
@@ -51,7 +50,7 @@ impl SavedNetworksManager {
     pub async fn new() -> Result<Self, anyhow::Error> {
         let path = known_ess_store::KNOWN_NETWORKS_PATH;
         let tmp_path = known_ess_store::TMP_KNOWN_NETWORKS_PATH;
-        Self::new_with_stash_or_paths(STASH_ID, Path::new(path), Path::new(tmp_path)).await
+        Self::new_with_stash_or_paths(POLICY_STASH_ID, Path::new(path), Path::new(tmp_path)).await
     }
 
     /// Load from persistent data from 1 of 2 places: stash or the file created by KnownEssStore.

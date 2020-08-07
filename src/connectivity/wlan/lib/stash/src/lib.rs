@@ -9,11 +9,10 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_stash as fidl_stash,
     std::collections::{HashMap, HashSet},
+    wlan_stash_constants::NODE_SEPARATOR,
 };
 
 pub mod policy;
-
-pub const NODE_SEPARATOR: &'static str = "#/@";
 
 pub struct StashNode {
     // Always terminated with `NODE_SEPARATOR`
