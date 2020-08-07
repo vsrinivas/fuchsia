@@ -300,9 +300,14 @@ Then elsewhere, you can add the `fuchsia_component()` target to the `deps` of a
 
 ### Unit tests {#unit-tests}
 
-Since unit tests are very common, a simplified template
-[`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni)
-is provided to define a package with a single component to be run as a test.
+Since unit tests are very common, two simplified templates are provided:
+
+* [`fuchsia_unittest_component.gni`](/src/sys/build/fuchsia_unittest_component.gni) defines a
+  component to be run as a test, with the option to automatically generate a basic component
+  manifest, that must then be included in a package.
+* [`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni) defines a
+  package with a single component to be run as a test, shorthand for a single
+  `fucshia_unittest_component` target paired with a `fuchsia_test_package`.
 
 #### Unit tests with manifests {#unit-tests-with-manifests}
 
@@ -379,7 +384,7 @@ The launch URL for the test will be
 The examples above specify a manifest for the test. However, it's possible for
 unit tests to not require any particular capabilities.
 
-Below s an example for a test that performs ROT13 encryption and decryption.
+Below is an example for a test that performs ROT13 encryption and decryption.
 The algorithm under test is pure logic that can be tested in complete
 isolation. If we were to write a manifest for these tests, it would only
 contain the test binary to be executed. In such cases, we can simply specify
@@ -464,6 +469,102 @@ the package!
 
 Did you mean "test/target-unittest-bin"?
 ```
+
+#### Multiple unit tests in a single package
+
+`fuchsia_unittest_component` can be used instead of `fuchsia_unittest_package` to include multiple
+components in a single package. This can be useful to easily run all the test components an a
+single package, e.g. with `fx test <package_name>`, rather than needing to type many separate
+package names.
+
+The example below creates a single test package `rot13-tests` that contains two separate test
+components, `rot13-decoder-test` and `rot13-encoder-test`. Both tests can be run using `fx test
+rot13-tests`, or individual tests can be run using either `fx test rot13-decoder-test` or the
+full URL `fx test fuchsia-pkg://fuchsia.com/rot13-tests#meta/rot13-decoder-test.cmx`.
+
+   * {C++}
+
+   ```gn
+   import("//build/rust/rustc_test.gni")
+   import("//src/sys/build/components.gni")
+
+   executable("rot13_decoder_test") {}
+
+   executable("rot13_encoder_test") {}
+
+   fuchsia_unittest_component("rot13-decoder-test") {
+     executable_path = "bin/rot13_decoder_test"
+     deps = [ ":rot13_decoder_test" ]
+   }
+
+   fuchsia_unittest_component("rot13-encoder-test") {
+     executable_path = "bin/rot13_encoder_test"
+     deps = [ ":rot13_encoder_test" ]
+   }
+
+   fuchsia_test_package("rot13-tests") {
+     test_components = [
+       ":rot13-decoder-test",
+       ":rot13-encoder-test",
+     ]
+   }
+   ```
+
+   * {Rust}
+
+   ```gn
+   import("//build/rust/rustc_test.gni")
+   import("//src/sys/build/components.gni")
+
+   rustc_test("rot13_decoder_test") {}
+
+   rustc_test("rot13_encoder_test") {}
+
+   fuchsia_unittest_component("rot13-decoder-test") {
+     executable_path = "bin/rot13_decoder_test"
+     deps = [ ":rot13_decoder_test" ]
+   }
+
+   fuchsia_unittest_component("rot13-encoder-test") {
+     executable_path = "bin/rot13_encoder_test"
+     deps = [ ":rot13_encoder_test" ]
+   }
+
+   fuchsia_test_package("rot13-tests") {
+     test_components = [
+       ":rot13-decoder-test",
+       ":rot13-encoder-test",
+     ]
+   }
+   ```
+
+   * {Go}
+
+   ```gn
+   import("//build/go/go_test.gni")
+   import("//src/sys/build/components.gni")
+
+   go_test("rot13_decoder_test") {}
+
+   go_test("rot13_encoder_test") {}
+
+   fuchsia_unittest_component("rot13-decoder-test") {
+     executable_path = "bin/rot13_decoder_test"
+     deps = [ ":rot13_decoder_test" ]
+   }
+
+   fuchsia_unittest_component("rot13-encoder-test") {
+     executable_path = "bin/rot13_encoder_test"
+     deps = [ ":rot13_encoder_test" ]
+   }
+
+   fuchsia_test_package("rot13-tests") {
+     test_components = [
+       ":rot13-decoder-test",
+       ":rot13-encoder-test",
+     ]
+   }
+   ```
 
 ## Additional packaged resources {#additional-packaged-resources}
 

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("fuchsia_component.gni")
 import("fuchsia_test_package.gni")
+import("fuchsia_unittest_component.gni")
 
 # Defines a package that contains a component that launches a test.
 # See: https://fuchsia.dev/fuchsia-src/development/components/build
@@ -60,51 +60,16 @@ import("fuchsia_test_package.gni")
 #   deps
 #   visibility
 template("fuchsia_unittest_package") {
-  assert(
-      defined(invoker.manifest) || defined(invoker.executable_path),
-      "Either `manifest` or `executable_path` must be specified when calling fuchsia_unittest_package($target_name)")
-  assert(
-      !(defined(invoker.manifest) && defined(invoker.executable_path)),
-      "Specifying `executable_path` has no effect when specifying `manifest` when calling fuchsia_unittest_package($target_name)")
-
-  if (!defined(invoker.manifest)) {
-    generated_target = "${target_name}_generated_manifest"
-    generated_file(generated_target) {
-      contents = {
-        program = {
-          binary = invoker.executable_path
-        }
-        sandbox = {
-          services = [ "fuchsia.logger.LogSink" ]
-        }
-      }
-      outputs = [ "$target_out_dir/${generated_target}.cmx" ]
-      output_conversion = "json"
-      testonly = true
-      visibility = [ ":*" ]
-    }
-
-    manifest = get_target_outputs(":$generated_target")
-    manifest = manifest[0]
-  }
-
   component_target = "${target_name}_component"
-  fuchsia_component(component_target) {
+  fuchsia_unittest_component(component_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "manifest",
+                             "executable_path",
                            ])
     component_name = invoker.target_name
-    testonly = true
     visibility = [ ":*" ]
-
-    if (defined(generated_target)) {
-      if (!defined(deps)) {
-        deps = []
-      }
-      deps += [ ":$generated_target" ]
-    }
   }
 
   fuchsia_test_package(target_name) {
