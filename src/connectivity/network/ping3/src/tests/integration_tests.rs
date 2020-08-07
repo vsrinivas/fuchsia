@@ -96,13 +96,13 @@ async fn alice_to_bob(
     Ok(())
 }
 
-// Send a simple ping between two clients: Alice and Bob
+// Send a simple ping between two clients: Alice and Bob.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn can_ping() -> Result<(), anyhow::Error> {
     alice_to_bob("can_ping", "-c 1", 0).await
 }
 
-// Send a ping with insufficent payload size for a timestamp.
+// Send a ping with insufficient payload size for a timestamp.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn can_ping_without_timestamp() -> Result<(), anyhow::Error> {
     alice_to_bob("can_ping_without_timestamp", "-c 1 -s 0", 0).await
