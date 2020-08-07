@@ -23,16 +23,17 @@
 
 namespace {
 
-struct Position {
-  uint8_t* addr;
-  Position operator+(uint32_t size) const { return Position{addr + size}; }
-  Position& operator+=(uint32_t size) {
+template <typename Byte>
+struct DecodingPosition {
+  Byte* addr;
+  DecodingPosition operator+(uint32_t size) const { return DecodingPosition{addr + size}; }
+  DecodingPosition& operator+=(uint32_t size) {
     addr += size;
     return *this;
   }
-  template <typename T>
-  constexpr T* Get() const {
-    return reinterpret_cast<T*>(addr);
+  template <typename T, typename U = std::conditional_t<std::is_const<Byte>::value, const T, T>>
+  constexpr U* Get() const {
+    return reinterpret_cast<U*>(addr);
   }
 };
 
@@ -46,12 +47,32 @@ constexpr zx_rights_t subtract_rights(zx_rights_t minuend, zx_rights_t subtrahen
 }
 static_assert(subtract_rights(0b011, 0b101) == 0b010, "ensure rights subtraction works correctly");
 
-class FidlDecoder final
-    : public fidl::Visitor<fidl::MutatingVisitorTrait, Position, EnvelopeCheckpoint> {
+enum class Mode { Decode, Validate };
+
+template <Mode mode, typename T, typename U>
+void AssignInDecode(T* ptr, U value) {
+  static_assert(mode == Mode::Decode, "only assign if decode");
+  *ptr = value;
+}
+
+template <Mode mode, typename T, typename U>
+void AssignInDecode(const T* ptr, U value) {
+  static_assert(mode == Mode::Validate, "don't assign if validate");
+  // nothing in validate mode
+}
+
+template <typename Byte>
+using BaseVisitor =
+    fidl::Visitor<std::conditional_t<std::is_const<Byte>::value, fidl::NonMutatingVisitorTrait,
+                                     fidl::MutatingVisitorTrait>,
+                  DecodingPosition<Byte>, EnvelopeCheckpoint>;
+
+template <Mode mode, typename Byte>
+class FidlDecoder final : public BaseVisitor<Byte> {
  public:
-  FidlDecoder(void* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
+  FidlDecoder(Byte* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
               uint32_t next_out_of_line, const char** out_error_msg)
-      : bytes_(static_cast<uint8_t*>(bytes)),
+      : bytes_(bytes),
         num_bytes_(num_bytes),
         num_handles_(num_handles),
         next_out_of_line_(next_out_of_line),
@@ -61,9 +82,9 @@ class FidlDecoder final
     }
   }
 
-  FidlDecoder(void* bytes, uint32_t num_bytes, const zx_handle_info_t* handle_infos,
+  FidlDecoder(Byte* bytes, uint32_t num_bytes, const zx_handle_info_t* handle_infos,
               uint32_t num_handle_infos, uint32_t next_out_of_line, const char** out_error_msg)
-      : bytes_(static_cast<uint8_t*>(bytes)),
+      : bytes_(bytes),
         num_bytes_(num_bytes),
         num_handles_(num_handle_infos),
         next_out_of_line_(next_out_of_line),
@@ -73,7 +94,13 @@ class FidlDecoder final
     }
   }
 
-  using Position = Position;
+  using Position = typename BaseVisitor<Byte>::Position;
+  using Status = typename BaseVisitor<Byte>::Status;
+  using PointeeType = typename BaseVisitor<Byte>::PointeeType;
+  using ObjectPointerPointer = typename BaseVisitor<Byte>::ObjectPointerPointer;
+  using HandlePointer = typename BaseVisitor<Byte>::HandlePointer;
+  using CountPointer = typename BaseVisitor<Byte>::CountPointer;
+  using EnvelopePointer = typename BaseVisitor<Byte>::EnvelopePointer;
 
   static constexpr bool kContinueAfterConstraintViolation = false;
 
@@ -91,7 +118,7 @@ class FidlDecoder final
       return Status::kMemoryError;
     }
     if (unlikely(new_offset > num_bytes_)) {
-      SetError("message tried to decode more than provided number of bytes");
+      SetError("message tried to access more than provided number of bytes");
       return Status::kMemoryError;
     }
     {
@@ -105,12 +132,14 @@ class FidlDecoder final
       auto status = fidl_validate_string(reinterpret_cast<const char*>(&bytes_[next_out_of_line_]),
                                          inline_size);
       if (status != ZX_OK) {
-        SetError("decoder encountered invalid UTF8 string");
+        SetError("encountered invalid UTF8 string");
         return Status::kConstraintViolationError;
       }
     }
     *out_position = Position{bytes_ + next_out_of_line_};
-    *object_ptr_ptr = reinterpret_cast<void*>(&bytes_[next_out_of_line_]);
+    AssignInDecode<mode>(
+        object_ptr_ptr,
+        reinterpret_cast<std::remove_pointer_t<ObjectPointerPointer>>(&bytes_[next_out_of_line_]));
 
     next_out_of_line_ = new_offset;
     return Status::kSuccess;
@@ -119,6 +148,7 @@ class FidlDecoder final
   Status VisitHandleInfo(Position handle_position, HandlePointer handle,
                          zx_rights_t required_handle_rights,
                          zx_obj_type_t required_handle_subtype) {
+    assert(mode == Mode::Decode);
     assert(has_handle_infos());
     zx_handle_info_t received_handle_info = handle_infos()[handle_idx_];
     zx_handle_t received_handle = received_handle_info.handle;
@@ -135,7 +165,7 @@ class FidlDecoder final
 
     // Special case: ZX_HANDLE_SAME_RIGHTS allows all handles through unchanged.
     if (required_handle_rights == ZX_RIGHT_SAME_RIGHTS) {
-      *handle = received_handle;
+      AssignInDecode<mode>(handle, received_handle);
       handle_idx_++;
       return Status::kSuccess;
     }
@@ -160,7 +190,7 @@ class FidlDecoder final
       return Status::kConstraintViolationError;
 #endif
     }
-    *handle = received_handle;
+    AssignInDecode<mode>(handle, received_handle);
     handle_idx_++;
     return Status::kSuccess;
   }
@@ -176,12 +206,17 @@ class FidlDecoder final
       return Status::kConstraintViolationError;
     }
 
+    if (mode == Mode::Validate) {
+      handle_idx_++;
+      return Status::kSuccess;
+    }
+
     if (has_handles()) {
       if (unlikely(handles()[handle_idx_] == ZX_HANDLE_INVALID)) {
         SetError("invalid handle detected in handle table");
         return Status::kConstraintViolationError;
       }
-      *handle = handles()[handle_idx_];
+      AssignInDecode<mode>(handle, handles()[handle_idx_]);
       handle_idx_++;
       return Status::kSuccess;
     } else if (likely(has_handle_infos())) {
@@ -189,7 +224,7 @@ class FidlDecoder final
                              required_handle_subtype);
     } else {
       SetError("decoder noticed a handle is present but the handle table is empty");
-      *handle = ZX_HANDLE_INVALID;
+      AssignInDecode<mode>(handle, ZX_HANDLE_INVALID);
       return Status::kConstraintViolationError;
     }
   }
@@ -200,7 +235,7 @@ class FidlDecoder final
   Status VisitInternalPadding(Position padding_position, MaskType mask) {
     const MaskType* padding_ptr = padding_position.template Get<const MaskType>();
     if ((*padding_ptr & mask) != 0) {
-      SetError("non-zero padding bytes detected during decoding");
+      SetError("non-zero padding bytes detected");
       return Status::kConstraintViolationError;
     }
     return Status::kSuccess;
@@ -229,6 +264,11 @@ class FidlDecoder final
   }
 
   Status VisitUnknownEnvelope(EnvelopePointer envelope) {
+    if (mode == Mode::Validate) {
+      handle_idx_ += envelope->num_handles;
+      return Status::kSuccess;
+    }
+
     // If we do not have the coding table for this payload,
     // treat it as unknown and close its contained handles
     if (unlikely(envelope->num_handles > 0)) {
@@ -275,7 +315,7 @@ class FidlDecoder final
   Status ValidatePadding(const uint8_t* padding_ptr, uint32_t padding_length) {
     for (uint32_t i = 0; i < padding_length; i++) {
       if (unlikely(padding_ptr[i] != 0)) {
-        SetError("non-zero padding bytes detected during decoding");
+        SetError("non-zero padding bytes detected");
         return Status::kConstraintViolationError;
       }
     }
@@ -292,7 +332,7 @@ class FidlDecoder final
   }
 
   // Message state passed in to the constructor.
-  uint8_t* const bytes_;
+  Byte* const bytes_;
   const uint32_t num_bytes_;
   fit::variant<fit::monostate, const zx_handle_t*, const zx_handle_info_t*> handles_;
   const uint32_t num_handles_;
@@ -339,8 +379,10 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     return status;
   }
 
-  FidlDecoder decoder(bytes, num_bytes, handles, num_handles, next_out_of_line, out_error_msg);
-  fidl::Walk(decoder, type, Position{reinterpret_cast<uint8_t*>(bytes)});
+  uint8_t* b = reinterpret_cast<uint8_t*>(bytes);
+  FidlDecoder<Mode::Decode, uint8_t> decoder(b, num_bytes, handles, num_handles, next_out_of_line,
+                                             out_error_msg);
+  fidl::Walk(decoder, type, DecodingPosition<uint8_t>{b});
 
   if (unlikely(decoder.status() != ZX_OK)) {
     drop_all_handles();
@@ -406,4 +448,46 @@ zx_status_t fidl_decode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
 zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_msg_t* msg, const char** out_error_msg) {
   return fidl_decode(type, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
                      out_error_msg);
+}
+
+zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
+                          uint32_t num_handles, const char** out_error_msg) {
+  auto set_error = [&out_error_msg](const char* msg) {
+    if (out_error_msg)
+      *out_error_msg = msg;
+  };
+  if (bytes == nullptr) {
+    set_error("Cannot validate null bytes");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint32_t next_out_of_line;
+  zx_status_t status;
+  if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
+      ZX_OK) {
+    return status;
+  }
+
+  const uint8_t* b = reinterpret_cast<const uint8_t*>(bytes);
+  FidlDecoder<Mode::Validate, const uint8_t> validator(
+      b, num_bytes, (zx_handle_t*)(nullptr), num_handles, next_out_of_line, out_error_msg);
+  fidl::Walk(validator, type, DecodingPosition<const uint8_t>{b});
+
+  if (validator.status() == ZX_OK) {
+    if (!validator.DidConsumeAllBytes()) {
+      set_error("message did not consume all provided bytes");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (!validator.DidConsumeAllHandles()) {
+      set_error("message did not reference all provided handles");
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  return validator.status();
+}
+
+zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
+                              const char** out_error_msg) {
+  return fidl_validate(type, msg->bytes, msg->num_bytes, msg->num_handles, out_error_msg);
 }

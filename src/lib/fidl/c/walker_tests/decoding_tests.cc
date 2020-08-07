@@ -241,7 +241,7 @@ TEST(Handles, decode_single_present_handle_check_trailing_padding) {
                               ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected during decoding");
+    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
   }
 }
 
@@ -1296,7 +1296,7 @@ TEST(Structs, decode_nested_nonnullable_structs_check_padding) {
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     ASSERT_NOT_NULL(error);
-    EXPECT_STR_EQ(error, "non-zero padding bytes detected during decoding");
+    EXPECT_STR_EQ(error, "non-zero padding bytes detected");
   }
 }
 

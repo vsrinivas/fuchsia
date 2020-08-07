@@ -34,7 +34,7 @@ zx_library("fidl_base") {
 
   sources = [
     "builder.cc",
-    "decoding.cc",
+    "decoding_and_validating.cc",
     "encoding.cc",
     "formatting.cc",
     "internal.c",
@@ -43,7 +43,6 @@ zx_library("fidl_base") {
     "message_builder.cc",
     "txn_header.c",
     "validate_string.cc",
-    "validating.cc",
     "walker.cc",
   ]
   deps = [
