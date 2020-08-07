@@ -48,6 +48,4 @@ pub struct LaunchModRequest {
     pub mod_url: Option<String>,
     pub mod_name: Option<String>,
     pub story_name: Option<String>,
-    pub focus_mod: Option<bool>,
-    pub focus_story: Option<bool>,
 }
