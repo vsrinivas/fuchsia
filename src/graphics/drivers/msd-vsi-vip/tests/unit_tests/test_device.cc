@@ -74,6 +74,15 @@ TEST_F(MsdVsiDeviceTest, ChipOption) {
   EXPECT_EQ(0, memcmp(&option, &option_from_buf, sizeof(option_from_buf)));
 }
 
+TEST_F(MsdVsiDeviceTest, QuerySram) {
+  uint32_t sram_buffer;
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(
+                                 device_.get(), kMsdVsiVendorQueryExternalSram, &sram_buffer));
+
+  auto buffer = magma::PlatformBuffer::Import(sram_buffer);
+  ASSERT_TRUE(buffer);
+}
+
 TEST_F(MsdVsiDeviceTest, FetchEngineDma) {
   constexpr uint32_t kPageCount = 1;
 

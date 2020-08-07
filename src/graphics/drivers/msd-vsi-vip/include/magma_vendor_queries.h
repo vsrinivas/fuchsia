@@ -13,6 +13,7 @@ enum MsdVsiVendorQuery {
   kMsdVsiVendorQueryChipIdentity = MAGMA_QUERY_VENDOR_PARAM_0,
   kMsdVsiVendorQueryChipOption = MAGMA_QUERY_VENDOR_PARAM_0 + 1,
   kMsdVsiVendorQueryClientGpuAddrRange = MAGMA_QUERY_VENDOR_PARAM_0 + 2,
+  kMsdVsiVendorQueryExternalSram = MAGMA_QUERY_VENDOR_PARAM_0 + 3,
 };
 
 #endif  // SRC_GRAPHICS_DRIVERS_MSD_VSI_VIP_INCLUDE_MAGMA_VENDOR_QUERIES_H_

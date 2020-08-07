@@ -20,10 +20,10 @@
 #include "mapped_batch.h"
 #include "msd.h"
 #include "msd_vsi_connection.h"
+#include "msd_vsi_platform_device.h"
 #include "page_table_arrays.h"
 #include "page_table_slot_allocator.h"
 #include "platform_bus_mapper.h"
-#include "platform_device.h"
 #include "platform_semaphore.h"
 #include "ringbuffer.h"
 #include "sequencer.h"
@@ -53,6 +53,7 @@ class MsdVsiDevice : public msd_device_t,
 
   magma_status_t ChipIdentity(magma_vsi_vip_chip_identity* out_identity);
   magma_status_t ChipOption(magma_vsi_vip_chip_option* out_option);
+  magma_status_t QuerySram(uint32_t* handle_out);
 
   struct DumpState {
     uint64_t last_completed_sequence_number;
@@ -216,8 +217,9 @@ class MsdVsiDevice : public msd_device_t,
 
   static const uint32_t kMagic = 0x64657669;  //"devi"
 
-  std::unique_ptr<magma::PlatformDevice> platform_device_;
+  std::unique_ptr<MsdVsiPlatformDevice> platform_device_;
   std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<magma::PlatformBuffer> external_sram_;
   std::unique_ptr<GpuFeatures> gpu_features_;
   uint32_t device_id_ = 0;
   uint32_t revision_ = 0;

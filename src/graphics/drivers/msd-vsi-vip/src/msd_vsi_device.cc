@@ -95,16 +95,27 @@ std::unique_ptr<MsdVsiDevice> MsdVsiDevice::Create(void* device_handle, bool sta
 }
 
 bool MsdVsiDevice::Init(void* device_handle) {
-  platform_device_ = magma::PlatformDevice::Create(device_handle);
+  platform_device_ = MsdVsiPlatformDevice::Create(device_handle);
   if (!platform_device_)
     return DRETF(false, "Failed to create platform device");
 
-  std::unique_ptr<magma::PlatformMmio> mmio =
-      platform_device_->CpuMapMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
+  uint32_t mmio_count = platform_device_->platform_device()->GetMmioCount();
+  DASSERT(mmio_count > 0);
+
+  std::unique_ptr<magma::PlatformMmio> mmio = platform_device_->platform_device()->CpuMapMmio(
+      0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
   if (!mmio)
     return DRETF(false, "failed to map registers");
 
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
+
+  DASSERT(mmio_count > 1);
+  external_sram_ = platform_device_->platform_device()->GetMmioBuffer(mmio_count - 1);
+  if (!external_sram_)
+    return DRETF(false, "GetMmioBuffer(%d) failed", mmio_count - 1);
+
+  if (!external_sram_->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING))
+    return DRETF(false, "Failed setting cache policy on external SRAM");
 
   device_id_ = registers::ChipId::Get().ReadFrom(register_io_.get()).chip_id().get();
   DLOG("Detected vsi chip id 0x%x", device_id_);
@@ -136,7 +147,8 @@ bool MsdVsiDevice::Init(void* device_handle) {
     return DRETF(false, "Gpu has no 3d pipe: features 0x%x\n",
                  gpu_features_->features().reg_value());
 
-  bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
+  bus_mapper_ = magma::PlatformBusMapper::Create(
+      platform_device_->platform_device()->GetBusTransactionInitiator());
   if (!bus_mapper_)
     return DRETF(false, "failed to create bus mapper");
 
@@ -161,7 +173,7 @@ bool MsdVsiDevice::Init(void* device_handle) {
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
-  interrupt_ = platform_device_->RegisterInterrupt(kInterruptIndex);
+  interrupt_ = platform_device_->platform_device()->RegisterInterrupt(kInterruptIndex);
   if (!interrupt_) {
     return DRETF(false, "Failed to register interrupt");
   }
@@ -286,8 +298,9 @@ int MsdVsiDevice::DeviceThreadLoop() {
 
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
-  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
-      magma::PlatformDevice::kPriorityHigher, "msd-vsi-vip/device-thread");
+  std::unique_ptr<magma::PlatformHandle> profile =
+      platform_device_->platform_device()->GetSchedulerProfile(
+          magma::PlatformDevice::kPriorityHigher, "msd-vsi-vip/device-thread");
   if (!profile) {
     return DRETF(false, "Failed to get higher priority");
   }
@@ -348,8 +361,9 @@ int MsdVsiDevice::InterruptThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("VSI InterruptThread");
   DLOG("VSI Interrupt thread started");
 
-  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
-      magma::PlatformDevice::kPriorityHigher, "msd-vsi-vip/vsi-interrupt-thread");
+  std::unique_ptr<magma::PlatformHandle> profile =
+      platform_device_->platform_device()->GetSchedulerProfile(
+          magma::PlatformDevice::kPriorityHigher, "msd-vsi-vip/vsi-interrupt-thread");
   if (!profile) {
     return DRETF(0, "Failed to get higher priority");
   }
@@ -1119,6 +1133,30 @@ magma_status_t MsdVsiDevice::ChipOption(magma_vsi_vip_chip_option* out_option) {
   return MAGMA_STATUS_OK;
 }
 
+magma_status_t MsdVsiDevice::QuerySram(uint32_t* handle_out) {
+  DASSERT(external_sram_);
+
+  if (external_sram_->HasChildren())
+    return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "External SRAM has children");
+
+  void* ptr;
+  if (!external_sram_->MapCpu(&ptr))
+    return MAGMA_STATUS_INTERNAL_ERROR;
+
+  // Wipe any previous content
+  memset(ptr, 0, external_sram_->size());
+
+  // Client looks for phys addr in the first few bytes
+  *reinterpret_cast<uint64_t*>(ptr) = platform_device_->GetExternalSramPhysicalBase();
+
+  external_sram_->UnmapCpu();
+
+  if (!external_sram_->CreateChild(handle_out))
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "CreateChild failed");
+
+  return MAGMA_STATUS_OK;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 msd_connection_t* msd_device_open(msd_device_t* device, msd_client_id_t client_id) {
@@ -1182,6 +1220,7 @@ magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id
       }
       return DataToBuffer("chip_identity", &result, sizeof(result), buffer_out);
     }
+
     case kMsdVsiVendorQueryChipOption: {
       magma_vsi_vip_chip_option result;
       magma_status_t status = MsdVsiDevice::cast(device)->ChipOption(&result);
@@ -1190,6 +1229,10 @@ magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id
       }
       return DataToBuffer("chip_option", &result, sizeof(result), buffer_out);
     }
+
+    case kMsdVsiVendorQueryExternalSram:
+      return MsdVsiDevice::cast(device)->QuerySram(buffer_out);
+
     default:
       return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled id %" PRIu64, id);
   }

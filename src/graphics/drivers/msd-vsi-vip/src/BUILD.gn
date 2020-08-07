@@ -24,6 +24,8 @@ source_set("src") {
     "msd_vsi_device_dump.cc",
     "msd_vsi_driver.cc",
     "msd_vsi_driver.h",
+    "msd_vsi_platform_device.h",
+    "msd_vsi_platform_device_zircon.cc",
     "msd_vsi_semaphore.cc",
     "msd_vsi_semaphore.h",
     "page_table_arrays.cc",
@@ -52,6 +54,9 @@ source_set("src") {
     "//src/graphics/lib/magma/src/magma_util/platform:thread",
     "//zircon/public/lib/fbl",
   ]
+  if (is_fuchsia) {
+    deps += [ "//src/graphics/lib/magma/src/magma_util/platform/zircon:device" ]
+  }
   friend = [
     "../tests/mock:*",
     "../tests/unit_tests:*",

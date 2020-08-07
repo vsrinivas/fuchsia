@@ -53,6 +53,16 @@ static pbus_irq_t nna_irqs[] = {
     },
 };
 
+static uint64_t s_external_sram_phys_base = T931_NNA_SRAM_BASE;
+
+static pbus_metadata_t nna_metadata[] = {
+    {
+        .type = 0,
+        .data_buffer = &s_external_sram_phys_base,
+        .data_size = sizeof(s_external_sram_phys_base),
+    },
+};
+
 static pbus_dev_t nna_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-nna";
@@ -65,6 +75,8 @@ static pbus_dev_t nna_dev = []() {
   dev.bti_count = countof(nna_btis);
   dev.irq_list = nna_irqs;
   dev.irq_count = countof(nna_irqs);
+  dev.metadata_list = nna_metadata;
+  dev.metadata_count = countof(nna_metadata);
   return dev;
 }();
 

@@ -48,7 +48,6 @@ class ZirconPlatformDeviceWithoutProtocol : public PlatformDevice {
     return DRETP(nullptr, "No protocol");
   }
 
- protected:
   zx_device_t* zx_device() const { return zx_device_; }
 
  private:

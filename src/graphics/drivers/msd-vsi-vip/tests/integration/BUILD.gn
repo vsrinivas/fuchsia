@@ -40,6 +40,7 @@ test("msd_vsi_vip_integration_tests") {
   deps = [
     "//src/graphics/drivers/msd-vsi-vip/include",
     "//src/graphics/lib/magma/src/libmagma",
+    "//src/graphics/lib/magma/src/magma_util/platform:buffer",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:gtest_main",
   ]

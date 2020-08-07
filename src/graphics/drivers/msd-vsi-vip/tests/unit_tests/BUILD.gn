@@ -46,6 +46,7 @@ source_set("hardware_tests") {
     "test_fault_recovery.cc",
     "test_memory_write.cc",
     "test_sram.cc",
+    "test_vsi_platform_device.cc",
   ]
 
   deps = [
