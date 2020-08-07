@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/story_model_owner_unittest"
-    }
-}

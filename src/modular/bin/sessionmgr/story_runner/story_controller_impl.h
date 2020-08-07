@@ -32,8 +32,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
-#include "src/modular/bin/sessionmgr/story/model/story_mutator.h"
-#include "src/modular/bin/sessionmgr/story/model/story_observer.h"
 #include "src/modular/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_shell_context_impl.h"
 #include "src/modular/lib/async/cpp/operation.h"

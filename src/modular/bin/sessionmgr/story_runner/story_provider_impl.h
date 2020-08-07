@@ -25,8 +25,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
-#include "src/modular/bin/sessionmgr/story/model/noop_story_model_storage.h"
-#include "src/modular/bin/sessionmgr/story/model/story_model_owner.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"

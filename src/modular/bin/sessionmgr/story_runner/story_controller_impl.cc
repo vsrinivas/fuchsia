@@ -7,7 +7,6 @@
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>

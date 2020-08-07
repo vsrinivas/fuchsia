@@ -33,7 +33,6 @@ group("tests") {
     "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittests",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
     "//src/modular/bin/sessionmgr/storage:storage_unittests",
-    "//src/modular/bin/sessionmgr/story/model:story_model_unittests",
     "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
     "//src/modular/bundles:integration_testing",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture_test",
