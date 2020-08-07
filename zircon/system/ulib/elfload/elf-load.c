@@ -25,6 +25,8 @@
 #define MY_MACHINE EM_X86_64
 #elif defined(__i386__)
 #define MY_MACHINE EM_386
+#elif defined(__riscv)
+#define MY_MACHINE EM_RISCV
 #else
 #error what machine?
 #endif
