@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(current_os == "fuchsia")
-
 # Declare a driver module target.
 #
 # This target allows you to create an object file that can be used as a driver

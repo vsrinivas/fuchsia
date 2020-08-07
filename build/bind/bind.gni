@@ -3,6 +3,169 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
+import("//build/testing/host_test_with_args.gni")
+
+# Declares a suite of tests for a driver's bind rules.
+#
+# The tests run as host tests by invoking the compiler. To avoid specifying the rules and bind
+# library dependencies twice use the `tests` parameter on the bind_rules template to generate this
+# target with the appropriate parameters.
+#
+# Parameters
+#
+#   rules (required)
+#     [path]: Path to the bind rules source file.
+#
+#   tests (required)
+#     [path]: Path to a test specification. The test specification is a JSON file defining a set
+#     of devices and the expected result of the bind rules when applied to that device. The file
+#     must adhere to the JSON schema defined by //src/devices/bind/debugger/tests_schema.json.
+#
+#   target (optional)
+#     [label]: The test target. Defaults to target_name.
+#
+#   deps (optional)
+#     [list of labels]: List of bind_library targets included by the bind rules.
+#
+#   visibility
+#     Forwarded from invoker.
+#
+template("bind_host_test") {
+  assert(defined(invoker.rules), "Need a bind rules source")
+  assert(defined(invoker.tests), "Need a test specification")
+
+  test_target = "_${target_name}_test"
+
+  group(target_name) {
+    testonly = true
+    if (is_host) {
+      deps = [ ":${test_target}" ]
+    }
+  }
+
+  if (is_host) {
+    response_file_target = "_${target_name}_response_file"
+    response_file = "${target_gen_dir}/${target_name}.rsp"
+    test_data_dir = "${root_out_dir}/test_data/bind-tests/${target_name}"
+    test_data_target = "_${target_name}_test_data"
+
+    generated_file(response_file_target) {
+      visibility = [ ":*" ]
+      testonly = true
+      forward_variables_from(invoker, [ "deps" ])
+      data_keys = [ "test_sources" ]
+      outputs = [ "${response_file}" ]
+    }
+
+    host_test_data(test_data_target) {
+      visibility = [ ":*" ]
+      sources = [
+        "${host_tools_dir}/bindc",
+        invoker.rules,
+        invoker.tests,
+        response_file,
+      ]
+      outputs = [ "${test_data_dir}/{{source_file_part}}" ]
+      deps = [
+        ":${response_file_target}",
+        "//tools/bindc:host($host_toolchain)",
+      ]
+    }
+
+    host_test_with_args(test_target) {
+      visibility = [ ":*" ]
+      if (defined(invoker.target)) {
+        target = "${invoker.target}"
+      } else {
+        target = "${target_name}"
+      }
+      tool = rebase_path("${test_data_dir}/bindc", root_build_dir)
+
+      rules_filename = get_path_info(invoker.rules, "file")
+      test_spec_filename = get_path_info(invoker.tests, "file")
+      response_file_filename = get_path_info(response_file, "file")
+      args = [
+        "test",
+        rebase_path("${test_data_dir}/${rules_filename}", root_build_dir),
+        "--test-spec",
+        rebase_path("${test_data_dir}/${test_spec_filename}", root_build_dir),
+        "--include-file",
+        rebase_path("${test_data_dir}/${response_file_filename}",
+                    root_build_dir),
+      ]
+      deps = [
+        ":${response_file_target}",
+        ":${test_data_target}",
+        "//tools/bindc:bin($host_toolchain)",
+      ]
+    }
+  } else {
+    not_needed(invoker,
+               [
+                 "deps",
+                 "tests",
+                 "rules",
+                 "target",
+                 test_target,
+               ])
+  }
+}
+
+# Declares a suite of tests for a driver's bind rules.
+#
+# This template is provided for convenience. It handles redirect bind_host_test to the host
+# toolchain.
+#
+# Parameters
+#
+#   rules (required)
+#     [path]: Path to the bind rules source file.
+#
+#   tests (required)
+#     [path]: Path to a test specification. The test specification is a JSON file defining a set
+#     of devices and the expected result of the bind rules when applied to that device. The file
+#     must adhere to the JSON schema defined by //src/devices/bind/debugger/tests_schema.json.
+#
+#   target (optional)
+#     [label]: The test target. Defaults to target_name.
+#
+#   deps (optional)
+#     [list of labels]: List of bind_library targets included by the bind rules.
+#
+#   visibility
+#     Forwarded from invoker.
+#
+template("bind_test") {
+  assert(defined(invoker.rules), "Need a bind rules source")
+  assert(defined(invoker.tests), "Need a test specification")
+  test_target = "${target_name}_test"
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    testonly = true
+
+    # Redirect to the host toolchain.
+    deps = [ ":${test_target}($host_toolchain)" ]
+  }
+
+  original_target_name = target_name
+  bind_host_test(test_target) {
+    if (defined(invoker.target)) {
+      target = "${invoker.target}"
+    } else {
+      target = "${original_target_name}"
+    }
+    rules = invoker.rules
+    tests = invoker.tests
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                           ])
+  }
+}
 
 # Declares a driver's bind rules.
 #
@@ -12,19 +175,27 @@ import("//build/compiled_action.gni")
 # Parameters
 #
 #   rules (required)
-#     Path to the bind rules source file.
+#     [path]: Path to the bind rules source file.
 #
-#   deps
-#     List of bind_library targets included by the bind rules.
+#   deps (optional)
+#     [lib of labels]: List of bind_library targets included by the bind rules.
 #
-#   output_file
-#     Name of the header file generated by the tool (defaults to target name + ".h").
+#   output_file (optional)
+#     [path]: Name of the header file generated by the tool (defaults to target name + ".h").
 #
-#   disable_autobind
-#     Configure the bind compiler to disable autobind, so that the driver must be bound on a user's
-#     request. Defaults to false.
+#   tests (optional)
+#     [path]: Path to a test specification. If this parameter is set then the template will
+#     create an additional bind_test target with the name "${target_name}_test". This allows you
+#     to define tests without specifying the bind library dependencies and rules file twice.
+#
+#   disable_autobind (optional)
+#     [bool]: Configure the bind compiler to disable autobind, so that the driver must be bound on
+#     a user's request. Defaults to false.
 #     TODO(43400): Eventually this option should be removed when we can define this configuration
 #     in the driver's component manifest.
+#
+#   testonly, visibility
+#     Forwarded from invoker.
 #
 template("bind_rules") {
   assert(defined(invoker.rules), "Need a bind rules source")
@@ -34,16 +205,27 @@ template("bind_rules") {
     output_file = invoker.output
   }
 
-  response_file_target = "${target_name}_response_file"
-  response_file = "$target_gen_dir/$target_name.rsp"
+  response_file_target = "_${target_name}_response_file"
+  response_file = "${target_gen_dir}/${target_name}.rsp"
 
   generated_file(response_file_target) {
+    visibility = [ ":*" ]
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
     data_keys = [ "sources" ]
-    forward_variables_from(invoker, [ "deps" ])
-    outputs = [ response_file ]
+    outputs = [ "${response_file}" ]
   }
 
   compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
     tool = "//tools/bindc:bin"
     tool_output_name = "bindc"
 
@@ -75,6 +257,17 @@ template("bind_rules") {
       deps += invoker.deps
     }
   }
+
+  if (defined(invoker.tests)) {
+    bind_test("${target_name}_test") {
+      forward_variables_from(invoker,
+                             [
+                               "rules",
+                               "deps",
+                               "tests",
+                             ])
+    }
+  }
 }
 
 # Declares a bind library.
@@ -85,19 +278,44 @@ template("bind_rules") {
 # Parameters
 #
 #   source (required)
-#     Path to the library source file.
+#     [path]: Path to the library source file.
 #
-#   public_deps
-#     List of other bind_library targets included by the library.
+#   public_deps (optional)
+#     [list of labels]: List of other bind_library targets included by the library.
+#
+#   testonly, visibility
+#     Forwarded from invoker.
 #
 template("bind_library") {
   assert(defined(invoker.source), "Need a source file")
 
+  test_data_dir = "${target_out_dir}/test_data/bind-tests/"
+  test_data_target = "${target_name}_test_data"
+  copy(test_data_target) {
+    visibility = [ ":*" ]
+    sources = [ invoker.source ]
+    outputs = [ "${test_data_dir}/{{source_file_part}}" ]
+  }
+
   group(target_name) {
     metadata = {
       sources = [ rebase_path(invoker.source, root_build_dir) ]
+
+      # Adds metadata for test_spec().
+      test_runtime_deps = get_target_outputs(":${test_data_target}")
+
+      # Adds metadata for bind_test().
+      test_sources = rebase_path(get_target_outputs(":${test_data_target}"),
+                                 root_build_dir)
     }
 
-    forward_variables_from(invoker, [ "public_deps" ])
+    deps = [ ":${test_data_target}" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
   }
 }
