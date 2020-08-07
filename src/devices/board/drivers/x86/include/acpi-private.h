@@ -4,10 +4,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_PRIVATE_H_
 #include <lib/fitx/result.h>
+#include <zircon/driver/binding.h>
 
 #include <vector>
 
-#include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/acpi.h>
@@ -259,12 +259,6 @@ zx_status_t ExtractCidToDevProps(const ACPI_DEVICE_INFO& info, T& props, uint32_
 }
 
 }  // namespace acpi
-
-struct pci_child_auxdata_ctx_t {
-  uint8_t max;
-  uint8_t i;
-  auxdata_i2c_device_t* data;
-};
 
 // TODO(cja): this is here because of kpci.cc and can be removed once
 // kernel pci is out of the tree.

@@ -305,12 +305,6 @@ zx_status_t DeviceProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t 
   return st;
 }
 
-// TODO(ZX-3146): These methods need to be deleted, or refactored.
-zx_status_t DeviceProxy::PciGetAuxdata(const char* args, void* out_data_buffer, size_t data_size,
-                                       size_t* out_data_actual) {
-  DEVICE_PROXY_UNIMPLEMENTED;
-}
-
 zx_status_t DeviceProxy::PciGetBti(uint32_t index, zx::bti* out_bti) {
   PciRpcMsg req = {};
   PciRpcMsg resp = {};

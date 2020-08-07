@@ -61,10 +61,6 @@ class FakePci : public ddk::PciProtocol<FakePci> {
   zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PciGetAuxdata(const char* args, void* out_data_buffer, size_t data_size,
-                            size_t* out_data_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti) { return ZX_ERR_NOT_SUPPORTED; }
 };
 

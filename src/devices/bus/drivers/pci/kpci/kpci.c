@@ -81,21 +81,6 @@ static zx_status_t kpci_config_write(pci_msg_t* req, kpci_device_t* device, zx_h
   return pci_rpc_reply(ch, st, NULL, req, &resp);
 }
 
-static zx_status_t kpci_get_auxdata(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
-  char args[32];
-  snprintf(args, sizeof(args), "%s,%02x:%02x:%02x", req->data, device->info.bus_id,
-           device->info.dev_id, device->info.func_id);
-
-  size_t actual;
-  pci_msg_t resp = {};
-  zx_status_t st = pciroot_get_auxdata(&device->pciroot, args, resp.data, req->outlen, &actual);
-  if (st == ZX_OK) {
-    resp.datalen = (uint32_t)actual;
-  }
-
-  return pci_rpc_reply(ch, st, 0, req, &resp);
-}
-
 // Retrieves either address information for PIO or a VMO corresponding to a device's
 // bar to pass back to the devhost making the call.
 static zx_status_t kpci_get_bar(pci_msg_t* req, kpci_device_t* device, zx_handle_t ch) {
@@ -223,7 +208,6 @@ const rxrpc_cbk_t rxrpc_cbk_tbl[] = {
     [PCI_OP_CONFIGURE_IRQ_MODE] = kpci_configure_irq_mode,
     [PCI_OP_MAP_INTERRUPT] = kpci_map_interrupt,
     [PCI_OP_GET_DEVICE_INFO] = kpci_get_device_info,
-    [PCI_OP_GET_AUXDATA] = kpci_get_auxdata,
     [PCI_OP_GET_BTI] = kpci_get_bti,
     [PCI_OP_CONNECT_SYSMEM] = kpci_connect_sysmem,
     [PCI_OP_MAX] = NULL,
@@ -231,11 +215,11 @@ const rxrpc_cbk_t rxrpc_cbk_tbl[] = {
 
 #define LABEL(x) [x] = #x
 const char* const rxrpc_string_tbl[] = {
-    LABEL(PCI_OP_INVALID),       LABEL(PCI_OP_RESET_DEVICE),    LABEL(PCI_OP_ENABLE_BUS_MASTER),
-    LABEL(PCI_OP_CONFIG_READ),   LABEL(PCI_OP_CONFIG_WRITE),    LABEL(PCI_OP_CONFIGURE_IRQ_MODE),
-    LABEL(PCI_OP_GET_BAR),       LABEL(PCI_OP_QUERY_IRQ_MODE),  LABEL(PCI_OP_SET_IRQ_MODE),
-    LABEL(PCI_OP_MAP_INTERRUPT), LABEL(PCI_OP_GET_DEVICE_INFO), LABEL(PCI_OP_GET_AUXDATA),
-    LABEL(PCI_OP_GET_BTI),       LABEL(PCI_OP_CONNECT_SYSMEM),
+    LABEL(PCI_OP_INVALID),        LABEL(PCI_OP_RESET_DEVICE),    LABEL(PCI_OP_ENABLE_BUS_MASTER),
+    LABEL(PCI_OP_CONFIG_READ),    LABEL(PCI_OP_CONFIG_WRITE),    LABEL(PCI_OP_CONFIGURE_IRQ_MODE),
+    LABEL(PCI_OP_GET_BAR),        LABEL(PCI_OP_QUERY_IRQ_MODE),  LABEL(PCI_OP_SET_IRQ_MODE),
+    LABEL(PCI_OP_MAP_INTERRUPT),  LABEL(PCI_OP_GET_DEVICE_INFO), LABEL(PCI_OP_GET_BTI),
+    LABEL(PCI_OP_CONNECT_SYSMEM),
 };
 #undef LABEL
 static_assert(countof(rxrpc_string_tbl) == PCI_OP_MAX, "rpc string table is not contiguous!");
@@ -350,8 +334,8 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
   device->handle = handle;
   device->index = index;
 
-  // Store the PCIROOT protocol for use with get_auxdata in the pci protocol
-  // It is not fatal if this fails, but auxdata protocol methods will not work.
+  // Store the PCIROOT protocol for use with get_bti in the pci protocol
+  // It is not fatal if this fails, but bti protocol methods will not work.
   device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device->pciroot);
   device_get_protocol(parent, ZX_PROTOCOL_PDEV, &device->pdev);
 

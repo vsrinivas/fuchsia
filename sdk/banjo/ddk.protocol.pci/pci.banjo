@@ -120,6 +120,5 @@ protocol Pci {
     GetNextCapability(uint8 id, uint8 offset) -> (zx.status s, uint8 offset);
     GetFirstExtendedCapability(uint16 id) -> (zx.status s, uint16 offset);
     GetNextExtendedCapability(uint16 id, uint16 offset) -> (zx.status s, uint16 offset);
-    GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
 };

@@ -93,7 +93,6 @@ class Device : public PciDeviceType,
   zx_status_t RpcConfigRead(const zx::unowned_channel& ch);
   zx_status_t RpcConfigWrite(const zx::unowned_channel& ch);
   zx_status_t RpcEnableBusMaster(const zx::unowned_channel& ch);
-  zx_status_t RpcGetAuxdata(const zx::unowned_channel& ch);
   zx_status_t RpcGetBar(const zx::unowned_channel& ch);
   zx_status_t RpcGetBti(const zx::unowned_channel& ch);
   zx_status_t RpcGetDeviceInfo(const zx::unowned_channel& ch);

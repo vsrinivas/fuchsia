@@ -220,10 +220,6 @@ device supports multiple protocols, implement the `get_protocol()` device op. A
 device can only have one protocol id. The protocol id corresponds to the class
 the device is published under in devfs.
 
-Device protocol headers are found in
-[ddk/protocol/](/src/lib/ddk/include/ddk/protocol). Ops and any data
-structures passed between drivers should be defined in this header.
-
 ## Driver operation
 
 A driver generally operates by servicing client requests from children drivers

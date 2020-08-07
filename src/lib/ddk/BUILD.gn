@@ -28,7 +28,6 @@ zx_library("ddk") {
     "ddk/metadata/pwm.h",
     "ddk/metadata/spi.h",
     "ddk/metadata/test.h",
-    "ddk/protocol/auxdata.h",
     "ddk/trace/event.h",
     "ddk/binding.h",
     "ddk/debug.h",

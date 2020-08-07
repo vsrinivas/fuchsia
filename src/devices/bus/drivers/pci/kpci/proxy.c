@@ -329,33 +329,6 @@ static zx_status_t pci_op_get_device_info(void* ctx, zx_pcie_device_info_t* out_
   return st;
 }
 
-static zx_status_t pci_op_get_auxdata(void* ctx, const char* args, void* data, size_t bytes,
-                                      size_t* actual) {
-  kpci_device_t* dev = ctx;
-  size_t arglen = strlen(args);
-  if (arglen > PCI_MAX_DATA) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  pci_msg_t req = {
-      .outlen = bytes,
-      .datalen = arglen,
-  };
-  pci_msg_t resp = {};
-  memcpy(req.data, args, arglen);
-  zx_status_t st = pci_rpc_request(dev, PCI_OP_GET_AUXDATA, NULL, &req, &resp);
-  if (st == ZX_OK) {
-    if (resp.datalen > bytes) {
-      return ZX_ERR_BUFFER_TOO_SMALL;
-    }
-    memcpy(data, resp.data, resp.datalen);
-    if (actual) {
-      *actual = resp.datalen;
-    }
-  }
-  return st;
-}
-
 static pci_protocol_ops_t _pci_protocol = {
     .enable_bus_master = pci_op_enable_bus_master,
     .reset_device = pci_op_reset_device,
@@ -373,7 +346,6 @@ static pci_protocol_ops_t _pci_protocol = {
     .config_write32 = pci_op_config_write32,
     .get_next_capability = pci_op_get_next_capability,
     .get_first_capability = pci_op_get_first_capability,
-    .get_auxdata = pci_op_get_auxdata,
     .get_bti = pci_op_get_bti,
 };
 

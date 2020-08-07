@@ -68,9 +68,6 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
     case PCI_OP_ENABLE_BUS_MASTER:
       return RpcEnableBusMaster(ch);
       break;
-    case PCI_OP_GET_AUXDATA:
-      return RpcGetAuxdata(ch);
-      break;
     case PCI_OP_GET_BAR:
       return RpcGetBar(ch);
       break;
@@ -175,8 +172,6 @@ zx_status_t Device::RpcConfigWrite(const zx::unowned_channel& ch) {
 zx_status_t Device::RpcEnableBusMaster(const zx::unowned_channel& ch) {
   return RpcReply(ch, EnableBusMaster(request_.enable));
 }
-
-zx_status_t Device::RpcGetAuxdata(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }
 
 zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
   fbl::AutoLock dev_lock(&dev_lock_);

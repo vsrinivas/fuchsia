@@ -20,7 +20,6 @@ enum PciRpcOp : uint32_t {
   PCI_OP_CONFIGURE_IRQ_MODE,
   PCI_OP_CONNECT_SYSMEM,
   PCI_OP_ENABLE_BUS_MASTER,
-  PCI_OP_GET_AUXDATA,
   PCI_OP_GET_BAR,
   PCI_OP_GET_BTI,
   PCI_OP_GET_DEVICE_INFO,
@@ -125,8 +124,6 @@ class DeviceProxy : public PciDeviceProxyType, public ddk::PciProtocol<pci::Devi
   zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
   zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
   zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
-  zx_status_t PciGetAuxdata(const char* args, void* out_data_buffer, size_t data_size,
-                            size_t* out_data_actual);
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
 
  private:

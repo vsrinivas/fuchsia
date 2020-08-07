@@ -37,10 +37,6 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   int32_t allocation_cnt() { return allocation_cnt_; }
 
   // Protocol methods.
-  zx_status_t PcirootGetAuxdata(const char* args, void* out_data, size_t data_size,
-                                size_t* out_data_actual) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
     return ZX_ERR_NOT_SUPPORTED;
   }
