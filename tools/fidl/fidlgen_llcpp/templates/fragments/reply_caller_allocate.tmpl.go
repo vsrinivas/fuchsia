@@ -9,12 +9,8 @@ const ReplyCallerAllocate = `
 Reply(::fidl::BytePart _buffer {{- if .Response }}, {{ end }}{{ template "Params" .Response }})
 {{- end }}
 
-{{- define "ReplyWithStatusCallerAllocateMethodSignature" -}}
-ReplyWithStatus(::fidl::BytePart _buffer {{- if .Response }}, {{ end }}{{ template "Params" .Response }})
-{{- end }}
-
 {{- define "ReplyCallerAllocateMethodDefinition" }}
-zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyWithStatusCallerAllocateMethodSignature" . }} {
+zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateMethodSignature" . }} {
   if (_buffer.capacity() < {{ .Name }}Response::PrimarySize) {
     CompleterBase::InternalError({::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -42,37 +38,20 @@ zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{
   return CompleterBase::SendReply(::fidl::DecodedMessage<{{ .Name }}Response>(std::move(_buffer)));
   {{- end }}
 }
-
-void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateMethodSignature" . }} {
-  ReplyWithStatus(std::move(_buffer), {{ template "SyncClientMoveParams" .Response }});
-}
 {{- end }}
 
 {{- define "ReplyCallerAllocateResultSuccessMethodSignature" -}}
 ReplySuccess(::fidl::BytePart _buffer {{- if .Result.ValueMembers }}, {{ end }}{{ template "Params" .Result.ValueMembers }})
 {{- end }}
 
-{{- define "ReplyWithStatusCallerAllocateResultSuccessMethodSignature" -}}
-ReplySuccessWithStatus(::fidl::BytePart _buffer {{- if .Result.ValueMembers }}, {{ end }}{{ template "Params" .Result.ValueMembers }})
-{{- end }}
-
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
-zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyWithStatusCallerAllocateResultSuccessMethodSignature" . }} {
+zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
   ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
   {{- range .Result.ValueMembers }}
   response.value.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  return ReplyWithStatus(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
-}
-
-void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
-  ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
-  {{- range .Result.ValueMembers }}
-  response.value.{{ .Name }} = std::move({{ .Name }});
-  {{- end }}
-
-  ReplyWithStatus(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
+  return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
 }
 {{- end }}
 `

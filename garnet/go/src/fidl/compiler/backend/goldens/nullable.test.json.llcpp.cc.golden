@@ -177,8 +177,7 @@ bool SimpleProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t SimpleProtocol::Interface::AddCompleterBase::ReplyWithStatus(
-    int32_t sum) {
+zx_status_t SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(AddResponse)];
@@ -195,11 +194,7 @@ zx_status_t SimpleProtocol::Interface::AddCompleterBase::ReplyWithStatus(
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
-  ReplyWithStatus(std::move(sum));
-}
-
-zx_status_t SimpleProtocol::Interface::AddCompleterBase::ReplyWithStatus(
+zx_status_t SimpleProtocol::Interface::AddCompleterBase::Reply(
     ::fidl::BytePart _buffer, int32_t sum) {
   if (_buffer.capacity() < AddResponse::PrimarySize) {
     CompleterBase::InternalError(
@@ -210,25 +205,6 @@ zx_status_t SimpleProtocol::Interface::AddCompleterBase::ReplyWithStatus(
   _buffer.set_actual(sizeof(AddResponse));
   return CompleterBase::SendReply(
       ::fidl::DecodedMessage<AddResponse>(std::move(_buffer)));
-}
-
-void SimpleProtocol::Interface::AddCompleterBase::Reply(
-    ::fidl::BytePart _buffer, int32_t sum) {
-  ReplyWithStatus(std::move(_buffer), std::move(sum));
-}
-
-zx_status_t SimpleProtocol::Interface::AddCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<AddResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
-                  kSimpleProtocol_Add_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void SimpleProtocol::Interface::AddCompleterBase::Reply(
-    ::fidl::DecodedMessage<AddResponse> params) {
-  ReplyWithStatus(std::move(params));
 }
 
 void SimpleProtocol::AddRequest::_InitHeader(zx_txid_t _txid) {

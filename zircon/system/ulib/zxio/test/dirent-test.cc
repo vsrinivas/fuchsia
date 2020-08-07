@@ -77,7 +77,8 @@ class TestServer final : public fio::Directory::Interface {
       size_t entry_size = sizeof(dirent) + name_length;
 
       if (actual + entry_size > max_bytes) {
-        return completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer_start), actual));
+        completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer_start), actual));
+        return;
       }
 
       auto name = new char[name_length + 1];

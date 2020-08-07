@@ -36,7 +36,7 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     }
     llcpp::fuchsia::io::NodeInfo info;
     info.set_stream_socket(fidl::unowned_ptr(&stream_socket));
-    return completer.Reply(std::move(info));
+    completer.Reply(std::move(info));
   }
 
   void Sync(SyncCompleter::Sync completer) override {

@@ -537,33 +537,24 @@ class {{ .Name }} final {
         {{- if .HasResponse }}
     class {{ .Name }}CompleterBase : public _Base {
      public:
-      void {{ template "ReplyCFlavorMethodSignature" . }};
+      // In the following methods, the return value indicates internal errors during
+      // the reply, such as encoding or writing to the transport.
+      // Note that any error will automatically lead to the destruction of the binding,
+      // after which the |on_unbound| callback will be triggered with a detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can be safely ignored.
+      zx_status_t {{ template "ReplyCFlavorMethodSignature" . }};
           {{- if .Result }}
-      void {{ template "ReplyCFlavorResultSuccessMethodSignature" . }};
-      void {{ template "ReplyCFlavorResultErrorMethodSignature" . }};
+      zx_status_t {{ template "ReplyCFlavorResultSuccessMethodSignature" . }};
+      zx_status_t {{ template "ReplyCFlavorResultErrorMethodSignature" . }};
           {{- end }}
           {{- if .Response }}
-      void {{ template "ReplyCallerAllocateMethodSignature" . }};
+      zx_status_t {{ template "ReplyCallerAllocateMethodSignature" . }};
             {{- if .Result }}
-      void {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
+      zx_status_t {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
             {{- end }}
-      void {{ template "ReplyInPlaceMethodSignature" . }};
-          {{- end }}
-
-      // The following APIs are identical to the above APIs except that they propagate up any
-      // internal error status on failure. On failure, unbinding is still triggered with the cause
-      // of the failure propagated to the unbinding hook if possible.
-      zx_status_t {{ template "ReplyWithStatusCFlavorMethodSignature" . }};
-          {{- if .Result }}
-      zx_status_t {{ template "ReplyWithStatusCFlavorResultSuccessMethodSignature" . }};
-      zx_status_t {{ template "ReplyWithStatusCFlavorResultErrorMethodSignature" . }};
-          {{- end }}
-          {{- if .Response }}
-      zx_status_t {{ template "ReplyWithStatusCallerAllocateMethodSignature" . }};
-            {{- if .Result }}
-      zx_status_t {{ template "ReplyWithStatusCallerAllocateResultSuccessMethodSignature" . }};
-            {{- end }}
-      zx_status_t {{ template "ReplyWithStatusInPlaceMethodSignature" . }};
           {{- end }}
 
      protected:
@@ -764,7 +755,6 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
       {{- end }}
       {{- if .Response }}
 {{ "" }}
-        {{- template "ReplyInPlaceMethodDefinition" . }}
       {{- end }}
 {{ "" }}
     {{- end }}

@@ -9,19 +9,11 @@ const ReplyInPlace = `
 Reply(::fidl::DecodedMessage<{{ .Name }}Response> params)
 {{- end }}
 
-{{- define "ReplyWithStatusInPlaceMethodSignature" -}}
-ReplyWithStatus(::fidl::DecodedMessage<{{ .Name }}Response> params)
-{{- end }}
-
 {{- define "ReplyInPlaceMethodDefinition" }}
-zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyWithStatusInPlaceMethodSignature" . }} {
+zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyInPlaceMethodSignature" . }} {
   ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number == kFidlWireFormatMagicNumberInitial);
   ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == {{ .OrdinalName }});
   return CompleterBase::SendReply(std::move(params));
-}
-
-void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyInPlaceMethodSignature" . }} {
-  ReplyWithStatus(std::move(params));
 }
 {{- end }}
 `

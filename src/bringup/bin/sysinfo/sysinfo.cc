@@ -23,31 +23,31 @@ namespace sysinfo {
 void SysInfo::GetHypervisorResource(GetHypervisorResourceCompleter::Sync completer) {
   zx::resource hypervisor;
   zx_status_t status = GetHypervisorResource(&hypervisor);
-  return completer.Reply(status, std::move(hypervisor));
+  completer.Reply(status, std::move(hypervisor));
 }
 
 void SysInfo::GetBoardName(GetBoardNameCompleter::Sync completer) {
   std::string board_name;
   zx_status_t status = GetBoardName(&board_name);
-  return completer.Reply(status, fidl::unowned_str(board_name));
+  completer.Reply(status, fidl::unowned_str(board_name));
 }
 
 void SysInfo::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
   uint32_t revision;
   zx_status_t status = GetBoardRevision(&revision);
-  return completer.Reply(status, revision);
+  completer.Reply(status, revision);
 }
 
 void SysInfo::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) {
   std::string bootloader_vendor;
   zx_status_t status = GetBootloaderVendor(&bootloader_vendor);
-  return completer.Reply(status, fidl::unowned_str(bootloader_vendor));
+  completer.Reply(status, fidl::unowned_str(bootloader_vendor));
 }
 
 void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
   llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {};
   zx_status_t status = GetInterruptControllerInfo(&info);
-  return completer.Reply(status, fidl::unowned_ptr(&info));
+  completer.Reply(status, fidl::unowned_ptr(&info));
 }
 
 // TODO(43777): Separate out GetHypervisorResource from sysinfo

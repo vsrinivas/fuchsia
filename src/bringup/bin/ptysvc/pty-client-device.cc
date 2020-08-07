@@ -18,12 +18,14 @@ void PtyClientDevice::OpenClient(uint32_t id, zx::channel client,
 
   // Only controlling clients (and the server itself) may create new clients
   if (!client_->is_control()) {
-    return completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
+    completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
+    return;
   }
 
   // Clients may not create controlling clients
   if (id == 0) {
-    return completer.Reply(buf.view(), ZX_ERR_INVALID_ARGS);
+    completer.Reply(buf.view(), ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   zx_status_t status = client_->server()->CreateClient(id, std::move(client));
@@ -56,7 +58,8 @@ void PtyClientDevice::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sy
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::MakeActiveResponse> buf;
 
   if (!client_->is_control()) {
-    return completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
+    completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
+    return;
   }
 
   zx_status_t status = client_->server()->MakeActive(client_pty_id);
@@ -67,7 +70,8 @@ void PtyClientDevice::ReadEvents(ReadEventsCompleter::Sync completer) {
   fidl::Buffer<::llcpp::fuchsia::hardware::pty::Device::ReadEventsResponse> buf;
 
   if (!client_->is_control()) {
-    return completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED, 0);
+    completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED, 0);
+    return;
   }
 
   uint32_t events = client_->server()->DrainEvents();

@@ -186,7 +186,7 @@ bool Example::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t Example::Interface::fooCompleterBase::ReplyWithStatus(
+zx_status_t Example::Interface::fooCompleterBase::Reply(
     ::llcpp::fidl::test::json::Example_foo_Result result) {
   fooResponse _response{result};
 
@@ -200,38 +200,18 @@ zx_status_t Example::Interface::fooCompleterBase::ReplyWithStatus(
   }
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
-
-void Example::Interface::fooCompleterBase::Reply(
-    ::llcpp::fidl::test::json::Example_foo_Result result) {
-  ReplyWithStatus(std::move(result));
-}
-zx_status_t Example::Interface::fooCompleterBase::ReplySuccessWithStatus(
-    int64_t y) {
+zx_status_t Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
   ::fidl::aligned<Example_foo_Response> response;
   response.value.y = std::move(y);
 
-  return ReplyWithStatus(
+  return Reply(
       Example_foo_Result::WithResponse(::fidl::unowned_ptr(&response)));
 }
-
-void Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
-  ::fidl::aligned<Example_foo_Response> response;
-  response.value.y = std::move(y);
-
-  ReplyWithStatus(
-      Example_foo_Result::WithResponse(::fidl::unowned_ptr(&response)));
-}
-zx_status_t Example::Interface::fooCompleterBase::ReplyErrorWithStatus(
-    uint32_t error) {
-  return ReplyWithStatus(
-      Example_foo_Result::WithErr(::fidl::unowned_ptr(&error)));
+zx_status_t Example::Interface::fooCompleterBase::ReplyError(uint32_t error) {
+  return Reply(Example_foo_Result::WithErr(::fidl::unowned_ptr(&error)));
 }
 
-void Example::Interface::fooCompleterBase::ReplyError(uint32_t error) {
-  ReplyWithStatus(Example_foo_Result::WithErr(::fidl::unowned_ptr(&error)));
-}
-
-zx_status_t Example::Interface::fooCompleterBase::ReplyWithStatus(
+zx_status_t Example::Interface::fooCompleterBase::Reply(
     ::fidl::BytePart _buffer,
     ::llcpp::fidl::test::json::Example_foo_Result result) {
   if (_buffer.capacity() < fooResponse::PrimarySize) {
@@ -249,42 +229,13 @@ zx_status_t Example::Interface::fooCompleterBase::ReplyWithStatus(
   }
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
-
-void Example::Interface::fooCompleterBase::Reply(
-    ::fidl::BytePart _buffer,
-    ::llcpp::fidl::test::json::Example_foo_Result result) {
-  ReplyWithStatus(std::move(_buffer), std::move(result));
-}
-zx_status_t Example::Interface::fooCompleterBase::ReplySuccessWithStatus(
+zx_status_t Example::Interface::fooCompleterBase::ReplySuccess(
     ::fidl::BytePart _buffer, int64_t y) {
   ::fidl::aligned<Example_foo_Response> response;
   response.value.y = std::move(y);
 
-  return ReplyWithStatus(
-      std::move(_buffer),
-      Example_foo_Result::WithResponse(::fidl::unowned_ptr(&response)));
-}
-
-void Example::Interface::fooCompleterBase::ReplySuccess(
-    ::fidl::BytePart _buffer, int64_t y) {
-  ::fidl::aligned<Example_foo_Response> response;
-  response.value.y = std::move(y);
-
-  ReplyWithStatus(std::move(_buffer), Example_foo_Result::WithResponse(
-                                          ::fidl::unowned_ptr(&response)));
-}
-
-zx_status_t Example::Interface::fooCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<fooResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == kExample_foo_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void Example::Interface::fooCompleterBase::Reply(
-    ::fidl::DecodedMessage<fooResponse> params) {
-  ReplyWithStatus(std::move(params));
+  return Reply(std::move(_buffer), Example_foo_Result::WithResponse(
+                                       ::fidl::unowned_ptr(&response)));
 }
 
 void Example::fooRequest::_InitHeader(zx_txid_t _txid) {

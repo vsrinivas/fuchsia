@@ -116,9 +116,10 @@ zx_status_t FakeCpuDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 void FakeCpuDevice::GetPerformanceStateInfo(uint32_t state,
                                             GetPerformanceStateInfoCompleter::Sync completer) {
   if (state >= countof(kTestPstates)) {
-    return completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+  } else {
+    completer.ReplySuccess(kTestPstates[state]);
   }
-  completer.ReplySuccess(kTestPstates[state]);
 }
 
 void FakeCpuDevice::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer) {
@@ -135,7 +136,8 @@ void FakeCpuDevice::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::
 void FakeCpuDevice::SetPerformanceState(uint32_t requested_state,
                                         SetPerformanceStateCompleter::Sync completer) {
   if (requested_state > countof(kTestPstates)) {
-    return completer.Reply(ZX_ERR_NOT_SUPPORTED, requested_state);
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, requested_state);
+    return;
   }
 
   pstate_set_count_++;

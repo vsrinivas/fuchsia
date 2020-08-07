@@ -59,7 +59,8 @@ void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
   if (query & fuchsia_fs::FilesystemInfoQuery::FS_ID) {
     zx_status_t status = blobfs_->GetFsId(&fs_id);
     if (status != ZX_OK) {
-      return completer.ReplyError(status);
+      completer.ReplyError(status);
+      return;
     }
     builder.set_fs_id(fidl::unowned_ptr(&fs_id));
   }
@@ -95,7 +96,8 @@ void QueryService::GetInfo(fuchsia_fs::FilesystemInfoQuery query,
     zx_status_t status =
         blobfs_->Device()->GetDevicePath(llcpp::fuchsia::io2::MAX_PATH_LENGTH, name_buf, &name_len);
     if (status != ZX_OK) {
-      return completer.ReplyError(status);
+      completer.ReplyError(status);
+      return;
     }
     // It appears that the |name_len| returned by |GetDevicePath| includes a trailing NUL.
     ZX_ASSERT(name_buf[name_len - 1] == '\0');

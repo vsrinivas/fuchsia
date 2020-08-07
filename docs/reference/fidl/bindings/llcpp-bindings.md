@@ -376,15 +376,15 @@ client:
 
 Dereferencing a `fidl::Client` provides access to the following methods:
 
-* `fidl::StatusAndError StartGame(bool start_first)`: Managed variant of a fire
+* `fidl::Result StartGame(bool start_first)`: Managed variant of a fire
   and forget method.
-* `fidl::StatusAndError StartGame(::fidl::BytePart _request_buffer, bool
+* `fidl::Result StartGame(::fidl::BytePart _request_buffer, bool
   start_first)`: Caller-allocated variant of a fire and forget method.
-* `fidl::StatusAndError MakeMove(uint8_t row, uint8_t col,
+* `fidl::Result MakeMove(uint8_t row, uint8_t col,
   fit::callback<void(bool success, fidl::tracking_ptr<GameState> new_state)>
   _cb)`: Managed variant of an asynchronous two way method. It takes a
   callback to handle responses as the last argument.
-* `fidl::StatusAndError MakeMove(fidl::BytePart _request_buffer, uint8_t row,
+* `fidl::Result MakeMove(fidl::BytePart _request_buffer, uint8_t row,
   uint8_t col, MakeMoveResponseContext* _context)`: Asynchronous,
   caller-allocated variant of a two way method. The final argument is a response
   context, which is explained below.
@@ -465,12 +465,12 @@ the only difference being that they are all `static` and take an
 * `static zx_status_t HandleEvents(zx::unowned_channel client_end, EventHandlers
   handlers)`:
 
-#### StatusAndError, ResultOf and UnownedResultOf
+#### Result, ResultOf and UnownedResultOf
 
 The managed variants of each method of `SyncClient` and `Call` all return a
 `ResultOf::` type, whereas the caller-allocating variants all return an
 `UnownedResultOf::`. Fire and forget methods on `fidl::Client` return a
-`StatusAndError`. These types define the same set of methods:
+`Result`. These types define the same set of methods:
 
 *   `zx_status status() const` returns the transport status. it returns the
     first error encountered during (if applicable) linearizing, encoding, making
@@ -557,9 +557,12 @@ correspond to the variants present in the [client API](#client). For example,
 both `MakeMoveCompleter::Sync` and `MakeMoveCompleter::Async` provide the
 following `Reply` methods:
 
-* `void Reply(bool success, fidl::tracking_ptr<GameState> new_state)`
-* `void Reply(fidl::BytePart _buffer, bool success,
+* `zx_status_t Reply(bool success, fidl::tracking_ptr<GameState> new_state)`
+* `zx_status_t Reply(fidl::BytePart _buffer, bool success,
   fidl::tracking_ptr<GameState> new_state)`
+
+Because the status returned by Reply is identical to the unbinding status, it can be safely
+ignored.
 
 Finally, sync completers for two way methods can be coverted to an async
 completer using the `ToAsync()` method. Async completers can out-live the scope of the

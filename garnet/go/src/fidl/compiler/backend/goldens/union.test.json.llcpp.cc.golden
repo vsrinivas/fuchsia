@@ -467,7 +467,7 @@ bool TestProtocol::Dispatch(Interface* impl, fidl_msg_t* msg,
 }
 
 zx_status_t TestProtocol::Interface::
-    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::ReplyWithStatus(
+    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
   StrictXUnionHenceResponseMayBeStackAllocatedResponse _response{xu};
 
@@ -482,14 +482,8 @@ zx_status_t TestProtocol::Interface::
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void TestProtocol::Interface::
-    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
-        ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
-  ReplyWithStatus(std::move(xu));
-}
-
 zx_status_t TestProtocol::Interface::
-    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::ReplyWithStatus(
+    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::fidl::BytePart _buffer,
         ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
   if (_buffer.capacity() <
@@ -510,37 +504,9 @@ zx_status_t TestProtocol::Interface::
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void TestProtocol::Interface::
-    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
-        ::fidl::BytePart _buffer,
-        ::llcpp::fidl::test::json::StrictBoundedXUnion xu) {
-  ReplyWithStatus(std::move(_buffer), std::move(xu));
-}
-
 zx_status_t TestProtocol::Interface::
-    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::ReplyWithStatus(
-        ::fidl::DecodedMessage<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse>
-            params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(
-      params.message()->_hdr.ordinal ==
-      kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void TestProtocol::Interface::
-    StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
-        ::fidl::DecodedMessage<
-            StrictXUnionHenceResponseMayBeStackAllocatedResponse>
-            params) {
-  ReplyWithStatus(std::move(params));
-}
-
-zx_status_t TestProtocol::Interface::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::
-        ReplyWithStatus(::llcpp::fidl::test::json::OlderSimpleUnion xu) {
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
+        ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
   FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse _response{xu};
 
   auto _encoded = ::fidl::internal::LinearizedAndEncoded<
@@ -554,16 +520,10 @@ zx_status_t TestProtocol::Interface::
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void TestProtocol::Interface::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
-        ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
-  ReplyWithStatus(std::move(xu));
-}
-
 zx_status_t TestProtocol::Interface::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::
-        ReplyWithStatus(::fidl::BytePart _buffer,
-                        ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
+    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
+        ::fidl::BytePart _buffer,
+        ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
   if (_buffer.capacity() <
       FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::PrimarySize) {
     CompleterBase::InternalError(
@@ -580,34 +540,6 @@ zx_status_t TestProtocol::Interface::
     return _encode_result.status;
   }
   return CompleterBase::SendReply(std::move(_encode_result.message));
-}
-
-void TestProtocol::Interface::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
-        ::fidl::BytePart _buffer,
-        ::llcpp::fidl::test::json::OlderSimpleUnion xu) {
-  ReplyWithStatus(std::move(_buffer), std::move(xu));
-}
-
-zx_status_t TestProtocol::Interface::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::
-        ReplyWithStatus(::fidl::DecodedMessage<
-                        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
-                            params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(
-      params.message()->_hdr.ordinal ==
-      kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void TestProtocol::Interface::
-    FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
-        ::fidl::DecodedMessage<
-            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
-            params) {
-  ReplyWithStatus(std::move(params));
 }
 
 void TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest::

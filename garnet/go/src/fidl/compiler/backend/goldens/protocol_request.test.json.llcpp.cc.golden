@@ -433,8 +433,7 @@ bool Parent::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
-    ::zx::channel c) {
+zx_status_t Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(GetChildResponse)];
@@ -451,11 +450,7 @@ zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void Parent::Interface::GetChildCompleterBase::Reply(::zx::channel c) {
-  ReplyWithStatus(std::move(c));
-}
-
-zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
+zx_status_t Parent::Interface::GetChildCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel c) {
   if (_buffer.capacity() < GetChildResponse::PrimarySize) {
     CompleterBase::InternalError(
@@ -468,25 +463,7 @@ zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
       ::fidl::DecodedMessage<GetChildResponse>(std::move(_buffer)));
 }
 
-void Parent::Interface::GetChildCompleterBase::Reply(::fidl::BytePart _buffer,
-                                                     ::zx::channel c) {
-  ReplyWithStatus(std::move(_buffer), std::move(c));
-}
-
-zx_status_t Parent::Interface::GetChildCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<GetChildResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == kParent_GetChild_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void Parent::Interface::GetChildCompleterBase::Reply(
-    ::fidl::DecodedMessage<GetChildResponse> params) {
-  ReplyWithStatus(std::move(params));
-}
-
-zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
+zx_status_t Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::zx::channel r) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
@@ -505,11 +482,7 @@ zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void Parent::Interface::GetChildRequestCompleterBase::Reply(::zx::channel r) {
-  ReplyWithStatus(std::move(r));
-}
-
-zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
+zx_status_t Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::zx::channel r) {
   if (_buffer.capacity() < GetChildRequestResponse::PrimarySize) {
     CompleterBase::InternalError(
@@ -520,25 +493,6 @@ zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
   _buffer.set_actual(sizeof(GetChildRequestResponse));
   return CompleterBase::SendReply(
       ::fidl::DecodedMessage<GetChildRequestResponse>(std::move(_buffer)));
-}
-
-void Parent::Interface::GetChildRequestCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::zx::channel r) {
-  ReplyWithStatus(std::move(_buffer), std::move(r));
-}
-
-zx_status_t Parent::Interface::GetChildRequestCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<GetChildRequestResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
-                  kParent_GetChildRequest_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void Parent::Interface::GetChildRequestCompleterBase::Reply(
-    ::fidl::DecodedMessage<GetChildRequestResponse> params) {
-  ReplyWithStatus(std::move(params));
 }
 
 void Parent::GetChildRequest::_InitHeader(zx_txid_t _txid) {

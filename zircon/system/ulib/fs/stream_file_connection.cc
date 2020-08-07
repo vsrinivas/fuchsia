@@ -42,13 +42,16 @@ void StreamFileConnection::Read(uint64_t count, ReadCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileRead] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (!options().rights.read) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (count > fio::MAX_BUF) {
-    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    return;
   }
   uint8_t data[fio::MAX_BUF];
   size_t actual = 0;
@@ -66,13 +69,16 @@ void StreamFileConnection::ReadAt(uint64_t count, uint64_t offset,
   FS_PRETTY_TRACE_DEBUG("[FileReadAt] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (!options().rights.read) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (count > fio::MAX_BUF) {
-    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    return;
   }
   uint8_t data[fio::MAX_BUF];
   size_t actual = 0;
@@ -90,10 +96,12 @@ void StreamFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter:
   FS_PRETTY_TRACE_DEBUG("[FileWrite] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   if (!options().rights.write) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   size_t actual = 0u;
   zx_iovec_t vector = {
@@ -114,10 +122,12 @@ void StreamFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
   FS_PRETTY_TRACE_DEBUG("[FileWriteAt] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   if (!options().rights.write) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   size_t actual = 0;
   zx_iovec_t vector = {
@@ -137,7 +147,8 @@ void StreamFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0u);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0u);
+    return;
   }
 
   zx_off_t seek = 0u;

@@ -715,18 +715,19 @@ void UsbDevice::GetConfigurationDescriptorSize(
   }
 
   auto length = le16toh(descriptor->wTotalLength);
-  return completer.Reply(ZX_OK, length);
+  completer.Reply(ZX_OK, length);
 }
 
 void UsbDevice::GetConfigurationDescriptor(uint8_t config,
                                            GetConfigurationDescriptorCompleter::Sync completer) {
   auto* descriptor = GetConfigDesc(config);
   if (!descriptor) {
-    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    return;
   }
 
   size_t length = le16toh(descriptor->wTotalLength);
-  return completer.Reply(
+  completer.Reply(
       ZX_OK,
       fidl::VectorView<uint8_t>(
           fidl::unowned_ptr(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(descriptor))),
@@ -738,7 +739,7 @@ void UsbDevice::GetStringDescriptor(uint8_t desc_id, uint16_t lang_id,
   char buffer[llcpp::fuchsia::hardware::usb::device::MAX_STRING_DESC_SIZE];
   size_t actual = 0;
   auto status = UsbGetStringDescriptor(desc_id, lang_id, &lang_id, buffer, sizeof(buffer), &actual);
-  return completer.Reply(status, fidl::StringView(buffer, actual), lang_id);
+  completer.Reply(status, fidl::StringView(buffer, actual), lang_id);
 }
 
 void UsbDevice::SetInterface(uint8_t interface_number, uint8_t alt_setting,
@@ -747,9 +748,7 @@ void UsbDevice::SetInterface(uint8_t interface_number, uint8_t alt_setting,
   completer.Reply(status);
 }
 
-void UsbDevice::GetDeviceId(GetDeviceIdCompleter::Sync completer) {
-  return completer.Reply(device_id_);
-}
+void UsbDevice::GetDeviceId(GetDeviceIdCompleter::Sync completer) { completer.Reply(device_id_); }
 
 void UsbDevice::GetHubDeviceId(GetHubDeviceIdCompleter::Sync completer) {
   completer.Reply(hub_id_);

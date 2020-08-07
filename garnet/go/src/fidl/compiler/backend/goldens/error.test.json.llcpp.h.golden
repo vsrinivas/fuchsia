@@ -419,27 +419,22 @@ class Example final {
 
     class fooCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::fidl::test::json::Example_foo_Result result);
-      void ReplySuccess(int64_t y);
-      void ReplyError(uint32_t error);
-      void Reply(::fidl::BytePart _buffer,
-                 ::llcpp::fidl::test::json::Example_foo_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, int64_t y);
-      void Reply(::fidl::DecodedMessage<fooResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(
-          ::llcpp::fidl::test::json::Example_foo_Result result);
-      zx_status_t ReplySuccessWithStatus(int64_t y);
-      zx_status_t ReplyErrorWithStatus(uint32_t error);
-      zx_status_t ReplyWithStatus(
-          ::fidl::BytePart _buffer,
-          ::llcpp::fidl::test::json::Example_foo_Result result);
-      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer, int64_t y);
-      zx_status_t ReplyWithStatus(::fidl::DecodedMessage<fooResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::llcpp::fidl::test::json::Example_foo_Result result);
+      zx_status_t ReplySuccess(int64_t y);
+      zx_status_t ReplyError(uint32_t error);
+      zx_status_t Reply(::fidl::BytePart _buffer,
+                        ::llcpp::fidl::test::json::Example_foo_Result result);
+      zx_status_t ReplySuccess(::fidl::BytePart _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

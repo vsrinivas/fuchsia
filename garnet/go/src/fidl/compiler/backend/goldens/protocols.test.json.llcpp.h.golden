@@ -902,18 +902,18 @@ class Transitional final {
 
     class RequestCompleterBase : public _Base {
      public:
-      void Reply(int64_t y);
-      void Reply(::fidl::BytePart _buffer, int64_t y);
-      void Reply(::fidl::DecodedMessage<RequestResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(int64_t y);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, int64_t y);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<RequestResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(int64_t y);
+      zx_status_t Reply(::fidl::BytePart _buffer, int64_t y);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1608,18 +1608,18 @@ class ChannelProtocol final {
 
     class MethodBCompleterBase : public _Base {
      public:
-      void Reply(int64_t result);
-      void Reply(::fidl::BytePart _buffer, int64_t result);
-      void Reply(::fidl::DecodedMessage<MethodBResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(int64_t result);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, int64_t result);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<MethodBResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(int64_t result);
+      zx_status_t Reply(::fidl::BytePart _buffer, int64_t result);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -1632,18 +1632,18 @@ class ChannelProtocol final {
 
     class MutateSocketCompleterBase : public _Base {
      public:
-      void Reply(::zx::socket b);
-      void Reply(::fidl::BytePart _buffer, ::zx::socket b);
-      void Reply(::fidl::DecodedMessage<MutateSocketResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(::zx::socket b);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, ::zx::socket b);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<MutateSocketResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::zx::socket b);
+      zx_status_t Reply(::fidl::BytePart _buffer, ::zx::socket b);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -2917,13 +2917,17 @@ class WithAndWithoutRequestResponse final {
 
     class NoRequestEmptyResponseCompleterBase : public _Base {
      public:
-      void Reply();
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus();
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply();
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -2937,19 +2941,18 @@ class WithAndWithoutRequestResponse final {
 
     class NoRequestWithResponseCompleterBase : public _Base {
      public:
-      void Reply(::fidl::StringView ret);
-      void Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
-      void Reply(::fidl::DecodedMessage<NoRequestWithResponseResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(::fidl::StringView ret);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer,
-                                  ::fidl::StringView ret);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<NoRequestWithResponseResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::fidl::StringView ret);
+      zx_status_t Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -2969,13 +2972,17 @@ class WithAndWithoutRequestResponse final {
 
     class WithRequestEmptyResponseCompleterBase : public _Base {
      public:
-      void Reply();
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus();
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply();
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -2990,20 +2997,18 @@ class WithAndWithoutRequestResponse final {
 
     class WithRequestWithResponseCompleterBase : public _Base {
      public:
-      void Reply(::fidl::StringView ret);
-      void Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
-      void Reply(
-          ::fidl::DecodedMessage<WithRequestWithResponseResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(::fidl::StringView ret);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer,
-                                  ::fidl::StringView ret);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<WithRequestWithResponseResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::fidl::StringView ret);
+      zx_status_t Reply(::fidl::BytePart _buffer, ::fidl::StringView ret);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3691,32 +3696,25 @@ class WithErrorSyntax final {
 
     class ResponseAsStructCompleterBase : public _Base {
      public:
-      void Reply(
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(
           ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
-      void ReplySuccess(int64_t a, int64_t b, int64_t c);
-      void ReplyError(uint32_t error);
-      void Reply(
+      zx_status_t ReplySuccess(int64_t a, int64_t b, int64_t c);
+      zx_status_t ReplyError(uint32_t error);
+      zx_status_t Reply(
           ::fidl::BytePart _buffer,
           ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, int64_t a, int64_t b,
-                        int64_t c);
-      void Reply(::fidl::DecodedMessage<ResponseAsStructResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
-      zx_status_t ReplySuccessWithStatus(int64_t a, int64_t b, int64_t c);
-      zx_status_t ReplyErrorWithStatus(uint32_t error);
-      zx_status_t ReplyWithStatus(
-          ::fidl::BytePart _buffer,
-          ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result);
-      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer, int64_t a,
-                                         int64_t b, int64_t c);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<ResponseAsStructResponse> params);
+      zx_status_t ReplySuccess(::fidl::BytePart _buffer, int64_t a, int64_t b,
+                               int64_t c);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3730,30 +3728,24 @@ class WithErrorSyntax final {
 
     class ErrorAsPrimitiveCompleterBase : public _Base {
      public:
-      void Reply(
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(
           ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
-      void ReplySuccess();
-      void ReplyError(uint32_t error);
-      void Reply(
+      zx_status_t ReplySuccess();
+      zx_status_t ReplyError(uint32_t error);
+      zx_status_t Reply(
           ::fidl::BytePart _buffer,
           ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer);
-      void Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
-      zx_status_t ReplySuccessWithStatus();
-      zx_status_t ReplyErrorWithStatus(uint32_t error);
-      zx_status_t ReplyWithStatus(
-          ::fidl::BytePart _buffer,
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result);
-      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
+      zx_status_t ReplySuccess(::fidl::BytePart _buffer);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -3767,30 +3759,24 @@ class WithErrorSyntax final {
 
     class ErrorAsEnumCompleterBase : public _Base {
      public:
-      void Reply(
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(
           ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
-      void ReplySuccess();
-      void ReplyError(ErrorEnun error);
-      void Reply(
+      zx_status_t ReplySuccess();
+      zx_status_t ReplyError(ErrorEnun error);
+      zx_status_t Reply(
           ::fidl::BytePart _buffer,
           ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer);
-      void Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
-      zx_status_t ReplySuccessWithStatus();
-      zx_status_t ReplyErrorWithStatus(ErrorEnun error);
-      zx_status_t ReplyWithStatus(
-          ::fidl::BytePart _buffer,
-          ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result);
-      zx_status_t ReplySuccessWithStatus(::fidl::BytePart _buffer);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<ErrorAsEnumResponse> params);
+      zx_status_t ReplySuccess(::fidl::BytePart _buffer);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

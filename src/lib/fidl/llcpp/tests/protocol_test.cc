@@ -39,17 +39,17 @@ class ErrorServer : public test::ErrorMethods::Interface {
   void NoArgsPrimitiveError(bool should_error,
                             NoArgsPrimitiveErrorCompleter::Sync completer) override {
     if (should_error) {
-      return completer.ReplyError(kErrorStatus);
+      completer.ReplyError(kErrorStatus);
     } else {
-      return completer.ReplySuccess();
+      completer.ReplySuccess();
     }
   }
   void ManyArgsCustomError(bool should_error,
                            ManyArgsCustomErrorCompleter::Sync completer) override {
     if (should_error) {
-      return completer.ReplyError(test::MyError::REALLY_BAD_ERROR);
+      completer.ReplyError(test::MyError::REALLY_BAD_ERROR);
     } else {
-      return completer.ReplySuccess(1, 2, 3);
+      completer.ReplySuccess(1, 2, 3);
     }
   }
 };

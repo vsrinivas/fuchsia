@@ -9,12 +9,8 @@ const ReplyCFlavor = `
 Reply({{ template "Params" .Response }})
 {{- end }}
 
-{{- define "ReplyWithStatusCFlavorMethodSignature" -}}
-ReplyWithStatus({{ template "Params" .Response }})
-{{- end }}
-
 {{- define "ReplyCFlavorMethodDefinition" }}
-zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyWithStatusCFlavorMethodSignature" . }} {
+zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorMethodSignature" . }} {
   {{- if .LLProps.LinearizeResponse }}
   {{/* tracking_ptr destructors will be called when _response goes out of scope */}}
   {{ .Name }}Response _response{
@@ -40,37 +36,20 @@ zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{
   }
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
-
-void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorMethodSignature" . }} {
-  ReplyWithStatus({{ template "SyncClientMoveParams" .Response }});
-}
 {{- end }}
 
 {{- define "ReplyCFlavorResultSuccessMethodSignature" -}}
 ReplySuccess({{ template "Params" .Result.ValueMembers }})
 {{- end }}
 
-{{- define "ReplyWithStatusCFlavorResultSuccessMethodSignature" -}}
-ReplySuccessWithStatus({{ template "Params" .Result.ValueMembers }})
-{{- end }}
-
 {{- define "ReplyCFlavorResultSuccessMethodDefinition" }}
-zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyWithStatusCFlavorResultSuccessMethodSignature" . }} {
+zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultSuccessMethodSignature" . }} {
   ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
   {{- range .Result.ValueMembers }}
   response.value.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  return ReplyWithStatus({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
-}
-
-void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultSuccessMethodSignature" . }} {
-  ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
-  {{- range .Result.ValueMembers }}
-  response.value.{{ .Name }} = std::move({{ .Name }});
-  {{- end }}
-
-  ReplyWithStatus({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
+  return Reply({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));
 }
 {{- end }}
 
@@ -78,17 +57,9 @@ void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ templa
 ReplyError({{ .Result.ErrorDecl }} error)
 {{- end }}
 
-{{- define "ReplyWithStatusCFlavorResultErrorMethodSignature" -}}
-ReplyErrorWithStatus({{ .Result.ErrorDecl }} error)
-{{- end }}
-
 {{- define "ReplyCFlavorResultErrorMethodDefinition" }}
-zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyWithStatusCFlavorResultErrorMethodSignature" . }} {
-  return ReplyWithStatus({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
-}
-
-void {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
-  ReplyWithStatus({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
+zx_status_t {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
+  return Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
 }
 {{- end }}
 `

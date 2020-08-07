@@ -191,12 +191,13 @@ class FakeBootArgs : public ::llcpp::fuchsia::boot::Arguments::Interface {
                GetBoolCompleter::Sync completer) override {
     if (strncmp(name.data(), "astro.sysconfig.abr-wear-leveling",
                 sizeof("astro.sysconfig.abr-wear-leveling")) == 0) {
-      return completer.Reply(astro_sysconfig_abr_wear_leveling_);
+      completer.Reply(astro_sysconfig_abr_wear_leveling_);
     } else if (strncmp(name.data(), "astro.sysconfig.buffered-client",
                        sizeof("astro.sysconfig.buffered-client")) == 0) {
-      return completer.Reply(astro_sysconfig_buffered_client_);
+      completer.Reply(astro_sysconfig_buffered_client_);
+    } else {
+      completer.Reply(defaultval);
     }
-    return completer.Reply(defaultval);
   }
   void GetBools(::fidl::VectorView<::llcpp::fuchsia::boot::BoolPair> name,
                 GetBoolsCompleter::Sync completer) override {}

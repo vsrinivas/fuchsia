@@ -56,7 +56,8 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
 
     async_dispatcher_t* loop;
     if ((status = driver_->GetOrStartLoop(&loop)) != ZX_OK) {
-      return completer.Reply(status);
+      completer.Reply(status);
+      return;
     }
 
     // Convert to HLCPP by transiting through fidl bytes.
@@ -65,11 +66,13 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
       fidl::Buffer<wlantap::WlantapPhyConfig> buffer;
       auto encode_result = fidl::LinearizeAndEncode(&config, buffer.view());
       if ((status = encode_result.status) != ZX_OK) {
-        return completer.Reply(status);
+        completer.Reply(status);
+        return;
       }
       auto decode_result = fidl::Decode(std::move(encode_result.message));
       if ((status = decode_result.status) != ZX_OK) {
-        return completer.Reply(status);
+        completer.Reply(status);
+        return;
       }
       fidl::Decoder dec(fidl::Message(decode_result.message.Release(), fidl::HandlePart()));
       ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);
@@ -77,9 +80,10 @@ struct WlantapCtl : wlantap::WlantapCtl::Interface {
 
     if ((status = wlan::CreatePhy(device_, std::move(proxy), std::move(phy_config), loop)) !=
         ZX_OK) {
-      return completer.Reply(status);
+      completer.Reply(status);
+    } else {
+      completer.Reply(ZX_OK);
     }
-    return completer.Reply(ZX_OK);
   };
 
   static zx_status_t DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {

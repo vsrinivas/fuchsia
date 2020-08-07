@@ -401,8 +401,7 @@ zx_status_t EmptyProtocol::SendReceiveEvent(
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(params));
 }
 
-zx_status_t
-EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
+zx_status_t EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::llcpp::fidl::test::json::Empty e) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
@@ -421,13 +420,7 @@ EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
-    ::llcpp::fidl::test::json::Empty e) {
-  ReplyWithStatus(std::move(e));
-}
-
-zx_status_t
-EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
+zx_status_t EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Empty e) {
   if (_buffer.capacity() < SendAndReceiveResponse::PrimarySize) {
     CompleterBase::InternalError(
@@ -438,26 +431,6 @@ EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
   _buffer.set_actual(sizeof(SendAndReceiveResponse));
   return CompleterBase::SendReply(
       ::fidl::DecodedMessage<SendAndReceiveResponse>(std::move(_buffer)));
-}
-
-void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
-    ::fidl::BytePart _buffer, ::llcpp::fidl::test::json::Empty e) {
-  ReplyWithStatus(std::move(_buffer), std::move(e));
-}
-
-zx_status_t
-EmptyProtocol::Interface::SendAndReceiveCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<SendAndReceiveResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal ==
-                  kEmptyProtocol_SendAndReceive_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
-    ::fidl::DecodedMessage<SendAndReceiveResponse> params) {
-  ReplyWithStatus(std::move(params));
 }
 
 void EmptyProtocol::SendRequest::_InitHeader(zx_txid_t _txid) {

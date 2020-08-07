@@ -778,21 +778,19 @@ class Protocol final {
 
     class RequestStrictResponseFlexibleCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::fidl::test::json::FlexibleFoo f);
-      void Reply(::fidl::BytePart _buffer,
-                 ::llcpp::fidl::test::json::FlexibleFoo f);
-      void Reply(
-          ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(::llcpp::fidl::test::json::FlexibleFoo f);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer,
-                                  ::llcpp::fidl::test::json::FlexibleFoo f);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<RequestStrictResponseFlexibleResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::llcpp::fidl::test::json::FlexibleFoo f);
+      zx_status_t Reply(::fidl::BytePart _buffer,
+                        ::llcpp::fidl::test::json::FlexibleFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -807,21 +805,19 @@ class Protocol final {
 
     class RequestFlexibleResponseStrictCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::fidl::test::json::StrictFoo f);
-      void Reply(::fidl::BytePart _buffer,
-                 ::llcpp::fidl::test::json::StrictFoo f);
-      void Reply(
-          ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(::llcpp::fidl::test::json::StrictFoo f);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer,
-                                  ::llcpp::fidl::test::json::StrictFoo f);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<RequestFlexibleResponseStrictResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::llcpp::fidl::test::json::StrictFoo f);
+      zx_status_t Reply(::fidl::BytePart _buffer,
+                        ::llcpp::fidl::test::json::StrictFoo f);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

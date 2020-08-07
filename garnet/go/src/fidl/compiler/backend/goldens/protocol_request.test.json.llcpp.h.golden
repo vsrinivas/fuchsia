@@ -755,18 +755,18 @@ class Parent final {
 
     class GetChildCompleterBase : public _Base {
      public:
-      void Reply(::zx::channel c);
-      void Reply(::fidl::BytePart _buffer, ::zx::channel c);
-      void Reply(::fidl::DecodedMessage<GetChildResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(::zx::channel c);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, ::zx::channel c);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<GetChildResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::zx::channel c);
+      zx_status_t Reply(::fidl::BytePart _buffer, ::zx::channel c);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -778,18 +778,18 @@ class Parent final {
 
     class GetChildRequestCompleterBase : public _Base {
      public:
-      void Reply(::zx::channel r);
-      void Reply(::fidl::BytePart _buffer, ::zx::channel r);
-      void Reply(::fidl::DecodedMessage<GetChildRequestResponse> params);
-
-      // The following APIs are identical to the above APIs except that they
-      // propagate up any internal error status on failure. On failure,
-      // unbinding is still triggered with the cause of the failure propagated
-      // to the unbinding hook if possible.
-      zx_status_t ReplyWithStatus(::zx::channel r);
-      zx_status_t ReplyWithStatus(::fidl::BytePart _buffer, ::zx::channel r);
-      zx_status_t ReplyWithStatus(
-          ::fidl::DecodedMessage<GetChildRequestResponse> params);
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      zx_status_t Reply(::zx::channel r);
+      zx_status_t Reply(::fidl::BytePart _buffer, ::zx::channel r);
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;

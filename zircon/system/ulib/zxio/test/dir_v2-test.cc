@@ -168,7 +168,8 @@ TEST_F(DirV2, Enumerate) {
               builder.set_id(fidl::unowned_ptr(&id));
               break;
             default:
-              return completer.ReplySuccess(fidl::VectorView<fio2::DirectoryEntry>());
+              completer.ReplySuccess(fidl::VectorView<fio2::DirectoryEntry>());
+              return;
           }
           count_++;
           fio2::DirectoryEntry entry[1] = {builder.build()};

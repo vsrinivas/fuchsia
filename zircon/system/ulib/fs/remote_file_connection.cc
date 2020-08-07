@@ -41,13 +41,16 @@ void RemoteFileConnection::Read(uint64_t count, ReadCompleter::Sync completer) {
   FS_PRETTY_TRACE_DEBUG("[FileRead] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (!options().rights.read) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (count > fio::MAX_BUF) {
-    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    return;
   }
   uint8_t data[fio::MAX_BUF];
   size_t actual = 0;
@@ -64,13 +67,16 @@ void RemoteFileConnection::ReadAt(uint64_t count, uint64_t offset,
   FS_PRETTY_TRACE_DEBUG("[FileReadAt] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (!options().rights.read) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
+    return;
   }
   if (count > fio::MAX_BUF) {
-    return completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
+    return;
   }
   uint8_t data[fio::MAX_BUF];
   size_t actual = 0;
@@ -85,10 +91,12 @@ void RemoteFileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter:
   FS_PRETTY_TRACE_DEBUG("[FileWrite] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   if (!options().rights.write) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   size_t actual = 0u;
   zx_status_t status;
@@ -113,10 +121,12 @@ void RemoteFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
   FS_PRETTY_TRACE_DEBUG("[FileWriteAt] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   if (!options().rights.write) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
+    return;
   }
   size_t actual = 0;
   zx_status_t status = vnode()->Write(data.data(), data.count(), offset, &actual);
@@ -129,7 +139,8 @@ void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {
-    return completer.Reply(ZX_ERR_BAD_HANDLE, offset_);
+    completer.Reply(ZX_ERR_BAD_HANDLE, offset_);
+    return;
   }
   fs::VnodeAttributes attr;
   zx_status_t r;
@@ -140,7 +151,8 @@ void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin
   switch (start) {
     case fio::SeekOrigin::START:
       if (offset < 0) {
-        return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+        completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+        return;
       }
       n = offset;
       break;
@@ -150,13 +162,15 @@ void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin
         // if negative seek
         if (n > offset_) {
           // wrapped around. attempt to seek before start
-          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          return;
         }
       } else {
         // positive seek
         if (n < offset_) {
           // wrapped around. overflow
-          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          return;
         }
       }
       break;
@@ -166,18 +180,21 @@ void RemoteFileConnection::Seek(int64_t offset, ::llcpp::fuchsia::io::SeekOrigin
         // if negative seek
         if (n > attr.content_size) {
           // wrapped around. attempt to seek before start
-          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          return;
         }
       } else {
         // positive seek
         if (n < attr.content_size) {
           // wrapped around
-          return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+          return;
         }
       }
       break;
     default:
-      return completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+      completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
+      return;
   }
   offset_ = n;
   completer.Reply(ZX_OK, offset_);

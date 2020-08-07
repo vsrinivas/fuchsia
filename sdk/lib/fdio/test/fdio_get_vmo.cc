@@ -92,16 +92,19 @@ class TestServer final : public fuchsia_io::File::Interface {
 
   void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) override {
     if (!context->supports_read_at) {
-      return completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::VectorView<uint8_t>());
+      completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::VectorView<uint8_t>());
+      return;
     }
     if (offset >= context->content_size) {
-      return completer.Reply(ZX_OK, fidl::VectorView<uint8_t>());
+      completer.Reply(ZX_OK, fidl::VectorView<uint8_t>());
+      return;
     }
     size_t actual = std::min(count, context->content_size - offset);
     uint8_t buffer[ZX_PAGE_SIZE];
     zx_status_t status = context->vmo.read(buffer, offset, actual);
     if (status != ZX_OK) {
-      return completer.Reply(status, fidl::VectorView<uint8_t>());
+      completer.Reply(status, fidl::VectorView<uint8_t>());
+      return;
     }
     completer.Reply(ZX_OK, fidl::VectorView(fidl::unowned_ptr(buffer), actual));
   }
@@ -128,7 +131,8 @@ class TestServer final : public fuchsia_io::File::Interface {
     context->last_flags = flags;
 
     if (!context->supports_get_buffer) {
-      return completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+      completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+      return;
     }
 
     llcpp::fuchsia::mem::Buffer buffer = {};
@@ -153,7 +157,8 @@ class TestServer final : public fuchsia_io::File::Interface {
       }
       status = context->vmo.create_child(options, 0, ZX_PAGE_SIZE, &result);
       if (status != ZX_OK) {
-        return completer.Reply(status, nullptr);
+        completer.Reply(status, nullptr);
+        return;
       }
 
       status = result.replace(rights, &result);
@@ -161,11 +166,12 @@ class TestServer final : public fuchsia_io::File::Interface {
       status = context->vmo.duplicate(rights, &result);
     }
     if (status != ZX_OK) {
-      return completer.Reply(status, nullptr);
+      completer.Reply(status, nullptr);
+      return;
     }
 
     buffer.vmo = std::move(result);
-    return completer.Reply(ZX_OK, fidl::unowned_ptr(&buffer));
+    completer.Reply(ZX_OK, fidl::unowned_ptr(&buffer));
   }
 
  private:

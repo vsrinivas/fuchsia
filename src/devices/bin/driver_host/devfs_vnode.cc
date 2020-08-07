@@ -176,7 +176,8 @@ void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync completer) {
 
 void DevfsVnode::GetDriverName(GetDriverNameCompleter::Sync completer) {
   if (!dev_->driver) {
-    return completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+    return;
   }
   const char* name = dev_->driver->name();
   if (name == nullptr) {
@@ -194,7 +195,8 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync completer)
   size_t actual;
   zx_status_t status = dev_->driver_host_context()->GetTopoPath(dev_, buf, sizeof(buf), &actual);
   if (status != ZX_OK) {
-    return completer.ReplyError(status);
+    completer.ReplyError(status);
+    return;
   }
   if (actual > 0) {
     // Remove the accounting for the null byte
@@ -219,7 +221,8 @@ void DevfsVnode::GetEventHandle(GetEventHandleCompleter::Sync completer) {
 
 void DevfsVnode::GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync completer) {
   if (!dev_->driver) {
-    return completer.Reply(ZX_ERR_UNAVAILABLE, 0);
+    completer.Reply(ZX_ERR_UNAVAILABLE, 0);
+    return;
   }
   uint32_t flags = dev_->driver->driver_rec()->log_flags;
   completer.Reply(ZX_OK, flags);
@@ -228,7 +231,8 @@ void DevfsVnode::GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync completer) {
 void DevfsVnode::SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
                                    SetDriverLogFlagsCompleter::Sync completer) {
   if (!dev_->driver) {
-    return completer.Reply(ZX_ERR_UNAVAILABLE);
+    completer.Reply(ZX_ERR_UNAVAILABLE);
+    return;
   }
   uint32_t flags = dev_->driver->driver_rec()->log_flags;
   flags &= ~clear_flags;
@@ -268,7 +272,7 @@ void DevfsVnode::SetPerformanceState(uint32_t requested_state,
   uint32_t out_state;
   zx_status_t status =
       dev_->driver_host_context()->DeviceSetPerformanceState(dev_, requested_state, &out_state);
-  return completer.Reply(status, out_state);
+  completer.Reply(status, out_state);
 }
 
 void DevfsVnode::ConfigureAutoSuspend(bool enable,
@@ -276,7 +280,7 @@ void DevfsVnode::ConfigureAutoSuspend(bool enable,
                                       ConfigureAutoSuspendCompleter::Sync completer) {
   zx_status_t status =
       dev_->driver_host_context()->DeviceConfigureAutoSuspend(dev_, enable, requested_state);
-  return completer.Reply(status);
+  completer.Reply(status);
 }
 
 void DevfsVnode::UpdatePowerStateMapping(
@@ -293,7 +297,8 @@ void DevfsVnode::UpdatePowerStateMapping(
   }
   zx_status_t status = dev_->SetSystemPowerStateMapping(states_mapping);
   if (status != ZX_OK) {
-    return completer.ReplyError(status);
+    completer.ReplyError(status);
+    return;
   }
 
   fidl::aligned<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response> response;

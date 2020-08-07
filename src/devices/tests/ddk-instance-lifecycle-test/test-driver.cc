@@ -48,10 +48,10 @@ void TestLifecycleDriver::CreateDevice(zx::channel lifecycle_client, zx::channel
   zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), std::move(lifecycle_client),
                                                         std::move(instance_client));
   if (status != ZX_OK) {
-    return completer.ReplyError(status);
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess();
   }
-
-  completer.ReplySuccess();
 }
 
 zx_status_t TestLifecycleBind(void* ctx, zx_device_t* device) {

@@ -156,7 +156,7 @@ bool Top::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   return found;
 }
 
-zx_status_t Top::Interface::GetFooCompleterBase::ReplyWithStatus(
+zx_status_t Top::Interface::GetFooCompleterBase::Reply(
     ::llcpp::bottom::Foo foo) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
@@ -174,11 +174,7 @@ zx_status_t Top::Interface::GetFooCompleterBase::ReplyWithStatus(
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void Top::Interface::GetFooCompleterBase::Reply(::llcpp::bottom::Foo foo) {
-  ReplyWithStatus(std::move(foo));
-}
-
-zx_status_t Top::Interface::GetFooCompleterBase::ReplyWithStatus(
+zx_status_t Top::Interface::GetFooCompleterBase::Reply(
     ::fidl::BytePart _buffer, ::llcpp::bottom::Foo foo) {
   if (_buffer.capacity() < GetFooResponse::PrimarySize) {
     CompleterBase::InternalError(
@@ -189,24 +185,6 @@ zx_status_t Top::Interface::GetFooCompleterBase::ReplyWithStatus(
   _buffer.set_actual(sizeof(GetFooResponse));
   return CompleterBase::SendReply(
       ::fidl::DecodedMessage<GetFooResponse>(std::move(_buffer)));
-}
-
-void Top::Interface::GetFooCompleterBase::Reply(::fidl::BytePart _buffer,
-                                                ::llcpp::bottom::Foo foo) {
-  ReplyWithStatus(std::move(_buffer), std::move(foo));
-}
-
-zx_status_t Top::Interface::GetFooCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<GetFooResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == kTop_GetFoo_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void Top::Interface::GetFooCompleterBase::Reply(
-    ::fidl::DecodedMessage<GetFooResponse> params) {
-  ReplyWithStatus(std::move(params));
 }
 
 void Top::GetFooRequest::_InitHeader(zx_txid_t _txid) {

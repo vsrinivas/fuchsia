@@ -582,12 +582,14 @@ void SkipBlockDevice::WriteBytesWithoutErase(WriteBytesOperation op,
 
   if (auto status = ValidateOperationLocked(op); status != ZX_OK) {
     zxlogf(INFO, "skipblock: Operation param is invalid.\n");
-    return completer.Reply(status);
+    completer.Reply(status);
+    return;
   }
 
   if (op.vmo_offset % nand_info_.page_size) {
     zxlogf(INFO, "skipblock: vmo_offset has to be page aligned for writing without erase");
-    return completer.Reply(ZX_ERR_INVALID_ARGS);
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   const size_t page_offset = op.offset / nand_info_.page_size;
@@ -606,7 +608,8 @@ void SkipBlockDevice::WriteBytesWithoutErase(WriteBytesOperation op,
   if (auto res = WriteBytesWithoutEraseLocked(page_offset, page_count, std::move(rw_op));
       res != ZX_OK) {
     zxlogf(INFO, "skipblock: Write without erase failed. %s\n", zx_status_get_string(res));
-    return completer.Reply(res);
+    completer.Reply(res);
+    return;
   }
 
   completer.Reply(ZX_OK);

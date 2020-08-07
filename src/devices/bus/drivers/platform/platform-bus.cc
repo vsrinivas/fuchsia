@@ -168,8 +168,9 @@ void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync completer) {
   fbl::AutoLock lock(&board_info_lock_);
   // Reply immediately if board_name is valid.
   if (board_info_.board_name[0]) {
-    return completer.Reply(
-        ZX_OK, fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
+    completer.Reply(ZX_OK,
+                    fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
+    return;
   }
   // Cache the requests until board_name becomes valid.
   board_name_completer_.push_back(completer.ToAsync());
@@ -177,15 +178,16 @@ void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync completer) {
 
 void PlatformBus::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
   fbl::AutoLock lock(&board_info_lock_);
-  return completer.Reply(ZX_OK, board_info_.board_revision);
+  completer.Reply(ZX_OK, board_info_.board_revision);
 }
 
 void PlatformBus::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync completer) {
   fbl::AutoLock lock(&bootloader_info_lock_);
   // Reply immediately if vendor is valid.
   if (bootloader_info_.vendor[0]) {
-    return completer.Reply(
-        ZX_OK, fidl::StringView(bootloader_info_.vendor, strlen(bootloader_info_.vendor)));
+    completer.Reply(ZX_OK,
+                    fidl::StringView(bootloader_info_.vendor, strlen(bootloader_info_.vendor)));
+    return;
   }
   // Cache the requests until vendor becomes valid.
   bootloader_vendor_completer_.push_back(completer.ToAsync());
@@ -195,7 +197,7 @@ void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter
   ::llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {
       .type = interrupt_controller_type_,
   };
-  return completer.Reply(ZX_OK, fidl::unowned_ptr(&info));
+  completer.Reply(ZX_OK, fidl::unowned_ptr(&info));
 }
 
 zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {

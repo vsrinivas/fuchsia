@@ -352,7 +352,7 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.ReplyWithStatus(request));
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.Reply(request));
     }
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     sync_completion_t* worker_start_;
@@ -794,7 +794,7 @@ TEST(BindServerTestCase, UnbindInfoChannelError) {
   struct WorkingServer : Simple::Interface {
     WorkingServer() = default;
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
-      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.ReplyWithStatus(request));
+      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request));
     }
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
   };
@@ -863,8 +863,7 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
   struct WorkingServer : Simple::Interface {
     explicit WorkingServer(std::optional<EchoCompleter::Async>* async_completer,
                            sync_completion_t* ready)
-        : async_completer_(async_completer),
-          ready_(ready) {}
+        : async_completer_(async_completer), ready_(ready) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       sync_completion_signal(ready_);
       *async_completer_ = completer.ToAsync();  // Releases ownership of the binding.
@@ -883,14 +882,14 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
   sync_completion_t ready, unbound;
   std::optional<Server::EchoCompleter::Async> async_completer;
   auto server = std::make_unique<WorkingServer>(&async_completer, &ready);
-  fidl::OnUnboundFn<WorkingServer> on_unbound =
-      [&unbound](WorkingServer*, fidl::UnbindInfo info, zx::channel) {
-        EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-        EXPECT_EQ(ZX_OK, info.status);
-        sync_completion_signal(&unbound);
-      };
-  auto binding_ref = fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(),
-                                      std::move(on_unbound));
+  fidl::OnUnboundFn<WorkingServer> on_unbound = [&unbound](WorkingServer*, fidl::UnbindInfo info,
+                                                           zx::channel) {
+    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
+    EXPECT_EQ(ZX_OK, info.status);
+    sync_completion_signal(&unbound);
+  };
+  auto binding_ref =
+      fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
   ASSERT_TRUE(binding_ref.is_ok());
 
   // Start another thread to make the outgoing call.

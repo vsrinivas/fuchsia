@@ -171,7 +171,7 @@ bool super::Dispatch(Interface* impl, fidl_msg_t* msg,
   return found;
 }
 
-zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(int64_t y) {
+zx_status_t super::Interface::fooCompleterBase::Reply(int64_t y) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
@@ -188,12 +188,8 @@ zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(int64_t y) {
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void super::Interface::fooCompleterBase::Reply(int64_t y) {
-  ReplyWithStatus(std::move(y));
-}
-
-zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(
-    ::fidl::BytePart _buffer, int64_t y) {
+zx_status_t super::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
+                                                      int64_t y) {
   if (_buffer.capacity() < fooResponse::PrimarySize) {
     CompleterBase::InternalError(
         {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
@@ -203,24 +199,6 @@ zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(
   _buffer.set_actual(sizeof(fooResponse));
   return CompleterBase::SendReply(
       ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
-}
-
-void super::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
-                                               int64_t y) {
-  ReplyWithStatus(std::move(_buffer), std::move(y));
-}
-
-zx_status_t super::Interface::fooCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<fooResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == ksuper_foo_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void super::Interface::fooCompleterBase::Reply(
-    ::fidl::DecodedMessage<fooResponse> params) {
-  ReplyWithStatus(std::move(params));
 }
 
 void super::fooRequest::_InitHeader(zx_txid_t _txid) {
@@ -391,7 +369,7 @@ bool sub::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   return found;
 }
 
-zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(int64_t y) {
+zx_status_t sub::Interface::fooCompleterBase::Reply(int64_t y) {
   // Destructors can't be called because it will lead to handle double close
   // (here and in fidl::Encode).
   FIDL_ALIGNDECL uint8_t _response_buffer[sizeof(fooResponse)];
@@ -408,12 +386,8 @@ zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(int64_t y) {
   return CompleterBase::SendReply(std::move(_encode_result.message));
 }
 
-void sub::Interface::fooCompleterBase::Reply(int64_t y) {
-  ReplyWithStatus(std::move(y));
-}
-
-zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(
-    ::fidl::BytePart _buffer, int64_t y) {
+zx_status_t sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
+                                                    int64_t y) {
   if (_buffer.capacity() < fooResponse::PrimarySize) {
     CompleterBase::InternalError(
         {::fidl::UnbindInfo::kEncodeError, ZX_ERR_BUFFER_TOO_SMALL});
@@ -423,24 +397,6 @@ zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(
   _buffer.set_actual(sizeof(fooResponse));
   return CompleterBase::SendReply(
       ::fidl::DecodedMessage<fooResponse>(std::move(_buffer)));
-}
-
-void sub::Interface::fooCompleterBase::Reply(::fidl::BytePart _buffer,
-                                             int64_t y) {
-  ReplyWithStatus(std::move(_buffer), std::move(y));
-}
-
-zx_status_t sub::Interface::fooCompleterBase::ReplyWithStatus(
-    ::fidl::DecodedMessage<fooResponse> params) {
-  ZX_DEBUG_ASSERT(params.message()->_hdr.magic_number ==
-                  kFidlWireFormatMagicNumberInitial);
-  ZX_DEBUG_ASSERT(params.message()->_hdr.ordinal == ksub_foo_Ordinal);
-  return CompleterBase::SendReply(std::move(params));
-}
-
-void sub::Interface::fooCompleterBase::Reply(
-    ::fidl::DecodedMessage<fooResponse> params) {
-  ReplyWithStatus(std::move(params));
 }
 
 void sub::fooRequest::_InitHeader(zx_txid_t _txid) {
