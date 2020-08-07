@@ -15,7 +15,6 @@ common_test_contents = [
   "//src/devices/board/drivers/mt8167s_ref:mt8167s_ref-test",
   "//src/devices/bus/lib/device-protocol-pdev/test:device-protocol-pdev-test",
   "//src/devices/nand/drivers/ram-nand:ram-nand-test",
-  "//src/devices/power/drivers/power:power-test",
   "//src/devices/sysmem/tests/sysmem",
   "//src/devices/tests/devfs",
   "//src/devices/tests/devhost-test",

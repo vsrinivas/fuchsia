@@ -9,6 +9,7 @@ group("tests") {
     "as370-power:tests",
     "msm8x53-power:tests",
     "mtk-power:tests",
+    "power:tests",
     "vs680-power:tests",
     "aml-meson-power:tests",
   ]
