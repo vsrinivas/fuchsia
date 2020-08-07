@@ -284,6 +284,11 @@ def main():
                 break
 
         pub_packages = parse_packages_file(os.path.join(importer_dir, '.packages'))
+        package_config = {
+          'configVersion': 2,
+          'packages': [],
+          'generator': os.path.basename(__file__)
+        }
         for package in pub_packages:
             if package[0] in packages:
                 # Skip canonical packages.
@@ -339,7 +344,19 @@ def main():
                 shutil.rmtree(test_path)
             write_build_file(os.path.join(dest_dir, 'BUILD.gn'), package_name,
                              name_with_version, min_sdk_version, deps, dart_sources)
-
+            # All pub packages are required to have a lib/ dir, so it's safe to
+            # hard-code this value.
+            package_config['packages'].append({
+              'name': package_name,
+              'rootUri': './%s/' % package_name,
+              'packageUri': 'lib/',
+              'languageVersion': min_sdk_version
+            })
+        # args.output == '//third_party/dart-pkg/pub/', so we'll try to
+        # serialize package_config to JSON by using json.dumps and write to
+        # //third_party/dart-pkg/pub/package_config.json.
+        with open(os.path.join(args.output, 'package_config.json'), 'w') as package_config_json:
+          package_config_json.write(json.dumps(package_config, sort_keys=True, indent=2))
         if args.changelog:
             new_packages = read_package_versions(args.output)
             generate_package_diff(old_packages, new_packages, args.changelog)
