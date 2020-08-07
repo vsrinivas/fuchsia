@@ -5,9 +5,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -15,6 +17,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
 )
 
@@ -288,32 +291,41 @@ func TestRunTest(t *testing.T) {
 				{
 					Name:   "fuchsia-pkg://foo/bar",
 					Result: runtests.TestFailure,
+					Stdio:  []byte("stdio"),
 				},
 				{
 					Name:     "fuchsia-pkg://foo/bar",
 					Result:   runtests.TestFailure,
 					RunIndex: 1,
+					Stdio:    []byte("stdio"),
 				},
 				{
 					Name:     "fuchsia-pkg://foo/bar",
 					Result:   runtests.TestFailure,
 					RunIndex: 2,
+					Stdio:    []byte("stdio"),
 				},
 				{
 					Name:     "fuchsia-pkg://foo/bar",
 					Result:   runtests.TestFailure,
 					RunIndex: 3,
+					Stdio:    []byte("stdio"),
 				},
 				{
 					Name:     "fuchsia-pkg://foo/bar",
 					Result:   runtests.TestFailure,
 					RunIndex: 4,
+					Stdio:    []byte("stdio"),
 				},
 				{
 					Name:     "fuchsia-pkg://foo/bar",
 					Result:   runtests.TestFailure,
 					RunIndex: 5,
+					Stdio:    []byte("stdio"),
 				},
+			},
+			runTestFunc: func(t testsharder.Test, stdout, stderr io.Writer) {
+				stdout.Write([]byte("stdio"))
 			},
 		},
 		{
@@ -337,10 +349,17 @@ func TestRunTest(t *testing.T) {
 				testErr: c.testErr,
 				runTest: c.runTestFunc,
 			}
+			var buf bytes.Buffer
+			producer := tap.NewProducer(&buf)
+			o, err := createTestOutputs(producer, "")
+			if err != nil {
+				t.Fatalf("failed to create a test outputs object: %v", err)
+			}
+			defer o.Close()
 			if c.runs == 0 {
 				c.runs = 1
 			}
-			results, err := runTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester)
+			results, err := runAndOutputTest(context.Background(), testsharder.Test{Test: c.test, Runs: c.runs, RunAlgorithm: c.runAlgorithm}, tester, o, &buf, &buf)
 
 			if err != c.expectedErr {
 				t.Errorf("got error: %v, expected: %v", err, c.expectedErr)
@@ -363,6 +382,21 @@ func TestRunTest(t *testing.T) {
 					t.Errorf("ran test %d times, expected: %d", testCount, expectedTries)
 				}
 			}
+			expectedOutput := ""
+			for i, result := range c.expectedResult {
+				statusString := "ok"
+				if result.Result != runtests.TestSuccess {
+					statusString = "not ok"
+				}
+				expectedOutput += fmt.Sprintf("%s%s %d %s (.*)\n", result.Stdio, statusString, i+1, result.Name)
+			}
+			actualOutput := buf.String()
+			expectedOutputRegex := regexp.MustCompile(strings.ReplaceAll(strings.ReplaceAll(expectedOutput, "(", "\\("), ")", "\\)"))
+			submatches := expectedOutputRegex.FindStringSubmatch(actualOutput)
+			if len(submatches) != 1 {
+				t.Errorf("unexpected output:\nexpected: %v\nactual: %v\n", expectedOutput, actualOutput)
+			}
+
 		})
 	}
 }

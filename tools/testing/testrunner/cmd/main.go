@@ -237,17 +237,12 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			return fmt.Errorf("test %#v has unsupported OS: %q", test, test.OS)
 		}
 
-		results, err := runTest(ctx, test, t)
+		results, err := runAndOutputTest(ctx, test, t, outputs, os.Stdout, os.Stderr)
 		if err != nil {
 			return err
 		}
-		if len(results) > 0 {
-			for i, result := range results {
-				if err := outputs.record(*result); err != nil {
-					return err
-				}
-				sinks = append(sinks, results[i].DataSinks)
-			}
+		for _, result := range results {
+			sinks = append(sinks, result.DataSinks)
 		}
 	}
 
@@ -282,57 +277,68 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 	return b.buf.Write(p)
 }
 
-func runTest(ctx context.Context, test testsharder.Test, t tester) ([]*testrunner.TestResult, error) {
+func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer) ([]*testrunner.TestResult, error) {
 	var results []*testrunner.TestResult
 	for i := 0; i < test.Runs; i++ {
-		// The test case parser specifically uses stdout, so we need to have a
-		// dedicated stdout buffer.
-		stdout := new(bytes.Buffer)
-		stdio := new(stdioBuffer)
-
-		multistdout := io.MultiWriter(os.Stdout, stdio, stdout)
-		multistderr := io.MultiWriter(os.Stderr, stdio)
-
-		// In the case of running tests on QEMU over serial, we do not wish to
-		// forward test output to stdout, as QEMU is already redirecting serial
-		// output there: we do not want to double-print.
-		//
-		// This is a bit of a hack, but is a lesser evil than extending the
-		// testrunner CLI just to sidecar the information of 'is QEMU'.
-		againstQEMU := os.Getenv(nodenameEnvVar) == target.DefaultQEMUNodename
-		if _, ok := t.(*fuchsiaSerialTester); ok && againstQEMU {
-			multistdout = io.MultiWriter(stdio, stdout)
-		}
-
-		result := runtests.TestSuccess
-		startTime := time.Now()
-		dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
+		result, err := runTestOnce(ctx, test, t, i, collectiveStdout, collectiveStderr)
 		if err != nil {
-			result = runtests.TestFailure
-			logger.Errorf(ctx, err.Error())
-			if sshutil.IsConnectionError(err) {
-				return results, err
-			}
+			return results, err
 		}
+		if err := outputs.record(*result); err != nil {
+			return results, err
+		}
+		results = append(results, result)
 
-		endTime := time.Now()
-
-		// Record the test details in the summary.
-		results = append(results, &testrunner.TestResult{
-			Name:      test.Name,
-			GNLabel:   test.Label,
-			Stdio:     stdio.buf.Bytes(),
-			Result:    result,
-			Cases:     testparser.Parse(stdout.Bytes()),
-			StartTime: startTime,
-			EndTime:   endTime,
-			DataSinks: dataSinks,
-			RunIndex:  i,
-		})
-
-		if test.RunAlgorithm == testsharder.StopOnSuccess && result == runtests.TestSuccess {
+		if test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess {
 			break
 		}
 	}
 	return results, nil
+}
+
+func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex int, collectiveStdout, collectiveStderr io.Writer) (*testrunner.TestResult, error) {
+	// The test case parser specifically uses stdout, so we need to have a
+	// dedicated stdout buffer.
+	stdout := new(bytes.Buffer)
+	stdio := new(stdioBuffer)
+
+	multistdout := io.MultiWriter(collectiveStdout, stdio, stdout)
+	multistderr := io.MultiWriter(collectiveStderr, stdio)
+
+	// In the case of running tests on QEMU over serial, we do not wish to
+	// forward test output to stdout, as QEMU is already redirecting serial
+	// output there: we do not want to double-print.
+	//
+	// This is a bit of a hack, but is a lesser evil than extending the
+	// testrunner CLI just to sidecar the information of 'is QEMU'.
+	againstQEMU := os.Getenv(nodenameEnvVar) == target.DefaultQEMUNodename
+	if _, ok := t.(*fuchsiaSerialTester); ok && againstQEMU {
+		multistdout = io.MultiWriter(stdio, stdout)
+	}
+
+	result := runtests.TestSuccess
+	startTime := time.Now()
+	dataSinks, err := t.Test(ctx, test, multistdout, multistderr)
+	if err != nil {
+		result = runtests.TestFailure
+		logger.Errorf(ctx, err.Error())
+		if sshutil.IsConnectionError(err) {
+			return nil, err
+		}
+	}
+
+	endTime := time.Now()
+
+	// Record the test details in the summary.
+	return &testrunner.TestResult{
+		Name:      test.Name,
+		GNLabel:   test.Label,
+		Stdio:     stdio.buf.Bytes(),
+		Result:    result,
+		Cases:     testparser.Parse(stdout.Bytes()),
+		StartTime: startTime,
+		EndTime:   endTime,
+		DataSinks: dataSinks,
+		RunIndex:  runIndex,
+	}, nil
 }
