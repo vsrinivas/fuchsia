@@ -21,8 +21,6 @@ constexpr char kHelpCommandString[] = "help";
 
 // Flags to pass to SessionCtlApp.
 constexpr char kJsonOutFlagString[] = "json_out";
-constexpr char kFocusModFlagString[] = "focus_mod";
-constexpr char kFocusStoryFlagString[] = "focus_story";
 constexpr char kModNameFlagString[] = "mod_name";
 constexpr char kModUrlFlagString[] = "mod_url";
 constexpr char kStoryIdFlagString[] = "story_id";
