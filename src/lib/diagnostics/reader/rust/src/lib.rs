@@ -260,7 +260,7 @@ mod tests {
     };
 
     const TEST_COMPONENT_URL: &str =
-        "fuchsia-pkg://fuchsia.com/fuchsia-inspect-contrib-tests#meta/inspect_test_component.cmx";
+        "fuchsia-pkg://fuchsia.com/diagnostics-reader-tests#meta/inspect_test_component.cmx";
 
     async fn start_component(env_label: &str) -> Result<(NestedEnvironment, App), Error> {
         let mut service_fs = ServiceFs::new();

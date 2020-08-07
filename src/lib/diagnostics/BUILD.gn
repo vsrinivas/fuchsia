@@ -2,10 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 group("diagnostics") {
-  deps = [ "//src/lib/diagnostics/testing" ]
+  deps = [
+    "//src/lib/diagnostics/reader",
+    "//src/lib/diagnostics/testing",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "//src/lib/diagnostics/testing:tests" ]
+  deps = [
+    "//src/lib/diagnostics/reader:tests",
+    "//src/lib/diagnostics/testing:tests",
+  ]
 }

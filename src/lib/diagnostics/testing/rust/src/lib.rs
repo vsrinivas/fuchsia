@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use anyhow::Error;
+use diagnostics_reader::ArchiveReader;
 use diagnostics_schema::{InspectSchema, Metadata};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
@@ -12,7 +13,6 @@ use fuchsia_component::{
     client::{connect_to_service, launch_with_options, App, ExitStatus, LaunchOptions},
     server::{ServiceFs, ServiceObj},
 };
-use fuchsia_inspect_contrib::reader::ArchiveReader;
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use futures::{channel::mpsc, StreamExt};
 use std::ops::Deref;

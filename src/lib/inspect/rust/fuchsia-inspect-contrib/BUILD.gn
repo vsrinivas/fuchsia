@@ -16,6 +16,7 @@ rustc_library("fuchsia-inspect-contrib") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/lib/diagnostics-schema",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -42,7 +43,6 @@ rustc_library("fuchsia-inspect-contrib") {
     "src/nodes/list.rs",
     "src/nodes/managed.rs",
     "src/nodes/mod.rs",
-    "src/reader/mod.rs",
   ]
 }
 
