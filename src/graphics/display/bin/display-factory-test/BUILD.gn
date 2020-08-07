@@ -65,6 +65,8 @@ rustc_binary("display_png") {
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "display-png.rs" ]
 }
 
 package("display-detect") {

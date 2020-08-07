@@ -43,4 +43,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "src/main.rs" ]
 }

@@ -130,7 +130,7 @@ template("rustc_staticlib") {
   }
 
   _sources = []
-  if (defined(invoker.enforce_source_listing) &&
+  if (!defined(invoker.enforce_source_listing) ||
       invoker.enforce_source_listing == true) {
     if (defined(invoker.sources)) {
       _sources = invoker.sources
