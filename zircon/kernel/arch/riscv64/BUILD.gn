@@ -1,0 +1,107 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# TODO(fxbug.dev/54160): Keep in sync with BUILD.gn
+
+import("$zx/kernel/params.gni")
+import("$zx/public/gn/toolchain/environment.gni")
+
+if (current_toolchain == default_toolchain) {
+  # Define a special environment for building code that runs in physical
+  # memory with the MMU disabled, at early boot.
+  environment("physmem") {
+    cpu = "riscv64"
+    globals = {
+      is_kernel = true
+    }
+    configs += standard_fuchsia_configs + [ ":physmem_config" ]
+    tags = [
+      "standalone",
+      "strict-align",
+    ]
+    exclude_variant_tags = [ "instrumented" ]
+  }
+} else {
+  # This is the top config for the physmem environment.
+  config("physmem_config") {
+    configs = [
+      "$zx/kernel:headers",
+      "$zx/kernel:standalone",
+      "$zx/kernel:warnings",
+      "$zx/public/gn/config:no_sanitizers",
+    ]
+
+    cflags = [
+      "-fpie",
+    ]
+
+    include_dirs = [ "include" ]
+  }
+
+  config("abi") {
+  }
+
+  # This is used pervasively throughout the kernel on riscv64.
+  config("kernel") {
+    cflags = []
+
+    cflags += [
+      # Use shadow-call-stack rather than safe-stack for the kernel,
+      # regardless of the compiler's default.
+      "-fno-sanitize=safe-stack",
+    ]
+
+    # Assembly code needs to use `#if __has_feature(...)` so make sure
+    # it always sees all the same `-fsanitize=...` flags and the like.
+    asmflags = cflags
+    ldflags = cflags
+
+    defines = [ "ARCH_RISCV64" ]
+
+    # For #include <arch/foo.h>.
+    include_dirs = [ "include" ]
+
+    configs = [
+      # <arch/current_thread.h> has #include <lib/arch/intrin.h>.
+      "$zx/kernel/lib/arch/riscv64:headers.config",
+    ]
+
+    # Align the kernel's segments to 64k so it can use "combined pages" to
+    # reduce the TLB load.
+    ldflags += [ "-Wl,-z,max-page-size=65536" ]
+  }
+
+  source_set("riscv64") {
+    sources = [
+      "arch.cc",
+      "debugger.cc",
+      "exceptions_c.cc",
+      "mmu.cc",
+      "mp.cc",
+      "perf_mon.cc",
+      "spinlock.cc",
+      "start.S",
+      "thread.cc",
+      "user_copy_c.cc",
+    ]
+    deps = [
+      "$zx/kernel/dev/iommu/dummy",
+      "$zx/kernel/lib/arch",
+      "$zx/kernel/lib/cmdline",
+      "$zx/kernel/lib/console",
+      "$zx/kernel/lib/counters",
+      "$zx/kernel/lib/crashlog",
+      "$zx/kernel/lib/init",
+      "$zx/kernel/lib/ktl",
+      "$zx/kernel/lib/perfmon",
+      "$zx/kernel/lib/syscalls",
+      "$zx/kernel/object",
+      "$zx/kernel/vm",
+      "$zx/system/ulib/bitmap",
+      "$zx/system/ulib/pretty",
+    ]
+  }
+}
