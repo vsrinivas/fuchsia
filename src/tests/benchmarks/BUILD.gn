@@ -2,45 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon_images.gni")
 import("//build/package.gni")
 
 group("benchmarks") {
   testonly = true
   deps = [
-    ":fuchsia_benchmarks",
     ":kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
   ]
-}
-
-executable("fuchsia_benchmarks_bin") {
-  output_name = "fuchsia_benchmarks"
-
-  sources = [ "benchmarks.cc" ]
-
-  deps = [ "//garnet/testing/benchmarking:benchmarking" ]
-}
-
-package("fuchsia_benchmarks") {
-  testonly = true
-
-  binaries = [
-    {
-      name = rebase_path("benchmarks.sh")
-      dest = "benchmarks.sh"
-    },
-    {
-      shell = true
-      name = "fuchsia_benchmarks"
-    },
-    {
-      name = rebase_path("benchmarks_perfcompare.sh")
-      dest = "benchmarks_perfcompare.sh"
-    },
-  ]
-
-  deps = [ ":fuchsia_benchmarks_bin" ]
 }
 
 executable("kernel-boot-timeline") {

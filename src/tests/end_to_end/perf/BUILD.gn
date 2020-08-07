@@ -120,13 +120,6 @@ if (is_host) {
   }
 }
 
-# Packages required either:
-#  1) by the Dart test wrappers in this directory, or
-#  2) by the older test runner in src/tests/benchmarks/ which is
-#     used by the peridot-perf and fuchsia-perfcompare builders.  This
-#     test runner will eventually be replaced by the Dart test
-#     wrappers (TODO(fxb/23091)), but sharing the same dependency
-#     declarations will ease this transition.
 group("package_deps") {
   testonly = true
   public_deps = [
@@ -143,15 +136,6 @@ group("package_deps") {
     "//src/ui/examples:simplest_app",
     "//src/ui/examples:yuv_to_image_pipe",
     "//src/ui/tools:present_view",
-
-    # These are used by the test runner in src/tests/benchmarks/,
-    # used by the peridot-perf and fuchsia-perfcompare builders.
-    "//garnet/bin/catapult_converter",
-    "//garnet/bin/trace2json:bin",
-    "//src/tests/benchmarks:fuchsia_benchmarks",
-    "//third_party/sbase:mkdir",
-    "//third_party/sbase:rm",
-    "//third_party/sbase:touch",
 
     # These are used by the flutter benchmarks.
     "//src/experiences/benchmarks/bin/button_flutter:button_flutter",
