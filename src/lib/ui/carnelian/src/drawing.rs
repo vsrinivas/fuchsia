@@ -15,7 +15,7 @@ use crate::{
 use anyhow::Error;
 use euclid::{
     default::{Box2D, Size2D, Vector2D},
-    Angle,
+    vec2, Angle,
 };
 use lazy_static::lazy_static;
 use rusttype::{Font, FontCollection, GlyphId, Scale, Segment};
@@ -206,6 +206,65 @@ pub fn path_for_polygon(
         path_builder.line_to(pt);
     }
     path_builder.line_to(first_point);
+    path_builder.build()
+}
+
+/// Create a path for knocking out the points of a rectangle, giving it a
+/// rounded appearance.
+pub fn path_for_corner_knockouts(
+    bounds: &Rect,
+    corner_radius: Coord,
+    render_context: &mut RenderContext,
+) -> Path {
+    let kappa = 4.0 / 3.0 * (std::f32::consts::PI / 8.0).tan();
+    let control_dist = kappa * corner_radius;
+
+    let top_left = bounds.top_left();
+    let top_left_arc_start = bounds.origin + vec2(0.0, corner_radius);
+    let top_left_arc_end = bounds.origin + vec2(corner_radius, 0.0);
+    let top_left_curve_center = bounds.origin + vec2(corner_radius, corner_radius);
+    let top_left_p1 = top_left_curve_center + vec2(-corner_radius, -control_dist);
+    let top_left_p2 = top_left_curve_center + vec2(-control_dist, -corner_radius);
+
+    let top_right = bounds.top_right();
+    let top_right_arc_start = top_right + vec2(-corner_radius, 0.0);
+    let top_right_arc_end = top_right + vec2(0.0, corner_radius);
+    let top_right_curve_center = top_right + vec2(-corner_radius, corner_radius);
+    let top_right_p1 = top_right_curve_center + vec2(control_dist, -corner_radius);
+    let top_right_p2 = top_right_curve_center + vec2(corner_radius, -control_dist);
+
+    let bottom_right = bounds.bottom_right();
+    let bottom_right_arc_start = bottom_right + vec2(0.0, -corner_radius);
+    let bottom_right_arc_end = bottom_right + vec2(-corner_radius, 0.0);
+    let bottom_right_curve_center = bottom_right + vec2(-corner_radius, -corner_radius);
+    let bottom_right_p1 = bottom_right_curve_center + vec2(corner_radius, control_dist);
+    let bottom_right_p2 = bottom_right_curve_center + vec2(control_dist, corner_radius);
+
+    let bottom_left = bounds.bottom_left();
+    let bottom_left_arc_start = bottom_left + vec2(corner_radius, 0.0);
+    let bottom_left_arc_end = bottom_left + vec2(0.0, -corner_radius);
+    let bottom_left_curve_center = bottom_left + vec2(corner_radius, -corner_radius);
+    let bottom_left_p1 = bottom_left_curve_center + vec2(-control_dist, corner_radius);
+    let bottom_left_p2 = bottom_left_curve_center + vec2(-corner_radius, control_dist);
+
+    let mut path_builder = render_context.path_builder().expect("path_builder");
+    path_builder
+        .move_to(top_left)
+        .line_to(top_left_arc_start)
+        .cubic_to(top_left_p1, top_left_p2, top_left_arc_end)
+        .line_to(top_left)
+        .move_to(top_right)
+        .line_to(top_right_arc_start)
+        .cubic_to(top_right_p1, top_right_p2, top_right_arc_end)
+        .line_to(top_right)
+        .move_to(bottom_right)
+        .line_to(bottom_right_arc_start)
+        .cubic_to(bottom_right_p1, bottom_right_p2, bottom_right_arc_end)
+        .line_to(bottom_right)
+        .move_to(bottom_left)
+        .line_to(bottom_left_arc_start)
+        .cubic_to(bottom_left_p1, bottom_left_p2, bottom_left_arc_end)
+        .line_to(bottom_left);
     path_builder.build()
 }
 

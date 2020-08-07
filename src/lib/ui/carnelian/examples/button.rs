@@ -11,8 +11,8 @@ use anyhow::Error;
 use carnelian::{
     color::Color,
     drawing::{
-        make_font_description, path_for_rectangle, DisplayAligned, DisplayRotation, GlyphMap,
-        Paint, Text,
+        make_font_description, path_for_corner_knockouts, path_for_rectangle, DisplayAligned,
+        DisplayRotation, GlyphMap, Paint, Text,
     },
     input::{self},
     make_app_assistant, make_message,
@@ -54,6 +54,20 @@ fn raster_for_rectangle(
         display_rotation.rotation().and_then(|transform| Some(transform.to_untyped()));
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
     raster_builder.add(&path_for_rectangle(bounds, render_context), rotation_transform.as_ref());
+    raster_builder.build()
+}
+
+fn raster_for_corner_knockouts(
+    bounds: &Rect,
+    corner_radius: Coord,
+    display_rotation: &DisplayRotation,
+    render_context: &mut RenderContext,
+) -> Raster {
+    let rotation_transform =
+        display_rotation.transform(&bounds.size).and_then(|transform| Some(transform.to_untyped()));
+    let path = path_for_corner_knockouts(bounds, corner_radius, render_context);
+    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+    raster_builder.add(&path, rotation_transform.as_ref());
     raster_builder.build()
 }
 
@@ -321,6 +335,22 @@ impl ViewAssistant for ButtonViewAssistant {
         self.button.padding = padding;
         self.button.font_size = font_size;
 
+        let corner_knockouts = raster_for_corner_knockouts(
+            &Rect::from_size(target_size),
+            10.0,
+            &self.display_rotation,
+            render_context,
+        );
+
+        let corner_knockouts_layer = Layer {
+            raster: corner_knockouts,
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(Color::new()),
+                blend_mode: BlendMode::Over,
+            },
+        };
+
         // Position and size the indicator in presentation space
         let indicator_y = target_size.height / 5.0;
         let indicator_len = target_size.height.min(target_size.width) / 8.0;
@@ -403,7 +433,8 @@ impl ViewAssistant for ButtonViewAssistant {
         };
         self.composition.replace(
             ..,
-            std::iter::once(label_layer)
+            std::iter::once(corner_knockouts_layer)
+                .chain(std::iter::once(label_layer))
                 .chain(std::iter::once(button_layer))
                 .chain(std::iter::once(indicator_layer)),
         );
