@@ -1,0 +1,32 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zircon/migrated_targets.gni")
+
+zx_library("riscv64") {
+  kernel = true
+  host = true
+  static = true
+  visibility = [ "../*" ]
+  sources = []
+  include_dirs = [
+    "include",
+    "../include",
+  ]
+
+  public_deps = [ "//zircon/system/ulib/hwreg:headers" ]
+
+  sdk = "source"
+  sdk_headers = [
+    "lib/arch/asm.h",
+    "lib/arch/intrin.h",
+    "lib/arch/ticks.h",
+  ]
+
+  if (!is_host) {
+    sources += [ "random.cc" ]
+  }
+}
