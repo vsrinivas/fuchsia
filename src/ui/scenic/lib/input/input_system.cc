@@ -42,6 +42,17 @@ escher::ray4 CreateZRay(glm::vec2 coords) {
   };
 }
 
+bool IsOutsideViewport(const Viewport& viewport, const glm::vec2& position_in_viewport) {
+  FX_DCHECK(!std::isunordered(position_in_viewport.x, viewport.extents.min.x) &&
+            !std::isunordered(position_in_viewport.x, viewport.extents.max.x) &&
+            !std::isunordered(position_in_viewport.y, viewport.extents.min.y) &&
+            !std::isunordered(position_in_viewport.y, viewport.extents.max.y));
+  return position_in_viewport.x < viewport.extents.min.x ||
+         position_in_viewport.y < viewport.extents.min.y ||
+         position_in_viewport.x > viewport.extents.max.x ||
+         position_in_viewport.y > viewport.extents.max.y;
+}
+
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.
 AccessibilityPointerEvent BuildAccessibilityPointerEvent(const InternalPointerEvent& internal_event,
@@ -91,6 +102,7 @@ std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t sou
                                                                    const gfx::ViewTree& view_tree) {
   std::optional<glm::mat4> world_from_source_transform =
       GetWorldFromViewTransform(source, view_tree);
+
   if (!world_from_source_transform)
     return std::nullopt;
 
@@ -102,12 +114,13 @@ std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t sou
   return destination_from_world_transform.value() * world_from_source_transform.value();
 }
 
-std::optional<escher::ray4> CreateWorldSpaceRay(const InternalPointerEvent& event,
-                                                const gfx::ViewTree& view_tree) {
+escher::ray4 CreateWorldSpaceRay(const InternalPointerEvent& event,
+                                 const gfx::ViewTree& view_tree) {
   const std::optional<glm::mat4> world_from_context_transform =
       GetWorldFromViewTransform(event.context, view_tree);
-  if (!world_from_context_transform)
-    return std::nullopt;
+  FX_DCHECK(world_from_context_transform)
+      << "Failed to create world space ray. Either the |event.context| ViewRef is invalid, we're "
+         "out of sync with the ViewTree, or the ViewTree callback returned std::nullopt.";
 
   const glm::mat4 world_from_viewport_transform =
       world_from_context_transform.value() * event.viewport.context_from_viewport_transform;
@@ -318,6 +331,16 @@ void InputSystem::RegisterListener(
   success_callback(true);
 }
 
+void InputSystem::HitTest(const gfx::ViewTree& view_tree, const InternalPointerEvent& event,
+                          gfx::HitAccumulator<gfx::ViewHit>& accumulator) const {
+  if (IsOutsideViewport(event.viewport, event.position_in_viewport)) {
+    return;
+  }
+
+  escher::ray4 world_ray = CreateWorldSpaceRay(event, view_tree);
+  view_tree.HitTestFrom(event.target, world_ray, &accumulator);
+}
+
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
                                          scheduling::SessionId session_id, bool parallel_dispatch) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
@@ -435,17 +458,9 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
   const bool a11y_enabled =
       IsA11yListenerEnabled() && IsOwnedByRootSession(view_tree, event.context);
 
-  const std::optional<escher::ray4> world_space_ray_optional =
-      CreateWorldSpaceRay(event, view_tree);
-  if (!world_space_ray_optional) {
-    FX_LOGS(WARNING) << "Failed to create ray from InternalPointerEvent";
-    return;
-  }
-  const escher::ray4 world_space_ray = world_space_ray_optional.value();
-
   if (pointer_phase == Phase::ADD) {
     gfx::ViewHitAccumulator accumulator;
-    view_tree.HitTestFrom(event.target, world_space_ray, &accumulator);
+    HitTest(view_tree, event, accumulator);
     const auto& hits = accumulator.hits();
 
     // Find input targets.  Honor the "input masking" view property.
@@ -518,10 +533,8 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
     zx_koid_t view_ref_koid = ZX_KOID_INVALID;
     {
       // Find top-hit target and send it to accessibility.
-      // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
-      // will keep going until we find a hit with a valid owning View.
       gfx::TopHitAccumulator top_hit;
-      view_tree.HitTestFrom(event.target, world_space_ray, &top_hit);
+      HitTest(view_tree, event, top_hit);
 
       if (top_hit.hit()) {
         view_ref_koid = top_hit.hit()->view_ref_koid;
@@ -530,8 +543,15 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event,
 
     glm::vec2 top_hit_view_local;
     if (view_ref_koid != ZX_KOID_INVALID) {
-      top_hit_view_local = TransformPointerCoords(
-          world_space_ray.origin, GetViewFromWorldTransform(view_ref_koid, view_tree).value());
+      std::optional<glm::mat4> view_from_context = GetDestinationViewFromSourceViewTransform(
+          /*source*/ event.context, /*destination*/ view_ref_koid, view_tree);
+      FX_DCHECK(view_from_context)
+          << "Failed to create world space ray. Either the |event.context| ViewRef is invalid, "
+             "we're out of sync with the ViewTree, or the ViewTree callback returned std::nullopt.";
+
+      const glm::mat4 view_from_viewport =
+          view_from_context.value() * event.viewport.context_from_viewport_transform;
+      top_hit_view_local = TransformPointerCoords(event.position_in_viewport, view_from_viewport);
     }
     const glm::vec2 ndc = GetViewportNDCPoint(event);
 
@@ -574,20 +594,12 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
   const uint32_t device_id = event.device_id;
   const Phase pointer_phase = event.phase;
 
-  const std::optional<escher::ray4> world_space_ray_optional =
-      CreateWorldSpaceRay(event, view_tree);
-  if (!world_space_ray_optional) {
-    FX_LOGS(WARNING) << "Failed to create ray from InternalPointerEvent";
-    return;
-  }
-  const escher::ray4 world_space_ray = world_space_ray_optional.value();
-
   if (pointer_phase == Phase::DOWN) {
     // Find top-hit target and associated properties.
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    view_tree.HitTestFrom(event.target, world_space_ray, &top_hit);
+    HitTest(view_tree, event, top_hit);
 
     std::vector</*view_ref_koids*/ zx_koid_t> hit_views;
     if (top_hit.hit()) {
@@ -630,7 +642,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
     // NOTE: We may hit various mouse cursors (owned by root presenter), but |TopHitAccumulator|
     // will keep going until we find a hit with a valid owning View.
     gfx::TopHitAccumulator top_hit;
-    view_tree.HitTestFrom(event.target, world_space_ray, &top_hit);
+    HitTest(view_tree, event, top_hit);
 
     if (top_hit.hit()) {
       const zx_koid_t top_view_koid = top_hit.hit()->view_ref_koid;

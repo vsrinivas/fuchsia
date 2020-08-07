@@ -60,11 +60,13 @@ class CoordinateTransformTest2 : public InputSystemTest {
 
   void RegisterInjector(fuchsia::ui::views::ViewRef context_view_ref,
                         fuchsia::ui::views::ViewRef target_view_ref,
+                        fuchsia::ui::pointerinjector::DispatchPolicy dispatch_policy =
+                            fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET,
                         std::array<float, 9> viewport_to_context_transform = kIdentityMatrix) {
     fuchsia::ui::pointerinjector::Config config;
     config.set_device_id(1);
     config.set_device_type(fuchsia::ui::pointerinjector::DeviceType::TOUCH);
-    config.set_dispatch_policy(fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET);
+    config.set_dispatch_policy(dispatch_policy);
     {
       {
         fuchsia::ui::pointerinjector::Context context;
@@ -317,7 +319,9 @@ TEST_F(CoordinateTransformTest2, InjectedInput_ShouldBeCorrectlyViewportTransfor
     };
     // clang-format on
 
-    RegisterInjector(client_1.view_ref(), client_2.view_ref(), kViewportToContextTransform);
+    RegisterInjector(client_1.view_ref(), client_2.view_ref(),
+                     fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET,
+                     kViewportToContextTransform);
     Inject(0, 0, fuchsia::ui::pointerinjector::EventPhase::ADD);
     Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
     Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
@@ -411,6 +415,78 @@ TEST_F(CoordinateTransformTest2, ClipSpaceTransformedScene_ShouldHaveNoImpactOnO
     EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 5.0, 5.0));
     EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 0.0, 5.0));
     EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::REMOVE, 0.0, 5.0));
+  }
+}
+
+// Basic scene (no transformations) where the Viewport is smaller than the Views.
+// We then inject two streams: The first has an ADD outside the Viewport, which counts as a miss and
+// should not be seen by anyone. The second stream has the ADD inside the Viewport and subseqeuent
+// events outside, and this full stream should be seen by the target.
+TEST_F(CoordinateTransformTest2, InjectionOutsideViewport_ShouldLimitOnADD) {
+  auto [v1, vh1] = scenic::ViewTokenPair::New();
+  auto [v2, vh2] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two ViewHolders, one a child of the other.
+  auto [root_session, root_resources] = CreateScene();
+  // Make the Views bigger than the Viewport.
+  static constexpr fuchsia::ui::gfx::ViewProperties k100x100x1 = {
+      .bounding_box = {.max = {100, 100, 1}}};
+  scenic::ViewHolder holder_1(root_session.session(), std::move(vh1), "holder_1");
+  {
+    holder_1.SetViewProperties(k100x100x1);
+    root_resources.scene.AddChild(holder_1);
+    RequestToPresent(root_session.session());
+  }
+
+  SessionWrapper client_1 = CreateClient("view_1", std::move(v1));
+  scenic::ViewHolder holder_2(client_1.session(), std::move(vh2), "holder_2");
+  {
+    holder_2.SetViewProperties(k100x100x1);
+    client_1.view()->AddChild(holder_2);
+    RequestToPresent(client_1.session());
+  }
+
+  SessionWrapper client_2 = CreateClient("view_2", std::move(v2));
+
+  // Scene is now set up, send in the input. The initial input is outside the viewport and
+  // the stream should therefore not be seen by anyone.
+  {
+    RegisterInjector(client_1.view_ref(), client_2.view_ref(),
+                     fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+    Inject(10, 10, fuchsia::ui::pointerinjector::EventPhase::ADD);  // Outside viewport.
+    // Rest inside viewport, but should not be delivered.
+    Inject(5, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(5, 5, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(0, 5, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+
+    // Neither client should receive any events.
+    EXPECT_TRUE(client_1.events().empty());
+    EXPECT_TRUE(client_2.events().empty());
+  }
+
+  // Send in input starting in the viewport and moving outside.
+  {
+    Inject(1, 1, fuchsia::ui::pointerinjector::EventPhase::ADD);  // Inside viewport.
+    // Rest outside viewport, but should still be delivered.
+    Inject(50, 0, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(50, 50, fuchsia::ui::pointerinjector::EventPhase::CHANGE);
+    Inject(0, 50, fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    RunLoopUntilIdle();
+
+    // Context should still not receive any events.
+    EXPECT_TRUE(client_1.events().empty());
+
+    // But target should receive all of them.
+    const std::vector<fuchsia::ui::input::InputEvent>& events = client_2.events();
+    ASSERT_EQ(events.size(), 7u);
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.0, 1.0));
+    EXPECT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 1.0, 1.0));
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 50.0, 0.0));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 50.0, 50.0));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 0.0, 50.0));
+    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::REMOVE, 0.0, 50.0));
   }
 }
 
