@@ -125,7 +125,7 @@ class UserPager {
 
  private:
   explicit UserPager(BlobfsMetrics* metrics);
-  UserPager() = delete;
+
   struct ReadRange {
     uint64_t offset;
     uint64_t length;
@@ -172,11 +172,13 @@ class UserPager {
   // calling |zx_pager_supply_pages|.
   zx::vmo decompression_buffer_;
 
+  // Watchdog which triggers if any page faults exceed a threshold deadline.  This *must* come
+  // before the loop below so that the loop, which might have references to the watchdog, is
+  // destryoed first.
+  PagerWatchdog watchdog_;
+
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-  // Watchdog which triggers if any page faults exceed a threshold deadline.
-  std::unique_ptr<PagerWatchdog> watchdog_;
 
   // Records all metrics for this instance of blobfs.
   BlobfsMetrics* metrics_ = nullptr;

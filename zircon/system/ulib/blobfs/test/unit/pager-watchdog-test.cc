@@ -15,67 +15,49 @@ namespace {
 
 TEST(PagerWatchdogTest, NotArmedByDefault) {
   constexpr zx::duration kDeadline = zx::msec(1);
-  auto watchdog_or = PagerWatchdog::Create(kDeadline);
-  ASSERT_OK(watchdog_or.status_value());
+  PagerWatchdog watchdog(kDeadline);
 
   bool called = false;
-  watchdog_or->SetCallback([&]() { called = true; });
-  watchdog_or->RunUntilIdle();
+  watchdog.SetCallback([&](int count) { called = true; });
+  watchdog.RunUntilIdle();
   ASSERT_FALSE(called);
 }
 
 TEST(PagerWatchdogTest, FiresOnDeadlineExceeded) {
   constexpr zx::duration kShortDeadline = zx::msec(1);
-  auto watchdog_or = PagerWatchdog::Create(kShortDeadline);
-  ASSERT_OK(watchdog_or.status_value());
+  PagerWatchdog watchdog(kShortDeadline);
 
   std::mutex m;
   std::condition_variable cv;
   bool called = false;
-  watchdog_or->SetCallback([&]() {
+  watchdog.SetCallback([&](int count) {
     std::unique_lock<std::mutex> l(m);
     called = true;
     cv.notify_all();
   });
 
   std::unique_lock<std::mutex> l(m);
-  PagerWatchdog::ArmToken token = watchdog_or->Arm();
+  PagerWatchdog::ArmToken token = watchdog.Arm();
   cv.wait(l, [&called]() { return called; });
-}
-
-TEST(PagerWatchdogTest, FiresOnDeadlineExceeded_MultipleTokens) {
-  constexpr zx::duration kShortDeadline = zx::msec(1);
-  auto watchdog_or = PagerWatchdog::Create(kShortDeadline);
-  ASSERT_OK(watchdog_or.status_value());
-
-  std::mutex m;
-  std::condition_variable cv;
-  int calls = 0;
-  watchdog_or->SetCallback([&]() {
-    std::unique_lock<std::mutex> l(m);
-    calls++;
-    cv.notify_all();
-  });
-
-  std::unique_lock<std::mutex> l(m);
-  PagerWatchdog::ArmToken token1 = watchdog_or->Arm();
-  PagerWatchdog::ArmToken token2 = watchdog_or->Arm();
-  cv.wait(l, [&calls]() { return calls == 2; });
 }
 
 TEST(PagerWatchdogTest, DoesNotFireIfDisarmed) {
   constexpr zx::duration kLongDeadline = zx::sec(60);
-  auto watchdog_or = PagerWatchdog::Create(kLongDeadline);
-  ASSERT_OK(watchdog_or.status_value());
+  PagerWatchdog watchdog(kLongDeadline);
 
   bool called = false;
-  watchdog_or->SetCallback([&]() { called = true; });
+  watchdog.SetCallback([&](int count) { called = true; });
 
-  {
-    PagerWatchdog::ArmToken token = watchdog_or->Arm();
-  }
-  watchdog_or->RunUntilIdle();
+  { PagerWatchdog::ArmToken token = watchdog.Arm(); }
+  watchdog.RunUntilIdle();
   ASSERT_FALSE(called);
+}
+
+TEST(PagerWatchdogDeathTest, AssertsWithMultipleTokens) {
+  ASSERT_DEATH(([]() {
+    static auto* watchdog = new PagerWatchdog(zx::sec(1));
+    PagerWatchdog::ArmToken tokens[] = {watchdog->Arm(), watchdog->Arm()};
+  }));
 }
 
 }  // namespace

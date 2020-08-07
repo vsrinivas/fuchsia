@@ -34,10 +34,14 @@ fbl::Array<uint8_t> LoadTemplateData() {
   const char* file = "bin/test-binary";
   const char* root_dir = getenv("TEST_ROOT_DIR");
   EXPECT_NE("", root_dir);
+  if (!root_dir)
+    return {};
   std::string path = std::string(root_dir) + "/" + file;
 
   fbl::unique_fd fd(open(path.c_str(), O_RDONLY));
   EXPECT_TRUE(fd.is_valid());
+  if (!fd)
+    return {};
   struct stat s;
   EXPECT_EQ(fstat(fd.get(), &s), 0);
   size_t sz = s.st_size;
@@ -85,6 +89,7 @@ void GenerateRandomBlob(const std::string& mount_path, size_t data_size,
 void GenerateRealisticBlob(const std::string& mount_path, size_t data_size,
                            std::unique_ptr<BlobInfo>* out) {
   static fbl::Array<uint8_t> template_data = LoadTemplateData();
+  ASSERT_GT(template_data.size(), 0);
   GenerateBlob(
       [](char* data, size_t length) {
         // TODO(jfsulliv): Use explicit seed
