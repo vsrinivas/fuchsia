@@ -6,6 +6,71 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
+rustc_library("fuchsia-inspect-transitional") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
+    "//src/lib/mapped-vmo",
+    "//src/lib/shared-buffer",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-sys",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:derivative",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:glob",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  enforce_source_listing = true
+
+  sources = [
+    "src/component.rs",
+    "src/format/bitfields.rs",
+    "src/format/block.rs",
+    "src/format/block_type.rs",
+    "src/format/constants.rs",
+    "src/format/container.rs",
+    "src/format/mod.rs",
+    "src/health.rs",
+    "src/heap.rs",
+    "src/lib.rs",
+    "src/reader/mod.rs",
+    "src/reader/readable_tree.rs",
+    "src/reader/snapshot.rs",
+    "src/reader/tree_reader.rs",
+    "src/service.rs",
+    "src/state.rs",
+    "src/testing/macros.rs",
+    "src/testing/mod.rs",
+    "src/trie.rs",
+    "src/utils.rs",
+  ]
+}
+
 rustc_library("fuchsia-inspect") {
   version = "0.1.0"
   edition = "2018"
