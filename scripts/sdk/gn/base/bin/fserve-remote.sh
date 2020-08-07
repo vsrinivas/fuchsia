@@ -18,11 +18,13 @@ usage: fserve-remote.sh [--no-serve] [--device-name <device hostname>] HOSTNAME 
   --device-name <device hostname>
       Connects to a device by looking up the given device hostname.
   --image <image name>
-      Name of prebuilt image packages to serve.
+      Name of prebuilt image packages to serve. Required unless --no-serve is specified.
   --bucket <bucket name>
       Name of GCS bucket containing the image archive.
   --no-serve
       Only tunnel, do not start a package server.
+  -v
+      Enable verbose SSH logging.
   -x
       Enable debug
   --ttl
@@ -40,6 +42,7 @@ EOF
 DEBUG_FLAG=""
 TTL_TIME="infinity"
 START_SERVE=1
+VERBOSE=0
 REMOTE_HOST=""
 REMOTE_DIR=""
 DEVICE_NAME="$(get-fuchsia-property device-name)"
@@ -66,6 +69,9 @@ while [[ $# -ne 0 ]]; do
   --image)
     shift
     IMAGE="${1}"
+    ;;
+  -v)
+    VERBOSE=1
     ;;
   -x)
     DEBUG_FLAG="-x"
@@ -100,17 +106,24 @@ if [[ -z "${REMOTE_HOST}" ]]; then
   exit 1
 fi
 
+if [[ -z "${REMOTE_DIR}" ]]; then
+  fx-error "REMOTE-DIR must be specified"
+  usage
+  exit 1
+fi
+
 if ((START_SERVE)); then
-  if [[ -z "${REMOTE_DIR}" ]]; then
-      fx-error "REMOTE-DIR must be specified"
-      usage
-      exit 1
+  if [[ -z "${IMAGE}" ]]; then
+    fx-error "--image must be specified when serving packages."
+    usage
+    exit 1
   fi
 fi
 
 if [[ "${DEVICE_NAME}" == "" ]]; then
     DEVICE_NAME="$(get-device-name)"
 fi
+
 # Determine the local device name/address to use.
 if ! DEVICE_IP=$(get-device-ip-by-name "${DEVICE_NAME}"); then
   fx-error "unable to discover device. Is the target up?"
@@ -120,6 +133,10 @@ fi
 if [[ -z "${DEVICE_IP}" ]]; then
   fx-error "unable to discover device. Is the target up?"
   exit 1
+fi
+
+if [[ "${BUCKET}" == "" ]]; then
+  fx-warn "--bucket not set. Using the default bucket."
 fi
 
 echo "Using remote ${REMOTE_HOST}:${REMOTE_DIR}"
@@ -140,12 +157,18 @@ ssh_base_args=(
   -t
 )
 
+if ((VERBOSE)); then
+  ssh_base_args+=( -o "LogLevel=DEBUG2")
+fi
+
+
 ssh_exit() {
-  if ! ssh "${ssh_base_args[@]}" -O exit > /dev/null; then
-    echo "Error exiting session: $?"
+  if ssh "${ssh_base_args[@]}" -O check > /dev/null 2>&1; then
+    if  ! ssh "${ssh_base_args[@]}" -O exit > /dev/null 2>&1 ; then
+      echo "Error exiting session: $?"
+    fi
   fi
 }
-
 
 # When we exit the script, close the background ssh connection.
 trap_exit() {
@@ -172,17 +195,16 @@ fi
   # forward, so we'll check for that and speculatively attempt to clean
   # it up. Unfortunately this means authing twice, but it's likely the
   # best we can do for now.
-  if ssh "${ssh_base_args[@]}" 'ss -ln | grep :8022' > /dev/null; then
+  if ssh "${ssh_base_args[@]}" 'ss -ln | grep :8022' > /dev/null  2>&1; then
     fx-warn "Found existing port forwarding, attempting to kill remote sshd sessions."
-    if pkill_result="$(ssh "${ssh_base_args[@]}" "pkill -u \$USER sshd")"; then
-      echo "SSH session cleaned up."
-    else
+    if  pkill_result="$(ssh "${ssh_base_args[@]}" "pkill -u \$USER sshd"  2>&1)"; then
       fx-error "Unexpected message from remote: ${pkill_result}"
-      exit 1
+    else
+      echo "SSH session cleaned up."
     fi
   fi
 
-args=(
+ssh_tunnel_args=(
   -6 # We want ipv6 binds for the port forwards
   -L "\*:8083:localhost:8083" # requests to the package server address locally go to the workstation
   -R "8022:[${DEVICE_IP}]:22" # requests from the workstation to ssh to localhost:8022 will make it to the target
@@ -191,6 +213,29 @@ args=(
   -R "9080:[${DEVICE_IP}]:80" # port 9080 on workstation to target port 80
   -o "ExitOnForwardFailure=yes"
 )
+
+# Start tunneling session in background. It's started seperately from the command invocations below
+# to allow the script to be consistent on how it is exited for both serve and non-serve cases. It
+# also allows script to explicitly close the control session (to better avoid stale sshd sessions).
+
+ssh "${ssh_base_args[@]}" "${ssh_tunnel_args[@]}" -nT sleep "${TTL_TIME}" &
+# Attempt to assert that the backgrounded ssh is alive and kicking, emulating -f as best we can.
+ssh_pid=$!
+
+# If there's a 2fa prompt, we may need a "human time" number of tries, which is why this is high.
+tries=30
+until ssh "${ssh_base_args[@]}" -q -O check; do
+  if ! kill -0 ${ssh_pid}; then
+    fx-error "SSH tunnel terminated prematurely"
+    exit 1
+  fi
+  if ! ((tries--)); then
+    fx-error "SSH tunnel appears not to have succeeded"
+    kill -TERM "${ssh_pid}"
+    exit 1
+  fi
+  sleep 1
+done
 
 # Set the configuration properties to match the remote device. Set the IP address,
 # and clear the device name to avoid any confusion.
@@ -230,27 +275,23 @@ if ((START_SERVE)); then
       echo "Success"
     fi
   fi
-fi
 
-if ((START_SERVE)); then
   # Starts a package server
-  args+=(cd "\$HOME" "&&" cd "${REMOTE_DIR}" "&&" ./bin/fserve.sh)
+  args=(cd "\$HOME" "&&" cd "${REMOTE_DIR}" "&&" ./bin/fserve.sh)
   if [[ "${DEBUG_FLAG}" != "" ]]; then
     args+=("${DEBUG_FLAG}")
   fi
   # fserve.sh runs in the background, keep the tunnel open by running sleep.
   args+=("&&" "sleep ${TTL_TIME}")
-else
-  # Starts nothing, just goes to sleep
-  args+=("sleep ${TTL_TIME}")
+
+  # shellcheck disable=SC2029
+  ssh "${ssh_base_args[@]}" "${args[@]}"
 fi
 
 echo "Press Ctrl-C to stop tunneling."
-# shellcheck disable=SC2029
-ssh "${ssh_base_args[@]}" "${args[@]}"
 
 # Wait for user Ctrl-C. Then script exit will trigger trap_exit to close the ssh connection.
-# a TTL of 0 is used in unit tests.
+# a TTL_TIME of 0 is used in unit tests.
 if [[ "$TTL_TIME" != "0" ]]; then
   read -r -d '' _ </dev/tty
 fi

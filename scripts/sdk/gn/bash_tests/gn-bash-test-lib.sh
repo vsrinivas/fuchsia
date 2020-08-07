@@ -135,3 +135,59 @@ function gn-test-tools-subdir {
   esac
   echo "${dir}"
 }
+
+
+# Custom mock logger. This is needed when there are calls to the
+# same mock in the backgroun and foreground close to each other.
+#
+# Args:
+#   FILENAME: the file to write the mock state to. If the same mock is
+#     called multiple times, the invocation ordinal is appended.
+#
+#   RC: the return code the mock is returning.
+#
+#   Remainder of args are recorded as arguments passed to the mock.
+#
+function  gn-test-log-mock  {
+  FILENAME="$1"
+  shift
+  RC="$1"
+  shift
+
+  declare state_file="${FILENAME}"
+  if [[ -e "${state_file}" ]]; then
+    # Command was executed more than once. Use numeric suffixes.
+    mv "${state_file}" "${state_file}.1"
+    state_file="${state_file}.2"
+  elif [[ -e "${state_file}.1" ]]; then
+    declare -i index
+    declare -i max_index=1
+    for file in "${state_file}".*; do
+      [[ -e $file ]] || break # handle no files found.
+      index=${file##*.}
+      max_index=$(( index > max_index ? index : max_index ))
+    done
+    state_file="${state_file}.$((max_index+1))"
+  fi
+
+  # Write the args into the status file.
+  #
+  # This is split into three steps, the middle of which writes the Bash array
+  # literal. The array is written using printf and %q to quote or escape the
+  # elements of the $@ array. This is important for a number of reasons:
+  #
+  # * Using escaped double quotes around $@ causes all of the arguments to be
+  #   concatenated into a single space-separated string.
+  # * Using escaped double quotes isn't safe if any item in the array contains a
+  #   double quotation mark.
+  # * Using printf allows all strings to be safely included in the array.
+  # * Using printf prevents variable expansion when the status file is sourced as
+  #   a script.
+  {
+    echo "#!/bin/bash"
+    printf "BT_MOCK_ARGS=( "
+    printf "%q " "${0}" "$@"
+    printf ")\n"
+    echo return "$RC"
+  } >> "${state_file}"
+}

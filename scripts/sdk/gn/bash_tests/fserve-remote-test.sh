@@ -52,6 +52,17 @@ TEST_fserve_remote() {
 
 # Create a mock that simulates a clean environment, nothing is running.
   cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    #
+    # DO NOT RELY ON mock_state.n files for this SSH.
+    #
+    # There are some calls to SSH that are done in the background,
+    # The mock implementation does not handle these concurrent calls,
+    # so we write out our own state file to capture the parameters.
+    # The names of the state files are hard coded, so if you need
+    # a new call to ssh, you'll need to add the file.
+    #
+    source  "$(dirname $0)/../scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+
     if [[ "$*" =~ SSH_CONNECTION ]]; then
       echo "172.20.100.10 38618 100.90.250.100 22"
       return 0
@@ -59,25 +70,59 @@ TEST_fserve_remote() {
       return 0
     fi
 
+    # if the check is in quiet mode, return true.
+    if [[ "$*" =~ "-q -O check" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.qcheck" $rc $@
+      return $rc
+    fi
+
     # No existing session.
     if [[ "$*" =~ "-O check" ]]; then
-      return 255
+      rc=255
+      gn-test-log-mock "${0}.check" $rc $@
+      return "${rc}"
     fi
 
     # No existing forwarding for 8022
     if [[ "$*" =~ "grep :8022" ]]; then
-      return 2
+      rc=255
+      gn-test-log-mock "${0}.check_for_8022" $rc $@
+      return "${rc}"
     fi
+
 
     # No existing forwarding for 8083
     if [[ "$*" =~ "grep :8083" ]]; then
-      return 2
+      rc=2
+      gn-test-log-mock "${0}.check_for_8083" $rc $@
+      return "${rc}"
+    fi
+
+    # log the call to make the tunnel
+    if [[ "$*" =~ "-6 -L" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.tunnel" $rc $@
+      return "${rc}"
+    fi
+
+    # log the call to configure the settings
+    if [[ "$*" =~ "fconfig.sh list" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fconfig" $rc $@
+      return "${rc}"
+    fi
+    # log the call to configure the settings
+    if [[ "$*" =~ "fserve.sh" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fserve" $rc $@
+      return "${rc}"
     fi
     echo $@
 EOF
 
   # Run command.
-  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --image image1 --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
 
   # Common command line args, used for each call to ssh
   ssh_common_expected=(_ANY_  "desktop.example.com" )
@@ -87,48 +132,54 @@ EOF
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  source "${SSH_MOCK_PATH}/ssh.check.1"
   expected=("${ssh_common_expected[@]}" -O check)
   gn-test-check-mock-args "${expected[@]}"
 
   # Check for an existing forwarding for port 8022.
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
+  source "${SSH_MOCK_PATH}/ssh.check_for_8022"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8022")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
-    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
-    "./bin/fconfig.sh default device-name" "&&" "./bin/fconfig.sh list")
- gn-test-check-mock-args "${expected[@]}"
-
-# shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
-  gn-test-check-mock-args "${expected[@]}"
-
-# shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
   expected=("${ssh_common_expected[@]}" )
   expected+=(-6 -L "\*:8083:localhost:8083"
     -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
     -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
     -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
     -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
-    -o "ExitOnForwardFailure=yes" "cd" "\$HOME" "&&"
-    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh" "&&" "sleep 0")
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  expected=("${ssh_common_expected[@]}" -q -O check)
   gn-test-check-mock-args "${expected[@]}"
 
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
-   expected=("${ssh_common_expected[@]}" -O "exit")
+  source "${SSH_MOCK_PATH}/ssh.fconfig"
+  expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
+    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
+    "./bin/fconfig.sh" "default" "device-name" "&&"
+    "./bin/fconfig.sh" "set" "image" "image1" "&&"
+    "./bin/fconfig.sh" "list" )
   gn-test-check-mock-args "${expected[@]}"
 
-  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.7"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.check_for_8083"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8083")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.fserve"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=("cd" "\$HOME" "&&"
+    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh" "&&" "sleep" "0")
 }
 
 TEST_fserve_remote_with_config() {
@@ -142,6 +193,17 @@ TEST_fserve_remote_with_config() {
 
   # Create a mock that simulates a clean environment, nothing is running.
   cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    #
+    # DO NOT RELY ON mock_state.n files for this SSH.
+    #
+    # There are some calls to SSH that are done in the background,
+    # The mock implementation does not handle these concurrent calls,
+    # so we write out our own state file to capture the parameters.
+    # The names of the state files are hard coded, so if you need
+    # a new call to ssh, you'll need to add the file.
+    #
+    source  "$(dirname $0)/../scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+
     if [[ "$*" =~ SSH_CONNECTION ]]; then
       echo "172.20.100.10 38618 100.90.250.100 22"
       return 0
@@ -149,19 +211,52 @@ TEST_fserve_remote_with_config() {
       return 0
     fi
 
+    # if the check is in quiet mode, return true.
+    if [[ "$*" =~ "-q -O check" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.qcheck" $rc $@
+      return $rc
+    fi
+
     # No existing session.
     if [[ "$*" =~ "-O check" ]]; then
-      return 255
+      rc=255
+      gn-test-log-mock "${0}.check" $rc $@
+      return $rc
     fi
 
     # No existing forwarding for 8022
     if [[ "$*" =~ "grep :8022" ]]; then
-      return 2
+      rc=2
+      gn-test-log-mock "${0}.check_for_8022" $rc $@
+      return "${rc}"
     fi
 
     # No existing forwarding for 8083
     if [[ "$*" =~ "grep :8083" ]]; then
-      return 2
+      rc=2
+      gn-test-log-mock "${0}.check_for_8083" $rc $@
+      return "${rc}"
+    fi
+
+    # log the call to make the tunnel
+    if [[ "$*" =~ "-6 -L" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.tunnel" $rc $@
+      return "${rc}"
+    fi
+
+    # log the call to configure the settings
+    if [[ "$*" =~ "fconfig.sh list" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fconfig" $rc $@
+      return "${rc}"
+    fi
+    # log the call to configure the settings
+    if [[ "$*" =~ "fserve.sh" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fserve" $rc $@
+      return "${rc}"
     fi
     echo $@
 EOF
@@ -175,52 +270,63 @@ EOF
   ssh_common_expected+=(-o "ControlMaster=auto")
   ssh_common_expected+=(-t)
 
-   # First SSH is to check if the mux session to the host exists
+  # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
-   expected=("${ssh_common_expected[@]}" -O check)
-   gn-test-check-mock-args "${expected[@]}"
+  source "${SSH_MOCK_PATH}/ssh.check.1"
+  expected=("${ssh_common_expected[@]}" -O check)
+  gn-test-check-mock-args "${expected[@]}"
 
   # Look for an existing port forwarding for 8022
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
+  source "${SSH_MOCK_PATH}/ssh.check_for_8022"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8022")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
-    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
-    "./bin/fconfig.sh default device-name" "&&"
-    "./bin/fconfig.sh set bucket custom-bucket" "&&"
-    "./bin/fconfig.sh set image test-image" "&&" "./bin/fconfig.sh list")
-  gn-test-check-mock-args "${expected[@]}"
-
-# shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
-  gn-test-check-mock-args "${expected[@]}"
-
-# shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
   expected=("${ssh_common_expected[@]}" )
   expected+=(-6 -L "\*:8083:localhost:8083"
     -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
     -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
     -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
-    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes"
-    "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
-    "&&" "./bin/fserve.sh" "&&" "sleep 0")
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  expected=("${ssh_common_expected[@]}" -q -O check)
   gn-test-check-mock-args "${expected[@]}"
 
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
-   expected=("${ssh_common_expected[@]}" -O "exit")
+  source "${SSH_MOCK_PATH}/ssh.fconfig"
+  expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
+    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
+    "./bin/fconfig.sh" "default" "device-name" "&&"
+    "./bin/fconfig.sh" "set" "bucket" "custom-bucket" "&&"
+    "./bin/fconfig.sh" "set" "image" "test-image" "&&"
+    "./bin/fconfig.sh" "list")
   gn-test-check-mock-args "${expected[@]}"
 
-  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.7"
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.check_for_8083"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8083")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.fserve"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=("cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
+    "&&" "./bin/fserve.sh" "&&" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
+
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.check.2"
+  expected=("${ssh_common_expected[@]}" -O "check")
+  gn-test-check-mock-args "${expected[@]}"
 }
 
 TEST_fserve_remote_existing_session() {
@@ -229,8 +335,19 @@ TEST_fserve_remote_existing_session() {
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
 
-# Create a mock that simulates fserve-remote is already running.
+  # Create a mock that simulates fserve-remote is already running.
   cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    #
+    # DO NOT RELY ON mock_state.n files for this SSH.
+    #
+    # There are some calls to SSH that are done in the background,
+    # The mock implementation does not handle these concurrent calls,
+    # so we write out our own state file to capture the parameters.
+    # The names of the state files are hard coded, so if you need
+    # a new call to ssh, you'll need to add the file.
+    #
+    source  "$(dirname $0)/../scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+
     if [[ "$*" =~ SSH_CONNECTION ]]; then
       echo "172.20.100.10 38618 100.90.250.100 22"
       return 0
@@ -238,30 +355,71 @@ TEST_fserve_remote_existing_session() {
       return 0
     fi
 
-    # No existing session.
-    if [[ "$*" =~ "-O check" ]]; then
-      return 0
+    # if the check is in quiet mode, return true.
+    if [[ "$*" =~ "-q -O check" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.qcheck" $rc $@
+      return $rc
     fi
 
-    # No existing forwarding for 8022
+    # existing session return 0.
+    if [[ "$*" =~ "-O check" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.check" $rc $@
+      return $rc
+    fi
+
+    # existing forwarding for 8022
     if [[ "$*" =~ "grep :8022" ]]; then
-      return 0
+      rc=0
+      gn-test-log-mock "${0}.check_for_8022" $rc $@
+      return "${rc}"
     fi
 
     # No existing forwarding for 8083
     if [[ "$*" =~ "grep :8083" ]]; then
-      return 2
+      rc=2
+      gn-test-log-mock "${0}.check_for_8083" $rc $@
+      return "${rc}"
     fi
 
     # simulate kill working successfully.
     if [[ "$*" =~ "pkill -u \$USER sshd" ]]; then
-      return 0
+      rc=0
+      gn-test-log-mock "${0}.pkill" $rc $@
+      return "${rc}"
     fi
-    echo $@
+
+    # log the call to make the tunnel
+    if [[ "$*" =~ "-6 -L" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.tunnel" $rc $@
+      return "${rc}"
+    fi
+
+    # log the call to configure the settings
+    if [[ "$*" =~ "fconfig.sh list" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fconfig" $rc $@
+      return "${rc}"
+    fi
+    # log the call to configure the settings
+    if [[ "$*" =~ "fserve.sh" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fserve" $rc $@
+      return "${rc}"
+    fi
+    # log the call to exit
+    if [[ "$*" =~ "-O exit" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.exit" $rc $@
+      return "${rc}"
+    fi
+     echo $@
 EOF
 
   # Run command.
-  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --image image1 --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
 
   # Common command line args, used for each call to ssh
   ssh_common_expected=(_ANY_  "desktop.example.com" )
@@ -271,60 +429,80 @@ EOF
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  source "${SSH_MOCK_PATH}/ssh.check.1"
   expected=("${ssh_common_expected[@]}" -O check)
   gn-test-check-mock-args "${expected[@]}"
 
-  # Exit the existing the control session.
+  # There is another check before calling exit.
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
+  source "${SSH_MOCK_PATH}/ssh.check.2"
+  expected=("${ssh_common_expected[@]}" -O "check")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.exit.1"
   expected=("${ssh_common_expected[@]}" -O "exit")
   gn-test-check-mock-args "${expected[@]}"
 
   # Check for an existing forwarding for port 8022.
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
+  source "${SSH_MOCK_PATH}/ssh.check_for_8022"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8022")
   gn-test-check-mock-args "${expected[@]}"
 
   # Kill sshd.
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
-  expected=("${ssh_common_expected[@]}" "pkill -u \$USER sshd")
+  source "${SSH_MOCK_PATH}/ssh.pkill"
+  expected=("${ssh_common_expected[@]}" "pkill" "-u" "\$USER" "sshd")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
-    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
-    "./bin/fconfig.sh default device-name" "&&" "./bin/fconfig.sh list")
- gn-test-check-mock-args "${expected[@]}"
-
-# shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
-  gn-test-check-mock-args "${expected[@]}"
-
-# shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.7"
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
   expected=("${ssh_common_expected[@]}" )
   expected+=(-6 -L "\*:8083:localhost:8083"
     -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
     -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
     -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
-    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes"
-    "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
-    "&&" "./bin/fserve.sh" "&&" "sleep 0")
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
-
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.8"
-   expected=("${ssh_common_expected[@]}" -O "exit")
+  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  expected=("${ssh_common_expected[@]}" -q -O check)
   gn-test-check-mock-args "${expected[@]}"
 
-  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.9"
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.fconfig"
+  expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
+    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
+    "./bin/fconfig.sh" "default" "device-name" "&&"
+    "./bin/fconfig.sh" "set" "image" "image1" "&&"
+    "./bin/fconfig.sh" "list")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.check_for_8083"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8083")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.fserve"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=("cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
+    "&&" "./bin/fserve.sh" "&&" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.check.3"
+  expected=("${ssh_common_expected[@]}" -O "check")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.exit.2"
+  expected=("${ssh_common_expected[@]}" -O "exit")
+  gn-test-check-mock-args "${expected[@]}"
 }
 
 TEST_fserve_remote_pm_running() {
@@ -333,8 +511,19 @@ TEST_fserve_remote_pm_running() {
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
 
-# Create a mock that simulates a clean environment, except pm is running on the remote.
+  # Create a mock that simulates a clean environment, except pm is running on the remote.
   cat > "${SSH_MOCK_PATH}/ssh.mock_side_effects" <<"EOF"
+    #
+    # DO NOT RELY ON mock_state.n files for this SSH.
+    #
+    # There are some calls to SSH that are done in the background,
+    # The mock implementation does not handle these concurrent calls,
+    # so we write out our own state file to capture the parameters.
+    # The names of the state files are hard coded, so if you need
+    # a new call to ssh, you'll need to add the file.
+    #
+    source  "$(dirname $0)/../scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
+
     if [[ "$*" =~ SSH_CONNECTION ]]; then
       echo "172.20.100.10 38618 100.90.250.100 22"
       return 0
@@ -342,25 +531,71 @@ TEST_fserve_remote_pm_running() {
       return 0
     fi
 
-    # No existing session.
+    # if the check is in quiet mode, return true.
+    if [[ "$*" =~ "-q -O check" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.qcheck" $rc $@
+      return $rc
+    fi
+
+     # No existing session.
     if [[ "$*" =~ "-O check" ]]; then
-      return 255
+      rc=255
+      gn-test-log-mock "${0}.check" $rc $@
+      return $rc
     fi
 
     # No existing forwarding for 8022
     if [[ "$*" =~ "grep :8022" ]]; then
-      return 2
+      rc=2
+      gn-test-log-mock "${0}.check_for_8022" $rc $@
+      return "${rc}"
     fi
 
-    # No existing forwarding for 8083
+    # Existing forwarding for 8083
     if [[ "$*" =~ "grep :8083" ]]; then
-      return 0
+      rc=0
+      gn-test-log-mock "${0}.check_for_8083" $rc $@
+      return "${rc}"
+    fi
+
+    # simulate kill working successfully.
+    if [[ "$*" =~ "pkill -u \$USER" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.pkill" $rc $@
+      return "${rc}"
+    fi
+
+    # log the call to make the tunnel
+    if [[ "$*" =~ "-6 -L" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.tunnel" $rc $@
+      return "${rc}"
+    fi
+
+    # log the call to configure the settings
+    if [[ "$*" =~ "fconfig.sh list" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fconfig" $rc $@
+      return "${rc}"
+    fi
+    # log the call to configure the settings
+    if [[ "$*" =~ "fserve.sh" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.fserve" $rc $@
+      return "${rc}"
+    fi
+    # log the call to exit
+    if [[ "$*" =~ "-O exit" ]]; then
+      rc=0
+      gn-test-log-mock "${0}.exit" $rc $@
+      return "${rc}"
     fi
     echo $@
 EOF
 
   # Run command.
-  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
+  BT_EXPECT "${FSERVE_REMOTE_CMD}" desktop.example.com "${REMOTE_PATH}" --image image1 --ttl 0 > "${BT_TEMP_DIR}/fserve_remote_log.txt" 2>&1
 
   # Common command line args, used for each call to ssh
   ssh_common_expected=(_ANY_  "desktop.example.com" )
@@ -370,56 +605,66 @@ EOF
 
   # First SSH is to check if the mux session to the host exists
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
-  expected=("${ssh_common_expected[@]}" -O check)
+  source "${SSH_MOCK_PATH}/ssh.check.1"
+  expected=("${ssh_common_expected[@]}" "-O" "check")
   gn-test-check-mock-args "${expected[@]}"
 
 
   # Check for an existing forwarding for port 8022.
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8022")
+  source "${SSH_MOCK_PATH}/ssh.check_for_8022"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8022")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.3"
-  expected=("${ssh_common_expected[@]}" "cd \$HOME" "&&"
-    "cd /home/path_to_samples/third_party/fuchsia-sdk" "&&"
-    "./bin/fconfig.sh set device-ip 127.0.0.1" "&&"
-    "./bin/fconfig.sh default device-name"
-    "&&" "./bin/fconfig.sh list")
-  gn-test-check-mock-args "${expected[@]}"
-
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.4"
-  expected=("${ssh_common_expected[@]}" "ss -ln | grep :8083")
-  gn-test-check-mock-args "${expected[@]}"
-
-  # Check for killing existing pm server running
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.5"
-  expected=("${ssh_common_expected[@]}" "pkill -u \$USER pm")
-  gn-test-check-mock-args "${expected[@]}"
-
-  # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.6"
+  source "${SSH_MOCK_PATH}/ssh.tunnel"
   expected=("${ssh_common_expected[@]}" )
   expected+=(-6 -L "\*:8083:localhost:8083"
     -R "8022:[fe80::c0ff:eec0:ffee%coffee]:22"
     -R "2345:[fe80::c0ff:eec0:ffee%coffee]:2345"
     -R "8443:[fe80::c0ff:eec0:ffee%coffee]:8443"
-    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80" -o "ExitOnForwardFailure=yes"
-    "cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
-    "&&" "./bin/fserve.sh" "&&" "sleep 0")
+    -R "9080:[fe80::c0ff:eec0:ffee%coffee]:80"
+    -o "ExitOnForwardFailure=yes" "-nT" "sleep" "0")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.qcheck"
+  expected=("${ssh_common_expected[@]}" -q -O check)
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.fconfig"
+  expected=("${ssh_common_expected[@]}" "cd" "\$HOME" "&&"
+    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&"
+    "./bin/fconfig.sh" "set" "device-ip" "127.0.0.1" "&&"
+    "./bin/fconfig.sh" "default" "device-name" "&&"
+    "./bin/fconfig.sh" "set" "image" "image1" "&&"
+    "./bin/fconfig.sh" "list")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.check_for_8083"
+  expected=("${ssh_common_expected[@]}" "ss" "-ln" "|" "grep" ":8083")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # Check for killing existing pm server running
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.pkill"
+  expected=("${ssh_common_expected[@]}" "pkill" "-u" "\$USER" "pm")
+  gn-test-check-mock-args "${expected[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.fserve"
+  expected=("${ssh_common_expected[@]}" )
+  expected+=("cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
+    "&&" "./bin/fserve.sh" "&&" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
 
 
   # shellcheck disable=SC1090
-  source "${SSH_MOCK_PATH}/ssh.mock_state.7"
-  expected=("${ssh_common_expected[@]}" -O "exit")
+  source "${SSH_MOCK_PATH}/ssh.check.2"
+  expected=("${ssh_common_expected[@]}" -O "check")
   gn-test-check-mock-args "${expected[@]}"
-
-  BT_ASSERT_FILE_DOES_NOT_EXIST "${SSH_MOCK_PATH}/ssh.mock_state.8"
 }
 
 # Test initialization.
@@ -438,6 +683,7 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/x64/pm
   scripts/sdk/gn/base/tools/arm64/pm
   isolated_path_for/ssh
+  isolated_path_for/kill
 )
 
 BT_INIT_TEMP_DIR() {
@@ -457,6 +703,16 @@ BT_SET_UP() {
   export HOME="${BT_TEMP_DIR}/test-home"
 
   MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
+
+  if [[ "$(type -t kill)" == "builtin" ]]; then
+    kill() {
+      "${BT_TEMP_DIR}/isolated_path_for/kill" "$@"
+    }
+  fi
+  # Create mock "kill" command$.
+  # Need to embed "enable -n kill" into fuchsia-common.sh to disable the
+  # bash builtin kill so we can intercept it.
+  echo "enable -n kill" >> "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fuchsia-common.sh"
 }
 
 BT_RUN_TESTS "$@"
