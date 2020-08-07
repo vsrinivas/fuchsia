@@ -4,8 +4,9 @@
 
 use crate::internal::handler::message;
 use crate::registry::device_storage::DeviceStorageFactory;
+use crate::registry::setting_handler::ControllerError;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{SettingRequest, SettingType};
+use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
@@ -19,10 +20,11 @@ use {
     crate::service_context::ServiceContext,
 };
 
-pub type SettingHandlerResult = Result<(), Error>;
+pub type SettingHandlerResult = Result<Option<SettingResponse>, ControllerError>;
+pub type ControllerGenerateResult = Result<(), Error>;
 
 pub type GenerateHandler<T> =
-    Box<dyn Fn(Context<T>) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync>;
+    Box<dyn Fn(Context<T>) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
 
 /// An command represents messaging from the registry to take a
 /// particular action.

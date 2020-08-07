@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::internal::handler::{message, reply, Payload};
 use crate::message::base::{Audience, MessageEvent};
-use crate::registry::base::{Command, Context, SettingHandlerResult, State};
+use crate::registry::base::{Command, Context, ControllerGenerateResult, State};
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
@@ -111,7 +111,7 @@ impl ClientImpl {
     pub async fn create<S: StorageFactory + 'static>(
         mut context: Context<S>,
         generate_controller: GenerateController,
-    ) -> SettingHandlerResult {
+    ) -> ControllerGenerateResult {
         let client = Arc::new(Mutex::new(Self::new(&context)));
         let controller_result = generate_controller(ClientProxy::new(client.clone())).await;
 
@@ -204,7 +204,7 @@ pub struct Handler<C: controller::Create + controller::Handle + Send + Sync + 's
 impl<C: controller::Create + controller::Handle + Send + Sync + 'static> Handler<C> {
     pub fn spawn<S: StorageFactory + 'static>(
         context: Context<S>,
-    ) -> BoxFuture<'static, SettingHandlerResult> {
+    ) -> BoxFuture<'static, ControllerGenerateResult> {
         Box::pin(async move {
             ClientImpl::create(
                 context,
@@ -348,7 +348,7 @@ pub mod persist {
     {
         pub fn spawn<F: StorageFactory + 'static>(
             context: Context<F>,
-        ) -> BoxFuture<'static, SettingHandlerResult> {
+        ) -> BoxFuture<'static, ControllerGenerateResult> {
             Box::pin(async move {
                 let storage = context
                     .environment
