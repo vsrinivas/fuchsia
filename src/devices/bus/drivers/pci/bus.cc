@@ -47,10 +47,7 @@ zx_status_t Bus::Create(zx_device_t* parent) {
 
   // Name the bus instance with segment group and bus range, for example:
   // pci[0][0:255] for a legacy pci bus in segment group 0.
-  char name[32];
-  snprintf(name, sizeof(name), "pci[%u][%u:%u]", info.segment_group, info.start_bus_num,
-           info.end_bus_num);
-  if ((status = bus->DdkAdd(name)) != ZX_OK) {
+  if ((status = bus->DdkAdd("bus")) != ZX_OK) {
     zxlogf(ERROR, "failed to add bus driver: %d", status);
     return status;
   }
