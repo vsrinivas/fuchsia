@@ -18,6 +18,12 @@ func init() {
 enum EnumArrayNonDenseElement{
 	A = 1;
 	C = 3;
+	D = 6;
+	E = 8;
+	F = 12;
+	G = 13;
+	H = 14;
+	J = 16;
 };`,
 		Definitions: []config.Definition{
 			{

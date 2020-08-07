@@ -29,6 +29,11 @@ benchmark_suite_declarations = [
     fidl = [ "enum_array.gen.test.fidl" ]
   },
   {
+    name = "enum_array_non_dense"
+    gidl = [ "enum_array_non_dense.gen.gidl" ]
+    fidl = [ "enum_array_non_dense.gen.test.fidl" ]
+  },
+  {
     name = "float_array"
     gidl = [ "float_array.gen.gidl" ]
     fidl = [ "float_array.gen.test.fidl" ]
