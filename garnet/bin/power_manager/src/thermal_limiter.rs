@@ -94,6 +94,31 @@ impl<'a, 'b> ThermalLimiterBuilder<'a, 'b> {
     }
 }
 
+/// Internal analogue of fthermal::TripPoint that uses ThermalLoad for its fields.
+#[derive(Clone, Debug)]
+struct TripPoint {
+    low: ThermalLoad,
+    high: ThermalLoad,
+}
+
+impl TripPoint {
+    fn new(low: u32, high: u32) -> TripPoint {
+        TripPoint { low: ThermalLoad(low), high: ThermalLoad(high) }
+    }
+}
+
+impl From<fthermal::TripPoint> for TripPoint {
+    fn from(tp: fthermal::TripPoint) -> TripPoint {
+        TripPoint::new(tp.low, tp.high)
+    }
+}
+
+impl Into<fthermal::TripPoint> for TripPoint {
+    fn into(self: Self) -> fthermal::TripPoint {
+        fthermal::TripPoint { low: self.low.0, high: self.high.0 }
+    }
+}
+
 /// Contains state and connection information for one thermal client
 struct ClientEntry {
     /// The Actor connection proxy to the client
@@ -106,7 +131,7 @@ struct ClientEntry {
     current_state: u32,
 
     /// The thermal load trip points that the client supplied when it subscribed
-    trip_points: Vec<ThermalLoad>,
+    trip_points: Vec<TripPoint>,
 
     /// The inspect node that this client records to. Since the ClientEntry owns the inspect node,
     /// if the ClientEntry is dropped then so will the node.
@@ -120,12 +145,17 @@ impl ClientEntry {
     fn new(
         proxy: fthermal::ActorProxy,
         actor_type: fthermal::ActorType,
-        trip_points: Vec<ThermalLoad>,
+        trip_points: Vec<TripPoint>,
         inspect_node: inspect::Node,
     ) -> Self {
         inspect_node.record_uint("proxy", proxy.as_handle_ref().raw_handle().into());
         inspect_node.record_uint("actor_type", actor_type as u64);
-        trip_points.iter().for_each(|val| inspect_node.record_uint("trip_point", val.0.into()));
+        for (i, trip_point) in trip_points.iter().enumerate() {
+            let node = inspect_node.create_child(format!("trip_point_{:03}", i));
+            node.record_uint("low", trip_point.low.0.into());
+            node.record_uint("high", trip_point.high.0.into());
+            inspect_node.record(node);
+        }
         ClientEntry {
             proxy,
             _actor_type: actor_type,
@@ -139,7 +169,8 @@ impl ClientEntry {
     /// Given a thermal load, determine and update the current thermal state locally. Returns the
     /// new state if the state was changed, otherwise returns None.
     fn update_state(&mut self, thermal_load: ThermalLoad) -> Option<u32> {
-        let new_state = Self::determine_thermal_state(thermal_load, &self.trip_points);
+        let new_state =
+            Self::determine_thermal_state(self.current_state, thermal_load, &self.trip_points);
         if new_state != self.current_state {
             self.current_state = new_state;
             self.inspect_state.set(new_state.into());
@@ -149,13 +180,25 @@ impl ClientEntry {
         }
     }
 
-    /// Given a thermal load and vector of trip points, determine the appropriate thermal
-    /// state. A thermal state is defined by the range between [previous_point - next_point), and
-    /// is bounded on the ends by 0 and MAX_THERMAL_LOAD. Therefore, the determined state will be
-    /// in the range [0 - len(trip_points)], a total of len(trip_points) + 1 possible states.
-    fn determine_thermal_state(thermal_load: ThermalLoad, trip_points: &Vec<ThermalLoad>) -> u32 {
+    /// Given the current state, thermal load, and vector of trip points, determine the appropriate
+    /// next thermal state.
+    ///
+    /// Since the current state is `current_state`, we know that the active trip points upon input
+    /// are `trip_points[i]` for `i < current_state`.
+    ///
+    /// An active trip point becomes inactive if `thermal_load < trip_point.low`, whereas an
+    /// inactive trip point remains inactive if `thermal_load < trip_point.high`. The output thermal
+    /// state is the index of the first inactive trip point, or `len(trip_points)` if all trip
+    /// points are active.
+    fn determine_thermal_state(
+        current_state: u32,
+        thermal_load: ThermalLoad,
+        trip_points: &Vec<TripPoint>,
+    ) -> u32 {
         for (i, trip_point) in trip_points.iter().enumerate() {
-            if thermal_load < *trip_point {
+            let threshold =
+                if (i as u32) < current_state { trip_point.low } else { trip_point.high };
+            if thermal_load < threshold {
                 return i as u32;
             }
         }
@@ -202,7 +245,41 @@ impl ThermalLimiter {
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
+                        // NOTE(fxb/57804): Copypasta between Subscribe and Subscribe2
+                        // implementations is temporary until Subscribe2 replaces Subscribe.
                         fthermal::ControllerRequest::Subscribe {
+                            actor,
+                            actor_type,
+                            trip_points,
+                            responder,
+                        } => {
+                            fuchsia_trace::instant!(
+                                "power_manager",
+                                "ThermalLimiter::handle_subscribe",
+                                fuchsia_trace::Scope::Thread
+                            );
+                            // A TripPoint with low == high is equivalent to the older style of
+                            // trip point with a single thermal load specified.
+                            let trip_points: Vec<fthermal::TripPoint> = trip_points
+                                .into_iter()
+                                .map(|val| fthermal::TripPoint { low: val, high: val })
+                                .collect();
+                            let mut result = self
+                                .handle_new_client(actor.into_proxy()?, actor_type, trip_points)
+                                .await;
+                            log_if_err!(
+                                result.map_err(|e| format!("{:?}", e)),
+                                "Failed to handle new client"
+                            );
+                            fuchsia_trace::instant!(
+                                "power_manager",
+                                "ThermalLimiter::handle_new_client_result",
+                                fuchsia_trace::Scope::Thread,
+                                "result" => format!("{:?}", result).as_str()
+                            );
+                            let _ = responder.send(&mut result);
+                        }
+                        fthermal::ControllerRequest::Subscribe2 {
                             actor,
                             actor_type,
                             trip_points,
@@ -242,7 +319,7 @@ impl ThermalLimiter {
         &self,
         proxy: fthermal::ActorProxy,
         actor_type: fthermal::ActorType,
-        trip_points: Vec<u32>,
+        trip_points: Vec<fthermal::TripPoint>,
     ) -> Result<(), fthermal::Error> {
         // TODO(fxb/44484): These strings must live for the duration of the function because the
         // trace macro uses them when the function goes out of scope. Therefore, they must be bound
@@ -258,20 +335,22 @@ impl ThermalLimiter {
         );
         // trip_points must:
         //  - have length in the range [1 - MAX_TRIP_POINT_COUNT]
+        //  - have `low` <= `high`
+        //  - be monotonically increasing: `high[i]` < `low[i+1]`
         //  - have values in the range [1 - MAX_THERMAL_LOAD]
-        //  - be monotonically increasing
         let trip_points_len = trip_points.len() as u32;
         if trip_points_len < 1
             || trip_points_len > fthermal::MAX_TRIP_POINT_COUNT
-            || !trip_points.windows(2).all(|w| w[0] < w[1])
-            || *trip_points.first().unwrap() < 1
-            || *trip_points.last().unwrap() > MAX_THERMAL_LOAD.0
+            || !trip_points.iter().all(|p| p.low <= p.high)
+            || !trip_points.windows(2).all(|w| w[0].high < w[1].low)
+            || trip_points.first().unwrap().low < 1
+            || trip_points.last().unwrap().high > MAX_THERMAL_LOAD.0
         {
             return Err(fthermal::Error::InvalidArguments);
         }
 
-        // Convert trip_points from Vec<u32> to Vec<ThermalLoad>
-        let trip_points = trip_points.into_iter().map(ThermalLoad).collect();
+        // Convert trip_points from Vec<fthermal::TripPoint> to Vec<TripPoint>
+        let trip_points: Vec<TripPoint> = trip_points.into_iter().map(|p| p.into()).collect();
 
         let mut client =
             ClientEntry::new(proxy, actor_type, trip_points, self.inspect.create_client_node());
@@ -420,7 +499,7 @@ pub mod tests {
     async fn subscribe_actor(
         node: Rc<ThermalLimiter>,
         actor_type: fthermal::ActorType,
-        trip_points: Vec<ThermalLoad>,
+        trip_points: Vec<TripPoint>,
     ) -> Result<fthermal::ActorRequestStream, fthermal::Error> {
         // Create the proxy objects to be used for subscribing
         let (controller_proxy, controller_stream) =
@@ -436,12 +515,10 @@ pub mod tests {
 
         // Subscribe with the ThermalLimiter Controller using the newly created actor proxy object
         // and supplied trip points
+        let mut trip_points: Vec<fthermal::TripPoint> =
+            trip_points.into_iter().map(|p| p.into()).collect();
         controller_proxy
-            .subscribe(
-                actor_proxy,
-                actor_type,
-                &trip_points.iter().map(|tp| tp.0 as u32).collect::<Vec<_>>(),
-            )
+            .subscribe2(actor_proxy, actor_type, &mut trip_points.iter_mut())
             .await
             .unwrap()?;
 
@@ -469,6 +546,14 @@ pub mod tests {
             Ok(MessageReturn::UpdateThermalLoad) => {}
             _ => panic!("Expected MessageReturn::UpdateThermalLoad"),
         }
+    }
+
+    // Convenience function to construct a Vec<TripPoint> from an array or Vec of (u32, u32)
+    fn make_trip_points<V>(values: V) -> Vec<TripPoint>
+    where
+        for<'a> &'a V: IntoIterator<Item = &'a (u32, u32)>,
+    {
+        values.into_iter().map(|v| TripPoint::new(v.0, v.1)).collect()
     }
 
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
@@ -505,7 +590,7 @@ pub mod tests {
         // ThermalLimiter Controller sends an update with thermal state 0 as soon as the Actor
         // connects
         let thermal_load = ThermalLoad(0);
-        let trip_points = vec![ThermalLoad(1)];
+        let trip_points = make_trip_points([(1, 1)]);
         let expected_state = 0;
 
         set_thermal_load(&node, thermal_load).await;
@@ -520,7 +605,7 @@ pub mod tests {
         // ThermalLimiter Controller sends an update with thermal state 1 as soon as the Actor
         // connects
         let thermal_load = ThermalLoad(50);
-        let trip_points = vec![ThermalLoad(1)];
+        let trip_points = make_trip_points([(1, 1)]);
         let expected_state = 1;
 
         set_thermal_load(&node, thermal_load).await;
@@ -543,19 +628,24 @@ pub mod tests {
         // empty trip points vector
         failure_trip_points.push(vec![]);
 
-        // vector length greater than fthermal::MAX_TRIP_POINT_COUNT
-        failure_trip_points
-            .push((0..fthermal::MAX_TRIP_POINT_COUNT + 1).map(ThermalLoad).collect());
+        // More than fthermal::MAX_TRIP_POINT_COUNT trip points. Note that, depending on the value
+        // of fthermal::MAX_THERMAL_LOAD, this may also violate the max allowed high value of a trip
+        // point. Regardless, this case will fail.
+        let range = 1..=fthermal::MAX_TRIP_POINT_COUNT + 1;
+        failure_trip_points.push(make_trip_points(range.clone().zip(range).collect::<Vec<_>>()));
 
-        // non-monotonically-increasing vector
-        failure_trip_points.push(vec![ThermalLoad(2), ThermalLoad(1)]);
-        failure_trip_points.push(vec![ThermalLoad(2), ThermalLoad(2)]);
+        // low > high
+        failure_trip_points.push(make_trip_points([(4, 3)]));
 
-        // a value of 0
-        failure_trip_points.push(vec![ThermalLoad(0)]);
+        // overlapping trip point boundaries
+        failure_trip_points.push(make_trip_points([(7, 10), (9, 13)]));
+        failure_trip_points.push(make_trip_points([(7, 10), (10, 13)]));
 
-        // a value greater than MAX_THERMAL_LOAD
-        failure_trip_points.push(vec![ThermalLoad(MAX_THERMAL_LOAD.0 + 1)]);
+        // low value of 0
+        failure_trip_points.push(make_trip_points([(0, 1)]));
+
+        // high value greater than MAX_THERMAL_LOAD
+        failure_trip_points.push(make_trip_points([(1, MAX_THERMAL_LOAD.0 + 1)]));
 
         for trip_points in failure_trip_points {
             match subscribe_actor(
@@ -594,8 +684,8 @@ pub mod tests {
             TestCase { load: ThermalLoad(80), client1: None, client2: None },
             TestCase { load: ThermalLoad(100), client1: Some(3), client2: Some(4) },
         ];
-        let trip_points_client1 = vec![1, 50, 100].into_iter().map(ThermalLoad).collect();
-        let trip_points_client2 = vec![1, 25, 99, 100].into_iter().map(ThermalLoad).collect();
+        let trip_points_client1 = make_trip_points([(1, 1), (50, 50), (100, 100)]);
+        let trip_points_client2 = make_trip_points([(1, 1), (25, 25), (99, 99), (100, 100)]);
 
         // Set up the node and executor
         let mut exec = fasync::Executor::new().unwrap();
@@ -670,7 +760,7 @@ pub mod tests {
         // Test parameters chosen such that the new thermal load (25) doesn't cause a change in
         // expected thermal state
         let thermal_load = ThermalLoad(25);
-        let trip_points = vec![ThermalLoad(50)];
+        let trip_points = make_trip_points([(50, 50)]);
         let expected_thermal_state = 0;
 
         let mut exec = fasync::Executor::new().unwrap();
@@ -700,25 +790,30 @@ pub mod tests {
     /// based on thermal load and trip point inputs
     #[test]
     fn test_client_determine_state() {
-        let trip_points = &vec![ThermalLoad(1)];
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(0), trip_points), 0);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(1), trip_points), 1);
+        let determine_thermal_state = ClientEntry::determine_thermal_state;
 
-        let trip_points = &vec![ThermalLoad(100)];
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(99), trip_points), 0);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(100), trip_points), 1);
+        // One trip point, no hysteresis
+        let trip_points = &make_trip_points([(7, 7)]);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(6), trip_points), 0);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(7), trip_points), 1);
 
-        let trip_points = &vec![ThermalLoad(50)];
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(49), trip_points), 0);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(50), trip_points), 1);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(51), trip_points), 1);
+        // One trip point with hysteresis
+        let trip_points = &make_trip_points([(7, 8)]);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(6), trip_points), 0);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(7), trip_points), 0);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(8), trip_points), 1);
+        assert_eq!(determine_thermal_state(1, ThermalLoad(8), trip_points), 1);
+        assert_eq!(determine_thermal_state(1, ThermalLoad(7), trip_points), 1);
+        assert_eq!(determine_thermal_state(1, ThermalLoad(6), trip_points), 0);
 
-        let trip_points = &vec![ThermalLoad(1), ThermalLoad(50)];
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(0), trip_points), 0);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(1), trip_points), 1);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(49), trip_points), 1);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(50), trip_points), 2);
-        assert_eq!(ClientEntry::determine_thermal_state(ThermalLoad(51), trip_points), 2);
+        // Two trip points with hysteresis -- check jumps of more than one state
+        let trip_points = &make_trip_points([(7, 8), (13, 15)]);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(13), trip_points), 1);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(14), trip_points), 1);
+        assert_eq!(determine_thermal_state(0, ThermalLoad(15), trip_points), 2);
+        assert_eq!(determine_thermal_state(2, ThermalLoad(8), trip_points), 1);
+        assert_eq!(determine_thermal_state(2, ThermalLoad(7), trip_points), 1);
+        assert_eq!(determine_thermal_state(2, ThermalLoad(6), trip_points), 0);
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data
@@ -728,7 +823,7 @@ pub mod tests {
         let node =
             ThermalLimiterBuilder::new().with_inspect_root(inspector.root()).build().unwrap();
         let actor_type = fthermal::ActorType::Unspecified;
-        let trip_points = vec![ThermalLoad(50)];
+        let trip_points = vec![TripPoint::new(47, 53)];
 
         // Subscribe a new client and block until we get the first state update from the Controller
         let mut stream = subscribe_actor(node.clone(), actor_type, trip_points).await.unwrap();
@@ -743,7 +838,10 @@ pub mod tests {
                         client0: {
                             proxy: inspect::testing::AnyProperty,
                             actor_type: actor_type as u64,
-                            trip_point: 50u64,
+                            trip_point_000: {
+                                low: 47u64,
+                                high: 53u64,
+                            },
                             thermal_state: 0u64
                         }
                     }
