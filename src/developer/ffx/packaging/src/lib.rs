@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod archive;
+mod constants;
 mod repository;
 
 use anyhow::{anyhow, Context, Result};

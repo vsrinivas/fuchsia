@@ -3,14 +3,37 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_macro.gni")
+import("//build/tools/json_merge/json_merge.gni")
 
 if (host_toolchain == current_toolchain) {
+  json_merge("config.json") {
+    sources = [
+      rebase_path("//src/developer/ffx/daemon/data/config.json"),
+      get_label_info("//src/developer/ffx:config.json", "target_out_dir") +
+          "/config.json",
+    ]
+    deps = [ "//src/developer/ffx:config.json" ]
+  }
+
+  config_path = "$target_out_dir/config.json"
+
+  # Rust looks for files included with `include_str` relative to the
+  # callsite. Rebase the config path relative to the files in src/.
+  rebased_config_path = rebase_path(config_path, "src")
+
+  config("env") {
+    rustenv = [ "FFX_DEFAULT_CONFIG_JSON=$rebased_config_path" ]
+  }
+
   rustc_macro("config-proc-macros") {
     name = "config_proc_macros"
     version = "0.1.0"
     edition = "2018"
 
+    configs += [ ":env" ]
+
     deps = [
+      ":config.json",
       "//third_party/rust_crates:proc-macro-hack",
       "//third_party/rust_crates:proc-macro2",
       "//third_party/rust_crates:quote",
@@ -22,6 +45,6 @@ if (host_toolchain == current_toolchain) {
     enforce_source_listing = true
 
     sources = [ "src/lib.rs" ]
-    inputs = [ "//src/developer/ffx/config/data/defaults.json" ]
+    inputs = [ config_path ]
   }
 }

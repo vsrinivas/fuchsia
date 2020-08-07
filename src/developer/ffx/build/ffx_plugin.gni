@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/tools/json_merge/json_merge.gni")
 import("command.gni")
 import("plugins.gni")
 
@@ -82,15 +83,14 @@ template("ffx_plugin") {
     }
 
     p_deps = []
+    json_deps = []
+    json_merge_deps = []
     if (defined(invoker.plugin_deps)) {
       foreach(d, invoker.plugin_deps) {
-        dep = d + "_suite"
-        p_deps += [ dep ]
-      }
-
-      foreach(d, invoker.plugin_deps) {
-        dep = d + "_args"
-        args_deps += [ dep ]
+        p_deps += [ d + "_suite" ]
+        args_deps += [ d + "_args" ]
+        json_deps += [ get_label_info(d, "target_out_dir") + "/config.json" ]
+        json_merge_deps += [ get_label_info(d, "dir") + ":config.json" ]
       }
 
       sub_cmd_gen = output_name + "_sub_command_gen"
@@ -114,6 +114,7 @@ template("ffx_plugin") {
                                  "name",
                                  "deps",
                                  "args_deps",
+                                 "config_data",
                                  "extra_deps",
                                  "args_source_root",
                                  "source_root",
@@ -139,6 +140,23 @@ template("ffx_plugin") {
       }
     }
 
+    if (defined(invoker.config_data)) {
+      json_deps += invoker.config_data
+    } else {
+      empty = "$target_out_dir/empty.json"
+      write_file(empty,
+                 {
+                 },
+                 "json")
+      json_deps += [ empty ]
+    }
+
+    json_merge("config.json") {
+      sources = json_deps
+      deps = json_merge_deps
+      minify = true
+    }
+
     rustc_library(args) {
       source_root = args_source_root
       deps = args_deps + extra_deps + [
@@ -150,6 +168,7 @@ template("ffx_plugin") {
                              "*",
                              [
                                "name",
+                               "config_data",
                                "deps",
                                "source_root",
                                "non_rust_deps",
@@ -207,6 +226,7 @@ template("ffx_plugin") {
                              "*",
                              [
                                "name",
+                               "config_data",
                                "output_name",
                                "args",
                              ])
@@ -229,6 +249,7 @@ template("ffx_plugin") {
                                "*",
                                [
                                  "name",
+                                 "config_data",
                                  "deps",
                                  "non_rust_deps",
                                  "target_name",
@@ -248,6 +269,7 @@ template("ffx_plugin") {
                              "*",
                              [
                                "name",
+                               "config_data",
                                "deps",
                                "non_rust_deps",
                                "target_name",

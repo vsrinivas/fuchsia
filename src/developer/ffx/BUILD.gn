@@ -34,6 +34,7 @@ if (host_toolchain == current_toolchain) {
 
     sources = [
       "src/args.rs",
+      "src/constants.rs",
       "src/logger.rs",
       "src/main.rs",
     ]

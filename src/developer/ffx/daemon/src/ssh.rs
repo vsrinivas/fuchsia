@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::constants::{SSH_PORT, SSH_PRIV},
     crate::target::TargetAddr,
     anyhow::{anyhow, Result},
-    ffx_config::constants::{SSH_PORT, SSH_PRIV},
     ffx_config::get,
     std::collections::HashSet,
     std::process::Command,

@@ -1,0 +1,9 @@
+{
+  "log": {
+    "dir": [
+      "$FFX_LOG_DIR",
+      "$HOME"
+    ],
+    "enabled": "$FFX_LOG_ENABLED"
+  }
+}

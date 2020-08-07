@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::constants::PACKAGE_REPO;
 use anyhow::Result;
-use ffx_config::constants::PACKAGE_REPO;
 use ffx_config::get;
 use std::io::{Read, Seek};
 use std::{fs, io, path};

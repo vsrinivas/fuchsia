@@ -20,3 +20,7 @@ pub const RETRY_DELAY: Duration = Duration::from_millis(200);
 // before giving up. This may need to be split up into specific timeouts for
 // specific events.
 pub const EVENT_TIMEOUT: Duration = Duration::from_secs(10);
+
+// Config keys
+pub const SSH_PRIV: &str = "ssh.priv";
+pub const SSH_PORT: &str = "ssh.port";

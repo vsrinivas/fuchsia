@@ -27,6 +27,7 @@ template("ffx") {
   ffx_plugin(suite_name) {
     forward_variables_from(invoker, "*", [])
     args_deps = [ "core:lib" ]
+    config_data = [ "data/config.json" ]
 
     # These are needed only for the default FFX
     extra_deps = [

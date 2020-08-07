@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
 };
 
+mod constants;
 mod logger;
 
 async fn get_daemon_proxy() -> Result<DaemonProxy> {

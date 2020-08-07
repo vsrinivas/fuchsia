@@ -1,5 +1,5 @@
 use {
-    ffx_config::constants::{LOG_DIR, LOG_ENABLED},
+    crate::constants::{LOG_DIR, LOG_ENABLED},
     ffx_config::get,
     simplelog::{
         CombinedLogger, Config, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
