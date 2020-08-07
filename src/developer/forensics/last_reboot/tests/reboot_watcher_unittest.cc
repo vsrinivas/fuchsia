@@ -72,6 +72,11 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootReasons, ImminentGracefulRebootWatcher
                                  "SESSION FAILURE",
                              },
                              {
+                                 "SystemFailure",
+                                 RebootReason::SYSTEM_FAILURE,
+                                 "SYSTEM FAILURE",
+                             },
+                             {
                                  "NotSupported",
                                  static_cast<RebootReason>(100u),
                                  "NOT SUPPORTED",

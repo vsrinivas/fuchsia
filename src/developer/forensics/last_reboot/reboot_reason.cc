@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/forensics/utils/cobalt/metrics.h"
+
 namespace forensics {
 namespace last_reboot {
 namespace {
@@ -38,6 +40,8 @@ std::string ToString(const RebootReason reason) {
       return "RebootReason::kHighTemperature";
     case RebootReason::kSessionFailure:
       return "RebootReason::kSessionFailure";
+    case RebootReason::kSystemFailure:
+      return "RebootReason::kSystemFailure";
   }
 }
 
@@ -53,6 +57,7 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kSoftwareWatchdogTimeout:
     case RebootReason::kBrownout:
     case RebootReason::kSessionFailure:
+    case RebootReason::kSystemFailure:
       return true;
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
@@ -70,6 +75,7 @@ std::optional<bool> OptionallyGraceful(const RebootReason reason) {
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
     case RebootReason::kSessionFailure:
+    case RebootReason::kSystemFailure:
       return true;
     case RebootReason::kCold:
     case RebootReason::kSpontaneous:
@@ -93,6 +99,7 @@ cobalt::LegacyRebootReason ToCobaltLegacyRebootReason(const RebootReason reason)
     case RebootReason::kSystemUpdate:
     case RebootReason::kHighTemperature:
     case RebootReason::kSessionFailure:
+    case RebootReason::kSystemFailure:
       return cobalt::LegacyRebootReason::kClean;
     case RebootReason::kCold:
       return cobalt::LegacyRebootReason::kCold;
@@ -125,6 +132,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
       return cobalt::LastRebootReason::kHighTemperature;
     case RebootReason::kSessionFailure:
       return cobalt::LastRebootReason::kSessionFailure;
+    case RebootReason::kSystemFailure:
+      return cobalt::LastRebootReason::kSystemFailure;
     case RebootReason::kCold:
       return cobalt::LastRebootReason::kCold;
     case RebootReason::kSpontaneous:
@@ -160,6 +169,8 @@ std::string ToCrashSignature(const RebootReason reason) {
       return "fuchsia-brownout";
     case RebootReason::kSessionFailure:
       return "fuchsia-session-failure";
+    case RebootReason::kSystemFailure:
+      return "fuchsia-system-failure";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
     case RebootReason::kSystemUpdate:
@@ -183,6 +194,7 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kOOM:
     case RebootReason::kSoftwareWatchdogTimeout:
     case RebootReason::kSessionFailure:
+    case RebootReason::kSystemFailure:
       return "system";
     case RebootReason::kGenericGraceful:
     case RebootReason::kUserRequest:
@@ -207,6 +219,8 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
       return fuchsia::feedback::RebootReason::HIGH_TEMPERATURE;
     case RebootReason::kSessionFailure:
       return fuchsia::feedback::RebootReason::SESSION_FAILURE;
+    case RebootReason::kSystemFailure:
+      return fuchsia::feedback::RebootReason::SYSTEM_FAILURE;
     case RebootReason::kCold:
       return fuchsia::feedback::RebootReason::COLD;
     case RebootReason::kSpontaneous:

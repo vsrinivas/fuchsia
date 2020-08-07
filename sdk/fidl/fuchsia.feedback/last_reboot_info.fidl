@@ -73,7 +73,11 @@ enum RebootReason : uint16 {
     /// The device rebooted because it was determined to be too hot.
     HIGH_TEMPERATURE = 11;
 
-    /// The device rebooted becuase of an issue with a session or because the session manager was
+    /// The device rebooted because of an issue with a session or because the session manager was
     /// unable to  recover from an error.
     SESSION_FAILURE = 12;
+
+    /// The device rebooted because a core component was unable to recover from an error, e.g., the
+    /// system manager crashed.
+    SYSTEM_FAILURE = 13;
 };

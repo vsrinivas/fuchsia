@@ -24,6 +24,8 @@ std::string FormatReason(fuchsia::hardware::power::statecontrol::RebootReason re
       return "HIGH TEMPERATURE";
     case RebootReason::SESSION_FAILURE:
       return "SESSION FAILURE";
+    case RebootReason::SYSTEM_FAILURE:
+      return "SYSTEM FAILURE";
     default:
       return "NOT SUPPORTED";
   }

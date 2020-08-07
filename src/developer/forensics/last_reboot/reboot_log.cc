@@ -38,6 +38,7 @@ enum class GracefulRebootReason {
   kSystemUpdate,
   kHighTemperature,
   kSessionFailure,
+  kSystemFailure,
   kNotSupported,
   kNotParseable,
 };
@@ -77,6 +78,8 @@ GracefulRebootReason ExtractGracefulRebootReason(const std::string_view line) {
     return GracefulRebootReason::kHighTemperature;
   } else if (line == "SESSION FAILURE") {
     return GracefulRebootReason::kSessionFailure;
+  } else if (line == "SYSTEM FAILURE") {
+    return GracefulRebootReason::kSystemFailure;
   } else if (line == "NOT SUPPORTED") {
     return GracefulRebootReason::kNotSupported;
   }
@@ -174,6 +177,8 @@ RebootReason DetermineGracefulRebootReason(GracefulRebootReason graceful_reason)
       return RebootReason::kHighTemperature;
     case GracefulRebootReason::kSessionFailure:
       return RebootReason::kSessionFailure;
+    case GracefulRebootReason::kSystemFailure:
+      return RebootReason::kSystemFailure;
     case GracefulRebootReason::kNotSupported:
     case GracefulRebootReason::kNone:
     case GracefulRebootReason::kNotParseable:

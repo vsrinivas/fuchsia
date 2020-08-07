@@ -91,6 +91,7 @@ enum class LastRebootReason {
   kSystemUpdate = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemUpdate,
   kHighTemperature = cobalt_registry::LastRebootUptimeMetricDimensionReason::HighTemperature,
   kSessionFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SessionFailure,
+  kSystemFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemFailure,
 };
 
 enum class RebootReasonWriteResult {

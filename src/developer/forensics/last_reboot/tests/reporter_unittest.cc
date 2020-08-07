@@ -27,6 +27,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace last_reboot {
@@ -40,6 +41,7 @@ constexpr char kHasReportedOnPath[] = "/tmp/has_reported_on_reboot_log.txt";
 struct UngracefulRebootTestParam {
   std::string test_name;
   std::string zircon_reboot_log;
+
   std::string output_crash_signature;
   std::optional<zx::duration> output_uptime;
   cobalt::LegacyRebootReason output_reboot_reason;
@@ -49,7 +51,17 @@ struct UngracefulRebootTestParam {
 struct GracefulRebootTestParam {
   std::string test_name;
   std::optional<std::string> graceful_reboot_log;
+
   cobalt::LegacyRebootReason output_reboot_reason;
+  cobalt::LastRebootReason output_last_reboot_reason;
+};
+
+struct GracefulRebootWithCrashTestParam {
+  std::string test_name;
+  std::string graceful_reboot_log;
+
+  std::string output_crash_signature;
+  zx::duration output_uptime;
   cobalt::LastRebootReason output_last_reboot_reason;
 };
 
@@ -362,21 +374,44 @@ TEST_P(GracefulReporterTest, Succeed) {
               }));
 }
 
-// Parameterize this fixture once we have more cases of graceful reboots with crash reports.
-TEST_F(GracefulReporterTest, SucceedOnSessionFailure) {
-  const zx::duration uptime = zx::msec(65487494);
+using GracefulWithCrashReporterTest = ReporterTest<GracefulRebootWithCrashTestParam>;
 
-  const std::string zircon_reboot_log = "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n65487494";
+INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, GracefulWithCrashReporterTest,
+                         ::testing::ValuesIn(std::vector<GracefulRebootWithCrashTestParam>({
+                             {
+                                 "SessionFailure",
+                                 "SESSION FAILURE",
+                                 "fuchsia-session-failure",
+                                 zx::msec(65487494),
+                                 cobalt::LastRebootReason::kSessionFailure,
+                             },
+                             {
+                                 "SystemFailure",
+                                 "SYSTEM FAILURE",
+                                 "fuchsia-system-failure",
+                                 zx::msec(65487494),
+                                 cobalt::LastRebootReason::kSystemFailure,
+                             },
+                         })),
+                         [](const testing::TestParamInfo<GracefulRebootWithCrashTestParam>& info) {
+                           return info.param.test_name;
+                         });
+TEST_P(GracefulWithCrashReporterTest, Succeed) {
+  const auto param = GetParam();
+
+  const std::string zircon_reboot_log = fxl::StringPrintf(
+      "ZIRCON REBOOT REASON (NO CRASH)\n\nUPTIME (ms)\n%lu", param.output_uptime.to_msecs());
   WriteZirconRebootLogContents(zircon_reboot_log);
 
-  const std::string graceful_reboot_log = "SESSION FAILURE";
-  WriteGracefulRebootLogContents(graceful_reboot_log);
+  WriteGracefulRebootLogContents(param.graceful_reboot_log);
 
   SetUpCrashReporterServer(
       std::make_unique<stubs::CrashReporter>(stubs::CrashReporter::Expectations{
-          .crash_signature = "fuchsia-session-failure",
-          .reboot_log = zircon_reboot_log + "\n" + "GRACEFUL REBOOT REASON (SESSION FAILURE)",
-          .uptime = uptime,
+          .crash_signature = param.output_crash_signature,
+          .reboot_log =
+              fxl::StringPrintf("%s\nGRACEFUL REBOOT REASON (%s)", zircon_reboot_log.c_str(),
+                                param.graceful_reboot_log.c_str()),
+          .uptime = param.output_uptime,
       }));
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
@@ -385,7 +420,7 @@ TEST_F(GracefulReporterTest, SucceedOnSessionFailure) {
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(cobalt::LegacyRebootReason::kClean),
-                  cobalt::Event(cobalt::LastRebootReason::kSessionFailure, uptime.to_usecs()),
+                  cobalt::Event(param.output_last_reboot_reason, param.output_uptime.to_usecs()),
               }));
 }
 
