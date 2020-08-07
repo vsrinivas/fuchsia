@@ -27,6 +27,10 @@ flutter_app("localized_flutter_app") {
 }
 
 flutter_test("localized_flutter_app_unittests") {
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
+
   sources = [ "sample_test.dart" ]
 
   deps = [ "//third_party/dart-pkg/pub/test" ]

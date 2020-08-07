@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//topaz/runtime/flutter_runner/flutter_app.gni")
 import("//topaz/runtime/dart/flutter_test.gni")
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 flutter_app("hello_experiences") {
   main_dart = "lib/main.dart"
@@ -26,11 +26,11 @@ flutter_app("hello_experiences") {
 }
 
 flutter_test("hello_experiences_unittests") {
-  sources = [
-    "sample_test.dart",
-  ]
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
 
-  deps = [
-   "//third_party/dart-pkg/pub/test",
-  ]
+  sources = [ "sample_test.dart" ]
+
+  deps = [ "//third_party/dart-pkg/pub/test" ]
 }

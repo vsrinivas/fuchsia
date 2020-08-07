@@ -9,28 +9,27 @@ dart_library("tiler") {
   package_name = "tiler"
 
   sources = [
-    "tiler.dart",
     "src/sizer.dart",
     "src/tile.dart",
     "src/tile_model.dart",
     "src/tiler.dart",
     "src/tiler_model.dart",
     "src/utils.dart",
+    "tiler.dart",
   ]
 
-  deps = [
-    "//third_party/dart-pkg/git/flutter/packages/flutter",
-  ]
+  deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
 }
 
 flutter_test("tiler_unittests") {
-  sources = [
-    "tiler_test.dart",
-  ]
+  sources = [ "tiler_test.dart" ]
 
   deps = [
     ":tiler",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
   ]
-}
 
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
+}

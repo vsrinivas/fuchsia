@@ -22,6 +22,10 @@ tz_ids_path = "${target_gen_dir}/tz_ids.txt"
 flutter_app("ermine") {
   main_dart = "lib/main.dart"
 
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
+
   fuchsia_package_name = "ermine"
   package_name = "ermine"
 
@@ -178,6 +182,10 @@ flutter_test("ermine_unittests") {
     "status_model_test.dart",
     "topbar_model_test.dart",
   ]
+
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
 
   deps = [
     ":ermine_dart_library",

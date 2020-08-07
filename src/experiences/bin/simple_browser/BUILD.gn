@@ -14,6 +14,10 @@ flutter_app("simple_browser") {
   main_dart = "lib/main.dart"
   package_name = "simple_browser"
 
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
+
   meta = [
     {
       path = rebase_path("meta/simple_browser.cmx")
@@ -68,6 +72,10 @@ flutter_test("simple_browser_unittests") {
     "widgets/tabs_widget_test.dart",
   ]
 
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
+
   deps = [
     ":simple_browser_dart_library",
     "//sdk/fidl/fuchsia.web",
@@ -85,6 +93,10 @@ dart_fuchsia_test("simple_browser_target_test") {
       dest = "simple_browser_target_test.cmx"
     },
   ]
+
+  # TODO(fxb/57840): This package has transitive dependencies.
+  # Please explicitly define its transitive dependencies as direct dependencies then remove this exemption
+  disable_strict_deps_check = true
 
   sources = [ "simple_browser_target_test.dart" ]
 
