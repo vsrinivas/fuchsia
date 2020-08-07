@@ -80,7 +80,4 @@ executable("network_time_unittests") {
     "//third_party/roughtime:client_lib",
     "//zircon/public/lib/zx",
   ]
-
-  # TODO(46771): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
