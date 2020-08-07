@@ -323,7 +323,7 @@ rustc_binary("setui-config-test") {
     ":lib",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
@@ -363,6 +363,21 @@ unittest_package("sample-setui-config-test") {
   tests = [
     {
       name = "setui_config_test"
+      dest = "setui_config_test_all_args"
+      args = [
+        "--service-config",
+        "/pkg/data/service_configuration.json",
+        "--controller-flags",
+        "/pkg/data/service_flags.json",
+        "--light-sensor-config",
+        "/pkg/data/light_sensor_configuration.json",
+        "--light-hardware-config",
+        "/pkg/data/light_hardware_configuration.json",
+      ]
+    },
+    {
+      name = "setui_config_test"
+      dest = "setui_config_test_short_args"
       args = [
         "-s",
         "/pkg/data/service_configuration.json",
@@ -370,8 +385,23 @@ unittest_package("sample-setui-config-test") {
         "/pkg/data/service_flags.json",
         "-l",
         "/pkg/data/light_sensor_configuration.json",
-        "--light_hardware_config",
+        "-h",
         "/pkg/data/light_hardware_configuration.json",
+      ]
+    },
+    {
+      name = "setui_config_test"
+      dest = "setui_config_test_no_args"
+      args = []
+    },
+    {
+      name = "setui_config_test"
+      dest = "setui_config_test_multiple_args"
+      args = [
+        "-s",
+        "/pkg/data/service_configuration.json",
+        "-s",
+        "/pkg/data/service_configuration.json",
       ]
     },
   ]

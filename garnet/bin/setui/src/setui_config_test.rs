@@ -3,15 +3,36 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Error};
-use clap::{App, Arg};
+use argh::FromArgs;
 use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
     EnabledServicesConfiguration, LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
 };
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io::Read;
+
+/// setui_config_tests validates configuration files passed to the settings service.
+#[derive(FromArgs)]
+struct TestConfig {
+    /// these configurations are the ones that will determine which controllers are enabled
+    /// within the settings service.
+    #[argh(option, short = 's')]
+    service_config: Vec<OsString>,
+
+    /// these configurations are the one that will determine the behavior of individual controllers.
+    #[argh(option, short = 'f')]
+    controller_flags: Vec<OsString>,
+
+    /// these configurations control specific settings within the light sensor controller.
+    #[argh(option, short = 'l')]
+    light_sensor_config: Vec<OsString>,
+
+    /// these configurations control specific settings for light hardware.
+    #[argh(option, short = 'h')]
+    light_hardware_config: Vec<OsString>,
+}
 
 fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
     fx_log_info!("Validating {:?}", path);
@@ -26,51 +47,21 @@ fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    let matches = App::new("setui_config_tests")
-        .arg(
-            Arg::with_name("light_sensor_configs")
-                .short("l")
-                .takes_value(true)
-                .multiple(true)
-                .min_values(0),
-        )
-        .arg(
-            Arg::with_name("service_configurations")
-                .short("s")
-                .takes_value(true)
-                .multiple(true)
-                .min_values(0),
-        )
-        .arg(
-            Arg::with_name("controller_flags")
-                .short("f")
-                .takes_value(true)
-                .multiple(true)
-                .min_values(0),
-        )
-        .arg(
-            Arg::with_name("light_hardware_configs")
-                .long("light_hardware_config")
-                .takes_value(true)
-                .multiple(true)
-                .min_values(0),
-        )
-        .get_matches();
-
-    for config in matches.values_of_os("service_configurations").into_iter().flatten() {
-        read_config::<EnabledServicesConfiguration>(config)?;
+    let test_config: TestConfig = argh::from_env();
+    for config in test_config.service_config.into_iter() {
+        read_config::<EnabledServicesConfiguration>(&config)?;
     }
 
-    for config in matches.values_of_os("controller_flags").into_iter().flatten() {
-        read_config::<ServiceFlags>(config)?;
+    for config in test_config.controller_flags.into_iter() {
+        read_config::<ServiceFlags>(&config)?;
     }
 
-    for config in matches.values_of_os("light_sensor_configs").into_iter().flatten() {
-        read_config::<LightSensorConfig>(config)?;
+    for config in test_config.light_sensor_config.into_iter() {
+        read_config::<LightSensorConfig>(&config)?;
     }
 
-    for config in matches.values_of_os("light_hardware_configs").into_iter().flatten() {
-        read_config::<LightHardwareConfiguration>(config)?;
+    for config in test_config.light_hardware_config.into_iter() {
+        read_config::<LightHardwareConfiguration>(&config)?;
     }
 
     Ok(())
