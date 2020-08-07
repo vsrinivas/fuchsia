@@ -111,6 +111,18 @@ static inline size_t conditional_select_nospec_lt(size_t x, size_t y, size_t a, 
   return select;
 }
 
+#elif __riscv
+
+// (x == y) ? a : b
+static inline size_t conditional_select_nospec_eq(size_t x, size_t y, size_t a, size_t b) {
+  return (x == y) ? a : b;
+}
+
+// (x < y) ? a : b
+static inline size_t conditional_select_nospec_lt(size_t x, size_t y, size_t a, size_t b) {
+  return (x < y) ? a : b;
+}
+
 #else
 #error "Provide implementations of conditional_select for your ARCH here"
 #endif

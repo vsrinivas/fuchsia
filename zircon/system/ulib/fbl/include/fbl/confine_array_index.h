@@ -81,6 +81,15 @@ static inline size_t confine_array_index(size_t index, size_t size) {
 }
 #endif
 
+#ifdef __riscv
+static inline size_t confine_array_index(size_t index, size_t size) {
+  if (index >= size) {
+    return 0;
+  }
+  return index;
+}
+#endif
+
 }  // namespace fbl
 
 #endif  // FBL_CONFINE_ARRAY_INDEX_H_
