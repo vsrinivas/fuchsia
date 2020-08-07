@@ -47,6 +47,8 @@ guest_package("linux_guest") {
     cmdline = "earlycon=pl011,0x808300000"
   } else if (target_cpu == "x64") {
     cmdline = "earlycon=uart,io,0x3f8"
+  } else if (target_cpu == "riscv64") {
+    cmdline = ""
   }
   cmdline += " console=hvc0 console=tty0 root=/dev/vda rw"
 
