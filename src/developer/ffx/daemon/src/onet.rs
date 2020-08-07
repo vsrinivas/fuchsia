@@ -14,6 +14,7 @@ use {
     fuchsia_async::Task,
     futures::channel::oneshot,
     futures::future::FutureExt,
+    futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
     std::collections::HashSet,
     std::future::Future,
     std::io,
@@ -38,6 +39,21 @@ struct HostPipeChild {
     logger_handle: Option<TaskHandle>,
 }
 
+async fn latency_sensitive_copy(
+    reader: &mut (impl AsyncRead + Unpin),
+    writer: &mut (impl AsyncWrite + Unpin),
+) -> std::io::Result<()> {
+    let mut buf = [0u8; 2048];
+    loop {
+        let n = reader.read(&mut buf).await?;
+        if n == 0 {
+            return Ok(());
+        }
+        writer.write_all(&buf[..n]).await?;
+        writer.flush().await?;
+    }
+}
+
 impl HostPipeChild {
     pub async fn new(addrs: HashSet<TargetAddr>) -> Result<HostPipeChild> {
         let mut inner = build_ssh_command(addrs, vec!["remote_control_runner"])
@@ -54,7 +70,7 @@ impl HostPipeChild {
         let stdout_pipe =
             inner.stdout.take().ok_or(anyhow!("unable to get stdout from target pipe"))?;
         let writer_handle = async_std::task::spawn(async move {
-            async_std::io::copy(&mut async_from_sync(stdout_pipe), &mut pipe_tx).await?;
+            latency_sensitive_copy(&mut async_from_sync(stdout_pipe), &mut pipe_tx).await?;
             log::info!("exiting onet pipe writer task (client -> ascendd)");
             Ok(())
         });
@@ -65,8 +81,8 @@ impl HostPipeChild {
             let mut stdin_pipe = async_from_sync(stdin_pipe);
             let mut cancel_rx = cancel_rx.fuse();
             futures::select! {
-                copy_res = async_std::io::copy(&mut pipe_rx, &mut stdin_pipe).fuse() => copy_res?,
-                _ = cancel_rx => 0,
+                copy_res = latency_sensitive_copy(&mut pipe_rx, &mut stdin_pipe).fuse() => copy_res?,
+                _ = cancel_rx => (),
             };
             log::info!("exiting onet pipe reader task (ascendd -> client)");
             Ok(())
