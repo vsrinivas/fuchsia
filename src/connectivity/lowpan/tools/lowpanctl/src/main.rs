@@ -15,6 +15,7 @@ pub mod list_command;
 pub mod mfg_command;
 pub mod network_scan_command;
 pub mod provision_command;
+pub mod repeat_command;
 pub mod reset_command;
 pub mod status_command;
 

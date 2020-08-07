@@ -14,6 +14,7 @@ pub use crate::list_command::*;
 pub use crate::mfg_command::*;
 pub use crate::network_scan_command::*;
 pub use crate::provision_command::*;
+pub use crate::repeat_command::*;
 pub use crate::reset_command::*;
 pub use crate::status_command::*;
 
@@ -36,9 +37,49 @@ pub struct LowpanCtlInvocation {
     pub device_name: Option<String>,
 
     #[argh(subcommand)]
-    pub command: CommandEnum,
+    pub command: CommandEnumWithRepeat,
 }
 
+/// Enum containing all of the normal commands, INCLUDING the repeat command.
+///
+/// New commands must be added to both this enum and `CommandEnum`.
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand)]
+pub enum CommandEnumWithRepeat {
+    Status(StatusCommand),
+    Provision(ProvisionCommand),
+    Leave(LeaveCommand),
+    List(ListCommand),
+    Reset(ResetCommand),
+    Join(JoinCommand),
+    Form(FormCommand),
+    EnergyScan(EnergyScanCommand),
+    NetworkScan(NetworkScanCommand),
+    Mfg(MfgCommand),
+    Repeat(RepeatCommand),
+}
+
+impl CommandEnumWithRepeat {
+    pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
+        match self {
+            CommandEnumWithRepeat::Status(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Provision(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Leave(x) => x.exec(context).await,
+            CommandEnumWithRepeat::List(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Reset(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Join(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Form(x) => x.exec(context).await,
+            CommandEnumWithRepeat::EnergyScan(x) => x.exec(context).await,
+            CommandEnumWithRepeat::NetworkScan(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Mfg(x) => x.exec(context).await,
+            CommandEnumWithRepeat::Repeat(x) => x.exec(context).await,
+        }
+    }
+}
+
+/// Enum containing all of the normal commands, EXCEPT the repeat command.
+///
+/// New commands must be added to both this enum and `CommandEnumWithRepeat`.
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum CommandEnum {
@@ -54,9 +95,9 @@ pub enum CommandEnum {
     Mfg(MfgCommand),
 }
 
-impl LowpanCtlInvocation {
+impl CommandEnum {
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
-        match &self.command {
+        match self {
             CommandEnum::Status(x) => x.exec(context).await,
             CommandEnum::Provision(x) => x.exec(context).await,
             CommandEnum::Leave(x) => x.exec(context).await,
@@ -68,5 +109,11 @@ impl LowpanCtlInvocation {
             CommandEnum::NetworkScan(x) => x.exec(context).await,
             CommandEnum::Mfg(x) => x.exec(context).await,
         }
+    }
+}
+
+impl LowpanCtlInvocation {
+    pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
+        self.command.exec(context).await
     }
 }

@@ -47,6 +47,7 @@ rustc_binary("bin") {
     "src/mfg_command.rs",
     "src/network_scan_command.rs",
     "src/provision_command.rs",
+    "src/repeat_command.rs",
     "src/reset_command.rs",
     "src/status_command.rs",
   ]
