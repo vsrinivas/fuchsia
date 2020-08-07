@@ -840,34 +840,70 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   return ZX_OK;
 }
 
+// Calculate the amount of memory needed to hold the escan parameters for a firmware request
+static size_t brcmf_escan_params_size(size_t num_channels, size_t num_ssids) {
+  size_t size = BRCMF_SCAN_PARAMS_FIXED_SIZE;
+
+  // escan params headers
+  size += offsetof(struct brcmf_escan_params_le, params_le);
+
+  // Channel specs
+  size += sizeof(uint32_t) * ((num_channels + 1) / 2);
+
+  // SSIDs
+  size += sizeof(struct brcmf_ssid_le) * num_ssids;
+
+  return size;
+}
+
 static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                    const wlanif_scan_req_t* request) {
-  if (request->min_channel_time == 0 || request->max_channel_time < request->min_channel_time) {
+  if (request == NULL) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  int32_t params_size =
-      BRCMF_SCAN_PARAMS_FIXED_SIZE + offsetof(struct brcmf_escan_params_le, params_le);
-  struct brcmf_escan_params_le* params;
+  // Validate dwell times
+  if (request->min_channel_time == 0 || request->max_channel_time < request->min_channel_time) {
+    BRCMF_ERR("Invalid dwell times in escan request min: %u max: %u", request->min_channel_time,
+              request->max_channel_time);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Validate channel count
+  if (request->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
+    BRCMF_ERR("Number of channels in escan request (%zu) exceeds maximum (%d)",
+              request->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Validate ssid count
+  if (request->num_ssids > WLAN_SCAN_MAX_SSIDS) {
+    BRCMF_ERR("Number of SSIDs in escan request (%zu) exceeds maximum (%d)", request->num_ssids,
+              WLAN_SCAN_MAX_SSIDS);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Calculate space needed for parameters
+  size_t params_size = brcmf_escan_params_size(request->num_channels, request->num_ssids);
+
+  // Validate command size
+  size_t total_cmd_size = params_size + sizeof("escan");
+  if (total_cmd_size >= BRCMF_DCMD_MEDLEN) {
+    BRCMF_ERR("Escan params size (%zu) exceeds command max capacity (%d)", total_cmd_size,
+              BRCMF_DCMD_MEDLEN);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   zx_status_t err = ZX_OK;
   int32_t fw_err = 0;
 
   BRCMF_DBG(SCAN, "E-SCAN START");
 
-  if (request != NULL) {
-    /* Allocate space for populating ssids in struct */
-    params_size += sizeof(uint32_t) * ((request->num_channels + 1) / 2);
-
-    /* Allocate space for populating ssids in struct */
-    params_size += sizeof(struct brcmf_ssid_le) * request->num_ssids;
-  }
-
-  params = static_cast<decltype(params)>(calloc(1, params_size));
+  struct brcmf_escan_params_le* params = static_cast<decltype(params)>(calloc(1, params_size));
   if (!params) {
     err = ZX_ERR_NO_MEMORY;
     goto exit;
   }
-  ZX_ASSERT(params_size + sizeof("escan") < BRCMF_DCMD_MEDLEN);
   err = brcmf_escan_prep(cfg, &params->params_le, request);
   if (err != ZX_OK) {
     BRCMF_ERR("escan preparation failed");
