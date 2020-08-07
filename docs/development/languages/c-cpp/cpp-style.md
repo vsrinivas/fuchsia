@@ -8,6 +8,12 @@ compliance with the style guide. Tricium checks in Gerrit also use clang-format 
 non-gating linter. However, you may still manually format code as long as it complies
 with these guidelines.
 
+#### Tip: TODO comments
+
+When following the Google C++ style guide by entering a bug number in a TODO
+comment, using the form `TODO(fxbug.dev/11111)` will provide an address that
+can be used as a URL.
+
 ### Exceptions
 
 #### Line length
