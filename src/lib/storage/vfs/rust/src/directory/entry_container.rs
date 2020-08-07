@@ -78,6 +78,9 @@ pub trait Directory: Any + Send + Sync {
     /// Get this directory's attributes.
     /// The "mode" field will be filled in by the connection.
     fn get_attrs(&self) -> Result<NodeAttributes, Status>;
+
+    /// Called when the directory is closed.
+    fn close(&self) -> Result<(), Status>;
 }
 
 /// This trait indicates a directory that can be mutated by adding and removing entries.

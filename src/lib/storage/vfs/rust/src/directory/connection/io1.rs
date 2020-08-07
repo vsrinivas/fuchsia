@@ -6,6 +6,7 @@ use crate::{
     common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
     directory::{
         common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
+        connection::util::OpenDirectory,
         entry::DirectoryEntry,
         entry_container::{AsyncGetEntry, Directory},
         read_dirents,
@@ -50,12 +51,13 @@ pub enum ConnectionState {
 pub trait DerivedConnection: Send + Sync {
     type Directory: BaseConnectionClient + ?Sized;
 
-    fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self;
+    fn new(scope: ExecutionScope, directory: OpenDirectory<Self::Directory>, flags: u32) -> Self;
 
     /// Initializes a directory connection, checking the flags and sending `OnOpen` event if
     /// necessary.  Then either runs this connection inside of the specified `scope` or, in case of
     /// an error, sends an appropriate `OnOpen` event (if requested) over the `server_end`
     /// connection.
+    /// If an error occurs, create_connection() must call close() on the directory.
     fn create_connection(
         scope: ExecutionScope,
         directory: Arc<Self::Directory>,
@@ -77,6 +79,8 @@ pub trait DerivedConnection: Send + Sync {
         &mut self,
         request: DirectoryRequest,
     ) -> BoxFuture<'_, Result<ConnectionState, Error>>;
+
+    fn get_directory(&self) -> &Self::Directory;
 }
 
 /// This is an API a directory needs to implement, in order for the `BaseConnection` to be able to
@@ -97,7 +101,7 @@ where
     /// use.
     pub(in crate::directory) scope: ExecutionScope,
 
-    pub(in crate::directory) directory: Arc<Connection::Directory>,
+    pub(in crate::directory) directory: OpenDirectory<Connection::Directory>,
 
     /// Flags set on this connection when it was opened or cloned.
     pub(in crate::directory) flags: u32,
@@ -261,7 +265,9 @@ pub(in crate::directory) async fn handle_requests<Connection>(
             }
             Ok(request) => match connection.handle_request(request).await {
                 Ok(ConnectionState::Alive) => (),
-                Ok(ConnectionState::Closed) => break,
+                Ok(ConnectionState::Closed) => {
+                    return;
+                }
                 Err(_) => {
                     // Protocol level error.  Close the connection on any unexpected error.
                     // TODO: Send an epitaph.
@@ -270,6 +276,9 @@ pub(in crate::directory) async fn handle_requests<Connection>(
             },
         }
     }
+    // There's not a whole lot we can do here if close() fails,
+    // so just ignore the result.
+    let _ = connection.get_directory().close();
 }
 
 impl<Connection> BaseConnection<Connection>
@@ -281,7 +290,7 @@ where
     /// `create_connection`, derived connections should use the [`create_connection`] call.
     pub(in crate::directory) fn new(
         scope: ExecutionScope,
-        directory: Arc<Connection::Directory>,
+        directory: OpenDirectory<Connection::Directory>,
         flags: u32,
     ) -> Self {
         BaseConnection { scope, directory, flags, seek: Default::default() }
@@ -300,7 +309,11 @@ where
                 self.handle_clone(flags, 0, object);
             }
             BaseDirectoryRequest::Close { responder } => {
-                responder.send(ZX_OK)?;
+                let status = match self.directory.close() {
+                    Ok(()) => Status::OK,
+                    Err(e) => e,
+                };
+                responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
             BaseDirectoryRequest::Describe { responder } => {
@@ -373,13 +386,7 @@ where
             }
         };
 
-        Connection::create_connection(
-            self.scope.clone(),
-            self.directory.clone(),
-            flags,
-            mode,
-            server_end,
-        );
+        self.directory.clone().open(self.scope.clone(), flags, mode, Path::empty(), server_end);
     }
 
     fn handle_open(
