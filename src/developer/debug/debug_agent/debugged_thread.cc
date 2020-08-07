@@ -358,7 +358,7 @@ void DebuggedThread::ClientResume(const debug_ipc::ResumeRequest& request) {
 
   ResumeFromException();
   if (client_suspend_handle_)
-    client_suspend_handle_.release();
+    client_suspend_handle_.reset();
 }
 
 void DebuggedThread::InternalResumeException() {
