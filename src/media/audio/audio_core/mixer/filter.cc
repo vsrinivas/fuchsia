@@ -3,6 +3,8 @@
 
 #include "src/media/audio/audio_core/mixer/filter.h"
 
+#include <lib/trace/event.h>
+
 #include <memory>
 #include <mutex>
 
@@ -91,6 +93,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
 //
 // Calculate our nearest-neighbor filter. With it we perform frame-rate conversion.
 CoefficientTable* CreatePointFilterTable(PointFilter::Inputs inputs) {
+  TRACE_DURATION("audio", "CreatePointFilterTable");
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
   auto width = inputs.side_width;
@@ -123,6 +126,7 @@ CoefficientTable* CreatePointFilterTable(PointFilter::Inputs inputs) {
 //
 // Calculate our linear-interpolation filter. With it we perform frame-rate conversion.
 CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
+  TRACE_DURATION("audio", "CreateLinearFilterTable");
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
   auto width = inputs.side_width;
@@ -153,6 +157,7 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
 //
 // Calculate our windowed-sinc FIR filter. With it we perform band-limited frame-rate conversion.
 CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
+  TRACE_DURATION("audio", "CreateSincFilterTable");
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
 

@@ -94,7 +94,7 @@ size_t CapturePacketQueue::ReadySize() const {
 }
 
 std::optional<CapturePacketQueue::PacketMixState> CapturePacketQueue::NextMixerJob() {
-  TRACE_INSTANT("audio", "CapturePacketQueue::NextMixerJob", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "CapturePacketQueue::NextMixerJob", TRACE_SCOPE_THREAD);
   std::lock_guard<std::mutex> lock(mutex_);
   if (pending_.empty()) {
     return std::nullopt;
@@ -111,7 +111,7 @@ std::optional<CapturePacketQueue::PacketMixState> CapturePacketQueue::NextMixerJ
 
 CapturePacketQueue::PacketMixStatus CapturePacketQueue::FinishMixerJob(
     const PacketMixState& state) {
-  TRACE_INSTANT("audio", "CapturePacketQueue::FinishMixerJob", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "CapturePacketQueue::FinishMixerJob", TRACE_SCOPE_THREAD);
   std::lock_guard<std::mutex> lock(mutex_);
   if (pending_.empty() || pending_.front() != state.packet) {
     return PacketMixStatus::Discarded;
@@ -128,7 +128,7 @@ CapturePacketQueue::PacketMixStatus CapturePacketQueue::FinishMixerJob(
 }
 
 void CapturePacketQueue::DiscardPendingPackets() {
-  TRACE_INSTANT("audio", "CapturePacketQueue::DiscardPendingPackets", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "CapturePacketQueue::DiscardPendingPackets", TRACE_SCOPE_THREAD);
   std::lock_guard<std::mutex> lock(mutex_);
   while (!pending_.empty()) {
     PopPendingLocked();
@@ -155,7 +155,7 @@ void CapturePacketQueue::PopPendingLocked() {
 }
 
 fbl::RefPtr<CapturePacketQueue::Packet> CapturePacketQueue::PopReady() {
-  TRACE_INSTANT("audio", "CapturePacketQueue::PopReady", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "CapturePacketQueue::PopReady", TRACE_SCOPE_THREAD);
   std::lock_guard<std::mutex> lock(mutex_);
   if (ready_.empty()) {
     return nullptr;
@@ -172,7 +172,7 @@ fbl::RefPtr<CapturePacketQueue::Packet> CapturePacketQueue::PopReady() {
 fit::result<void, std::string> CapturePacketQueue::PushPending(size_t offset_frames,
                                                                size_t num_frames,
                                                                CaptureAtCallback callback) {
-  TRACE_INSTANT("audio", "CapturePacketQueue::PushPending", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "CapturePacketQueue::PushPending", TRACE_SCOPE_THREAD);
   FX_CHECK(mode_ == Mode::DynamicallyAllocated);
 
   // Buffers submitted by clients must exist entirely within the shared payload buffer, and must
@@ -197,7 +197,7 @@ fit::result<void, std::string> CapturePacketQueue::PushPending(size_t offset_fra
 }
 
 fit::result<void, std::string> CapturePacketQueue::Recycle(const StreamPacket& stream_packet) {
-  TRACE_INSTANT("audio", "CapturePacketQueue::Recycle", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("audio", "CapturePacketQueue::Recycle", TRACE_SCOPE_THREAD);
   FX_CHECK(mode_ == Mode::Preallocated);
 
   std::lock_guard<std::mutex> lock(mutex_);
