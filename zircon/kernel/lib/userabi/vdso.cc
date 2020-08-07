@@ -75,6 +75,10 @@ class VDsoMutator {
   // Fixed-size instructions.  Use 'brk #1' (what __builtin_trap() emits).
   using Insn = uint32_t;
   static constexpr Insn kTrapFill = 0xd4200020;
+#elif ARCH_RISCV64
+  // Fixed-size instructions.  Use 'ebreak' (what __builtin_trap() emits).
+  using Insn = uint16_t;
+  static constexpr Insn kTrapFill = 0x0290;
 #else
 #error what architecture?
 #endif
