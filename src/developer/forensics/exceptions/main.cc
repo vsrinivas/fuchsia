@@ -14,7 +14,6 @@ namespace {
 
 void LogProcessLimboStatus(const ::forensics::exceptions::ProcessLimboManager& limbo) {
   if (!limbo.active()) {
-    FX_LOGS(INFO) << "Process Limbo is not active at startup.";
     return;
   }
 
