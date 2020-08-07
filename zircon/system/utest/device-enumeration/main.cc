@@ -248,7 +248,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "wifi/brcmfmac-wlanphy",
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:03:11/clocks",
-      "aml-thermal/thermal",
+      "sys/platform/05:03:a/thermal",
       "astro-i2s-audio-out",
       "sys/platform/05:03:13/astro-audio-in",
       "aml-secure-mem/aml-securemem",

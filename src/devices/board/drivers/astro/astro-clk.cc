@@ -33,9 +33,10 @@ constexpr pbus_mmio_t clk_mmios[] = {
 };
 
 constexpr clock_id_t clock_ids[] = {
-    // For thermal driver.
+    // For CPU device.
     {g12a_clk::CLK_SYS_PLL_DIV16},
     {g12a_clk::CLK_SYS_CPU_CLK_DIV16},
+    {g12a_clk::CLK_SYS_CPU_CLK},
     // For video decoder
     {g12a_clk::CLK_DOS_GCLK_VDEC},
 };

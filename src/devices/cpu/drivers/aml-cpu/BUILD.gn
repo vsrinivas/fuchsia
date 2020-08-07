@@ -23,9 +23,7 @@ driver_module("aml-cpu") {
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
-    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -41,34 +39,20 @@ driver_module("aml-cpu") {
 }
 
 test("aml-cpu-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-  output_name = "aml-cpu-test"
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-cpu-test.cc",
     "aml-cpu.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.power:ddk.protocol.power_mock",
     "//sdk/banjo/ddk.protocol.thermal",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl_llcpp",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
-    "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",

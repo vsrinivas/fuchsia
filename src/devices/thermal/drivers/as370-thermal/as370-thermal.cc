@@ -68,7 +68,7 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   }
 
   ddk::PowerProtocolClient cpu_power(fragments[FRAGMENT_CPU_POWER]);
-  if (!cpu_clock.is_valid()) {
+  if (!cpu_power.is_valid()) {
     zxlogf(ERROR, "%s: Failed to get power protocol", __func__);
     return ZX_ERR_NO_RESOURCES;
   }

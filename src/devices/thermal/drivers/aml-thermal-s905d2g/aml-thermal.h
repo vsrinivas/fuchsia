@@ -19,9 +19,7 @@
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/thermal.h>
 
-#include "aml-cpufreq.h"
 #include "aml-tsensor.h"
-#include "aml-voltage.h"
 
 namespace thermal {
 
@@ -32,13 +30,9 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlThermal);
   AmlThermal(zx_device_t* device, std::unique_ptr<thermal::AmlTSensor> tsensor,
-             std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator,
-             std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling,
              fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config)
       : DeviceType(device),
         tsensor_(std::move(tsensor)),
-        voltage_regulator_(std::move(voltage_regulator)),
-        cpufreq_scaling_(std::move(cpufreq_scaling)),
         thermal_config_(std::move(thermal_config)),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
@@ -52,19 +46,7 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   // Implements ZX_PROTOCOL_THERMAL
   zx_status_t ThermalConnect(zx::channel ch);
 
-  // For testing
- protected:
-  zx_status_t SetTarget(uint32_t opp_idx, fuchsia_hardware_thermal_PowerDomain power_domain);
-
  private:
-  static zx_status_t PopulateClusterDvfsTable(
-      const zx::resource& smc_resource, const aml_thermal_info_t& aml_info,
-      fuchsia_hardware_thermal_PowerDomain cluster,
-      fuchsia_hardware_thermal_ThermalDeviceInfo* thermal_info);
-  static zx_status_t PopulateDvfsTable(const zx::resource& smc_resource,
-                                       const aml_thermal_info_t& aml_info,
-                                       fuchsia_hardware_thermal_ThermalDeviceInfo* thermal_info);
-
   zx_status_t GetInfo(fidl_txn_t* txn);
   zx_status_t GetDeviceInfo(fidl_txn_t* txn);
   zx_status_t GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain, fidl_txn_t* txn);
@@ -97,14 +79,9 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
       .SetFanLevel = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetFanLevel>,
   };
 
-  int ThermalNotificationThread();
-  zx_status_t NotifyThermalDaemon();
-
   zx_status_t StartConnectDispatchThread();
 
   std::unique_ptr<thermal::AmlTSensor> tsensor_;
-  std::unique_ptr<thermal::AmlVoltageRegulator> voltage_regulator_;
-  std::unique_ptr<thermal::AmlCpuFrequency> cpufreq_scaling_;
   fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
   async::Loop loop_;
 };

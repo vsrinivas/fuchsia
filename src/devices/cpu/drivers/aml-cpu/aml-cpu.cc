@@ -16,31 +16,101 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
-#include <ddktl/protocol/platform/device.h>
-#include <ddktl/protocol/thermal.h>
 
-namespace {
-using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
-using llcpp::fuchsia::hardware::thermal::PowerDomain;
-
-constexpr size_t kFragmentPdev = 0;
-constexpr size_t kFragmentThermal = 1;
-constexpr size_t kFragmentCount = 2;
-constexpr zx_off_t kCpuVersionOffset = 0x220;
-
-uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_points) {
-  ZX_ASSERT(pstate < n_operating_points);
-  ZX_ASSERT(n_operating_points < MAX_DEVICE_PERFORMANCE_STATES);
-
-  // Operating points are indexed 0 to N-1.
-  return static_cast<uint16_t>(n_operating_points - pstate - 1);
-}
-
-}  // namespace
 namespace amlogic_cpu {
 
+namespace {
+constexpr size_t kFragmentPdev = 0;
+// Fragments are provided to this driver in groups of 4. Fragments are provided as follows:
+// 0 - Platform Device
+// [4 fragments for cluster 0]
+// [4 fragments for cluster 1]
+// [...]
+// [4 fragments for cluster n]
+// The following offsets refer to the offset of the fragment inside its group of 4.
+// i.e. power will always be first, followed by plldiv16clk, cpudiv16clk, and finally cpuscaler
+constexpr size_t kPowerFragmentOffset = 1;
+constexpr size_t kPllDiv16ClkFragmentOffset = 2;
+constexpr size_t kCpuDiv16ClkFragmentOffset = 3;
+constexpr size_t kCpuScalerClkFragmentOffset = 4;
+constexpr size_t kFragmentsPerPfDomain = 4;
+
+constexpr zx_off_t kCpuVersionOffset = 0x220;
+}  // namespace
+
 zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
-  zx_status_t status;
+  zx_status_t st;
+  size_t actual;
+
+  // Get the metadata for the performance domains.
+  size_t perf_domain_size = 0;
+  st = device_get_metadata_size(parent, DEVICE_METADATA_AML_PERF_DOMAINS, &perf_domain_size);
+  zxlogf(DEBUG, "%s: Got AML_PERF_DOMAINS metadata size, st = %d, size = %lu", __func__, st,
+         perf_domain_size);
+
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get performance domain count from board driver, st = %d", __func__,
+           st);
+    return st;
+  }
+
+  // Make sure that the board driver gave us an exact integer number of performance domains.
+  if (perf_domain_size % sizeof(perf_domain_t) != 0) {
+    zxlogf(ERROR,
+           "%s: Performance domain metadata from board driver is malformed. perf_domain_size = "
+           "%lu, sizeof(perf_domain_t) = %lu",
+           __func__, perf_domain_size, sizeof(perf_domain_t));
+    return ZX_ERR_INTERNAL;
+  }
+
+  const size_t num_perf_domains = perf_domain_size / sizeof(perf_domain_t);
+  std::unique_ptr<perf_domain_t[]> perf_domains =
+      std::make_unique<perf_domain_t[]>(num_perf_domains);
+  st = device_get_metadata(parent, DEVICE_METADATA_AML_PERF_DOMAINS, perf_domains.get(),
+                           perf_domain_size, &actual);
+  zxlogf(DEBUG, "%s: Got AML_PERF_DOMAINS metadata, st = %d, actual = %lu", __func__, st, actual);
+
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get performance domain metadata from board driver, st = %d",
+           __func__, st);
+    return st;
+  }
+  if (actual != perf_domain_size) {
+    zxlogf(ERROR, "%s: Expected %lu bytes in perf domain metadata, got %lu", __func__,
+           perf_domain_size, actual);
+    return ZX_ERR_INTERNAL;
+  }
+
+  size_t op_point_size;
+  st = device_get_metadata_size(parent, DEVICE_METADATA_AML_OP_POINTS, &op_point_size);
+  zxlogf(DEBUG, "%s: Got AML_OP_POINTS metadata size, st = %d, size = %lu", __func__, st,
+         op_point_size);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get opp count metadata size from board driver, st = %d", __func__,
+           st);
+    return st;
+  }
+
+  if (op_point_size % sizeof(operating_point_t) != 0) {
+    zxlogf(ERROR, "%s: Operating point metadata from board driver is malformed", __func__);
+    return ZX_ERR_INTERNAL;
+  }
+
+  const size_t num_op_points = op_point_size / sizeof(operating_point_t);
+  std::unique_ptr<operating_point_t[]> operating_points =
+      std::make_unique<operating_point_t[]>(num_op_points);
+  st = device_get_metadata(parent, DEVICE_METADATA_AML_OP_POINTS, operating_points.get(),
+                           op_point_size, &actual);
+  zxlogf(DEBUG, "%s: Got AML_OP_POINTS metadata, st = %d, actual = %lu", __func__, st, actual);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get operating points from board driver, st = %d", __func__, st);
+    return st;
+  }
+  if (actual != op_point_size) {
+    zxlogf(ERROR, "%s: Expected %lu bytes in operating point metadata, got %lu", __func__,
+           op_point_size, actual);
+    return ZX_ERR_INTERNAL;
+  }
 
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
@@ -48,109 +118,122 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  zx_device_t* devices[kFragmentCount];
-  size_t actual;
-  composite.GetFragments(devices, kFragmentCount, &actual);
-  if (actual != kFragmentCount) {
-    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu", __func__, kFragmentCount,
+  // Make sure we have the right number of fragments.
+  const size_t fragment_count = composite.GetFragmentCount();
+  zxlogf(DEBUG, "%s: GetFragmentCount = %lu", __func__, fragment_count);
+  if ((num_perf_domains * kFragmentsPerPfDomain) + 1 != fragment_count) {
+    zxlogf(ERROR,
+           "%s: Expected %lu fragments for each %lu performance domains for a total of %lu "
+           "fragments but got %lu instead",
+           __func__, kFragmentsPerPfDomain, perf_domain_size,
+           perf_domain_size * kFragmentsPerPfDomain, fragment_count);
+    return ZX_ERR_INTERNAL;
+  }
+
+  std::unique_ptr<zx_device_t*[]> fragments = std::make_unique<zx_device_t*[]>(fragment_count);
+  composite.GetFragments(fragments.get(), fragment_count, &actual);
+  zxlogf(DEBUG, "%s: GetFragments = %lu", __func__, actual);
+  if (actual != fragment_count) {
+    zxlogf(ERROR, "%s: Expected to get %lu fragments, actually got %lu", __func__, fragment_count,
            actual);
     return ZX_ERR_INTERNAL;
   }
 
-  // Initialize an array with the maximum possible number of PStates since we
-  // determine the actual number of PStates at runtime by querying the thermal
-  // driver.
-  device_performance_state_info_t perf_states[MAX_DEVICE_PERFORMANCE_STATES];
-  for (size_t i = 0; i < MAX_DEVICE_PERFORMANCE_STATES; i++) {
-    perf_states[i].state_id = static_cast<uint8_t>(i);
-    perf_states[i].restore_latency = 0;
-  }
-
-  // The Thermal Driver is our parent and it exports an interface with one
-  // method (Connect) which allows us to connect to its FIDL interface.
-  zx_device_t* device = devices[kFragmentThermal];
-  ddk::ThermalProtocolClient thermal_client;
-  status = ddk::ThermalProtocolClient::CreateFromDevice(device, &thermal_client);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to get thermal protocol client, st = %d", status);
-    return status;
-  }
-
-  // This channel pair will be used to talk to the Thermal Device's FIDL
-  // interface.
-  zx::channel channel_local, channel_remote;
-  status = zx::channel::create(0, &channel_local, &channel_remote);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to create channel pair, st = %d", status);
-    return status;
-  }
-
-  // Pass one end of the channel to the Thermal driver. The thermal driver will
-  // serve its FIDL interface over this channel.
-  status = thermal_client.Connect(std::move(channel_remote));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: failed to connect to thermal driver, st = %d", status);
-    return status;
-  }
-
-  fuchsia_thermal::Device::SyncClient thermal_fidl_client(std::move(channel_local));
-
-  auto device_info = thermal_fidl_client.GetDeviceInfo();
-  if (device_info.status() != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: failed to get device info, st = %d", device_info.status());
-    return device_info.status();
-  }
-
-  const fuchsia_thermal::ThermalDeviceInfo* info = device_info->info.get();
-
-  // Hack: Only support one DVFS domain in this driver. When only one domain is
-  // supported, it is published as the "Big" domain, so we check that the Little
-  // domain is unpopulated.
-  constexpr size_t kLittleDomainIndex = 1u;
-  static_assert(static_cast<size_t>(PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN) ==
-                kLittleDomainIndex);
-  if (info->opps[kLittleDomainIndex].count != 0) {
-    zxlogf(ERROR, "aml-cpu: this driver only supports one dvfs domain.");
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Make sure we don't have more operating points than available performance states.
-  const fuchsia_thermal::OperatingPoint& opps = info->opps[0];
-  if (opps.count > MAX_DEVICE_PERFORMANCE_STATES) {
-    zxlogf(ERROR, "aml-cpu: cpu device has more operating points than we support");
-    return ZX_ERR_INTERNAL;
-  }
-
-  const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
-  zxlogf(INFO, "aml-cpu: Creating CPU Device with %u operating points", opps.count);
-
-  zx_device_t* platform_device = devices[kFragmentPdev];
-  ddk::PDev pdev_client(platform_device);
-
   // Map AOBUS registers
+  ddk::PDev pdev(fragments[kFragmentPdev]);
   std::optional<ddk::MmioBuffer> mmio_buffer;
-
-  if ((status = pdev_client.MapMmio(0, &mmio_buffer)) != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", status);
-    return status;
+  if ((st = pdev.MapMmio(0, &mmio_buffer)) != ZX_OK) {
+    zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", st);
+    return st;
   }
+  const uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
 
-  auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(thermal_fidl_client));
-  uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
-  cpu_device->SetCpuInfo(cpu_version_packed);
+  // Build and publish each performance domain.
+  for (size_t i = 0; i < num_perf_domains; i++) {
+    const perf_domain_t& perf_domain = perf_domains[i];
 
-  status = cpu_device->DdkAdd(ddk::DeviceAddArgs("cpu")
-                                  .set_flags(DEVICE_ADD_NON_BINDABLE)
-                                  .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
-                                  .set_performance_states({perf_states, perf_state_count})
-                                  .set_inspect_vmo(cpu_device->inspector_.DuplicateVmo()));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "aml-cpu: Failed to add cpu device, st = %d", status);
-    return status;
+    const size_t power_fragment_offset = (kFragmentsPerPfDomain * i) + kPowerFragmentOffset;
+    const size_t pll_div16_clk_fragment_offset =
+        (kFragmentsPerPfDomain * i) + kPllDiv16ClkFragmentOffset;
+    const size_t cpu_div16_clk_fragment_offset =
+        (kFragmentsPerPfDomain * i) + kCpuDiv16ClkFragmentOffset;
+    const size_t cpu_scaler_clk_fragment_offset =
+        (kFragmentsPerPfDomain * i) + kCpuScalerClkFragmentOffset;
+
+    ddk::ClockProtocolClient pllDiv16Client;
+    if ((st = ddk::ClockProtocolClient::CreateFromDevice(fragments[pll_div16_clk_fragment_offset],
+                                                         &pllDiv16Client)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to create pll_div_16 clock client, st = %d", __func__, st);
+      return st;
+    }
+
+    ddk::ClockProtocolClient cpuDiv16Client;
+    if ((st = ddk::ClockProtocolClient::CreateFromDevice(fragments[cpu_div16_clk_fragment_offset],
+                                                         &cpuDiv16Client)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to create cpu_div_16 clock client, st = %d", __func__, st);
+      return st;
+    }
+
+    ddk::ClockProtocolClient cpuScalerClient;
+    if ((st = ddk::ClockProtocolClient::CreateFromDevice(fragments[cpu_scaler_clk_fragment_offset],
+                                                         &cpuScalerClient)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to create cpu_scaler clock client, st = %d", __func__, st);
+      return st;
+    }
+
+    ddk::PowerProtocolClient powerClient;
+    if ((st = ddk::PowerProtocolClient::CreateFromDevice(fragments[power_fragment_offset],
+                                                         &powerClient)) != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to create power client, st = %d", __func__, st);
+      return st;
+    }
+
+    // Vector of operating points that belong to this power domain.
+    std::vector<operating_point_t> pd_op_points;
+    std::copy_if(operating_points.get(), operating_points.get() + num_op_points,
+                 std::back_inserter(pd_op_points), [&perf_domain](const operating_point_t& op) {
+                   return op.pd_id == perf_domain.id;
+                 });
+
+    // Order operating points from highest frequency to lowest because Operating Point 0 is the
+    // fastest.
+    std::sort(pd_op_points.begin(), pd_op_points.end(),
+              [](const operating_point_t& a, const operating_point_t& b) {
+                return a.freq_hz > b.freq_hz;
+              });
+
+    const size_t perf_state_count = pd_op_points.size();
+    auto perf_states = std::make_unique<device_performance_state_info_t[]>(perf_state_count);
+    for (size_t j = 0; j < perf_state_count; j++) {
+      perf_states[j].state_id = static_cast<uint8_t>(j);
+      perf_states[j].restore_latency = 0;
+    }
+
+    auto device = std::make_unique<AmlCpu>(parent, std::move(pllDiv16Client),
+                                           std::move(cpuDiv16Client), std::move(cpuScalerClient),
+                                           std::move(powerClient), std::move(pd_op_points));
+
+    st = device->Init();
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to initialize device, st = %d", __func__, st);
+      return st;
+    }
+
+    device->SetCpuInfo(cpu_version_packed);
+
+    st = device->DdkAdd(ddk::DeviceAddArgs("cpu")
+                            .set_flags(DEVICE_ADD_NON_BINDABLE)
+                            .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
+                            .set_performance_states({perf_states.get(), perf_state_count})
+                            .set_inspect_vmo(device->inspector_.DuplicateVmo()));
+
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "%s: DdkAdd failed, st = %d", __func__, st);
+      return st;
+    }
+
+    __UNUSED auto ptr = device.release();
   }
-
-  // Intentionally leak this device because it's owned by the driver framework.
-  __UNUSED auto unused = cpu_device.release();
 
   return ZX_OK;
 }
@@ -164,31 +247,118 @@ zx_status_t AmlCpu::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 void AmlCpu::DdkRelease() { delete this; }
 
 zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state) {
-  zx_status_t status;
-  fuchsia_thermal::OperatingPoint opps;
-
-  status = GetThermalOperatingPoints(&opps);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d", __func__, status);
-    return status;
-  }
-
-  if (requested_state >= opps.count) {
-    zxlogf(ERROR, "%s: Requested device performance state is out of bounds", __func__);
+  if (requested_state >= operating_points_.size()) {
+    zxlogf(ERROR, "%s: Requested performance state is out of bounds, state = %u\n", __func__,
+           requested_state);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  const uint16_t pstate = PstateToOperatingPoint(requested_state, opps.count);
+  if (!out_state) {
+    zxlogf(ERROR, "%s: out_state may not be null", __func__);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-  const auto result =
-      thermal_client_.SetDvfsOperatingPoint(pstate, PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
+  // There is no condition under which this function will return ZX_OK but out_state will not
+  // be requested_state so we're going to go ahead and set that up front.
+  *out_state = requested_state;
 
-  if (!result.ok() || result->status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to set dvfs operating point.", __func__);
+  const operating_point_t& target_state = operating_points_[requested_state];
+  const operating_point_t& initial_state = operating_points_[current_pstate_];
+
+  zxlogf(INFO, "%s: Scaling from %u MHz %u mV to %u MHz %u mV", __func__,
+         initial_state.freq_hz / 1000000, initial_state.volt_uv / 1000,
+         target_state.freq_hz / 1000000, target_state.volt_uv / 1000);
+
+  if (initial_state.freq_hz == target_state.freq_hz &&
+      initial_state.volt_uv == target_state.volt_uv) {
+    // Nothing to be done.
+    return ZX_OK;
+  }
+
+  zx_status_t st;
+  if (target_state.freq_hz > initial_state.freq_hz) {
+    // If we're increasing the frequency, we need to increase the voltage first.
+    uint32_t actual_voltage;
+    st = pwr_.RequestVoltage(target_state.volt_uv, &actual_voltage);
+    if (st != ZX_OK || actual_voltage != target_state.volt_uv) {
+      zxlogf(ERROR, "%s: Failed to set cpu voltage, requested = %u, got = %u, st = %d", __func__,
+             target_state.volt_uv, actual_voltage, st);
+      return st;
+    }
+  }
+
+  // Set the frequency next.
+  st = cpuscaler_.SetRate(target_state.freq_hz);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "%s: Could not set CPU frequency, st = %d\n", __func__, st);
+
+    // Put the voltage back if frequency scaling fails.
+    uint32_t actual_voltage;
+    zx_status_t vt_st = pwr_.RequestVoltage(initial_state.volt_uv, &actual_voltage);
+    if (vt_st != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to reset CPU voltage, st = %d, Voltage and frequency mismatch!",
+             __func__, vt_st);
+      return vt_st;
+    }
+    return st;
+  }
+
+  // If we're decreasing the frequency, then we set the voltage after the frequency has
+  // been reduced.
+  if (target_state.freq_hz < initial_state.freq_hz) {
+    // If we're increaing the frequency, we need to increase the voltage first.
+    uint32_t actual_voltage;
+    st = pwr_.RequestVoltage(target_state.volt_uv, &actual_voltage);
+    if (st != ZX_OK || actual_voltage != target_state.volt_uv) {
+      zxlogf(ERROR,
+             "%s: Failed to set cpu voltage, requested = %u, got = %u, st = %d. "
+             "Voltage and frequency mismatch!",
+             __func__, target_state.volt_uv, actual_voltage, st);
+      return st;
+    }
+  }
+
+  zxlogf(INFO, "%s: Success\n", __func__);
+
+  current_pstate_ = requested_state;
+
+  return ZX_OK;
+}
+
+zx_status_t AmlCpu::Init() {
+  zx_status_t result;
+  constexpr uint32_t kInitialPstate = 0;
+
+  result = plldiv16_.Enable();
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to enable plldiv16, st = %d", __func__, result);
+    return result;
+  }
+
+  result = cpudiv16_.Enable();
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to enable cpudiv16_, st = %d", __func__, result);
+    return result;
+  }
+
+  uint32_t min_voltage, max_voltage;
+  pwr_.GetSupportedVoltageRange(&min_voltage, &max_voltage);
+  pwr_.RegisterPowerDomain(min_voltage, max_voltage);
+
+  uint32_t actual;
+  result = DdkSetPerformanceState(kInitialPstate, &actual);
+
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to set initial performance state, st = %d", __func__, result);
+    return result;
+  }
+
+  if (actual != kInitialPstate) {
+    zxlogf(ERROR, "%s: Failed to set initial performance state, requested = %u, actual = %u",
+           __func__, kInitialPstate, actual);
     return ZX_ERR_INTERNAL;
   }
 
-  *out_state = requested_state;
   return ZX_OK;
 }
 
@@ -198,49 +368,17 @@ zx_status_t AmlCpu::DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep
 
 void AmlCpu::GetPerformanceStateInfo(uint32_t state,
                                      GetPerformanceStateInfoCompleter::Sync completer) {
-  // Get all performance states.
-  zx_status_t status;
-  fuchsia_thermal::OperatingPoint opps;
-
-  status = GetThermalOperatingPoints(&opps);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get Thermal operating poitns, st = %d", __func__, status);
-    completer.ReplyError(status);
-  }
-
-  // Make sure that the state is in bounds?
-  if (state >= opps.count) {
-    zxlogf(ERROR, "%s: requested pstate index out of bounds, requested = %u, count = %u", __func__,
-           state, opps.count);
+  if (state >= operating_points_.size()) {
+    zxlogf(ERROR, "%s: Requested an operating point that's out of bounds, %u\n", __func__, state);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
 
-  const uint16_t pstate = PstateToOperatingPoint(state, opps.count);
-
   llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo result;
-  result.frequency_hz = opps.opp[pstate].freq_hz;
-  result.voltage_uv = opps.opp[pstate].volt_uv;
+  result.frequency_hz = operating_points_[state].freq_hz;
+  result.voltage_uv = operating_points_[state].volt_uv;
+
   completer.ReplySuccess(result);
-}
-
-zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* out) {
-  auto result = thermal_client_.GetDeviceInfo();
-  if (!result.ok() || result->status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to get thermal device info", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  fuchsia_thermal::ThermalDeviceInfo* info = result->info.get();
-
-  // We only support one DVFS cluster on Astro.
-  if (info->opps[1].count != 0) {
-    zxlogf(ERROR, "%s: thermal driver reported more than one dvfs domain?", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  memcpy(out, &info->opps[0], sizeof(*out));
-  return ZX_OK;
 }
 
 void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync completer) {
