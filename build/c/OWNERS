@@ -1,0 +1,3 @@
+per-file fidl_c.gni = file: /src/fidl/OWNERS
+
+# COMPONENT: Build

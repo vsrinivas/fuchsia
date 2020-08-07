@@ -1,0 +1,4 @@
+per-file fidlmerge_cpp.gni = file: /src/fidl/OWNERS
+per-file fidl_cpp.gni = file: /src/fidl/OWNERS
+
+# COMPONENT: Build

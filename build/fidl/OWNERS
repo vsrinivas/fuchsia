@@ -1,3 +1,5 @@
+include /src/fidl/OWNERS
+
 per-file linting_exceptions.gni=pylaligand@google.com
 per-file linting_exceptions.gni=shayba@google.com
 per-file linting_exceptions.gni=phosek@google.com

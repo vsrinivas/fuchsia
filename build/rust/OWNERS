@@ -1,5 +1,7 @@
 tmandry@google.com
 
 per-file rustc_fuzzer.gni=aarongreen@google.com
+per-file fidl_rust.gni = file: /src/fidl/OWNERS
+per-file fidl_rust_library.gni = file: /src/fidl/OWNERS
 
 # COMPONENT: Toolchain>Rust
