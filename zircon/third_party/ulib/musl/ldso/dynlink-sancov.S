@@ -18,6 +18,7 @@
         adrp x16, :got:__sanitizer_cov_\name
         ldr x16, [x16, #:got_lo12:__sanitizer_cov_\name]
         br x16
+#elif defined(__riscv)
 #else
 # error unsupported architecture
 #endif

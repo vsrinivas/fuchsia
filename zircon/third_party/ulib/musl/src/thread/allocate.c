@@ -121,8 +121,8 @@ __NO_SAFESTACK static thrd_t copy_tls(unsigned char* mem, size_t alloc) {
 #endif
 
   for (i = 1, p = libc.tls_head; p; i++, p = p->next) {
-    dtv[i] = mem + offset_for_module(p);
-    memcpy(dtv[i], p->image, p->len);
+    dtv[i] = mem + offset_for_module(p) + DTP_OFFSET;
+    memcpy(mem + offset_for_module(p), p->image, p->len);
   }
 
   dtv[0] = (void*)libc.tls_cnt;

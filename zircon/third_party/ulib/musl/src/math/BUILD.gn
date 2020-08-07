@@ -180,6 +180,14 @@ source_set("math") {
       "aarch64/sqrtf.S",
     ]
   }
+  if (current_cpu == "riscv64") {
+    sources += [
+      "riscv64/fabs.S",
+      "riscv64/fabsf.S",
+      "riscv64/sqrt.S",
+      "riscv64/sqrtf.S",
+    ]
+  }
   deps = [
     "//zircon/third_party/ulib/musl:musl_internal",
     "//zircon/third_party/ulib/musl/third_party/math",

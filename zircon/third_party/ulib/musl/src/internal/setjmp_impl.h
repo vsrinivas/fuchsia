@@ -33,6 +33,16 @@
 #define JB_D(n) (JB_X(29) + n - 8)
 #define JB_COUNT JB_D(16)
 
+#elif defined(__riscv)
+
+// The shadow call stack pointer (x18) is also mangled.
+#define JB_ARCH_MANGLE_COUNT 1
+
+// Callee-saves registers are [x19,x28] and [d8,d15].
+#define JB_X(n) (JB_MANGLE_COUNT + n - 19)
+#define JB_D(n) (JB_X(29) + n - 8)
+#define JB_COUNT JB_D(16)
+
 #else
 
 #error what architecture?

@@ -79,6 +79,16 @@ ZXR_TLS_INLINE static inline void zxr_tp_set(zx_handle_t self, void* tp) {
     __builtin_trap();
 }
 
+#elif defined(__riscv)
+
+__NO_SAFESTACK static inline void* zxr_tp_get(void) {
+  return __builtin_thread_pointer();
+}
+
+ZXR_TLS_INLINE static inline void zxr_tp_set(zx_handle_t self, void* tp) {
+  __asm__ volatile("mv tp, %0" : : "r"(tp));
+}
+
 #else
 
 #error Unsupported architecture

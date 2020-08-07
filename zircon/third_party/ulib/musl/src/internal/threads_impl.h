@@ -101,14 +101,14 @@ struct pthread {
 };
 
 #ifdef TLS_ABOVE_TP
-#define PTHREAD_TP_OFFSET offsetof(struct pthread, head)
+#define PTHREAD_TP_OFFSET sizeof(struct pthread)
 #else
 #define PTHREAD_TP_OFFSET 0
 #endif
 
 #define TP_OFFSETOF(field) ((ptrdiff_t)offsetof(struct pthread, field) - PTHREAD_TP_OFFSET)
 
-static_assert(TP_OFFSETOF(head) == 0, "ABI tcbhead_t misplaced in struct pthread");
+static_assert(TP_OFFSETOF(head) == -0x10, "ABI tcbhead_t misplaced in struct pthread");
 
 #ifdef ABI_TCBHEAD_SIZE
 static_assert((sizeof(struct pthread) - offsetof(struct pthread, head)) == ABI_TCBHEAD_SIZE,

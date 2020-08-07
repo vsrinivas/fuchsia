@@ -185,6 +185,16 @@ static NO_ASAN _Noreturn void finish_exit(pthread_t self) {
       :
       : [base] "r"(self->tcb_region.iov_base), [len] "r"(self->tcb_region.iov_len - PAGE_SIZE),
         [self] "r"(self));
+#elif defined(__riscv)
+  // The thread descriptor is at the start of the region, so the rest of
+  // the space up to the guard page is available as the temporary stack.
+  __asm__(
+      "add sp, %[base], %[len]\n"
+      "mv  a0, %[self]\n"
+      "jal final_exit"
+      :
+      : [base] "r"(self->tcb_region.iov_base), [len] "r"(self->tcb_region.iov_len - PAGE_SIZE),
+        [self] "r"(self));
 #else
 #error what architecture?
 #endif
