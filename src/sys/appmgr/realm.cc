@@ -623,12 +623,13 @@ void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCal
     }
 
     // Start up the library loader.
-    zx::channel chan;
-    if (DynamicLibraryLoader::Start(std::move(dirfd), &chan) != ZX_OK) {
-      callback(ZX_ERR_INTERNAL, std::move(binary), std::move(loader));
+    zx::status<zx::channel> chan =
+        DynamicLibraryLoader::Start(dirfd.get(), Util::GetLabelFromURL(package->resolved_url));
+    if (chan.is_error()) {
+      callback(chan.status_value(), std::move(binary), std::move(loader));
       return;
     }
-    loader.set_channel(std::move(chan));
+    loader.set_channel(std::move(chan).value());
     callback(ZX_OK, std::move(binary), std::move(loader));
   });
 }
@@ -812,7 +813,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                        ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponentFromPackage", "package.resolved_url",
                  package->resolved_url, "launch_info.url", launch_info.url);
-  fbl::unique_fd fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+  fbl::unique_fd pkg_fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
   // Parse cmx manifest file, if it's there.
   CmxMetadata cmx;
@@ -839,13 +840,13 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   }
   TRACE_DURATION_BEGIN("appmgr", "Realm::CreateComponentFromPackage:IsFileAt", "cmx_path",
                        cmx_path);
-  if (!cmx_path.empty() && files::IsFileAt(fd.get(), cmx_path)) {
+  if (!cmx_path.empty() && files::IsFileAt(pkg_fd.get(), cmx_path)) {
     TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
     json::JSONParser json_parser;
     {
       TRACE_DURATION("appmgr", "Realm::CreateComponentFromPackage:ParseFromFileAt", "cmx_path",
                      cmx_path);
-      if (!cmx.ParseFromFileAt(fd.get(), cmx_path, &json_parser)) {
+      if (!cmx.ParseFromFileAt(pkg_fd.get(), cmx_path, &json_parser)) {
         FX_LOGS(ERROR) << "cmx file failed to parse: " << json_parser.error_str();
         component_request.SetReturnValues(kComponentCreationFailed,
                                           TerminationReason::INTERNAL_ERROR);
@@ -888,6 +889,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     launch_info.arguments = program.args();
   }
 
+  zx::channel loader_service;
   if (runtime.IsNull()) {
     // If we cannot parse a runtime from either .cmx or deprecated_runtime, then
     // we fall back to the default runner, which is running an ELF binary or
@@ -899,7 +901,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                          "bin_path", bin_path);
     zx_status_t status;
     fbl::unique_fd elf_fd;
-    status = fdio_open_fd_at(fd.get(), bin_path.c_str(),
+    status = fdio_open_fd_at(pkg_fd.get(), bin_path.c_str(),
                              fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE,
                              elf_fd.reset_and_get_address());
     if (status == ZX_OK) {
@@ -912,6 +914,17 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       component_request.SetReturnValues(kComponentCreationFailed,
                                         TerminationReason::INTERNAL_ERROR);
       return;
+    }
+
+    {
+      zx::status<zx::channel> status =
+          DynamicLibraryLoader::Start(pkg_fd.get(), Util::GetLabelFromURL(launch_info.url));
+      if (status.is_error()) {
+        component_request.SetReturnValues(kComponentCreationFailed,
+                                          TerminationReason::INTERNAL_ERROR);
+        return;
+      }
+      loader_service = std::move(status).value();
     }
   } else {
     // Read 'data' path from cmx, or assume to be /pkg/data/<component-name>.
@@ -937,21 +950,9 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
   }
 
-  // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
-  // should be able to tear down the file descriptor in a way that gives us
-  // the channel back.
-  TRACE_DURATION_BEGIN("appmgr",
-                       "Realm::CreateComponentFromPackage:CloneChannelFromFileDescriptor");
-  zx::channel pkg = fsl::CloneChannelFromFileDescriptor(fd.get());
-  TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:CloneChannelFromFileDescriptor");
-  zx::channel loader_service;
-  if (DynamicLibraryLoader::Start(std::move(fd), &loader_service) != ZX_OK) {
-    component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
-    return;
-  }
-
   // We want two handles to the package, one to put in the component's namespace
   // and one to put in the hub.
+  zx::channel pkg = fsl::TransferChannelFromFileDescriptor(std::move(pkg_fd));
   zx::channel pkg_clone;
   if (pkg.is_valid()) {
     pkg_clone = zx::channel(fdio_service_clone(pkg.get()));

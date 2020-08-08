@@ -4,36 +4,46 @@
 
 #include "src/sys/appmgr/dynamic_library_loader.h"
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 
-#include <loader-service/loader-service.h>
+#include "src/lib/loader_service/loader_service.h"
 
 namespace component {
 namespace DynamicLibraryLoader {
 
+namespace fio = ::llcpp::fuchsia::io;
+
 static async_loop_t* ld_loop = nullptr;
 
-zx_status_t Start(fbl::unique_fd fd, zx::channel* result) {
-  zx_status_t status = ZX_OK;
-
+zx::status<zx::channel> Start(int package_fd, std::string name) {
   if (!ld_loop) {
-    status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &ld_loop);
-    if (status != ZX_OK)
-      return status;
+    zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &ld_loop);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
 
     status = async_loop_start_thread(ld_loop, "appmgr-loader", nullptr);
-    if (status != ZX_OK)
-      return status;
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
   }
 
-  loader_service_t* svc = nullptr;
-  status = loader_service_create_fd(async_loop_get_dispatcher(ld_loop), fd.release(), &svc);
-  if (status != ZX_OK)
-    return status;
-  status = loader_service_connect(svc, result->reset_and_get_address());
-  loader_service_release(svc);
-  return status;
+  fbl::unique_fd lib_fd;
+  zx_status_t status = fdio_open_fd_at(
+      package_fd, "lib",
+      fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+      lib_fd.reset_and_get_address());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  auto loader =
+      loader::LoaderService::Create(async_loop_get_dispatcher(ld_loop), std::move(lib_fd), name);
+  return loader->Connect();
 }
 
 }  // namespace DynamicLibraryLoader
