@@ -100,8 +100,7 @@ async fn ethernet_tx_rx() {
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
 
-    let proxy = helper.proxy();
-    connect(&wlan_service, &proxy, &mut helper, SSID, &BSS, None).await;
+    connect_to_open_ap(&wlan_service, &mut helper, SSID, &BSS).await;
 
     let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await

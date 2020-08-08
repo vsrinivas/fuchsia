@@ -18,6 +18,7 @@ use {
     fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
     log::{debug, error},
+    std::{future::Future, marker::Unpin},
     wlan_common::{
         bss::Protection,
         data_writer,
@@ -380,30 +381,58 @@ pub fn handle_connect_events(
     }
 }
 
-pub async fn connect(
-    wlan_service: &WlanProxy,
-    phy: &WlantapPhyProxy,
+pub async fn connect_to_ap<F, R>(
+    connect_fut: F,
     helper: &mut test_utils::TestHelper,
-    ssid: &[u8],
-    bssid: &mac::Bssid,
-    passphrase: Option<&str>,
-) {
-    let mut connect_config = create_connect_config(ssid, passphrase.unwrap_or(&""));
-    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p));
-    let connect_fut = wlan_service.connect(&mut connect_config);
-    let protection = match passphrase {
-        Some(_) => Protection::Wpa2Personal,
-        None => Protection::Open,
-    };
-    let error = helper
+    ap_ssid: &[u8],
+    ap_bssid: &mac::Bssid,
+    protection: &Protection,
+    authenticator: &mut Option<wlan_rsn::Authenticator>,
+) -> R
+where
+    F: Future<Output = R> + Unpin,
+{
+    let phy = helper.proxy();
+    helper
         .run_until_complete_or_timeout(
             30.seconds(),
-            format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
+            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ap_ssid), ap_bssid),
             |event| {
-                handle_connect_events(&event, &phy, ssid, bssid, &protection, &mut authenticator);
+                handle_connect_events(&event, &phy, ap_ssid, ap_bssid, protection, authenticator);
             },
             connect_fut,
         )
+        .await
+}
+
+pub async fn connect_to_wpa2_ap(
+    wlan_service: &WlanProxy,
+    helper: &mut test_utils::TestHelper,
+    ap_ssid: &[u8],
+    ap_bssid: &mac::Bssid,
+    passphrase: &str,
+) {
+    let mut connect_config = create_connect_config(ap_ssid, passphrase);
+    let mut authenticator = Some(create_wpa2_psk_authenticator(ap_bssid, ap_ssid, passphrase));
+    let protection = Protection::Wpa2Personal;
+    let connect_fut = wlan_service.connect(&mut connect_config);
+    let error =
+        connect_to_ap(connect_fut, helper, ap_ssid, ap_bssid, &protection, &mut authenticator)
+            .await
+            .expect("connecting via wlancfg service");
+    assert_eq!(error.code, ErrCode::Ok, "connect failed: {:?}", error);
+}
+
+pub async fn connect_to_open_ap(
+    wlan_service: &WlanProxy,
+    helper: &mut test_utils::TestHelper,
+    ap_ssid: &[u8],
+    ap_bssid: &mac::Bssid,
+) {
+    let mut connect_config = create_connect_config(ap_ssid, "");
+    let protection = Protection::Open;
+    let connect_fut = wlan_service.connect(&mut connect_config);
+    let error = connect_to_ap(connect_fut, helper, ap_ssid, ap_bssid, &protection, &mut None)
         .await
         .expect("connecting via wlancfg service");
     assert_eq!(error.code, ErrCode::Ok, "connect failed: {:?}", error);

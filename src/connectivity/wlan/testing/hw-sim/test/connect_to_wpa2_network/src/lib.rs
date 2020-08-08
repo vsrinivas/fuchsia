@@ -21,8 +21,8 @@ async fn connect_to_wpa2_network() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let phy = helper.proxy();
-    let () = connect(&wlan_service, &phy, &mut helper, SSID, &BSS, Some(&"wpa2good")).await;
+    let () =
+        wlan_hw_sim::connect_to_wpa2_ap(&wlan_service, &mut helper, SSID, &BSS, "wpa2good").await;
 
     let status = wlan_service.status().await.expect("getting wlan status");
     let is_protected = true;

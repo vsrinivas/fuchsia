@@ -21,10 +21,9 @@ async fn connect_to_open_network() {
 
     let wlan_service =
         connect_to_service::<WlanMarker>().expect("Failed to connect to wlan service");
-    let proxy = helper.proxy();
 
-    let (passphrase, is_protected) = (None, false);
-    let () = connect(&wlan_service, &proxy, &mut helper, SSID, &BSS, passphrase).await;
+    let is_protected = false;
+    let () = wlan_hw_sim::connect_to_open_ap(&wlan_service, &mut helper, SSID, &BSS).await;
     let status = wlan_service.status().await.expect("getting wlan status");
     assert_associated_state(status, &BSS, SSID, &CHANNEL, is_protected);
     helper.stop().await;

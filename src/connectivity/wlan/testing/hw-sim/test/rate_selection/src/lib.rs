@@ -149,9 +149,9 @@ async fn rate_selection() {
     .await;
     let () = loop_until_iface_is_found().await;
 
-    let phy = helper.proxy();
-    let () = connect(&wlan_service, &phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL, None).await;
+    let () = connect_to_open_ap(&wlan_service, &mut helper, SSID_MINSTREL, &BSS_MINSTL).await;
 
+    let phy = helper.proxy();
     let (sender, mut receiver) = mpsc::channel(1);
     let eth_and_beacon_sender_fut = eth_and_beacon_sender(&mut receiver, &phy);
     pin_mut!(eth_and_beacon_sender_fut);
