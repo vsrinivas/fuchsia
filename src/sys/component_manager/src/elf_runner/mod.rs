@@ -269,7 +269,8 @@ impl ElfRunner {
         };
 
         if cfg!(feature = "propagate_utc_clock") {
-            let clock_rights = zx::Rights::READ | zx::Rights::DUPLICATE | zx::Rights::TRANSFER;
+            let clock_rights =
+                zx::Rights::READ | zx::Rights::WAIT | zx::Rights::DUPLICATE | zx::Rights::TRANSFER;
             let utc_clock = if let Some(utc_clock) = &self.utc_clock {
                 utc_clock.duplicate_handle(clock_rights)
             } else {

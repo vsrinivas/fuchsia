@@ -452,9 +452,9 @@ static zx_status_t send_handles(fprocess::Launcher::SyncClient* launcher, size_t
     if (utc_clock != ZX_HANDLE_INVALID) {
       auto* handle_info = &handle_infos[h++];
       handle_info->id = PA_CLOCK_UTC;
-      status =
-          zx_handle_duplicate(utc_clock, ZX_RIGHT_READ | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER,
-                              handle_info->handle.reset_and_get_address());
+      status = zx_handle_duplicate(
+          utc_clock, ZX_RIGHT_READ | ZX_RIGHT_WAIT | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER,
+          handle_info->handle.reset_and_get_address());
       if (status != ZX_OK) {
         report_error(err_msg, "failed to clone UTC clock: %d", status);
         goto cleanup;
