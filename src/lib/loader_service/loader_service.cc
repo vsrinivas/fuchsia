@@ -75,15 +75,6 @@ void LoaderConnection::LoadObject(fidl::StringView object_name,
     }
   };
 
-  // The fuchsia.ldsvc.Loader protocol doesn't require this to allow for future flexibility, but
-  // filesystem-based implementations like this disallow object names that contain path separators.
-  // This avoids security bugs since we rely on string path manipulation and because our handling of
-  // ".." path components is currently somewhat inconsistent, depending on where it gets handled.
-  if (name.find('/') != std::string::npos) {
-    reply(zx::error(ZX_ERR_INVALID_ARGS));
-    return;
-  }
-
   if (config_.subdir.empty()) {
     reply(server_->LoadObjectImpl(name));
     return;

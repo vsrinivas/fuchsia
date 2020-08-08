@@ -410,16 +410,14 @@ TEST_F(LoaderServiceTest, InvalidLoadObject) {
   std::shared_ptr<LoaderService> loader;
   std::vector<TestDirectoryEntry> config;
   config.emplace_back("libfoo.so", "science", true);
-  config.emplace_back("asan/libfoo.so", "rules", false);
+  config.emplace_back("asan/libfoo.so", "rules", true);
   ASSERT_NO_FATAL_FAILURE(CreateTestLoader(std::move(config), &loader));
 
   auto status = loader->Connect();
   ASSERT_TRUE(status.is_ok());
   fldsvc::Loader::SyncClient client(std::move(status.value()));
 
-  EXPECT_NO_FATAL_FAILURE(LoadObject(client, "/", zx::error(ZX_ERR_INVALID_ARGS)));
-  EXPECT_NO_FATAL_FAILURE(LoadObject(client, "./libfoo.so", zx::error(ZX_ERR_INVALID_ARGS)));
-  EXPECT_NO_FATAL_FAILURE(LoadObject(client, "asan/libfoo.so", zx::error(ZX_ERR_INVALID_ARGS)));
+  EXPECT_NO_FATAL_FAILURE(LoadObject(client, "/", zx::error(ZX_ERR_NOT_FILE)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "..", zx::error(ZX_ERR_INVALID_ARGS)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "asan", zx::error(ZX_ERR_NOT_FILE)));
 }
