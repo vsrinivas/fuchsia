@@ -58,8 +58,6 @@ rustc_library("tuf") {
   # TODO(46838): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = common_sources
 }
 
@@ -99,8 +97,6 @@ rustc_test("tuf_lib_test") {
 
   # TODO(46838): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  enforce_source_listing = true
 
   sources = common_sources
 

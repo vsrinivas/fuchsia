@@ -42,8 +42,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/cases.rs",
     "src/elf/elf_component.rs",
@@ -74,8 +72,6 @@ rustc_library("test_lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/test_lib.rs" ]
 }

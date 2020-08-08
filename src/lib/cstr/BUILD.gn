@@ -10,8 +10,6 @@ rustc_library("cstr") {
   edition = "2018"
   deps = [ "//third_party/rust_crates:libc" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

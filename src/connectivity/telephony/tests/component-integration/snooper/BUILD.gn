@@ -26,7 +26,5 @@ rustc_test("multi-clients") {
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/multi_clients.rs" ]
 }

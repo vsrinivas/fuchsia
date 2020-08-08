@@ -30,8 +30,6 @@ rustc_library("pseudo-fs") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/common.rs",
     "src/directory/common.rs",

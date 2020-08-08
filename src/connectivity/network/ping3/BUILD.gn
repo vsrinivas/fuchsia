@@ -37,8 +37,6 @@ rustc_binary("bin") {
     "//src/lib/network/fidl_fuchsia_net_stack_ext",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/main.rs",
     "src/opt.rs",

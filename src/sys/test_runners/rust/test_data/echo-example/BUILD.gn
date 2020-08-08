@@ -16,8 +16,6 @@ rustc_test("echo_rust_client") {
     "//src/lib/fuchsia-component",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 

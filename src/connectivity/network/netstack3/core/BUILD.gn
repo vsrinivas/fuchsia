@@ -35,8 +35,6 @@ rustc_library("netstack3-core") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/algorithm.rs",
     "src/context.rs",
@@ -95,8 +93,6 @@ rustc_test("netstack3-core_test") {
     "//third_party/rust_crates:rand_xorshift",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/algorithm.rs",

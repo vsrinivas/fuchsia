@@ -48,8 +48,6 @@ rustc_library("stream_processor_test_lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/buffer_collection_constraints.rs",
     "src/buffer_set.rs",
@@ -92,8 +90,6 @@ rustc_library("stream_processor_decoder_factory_lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "stream_processor_factories/decoders.rs" ]
 }
 
@@ -113,8 +109,6 @@ rustc_library("stream_processor_encoder_factory_lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "stream_processor_factories/encoders.rs" ]
 }
@@ -142,8 +136,6 @@ rustc_test("audio_decoder_test_bin") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "audio_decoder_test/lib.rs",
@@ -194,8 +186,6 @@ rustc_test("audio_encoder_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "audio_encoder_test/lib.rs",
     "audio_encoder_test/pcm_audio.rs",
@@ -236,8 +226,6 @@ rustc_library("video_frame_hasher_lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "video_frame_hasher/lib.rs" ]
 }
 
@@ -270,8 +258,6 @@ rustc_library("video_frame_stream_lib") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "video_frame_stream/lib.rs" ]
 }
@@ -306,8 +292,6 @@ rustc_test("h264_decoder_test_bin") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "h264_decoder_test/h264.rs",
@@ -354,8 +338,6 @@ rustc_test("h264_encoder_test_bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "h264_encoder_test/h264.rs",
     "h264_encoder_test/lib.rs",
@@ -396,8 +378,6 @@ rustc_test("h265_encoder_test_bin") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "h265_encoder_test/h265.rs",

@@ -26,8 +26,6 @@ rustc_binary("mock_services") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/tests_and_mocks.rs" ]
 }
 
@@ -43,8 +41,6 @@ rustc_test("test_driver") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

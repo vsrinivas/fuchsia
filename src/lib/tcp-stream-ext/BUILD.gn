@@ -21,8 +21,6 @@ rustc_library("tcp-stream-ext") {
     "//third_party/rust_crates:proptest",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
@@ -42,8 +40,6 @@ rustc_test("stub-netstack-test") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:matches",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/stub_netstack_test.rs" ]
 }

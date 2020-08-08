@@ -16,8 +16,6 @@ rustc_library("trace") {
   ]
   non_rust_deps = [ "//zircon/system/ulib/trace-engine" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
@@ -54,8 +52,6 @@ rustc_library("trace-provider") {
     ":rust-trace-provider",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "trace-provider/src/lib.rs" ]
 }

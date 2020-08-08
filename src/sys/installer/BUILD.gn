@@ -36,8 +36,6 @@ rustc_binary("bin") {
   # Use static linking since we're in the zbi.
   configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/main.rs",
     "src/partition.rs",

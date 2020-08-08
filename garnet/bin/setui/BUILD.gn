@@ -78,8 +78,6 @@ rustc_library("lib") {
   # TODO(56138): Fix the leaks and remove this.
   test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/accessibility.rs",
     "src/accessibility/accessibility_controller.rs",
@@ -281,8 +279,6 @@ rustc_binary("bin") {
   # TODO(56138): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -332,8 +328,6 @@ rustc_binary("setui-config-test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   source_root = "src/setui_config_test.rs"
-
-  enforce_source_listing = true
 
   sources = [ "src/setui_config_test.rs" ]
 }

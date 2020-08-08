@@ -70,8 +70,6 @@ rustc_library("fuchsia-async") {
 
   # TODO(56138): Fix the leaks and remove this.
   test_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  enforce_source_listing = true
 }
 
 rustc_staticlib("fuchsia-async-staticlib") {
@@ -83,8 +81,6 @@ rustc_staticlib("fuchsia-async-staticlib") {
     "//third_party/rust_crates:parking_lot",
   ]
   source_root = "src/ffi.rs"
-
-  enforce_source_listing = true
 
   sources = [ "src/ffi.rs" ]
 }

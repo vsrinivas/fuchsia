@@ -24,8 +24,6 @@ rustc_test("audio_device_tests_bin") {
   # TODO(56138): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/gain.rs",
     "src/lib.rs",

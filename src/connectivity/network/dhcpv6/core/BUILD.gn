@@ -21,8 +21,6 @@ rustc_library("core") {
     "//third_party/rust_crates:matches",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/client.rs",
     "src/lib.rs",

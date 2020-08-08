@@ -33,8 +33,6 @@ rustc_library("io_conformance") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/directory_request_logger.rs",
     "src/io1_harness_receiver.rs",
@@ -61,8 +59,6 @@ rustc_test("io1_conformance_test") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "io1_tests.rs" ]
 }

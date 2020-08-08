@@ -18,8 +18,6 @@ rustc_library("diagnostics-schema") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

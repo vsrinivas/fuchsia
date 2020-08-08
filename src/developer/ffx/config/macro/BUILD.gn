@@ -16,8 +16,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:proc-macro-hack",
     ]
 
-    enforce_source_listing = true
-
     sources = [ "src/lib.rs" ]
   }
 }

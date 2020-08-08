@@ -34,8 +34,6 @@ rustc_staticlib("wlan-mlme-c") {
 
   public = [ "bindings.h" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ap.rs",
     "src/client.rs",

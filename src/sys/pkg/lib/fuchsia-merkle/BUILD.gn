@@ -24,8 +24,6 @@ rustc_library("fuchsia-merkle") {
   # TODO(46721): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/builder.rs",
     "src/lib.rs",

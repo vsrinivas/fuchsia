@@ -34,8 +34,6 @@ rustc_library("blobfs-ramdisk") {
     "//third_party/rust_crates:matches",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/test.rs",

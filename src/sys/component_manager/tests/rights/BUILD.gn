@@ -31,8 +31,6 @@ rustc_test("rights_integration_test_bin") {
   # TODO(46776): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [ "rights_integration_test.rs" ]
 }
 
@@ -67,8 +65,6 @@ rustc_binary("use_dir_rights") {
     "//third_party/rust_crates:log",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "use_dir_rights.rs" ]
 }
 
@@ -96,8 +92,6 @@ rustc_binary("component_manager_for_rights_test") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "component_manager.rs" ]
 }
 
@@ -118,8 +112,6 @@ rustc_binary("use_storage") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "use_storage.rs" ]
 }

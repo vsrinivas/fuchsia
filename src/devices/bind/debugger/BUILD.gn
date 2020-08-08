@@ -26,8 +26,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -52,8 +50,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/bind_library.rs",

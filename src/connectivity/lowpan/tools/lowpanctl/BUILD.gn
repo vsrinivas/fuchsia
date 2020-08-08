@@ -33,8 +33,6 @@ rustc_binary("bin") {
 
   non_rust_deps = []
 
-  enforce_source_listing = true
-
   sources = [
     "src/context.rs",
     "src/energy_scan_command.rs",

@@ -17,8 +17,6 @@ rustc_library("mapped-vmo") {
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

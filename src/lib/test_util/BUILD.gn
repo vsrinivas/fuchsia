@@ -12,8 +12,6 @@ rustc_library("test_util") {
 
   deps = [ "//third_party/rust_crates:lazy_static" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

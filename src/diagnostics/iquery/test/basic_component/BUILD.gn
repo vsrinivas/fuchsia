@@ -16,7 +16,5 @@ rustc_binary("iquery_basic_component") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "main.rs" ]
 }

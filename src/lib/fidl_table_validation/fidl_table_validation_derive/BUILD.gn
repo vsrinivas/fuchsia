@@ -14,7 +14,5 @@ rustc_macro("fidl_table_validation_derive") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

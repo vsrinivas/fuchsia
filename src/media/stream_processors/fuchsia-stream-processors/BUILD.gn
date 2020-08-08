@@ -28,8 +28,6 @@ rustc_library("fuchsia-stream-processors") {
 
   test_deps = []
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/types.rs",

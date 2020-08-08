@@ -29,8 +29,6 @@ rustc_library("fuchsia-criterion") {
     features = [ "local_bench" ]
   }
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

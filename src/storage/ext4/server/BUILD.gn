@@ -31,8 +31,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -52,8 +50,6 @@ rustc_test("ext4_server_integration_test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:matches",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "tests/ext4_server_test.rs" ]
 }

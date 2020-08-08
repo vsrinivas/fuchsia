@@ -29,8 +29,6 @@ rustc_library("async-helpers") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/component_lifecycle.rs",
     "src/hanging_get/async_server.rs",

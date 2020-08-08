@@ -10,8 +10,6 @@ rustc_library("testing") {
   with_unit_tests = true
   edition = "2018"
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
@@ -20,8 +18,6 @@ rustc_binary("testing_integration_test") {
   edition = "2018"
   source_root = "tests/integration_test.rs"
 
-  enforce_source_listing = true
-
   sources = [ "tests/integration_test.rs" ]
 }
 
@@ -29,8 +25,6 @@ rustc_binary("testing_integration_test_two") {
   deps = [ ":testing" ]
   edition = "2018"
   source_root = "tests/integration_test_two.rs"
-
-  enforce_source_listing = true
 
   sources = [ "tests/integration_test_two.rs" ]
 }

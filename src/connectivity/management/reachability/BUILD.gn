@@ -41,8 +41,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/eventloop.rs",
     "src/main.rs",

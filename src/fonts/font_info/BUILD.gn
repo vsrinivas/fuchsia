@@ -28,8 +28,6 @@ rustc_library("font_info") {
     ]
   }
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/sources.rs",
@@ -50,8 +48,6 @@ rustc_test("font_info_test_bin") {
   if (is_host) {
     non_rust_deps = [ ":test_data" ]
   }
-
-  enforce_source_listing = true
 
   sources = [ "tests/tests.rs" ]
 }

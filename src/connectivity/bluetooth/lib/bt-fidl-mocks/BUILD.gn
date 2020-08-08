@@ -25,8 +25,6 @@ rustc_library("bt-fidl-mocks") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/control.rs",
     "src/expect.rs",

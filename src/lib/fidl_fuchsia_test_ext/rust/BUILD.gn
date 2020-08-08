@@ -13,7 +13,5 @@ rustc_library("fidl_fuchsia_test_ext") {
     "//src/lib/fidl/rust/fidl",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

@@ -23,7 +23,5 @@ rustc_library("bt-profile-test-server") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

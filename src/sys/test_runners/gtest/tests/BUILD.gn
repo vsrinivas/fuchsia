@@ -28,8 +28,6 @@ rustc_test("tests_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "main.rs" ]
 
   inputs = [ "../test_data/sample_tests_golden_events.rsf" ]

@@ -29,8 +29,6 @@ rustc_library("fuchsia-pkg") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/build.rs",
     "src/creation_manifest.rs",

@@ -26,8 +26,6 @@ rustc_binary("mock_services") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/mock_services.rs" ]
 }
 
@@ -43,8 +41,6 @@ rustc_test("test_driver") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/test.rs" ]
 }
@@ -72,7 +68,8 @@ test_package("pwrbtn-monitor-integration-test") {
 
   meta = [
     {
-      path = rebase_path("//src/bringup/bin/pwrbtn-monitor/meta/pwrbtn-monitor.cml")
+      path = rebase_path(
+              "//src/bringup/bin/pwrbtn-monitor/meta/pwrbtn-monitor.cml")
       dest = "pwrbtn-monitor.cm"
     },
     {

@@ -40,8 +40,6 @@ rustc_library("input") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",

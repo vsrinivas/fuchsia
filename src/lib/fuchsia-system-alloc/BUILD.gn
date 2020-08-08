@@ -8,7 +8,5 @@ rustc_library("fuchsia-system-alloc") {
   edition = "2018"
   deps = []
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

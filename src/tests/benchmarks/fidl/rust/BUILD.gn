@@ -45,8 +45,6 @@ template("rust_gidl_benchmark_suite") {
     ]
     non_rust_deps = [ ":${target_name}__gidl" ]
 
-    enforce_source_listing = true
-
     sources = [ output_file ]
   }
 }
@@ -89,8 +87,6 @@ rustc_library("benchmark_suite_rust_lib") {
   deps = [ "//src/developer/fuchsia-criterion" ] + gidl_lib_deps
   non_rust_deps = [ ":benchmark_suite_rust_lib_gen" ]
 
-  enforce_source_listing = true
-
   sources = [ benchmark_suite_file ]
 }
 
@@ -104,8 +100,6 @@ rustc_binary("rust_fidl_microbenchmarks_bin") {
     "//src/developer/fuchsia-criterion",
     "//third_party/rust_crates:criterion",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

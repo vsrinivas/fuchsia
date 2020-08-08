@@ -15,8 +15,6 @@ rustc_binary("advanced_routing_reporter_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "advanced_routing/reporter.rs" ]
 }
 
@@ -31,8 +29,6 @@ rustc_binary("simple_component_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "simple_component/main.rs" ]
 }
@@ -55,8 +51,6 @@ rustc_binary("dynamic_child_reporter_bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "dynamic_child/reporter.rs" ]
 }
 
@@ -75,8 +69,6 @@ rustc_binary("visibility_reporter_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "visibility/reporter.rs" ]
 }
@@ -97,8 +89,6 @@ rustc_library("hub_report_lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "hub_report.rs" ]
 }

@@ -98,8 +98,6 @@ rustc_library("triage_app_lib") {
 
   deps = lib_deps
 
-  enforce_source_listing = true
-
   sources = [
     "src/app.rs",
     "src/config.rs",
@@ -119,8 +117,6 @@ rustc_test("triage_lib_test") {
            ":test_data",
          ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/app.rs",
     "src/config.rs",
@@ -136,8 +132,6 @@ rustc_binary("triage_bin") {
   edition = "2018"
 
   deps = lib_deps + [ ":triage_app_lib" ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

@@ -47,8 +47,6 @@ rustc_library("wlan-hw-sim") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/config.rs",
     "src/eth_helper.rs",

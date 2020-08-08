@@ -20,8 +20,6 @@ rustc_test("bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 

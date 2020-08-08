@@ -57,8 +57,6 @@ rustc_library("fuchsia-pkg-testing") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/inspect.rs",
     "src/lib.rs",
@@ -96,8 +94,6 @@ rustc_test("pkgfs-test") {
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:serde_json",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "tests/get_buffer.rs",

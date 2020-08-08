@@ -21,8 +21,6 @@ rustc_test("base_resolver_test_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "base_resolver_test.rs" ]
 }
 
@@ -43,8 +41,6 @@ rustc_binary("root_component_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "root_component.rs" ]
 }

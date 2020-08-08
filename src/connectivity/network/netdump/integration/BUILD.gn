@@ -36,8 +36,6 @@ rustc_test("test_bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/pcapng.rs",

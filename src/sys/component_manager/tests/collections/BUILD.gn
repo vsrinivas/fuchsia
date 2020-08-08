@@ -22,8 +22,6 @@ rustc_test("collections_integration_test_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "integration_test.rs" ]
 }
 

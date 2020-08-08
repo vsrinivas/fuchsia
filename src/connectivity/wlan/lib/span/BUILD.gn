@@ -12,8 +12,6 @@ rustc_library("wlan-span") {
   with_unit_tests = true
   edition = "2018"
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

@@ -21,8 +21,6 @@ rustc_library("hoist") {
   test_deps = [ "//third_party/rust_crates:parking_lot" ]
   non_rust_deps = [ "//third_party/boringssl" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 
   inputs = [

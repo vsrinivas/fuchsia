@@ -17,7 +17,5 @@ rustc_binary("virtio_rng_test_util") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }

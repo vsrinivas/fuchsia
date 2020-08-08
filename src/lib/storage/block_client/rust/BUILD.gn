@@ -22,8 +22,6 @@ rustc_library("remote-block-device") {
     "//third_party/rust_crates:linked-hash-map-v0_5_2",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/cache.rs",
     "src/lib.rs",

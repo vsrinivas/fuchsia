@@ -14,8 +14,6 @@ rustc_binary("logging_component") {
     "//third_party/rust_crates:log",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "logging_component.rs" ]
 }
 

@@ -37,8 +37,6 @@ rustc_library("update-package") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/board.rs",
     "src/hash.rs",

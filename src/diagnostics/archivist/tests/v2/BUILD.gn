@@ -19,8 +19,6 @@ rustc_binary("stub_inspect_component") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "components/stub_inspect_component.rs" ]
 }
 
@@ -39,8 +37,6 @@ rustc_test("integration_tests_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/lib.rs" ]
 }

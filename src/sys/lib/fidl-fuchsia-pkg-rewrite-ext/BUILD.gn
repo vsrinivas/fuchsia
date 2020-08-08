@@ -26,8 +26,6 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/errors.rs",
     "src/lib.rs",

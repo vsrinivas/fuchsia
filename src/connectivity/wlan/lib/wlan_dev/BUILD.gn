@@ -17,8 +17,6 @@ rustc_library("wlan_dev") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/sys.rs",

@@ -16,7 +16,5 @@ rustc_macro("macros") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

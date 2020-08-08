@@ -33,8 +33,6 @@ rustc_binary("banjo_bin") {
   ]
   source_root = "src/main.rs"
 
-  enforce_source_listing = true
-
   sources = [
     "src/ast.rs",
     "src/backends/ast.rs",
@@ -100,8 +98,6 @@ rustc_library("banjo_lib") {
   ]
   source_root = "src/lib.rs"
 
-  enforce_source_listing = true
-
   sources = [
     "src/ast.rs",
     "src/backends/ast.rs",
@@ -163,8 +159,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:serde_json",
     ]
     source_root = "test/tests.rs"
-
-    enforce_source_listing = true
 
     sources = [
       "test/ast_tests.rs",

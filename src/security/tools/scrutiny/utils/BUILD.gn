@@ -24,8 +24,6 @@ if (!is_fuchsia) {
     ]
     test_deps = [ "//third_party/rust_crates:hex" ]
 
-    enforce_source_listing = true
-
     sources = [
       "src/bootfs.rs",
       "src/lib.rs",

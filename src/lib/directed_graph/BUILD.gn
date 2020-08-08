@@ -12,8 +12,6 @@ rustc_library("directed_graph") {
   deps = [ "//third_party/rust_crates:thiserror" ]
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

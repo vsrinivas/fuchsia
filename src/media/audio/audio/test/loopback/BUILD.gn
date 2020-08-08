@@ -23,8 +23,6 @@ rustc_test("audio_loopback_tests_bin") {
     "//third_party/rust_crates:smallvec",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/audio_loopback_test.rs",
     "src/lib.rs",

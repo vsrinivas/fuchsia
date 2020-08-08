@@ -59,8 +59,6 @@ rustc_library("rust") {
 
   non_rust_deps = [ ":schemas" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/banjo_library.rs",
     "src/cc_prebuilt_library.rs",

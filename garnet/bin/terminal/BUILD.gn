@@ -53,8 +53,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/app.rs",
     "src/key_util.rs",
@@ -82,8 +80,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/bin/terminal.rs" ]
 }

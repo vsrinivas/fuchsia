@@ -24,8 +24,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:pretty_assertions",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

@@ -9,8 +9,6 @@ rustc_test("test") {
   name = "no_rust_tests"
   edition = "2018"
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

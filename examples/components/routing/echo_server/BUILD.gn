@@ -16,8 +16,6 @@ rustc_binary("echo_server") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 

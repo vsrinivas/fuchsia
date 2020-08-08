@@ -23,8 +23,6 @@ rustc_binary("locate_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -61,8 +59,6 @@ rustc_binary("locate_integration_test_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/locate_integration_test.rs" ]
 }

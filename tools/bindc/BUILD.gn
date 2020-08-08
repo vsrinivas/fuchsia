@@ -24,8 +24,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:structopt",
     ]
 
-    enforce_source_listing = true
-
     sources = [ "src/main.rs" ]
 
     inputs = [ "src/templates/bind.h.template" ]

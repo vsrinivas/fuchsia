@@ -21,8 +21,6 @@ rustc_library("mdns") {
     "//third_party/rust_crates:byteorder",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/protocol.rs",

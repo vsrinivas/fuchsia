@@ -17,8 +17,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:structopt",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -27,8 +25,6 @@ rustc_library("lib") {
   edition = "2018"
   with_unit_tests = true
   deps = [ "//third_party/rust_crates:rand" ]
-
-  enforce_source_listing = true
 
   sources = [ "src/lib.rs" ]
 }

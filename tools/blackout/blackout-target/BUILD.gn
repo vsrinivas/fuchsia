@@ -14,8 +14,6 @@ rustc_library("blackout-target") {
     "//third_party/rust_crates:structopt",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/static_tree.rs",
@@ -31,8 +29,6 @@ rustc_test("blackout-target-lib-test") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:structopt",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/lib.rs",

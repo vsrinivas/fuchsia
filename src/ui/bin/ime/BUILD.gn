@@ -48,8 +48,6 @@ rustc_binary("bin") {
   # TODO(56138): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/fidl_helpers.rs",
     "src/ime_service.rs",
@@ -138,8 +136,6 @@ rustc_test("keyboard_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/keyboard.rs"
-
-  enforce_source_listing = true
 
   sources = [ "tests/keyboard.rs" ]
 }

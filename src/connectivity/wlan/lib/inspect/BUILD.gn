@@ -19,8 +19,6 @@ rustc_library("wlan-inspect") {
     "//third_party/rust_crates:parking_lot",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/iface_mgr.rs",
     "src/lib.rs",

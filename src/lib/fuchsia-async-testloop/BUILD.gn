@@ -14,8 +14,6 @@ rustc_library("fuchsia-async-testloop") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ffi.rs",
     "src/lib.rs",

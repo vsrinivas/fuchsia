@@ -29,8 +29,6 @@ rustc_test("fidl_rust_conformance_tests") {
   ]
   non_rust_deps = [ ":generate_conformance_test" ]
 
-  enforce_source_listing = true
-
   sources = [ conformance_test_source ]
 }
 

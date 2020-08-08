@@ -34,8 +34,6 @@ rustc_library("runner") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/component.rs",
     "src/lib.rs",

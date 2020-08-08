@@ -36,8 +36,6 @@ rustc_binary("intl_wisdom_server_rust") {
   ]
   non_rust_deps = [ "//third_party/icu" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/main.rs",
     "src/wisdom_server_impl.rs",

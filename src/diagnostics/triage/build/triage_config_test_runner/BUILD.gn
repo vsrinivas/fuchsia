@@ -17,8 +17,6 @@ rustc_test("triage_config_test_runner_test") {
   source_root = "src/main.rs"
   deps = shared_deps
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -26,8 +24,6 @@ rustc_binary("triage_config_test_runner") {
   edition = "2018"
 
   deps = shared_deps
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

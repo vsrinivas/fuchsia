@@ -18,8 +18,6 @@ rustc_library("lib") {
   # in the infrastructure currently.
   test_environments = []
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/usb.rs",

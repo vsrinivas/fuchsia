@@ -24,8 +24,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
@@ -38,8 +36,6 @@ rustc_binary("mark-active-configuration-healthy") {
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/system-health-check",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/mark_active_configuration_healthy.rs" ]
 }

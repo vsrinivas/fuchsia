@@ -47,8 +47,6 @@ rustc_library("fuchsia-bluetooth") {
     "//third_party/rust_crates:uuid",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/assigned_numbers.rs",
     "src/assigned_numbers/constants.rs",

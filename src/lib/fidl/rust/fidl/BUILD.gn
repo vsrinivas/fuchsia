@@ -40,8 +40,6 @@ rustc_library("fidl") {
     features = [ "fidl_trace" ]
   }
 
-  enforce_source_listing = true
-
   sources = [
     "src/client.rs",
     "src/encoding.rs",
@@ -60,8 +58,6 @@ rustc_test("fidl_rust_lib_tests") {
            "//third_party/rust_crates:futures-test",
            "//third_party/rust_crates:matches",
          ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/client.rs",

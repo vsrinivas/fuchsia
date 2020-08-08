@@ -21,8 +21,6 @@ rustc_test("fidl_rust_handle_tests") {
   edition = "2018"
   deps = [ ":deps" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/channel.rs",
     "src/lib.rs",
@@ -35,8 +33,6 @@ rustc_library("fidl_handle_tests") {
   name = "fidl_handle_tests"
   edition = "2018"
   deps = [ ":deps" ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/channel.rs",

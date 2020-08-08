@@ -32,8 +32,6 @@ rustc_test("ppp_protocol_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ipv4.rs",
     "src/ipv6.rs",

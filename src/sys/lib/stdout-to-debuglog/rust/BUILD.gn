@@ -14,7 +14,5 @@ rustc_library("stdout-to-debuglog") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

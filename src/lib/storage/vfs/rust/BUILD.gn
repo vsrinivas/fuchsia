@@ -99,8 +99,6 @@ rustc_library("vfs") {
   edition = "2018"
   deps = common_deps
 
-  enforce_source_listing = true
-
   sources = common_sources
 }
 
@@ -124,8 +122,6 @@ rustc_test("vfs_test") {
   # TODO(fxbug.dev/49845): Re-enable these lints.
   # -Dwarnings seems to override -A options that come after it.
   configs += [ ":suppress_lints" ]
-
-  enforce_source_listing = true
 
   sources = common_sources + [
               "src/directory/test_utils.rs",

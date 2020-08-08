@@ -110,7 +110,6 @@ template("measure_tape") {
       non_rust_deps = [ ":$gen_target_name" ]
       source_root = rebase_path(out_rs)
       sources = [ rebase_path(out_rs) ]
-      enforce_source_listing = true
     }
 
     generated_outputs = [ out_rs ]

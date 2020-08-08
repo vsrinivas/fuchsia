@@ -31,8 +31,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates/transitional/rustyline",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/central.rs",
     "src/gatt.rs",

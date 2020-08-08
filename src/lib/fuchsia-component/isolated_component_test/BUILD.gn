@@ -31,8 +31,6 @@ rustc_binary("fuchsia_component_test_outer_bin") {
   # TODO(46724): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [ "outer.rs" ]
 }
 
@@ -66,8 +64,6 @@ rustc_binary("fuchsia_component_test_middle_bin") {
 
   # TODO(46724): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  enforce_source_listing = true
 
   sources = [ "middle.rs" ]
 }
@@ -104,8 +100,6 @@ rustc_binary("fuchsia_component_test_middle_sibling_bin") {
   ]
   source_root = "middle_sibling.rs"
 
-  enforce_source_listing = true
-
   sources = [ "middle_sibling.rs" ]
 }
 
@@ -138,8 +132,6 @@ rustc_binary("fuchsia_component_test_inner_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "inner.rs"
-
-  enforce_source_listing = true
 
   sources = [ "inner.rs" ]
 }

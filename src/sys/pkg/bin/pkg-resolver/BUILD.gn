@@ -71,8 +71,6 @@ rustc_binary("bin") {
   non_rust_deps =
       [ "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client-c" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/cache.rs",
     "src/cache/base_package_index.rs",

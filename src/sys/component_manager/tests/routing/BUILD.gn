@@ -26,8 +26,6 @@ rustc_test("routing_integration_test_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "integration_test.rs" ]
 }
 

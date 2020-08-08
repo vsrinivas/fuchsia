@@ -24,8 +24,6 @@ rustc_library("bt-avctp") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/avc/mod.rs",
     "src/avc/tests.rs",

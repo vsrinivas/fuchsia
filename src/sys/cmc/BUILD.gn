@@ -41,8 +41,6 @@ rustc_binary("cmc") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/cml.rs",
     "src/compile.rs",
@@ -78,8 +76,6 @@ rustc_macro("cmc_macro") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "macro/src/lib.rs" ]
 }
 
@@ -104,8 +100,6 @@ rustc_binary("cmc_integration_test_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "tests/integration_test.rs" ]
 }
 
@@ -113,8 +107,6 @@ rustc_binary("example_bin") {
   name = "example"
   edition = "2018"
   source_root = "tests/example.rs"
-
-  enforce_source_listing = true
 
   sources = [ "tests/example.rs" ]
 }

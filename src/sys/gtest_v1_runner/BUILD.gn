@@ -41,8 +41,6 @@ rustc_binary("bin") {
     "//zircon/system/ulib/memfs",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 

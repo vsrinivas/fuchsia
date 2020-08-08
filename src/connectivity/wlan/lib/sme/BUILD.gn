@@ -41,8 +41,6 @@ rustc_library("wlan-sme") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ap/aid.rs",
     "src/ap/authenticator.rs",

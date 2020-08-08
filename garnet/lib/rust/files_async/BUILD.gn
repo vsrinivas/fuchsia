@@ -26,8 +26,6 @@ rustc_library("files_async") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

@@ -55,8 +55,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/mock_filesystem.rs",
@@ -106,8 +104,6 @@ rustc_test("dynamic_repositories_disabled") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/dynamic_repositories_disabled.rs" ]
 }
 
@@ -154,8 +150,6 @@ rustc_test("dynamic_rewrite_disabled") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/dynamic_rewrite_disabled.rs" ]
 }
 
@@ -201,8 +195,6 @@ rustc_test("pkg_resolve_inspect") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/pkg_resolve_inspect.rs" ]
 }
@@ -251,8 +243,6 @@ rustc_test("resolve_propagates_pkgfs_failure") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/resolve_propagates_pkgfs_failure.rs" ]
 }
 
@@ -298,8 +288,6 @@ rustc_test("resolve_recovers_from_http_errors") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/resolve_recovers_from_http_errors.rs" ]
 }
@@ -350,8 +338,6 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
   # TODO(46772): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/resolve_succeeds_with_broken_minfs.rs" ]
 }
 
@@ -401,8 +387,6 @@ rustc_test("resolve_succeeds") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/resolve_succeeds.rs" ]
 }
 
@@ -449,8 +433,6 @@ rustc_test("get_hash") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/get_hash.rs" ]
 }
 
@@ -480,8 +462,6 @@ rustc_test("system_cache_fallback") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/system_cache_fallback.rs" ]
 }
 
@@ -510,8 +490,6 @@ rustc_test("base_pinning") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/base_pinning.rs" ]
 }
 
@@ -534,8 +512,6 @@ rustc_test("metrics") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/metrics.rs" ]
 }

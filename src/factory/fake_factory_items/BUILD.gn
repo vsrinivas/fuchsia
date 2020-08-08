@@ -26,8 +26,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/config.rs",
     "src/fake_factory_items_server.rs",
@@ -64,8 +62,6 @@ rustc_test("fake_factory_items_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "tests/fake_factory_items_test.rs" ]
 }

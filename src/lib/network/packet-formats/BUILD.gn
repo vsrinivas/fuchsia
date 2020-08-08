@@ -27,8 +27,6 @@ rustc_library("packet-formats") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/arp.rs",
     "src/error.rs",
@@ -77,8 +75,6 @@ rustc_test("packet-formats-lib-test") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/arp.rs",

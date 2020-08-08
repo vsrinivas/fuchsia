@@ -10,8 +10,6 @@ rustc_test("test") {
   edition = "2018"
   deps = [ "macro:gen-tests-macro" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

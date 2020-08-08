@@ -15,8 +15,6 @@ ffx_plugin("ffx_knock") {
     "//src/lib/zircon/rust:fuchsia-zircon-status",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/args.rs",
     "src/lib.rs",

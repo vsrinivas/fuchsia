@@ -18,7 +18,5 @@ rustc_library("security_policy_test_util") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "lib.rs" ]
 }

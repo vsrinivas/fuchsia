@@ -45,8 +45,6 @@ rustc_test("timezone_bin_test") {
     "//third_party/rust_crates:rust_icu_ustring",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "timezone_test.rs" ]
 }
 

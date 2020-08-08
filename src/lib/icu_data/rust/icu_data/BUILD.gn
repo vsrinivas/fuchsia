@@ -33,8 +33,6 @@ rustc_library("icu_data") {
     "//third_party/icu:icudata",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

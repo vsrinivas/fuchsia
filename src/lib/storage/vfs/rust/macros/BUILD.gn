@@ -17,8 +17,6 @@ rustc_macro("macros") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
@@ -33,8 +31,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:quote",
       "//third_party/rust_crates:syn",
     ]
-
-    enforce_source_listing = true
 
     sources = [
       "src/lib.rs",

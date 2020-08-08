@@ -21,8 +21,6 @@ rustc_library("ramdevice_client") {
   ]
   non_rust_deps = [ "//zircon/system/ulib/ramdevice-client" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/ramdevice_sys.rs",

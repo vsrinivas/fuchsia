@@ -9,7 +9,5 @@ rustc_library("fakestd") {
   version = "0.1.0"
   edition = "2018"
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

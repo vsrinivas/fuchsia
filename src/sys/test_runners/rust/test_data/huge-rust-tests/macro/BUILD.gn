@@ -12,7 +12,5 @@ rustc_macro("gen-tests-macro") {
     "//third_party/rust_crates:quote",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

@@ -27,8 +27,6 @@ if (host_toolchain == current_toolchain) {
       },
     ]
 
-    enforce_source_listing = true
-
     sources = [ "src/host.rs" ]
   }
 }
@@ -49,8 +47,6 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
     "//tools/blackout/blackout-target",
   ]
   source_root = "src/target.rs"
-
-  enforce_source_listing = true
 
   sources = [ "src/target.rs" ]
 }

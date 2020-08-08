@@ -19,7 +19,5 @@ rustc_test("set_country") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

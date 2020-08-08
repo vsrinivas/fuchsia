@@ -22,8 +22,6 @@ rustc_test("bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/hello_world_integration_test.rs" ]
 }
 

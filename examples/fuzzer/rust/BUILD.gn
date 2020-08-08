@@ -10,8 +10,6 @@ import("//build/rust/rustc_library.gni")
 # Defaults should generally work if the fuzz target function name matches the
 # fuzzer name.
 rustc_fuzzer("toy_example_arbitrary") {
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
@@ -19,8 +17,6 @@ rustc_fuzzer("toy_example_arbitrary") {
 # the `rustfunction` parameter.
 rustc_fuzzer("toy_example_raw_bytes") {
   rustfunction = "toy_example_u8"
-
-  enforce_source_listing = true
 
   sources = [ "src/lib.rs" ]
 }
@@ -32,8 +28,6 @@ rustc_fuzzer("toy_example_with_main") {
   source_root = "src/main.rs"
   deps = [ ":helper" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -42,15 +36,11 @@ rustc_library("helper") {
   source_root = "helper/lib.rs"
   deps = [ "//src/lib/fuzzing/rust:fuzz" ]
 
-  enforce_source_listing = true
-
   sources = [ "helper/lib.rs" ]
 }
 
 rustc_fuzzer("toy_example_same_name") {
   deps = [ ":helper" ]
-
-  enforce_source_listing = true
 
   sources = [ "src/lib.rs" ]
 }
@@ -62,8 +52,6 @@ rustc_binary("toy_example_bin") {
     ":helper",
     "//src/lib/fuzzing/rust:fuzz",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

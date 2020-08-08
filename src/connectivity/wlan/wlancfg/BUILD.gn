@@ -64,8 +64,6 @@ rustc_binary("bin") {
   # TODO(56138): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/access_point/mod.rs",
     "src/access_point/state_machine.rs",

@@ -14,8 +14,6 @@ rustc_binary("hello_world_bin") {
   with_unit_tests = true
   deps = [ "//src/lib/syslog/rust:syslog" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/hello_world.rs" ]
 }
 
@@ -23,8 +21,6 @@ rustc_binary("ls_root_pkg_bin") {
   source_root = "src/ls_root_pkg.rs"
   name = "ls_root_pkg"
   edition = "2018"
-
-  enforce_source_listing = true
 
   sources = [ "src/ls_root_pkg.rs" ]
 }
@@ -34,8 +30,6 @@ rustc_binary("echo_args_bin") {
   name = "echo_args"
   edition = "2018"
   deps = [ "//src/lib/syslog/rust:syslog" ]
-
-  enforce_source_listing = true
 
   sources = [ "src/echo_args.rs" ]
 }
@@ -50,8 +44,6 @@ rustc_binary("lifecycle_bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/lifecycle.rs" ]
 }
@@ -70,8 +62,6 @@ rustc_binary("lifecycle_full_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures-util",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/lifecycle_full.rs" ]
 }

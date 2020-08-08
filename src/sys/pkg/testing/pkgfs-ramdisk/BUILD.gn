@@ -35,8 +35,6 @@ rustc_library("pkgfs-ramdisk") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

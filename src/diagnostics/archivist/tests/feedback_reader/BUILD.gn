@@ -29,8 +29,6 @@ rustc_test("feedback_reader_test") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 
   inputs = [

@@ -71,8 +71,6 @@ rustc_library("lib") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/accessor.rs",
     "src/archive.rs",
@@ -136,8 +134,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }
@@ -222,8 +218,6 @@ rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
   source_root = "src/fuzzer.rs"
-
-  enforce_source_listing = true
 
   sources = [ "src/fuzzer.rs" ]
 }

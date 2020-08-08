@@ -33,8 +33,6 @@ rustc_library("serial_link") {
     deps += [ "//third_party/rust_crates:async-std" ]
   }
 
-  enforce_source_listing = true
-
   sources = [
     "src/descriptor.rs",
     "src/fragment_io.rs",

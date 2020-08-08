@@ -21,8 +21,6 @@ rustc_library("core") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/fixed.rs",
     "src/lib.rs",

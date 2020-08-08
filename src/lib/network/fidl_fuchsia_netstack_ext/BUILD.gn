@@ -16,8 +16,6 @@ rustc_library("fidl_fuchsia_netstack_ext") {
     "//third_party/rust_crates:prettytable-rs",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

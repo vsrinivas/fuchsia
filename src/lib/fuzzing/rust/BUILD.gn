@@ -12,7 +12,5 @@ rustc_macro("fuzz") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

@@ -11,8 +11,6 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [ "//src/developer/fuchsia-criterion" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 

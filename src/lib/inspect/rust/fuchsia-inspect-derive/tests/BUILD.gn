@@ -18,8 +18,6 @@ rustc_test("fuchsia_inspect_derive_tests") {
     "//third_party/rust_crates:serde",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -28,8 +26,6 @@ rustc_test("fuchsia_inspect_derive_import_tests") {
   source_root = "src/import.rs"
 
   deps = [ "//src/lib/inspect/rust/fuchsia-inspect-derive" ]
-
-  enforce_source_listing = true
 
   sources = [ "src/import.rs" ]
 }

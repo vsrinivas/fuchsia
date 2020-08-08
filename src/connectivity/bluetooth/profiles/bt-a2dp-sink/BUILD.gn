@@ -61,8 +61,6 @@ rustc_binary("bin") {
 
   test_deps = [ "//third_party/rust_crates:futures-test" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/avrcp_relay.rs",
     "src/connected_peers.rs",

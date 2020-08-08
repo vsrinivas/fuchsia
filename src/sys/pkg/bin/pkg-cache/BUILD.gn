@@ -45,8 +45,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/blob_location.rs",
     "src/cache_service.rs",

@@ -20,7 +20,5 @@ rustc_library("freetype_ffi") {
     non_rust_deps = [ "//third_party/freetype2:freetype2_for_rust_host" ]
   }
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

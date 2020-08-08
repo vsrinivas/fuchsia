@@ -36,8 +36,6 @@ rustc_library("wlan-rsn") {
     "//third_party/rust_crates:time",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/auth/mod.rs",
     "src/auth/psk.rs",

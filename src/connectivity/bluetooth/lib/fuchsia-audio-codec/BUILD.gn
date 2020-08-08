@@ -37,8 +37,6 @@ rustc_library("fuchsia-audio-codec") {
     "//third_party/rust_crates:hex",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/stream_processor.rs",

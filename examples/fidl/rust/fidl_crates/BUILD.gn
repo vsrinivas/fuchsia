@@ -9,8 +9,6 @@ rustc_test("fidl_crates_test") {
   edition = "2018"
   deps = [ "//examples/fidl/fuchsia.examples:fuchsia.examples-rustc" ]
 
-  enforce_source_listing = true
-
   sources = [ "fidl_crates_test.rs" ]
 }
 

@@ -18,8 +18,6 @@ rustc_library("escaped-cstring") {
     "//third_party/rust_crates:smallvec",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

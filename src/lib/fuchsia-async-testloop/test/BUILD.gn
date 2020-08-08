@@ -17,8 +17,6 @@ rustc_staticlib("guest") {
   ]
   source_root = "guest.rs"
 
-  enforce_source_listing = true
-
   sources = [ "guest.rs" ]
 }
 

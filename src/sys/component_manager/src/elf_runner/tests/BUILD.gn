@@ -29,8 +29,6 @@ rustc_test("lifecycle") {
     "//third_party/rust_crates:futures-util",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "lifecycle.rs" ]
 }
 
@@ -38,8 +36,6 @@ rustc_binary("immediate_exit") {
   name = "immediate_exit"
   edition = "2018"
   source_root = "immediate_exit_component.rs"
-
-  enforce_source_listing = true
 
   sources = [ "immediate_exit_component.rs" ]
 }
@@ -56,8 +52,6 @@ rustc_binary("rendezvous_exit") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "rendezvous_exit_component.rs" ]
 }
@@ -78,8 +72,6 @@ rustc_test("component_exit") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-util",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "component_exit.rs" ]
 }
@@ -102,8 +94,6 @@ rustc_test("lifecycle_timeout") {
     "//third_party/rust_crates:futures-util",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "lifecycle_timeout.rs" ]
 }
 
@@ -125,8 +115,6 @@ rustc_test("lifecycle_timeout_unresponsive") {
     "//third_party/rust_crates:futures-util",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "lifecycle_timeout_unresponsive.rs" ]
 }
 
@@ -144,8 +132,6 @@ rustc_binary("unresponsive_component") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures-util",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "unresponsive_component.rs" ]
 }

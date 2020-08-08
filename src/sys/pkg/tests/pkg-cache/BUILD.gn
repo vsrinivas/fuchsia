@@ -48,8 +48,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/base_pkg_index.rs",
     "src/cobalt.rs",

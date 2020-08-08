@@ -20,8 +20,6 @@ rustc_binary("iquery_test_component") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "deprecated_fidl_server.rs",
     "main.rs",

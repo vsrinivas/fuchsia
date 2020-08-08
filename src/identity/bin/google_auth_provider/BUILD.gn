@@ -37,8 +37,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:url",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/constants.rs",
     "src/error.rs",

@@ -43,8 +43,6 @@ rustc_library("lib") {
 
   test_deps = [ "//src/lib/fidl/rust/fidl" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/address.rs",
     "src/config.rs",

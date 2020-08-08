@@ -35,8 +35,6 @@ rustc_library("wlan-common") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/appendable.rs",
     "src/big_endian.rs",

@@ -23,8 +23,6 @@ rustc_library("fuchsia-inspect-derive-transitional") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/inspect.rs",
     "src/lib.rs",
@@ -44,8 +42,6 @@ rustc_library("fuchsia-inspect-derive") {
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/inspect.rs",

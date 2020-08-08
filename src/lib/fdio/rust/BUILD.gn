@@ -21,8 +21,6 @@ rustc_library("fdio") {
 
   test_deps = [ "//sdk/fidl/fuchsia.io:fuchsia.io-rustc" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/fdio_sys.rs",
     "src/lib.rs",
@@ -35,8 +33,6 @@ rustc_binary("spawn_test_target_bin") {
   edition = "2018"
 
   source_root = "spawn_test_target_bin/main.rs"
-
-  enforce_source_listing = true
 
   sources = [ "spawn_test_target_bin/main.rs" ]
 }

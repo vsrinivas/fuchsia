@@ -49,8 +49,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pretty_assertions",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/main.rs",
     "src/test_server.rs",

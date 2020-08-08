@@ -26,8 +26,6 @@ rustc_library("fuchsia-fatfs") {
     "//third_party/rust_crates:static_assertions",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/directory.rs",
     "src/file.rs",
@@ -73,8 +71,6 @@ rustc_binary("fatfs") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

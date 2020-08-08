@@ -17,7 +17,5 @@ rustc_test("connect_to_wpa2_network") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

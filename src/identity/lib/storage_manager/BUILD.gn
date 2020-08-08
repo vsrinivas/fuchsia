@@ -26,8 +26,6 @@ rustc_library("storage_manager") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/directory.rs",
     "src/lib.rs",

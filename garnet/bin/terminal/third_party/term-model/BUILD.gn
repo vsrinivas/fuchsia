@@ -20,8 +20,6 @@ rustc_library("term-model") {
     "//third_party/rust_crates:vte",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ansi.rs",
     "src/clipboard.rs",

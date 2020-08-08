@@ -33,8 +33,6 @@ rustc_library("wlan-mlme") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/akm_algorithm.rs",
     "src/ap/context.rs",

@@ -22,8 +22,6 @@ rustc_library("echo_interposer") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "echo_interposer.rs" ]
 }
 
@@ -42,8 +40,6 @@ rustc_library("echo_factory_interposer") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "echo_factory_interposer.rs" ]
 }
@@ -68,8 +64,6 @@ rustc_test("events_integration_test_bin") {
 
   # TODO(56138): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  enforce_source_listing = true
 
   sources = [ "integration_test.rs" ]
 }

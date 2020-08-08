@@ -17,8 +17,6 @@ rustc_library("fuchsia-archive") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/error.rs",
     "src/lib.rs",

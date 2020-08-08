@@ -15,8 +15,6 @@ rustc_library("async-generator") {
     "//third_party/rust_crates:pin-project",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

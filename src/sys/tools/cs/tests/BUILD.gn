@@ -17,7 +17,6 @@ rustc_test("v2_test_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
   sources = [ "v2_test.rs" ]
 }
 

@@ -29,8 +29,6 @@ rustc_library("token_manager") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/auth_provider_cache.rs",
     "src/auth_provider_connection.rs",

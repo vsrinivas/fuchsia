@@ -27,8 +27,6 @@ rustc_staticlib("bt-hci") {
 
   public = [ "bindings.h" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/control_plane.rs",
     "src/error.rs",

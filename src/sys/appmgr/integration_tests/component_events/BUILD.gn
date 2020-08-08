@@ -75,8 +75,6 @@ rustc_test("component_events_test") {
     "//third_party/rust_crates:regex",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "component_events_integration_test.rs" ]
 }
 
@@ -99,8 +97,6 @@ rustc_test("observer_integration_test") {
     "//third_party/rust_crates:lazy_static",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "observer_integration_test.rs" ]
 }
 
@@ -118,8 +114,6 @@ rustc_binary("test_component") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "test_component.rs" ]
 }
@@ -141,8 +135,6 @@ rustc_binary("test_component_with_subrealm") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "test_component_with_subrealm.rs" ]
 }

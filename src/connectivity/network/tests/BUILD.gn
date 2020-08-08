@@ -78,8 +78,6 @@ rustc_test("netstack_integration_test_bin") {
   # TODO(46769): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/constants.rs",
     "src/dhcp.rs",
@@ -104,8 +102,6 @@ rustc_macro("netstack_testing_macros") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/proc_macros.rs" ]
 }
 
@@ -127,8 +123,6 @@ rustc_test("netstack_cobalt_integration_test_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/cobalt.rs" ]
 }

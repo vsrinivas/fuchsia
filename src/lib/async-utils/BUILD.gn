@@ -17,8 +17,6 @@ rustc_library("async-utils") {
     "//third_party/rust_crates:slab",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/event.rs",
     "src/hanging_get/client.rs",

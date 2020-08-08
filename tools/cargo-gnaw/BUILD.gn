@@ -16,8 +16,6 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
     ]
 
-    enforce_source_listing = true
-
     sources = [ "src/main.rs" ]
   }
 
@@ -34,8 +32,6 @@ if (is_host) {
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:toml",
     ]
-
-    enforce_source_listing = true
 
     sources = [
       "src/build.rs",
@@ -66,8 +62,6 @@ if (is_host) {
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:toml",
     ]
-
-    enforce_source_listing = true
 
     sources = [
       "src/build.rs",

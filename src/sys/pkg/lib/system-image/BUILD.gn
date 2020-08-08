@@ -19,8 +19,6 @@ rustc_library("system-image") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/errors.rs",
     "src/lib.rs",

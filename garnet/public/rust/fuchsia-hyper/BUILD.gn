@@ -28,8 +28,6 @@ rustc_library("fuchsia-hyper") {
     "//third_party/rust_crates:tokio",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

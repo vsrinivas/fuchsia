@@ -19,8 +19,6 @@ ffx_plugin("ffx_packaging") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/archive.rs",
     "src/args.rs",

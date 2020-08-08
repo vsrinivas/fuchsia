@@ -54,8 +54,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/args.rs",
     "src/fidl.rs",

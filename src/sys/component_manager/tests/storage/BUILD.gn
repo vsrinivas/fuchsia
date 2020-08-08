@@ -26,8 +26,6 @@ rustc_test("storage_integration_test_bin") {
     "//third_party/rust_crates:lazy_static",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "integration_test.rs" ]
 }
 
@@ -45,8 +43,6 @@ rustc_binary("storage_realm_coll_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "storage_realm_coll.rs" ]
 }
@@ -67,8 +63,6 @@ rustc_binary("storage_user_bin") {
     "//src/sys/lib/directory_broker",
     "//third_party/rust_crates:anyhow",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "storage_user.rs" ]
 }

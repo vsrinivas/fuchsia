@@ -24,8 +24,6 @@ rustc_binary("component_id_index") {
   with_unit_tests = true
   edition = "2018"
 
-  enforce_source_listing = true
-
   sources = [
     "src/index.rs",
     "src/main.rs",

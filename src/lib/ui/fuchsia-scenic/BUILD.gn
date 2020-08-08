@@ -28,8 +28,6 @@ rustc_library("fuchsia-scenic") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/cmd.rs",
     "src/lib.rs",

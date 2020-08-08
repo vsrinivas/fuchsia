@@ -16,8 +16,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:xml-rs",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ast.rs",
     "src/codegen.rs",
@@ -34,8 +32,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:structopt",
     ]
 
-    enforce_source_listing = true
-
     sources = [ "src/main.rs" ]
   }
 }
@@ -44,8 +40,6 @@ rustc_test("wayland_scanner_front_end_test") {
   edition = "2018"
   deps = [ ":lib" ]
   source_root = "tests/front_end_test.rs"
-
-  enforce_source_listing = true
 
   sources = [ "tests/front_end_test.rs" ]
 }
@@ -64,8 +58,6 @@ rustc_test("wayland_scanner_back_end_test") {
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
   source_root = "tests/back_end_test.rs"
-
-  enforce_source_listing = true
 
   sources = [ "tests/back_end_test.rs" ]
 }

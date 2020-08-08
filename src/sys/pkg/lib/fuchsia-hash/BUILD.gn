@@ -20,8 +20,6 @@ rustc_library("fuchsia-hash") {
 
   test_deps = [ "//third_party/rust_crates:proptest" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

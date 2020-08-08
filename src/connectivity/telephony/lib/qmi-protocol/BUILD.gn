@@ -37,8 +37,6 @@ rustc_library("qmi-protocol") {
   ]
   source_root = "$target_gen_dir/qmi-protocol.rs"
 
-  enforce_source_listing = true
-
   sources = [ "$target_gen_dir/qmi-protocol.rs" ]
 }
 
@@ -58,8 +56,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:thiserror",
     ]
 
-    enforce_source_listing = true
-
     sources = [
       "src/ast.rs",
       "src/codegen.rs",
@@ -75,8 +71,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
     ]
-
-    enforce_source_listing = true
 
     sources = [
       "src/ast.rs",
@@ -94,8 +88,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:pretty_assertions",
     ]
     source_root = "tests/codegen_tests.rs"
-
-    enforce_source_listing = true
 
     sources = [
       "tests/codegen_tests.rs",

@@ -24,8 +24,6 @@ rustc_library("http_sse") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/client.rs",
     "src/client_server_tests.rs",

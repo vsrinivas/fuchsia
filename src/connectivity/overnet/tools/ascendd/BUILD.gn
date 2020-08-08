@@ -31,8 +31,6 @@ if (!is_fuchsia) {
 
     non_rust_deps = [ "//third_party/boringssl" ]
 
-    enforce_source_listing = true
-
     sources = [
       "src/lib.rs",
       "src/serial.rs",
@@ -54,8 +52,6 @@ if (!is_fuchsia) {
     ]
 
     non_rust_deps = [ "//third_party/boringssl" ]
-
-    enforce_source_listing = true
 
     sources = [ "src/main.rs" ]
   }

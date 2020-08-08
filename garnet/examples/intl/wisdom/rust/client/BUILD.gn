@@ -37,8 +37,6 @@ rustc_binary("intl_wisdom_client_rust") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/main.rs",
     "src/wisdom_client_impl.rs",

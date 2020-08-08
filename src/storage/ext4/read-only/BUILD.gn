@@ -27,8 +27,6 @@ rustc_library("ext4-read-only") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/parser.rs",

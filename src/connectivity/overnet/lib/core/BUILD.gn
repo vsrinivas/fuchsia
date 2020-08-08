@@ -79,14 +79,14 @@ rustc_library("core") {
   name = "overnet_core"
   edition = "2018"
   deps = CORE_DEPS
-  enforce_source_listing = true
+
   sources = CORE_SOURCES
 }
 
 rustc_test("core_test") {
   name = "overnet_core_test"
   edition = "2018"
-  enforce_source_listing = true
+
   deps = CORE_DEPS + [
            ":triangle-rustc",
            "//garnet/examples/fidl/services:echo-rustc",

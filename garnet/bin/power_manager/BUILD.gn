@@ -69,8 +69,6 @@ rustc_binary("bin") {
   # TODO(47946): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/cpu_control_handler.rs",
     "src/cpu_stats_handler.rs",

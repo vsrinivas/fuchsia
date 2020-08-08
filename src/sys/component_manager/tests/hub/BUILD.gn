@@ -22,8 +22,6 @@ rustc_library("hub_report_capability") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "hub_report_capability.rs" ]
 }
 
@@ -44,8 +42,6 @@ rustc_test("hub_integration_test_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "hub_integration_test.rs" ]
 }

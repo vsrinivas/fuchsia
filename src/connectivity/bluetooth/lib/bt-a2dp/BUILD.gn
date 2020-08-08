@@ -48,8 +48,6 @@ rustc_library("bt-a2dp") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/codec.rs",
     "src/inspect.rs",

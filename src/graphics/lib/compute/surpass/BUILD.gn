@@ -21,8 +21,6 @@ rustc_library("surpass") {
 
   configs += [ ":surpass-performance" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/extend.rs",
     "src/layer.rs",

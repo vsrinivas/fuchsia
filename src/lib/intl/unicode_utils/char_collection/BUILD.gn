@@ -20,8 +20,6 @@ rustc_library("char_collection") {
     "//third_party/rust_crates:unic-ucd-block",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/char_collection.rs",
     "src/conversions.rs",

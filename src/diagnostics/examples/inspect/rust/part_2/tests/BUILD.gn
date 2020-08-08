@@ -20,7 +20,5 @@ rustc_test("integration_test") {
     "//third_party/rust_crates:lazy_static",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "integration_test.rs" ]
 }

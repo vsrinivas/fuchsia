@@ -9,7 +9,5 @@ rustc_staticlib("crust") {
   edition = "2018"
   public = [ "crust.h" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

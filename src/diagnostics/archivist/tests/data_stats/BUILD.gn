@@ -21,8 +21,6 @@ rustc_test("data_stats_test") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 
   inputs = [

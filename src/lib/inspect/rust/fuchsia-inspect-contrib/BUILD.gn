@@ -31,8 +31,6 @@ rustc_library("fuchsia-inspect-contrib-transitional") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/inspectable/mod.rs",
     "src/lib.rs",
@@ -70,8 +68,6 @@ rustc_library("fuchsia-inspect-contrib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/inspectable/mod.rs",

@@ -41,8 +41,6 @@ rustc_library("pkgfs") {
     "//third_party/rust_crates:void",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/control.rs",
     "src/install.rs",

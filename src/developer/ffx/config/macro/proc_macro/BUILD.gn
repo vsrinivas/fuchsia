@@ -42,8 +42,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:syn",
     ]
 
-    enforce_source_listing = true
-
     sources = [ "src/lib.rs" ]
     inputs = [ config_path ]
   }

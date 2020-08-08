@@ -25,8 +25,6 @@ rustc_binary("bin") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/args.rs",
     "src/main.rs",

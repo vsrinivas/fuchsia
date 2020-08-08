@@ -22,8 +22,6 @@ rustc_library("mold") {
 
   configs += [ ":mold-performance" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/buffer.rs",
     "src/composition.rs",

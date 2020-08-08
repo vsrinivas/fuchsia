@@ -23,8 +23,6 @@ rustc_library("rustyline") {
     "//third_party/rust_crates:utf8parse",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "//third_party/rust-mirrors/rustyline/src/completion.rs",
     "//third_party/rust-mirrors/rustyline/src/config.rs",

@@ -132,8 +132,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:maplit",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/audio/commands.rs",
     "src/audio/facade.rs",
@@ -337,8 +335,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

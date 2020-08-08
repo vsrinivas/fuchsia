@@ -43,8 +43,6 @@ if (host_toolchain == current_toolchain) {
     # TODO: remove this dep once Overnet is on async-std also.
     deps += [ "//src/connectivity/overnet/lib/core" ]
 
-    enforce_source_listing = true
-
     sources = [
       "src/constants.rs",
       "src/daemon.rs",

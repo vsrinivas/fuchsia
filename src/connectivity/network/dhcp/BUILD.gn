@@ -35,8 +35,6 @@ rustc_library("lib") {
 
   test_deps = [ "//src/connectivity/lib/net-declare" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/configuration.rs",
     "src/lib.rs",
@@ -82,8 +80,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:rand",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

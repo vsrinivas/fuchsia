@@ -22,8 +22,6 @@ rustc_binary("merge_sdk") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/app.rs",
     "src/file_provider.rs",

@@ -17,8 +17,6 @@ rustc_library("waitgroup") {
   edition = "2018"
   deps = [ "//third_party/rust_crates:futures" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
@@ -30,8 +28,6 @@ rustc_test("waitgroup_lib_test") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/test.rs" ]
 }

@@ -12,8 +12,6 @@ rustc_library("fidl_fuchsia_net_name_ext") {
   deps = [ "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc" ]
   test_deps = [ "//sdk/fidl/fuchsia.net:fuchsia.net-rustc" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

@@ -192,8 +192,6 @@ template("component_manager") {
       # TODO(46841): Fix the leaks and remove this.
       non_rust_deps +=
           [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-      enforce_source_listing = true
     }
   } else {
     rustc_library(target_name) {
@@ -204,8 +202,6 @@ template("component_manager") {
                              ])
       name = "component_manager_lib"
       edition = "2018"
-
-      enforce_source_listing = true
 
       # Only for internal use.
       visibility = [
@@ -261,8 +257,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/main.rs" ]
 }

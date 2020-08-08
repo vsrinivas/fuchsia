@@ -13,8 +13,6 @@ rustc_test("fidl_rust_external_tests") {
     "//src/lib/fuchsia-async",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/server_sender.rs",

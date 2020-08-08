@@ -27,8 +27,6 @@ rustc_library("wlan-service-util") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ap.rs",
     "src/client.rs",

@@ -46,8 +46,6 @@ rustc_binary("bin") {
 
   non_rust_deps = [ "//zircon/system/ulib/tee-client-api" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/common.rs",
     "src/crypto_provider/mock_provider.rs",

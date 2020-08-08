@@ -17,7 +17,5 @@ rustc_test("lib_test") {
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

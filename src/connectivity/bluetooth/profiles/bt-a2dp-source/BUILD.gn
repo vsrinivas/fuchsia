@@ -50,8 +50,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:matches",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/encoding.rs",
     "src/main.rs",
@@ -123,8 +121,6 @@ rustc_test("encoding_integration_bin") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/encoding.rs",

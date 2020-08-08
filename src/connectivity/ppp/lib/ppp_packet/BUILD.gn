@@ -20,8 +20,6 @@ rustc_library("ppp_packet") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ipv4.rs",
     "src/ipv6.rs",
@@ -42,8 +40,6 @@ rustc_test("ppp_packet_test_bin") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/ipv4.rs",

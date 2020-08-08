@@ -12,8 +12,6 @@ rustc_library("fidl_table_validation") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

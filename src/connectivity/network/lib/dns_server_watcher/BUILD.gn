@@ -23,8 +23,6 @@ rustc_library("dns_server_watcher") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/stream.rs",

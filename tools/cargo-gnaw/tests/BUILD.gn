@@ -33,8 +33,6 @@ if (is_host) {
       ":cargo_gnaw_tests",
     ]
 
-    enforce_source_listing = true
-
     sources = [ "golden.rs" ]
   }
 

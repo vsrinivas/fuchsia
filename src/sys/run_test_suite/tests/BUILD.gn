@@ -19,8 +19,6 @@ rustc_test("tests_bin") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "main.rs" ]
 }
 

@@ -22,8 +22,6 @@ rustc_library("fuchsia-url") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/boot_url.rs",
     "src/errors.rs",

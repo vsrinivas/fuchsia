@@ -55,8 +55,6 @@ rustc_library("test_utils_lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "echo_capability.rs",
     "echo_factory_capability.rs",
@@ -82,8 +80,6 @@ rustc_binary("trigger_bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "trigger.rs" ]
 }
 
@@ -99,8 +95,6 @@ rustc_test("shutdown_integration_test_bin") {
 
   # TODO(46841): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  enforce_source_listing = true
 
   sources = [ "shutdown_integration.rs" ]
 }
@@ -120,8 +114,6 @@ rustc_binary("system_controller_client") {
   # TODO(46841): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [ "system_controller_client.rs" ]
 }
 
@@ -138,8 +130,6 @@ rustc_test("component_manager_panic_test_bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "component_manager_panic.rs" ]
 }

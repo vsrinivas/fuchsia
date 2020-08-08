@@ -21,16 +21,12 @@ rustc_binary("echo_test_client") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "echo_test_client.rs" ]
 }
 
 rustc_binary("echo_test_realm") {
   edition = "2018"
   source_root = "echo_test_realm.rs"
-
-  enforce_source_listing = true
 
   sources = [ "echo_test_realm.rs" ]
 }

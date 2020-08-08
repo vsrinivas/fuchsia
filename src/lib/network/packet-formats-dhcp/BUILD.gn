@@ -22,8 +22,6 @@ rustc_library("packet-formats-dhcp") {
   ]
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/v6.rs",

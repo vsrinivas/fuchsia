@@ -27,8 +27,6 @@ rustc_library("quiche") {
   ]
   non_rust_deps = [ "//third_party/boringssl" ]
 
-  enforce_source_listing = true
-
   sources = [
     "//third_party/rust-mirrors/quiche/src/crypto.rs",
     "//third_party/rust-mirrors/quiche/src/ffi.rs",

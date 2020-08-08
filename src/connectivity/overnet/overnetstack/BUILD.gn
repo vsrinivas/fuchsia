@@ -39,8 +39,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/main.rs",
     "src/mdns.rs",
@@ -142,7 +140,6 @@ test_package("overnetstack-tests") {
       dest = "root.crt"
     },
   ]
-
 }
 
 group("tests") {

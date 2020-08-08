@@ -21,8 +21,6 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
   ]
   test_deps = [ "//src/connectivity/lib/net-declare" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/error.rs",
     "src/lib.rs",

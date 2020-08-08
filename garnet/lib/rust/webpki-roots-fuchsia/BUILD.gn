@@ -18,8 +18,6 @@ rustc_library("webpki-roots-fuchsia") {
     "//third_party/rust_crates:webpki",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

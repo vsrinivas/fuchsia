@@ -16,8 +16,6 @@ rustc_macro("wlan-frame-writer-macro") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/frame_writer.rs",
     "src/header.rs",

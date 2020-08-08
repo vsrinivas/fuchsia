@@ -23,8 +23,6 @@ rustc_library("tel_dev") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/at_test_common.rs",
     "src/component_test.rs",

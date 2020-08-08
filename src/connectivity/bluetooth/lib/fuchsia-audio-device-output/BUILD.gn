@@ -37,8 +37,6 @@ rustc_library("fuchsia-audio-device-output") {
   # TODO(56138): Fix the leaks and remove this.
   test_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/driver.rs",
     "src/frame_vmo.rs",

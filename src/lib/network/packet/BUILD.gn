@@ -16,8 +16,6 @@ rustc_library("packet") {
     "//src/lib/zerocopy",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/fragmented.rs",
     "src/lib.rs",
@@ -40,8 +38,6 @@ rustc_test("packet-lib-test") {
 
   # TODO(56138): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
-  enforce_source_listing = true
 
   sources = [
     "src/fragmented.rs",

@@ -99,8 +99,6 @@ rustc_binary("font_provider") {
 
   non_rust_deps = [ "//third_party/freetype2" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/font_service/asset/asset.rs",
     "src/font_service/asset/cache.rs",

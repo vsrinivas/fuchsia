@@ -15,8 +15,6 @@ rustc_test("rust-tests") {
 
   non_rust_deps = [ ":measure_tape_for_toplevelunion" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

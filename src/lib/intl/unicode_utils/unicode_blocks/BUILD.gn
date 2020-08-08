@@ -18,8 +18,6 @@ rustc_library("unicode_blocks") {
   non_rust_deps = [ ":generate_unicode_blocks_source" ]
   source_root = rebase_path("$target_gen_dir/unicode_blocks.rs")
 
-  enforce_source_listing = true
-
   sources = [ "$target_gen_dir/unicode_blocks.rs" ]
 }
 
@@ -40,8 +38,6 @@ rustc_binary("unicode_block_generator") {
     "//third_party/rust_crates:unic-ucd-block",
   ]
   source_root = "src/unicode_block_generator.rs"
-
-  enforce_source_listing = true
 
   sources = [ "src/unicode_block_generator.rs" ]
 }

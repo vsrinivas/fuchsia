@@ -17,8 +17,6 @@ rustc_test("destruction_integration_test_bin") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "integration_test.rs" ]
 }
 
@@ -40,8 +38,6 @@ rustc_binary("destruction_collection_realm_bin") {
     "//third_party/rust_crates:log",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "collection_realm.rs" ]
 }
 
@@ -56,8 +52,6 @@ rustc_binary("destruction_trigger_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "trigger.rs" ]
 }

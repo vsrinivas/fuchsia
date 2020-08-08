@@ -22,8 +22,6 @@ rustc_test("archive_path_test") {
     "//third_party/rust_crates:regex",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 
   inputs = [ "configs/archivist_config.json" ]

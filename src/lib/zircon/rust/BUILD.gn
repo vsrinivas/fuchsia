@@ -51,8 +51,6 @@ if (is_fuchsia) {
       "//third_party/rust_crates:bitflags",
     ]
 
-    enforce_source_listing = true
-
     sources = common_sources
   }
 }
@@ -80,8 +78,6 @@ rustc_library("fuchsia-zircon-sys") {
     ":generate-rust-zircon-syscalls-definitions",
   ]
 
-  enforce_source_listing = true
-
   sources = [ _outputs[0] ]
 }
 
@@ -89,8 +85,6 @@ rustc_library("fuchsia-zircon-types") {
   version = "0.1.0"
   edition = "2018"
   source_root = "fuchsia-zircon-types/src/lib.rs"
-
-  enforce_source_listing = true
 
   sources = [ "fuchsia-zircon-types/src/lib.rs" ]
 }
@@ -101,8 +95,6 @@ rustc_library("fuchsia-zircon-status") {
   source_root = "fuchsia-zircon-status/src/lib.rs"
   deps = [ ":fuchsia-zircon-sys" ]
 
-  enforce_source_listing = true
-
   sources = [ "fuchsia-zircon-status/src/lib.rs" ]
 }
 
@@ -112,8 +104,6 @@ rustc_test("fuchsia-zircon-status-tests") {
   source_root = "fuchsia-zircon-status/src/lib.rs"
 
   deps = [ "//src/lib/zircon/rust:fuchsia-zircon-sys" ]
-
-  enforce_source_listing = true
 
   sources = [ "fuchsia-zircon-status/src/lib.rs" ]
 }
@@ -139,8 +129,6 @@ rustc_test("fuchsia-zircon-unittest") {
   # TODO(46723): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = common_sources
 }
 
@@ -149,8 +137,6 @@ rustc_binary("exit_with_code_util") {
   source_root = "test_util/exit_with_code_util.rs"
   deps = [ ":fuchsia-zircon" ]
 
-  enforce_source_listing = true
-
   sources = [ "test_util/exit_with_code_util.rs" ]
 }
 
@@ -158,8 +144,6 @@ rustc_binary("sleep_forever_util") {
   edition = "2018"
   source_root = "test_util/sleep_forever_util.rs"
   deps = [ ":fuchsia-zircon" ]
-
-  enforce_source_listing = true
 
   sources = [ "test_util/sleep_forever_util.rs" ]
 }

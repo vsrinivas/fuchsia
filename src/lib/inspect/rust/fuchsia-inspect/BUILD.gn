@@ -45,8 +45,6 @@ rustc_library("fuchsia-inspect-transitional") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/component.rs",
     "src/format/bitfields.rs",
@@ -110,8 +108,6 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/component.rs",
     "src/format/bitfields.rs",
@@ -157,8 +153,6 @@ rustc_binary("inspect_test_component_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "test/main.rs" ]
 }

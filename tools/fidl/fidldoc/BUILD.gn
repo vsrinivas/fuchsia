@@ -46,8 +46,6 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
     deps = [ ":rust_crates" ]
 
-    enforce_source_listing = true
-
     sources = common_sources
 
     inputs = common_inputs
@@ -68,8 +66,6 @@ if (host_toolchain == current_toolchain) {
       ":copy_jsonir_goldens",
       ":copy_markdown_goldens",
     ]
-
-    enforce_source_listing = true
 
     sources = common_sources
 

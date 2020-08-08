@@ -23,7 +23,5 @@ rustc_test("integration_test") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "integration_test.rs" ]
 }

@@ -17,7 +17,5 @@ rustc_binary("crasher_exe") {
   name = "rust_crasher"
   edition = "2018"
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }

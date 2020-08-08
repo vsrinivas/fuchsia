@@ -10,8 +10,6 @@ ffx_plugin("ffx_daemon_start") {
   with_unit_tests = true
   deps = [ "//src/developer/ffx/daemon:lib" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/args.rs",
     "src/lib.rs",

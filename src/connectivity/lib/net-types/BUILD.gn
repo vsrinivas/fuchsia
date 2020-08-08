@@ -22,8 +22,6 @@ rustc_library("net-types") {
 
   features = [ "std" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/ethernet.rs",
     "src/ip.rs",

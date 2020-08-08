@@ -29,8 +29,6 @@ rustc_library("mock-resolver") {
     "//third_party/rust_crates:matches",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

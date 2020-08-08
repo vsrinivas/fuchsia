@@ -23,8 +23,6 @@ rustc_library("spinel-rs") {
   ]
   features = [ "spinel-null" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/context.rs",
     "src/lib.rs",

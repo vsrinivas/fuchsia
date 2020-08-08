@@ -26,8 +26,6 @@ rustc_library("lib") {
   edition = "2018"
   non_rust_deps = [ ":static" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

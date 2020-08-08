@@ -27,8 +27,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/main.rs",
     "src/transport.rs",

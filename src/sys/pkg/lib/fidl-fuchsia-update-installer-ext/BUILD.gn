@@ -25,8 +25,6 @@ rustc_library("fidl-fuchsia-update-installer-ext") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/state.rs",

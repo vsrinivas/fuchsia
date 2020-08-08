@@ -17,8 +17,6 @@ rustc_binary("rust") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/fidl_assisted/after.rs",
     "src/fidl_assisted/before.rs",

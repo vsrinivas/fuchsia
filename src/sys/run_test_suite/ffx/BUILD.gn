@@ -15,8 +15,6 @@ ffx_plugin("ffx_test") {
     "//src/sys/run_test_suite:lib",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/args.rs",
     "src/lib.rs",

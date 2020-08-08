@@ -22,8 +22,6 @@ rustc_library("wlan-sae") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/boringssl.rs",
     "src/crypto_utils.rs",

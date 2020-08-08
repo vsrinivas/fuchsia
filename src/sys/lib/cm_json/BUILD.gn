@@ -27,8 +27,6 @@ rustc_library("cm_json") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/cm.rs",
     "src/lib.rs",

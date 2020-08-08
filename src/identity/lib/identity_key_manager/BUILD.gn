@@ -22,8 +22,6 @@ rustc_library("identity_key_manager") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/key_manager.rs",
     "src/lib.rs",

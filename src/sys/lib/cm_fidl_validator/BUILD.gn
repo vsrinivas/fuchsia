@@ -23,8 +23,6 @@ rustc_library("cm_fidl_validator") {
     "//third_party/rust_crates:regex",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

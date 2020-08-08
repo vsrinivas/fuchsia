@@ -8,7 +8,5 @@ rustc_library("fidl_fuchsia_power_ext") {
   edition = "2018"
   deps = [ "//sdk/fidl/fuchsia.power:fuchsia.power-rustc" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

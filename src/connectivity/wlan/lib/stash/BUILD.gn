@@ -25,8 +25,6 @@ rustc_library("wlan-stash") {
     "//third_party/rust_crates:serde_json",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/lib.rs",
     "src/policy.rs",
@@ -43,8 +41,6 @@ rustc_library("wlan-stash-constants") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "src/constants.rs" ]
 }

@@ -27,8 +27,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tracing",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }
 
@@ -44,8 +42,6 @@ rustc_test("test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
-
-  enforce_source_listing = true
 
   sources = [ "tests/lib.rs" ]
 }

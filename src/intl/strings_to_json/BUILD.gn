@@ -40,8 +40,6 @@ if (host_toolchain == current_toolchain) {
 
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
-    enforce_source_listing = true
-
     sources = [ "src/main.rs" ]
   }
 }

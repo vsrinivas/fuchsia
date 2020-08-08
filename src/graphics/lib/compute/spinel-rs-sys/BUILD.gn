@@ -37,8 +37,6 @@ rustc_library("spinel-rs-sys") {
                 rebase_path("spinel.c-api"),
               ])
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

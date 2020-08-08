@@ -28,8 +28,6 @@ rustc_library("forced-fdr") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/forced_fdr_test.rs",
     "src/lib.rs",

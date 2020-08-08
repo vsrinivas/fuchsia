@@ -29,7 +29,5 @@ rustc_binary("netstack_cfg") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/main.rs" ]
 }

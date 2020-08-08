@@ -24,7 +24,5 @@ rustc_test("sim_client_vs_sim_ap") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

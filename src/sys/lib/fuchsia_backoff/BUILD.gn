@@ -18,8 +18,6 @@ rustc_library("fuchsia_backoff") {
     "//third_party/rust_crates:futures",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

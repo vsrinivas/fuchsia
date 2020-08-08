@@ -33,8 +33,6 @@ rustc_library("test_executor") {
     "//third_party/rust_crates:pretty_assertions",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

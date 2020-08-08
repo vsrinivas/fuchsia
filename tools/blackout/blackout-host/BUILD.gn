@@ -15,8 +15,6 @@ if (host_toolchain == current_toolchain) {
       "//third_party/rust_crates:thiserror",
     ]
 
-    enforce_source_listing = true
-
     sources = [
       "src/integration.rs",
       "src/lib.rs",

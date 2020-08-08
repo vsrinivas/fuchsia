@@ -28,8 +28,6 @@ rustc_library("mundane") {
   # TODO(46762): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/boringssl/abort.rs",
     "src/boringssl/mod.rs",

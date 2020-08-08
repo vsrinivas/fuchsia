@@ -70,8 +70,6 @@ rustc_library("carnelian") {
     "//src/graphics/lib/compute/spinel/platforms/vk:vk_find_target",
   ]
 
-  enforce_source_listing = true
-
   sources = [
     "src/app.rs",
     "src/app/strategies.rs",

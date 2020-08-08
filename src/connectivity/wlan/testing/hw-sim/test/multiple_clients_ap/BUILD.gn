@@ -23,7 +23,5 @@ rustc_test("multiple_clients_ap") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

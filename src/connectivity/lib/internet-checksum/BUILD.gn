@@ -17,8 +17,6 @@ rustc_library("internet-checksum") {
     "//third_party/rust_crates:rand_xorshift",
   ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

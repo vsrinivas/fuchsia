@@ -17,7 +17,5 @@ rustc_test("fake-at-driver-test") {
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }

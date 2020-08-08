@@ -14,8 +14,6 @@ rustc_library("wlan-bitfield-wrapper") {
 
   deps = [ "//src/connectivity/wlan/lib/bitfield:wlan-bitfield" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 
