@@ -41,7 +41,7 @@ default format is used.
 
 **Current value (from the default):** `""`
 
-From //public/gn/config/BUILD.zircon.gn:25
+From //public/gn/config/BUILD.zircon.gn:26
 
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
@@ -57,7 +57,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"/b/s/w/ir/k/root_build_dir.zircon/clang-crashreports"`
 
-From //public/gn/config/BUILD.zircon.gn:13
+From //public/gn/config/BUILD.zircon.gn:14
 
 ### current_cpu
 
@@ -354,6 +354,16 @@ If true, produce a Breakpad symbol file for each binary.
 
 From //public/gn/toolchain/breakpad.gni:9
 
+### rustc_tool_dir
+Directory where the Rust toolchain binary ("rustc") is found.  If this is
+"", then the prebuilt rustc is used.  Using a system compiler is not
+supported.  This toolchain is expected to support both Fuchsia targets and
+the host.
+
+**Current value (from the default):** `""`
+
+From //public/gn/toolchain/rustc.gni:13
+
 ### scheduler_tracing_level
 The level of detail for scheduler traces when enabled. Values greater than
 zero add increasing details at the cost of increased trace buffer use.
@@ -401,7 +411,7 @@ The empty list (or empty string) means don't use `--sysroot` at all.
 }]
 ```
 
-From //public/gn/config/BUILD.zircon.gn:19
+From //public/gn/config/BUILD.zircon.gn:20
 
 ### target_cpu
 

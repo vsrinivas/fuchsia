@@ -106,7 +106,7 @@ production builds to avoid accidental inclusion of testing targets.
 
 **Current value (from the default):** `true`
 
-From //BUILD.gn:82
+From //BUILD.gn:83
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -121,7 +121,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:27
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//src/connectivity/network/http_client", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/cobalt/bin/system-metrics:config", "//src/connectivity/bluetooth:core", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/management:network_config_default", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network:config", "//src/connectivity/wlan:packages", "//src/connectivity/wlan/config:default", "//src/developer/forensics:pkg", "//src/developer/forensics/bugreport", "//src/developer/forensics/crash_reports:crash-reports", "//src/developer/forensics/exceptions", "//src/developer/forensics/last_reboot:last-reboot", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/hwinfo:default_product_config", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_policy_eng", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/appmgr:core_component_id_index", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//src/sys/pkg:system-update-checker", "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration", "//src/sys/stash:pkg", "//src/sys/timekeeper", "//src/sys/time/network_time_service:network-time-service", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//src/sys/pkg:tools", "//tools/cargo-gnaw:install-cargo-gnaw", "//bundles:kitchen_sink"]`
 
@@ -129,7 +129,7 @@ From //root_build_dir/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:27
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -394,7 +394,7 @@ From //products/core.gni:91
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:34
+From //BUILD.gn:35
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
@@ -402,7 +402,7 @@ From //products/core.gni:91
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:34
+From //BUILD.gn:35
 
 ### camera_debug
 
@@ -431,7 +431,7 @@ Path to Clang lib directory.
 
 **Current value (from the default):** `"../build/prebuilt/third_party/clang/linux-x64/lib"`
 
-From //build/images/manifest.gni:9
+From //build/images/manifest.gni:10
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -550,7 +550,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/3fdb1f1b62f22a0f38c76ef9ed859ab63735f68b/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/df5b3d8c769a7f5c06aeddb3a3d1e8be7bef6dc0/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -558,14 +558,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3fdb1f1b62f22a0f38c76ef9ed859ab63735f68b/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/df5b3d8c769a7f5c06aeddb3a3d1e8be7bef6dc0/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/3fdb1f1b62f22a0f38c76ef9ed859ab63735f68b/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/df5b3d8c769a7f5c06aeddb3a3d1e8be7bef6dc0/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -715,7 +715,7 @@ Extra args to globally apply to the manifest generation script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/manifest.gni:12
+From //build/images/manifest.gni:16
 
 ### extra_package_labels
 
@@ -729,7 +729,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:701
+From //build/config/BUILDCONFIG.gn:705
 
 ### factory_mode
 factory_mode: enables/disables factory mode
@@ -793,7 +793,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/3fdb1f1b62f22a0f38c76ef9ed859ab63735f68b/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/df5b3d8c769a7f5c06aeddb3a3d1e8be7bef6dc0/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -808,14 +808,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/3fdb1f1b62f22a0f38c76ef9ed859ab63735f68b/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/df5b3d8c769a7f5c06aeddb3a3d1e8be7bef6dc0/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/3fdb1f1b62f22a0f38c76ef9ed859ab63735f68b/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/df5b3d8c769a7f5c06aeddb3a3d1e8be7bef6dc0/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1020,7 +1020,7 @@ From //products/bringup.gni:37
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -1028,7 +1028,7 @@ From //products/bringup.gni:37
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:54
 
 ### host_os
 
@@ -1331,7 +1331,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:626
+From //build/config/BUILDCONFIG.gn:630
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1834,6 +1834,13 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 From //build/config/BUILD.gn:29
 
+### rustc_lib_dir
+Path to rustc lib directory.
+
+**Current value (from the default):** `"../build/prebuilt/third_party/rust/linux-x64/lib"`
+
+From //build/images/manifest.gni:13
+
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
 This can be used to test custom Rust toolchains.
@@ -1959,7 +1966,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:931
+From //build/config/BUILDCONFIG.gn:935
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1968,7 +1975,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:936
+From //build/config/BUILDCONFIG.gn:940
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2002,7 +2009,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:747
+From //build/config/BUILDCONFIG.gn:751
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2188,7 +2195,7 @@ and causes infra to schedule tests as if each one has the same duration.
 
 **Current value (from the default):** `"//integration/infra/test_durations/default.json"`
 
-From //BUILD.gn:40
+From //BUILD.gn:41
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -2266,7 +2273,7 @@ From //build/config/sanitizers/BUILD.gn:33
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:721
+From //build/config/BUILDCONFIG.gn:725
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2282,7 +2289,7 @@ From //products/core.gni:93
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:48
+From //BUILD.gn:49
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//tools/vboot_reference:cgpt_host", "//tools/vboot_reference:futility_host", "//bundles:tools"]`
 
@@ -2290,7 +2297,7 @@ From //products/core.gni:93
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:48
+From //BUILD.gn:49
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
@@ -2585,13 +2592,13 @@ silently clobber the default value shown here.
 }
 ```
 
-From //BUILD.gn:107
+From //BUILD.gn:108
 
 ### zircon_asserts
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:192
+From //build/config/fuchsia/BUILD.gn:193
 
 ### zircon_b_partition
 
@@ -2610,7 +2617,7 @@ Compilation database filter. Gets passed to --export-compile-commands=<filter>.
 
 **Current value (from the default):** `"legacy-arm64"`
 
-From //BUILD.gn:77
+From //BUILD.gn:78
 
 ### zircon_extra_args
 [Zircon GN build arguments](/docs/gen/zircon_build_arguments.md).
@@ -2627,14 +2634,14 @@ to explicitly set Zircon's `variants` here.
 
 **Current value (from the default):** `{ }`
 
-From //BUILD.gn:66
+From //BUILD.gn:67
 
 ### zircon_extra_deps
 Additional Zircon GN labels to include in the Zircon build.
 
 **Current value (from the default):** `[]`
 
-From //BUILD.gn:70
+From //BUILD.gn:71
 
 ### zircon_r_partition
 
@@ -2648,7 +2655,7 @@ given the empty string. Path can be source-absolute or system-absolute.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:74
+From //BUILD.gn:75
 
 ### zvb_partition_name
 Partition name from where image will be verified
