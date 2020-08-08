@@ -11,7 +11,7 @@ readonly HOST_OS="$(uname | tr '[:upper:]' '[:lower:]')"
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
 if [[ "x${HOST_OS}" == "xlinux" ]]; then
-  readonly QEMU_HOST_FLAGS="${QEMU_FLAGS} --disable-gtk --enable-sdl=internal --enable-kvm"
+  readonly QEMU_HOST_FLAGS="${QEMU_FLAGS} --disable-gtk --enable-kvm"
 elif [[ "x${HOST_OS}" == "xdarwin" ]]; then
   readonly QEMU_HOST_FLAGS="${QEMU_FLAGS} --enable-cocoa"
 else
@@ -39,10 +39,7 @@ build() {
   pushd "${outdir}/build-qemu-${HOST_TRIPLE}"
   ${srcdir}/configure \
     ${QEMU_HOST_FLAGS} \
-    --prefix= \
     --target-list=aarch64-softmmu,x86_64-softmmu \
-    --without-system-pixman \
-    --without-system-fdt \
     --disable-vnc-jpeg \
     --disable-vnc-png \
     --disable-vnc-sasl \
@@ -52,7 +49,6 @@ build() {
     --disable-debug-info \
     --disable-qom-cast-debug \
     --disable-guest-agent \
-    --disable-bluez \
     --disable-brlapi \
     --disable-gnutls \
     --disable-gcrypt \
@@ -63,8 +59,7 @@ build() {
     --disable-vhost-vsock \
     --disable-libusb \
     --disable-smartcard \
-    --disable-tools \
-    --disable-tasn1
+    --disable-tools
   make -j "${jobs}"
   make DESTDIR="${destdir}/qemu-${HOST_TRIPLE}" install
   popd
