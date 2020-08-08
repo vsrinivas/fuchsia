@@ -66,7 +66,44 @@ static const struct FidlCodedHandle Protocol30fidl_test_handles_SomeProtocolnonn
 static const struct FidlCodedHandle Request30fidl_test_handles_SomeProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable};
 
 
-static bool EnumValidatorFor_fidl_test_handles_obj_type(uint64_t v) { return (v == 0ul) || (v == 1ul) || (v == 2ul) || (v == 3ul) || (v == 4ul) || (v == 5ul) || (v == 6ul) || (v == 9ul) || (v == 11ul) || (v == 12ul) || (v == 14ul) || (v == 15ul) || (v == 16ul) || (v == 17ul) || (v == 18ul) || (v == 19ul) || (v == 20ul) || (v == 21ul) || (v == 22ul) || (v == 23ul) || (v == 24ul) || (v == 25ul) || (v == 26ul) || (v == 27ul) || (v == 28ul) || (v == 29ul) || (v == 30ul) || (v == 31ul) || (v == 32ul) || (v == 33ul) || false; }
+static bool EnumValidatorFor_fidl_test_handles_obj_type(uint64_t v) {
+  switch (v) {
+    case 0ul:
+    case 1ul:
+    case 2ul:
+    case 3ul:
+    case 4ul:
+    case 5ul:
+    case 6ul:
+    case 9ul:
+    case 11ul:
+    case 12ul:
+    case 14ul:
+    case 15ul:
+    case 16ul:
+    case 17ul:
+    case 18ul:
+    case 19ul:
+    case 20ul:
+    case 21ul:
+    case 22ul:
+    case 23ul:
+    case 24ul:
+    case 25ul:
+    case 26ul:
+    case 27ul:
+    case 28ul:
+    case 29ul:
+    case 30ul:
+    case 31ul:
+    case 32ul:
+    case 33ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum fidl_test_handles_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_fidl_test_handles_obj_type, .name="fidl.test.handles/obj_type"};
 
 static const struct FidlStructElement Fields25fidl_test_handles_Handles[] = {

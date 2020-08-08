@@ -45,7 +45,15 @@ const struct FidlCodedTable example_ExampleTableTable = {.tag=kFidlTypeTable, .f
 
 const struct FidlCodedStruct example_ExampleStructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="example/ExampleStruct"};
 
-static bool EnumValidatorFor_example_ExampleEnum(uint64_t v) { return (v == 1ul) || false; }
+static bool EnumValidatorFor_example_ExampleEnum(uint64_t v) {
+  switch (v) {
+    case 1ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum example_ExampleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_example_ExampleEnum, .name="example/ExampleEnum"};
 
 const struct FidlCodedBits example_ExampleBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=1ul, .name="example/ExampleBits"};

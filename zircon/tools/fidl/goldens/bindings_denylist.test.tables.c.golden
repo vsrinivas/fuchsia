@@ -32,6 +32,14 @@ static const struct FidlXUnionField Fields30test_name_OnlyLlcppNullableRef[] = {
 const struct FidlCodedXUnion test_name_OnlyLlcppNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields30test_name_OnlyLlcppNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/OnlyLlcpp", .strictness=kFidlStrictness_Strict};
 const struct FidlCodedStruct test_name_OnlyGoTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="test.name/OnlyGo"};
 
-static bool EnumValidatorFor_test_name_OnlyDart(uint64_t v) { return (v == 1ul) || false; }
+static bool EnumValidatorFor_test_name_OnlyDart(uint64_t v) {
+  switch (v) {
+    case 1ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum test_name_OnlyDartTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_OnlyDart, .name="test.name/OnlyDart"};
 

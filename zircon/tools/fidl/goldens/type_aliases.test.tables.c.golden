@@ -25,7 +25,16 @@ static const struct FidlCodedHandle HandlehandlenonnullableTable = {.tag=kFidlTy
 static const struct FidlCodedHandle HandlehandlenullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
 
 
-static bool EnumValidatorFor_example_obj_type(uint64_t v) { return (v == 0ul) || (v == 4ul) || false; }
+static bool EnumValidatorFor_example_obj_type(uint64_t v) {
+  switch (v) {
+    case 0ul:
+    case 4ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum example_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_example_obj_type, .name="example/obj_type"};
 
 static const struct FidlStructElement Fields29example_ExampleOfUseOfAliases[] = {

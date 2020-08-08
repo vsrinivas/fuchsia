@@ -13,10 +13,26 @@ extern const struct FidlCodedStruct values_StructTable;
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
 
-static bool EnumValidatorFor_values_EnumType(uint64_t v) { return (v == 1ul) || false; }
+static bool EnumValidatorFor_values_EnumType(uint64_t v) {
+  switch (v) {
+    case 1ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum values_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .validate=&EnumValidatorFor_values_EnumType, .name="values/EnumType"};
 
-static bool EnumValidatorFor_values_Enum(uint64_t v) { return (v == 170ul) || false; }
+static bool EnumValidatorFor_values_Enum(uint64_t v) {
+  switch (v) {
+    case 170ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum values_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_values_Enum, .name="values/Enum"};
 
 const struct FidlCodedBits values_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .mask=131ul, .name="values/BitsType"};

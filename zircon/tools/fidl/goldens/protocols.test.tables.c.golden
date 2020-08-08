@@ -140,7 +140,16 @@ static const struct FidlStructElement Fields44test_name_WithErrorSyntaxErrorAsEn
 const struct FidlCodedStruct test_name_WithErrorSyntaxErrorAsEnumResponseTable = {.tag=kFidlTypeStruct, .elements=Fields44test_name_WithErrorSyntaxErrorAsEnumResponse, .element_count=1u, .size=40u, .name="test.name/WithErrorSyntaxErrorAsEnumResponse"};
 
 
-static bool EnumValidatorFor_test_name_obj_type(uint64_t v) { return (v == 0ul) || (v == 14ul) || false; }
+static bool EnumValidatorFor_test_name_obj_type(uint64_t v) {
+  switch (v) {
+    case 0ul:
+    case 14ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum test_name_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_obj_type, .name="test.name/obj_type"};
 
 const struct FidlCodedStruct test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="test.name/WithErrorSyntax_ResponseAsStruct_Response"};
@@ -169,7 +178,16 @@ static const struct FidlXUnionField Fields60test_name_WithErrorSyntax_ErrorAsPri
 const struct FidlCodedXUnion test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields60test_name_WithErrorSyntax_ErrorAsPrimitive_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict};
 const struct FidlCodedStruct test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=1u, .name="test.name/WithErrorSyntax_ErrorAsEnum_Response"};
 
-static bool EnumValidatorFor_test_name_ErrorEnun(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+static bool EnumValidatorFor_test_name_ErrorEnun(uint64_t v) {
+  switch (v) {
+    case 1ul:
+    case 2ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum test_name_ErrorEnunTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_ErrorEnun, .name="test.name/ErrorEnun"};
 
 static const struct FidlXUnionField Fields44test_name_WithErrorSyntax_ErrorAsEnum_Result[] = {

@@ -19,7 +19,16 @@ static const struct FidlCodedArray Array20_20HandlevmononnullableTable __attribu
 static const struct FidlCodedVector Vector4294967295nonnullable30Array20_20HandlevmononnullableTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&Array20_20HandlevmononnullableTable), .max_count=4294967295u, .element_size=20u, .nullable=kFidlNullability_Nonnullable};
 
 
-static bool EnumValidatorFor_test_name_obj_type(uint64_t v) { return (v == 0ul) || (v == 3ul) || false; }
+static bool EnumValidatorFor_test_name_obj_type(uint64_t v) {
+  switch (v) {
+    case 0ul:
+    case 3ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
 const struct FidlCodedEnum test_name_obj_typeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_obj_type, .name="test.name/obj_type"};
 
 static const struct FidlXUnionField Fields25test_name_UnionWithHandle[] = {

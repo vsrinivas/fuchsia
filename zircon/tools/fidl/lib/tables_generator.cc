@@ -159,13 +159,15 @@ void TablesGenerator::Generate(const coded::EnumType& enum_type) {
   std::string validator_func = std::string("EnumValidatorFor_") + std::string(enum_type.coded_name);
   Emit(&tables_file_, "static bool ");
   Emit(&tables_file_, validator_func);
-  Emit(&tables_file_, "(uint64_t v) { return ");
+  Emit(&tables_file_, "(uint64_t v) {\n  switch (v) {\n");
   for (const auto& member : enum_type.members) {
-    Emit(&tables_file_, "(v == ");
+    Emit(&tables_file_, "    case ");
     Emit(&tables_file_, member);
-    Emit(&tables_file_, ") || ");
+    Emit(&tables_file_, ":\n");
   }
-  Emit(&tables_file_, "false; }\n");
+  Emit(&tables_file_, "      return true;\n");
+  Emit(&tables_file_, "    default:\n      return false;\n");
+  Emit(&tables_file_, "  }\n}\n\n");
 
   Emit(&tables_file_, "const struct FidlCodedEnum ");
   Emit(&tables_file_, NameTable(enum_type.coded_name));
