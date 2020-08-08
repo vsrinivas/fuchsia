@@ -12,21 +12,18 @@
 #include <lib/fidl/cpp/interface_request.h>
 
 #include "src/modular/bin/sessionmgr/storage/encode_module_path.h"
-#include "src/modular/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 
-ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_controller_impl,
-                                           fuchsia::sys::Launcher* const launcher,
+ModuleControllerImpl::ModuleControllerImpl(fuchsia::sys::Launcher* const launcher,
                                            fuchsia::modular::session::AppConfig module_config,
                                            const fuchsia::modular::ModuleData* const module_data,
                                            fuchsia::sys::ServiceListPtr service_list,
                                            fuchsia::ui::views::ViewToken view_token,
                                            scenic::ViewRefPair view_ref_pair)
-    : story_controller_impl_(story_controller_impl),
-      app_client_(launcher, CloneStruct(module_config),
+    : app_client_(launcher, CloneStruct(module_config),
                   /*data_origin=*/"", std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { OnAppConnectionError(); });
@@ -39,30 +36,13 @@ ModuleControllerImpl::ModuleControllerImpl(StoryControllerImpl* const story_cont
                                        std::move(view_ref_pair.view_ref));
 }
 
-ModuleControllerImpl::~ModuleControllerImpl() {}
-
-void ModuleControllerImpl::Connect(
-    fidl::InterfaceRequest<fuchsia::modular::ModuleController> request) {
-  module_controller_bindings_.AddBinding(this, std::move(request));
-  // Notify of initial state on connection.
-  NotifyStateChange();
-}
+ModuleControllerImpl::~ModuleControllerImpl() = default;
 
 // If the ComponentController connection closes, it means the module cannot be
 // started. We indicate this by the ERROR state.
 void ModuleControllerImpl::OnAppConnectionError() {
   FX_LOGS(ERROR) << "Module " << EncodeModulePath(module_data_->module_path()) << " (URL "
                  << module_data_->module_url() << ") terminated unexpectedly.";
-  SetState(fuchsia::modular::ModuleState::ERROR);
-}
-
-void ModuleControllerImpl::SetState(const fuchsia::modular::ModuleState new_state) {
-  if (state_ == new_state) {
-    return;
-  }
-
-  state_ = new_state;
-  NotifyStateChange();
 }
 
 void ModuleControllerImpl::Teardown(fit::function<void()> done) {
@@ -71,28 +51,7 @@ void ModuleControllerImpl::Teardown(fit::function<void()> done) {
   app_client_.SetAppErrorHandler(nullptr);
 
   // Tear down the module application through the normal procedure with timeout.
-  app_client_.Teardown(kBasicTimeout, [this, done = std::move(done)] {
-    SetState(fuchsia::modular::ModuleState::STOPPED);
-    done();
-  });
-}
-
-void ModuleControllerImpl::Focus() {
-  story_controller_impl_->FocusModule(module_data_->module_path());
-}
-
-void ModuleControllerImpl::Defocus() {
-  story_controller_impl_->DefocusModule(module_data_->module_path());
-}
-
-void ModuleControllerImpl::Stop(StopCallback done) {
-  story_controller_impl_->DeleteModule(module_data_->module_path(), std::move(done));
-}
-
-void ModuleControllerImpl::NotifyStateChange() {
-  for (auto& binding : module_controller_bindings_.bindings()) {
-    binding->events().OnStateChange(state_);
-  }
+  app_client_.Teardown(kBasicTimeout, std::move(done));
 }
 
 }  // namespace modular

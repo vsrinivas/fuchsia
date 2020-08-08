@@ -15,7 +15,6 @@ fidl("fuchsia.modular") {
     "intent.fidl",
     "lifecycle.fidl",
     "module_context.fidl",
-    "module_controller.fidl",
     "module_data.fidl",
     "module_manifest.fidl",
     "module_state.fidl",

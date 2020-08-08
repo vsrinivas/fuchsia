@@ -54,7 +54,6 @@ class TestModule : public modular_testing::FakeModule {
              .sandbox_services = modular_testing::FakeModule::GetDefaultSandboxServices()}) {}
   fit::function<void()> on_destroy;
   fit::function<void()> on_create;
-  fuchsia::modular::ModuleControllerPtr controller;
 
  private:
   // |modular_testing::FakeModule|
