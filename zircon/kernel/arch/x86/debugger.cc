@@ -106,7 +106,7 @@ static inline bool mxcsr_is_valid(uint32_t mxcsr, uint32_t mxcsr_mask) {
     mxcsr_mask = 0x0000ffbf;
   }
 
-  return mxcsr & ~mxcsr_mask;
+  return (mxcsr & ~mxcsr_mask) == 0;
 }
 
 // Backend for arch_get_vector_regs and arch_set_vector_regs. This does a read or write of the
@@ -147,7 +147,7 @@ zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs*
   // fxbug.dev/50632: Overwriting the reserved bits of the mxcsr register
   // causes a #GP Fault. We need to check against the mxcsr_mask to see if the
   // proposed mxcsr is valid.
-  if (access == RegAccess::kSet && mxcsr_is_valid(regs->mxcsr, save->mxcsr_mask)) {
+  if (access == RegAccess::kSet && !mxcsr_is_valid(regs->mxcsr, save->mxcsr_mask)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
