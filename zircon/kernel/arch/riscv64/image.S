@@ -48,8 +48,8 @@ END_DATA(_zbi_kernel_header)
 DATA(_zbi_kernel_payload)
     // The boot-shim code expects this to be an offset from the beginning
     // of the load image, whatever the kernel's virtual address.
-    .quad 0 // IMAGE_ELF_ENTRY - _zbi_file_header
-    .quad 0 // IMAGE_MEMORY_END - boot_load_end
+    .quad IMAGE_ELF_ENTRY - 0xffff800000000000 # TODO(revest): Once the linker supports this relocation type add: - _zbi_file_header
+    .quad IMAGE_MEMORY_END # TODO(revest): and here too: - boot_load_end
 END_DATA(_zbi_kernel_payload)
 
 // Pad out to the header size that was allocated in the kernel image layout.

@@ -225,6 +225,16 @@ typedef struct {
 //     holds the physical address of the bootloader-constructed ZBI.
 //     All other registers are unspecified.
 //
+//  RISCV64
+//
+//     zbi_kernel_t.entry is an offset from the beginning of the image
+//     (i.e., the ZBI_TYPE_CONTAINER header before the ZBI_TYPE_KERNEL_RISCV64
+//     header) to the PC location in the image where the kernel will
+//     start.  The processor is in physical address mode in Supervisor Mode.
+//     The kernel image and the bootloader-constructed ZBI each can be loaded
+//     anywhere in physical memory.  The a0 register holds the physical address
+//     of the bootloader-constructed ZBI.  All other registers are unspecified.
+//
 #define ZBI_TYPE_KERNEL_PREFIX (0x004e524b)  // KRN\0
 #define ZBI_TYPE_KERNEL_MASK (0x00FFFFFF)    // Mask to compare to the prefix.
 #define ZBI_TYPE_KERNEL_X64 (0x4c4e524b)     // KRNL
