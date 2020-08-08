@@ -37,6 +37,12 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
 void arch_late_init_percpu(void) {
 }
 
+__NO_RETURN int arch_idle_thread_routine(void*) {
+  for (;;) {
+    __asm__ volatile("wfi");
+  }
+}
+
 void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uintptr_t arg1,
                               uintptr_t arg2) {
 }
