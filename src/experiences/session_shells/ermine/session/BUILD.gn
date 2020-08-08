@@ -48,8 +48,6 @@ rustc_binary("bin") {
 
   test_deps = []
 
-  enforce_source_listing = true
-
   sources = [
     "src/element_repository/element_manager_server.rs",
     "src/element_repository/event_handler.rs",
