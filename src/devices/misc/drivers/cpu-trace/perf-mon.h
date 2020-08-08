@@ -26,6 +26,10 @@
 #include <lib/zircon-internal/device/cpu-trace/arm64-pm.h>
 
 #include "arm64-pm-impl.h"
+#elif defined(__riscv)
+#include <lib/zircon-internal/device/cpu-trace/riscv64-pm.h>
+
+#include "riscv64-pm-impl.h"
 #else
 #error "unsupported architecture"
 #endif
@@ -48,6 +52,9 @@ using PmuConfig = X86PmuConfig;
 #elif defined(__aarch64__)
 using PmuHwProperties = Arm64PmuProperties;
 using PmuConfig = Arm64PmuConfig;
+#elif defined(__riscv)
+using PmuHwProperties = Riscv64PmuProperties;
+using PmuConfig = Riscv64PmuConfig;
 #endif
 
 struct EventDetails {
@@ -68,6 +75,10 @@ constexpr uint16_t kMinPmVersion = 2;
 // KISS and begin with pmu v3.
 // Note: This should agree with the kernel driver's check.
 constexpr uint16_t kMinPmVersion = 3;
+#elif defined(__riscv)
+// Placeholder
+// Note: This should agree with the kernel driver's check.
+constexpr uint16_t kMinPmVersion = 0;
 #endif
 
 // Compare function to qsort, bsearch.

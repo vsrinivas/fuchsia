@@ -23,7 +23,7 @@ static int test_thread_fn(void* arg) {
 }
 
 TestThread::TestThread(fbl::Function<bool()> fn) : fn_(std::move(fn)) {
-#if !defined(__x86_64__) and !defined(__aarch64__)
+#if !defined(__x86_64__) and !defined(__aarch64__) and !defined(__riscv)
   static_assert(false, "Unsupported architecture");
 #endif
 }
@@ -101,6 +101,8 @@ bool TestThread::Wait(bool expect_failure, bool expect_crash, uintptr_t crash_ad
     ZX_ASSERT(zx_thread_.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)) == ZX_OK);
 #if defined(__x86_64__)
     regs.rip = reinterpret_cast<uintptr_t>(thrd_exit);
+#elif defined(__riscv)
+    regs.placeholder = reinterpret_cast<uintptr_t>(thrd_exit);
 #else
     regs.pc = reinterpret_cast<uintptr_t>(thrd_exit);
 #endif
@@ -132,6 +134,10 @@ void TestThread::PrintDebugInfo(const zx_exception_report_t& report) {
   pc = regs.rip;
   sp = regs.rsp;
   fp = regs.rbp;
+#elif defined(__riscv)
+  pc = 0;
+  sp = 0;
+  fp = 0;
 #else
   inspector_print_general_regs(stdout, &regs, &report.context.arch.u.arm_64);
   pc = regs.pc;

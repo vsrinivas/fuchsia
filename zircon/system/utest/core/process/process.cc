@@ -33,6 +33,8 @@ namespace {
 constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::tpidr;
 #elif defined(__x86_64__)
 constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::fs_base;
+#elif defined(__riscv)
+constexpr auto kThreadRegister = &zx_thread_state_general_regs_t::placeholder;
 #endif
 
 const zx_time_t kTimeoutNs = ZX_MSEC(250);

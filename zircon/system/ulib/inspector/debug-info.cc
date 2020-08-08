@@ -26,6 +26,8 @@ namespace inspector {
 static const char* kArch = "x86_64";
 #elif defined(__aarch64__)
 static const char* kArch = "aarch64";
+#elif defined(__riscv)
+static const char* kArch = "riscv64";
 #else
 #error unsupported architecture
 #endif
@@ -114,6 +116,7 @@ decoded_registers_t decode_registers(const zx_thread_state_general_regs* regs) {
   decoded.pc = regs->pc;
   decoded.sp = regs->sp;
   decoded.fp = regs->r[29];
+#elif defined(__riscv)
 #else
 #error unsupported architecture
 #endif
@@ -209,6 +212,7 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
         violation = "undecoded";
         break;
     }
+#elif defined(__riscv)
 #else
 #error unsupported architecture
 #endif
@@ -308,6 +312,7 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
         fprintf(out, " far %#18" PRIx64 " esr %#18x\n", report.context.arch.u.arm_64.far,
                 report.context.arch.u.arm_64.esr);
       }
+#elif defined(__riscv)
 #else
 #error unsupported architecture
 #endif

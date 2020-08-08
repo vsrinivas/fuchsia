@@ -68,6 +68,12 @@ __EXPORT void inspector_print_general_regs(FILE* f, const zx_thread_state_genera
   fprintf(f, " pc  %#18" PRIx64 " psr %#18" PRIx64 "\n", regs->pc, regs->cpsr);
 }
 
+#elif defined(__riscv)
+
+__EXPORT void inspector_print_general_regs(FILE* f, const zx_thread_state_general_regs_t* regs,
+                                           const inspector_excp_data_t* excp_data) {
+}
+
 #else  // unsupported arch
 
 __EXPORT void inspector_print_general_regs(const zx_thread_state_general_regs_t* regs,

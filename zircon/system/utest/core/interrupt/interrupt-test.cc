@@ -70,6 +70,7 @@ __asm__(
     "exit:\n"
     "  call zx_thread_exit\n"
     "  ud2\n"  // Crash if we didn't exit.
+#elif defined(__riscv)
 #else
 #error "what machine?"
 #endif

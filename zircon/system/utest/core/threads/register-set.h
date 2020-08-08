@@ -16,6 +16,9 @@
 #elif defined(__aarch64__)
 #define REG_PC pc
 #define REG_STACK_PTR sp
+#elif defined(__riscv)
+#define REG_PC placeholder
+#define REG_STACK_PTR placeholder
 #else
 #error Unsupported architecture
 #endif
@@ -26,6 +29,7 @@ struct thread_local_regs {
   uint64_t gs_base_value;
 #elif defined(__aarch64__)
   uint64_t tpidr_value;
+#elif defined(__riscv)
 #else
 #error Unsupported architecture
 #endif

@@ -82,6 +82,7 @@ static void advance_over_breakpoint(zx_handle_t thread) {
             ZX_OK);
 #elif defined(__x86_64__)
 // x86 sets the instruction pointer to the following instruction so needs no update.
+#elif defined(__riscv)
 #else
 #error Not supported on this platform.
 #endif
@@ -1095,6 +1096,8 @@ class RegisterReadSetup {
     regs.pc = reinterpret_cast<uintptr_t>(zx_thread_exit);
 #elif defined(__x86_64__)
     regs.rip = reinterpret_cast<uintptr_t>(zx_thread_exit);
+#elif defined(__riscv)
+    regs.placeholder = reinterpret_cast<uintptr_t>(zx_thread_exit);
 #else
 #error "what machine?"
 #endif
@@ -1147,6 +1150,8 @@ TEST(Threads, ReadingFpRegisterState) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_NO_FATAL_FAILURES(fp_regs_expect_eq(regs, fp_regs_expected));
 #elif defined(__aarch64__)
+  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+#elif defined(__riscv)
   ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 #else
 #error unsupported platform
@@ -1343,6 +1348,8 @@ TEST(Threads, WritingFpRegisterState) {
   setup.DoSave(&save_fp_regs_and_exit_thread, &regs);
   ASSERT_NO_FATAL_FAILURES(fp_regs_expect_eq(regs_to_set, regs));
 #elif defined(__aarch64__)
+  ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+#elif defined(__riscv)
   ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 #else
 #error unsupported platform
@@ -1914,6 +1921,7 @@ TEST(Threads, SyscallSuspendedRegisterState) {
   EXPECT_EQ(actual_regs.r[2], ZX_TIME_INFINITE);                           // 3rd arg
   EXPECT_EQ(actual_regs.r[3], reinterpret_cast<uint64_t>(&arg.observed));  // 4th arg
   EXPECT_EQ(actual_regs.r[0], ZX_ERR_INTERNAL_INTR_RETRY);                 // syscall result
+#elif defined(__riscv)
 #else
 #error unsupported platform
 #endif
@@ -1950,6 +1958,7 @@ TEST(Threads, SyscallDebuggerModifyResult) {
 #elif defined(__aarch64__)
   EXPECT_EQ(actual_regs.r[0], ZX_ERR_INTERNAL_INTR_RETRY);
   actual_regs.r[0] = ZX_ERR_CANCELED;
+#elif defined(__riscv)
 #else
 #error unsupported platform
 #endif

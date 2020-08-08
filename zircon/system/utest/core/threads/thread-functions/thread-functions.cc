@@ -68,6 +68,7 @@ void threads_test_wait_break_fn(void* arg) {
   __asm__ volatile("brk 0");
 #elif defined(__x86_64__)
   __asm__ volatile("int3");
+#elif defined(__riscv)
 #else
 #error Not supported on this platform.
 #endif
