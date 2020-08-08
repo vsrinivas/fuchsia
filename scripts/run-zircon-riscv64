@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+exec $DIR/../zircon/scripts/run-zircon -a riscv64 "$@"

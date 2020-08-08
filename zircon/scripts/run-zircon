@@ -8,7 +8,7 @@
 
 function HELP {
     echo "help:"
-    echo "-a <arch>            : arm64 or x64"
+    echo "-a <arch>            : arm64, riscv64 or x64"
     echo "-c <text>            : append item to kernel commandline"
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
@@ -377,6 +377,14 @@ case $ARCH in
         if [[ $GIC != 0 ]]; then
             ARGS+=",gic-version=${GIC}"
         fi
+
+        if (( !$SERIAL )); then
+          CMDLINE+="kernel.serial=none "
+        fi
+        ;;
+    riscv64)
+        QEMU=${QEMUDIR}qemu-system-riscv64
+        ARGS+=" -machine virt"
 
         if (( !$SERIAL )); then
           CMDLINE+="kernel.serial=none "
