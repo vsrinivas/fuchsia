@@ -26,7 +26,7 @@ impl<T: Clone + Debug + Eq + Hash + Send + Sync> Address for T {}
 
 /// A MessageEvent defines the data that can be returned through a message
 /// receptor.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum MessageEvent<P: Payload + 'static, A: Address + 'static> {
     /// A message that has been delivered, either as a new message directed at to
     /// the recipient's address or a reply to a previously sent message
