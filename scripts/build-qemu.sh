@@ -39,7 +39,7 @@ build() {
   pushd "${outdir}/build-qemu-${HOST_TRIPLE}"
   ${srcdir}/configure \
     ${QEMU_HOST_FLAGS} \
-    --target-list=aarch64-softmmu,x86_64-softmmu \
+    --target-list=aarch64-softmmu,x86_64-softmmu,riscv64-softmmu \
     --disable-vnc-jpeg \
     --disable-vnc-png \
     --disable-vnc-sasl \
