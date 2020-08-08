@@ -862,40 +862,6 @@ TEST_F(CrashReporterTest, Check_CobaltAfterInvalidInputCrashReport) {
                                       }));
 }
 
-TEST_F(CrashReporterTest, Check_InspectTreeAfterSuccessfulUpload) {
-  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
-  SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
-  SetUpDataProviderServer(
-      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
-  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
-  SetUpUtcProviderServer({kExternalResponse});
-
-  EXPECT_TRUE(FileOneCrashReport().is_ok());
-  EXPECT_THAT(InspectTree(),
-              ChildrenMatch(Contains(
-                  AllOf(NodeMatches(NameMatches("crash_reporter")),
-                        ChildrenMatch(IsSupersetOf({
-                            AllOf(NodeMatches(NameMatches("reports")),
-                                  ChildrenMatch(ElementsAre(
-                                      AllOf(NodeMatches(NameMatches(kProgramName)),
-                                            ChildrenMatch(ElementsAre(AllOf(
-                                                NodeMatches(PropertyList(UnorderedElementsAreArray({
-                                                    StringIs("creation_time", Not(IsEmpty())),
-                                                    StringIs("final_state", "uploaded"),
-                                                    UintIs("upload_attempts", 1u),
-                                                }))),
-                                                ChildrenMatch(ElementsAre(NodeMatches(AllOf(
-                                                    NameMatches("crash_server"),
-                                                    PropertyList(UnorderedElementsAreArray({
-                                                        StringIs("creation_time", Not(IsEmpty())),
-                                                        StringIs("id", kStubServerReportId),
-                                                    }))))))))))))),
-                            AllOf(NodeMatches(AllOf(NameMatches("queue"),
-                                                    PropertyList(ElementsAre(UintIs("size", 0u))))),
-                                  ChildrenMatch(IsEmpty())),
-                        }))))));
-}
-
 }  // namespace
 }  // namespace crash_reports
 }  // namespace forensics

@@ -76,9 +76,6 @@ bool Queue::Add(const std::string& program_name,
   }
 
   pending_reports_.push_back(local_report_id.value());
-  info_.SetSize(pending_reports_.size());
-
-  info_.LogReport(program_name, std::to_string(local_report_id.value()));
 
   // We do the processing asynchronously as we don't want to block the caller.
   if (const auto status = PostTask(dispatcher_, [this] { ProcessAll(); }); status != ZX_OK) {
@@ -108,15 +105,13 @@ bool Queue::Upload(const Store::Uid& local_report_id) {
   }
 
   upload_attempts_[local_report_id]++;
-  info_.RecordUploadAttemptNumber(std::to_string(local_report_id),
-                                  upload_attempts_[local_report_id]);
+  info_.RecordUploadAttemptNumber(upload_attempts_[local_report_id]);
 
   std::string server_report_id;
   if (crash_server_->MakeRequest(report.value(), &server_report_id)) {
     FX_LOGS(INFO) << "Successfully uploaded report at https://crash.corp.google.com/"
                   << server_report_id;
-    info_.MarkReportAsUploaded(std::to_string(local_report_id), server_report_id,
-                               upload_attempts_[local_report_id]);
+    info_.MarkReportAsUploaded(server_report_id, upload_attempts_[local_report_id]);
     upload_attempts_.erase(local_report_id);
     store_.Remove(local_report_id);
     return true;
@@ -129,8 +124,7 @@ bool Queue::Upload(const Store::Uid& local_report_id) {
 
 void Queue::GarbageCollect(const Store::Uid& local_report_id) {
   FX_LOGS(INFO) << "Garbage collected local report " << std::to_string(local_report_id);
-  info_.MarkReportAsGarbageCollected(std::to_string(local_report_id),
-                                     upload_attempts_[local_report_id]);
+  info_.MarkReportAsGarbageCollected(upload_attempts_[local_report_id]);
   upload_attempts_.erase(local_report_id);
   pending_reports_.erase(
       std::remove(pending_reports_.begin(), pending_reports_.end(), local_report_id),
@@ -146,7 +140,6 @@ size_t Queue::UploadAll() {
   }
 
   pending_reports_.swap(new_pending_reports);
-  info_.SetSize(pending_reports_.size());
 
   // |new_pending_reports| now contains the pending reports before attempting to upload them.
   return new_pending_reports.size() - pending_reports_.size();
@@ -157,11 +150,10 @@ size_t Queue::ArchiveAll() {
   for (const auto& local_report_id : pending_reports_) {
     FX_LOGS(INFO) << "Archiving local report " << std::to_string(local_report_id)
                   << " under /tmp/reports";
-    info_.MarkReportAsArchived(std::to_string(local_report_id), upload_attempts_[local_report_id]);
+    info_.MarkReportAsArchived(upload_attempts_[local_report_id]);
   }
 
   pending_reports_.clear();
-  info_.SetSize(0u);
 
   return successful;
 }

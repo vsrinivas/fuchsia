@@ -57,27 +57,32 @@ class InspectManager {
   //
   // Returns false if there is already a report with |local_report_id| as ID (for the given program
   // or another).
+  // TODO(fxbug.dev/57903) Revisit this when refactoring Queue related Inspect.
   bool AddReport(const std::string& program_name, const std::string& local_report_id);
 
   // Sets the number of upload attempts for an existing report.
   //
   // Returns false if there are no reports with |local_report_id| as ID.
+  // TODO(fxbug.dev/57903) Revisit this when refactoring Queue related Inspect.
   bool SetUploadAttempt(const std::string& local_report_id, uint64_t upload_attempt);
 
   // Marks an existing report as uploaded, storing its server report ID.
   //
   // Returns false if there are no reports with |local_report_id| as ID.
+  // TODO(fxbug.dev/57903) Revisit this when refactoring Queue related Inspect.
   bool MarkReportAsUploaded(const std::string& local_report_id,
                             const std::string& server_report_id);
 
   // Mark an existing report as archived.
   //
   // Returns false if there are no reports with |local_report_id| as ID.
+  // TODO(fxbug.dev/57903) Revisit this when refactoring Queue related Inspect.
   bool MarkReportAsArchived(const std::string& local_report_id);
 
   // Mark an existing report as garbage collected.
   //
   // Returns false if there are no report with |local_report_id| as ID.
+  // TODO(fxbug.dev/57903) Revisit this when refactoring Queue related Inspect.
   bool MarkReportAsGarbageCollected(const std::string& local_report_id);
 
  private:
@@ -109,11 +114,13 @@ class InspectManager {
   };
 
   // Inspect node containing the queue properties.
+  // TODO(fxbug.dev/57903) Revisit this when refactoring Queue related Inspect.
   struct Queue {
     inspect::UintProperty size;
   };
 
   // Inspect node for a single report.
+  // TODO(fxbug.dev/57903) Revisit this when refactoring Queue related Inspect.
   struct Report {
     Report(const std::string& program_name, const std::string& local_report_id);
 

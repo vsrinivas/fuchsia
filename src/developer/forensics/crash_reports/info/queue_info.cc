@@ -13,29 +13,17 @@ QueueInfo::QueueInfo(std::shared_ptr<InfoContext> context) : context_(context) {
   FX_CHECK(context_);
 }
 
-void QueueInfo::LogReport(const std::string& program_name, const std::string& local_report_id) {
-  context_->InspectManager().AddReport(program_name, local_report_id);
-}
-
-void QueueInfo::SetSize(const uint64_t size) { context_->InspectManager().SetQueueSize(size); }
-
-void QueueInfo::RecordUploadAttemptNumber(const std::string& local_report_id,
-                                          const uint64_t upload_attempt) {
-  context_->InspectManager().SetUploadAttempt(local_report_id, upload_attempt);
+void QueueInfo::RecordUploadAttemptNumber(const uint64_t upload_attempt) {
   context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploadAttempt, upload_attempt);
 }
 
-void QueueInfo::MarkReportAsUploaded(const std::string& local_report_id,
-                                     const std::string& server_report_id,
+void QueueInfo::MarkReportAsUploaded(const std::string& server_report_id,
                                      const uint64_t upload_attempts) {
-  context_->InspectManager().MarkReportAsUploaded(local_report_id, server_report_id);
   context_->Cobalt().LogOccurrence(cobalt::CrashState::kUploaded);
   context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploaded, upload_attempts);
 }
 
-void QueueInfo::MarkReportAsArchived(const std::string& local_report_id,
-                                     const uint64_t upload_attempts) {
-  context_->InspectManager().MarkReportAsArchived(local_report_id);
+void QueueInfo::MarkReportAsArchived(const uint64_t upload_attempts) {
   context_->Cobalt().LogOccurrence(cobalt::CrashState::kArchived);
 
   // We log if it was attempted at least once.
@@ -44,9 +32,7 @@ void QueueInfo::MarkReportAsArchived(const std::string& local_report_id,
   }
 }
 
-void QueueInfo::MarkReportAsGarbageCollected(const std::string& local_report_id,
-                                             const uint64_t upload_attempts) {
-  context_->InspectManager().MarkReportAsGarbageCollected(local_report_id);
+void QueueInfo::MarkReportAsGarbageCollected(const uint64_t upload_attempts) {
   context_->Cobalt().LogOccurrence(cobalt::CrashState::kGarbageCollected);
 
   // We log if it was attempted at least once.

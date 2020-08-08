@@ -19,15 +19,11 @@ struct QueueInfo {
  public:
   QueueInfo(std::shared_ptr<InfoContext> context);
 
-  void LogReport(const std::string& program_name, const std::string& local_report_id);
-  void SetSize(uint64_t size);
+  void RecordUploadAttemptNumber(uint64_t upload_attempt);
 
-  void RecordUploadAttemptNumber(const std::string& local_report_id, uint64_t upload_attempt);
-
-  void MarkReportAsUploaded(const std::string& local_report_id, const std::string& server_report_id,
-                            uint64_t upload_attempts);
-  void MarkReportAsArchived(const std::string& local_report_id, uint64_t upload_attempts);
-  void MarkReportAsGarbageCollected(const std::string& local_report_id, uint64_t upload_attempts);
+  void MarkReportAsUploaded(const std::string& server_report_id, uint64_t upload_attempts);
+  void MarkReportAsArchived(uint64_t upload_attempts);
+  void MarkReportAsGarbageCollected(uint64_t upload_attempts);
 
  private:
   std::shared_ptr<InfoContext> context_;
