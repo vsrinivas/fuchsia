@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/log_message_store_unittest_exe"
+    }
+}

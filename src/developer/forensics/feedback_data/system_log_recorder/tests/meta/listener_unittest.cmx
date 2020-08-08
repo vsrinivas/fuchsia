@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/listener_unittest_exe"
+    }
+}

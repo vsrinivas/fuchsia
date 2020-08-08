@@ -7,6 +7,38 @@ import("//src/sys/build/components.gni")
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("listener_unittest_exe") {
+  testonly = true
+
+  sources = [ "listener_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data/system_log_recorder:src",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:logger",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("log_message_store_unittest_exe") {
+  testonly = true
+
+  sources = [ "log_message_store_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data/system_log_recorder:src",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:logger",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("lz4_encoding_unittest_exe") {
   testonly = true
 
@@ -17,17 +49,31 @@ executable("lz4_encoding_unittest_exe") {
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:lz4_decoder",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:lz4_encoder",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:lz4_utils",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/utils:errors",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("reader_unittest_exe") {
+  testonly = true
+
+  sources = [ "reader_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
+    "//src/developer/forensics/feedback_data/system_log_recorder:src",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_decoder",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing/stubs:logger",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
   ]
 }
 
@@ -37,7 +83,27 @@ executable("system_log_recorder_unittest_exe") {
   sources = [ "system_log_recorder_unittest.cc" ]
 
   deps = [
-    "//src/developer/forensics/feedback_data/attachments:types",
+    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
+    "//src/developer/forensics/feedback_data/system_log_recorder:src",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_decoder",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:logger",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("writer_unittest_exe") {
+  testonly = true
+
+  sources = [ "writer_unittest.cc" ]
+
+  deps = [
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",
@@ -45,31 +111,47 @@ executable("system_log_recorder_unittest_exe") {
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing/stubs:logger",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/cobalt",
     "//src/lib/files",
-    "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
   ]
 }
 
 ###############################################################################
 # COMPONENTS
 ###############################################################################
+fuchsia_component("listener_unittest") {
+  testonly = true
+
+  manifest = "meta/listener_unittest.cmx"
+
+  deps = [ ":listener_unittest_exe" ]
+}
+
+fuchsia_component("log_message_store_unittest") {
+  testonly = true
+
+  manifest = "meta/log_message_store_unittest.cmx"
+
+  deps = [ ":log_message_store_unittest_exe" ]
+}
+
 fuchsia_component("lz4_encoding_unittest") {
   testonly = true
 
   manifest = "meta/lz4_encoding_unittest.cmx"
 
   deps = [ ":lz4_encoding_unittest_exe" ]
+}
+
+fuchsia_component("reader_unittest") {
+  testonly = true
+
+  manifest = "meta/reader_unittest.cmx"
+
+  deps = [ ":reader_unittest_exe" ]
 }
 
 fuchsia_component("system_log_recorder_unittest") {
@@ -80,13 +162,25 @@ fuchsia_component("system_log_recorder_unittest") {
   deps = [ ":system_log_recorder_unittest_exe" ]
 }
 
+fuchsia_component("writer_unittest") {
+  testonly = true
+
+  manifest = "meta/writer_unittest.cmx"
+
+  deps = [ ":writer_unittest_exe" ]
+}
+
 ###############################################################################
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("system-log-recorder-tests") {
   test_components = [
+    ":listener_unittest",
+    ":log_message_store_unittest",
     ":lz4_encoding_unittest",
+    ":reader_unittest",
     ":system_log_recorder_unittest",
+    ":writer_unittest",
   ]
 }
 

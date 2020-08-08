@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/syslog/logger.h>
-#include <stdlib.h>
-
-#include <memory>
 #include <regex>
-#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

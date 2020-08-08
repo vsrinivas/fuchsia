@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/reader_unittest_exe"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
