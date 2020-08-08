@@ -29,21 +29,31 @@ source_set("loader_service") {
   ]
 }
 
+# Subclasses of LoaderServiceBase can reuse the test fixture used here.
+source_set("loader_service_test_fixture") {
+  testonly = true
+  sources = [ "loader_service_test_fixture.cc" ]
+
+  public_deps = [
+    ":loader_service",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/memfs:memfs-cpp",
+  ]
+  deps =
+      [ "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp" ]
+}
+
 executable("loader_service_test") {
   testonly = true
   sources = [ "loader_service_test.cc" ]
 
   deps = [
-    ":loader_service",
-    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/public/lib/fbl",
+    ":loader_service_test_fixture",
     "//zircon/public/lib/ldmsg",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/memfs",
-    "//zircon/system/ulib/memfs:memfs-cpp",
   ]
 }
 
