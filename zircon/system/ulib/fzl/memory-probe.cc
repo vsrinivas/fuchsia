@@ -57,6 +57,10 @@ extern "C" void write_thread_func(uintptr_t address, uintptr_t);
 #define CALL_INSN "call"
 #define READ_PROBE_INSN "movb (%rdi), %al"
 #define WRITE_PROBE_INSN "movb %al, (%rdi)"
+#elif defined(__riscv)
+#define CALL_INSN "jal"
+#define READ_PROBE_INSN ""
+#define WRITE_PROBE_INSN ""
 #else
 #error "what machine?"
 #endif
@@ -75,6 +79,7 @@ zx_status_t advance_program_counter(const zx::thread& thread) {
   regs.pc += 4u;
 #elif defined(__x86_64__)
   regs.rip += 2u;
+#elif defined(__riscv)
 #else
 #error "what machine?"
 #endif
