@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#ifdef __aarch64__
+#if defined(__aarch64__)
 // The Linux/ARM64 KVM hypervisor does not support MMIO access via load/store
 // instructions that use writeback, which the compiler might decide to generate.
 // (The ARM64 virtualization hardware requires software assistance for the
@@ -53,7 +53,7 @@ static inline uint64_t readll(const volatile void* a) {
   return v;
 }
 
-#else
+#elif defined(__x86_64__)
 // TODO(fxbug.dev/12611): Similar to arm64 above, the Fuchsia hypervisor's instruction decoder does
 // not support MMIO access via load/store instructions that use writeback, which the compiler may
 // generate. Until support is implemented, we use inline assembly definitions here to ensure that
@@ -90,6 +90,41 @@ static inline uint32_t readl(const volatile void* a) {
 static inline uint64_t readll(const volatile void* a) {
   uint64_t v;
   __asm__ volatile("movq %1, %0" : "=r"(v) : "m"(*(volatile uint64_t*)a));
+  return v;
+}
+
+#elif defined(__riscv)
+static inline void writeb(uint8_t v, volatile void* a) {
+  __asm__ volatile("sb %0, 0(%1)" : : "r" (v), "r" (*(volatile uint8_t*)a));
+}
+static inline void writew(uint16_t v, volatile void* a) {
+  __asm__ volatile("sh %0, 0(%1)" : : "r" (v), "r" (*(volatile uint16_t*)a));
+}
+static inline void writel(uint32_t v, volatile void* a) {
+  __asm__ volatile("sw %0, 0(%1)" : : "r" (v), "r" (*(volatile uint32_t*)a));
+}
+static inline void writell(uint64_t v, volatile void* a) {
+  __asm__ volatile("sd %0, 0(%1)" : : "r" (v), "r" (*(volatile uint64_t*)a));
+}
+
+static inline uint8_t readb(const volatile void* a) {
+  uint8_t v;
+  __asm__ volatile("lb %0, 0(%1)" : "=r" (v) : "r" (*(volatile uint8_t*)a));
+  return v;
+}
+static inline uint16_t readw(const volatile void* a) {
+  uint16_t v;
+  __asm__ volatile("lh %0, 0(%1)" : "=r" (v) : "r" (*(volatile uint16_t*)a));
+  return v;
+}
+static inline uint32_t readl(const volatile void* a) {
+  uint32_t v;
+  __asm__ volatile("lw %0, 0(%1)" : "=r" (v) : "r" (*(volatile uint32_t*)a));
+  return v;
+}
+static inline uint64_t readll(const volatile void* a) {
+  uint64_t v;
+  __asm__ volatile("ld %0, 0(%1)" : "=r" (v) : "r" (*(volatile uint64_t*)a));
   return v;
 }
 

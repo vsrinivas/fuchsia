@@ -17,6 +17,12 @@
 #define hw_rmb() __asm__ volatile("lfence" ::: "memory")
 #define hw_wmb() __asm__ volatile("sfence" ::: "memory")
 
+#elif defined(__riscv)
+
+#define hw_mb() __asm__ volatile("fence iorw,iorw" ::: "memory")
+#define hw_rmb() __asm__ volatile("fence ir,ir" ::: "memory")
+#define hw_wmb() __asm__ volatile("fence ow,ow" ::: "memory")
+
 #endif
 
 #endif  // SRC_LIB_DDK_INCLUDE_LIB_HW_ARCH_OPS_H_
