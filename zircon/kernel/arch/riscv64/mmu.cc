@@ -30,6 +30,11 @@
 #include <vm/pmm.h>
 #include <vm/vm.h>
 
+typedef uintptr_t riscv_pte_t;
+
+riscv_pte_t kernel_pgtable[512] __ALIGNED(PAGE_SIZE);
+paddr_t kernel_pgtable_phys; // filled in by start.S
+
 zx_status_t Riscv64ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
   return ZX_OK;
 }
