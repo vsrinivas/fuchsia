@@ -124,7 +124,7 @@ class TestAgent : fuchsia::modular::Agent,
 
   // `outgoing_dir_server_` must be initialized after `agent_binding_` (which itself serves
   // `services_ptr_`) so that it is guaranteed to be destroyed *before* `agent_binding_` to protect
-  // access to `services_ptr_`. See fxb/49304.
+  // access to `services_ptr_`. See fxbug.dev/49304.
   std::unique_ptr<modular::PseudoDirServer> outgoing_dir_server_;
   vfs::PseudoDir* outgoing_dir_ptr_;
 

@@ -64,7 +64,7 @@ source_set("json_xdr") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/json_parser",
 
-    # TODO(57392): Move it back to //third_party once unification completes.
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
     "//zircon/third_party/rapidjson",
   ]
 }
@@ -141,7 +141,7 @@ source_set("view_host") {
 }
 
 fidl("app_client_unittest_fidl") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "protocol-name-includes-service",
     "too-many-nested-libraries",
@@ -180,7 +180,7 @@ source_set("app_client_unittest") {
 }
 
 fidl("json_xdr_unittest_fidl") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "string-bounds-not-specified",
     "too-many-nested-libraries",

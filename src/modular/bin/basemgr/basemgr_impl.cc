@@ -298,7 +298,7 @@ void BasemgrImpl::StartSessionWithRandomId() {
                              : &config_accessor_;
 
   // Create a copy of the configuration that ensures a random session ID is used.
-  // TODO(fxb/51752): Create a config field for use_random_session_id and remove base shell
+  // TODO(fxbug.dev/51752): Create a config field for use_random_session_id and remove base shell
   auto new_config = CloneStruct(accessor->config());
   new_config.mutable_basemgr_config()
       ->mutable_base_shell()

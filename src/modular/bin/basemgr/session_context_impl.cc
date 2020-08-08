@@ -74,7 +74,7 @@ std::string GetRandomSessionId() {
 // directory on disk if possible, and a fixed ID if not. The selected case is
 // reported to cobalt.
 std::string GetStableSessionId() {
-  // TODO(50300): Once a sufficiently small number of devices are using legacy
+  // TODO(fxbug.dev/50300): Once a sufficiently small number of devices are using legacy
   // non-zero session IDs, remove support for sniffing an existing directory and
   // just always use zero.
   auto existing_sessions = GetExistingSessionIds();

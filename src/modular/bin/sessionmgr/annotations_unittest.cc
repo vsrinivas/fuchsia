@@ -91,13 +91,13 @@ TEST(AnnotationsTest, MergeDisjoint) {
       UnorderedElementsAre(AnnotationEq(ByRef(annotation_1)), AnnotationEq(ByRef(annotation_2))));
 }
 
-// TODO(fxb/37645): Return the proper properties instead of text strings.
+// TODO(fxbug.dev/37645): Return the proper properties instead of text strings.
 TEST(AnnotationsTest, TextToInspect) {
   auto annotation_text = MakeAnnotation("string_key", "string_text");
   EXPECT_THAT(ToInspect(*annotation_text.value.get()), "string_text");
 }
 
-// TODO(fxb/37645): Return the proper properties instead of text strings.
+// TODO(fxbug.dev/37645): Return the proper properties instead of text strings.
 TEST(AnnotationsTest, BufferToInspect) {
   fuchsia::mem::Buffer buffer{};
   std::string buffer_str = "x";
@@ -111,7 +111,7 @@ TEST(AnnotationsTest, BufferToInspect) {
   EXPECT_THAT(ToInspect(*annotation_buffer.value.get()), "buffer");
 }
 
-// TODO(fxb/37645): Return the proper properties instead of text strings.
+// TODO(fxbug.dev/37645): Return the proper properties instead of text strings.
 TEST(AnnotationsTest, BytesToInspect) {
   AnnotationValue annotation_value_bytes;
   annotation_value_bytes.set_bytes({0x01, 0x02, 0x03, 0x04});

@@ -22,7 +22,7 @@ bool ModularConfigAccessor::use_random_session_id() const {
   }
 
   // Use the default of a random session ID unless the configuration requested persistence.
-  // TODO(fxb/51752): Change base manager config to use a more direct declaration of persistence
+  // TODO(fxbug.dev/51752): Change base manager config to use a more direct declaration of persistence
   // and remove the base shell configuration entirely.
   FX_DCHECK(basemgr_config().has_base_shell());
   FX_DCHECK(basemgr_config().base_shell().has_app_config());
