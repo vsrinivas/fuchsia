@@ -257,24 +257,6 @@ func (c *Client) OTAToRecovery(ctx context.Context, repo *packages.Repository) e
 	})
 }
 
-func (c *Client) ReadBasePackages(ctx context.Context) (map[string]string, error) {
-	b, err := c.ReadRemotePath(ctx, "/pkgfs/system/data/static_packages")
-	if err != nil {
-		return nil, err
-	}
-
-	pkgs := make(map[string]string)
-	for _, line := range strings.Split(string(b), "\n") {
-		if line == "" {
-			break
-		}
-		parts := strings.SplitN(line, "=", 2)
-		pkgs[parts[0]] = parts[1]
-	}
-
-	return pkgs, nil
-}
-
 func (c *Client) ExpectDisconnect(ctx context.Context, f func() error) error {
 	ch := make(chan struct{})
 	c.RegisterDisconnectListener(ch)

@@ -26,7 +26,6 @@ import (
 )
 
 type client interface {
-	ReadBasePackages(ctx context.Context) (map[string]string, error)
 	ExpectReboot(ctx context.Context, f func() error) error
 	ServePackageRepository(
 		ctx context.Context,
