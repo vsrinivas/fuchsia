@@ -52,6 +52,11 @@ class StoreTest : public UnitTestFixture {
   }
 
   std::optional<Store::Uid> Add(const std::string& program_shortname,
+                                std::vector<Store::Uid>* garbage_collected_reports) {
+    return Add(program_shortname, {}, {}, std::nullopt, garbage_collected_reports);
+  }
+
+  std::optional<Store::Uid> Add(const std::string& program_shortname,
                                 const std::map<std::string, std::string>& annotations,
                                 const std::map<std::string, std::string>& attachments,
                                 const std::optional<std::string>& minidump,
@@ -265,31 +270,62 @@ TEST_F(StoreTest, Succeed_Remove) {
 }
 
 TEST_F(StoreTest, Succeed_GarbageCollection) {
-  const std::string minidump = "minidump";
+  // To make this test easier to understand, the below table shows when and why each report is being
+  // garbage collected.
+  //
+  // uid | program name  | garbage collection order | garbage collection reason
+  // ----------------------------------------------------------------------------------------------
+  // id1 | program_name1 |            n/a           |         n/a
+  // id2 | program_name2 |             3            | oldest report in the store
+  // id3 | program_name3 |             1            | program_name3 has the most reports
+  // id4 | program_name3 |             2            | program_name3 has the most reports
+  // id5 | program_name3 |            n/a           |         n/a
+  // id6 | program_name3 |            n/a           |         n/a
+  // id7 | program_name2 |            n/a           |         n/a
+  // id8 | program_name4 |            n/a           |         n/a
 
-  // We set up the store so it can only hold one report at most, evicting the oldest ones first.
-  MakeNewStore(StorageSize::Bytes(minidump.size() + 4u /*the empty annotations.json*/));
-
+  // We set up the store so it can hold four reports at most.
+  MakeNewStore(4 * StorageSize::Bytes(2u /*the empty annotations.json*/));
   std::vector<Store::Uid> garbage_collected_reports;
-  const auto id1 = Add("program_name1", /*annotations=*/{}, /*attachments=*/{}, minidump,
-                       &garbage_collected_reports);
-  const auto id2 = Add("program_name2", /*annotations=*/{}, /*attachments=*/{}, minidump,
-                       &garbage_collected_reports);
 
-  EXPECT_FALSE(store_->Contains(id1.value()));
-  EXPECT_TRUE(store_->Contains(id2.value()));
-  EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id1.value()}));
+  const auto id1 = Add("program_name1", &garbage_collected_reports);
+  const auto id2 = Add("program_name2", &garbage_collected_reports);
+  const auto id3 = Add("program_name3", &garbage_collected_reports);
+  const auto id4 = Add("program_name3", &garbage_collected_reports);
 
-  EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({"program_name2"}));
+  // Add a report to force garbage collection of the oldest report for program_name3
+  const auto id5 = Add("program_name3", &garbage_collected_reports);
+  EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id3.value()}));
+  EXPECT_FALSE(store_->Contains(id3.value()));
 
-  const auto id3 = Add("program_name3", /*annotations=*/{}, /*attachments=*/{}, minidump,
-                       &garbage_collected_reports);
+  // Add a report to force garbage collection of the oldest report for program_name3
+  const auto id6 = Add("program_name3", &garbage_collected_reports);
+  EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id4.value()}));
+  EXPECT_FALSE(store_->Contains(id4.value()));
 
-  EXPECT_FALSE(store_->Contains(id2.value()));
-  EXPECT_TRUE(store_->Contains(id3.value()));
+  // Remove the report for program_name1 from the store and add a report for program_name2 so both
+  // program_name2 and program_name3 have 2 reports in the store.
+  EXPECT_TRUE(store_->Remove(id1.value()));
+  const auto id7 = Add("program_name2", &garbage_collected_reports);
+  EXPECT_TRUE(garbage_collected_reports.empty());
+
+  // Add a report to force garbage collection of the oldest report between program_nam2 and
+  // program_name3.
+  const auto id8 = Add("program_name4", &garbage_collected_reports);
   EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id2.value()}));
+  EXPECT_FALSE(store_->Contains(id2.value()));
 
-  EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({"program_name3"}));
+  EXPECT_THAT(store_->GetAllUids(), UnorderedElementsAreArray({
+                                        id5.value(),
+                                        id6.value(),
+                                        id7.value(),
+                                        id8.value(),
+                                    }));
+  EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({
+                                          "program_name2",
+                                          "program_name3",
+                                          "program_name4",
+                                      }));
 }
 
 TEST_F(StoreTest, Succeed_RebuildsMetadata) {

@@ -80,8 +80,9 @@ class Store {
 
   std::map<Uid, ReportMetadata> id_to_metadata_;
 
-  // We store the Uids in FIFO order for easy garbage collection.
-  std::deque<Uid> uids_;
+  // The uids for a given program shortname. The uids are stored in the order they're generated to
+  // make garbage collection easy.
+  std::map<std::string, std::deque<Uid>> reports_for_program_;
   Uid next_id_{0};
 
   StoreInfo info_;

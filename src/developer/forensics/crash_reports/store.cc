@@ -161,13 +161,15 @@ void Store::RebuildMetadata() {
       };
 
       current_size_ += size;
-      uids_.push_back(id);
+      reports_for_program_[program_shortname].push_back(id);
     }
   }
 
-  std::sort(uids_.begin(), uids_.end());
-  if (!uids_.empty()) {
-    next_id_ = uids_.back() + 1;
+  for (auto& [_, uids] : reports_for_program_) {
+    std::sort(uids.begin(), uids.end());
+
+    // The next ID will be the largest ID in the store + 1.
+    next_id_ = std::max(uids.back() + 1, next_id_);
   }
 }
 
@@ -232,7 +234,7 @@ std::optional<Store::Uid> Store::Add(const Report report,
       .size = report_size,
       .program_shortname = report.ProgramShortname(),
   };
-  uids_.push_back(id);
+  reports_for_program_[report.ProgramShortname()].push_back(id);
   current_size_ += report_size;
 
   cleanup_on_error.cancel();
@@ -282,7 +284,11 @@ std::optional<Report> Store::Get(const Store::Uid& id) {
 }
 
 std::vector<Store::Uid> Store::GetAllUids() const {
-  return std::vector<Uid>(uids_.begin(), uids_.end());
+  std::vector<Uid> uids;
+  for (const auto& [id, _] : id_to_metadata_) {
+    uids.push_back(id);
+  }
+  return uids;
 }
 
 bool Store::Contains(const Uid& id) const {
@@ -301,18 +307,23 @@ bool Store::Remove(const Uid& id) {
     FX_LOGS(ERROR) << "Failed to delete report at " << id_to_metadata_.at(id).dir;
   }
 
-  const std::string program_path =
-      files::JoinPath(root_dir_, id_to_metadata_.at(id).program_shortname);
+  const std::string program_shortname = id_to_metadata_.at(id).program_shortname;
+  const std::string program_path = files::JoinPath(root_dir_, program_shortname);
+
   const std::vector<std::string> dir_contents = GetDirectoryContents(program_path);
-  if (dir_contents.empty()) {
-    if (!DeletePath(program_path)) {
-      FX_LOGS(ERROR) << "Failed to delete " << program_path;
-    }
+  if (dir_contents.empty() && !DeletePath(program_path)) {
+    FX_LOGS(ERROR) << "Failed to delete " << program_path;
+  }
+
+  // |id| should no longer be associated with |program_shortname|.
+  auto& uids = reports_for_program_[program_shortname];
+  uids.erase(std::find(uids.begin(), uids.end(), id));
+  if (uids.empty()) {
+    reports_for_program_.erase(program_shortname);
   }
 
   current_size_ -= id_to_metadata_[id].size;
   id_to_metadata_.erase(id);
-  uids_.erase(std::remove(uids_.begin(), uids_.end(), id), uids_.end());
 
   return true;
 }
@@ -325,7 +336,7 @@ void Store::RemoveAll() {
 
   current_size_ = StorageSize::Bytes(0u);
   id_to_metadata_.clear();
-  uids_.clear();
+  reports_for_program_.clear();
 }
 
 bool Store::MakeFreeSpace(const StorageSize required_space,
@@ -338,8 +349,25 @@ bool Store::MakeFreeSpace(const StorageSize required_space,
   garbage_collected_reports->clear();
 
   size_t num_garbage_collected{0};
-  while ((current_size_ + required_space) > max_size_ && !uids_.empty()) {
-    const Uid uid = uids_.front();
+  while ((current_size_ + required_space) > max_size_ && !reports_for_program_.empty()) {
+    // The program shortname to remove the next report from.
+    std::string remove_from{reports_for_program_.begin()->first};
+
+    // The report that will be removed from the store is determined by
+    // 1) finding the program(s) with the most reports and then
+    // 2) finding the oldest report amongst them.
+    for (const auto& [program_shortname, uids] : reports_for_program_) {
+      if (uids.size() > reports_for_program_[remove_from].size()) {
+        // We found a program with more reports.
+        remove_from = program_shortname;
+      } else if (uids.size() == reports_for_program_[remove_from].size() &&
+                 uids.front() < reports_for_program_[remove_from].front()) {
+        // We found a program with as many reports, but an older report.
+        remove_from = program_shortname;
+      }
+    }
+
+    const Uid uid = reports_for_program_[remove_from].front();
     if (Remove(uid)) {
       ++num_garbage_collected;
       garbage_collected_reports->push_back(uid);
