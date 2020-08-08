@@ -286,7 +286,7 @@ impl DisplayMetrics {
     /// The display pixel density used for a 24 inch monitor.
     const MONITOR_24_IN_DENSITY: f32 = 4.16;
 
-    // TODO(fxb/42794): Allow Root Presenter clients to specify exact pixel ratio
+    // TODO(fxbug.dev/42794): Allow Root Presenter clients to specify exact pixel ratio
     /// The display pixel density used for a 27 inch monitor.
     const MONITOR_27_IN_2K_DENSITY: f32 = 5.22;
 

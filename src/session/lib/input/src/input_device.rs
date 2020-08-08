@@ -122,10 +122,10 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
         let mut previous_report: Option<InputReport> = None;
         let (report_reader, server_end) = match fidl::endpoints::create_proxy() {
             Ok(res) => res,
-            Err(_) => return, // TODO(54445): signal error
+            Err(_) => return, // TODO(fxbug.dev/54445): signal error
         };
         if device_proxy.get_input_reports_reader(server_end).is_err() {
-            return; // TODO(54445): signal error
+            return; // TODO(fxbug.dev/54445): signal error
         }
         let mut report_stream =
             HangingGetStream::new(Box::new(move || Some(report_reader.read_input_reports())));
@@ -146,7 +146,7 @@ pub fn initialize_report_stream<InputDeviceProcessReportsFn>(
                 None => break,
             }
         }
-        // TODO(54445): Add signaling for when this loop exits, since it means the device
+        // TODO(fxbug.dev/54445): Add signaling for when this loop exits, since it means the device
         // binding is no longer functional.
     })
     .detach();

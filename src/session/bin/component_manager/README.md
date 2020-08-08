@@ -4,7 +4,7 @@ Reviewed on: 2020-02-04
 
 This implementation of [Component Manager](/src/component/component_manager/README.md) allows command line tools to connect to services exposed by [`session_manager`](/src/session/bin/session_manager/README.md) at runtime.
 
-> TODO(45361): Remove this work-around implementation entirely.
+> TODO(fxbug.dev/45361): Remove this work-around implementation entirely.
 >
 > See below for details.
 
