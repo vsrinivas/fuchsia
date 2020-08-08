@@ -19,7 +19,7 @@ impl FileType {
     /// Returns whether the file type is supported by `affected_targets`.
     pub fn supported(&self) -> bool {
         match self {
-            FileType::Cpp | FileType::Fidl | FileType::Gn => true,
+            FileType::Cpp | FileType::Fidl | FileType::Gn | FileType::Rust => true,
             _ => false,
         }
     }
@@ -118,12 +118,13 @@ mod tests {
 
     #[test]
     fn test_file_types_are_supported() {
-        assert!(file_types_are_supported(&["test.h", "BUILD.gn", "test.fidl"]));
+        assert!(file_types_are_supported(&["test.h", "BUILD.gn", "test.fidl", "test.rs"]));
         assert!(!file_types_are_supported(&[
             "test.h",
             "BUILD.gn",
             "test.fidl",
-            "test.unsupported"
+            "test.unsupported",
+            "test.rs"
         ]));
         assert!(!file_types_are_supported(&["test.h", "BUILD.gn", "test.fidl", "no_extension"]));
     }
