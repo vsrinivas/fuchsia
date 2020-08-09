@@ -58,11 +58,11 @@ void Inference::ExtractHandleInfos(SyscallDecoder* decoder) {
       switch (type) {
         case PA_FD:
           AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
-                                PA_HND_ARG(handle_info[handle]));
+                                PA_HND_ARG(handle_info[handle]), "");
           break;
         case PA_DIRECTORY_REQUEST:
           AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
-                                "directory-request", "/");
+                                "directory-request", "/", "");
           break;
         default:
           AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
@@ -106,16 +106,17 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
               decoder->fidlcat_thread()->process()->koid(), handles[handle], "dir",
               (index < name_count) ? reinterpret_cast<const char*>(
                                          decoder->BufferContent(Stage::kEntry, names[index]))
-                                   : "");
+                                   : "",
+              "");
           break;
         }
         case PA_FD:
           AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle], "fd",
-                                PA_HND_ARG(handle_info[handle]));
+                                PA_HND_ARG(handle_info[handle]), "");
           break;
         case PA_DIRECTORY_REQUEST:
           AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
-                                "directory-request", "/");
+                                "directory-request", "/", "");
           break;
         default:
           AddInferredHandleInfo(decoder->fidlcat_thread()->process()->koid(), handles[handle],
@@ -182,9 +183,9 @@ void Inference::ZxChannelCreate(const OutputEvent* event) {
                                   /*startup=*/false);
     // Provides the minimal semantic for both handles (that is they are channels).
     AddInferredHandleInfo(event->thread()->process()->koid(), out0->handle().handle, "channel",
-                          next_channel_++);
+                          next_channel_++, "");
     AddInferredHandleInfo(event->thread()->process()->koid(), out1->handle().handle, "channel",
-                          next_channel_++);
+                          next_channel_++, "");
     // Links the two channels.
     AddLinkedHandles(event->thread()->process()->koid(), out0->handle().handle,
                      out1->handle().handle);
@@ -201,7 +202,7 @@ void Inference::ZxPortCreate(const OutputEvent* event) {
                                   /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a port).
     AddInferredHandleInfo(event->thread()->process()->koid(), out->handle().handle, "port",
-                          next_port_++);
+                          next_port_++, "");
   }
 }
 
@@ -215,7 +216,7 @@ void Inference::ZxTimerCreate(const OutputEvent* event) {
                                   /*startup=*/false);
     // Provides the minimal semantic for the handle (that is it's a timer).
     AddInferredHandleInfo(event->thread()->process()->koid(), out->handle().handle, "timer",
-                          next_timer_++);
+                          next_timer_++, "");
   }
 }
 

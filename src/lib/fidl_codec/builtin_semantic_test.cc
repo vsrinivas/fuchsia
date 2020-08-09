@@ -28,7 +28,11 @@ class BuiltinSemanticTest : public SemanticParserTest {
   BuiltinSemanticTest();
 
   void SetHandleSemantic(std::string_view type, std::string_view path) {
-    handle_semantic_.AddInferredHandleInfo(kPid, kHandle, type, path);
+    handle_semantic_.AddInferredHandleInfo(kPid, kHandle, type, path, "");
+  }
+
+  void SetHandleSemantic(std::string_view type, int64_t fd) {
+    handle_semantic_.AddInferredHandleInfo(kPid, kHandle, type, fd, "");
   }
 
   void ExecuteWrite(const MethodSemantic* method_semantic, const StructValue* request,
@@ -93,6 +97,7 @@ TEST_F(BuiltinSemanticTest, CloneWrite) {
   ASSERT_NE(inferred_handle_info, nullptr);
   ASSERT_EQ(inferred_handle_info->type(), "dir");
   ASSERT_EQ(inferred_handle_info->path(), "/svc");
+  ASSERT_EQ(inferred_handle_info->attributes(), "cloned");
 }
 
 // Check Node::Clone: request.object = handle
@@ -124,6 +129,39 @@ TEST_F(BuiltinSemanticTest, CloneRead) {
   ASSERT_NE(inferred_handle_info, nullptr);
   ASSERT_EQ(inferred_handle_info->type(), "dir");
   ASSERT_EQ(inferred_handle_info->path(), "/svc");
+  ASSERT_EQ(inferred_handle_info->attributes(), "cloned");
+}
+
+// Check Node::Clone: request.object = handle
+TEST_F(BuiltinSemanticTest, CloneFd) {
+  // Checks that Node::Clone exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/Node", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Clone");
+  ASSERT_NE(method, nullptr);
+  // Checks that the builtin semantic is defined for Clone.
+  ASSERT_NE(method->semantic(), nullptr);
+
+  // Check that by writing on this handle:
+  SetHandleSemantic("handle", 2);
+
+  // This message (we only define the fields used by the semantic):
+  StructValue request(*method->request());
+  request.AddField("object", std::make_unique<HandleValue>(channel0_));
+
+  ExecuteRead(method->semantic(), &request, nullptr);
+
+  // We have this handle semantic for kChannel1.
+  const InferredHandleInfo* inferred_handle_info =
+      handle_semantic_.GetInferredHandleInfo(kPid, kChannel0);
+  ASSERT_NE(inferred_handle_info, nullptr);
+  ASSERT_EQ(inferred_handle_info->type(), "handle");
+  ASSERT_EQ(inferred_handle_info->attributes(), "cloned");
+  ASSERT_EQ(inferred_handle_info->fd(), 2);
 }
 
 // Check Directory::Open: request.object = handle / request.path

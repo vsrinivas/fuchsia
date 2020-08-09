@@ -12,7 +12,7 @@ namespace semantic {
 std::string builtin_semantic_fuchsia_io =
     "library fuchsia.io {\n"
     "  Node::Clone {\n"
-    "    request.object = handle;\n"
+    "    request.object = handle : 'cloned';\n"
     "  }\n"
     "  Directory::Open {\n"
     "    request.object = handle / request.path;\n"

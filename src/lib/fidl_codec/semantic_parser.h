@@ -71,6 +71,8 @@ enum class LexicalToken {
   kLeftParenthesis,
   // A right parenthesis: )
   kRightParenthesis,
+  // One colon: :
+  kColon,
   // Two colons: ::
   kColonColon,
   // A comma: ,
@@ -159,6 +161,7 @@ class SemanticParser {
   bool ConsumeRightBrace() { return Consume(LexicalToken::kRightBrace); }
   bool ConsumeLeftParenthesis() { return Consume(LexicalToken::kLeftParenthesis); }
   bool ConsumeRightParenthesis() { return Consume(LexicalToken::kRightParenthesis); }
+  bool ConsumeColon() { return Consume(LexicalToken::kColon); }
   bool ConsumeDot() { return Consume(LexicalToken::kDot); }
   bool ConsumeEqual() { return Consume(LexicalToken::kEqual); }
   bool ConsumeSemicolon() { return Consume(LexicalToken::kSemicolon); }

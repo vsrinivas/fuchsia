@@ -523,6 +523,7 @@ void SyscallDecoderDispatcher::GenerateProtoSession(proto::Session* session) {
       proto_handle_description->set_type(inferred_handle_info->type());
       proto_handle_description->set_fd(inferred_handle_info->fd());
       proto_handle_description->set_path(inferred_handle_info->path());
+      proto_handle_description->set_attributes(inferred_handle_info->attributes());
     }
     proto_handle_description->set_koid(handle_info->koid());
     proto_handle_description->set_object_type(handle_info->object_type());

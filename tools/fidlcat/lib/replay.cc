@@ -109,7 +109,7 @@ bool Replay::ReplayProto(const std::string& file_name, std::istream& is) {
     }
     auto inferred_handle_info = std::make_unique<fidl_codec::semantic::InferredHandleInfo>(
         proto_handle_description.type(), proto_handle_description.fd(),
-        proto_handle_description.path());
+        proto_handle_description.path(), proto_handle_description.attributes());
     dispatcher()->inference().AddInferredHandleInfo(thread->process()->koid(),
                                                     proto_handle_description.handle(),
                                                     std::move(inferred_handle_info));

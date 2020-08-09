@@ -52,7 +52,7 @@ bool ExpressionHandleDescription::Execute(SemanticContext* context, ExpressionVa
   if (!type.string() || !path.string()) {
     return false;
   }
-  result->set(*type.string(), -1, *path.string());
+  result->set(*type.string(), -1, *path.string(), "");
   return true;
 }
 
@@ -100,12 +100,13 @@ bool ExpressionSlash::Execute(SemanticContext* context, ExpressionValue* result)
   }
   if (right_value.string()) {
     if (inferred_handle_info->path().empty()) {
-      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), *right_value.string());
+      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), *right_value.string(),
+                  inferred_handle_info->attributes());
       return true;
     }
     if (*right_value.string() == ".") {
       result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
-                  inferred_handle_info->path());
+                  inferred_handle_info->path(), inferred_handle_info->attributes());
       return true;
     }
     std::string path(*right_value.string());
@@ -113,11 +114,42 @@ bool ExpressionSlash::Execute(SemanticContext* context, ExpressionValue* result)
       path.erase(0, 2);
     }
     if (inferred_handle_info->path() == "/") {
-      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), "/" + path);
+      result->set(inferred_handle_info->type(), inferred_handle_info->fd(), "/" + path,
+                  inferred_handle_info->attributes());
       return true;
     }
     result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
-                inferred_handle_info->path() + "/" + path);
+                inferred_handle_info->path() + "/" + path, inferred_handle_info->attributes());
+    return true;
+  }
+  return false;
+}
+
+void ExpressionColon::Dump(std::ostream& os) const { os << *left_ << " : " << *right_; }
+
+bool ExpressionColon::Execute(SemanticContext* context, ExpressionValue* result) const {
+  ExpressionValue left_value;
+  ExpressionValue right_value;
+  if (!left_->Execute(context, &left_value) || !right_->Execute(context, &right_value)) {
+    return false;
+  }
+  const InferredHandleInfo* inferred_handle_info = left_value.inferred_handle_info();
+  if ((inferred_handle_info == nullptr) && (left_value.handle() != ZX_HANDLE_INVALID)) {
+    inferred_handle_info =
+        context->handle_semantic()->GetInferredHandleInfo(context->pid(), left_value.handle());
+  }
+  if (inferred_handle_info == nullptr) {
+    return false;
+  }
+  if (right_value.string()) {
+    if (inferred_handle_info->attributes().empty()) {
+      result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
+                  inferred_handle_info->path(), *right_value.string());
+      return true;
+    }
+    result->set(inferred_handle_info->type(), inferred_handle_info->fd(),
+                inferred_handle_info->path(),
+                inferred_handle_info->attributes() + ", " + std::string(*right_value.string()));
     return true;
   }
   return false;
@@ -232,6 +264,9 @@ void InferredHandleInfo::Display(PrettyPrinter& printer) const {
     }
     if (!path_.empty()) {
       printer << ':' << Blue << path_ << ResetColor;
+    }
+    if (!attributes_.empty()) {
+      printer << " [" << Blue << attributes_ << ResetColor << ']';
     }
   }
 }

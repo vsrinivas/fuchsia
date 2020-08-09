@@ -94,10 +94,10 @@ void SemanticParser::NextLexicalToken() {
         ++next_;
         if (*next_ == ':') {
           ++next_;
+          current_lexical_token_ = LexicalToken::kColonColon;
         } else {
-          AddError() << "Missing a second ':'.\n";
+          current_lexical_token_ = LexicalToken::kColon;
         }
-        current_lexical_token_ = LexicalToken::kColonColon;
         return;
       case ',':
         ++next_;
@@ -336,14 +336,23 @@ std::unique_ptr<Expression> SemanticParser::ParseMultiplicativeExpression() {
   if (expression == nullptr) {
     return nullptr;
   }
-  if (ConsumeSlash()) {
-    std::unique_ptr<Expression> right = ParseAccessExpression();
-    if (right == nullptr) {
-      return nullptr;
+  for (;;) {
+    if (ConsumeSlash()) {
+      std::unique_ptr<Expression> right = ParseAccessExpression();
+      if (right == nullptr) {
+        return nullptr;
+      }
+      expression = std::make_unique<ExpressionSlash>(std::move(expression), std::move(right));
+    } else if (ConsumeColon()) {
+      std::unique_ptr<Expression> right = ParseAccessExpression();
+      if (right == nullptr) {
+        return nullptr;
+      }
+      expression = std::make_unique<ExpressionColon>(std::move(expression), std::move(right));
+    } else {
+      return expression;
     }
-    return std::make_unique<ExpressionSlash>(std::move(expression), std::move(right));
   }
-  return expression;
 }
 
 std::unique_ptr<Expression> SemanticParser::ParseAccessExpression() {

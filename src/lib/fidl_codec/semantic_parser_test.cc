@@ -73,7 +73,8 @@ TEST_F(SemanticParserTest, CheckAssignments) {
   std::string text =
       "request.object = handle / request.path;\n"
       "request.foo = handle;\n"
-      "request.bar = handle / request.other_path;\n";
+      "request.bar = handle / request.other_path;\n"
+      "request.bar2 = handle : 'cloned';\n";
   ParserErrors parser_errors;
   SemanticParser parser(&library_loader_, text, &parser_errors);
   MethodSemantic semantic;
@@ -87,7 +88,8 @@ TEST_F(SemanticParserTest, CheckAssignments) {
   ASSERT_EQ(result,
             "request.object = handle / request.path\n"
             "request.foo = handle\n"
-            "request.bar = handle / request.other_path\n");
+            "request.bar = handle / request.other_path\n"
+            "request.bar2 = handle : 'cloned'\n");
 }
 
 TEST_F(SemanticParserTest, EmptyText) {

@@ -46,6 +46,7 @@ message HandleDescription {
   string path = 7;
   uint64 koid = 8;
   uint32 object_type = 9;
+  string attributes = 10;
 }
 
 message LinkedKoids {

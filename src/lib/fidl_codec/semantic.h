@@ -155,6 +155,20 @@ class ExpressionSlash : public Expression {
   const std::unique_ptr<Expression> right_;
 };
 
+// Defines the colon operator (used to add attributes to a handle).
+class ExpressionColon : public Expression {
+ public:
+  ExpressionColon(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
+      : left_(std::move(left)), right_(std::move(right)) {}
+
+  void Dump(std::ostream& os) const override;
+  bool Execute(SemanticContext* context, ExpressionValue* result) const override;
+
+ private:
+  const std::unique_ptr<Expression> left_;
+  const std::unique_ptr<Expression> right_;
+};
+
 // Defines an assignment. An assignment is a rule which infers the semantic of one handle
 // (destination) using the value of an expression (source).
 class Assignment {
@@ -199,16 +213,20 @@ class InferredHandleInfo {
 
   explicit InferredHandleInfo(std::string_view type) : type_(type) {}
 
-  InferredHandleInfo(std::string_view type, int64_t fd) : type_(type), fd_(fd) {}
+  InferredHandleInfo(std::string_view type, int64_t fd, std::string_view attributes)
+      : type_(type), fd_(fd), attributes_(attributes) {}
 
-  InferredHandleInfo(std::string_view type, std::string_view path) : type_(type), path_(path) {}
+  InferredHandleInfo(std::string_view type, std::string_view path, std::string_view attributes)
+      : type_(type), path_(path), attributes_(attributes) {}
 
-  InferredHandleInfo(std::string_view type, int64_t fd, std::string_view path)
-      : type_(type), fd_(fd), path_(path) {}
+  InferredHandleInfo(std::string_view type, int64_t fd, std::string_view path,
+                     std::string_view attributes)
+      : type_(type), fd_(fd), path_(path), attributes_(attributes) {}
 
   const std::string& type() const { return type_; }
   int64_t fd() const { return fd_; }
   const std::string& path() const { return path_; }
+  const std::string& attributes() const { return attributes_; }
 
   // Convert a handle type (found in zircon/system/public/zircon/processargs.h) into a string.
   static std::string_view Convert(uint32_t type);
@@ -225,6 +243,8 @@ class InferredHandleInfo {
   // Path associated with the handle. We can have both fd and path defined at the
   // same time.
   const std::string path_;
+  // Applicative attributes associated with the handle.
+  const std::string attributes_;
 };
 
 // Holds the handle semantic for one process. That is all the meaningful information we have been
@@ -294,13 +314,16 @@ class HandleSemantic {
     process_handles_[pid].handles[handle] = std::make_unique<InferredHandleInfo>(type);
   }
 
-  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, std::string_view type, int64_t fd) {
-    process_handles_[pid].handles[handle] = std::make_unique<InferredHandleInfo>(type, fd);
+  void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, std::string_view type, int64_t fd,
+                             std::string_view attributes) {
+    process_handles_[pid].handles[handle] =
+        std::make_unique<InferredHandleInfo>(type, fd, attributes);
   }
 
   void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, std::string_view type,
-                             std::string_view path) {
-    process_handles_[pid].handles[handle] = std::make_unique<InferredHandleInfo>(type, path);
+                             std::string_view path, std::string_view attributes) {
+    process_handles_[pid].handles[handle] =
+        std::make_unique<InferredHandleInfo>(type, path, attributes);
   }
 
   void AddInferredHandleInfo(zx_koid_t pid, zx_handle_t handle, uint32_t type) {
@@ -355,8 +378,8 @@ class ExpressionValue {
 
   void set(const Value* value) { value_ = value; }
   void set(zx_handle_t handle) { handle_ = handle; }
-  void set(std::string_view type, int64_t fd, std::string_view path) {
-    inferred_handle_info_ = std::make_unique<InferredHandleInfo>(type, fd, path);
+  void set(std::string_view type, int64_t fd, std::string_view path, std::string_view attributes) {
+    inferred_handle_info_ = std::make_unique<InferredHandleInfo>(type, fd, path, attributes);
   }
   void set(const std::string& string) { string_ = string; }
 
