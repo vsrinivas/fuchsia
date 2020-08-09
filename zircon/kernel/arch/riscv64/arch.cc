@@ -19,6 +19,7 @@
 
 #include <arch/mp.h>
 #include <arch/ops.h>
+#include <arch/riscv64/sbi.h>
 #include <arch/regs.h>
 #include <kernel/atomic.h>
 #include <kernel/thread.h>

@@ -107,8 +107,8 @@ zx_status_t display_get_info(struct display_info* info) { return ZX_ERR_NOT_FOUN
 
 void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_reason_t reason,
                             bool halt_on_panic) {
-  for (;;)
-    ;
+  sbi_call(SBI_SHUTDOWN);
+  __UNREACHABLE;
 }
 
 zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
