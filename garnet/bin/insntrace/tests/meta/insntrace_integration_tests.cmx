@@ -1,10 +1,17 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader"
+            ]
+        }
+    },
     "program": {
         "binary": "test/insntrace_integration_tests"
     },
     "sandbox": {
         "dev": [
-            "misc",
             "sys/cpu-trace"
         ],
         "features": [
@@ -13,9 +20,12 @@
             "shell-commands"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.kernel.Controller",
+            "fuchsia.tracing.kernel.Reader"
         ]
     }
 }

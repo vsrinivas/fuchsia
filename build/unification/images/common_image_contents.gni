@@ -117,7 +117,6 @@ common_image_contents = [
   "//src/devices/mcu/drivers/vim3-mcu",
   "//src/devices/misc/drivers/builtin",
   "//src/devices/misc/drivers/cpu-trace",
-  "//src/devices/misc/drivers/ktrace",
   "//src/devices/ml/drivers/aml-nna",
   "//src/devices/ml/drivers/usb-harriet",
   "//src/devices/nand/bin/nand-loader",

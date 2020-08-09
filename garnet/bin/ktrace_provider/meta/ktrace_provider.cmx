@@ -3,13 +3,12 @@
         "binary": "bin/ktrace_provider"
     },
     "sandbox": {
-        "dev": [
-            "misc"
-        ],
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.boot.RootJob",
             "fuchsia.logger.LogSink",
+            "fuchsia.tracing.kernel.Controller",
+            "fuchsia.tracing.kernel.Reader",
             "fuchsia.tracing.provider.Registry"
         ]
     }

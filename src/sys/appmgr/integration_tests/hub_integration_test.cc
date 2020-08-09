@@ -123,6 +123,8 @@ TEST_F(HubTest, Services) {
                                                "fuchsia.kernel.Counter",
                                                "fuchsia.kernel.DebugBroker",
                                                "fuchsia.kernel.Stats",
+                                               "fuchsia.tracing.kernel.Controller",
+                                               "fuchsia.tracing.kernel.Reader",
                                                "fuchsia.paver.Paver",
                                                "fuchsia.process.Launcher",
                                                "fuchsia.process.Resolver",

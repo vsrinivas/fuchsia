@@ -132,7 +132,7 @@ bool InitProcessTrace(const IptConfig& config) {
   FX_LOGS(INFO) << "InitProcessTrace called";
 
   fuchsia::tracing::kernel::ControllerSyncPtr ktrace;
-  if (!OpenKtraceChannel(&ktrace)) {
+  if (OpenKtraceControllerChannel(&ktrace) != ZX_OK) {
     return false;
   }
 
@@ -205,7 +205,7 @@ void StopSidebandDataCollection(const IptConfig& config) {
   FX_LOGS(INFO) << "StopSidebandDataCollection called";
 
   fuchsia::tracing::kernel::ControllerSyncPtr ktrace;
-  if (!OpenKtraceChannel(&ktrace)) {
+  if (OpenKtraceControllerChannel(&ktrace) != ZX_OK) {
     return;
   }
 
@@ -436,7 +436,7 @@ void FreeTrace(const IptConfig& config) {
   // the boot time records.
 
   fuchsia::tracing::kernel::ControllerSyncPtr ktrace;
-  if (!OpenKtraceChannel(&ktrace)) {
+  if (OpenKtraceControllerChannel(&ktrace) != ZX_OK) {
     return;
   }
 

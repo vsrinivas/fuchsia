@@ -88,6 +88,14 @@
             protocol: "/svc/fuchsia.kernel.Stats",
             as: "/svc_for_sys/fuchsia.kernel.Stats",
         },
+        {
+            protocol: "/svc/fuchsia.tracing.kernel.Controller",
+            as: "/svc_for_sys/fuchsia.tracing.kernel.Controller",
+        },
+        {
+            protocol: "/svc/fuchsia.tracing.kernel.Reader",
+            as: "/svc_for_sys/fuchsia.tracing.kernel.Reader",
+        },
 
         // From ptysvc
         {

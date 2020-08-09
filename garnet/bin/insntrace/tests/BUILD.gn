@@ -34,7 +34,10 @@ test_package("insntrace_tests") {
   tests = [
     {
       name = "insntrace_integration_tests"
-      environments = basic_envs
+      environments = [
+        nuc_env,
+        emu_env,
+      ]
     },
   ]
 }

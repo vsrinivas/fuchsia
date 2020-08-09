@@ -25,6 +25,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/kernel-debug/kernel-debug.h>
 #include <lib/kernel-mexec/kernel-mexec.h>
+#include <lib/ktrace/ktrace.h>
 #include <lib/logger/provider.h>
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
@@ -347,6 +348,8 @@ int main(int argc, char** argv) {
        .ctx = reinterpret_cast<void*>(&mexec_context)},
       {.provider = profile_get_service_provider(),
        .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
+      {.provider = ktrace_get_service_provider(),
+       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource))},
   };
 
   for (size_t i = 0; i < std::size(service_providers); ++i) {

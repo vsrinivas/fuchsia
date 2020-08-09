@@ -20,16 +20,28 @@
 
 namespace insntrace {
 
-constexpr char kKtraceDevicePath[] = "/dev/misc/ktrace";
+constexpr char kKtraceControllerSvc[] = "/svc/fuchsia.tracing.kernel.Controller";
+constexpr char kKtraceReaderSvc[] = "/svc/fuchsia.tracing.kernel.Reader";
 
-bool OpenKtraceChannel(fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr) {
+zx_status_t OpenKtraceControllerChannel(
+    fuchsia::tracing::kernel::ControllerSyncPtr* out_controller_ptr) {
   zx_status_t status = fdio_service_connect(
-      kKtraceDevicePath, out_controller_ptr->NewRequest().TakeChannel().release());
+      kKtraceControllerSvc, out_controller_ptr->NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Error connecting to " << kKtraceDevicePath << ": " << status;
-    return false;
+    FX_LOGS(ERROR) << "Error connecting to " << kKtraceControllerSvc << ": " << status;
+    return status;
   }
-  return true;
+  return status;
+}
+
+zx_status_t OpenKtraceReaderChannel(fuchsia::tracing::kernel::ReaderSyncPtr* out_reader_ptr) {
+  zx_status_t status =
+      fdio_service_connect(kKtraceReaderSvc, out_reader_ptr->NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error connecting to " << kKtraceReaderSvc << ": " << status;
+    return status;
+  }
+  return status;
 }
 
 bool RequestKtraceStart(const fuchsia::tracing::kernel::ControllerSyncPtr& ktrace,
@@ -53,13 +65,10 @@ void RequestKtraceRewind(const fuchsia::tracing::kernel::ControllerSyncPtr& ktra
 }
 
 void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_suffix) {
-  int fd = open(kKtraceDevicePath, O_RDONLY);
-  if (fd < 0) {
-    FX_LOGS(ERROR) << "open ktrace"
-                   << ", " << debugger_utils::ErrnoString(errno);
+  fuchsia::tracing::kernel::ReaderSyncPtr ktrace;
+  if (OpenKtraceReaderChannel(&ktrace) != ZX_OK) {
     return;
   }
-  fxl::UniqueFD ktrace_fd{fd};
 
   std::string ktrace_output_path =
       fxl::StringPrintf("%s.%s", output_path_prefix, output_path_suffix);
@@ -67,13 +76,22 @@ void DumpKtraceBuffer(const char* output_path_prefix, const char* output_path_su
 
   fxl::UniqueFD dest_fd(open(ktrace_c_path, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR));
   if (dest_fd.is_valid()) {
-    ssize_t count;
-    char buf[1024];
-    while ((count = read(ktrace_fd.get(), buf, sizeof(buf))) != 0) {
-      if (write(dest_fd.get(), buf, count) != count) {
+    std::vector<uint8_t> buf;
+    size_t read_size = 1024;
+    size_t offset = 0;
+    zx_status_t out_status;
+    zx_status_t status;
+    while ((status = ktrace->ReadAt(read_size, offset, &out_status, &buf)) == ZX_OK &&
+           out_status == ZX_OK) {
+      if (buf.size() == 0) {
+        break;
+      }
+      size_t bytes_written = write(dest_fd.get(), buf.data(), buf.size());
+      if (bytes_written != buf.size()) {
         FX_LOGS(ERROR) << "error writing " << ktrace_c_path;
         break;
       }
+      offset += buf.size();
     }
   } else {
     FX_LOGS(ERROR) << fxl::StringPrintf("unable to create %s", ktrace_c_path)

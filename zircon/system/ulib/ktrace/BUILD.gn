@@ -1,0 +1,30 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
+zx_library("ktrace") {
+  sdk = "source"
+  sdk_headers = [ "lib/ktrace/ktrace.h" ]
+  sources = [ "ktrace.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.tracing.kernel",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fidl-async",
+  ]
+  public_deps = [ "//zircon/system/ulib/svc" ]
+}

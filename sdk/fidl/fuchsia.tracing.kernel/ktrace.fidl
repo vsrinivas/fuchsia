@@ -6,9 +6,9 @@ library fuchsia.tracing.kernel;
 
 using zx;
 
-// TODO(ZX-448): Allow providing a vmo of the buffer to use.
+// TODO(30408): Allow providing a vmo of the buffer to use.
 
-[ForDeprecatedCBindings]
+[Discoverable]
 protocol Controller {
     /// Start tracing.
     Start(uint32 group_mask) -> (zx.status status);
@@ -18,8 +18,17 @@ protocol Controller {
 
     /// Rewind the trace buffer.
     Rewind() -> (zx.status status);
+};
 
+const uint32 MAX_BUF = 8192;
+
+[Discoverable]
+protocol Reader {
     /// Get the number of bytes written to the trace buffer.
     /// `size` is valid if, and only if, `status` is `ZX_OK`.
     GetBytesWritten() -> (zx.status status, uint64 size);
+
+    /// Read `count` bytes from ktrace buffer at `offset`
+    /// and return `data` read upon success
+    ReadAt(uint64 count, uint64 offset) -> (zx.status status, vector<uint8>:MAX_BUF data);
 };
