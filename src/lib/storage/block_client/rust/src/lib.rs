@@ -404,7 +404,6 @@ impl Drop for RemoteBlockDevice {
         // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
         // down.
         self.temp_vmo_id.take().into_id();
-        self.fifo_state.lock().unwrap().terminate();
         // Ignore errors here as there is not much we can do about it.
         let _ = self.device.lock().unwrap().close_fifo(zx::Time::INFINITE);
     }
