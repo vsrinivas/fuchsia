@@ -42,6 +42,7 @@ if (current_toolchain == default_toolchain) {
   }
 
   config("abi") {
+    cflags = [ "-ffixed-x31" ] # We reserve t6 for the per-cpu datastructure
   }
 
   # This is used pervasively throughout the kernel on riscv64.

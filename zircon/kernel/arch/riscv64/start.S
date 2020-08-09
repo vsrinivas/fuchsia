@@ -110,6 +110,15 @@ FUNCTION(_start)
     add     sp, sp, t0
     add     ra, ra, t0
 
+    // jump to high memory
+    lla     t1, .Lmmu_on_vaddr
+    add     t1, t1, t0
+    jr      t1
+
+.Lmmu_on_vaddr:
+    // Set up the percpu structure for the logical CPU 0
+    lla     x31, percpu
+
     // call main
     jal     lk_main
 

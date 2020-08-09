@@ -25,6 +25,19 @@
 #include <lk/init.h>
 #include <lk/main.h>
 
+// per cpu structure, pointed to by s11 (x27)
+struct riscv64_percpu percpu[SMP_MAX_CPUS];
+
+// first C level code to initialize each cpu
+void riscv64_early_init_percpu(void) {
+  // set the top level exception handler
+  riscv64_csr_write(RISCV64_CSR_STVEC, (uintptr_t)&riscv64_exception_entry);
+
+  // mask all exceptions, just in case
+  riscv64_csr_clear(RISCV64_CSR_SSTATUS, RISCV64_CSR_SSTATUS_IE);
+  riscv64_csr_clear(RISCV64_CSR_SIE, RISCV64_CSR_SIE_SIE | RISCV64_CSR_SIE_TIE | RISCV64_CSR_SIE_EIE);
+}
+
 void arch_early_init() {
 }
 

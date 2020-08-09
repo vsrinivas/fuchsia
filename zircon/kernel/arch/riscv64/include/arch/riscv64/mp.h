@@ -15,6 +15,19 @@
 
 __BEGIN_CDECLS
 
+struct riscv64_percpu {
+} __ALIGNED(MAX_CACHE_LINE);
+
+register struct riscv64_percpu *__riscv64_percpu __asm("x31");
+
+static inline void riscv64_set_percpu(struct riscv64_percpu *ptr) {
+  __riscv64_percpu = ptr;
+}
+
+static inline struct riscv64_percpu *riscv64_get_percpu(void) {
+  return __riscv64_percpu;
+}
+
 static inline cpu_num_t arch_curr_cpu_num(void) {
   return 0;
 }
