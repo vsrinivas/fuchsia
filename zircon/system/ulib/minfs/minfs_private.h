@@ -22,7 +22,7 @@
 
 #include <fs/journal/journal.h>
 #include <fs/managed_vfs.h>
-#include <fs/remote.h>
+#include <fs/remote_container.h>
 #include <fs/watcher.h>
 #include <minfs/metrics.h>
 #endif

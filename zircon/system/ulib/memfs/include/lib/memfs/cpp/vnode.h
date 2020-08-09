@@ -17,7 +17,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fs/managed_vfs.h>
-#include <fs/remote.h>
+#include <fs/remote_container.h>
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
@@ -124,6 +124,8 @@ class VnodeDir final : public VnodeMemfs {
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
   zx_status_t QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* out) final;
 
+  // Vnode overrides.
+  //
   // The vnode is acting as a mount point for a remote filesystem or device.
   bool IsRemote() const final;
   zx::channel DetachRemote() final;

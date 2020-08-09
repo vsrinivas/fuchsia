@@ -18,7 +18,7 @@
 #include <lib/zx/vmo.h>
 
 #include <fbl/auto_lock.h>
-#include <fs/remote.h>
+#include <fs/remote_container.h>
 #include <fs/watcher.h>
 
 #include "vnode_allocation.h"

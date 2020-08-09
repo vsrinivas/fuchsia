@@ -32,7 +32,6 @@
 #include <fs/internal/remote_file_connection.h>
 #include <fs/internal/stream_file_connection.h>
 #include <fs/mount_channel.h>
-#include <fs/remote.h>
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -93,21 +92,6 @@ zx_status_t PrevalidateOptions(VnodeConnectionOptions options) {
 }
 
 }  // namespace
-
-#ifdef __Fuchsia__
-
-bool RemoteContainer::IsRemote() const { return remote_.is_valid(); }
-
-zx::channel RemoteContainer::DetachRemote() { return std::move(remote_); }
-
-zx_handle_t RemoteContainer::GetRemote() const { return remote_.get(); }
-
-void RemoteContainer::SetRemote(zx::channel remote) {
-  ZX_DEBUG_ASSERT(!remote_.is_valid());
-  remote_ = std::move(remote);
-}
-
-#endif
 
 Vfs::Vfs() = default;
 Vfs::~Vfs() = default;
