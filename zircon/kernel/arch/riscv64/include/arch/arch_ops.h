@@ -34,6 +34,14 @@ static inline void arch_trace_process_create(uint64_t pid, paddr_t tt_phys) {
   // nothing to do
 }
 
+#define mb()        __asm__ volatile("fence iorw,iorw" ::: "memory");
+#define wmb()       __asm__ volatile("fence ow,ow" ::: "memory");
+#define rmb()       __asm__ volatile("fence ir,ir" ::: "memory");
+
+#define smp_mb()    __asm__ volatile("fence rw,rw" ::: "memory");
+#define smp_wmb()   __asm__ volatile("fence w,w" ::: "memory");
+#define smp_rmb()   __asm__ volatile("fence r,r" ::: "memory");
+
 __END_CDECLS
 
 #endif  // __ASSEMBLER__
