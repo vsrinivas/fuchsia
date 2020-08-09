@@ -25,6 +25,20 @@
 #include <vm/fault.h>
 #include <vm/vm.h>
 
+#define LOCAL_TRACE 0
+
+static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type,
+                                                          iframe_t* iframe) {
+  arch_exception_context_t context = {};
+  DEBUG_ASSERT(iframe != nullptr);
+  context.frame = iframe;
+
+  arch_enable_ints();
+  zx_status_t status = dispatch_user_exception(type, &context);
+  arch_disable_ints();
+  return status;
+}
+
 void arch_iframe_process_pending_signals(iframe_t* iframe) {
 }
 
@@ -44,3 +58,145 @@ bool arch_install_exception_context(Thread* thread, const arch_exception_context
 }
 
 void arch_remove_exception_context(Thread* thread) { }
+
+static inline void riscv64_restore_percpu_pointer() {
+  riscv64_set_percpu(arch_get_current_thread()->arch().current_percpu_ptr);
+}
+
+static const char *cause_to_string(long cause) {
+  if (cause < 0) {
+    switch (cause & LONG_MAX) {
+      case RISCV64_INTERRUPT_SSWI:
+	return "Software interrupt";
+        break;
+      case RISCV64_INTERRUPT_STIM:
+	return "Timer interrupt";
+      case RISCV64_INTERRUPT_SEXT:
+	return "External interrupt";
+    }
+  } else {
+    switch (cause) {
+      case RISCV64_EXCEPTION_IADDR_MISALIGN:
+        return "Instruction address misaligned";
+      case RISCV64_EXCEPTION_IACCESS_FAULT:
+        return "Instruction access fault";
+      case RISCV64_EXCEPTION_ILLEGAL_INS:
+        return "Illegal instruction";
+      case RISCV64_EXCEPTION_BREAKPOINT:
+        return "Breakpoint";
+      case RISCV64_EXCEPTION_LOAD_ADDR_MISALIGN:
+        return "Load address misaligned";
+      case RISCV64_EXCEPTION_LOAD_ACCESS_FAULT:
+        return "Load access fault";
+      case RISCV64_EXCEPTION_STORE_ADDR_MISALIGN:
+        return "Store/AMO address misaligned";
+      case RISCV64_EXCEPTION_STORE_ACCESS_FAULT:
+        return "Store/AMO access fault";
+      case RISCV64_EXCEPTION_ENV_CALL_U_MODE:
+        return "Environment call from U-mode";
+      case RISCV64_EXCEPTION_ENV_CALL_S_MODE:
+        return "Environment call from S-mode";
+      case RISCV64_EXCEPTION_ENV_CALL_M_MODE:
+        return "Environment call from M-mode";
+      case RISCV64_EXCEPTION_INS_PAGE_FAULT:
+        return "Instruction page fault";
+      case RISCV64_EXCEPTION_LOAD_PAGE_FAULT:
+        return "Load page fault";
+      case RISCV64_EXCEPTION_STORE_PAGE_FAULT:
+        return "Store/AMO page fault";
+    }
+  }
+  return "Unknown";
+}
+
+__NO_RETURN __NO_INLINE
+static void fatal_exception(long cause, struct iframe_t *frame) {
+  if (cause < 0) {
+    panic("unhandled interrupt cause %#lx, epc %#lx, tval %#lx cpu %u\n", cause,
+	  frame->epc, riscv64_csr_read(RISCV64_CSR_STVAL), arch_curr_cpu_num());
+  } else {
+    panic("unhandled exception cause %#lx (%s), epc %#lx, tval %#lx, cpu %u\n",
+	  cause, cause_to_string(cause), frame->epc,
+	  riscv64_csr_read(RISCV64_CSR_STVAL), arch_curr_cpu_num());
+  }
+}
+
+static void riscv64_page_fault_handler(long cause, struct iframe_t *frame) {
+  vaddr_t tval = riscv64_csr_read(RISCV64_CSR_STVAL);
+  uint pf_flags = VMM_PF_FLAG_NOT_PRESENT;
+  pf_flags |= cause == RISCV64_EXCEPTION_STORE_PAGE_FAULT ? VMM_PF_FLAG_WRITE : 0;
+  pf_flags |= cause == RISCV64_EXCEPTION_INS_PAGE_FAULT ? VMM_PF_FLAG_INSTRUCTION : 0;
+  pf_flags |= is_user_address(tval) ? VMM_PF_FLAG_USER : 0; // TODO: also check whether the privilege number matches!
+
+  zx_status_t pf_status = vmm_page_fault_handler(tval, pf_flags);
+
+  if (pf_status != ZX_OK) {
+    uint64_t dfr = Thread::Current::Get()->arch().data_fault_resume;
+    if (unlikely(dfr)) {
+      frame->epc = dfr;
+      frame->a1 = tval;
+      frame->a2 = pf_flags;
+      return;
+    }
+
+    // If this is from user space, let the user exception handler get a shot at it.
+    if (pf_flags & VMM_PF_FLAG_USER) {
+      if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, frame) == ZX_OK) {
+        return;
+      }
+    }
+  }
+}
+
+static void riscv64_illegal_instruction_handler(long cause, struct iframe_t *frame) {
+  // vaddr_t tval = riscv64_csr_read(RISCV64_CSR_STVAL);
+  // TODO(revest): Check that it's a floating point operation
+  frame->status |= RISCV64_CSR_SSTATUS_FS_INITIAL;
+}
+
+extern "C" syscall_result riscv64_syscall_dispatcher(struct iframe_t *frame);
+
+extern "C" void riscv64_exception_handler(long cause, struct iframe_t *frame) {
+  riscv64_restore_percpu_pointer();
+
+  LTRACEF("hart %u cause %s epc %#lx status %#lx\n",
+          arch_curr_cpu_num(), cause_to_string(cause), frame->epc, frame->status);
+
+  // top bit of the cause register determines if it's an interrupt or not
+  if (cause < 0) {
+    int_handler_saved_state_t state;
+    int_handler_start(&state);
+
+    switch (cause & LONG_MAX) {
+      case RISCV64_INTERRUPT_SSWI: // software interrupt
+        riscv64_software_exception();
+        break;
+      case RISCV64_INTERRUPT_STIM: // timer interrupt
+        riscv64_timer_exception();
+        break;
+      case RISCV64_INTERRUPT_SEXT: // external interrupt
+        break;
+      default:
+        fatal_exception(cause, frame);
+    }
+
+    bool do_preempt = int_handler_finish(&state);
+    if (do_preempt) {
+      Thread::Current::Preempt();
+    }
+  } else {
+    // all synchronous traps go here
+    switch (cause) {
+      case RISCV64_EXCEPTION_INS_PAGE_FAULT:
+      case RISCV64_EXCEPTION_LOAD_PAGE_FAULT:
+      case RISCV64_EXCEPTION_STORE_PAGE_FAULT:
+        riscv64_page_fault_handler(cause, frame);
+        break;
+      case RISCV64_EXCEPTION_ILLEGAL_INS:
+        riscv64_illegal_instruction_handler(cause, frame);
+        break;
+      default:
+        fatal_exception(cause, frame);
+    }
+  }
+}

@@ -39,15 +39,36 @@ void riscv64_early_init_percpu(void) {
 }
 
 void arch_early_init() {
+  riscv64_early_init_percpu();
 }
 
 void arch_prevm_init() {
 }
 
 void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
+  // print some arch info
+  dprintf(INFO, "RISCV: Supervisor mode\n");
+  dprintf(INFO, "RISCV: mvendorid %#lx marchid %#lx mimpid %#lx\n",
+          sbi_call(SBI_GET_MVENDORID).value, sbi_call(SBI_GET_MARCHID).value,
+          sbi_call(SBI_GET_MIMPID).value);
+  dprintf(INFO, "RISCV: MMU enabled sv49\n");
+  dprintf(INFO, "RISCV: SBI impl id %#lx version %#lx\n", sbi_call(SBI_GET_SBI_IMPL_ID).value, sbi_call(SBI_GET_SBI_IMPL_VERSION).value);
+
+  // probe some SBI extensions
+  dprintf(INFO, "RISCV: SBI extension TIMER %ld\n", sbi_call(SBI_PROBE_EXTENSION, SBI_EXT_TIMER).value);
+  dprintf(INFO, "RISCV: SBI extension IPI %ld\n", sbi_call(SBI_PROBE_EXTENSION, SBI_EXT_IPI).value);
+  dprintf(INFO, "RISCV: SBI extension RFENCE %ld\n", sbi_call(SBI_PROBE_EXTENSION, SBI_EXT_RFENCE).value);
+  dprintf(INFO, "RISCV: SBI extension HSM %ld\n", sbi_call(SBI_PROBE_EXTENSION, SBI_EXT_HSM).value);
 }
 
 void arch_late_init_percpu(void) {
+  // enable software interrupts, used for inter-processor-interrupts
+  riscv64_csr_set(RISCV64_CSR_SIE, RISCV64_CSR_SIE_SIE);
+
+  // enable external interrupts
+  riscv64_csr_set(RISCV64_CSR_SIE, RISCV64_CSR_SIE_EIE);
+
+  mp_set_curr_cpu_online(true);
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {

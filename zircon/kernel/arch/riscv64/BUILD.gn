@@ -79,6 +79,7 @@ if (current_toolchain == default_toolchain) {
   source_set("riscv64") {
     sources = [
       "arch.cc",
+      "asm.S",
       "debugger.cc",
       "exceptions_c.cc",
       "mmu.cc",

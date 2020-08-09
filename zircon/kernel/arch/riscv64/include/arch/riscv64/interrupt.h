@@ -16,13 +16,15 @@ __BEGIN_CDECLS
 
 // override of some routines
 static inline void arch_enable_ints(void) {
+  riscv64_csr_set(RISCV64_CSR_SSTATUS, RISCV64_CSR_SSTATUS_IE);
 }
 
 static inline void arch_disable_ints(void) {
+  riscv64_csr_clear(RISCV64_CSR_SSTATUS, RISCV64_CSR_SSTATUS_IE);
 }
 
 static inline bool arch_ints_disabled(void) {
-  return false;
+  return !(riscv64_csr_read(RISCV64_CSR_SSTATUS) & RISCV64_CSR_SSTATUS_IE);
 }
 
 __END_CDECLS

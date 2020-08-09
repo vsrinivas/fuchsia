@@ -139,6 +139,12 @@ __END_CDECLS
   __val; \
 })
 
+extern "C" void riscv64_exception_entry(void);
+extern "C" void riscv64_context_switch(vaddr_t old_sp, vaddr_t new_sp);
+
+extern void riscv64_timer_exception();
+extern void riscv64_software_exception();
+
 #endif  // __ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_ARCH_RISCV64_INCLUDE_ARCH_RISCV64_H_
