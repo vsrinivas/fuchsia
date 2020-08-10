@@ -238,12 +238,12 @@ You can also provide multiple targets in a single invocation:
 
 
 
-### Converting from `run-test` or `run-host-tests`
+### Converting from run-test or run-host-tests
 
 Note: Please file a bug with `fx` if you find any test invocations that cannot
 be converted.
 
-#### `run-test`
+#### run-test
 
 For `run-test`, you should always be able to change `fx run-test` to `fx test`,
 for example:
@@ -259,7 +259,7 @@ Now becomes:
 </pre>
 
 
-#### `run-host-tests`
+#### run-host-tests
 
 For `run-host-tests`, you should always be able to change `fx run-host-tests` to
 `fx test`, for example:
@@ -274,6 +274,24 @@ Now becomes:
 <code class="devsite-terminal">fx test <var>PATH_TO_HOST_TEST</var></code>
 </pre>
 
+#### run-e2e-tests
+
+Caution: The conversion from `run-e2e-tests` to `fx test` is currently in the beta
+stage. The `fx test` command may fail to run some of the existing end-to-end tests
+today.
+
+For `run-e2e-tests`, use the `fx test` command with the `--e2e`
+option, for example:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx run-e2e-tests <var>END_TO_END_TEST_NAME</var></code>
+</pre>
+
+Now becomes:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test --e2e <var>END_TO_END_TEST_NAME</var></code>
+</pre>
 
 #### the `-t` flag
 
