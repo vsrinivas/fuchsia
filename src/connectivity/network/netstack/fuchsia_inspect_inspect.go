@@ -386,6 +386,9 @@ type ethInfoInspectImpl struct {
 func (impl *ethInfoInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
 		Name: impl.name,
+		Metrics: []inspect.Metric{
+			{Key: "TxDrops", Value: inspect.MetricValueWithUintValue(impl.value.TxStats().Drops.Value())},
+		},
 		Properties: []inspect.Property{
 			{Key: "Topopath", Value: inspect.PropertyValueWithStr(impl.value.Topopath())},
 			{Key: "Filepath", Value: inspect.PropertyValueWithStr(impl.value.Filepath())},

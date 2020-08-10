@@ -167,8 +167,8 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 		c.handler.PushInitialTx(c.iob.entry(b))
 	}
 
-	c.handler.Stats.Tx = fifo.MakeFifoStats(fifos.TxDepth)
-	c.handler.Stats.Rx = fifo.MakeFifoStats(fifos.RxDepth)
+	c.handler.Stats.Rx.FifoStats = fifo.MakeFifoStats(fifos.RxDepth)
+	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(fifos.TxDepth)
 
 	return c, nil
 }
@@ -246,7 +246,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.wg.Add(1)
 	go func() {
 		defer c.wg.Done()
-		if err := c.handler.TxReceiverLoop(); err != nil {
+		if err := c.handler.TxReceiverLoop(func(entry *eth.FifoEntry) bool {
+			return entry.Flags()&eth.FifoTXOK != 0
+		}); err != nil {
 			detachWithError(fmt.Errorf("TX read loop error: %w", err))
 		}
 	}()
@@ -426,10 +428,10 @@ func (c *Client) ListenTX() error {
 	return nil
 }
 
-func (c *Client) RxStats() *fifo.FifoStats {
+func (c *Client) RxStats() *fifo.RxStats {
 	return &c.handler.Stats.Rx
 }
 
-func (c *Client) TxStats() *fifo.FifoStats {
+func (c *Client) TxStats() *fifo.TxStats {
 	return &c.handler.Stats.Tx
 }

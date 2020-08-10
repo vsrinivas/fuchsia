@@ -220,7 +220,10 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.dispatcherWg.Add(1)
 	go func() {
 		defer c.dispatcherWg.Done()
-		if err := c.handler.TxReceiverLoop(); err != nil {
+		if err := c.handler.TxReceiverLoop(func(descriptorIndex *uint16) bool {
+			descriptor := c.getDescriptor(*descriptorIndex)
+			return network.TxReturnFlags(descriptor.return_flags)&network.TxReturnFlagsTxRetError == 0
+		}); err != nil {
 			detachWithError(fmt.Errorf("TX read loop: %w", err))
 		}
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "TX read loop finished")
@@ -460,8 +463,8 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		panic(fmt.Sprintf("Bad handler tx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
 	}
 
-	c.handler.Stats.Tx = fifo.MakeFifoStats(c.info.TxDepth)
-	c.handler.Stats.Rx = fifo.MakeFifoStats(c.info.RxDepth)
+	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(c.info.TxDepth)
+	c.handler.Stats.Rx.FifoStats = fifo.MakeFifoStats(c.info.RxDepth)
 
 	descriptorIndex := uint16(0)
 	vmoOffset := uint64(0)

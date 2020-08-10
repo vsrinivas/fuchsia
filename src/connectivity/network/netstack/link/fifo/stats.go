@@ -17,6 +17,15 @@ type FifoStats struct {
 	batches []rwStats
 }
 
+type RxStats struct {
+	FifoStats
+}
+
+type TxStats struct {
+	FifoStats
+	Drops tcpip.StatCounter
+}
+
 func MakeFifoStats(depth uint32) FifoStats {
 	return FifoStats{batches: make([]rwStats, depth)}
 }

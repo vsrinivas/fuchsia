@@ -41,12 +41,13 @@ type {{ .Handler }} struct {
 		cond sync.Cond
 	}
 	Stats struct {
-        Tx, Rx fifo.FifoStats
+        Rx fifo.RxStats
+        Tx fifo.TxStats
     }
 }
 
 
-func (h *{{ .Handler }}) TxReceiverLoop() error {
+func (h *{{ .Handler }}) TxReceiverLoop(wasSent func(entry *{{ .EntryType }}) bool) error {
 	scratch := make([]{{ .EntryType }}, h.TxDepth)
 	for {
 		h.tx.mu.Lock()
@@ -61,6 +62,13 @@ func (h *{{ .Handler }}) TxReceiverLoop() error {
 			if status != zx.ErrOk {
 				return &zx.Error{Status: status, Text: "FifoRead(TX)"}
 			}
+			var notSent uint64
+			for i := range scratch[:count] {
+				if !wasSent(&scratch[i]) {
+				  notSent++
+				}
+			}
+			h.Stats.Tx.Drops.IncrementBy(notSent)
 			h.Stats.Tx.Reads(count).Increment()
 			h.tx.mu.Lock()
 			n := h.tx.mu.entries.AddReadied(scratch[:count])

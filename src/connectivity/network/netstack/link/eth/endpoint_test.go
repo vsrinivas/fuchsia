@@ -183,8 +183,8 @@ func TestEndpoint(t *testing.T) {
 				for excess := depth; ; excess >>= 1 {
 					t.Run(fmt.Sprintf("excess=%d", excess), func(t *testing.T) {
 						// Grab baseline stats to avoid assumptions about ops done to this point.
-						wantRxReads := fifoReadsTransformer(client.RxStats())
-						wantTxWrites := fifoWritesTransformer(client.TxStats())
+						wantRxReads := fifoReadsTransformer(&client.RxStats().FifoStats)
+						wantTxWrites := fifoWritesTransformer(&client.TxStats().FifoStats)
 
 						// Compute expectations.
 						for _, want := range [][]uint64{wantRxReads, wantTxWrites} {
@@ -240,7 +240,7 @@ func TestEndpoint(t *testing.T) {
 						}
 
 						// NB: only assert on the reads, since RX writes are unsynchronized wrt this test.
-						if diff := cmp.Diff(wantRxReads, fifoReadsTransformer(client.RxStats())); diff != "" {
+						if diff := cmp.Diff(wantRxReads, fifoReadsTransformer(&client.RxStats().FifoStats)); diff != "" {
 							t.Errorf("Stats.Rx.Reads mismatch (-want +got):\n%s", diff)
 						}
 
@@ -258,6 +258,8 @@ func TestEndpoint(t *testing.T) {
 							t.Fatalf("got WritePackets(_) = %d, nil, want %d, nil", got, writeSize)
 						}
 
+						dropsBefore := client.TxStats().Drops.Value()
+
 						if err := cycleTX(deviceFifos.Tx, writeSize, device.iob, nil); err != nil {
 							t.Fatal(err)
 						}
@@ -265,8 +267,16 @@ func TestEndpoint(t *testing.T) {
 							t.Fatal(err)
 						}
 
+						dropsAfter := client.TxStats().Drops.Value()
+
+						// Since we're not setting the TX_OK flag in this test, all these
+						// packets will be considered to have dropped.
+						if got, want := dropsAfter-dropsBefore, uint64(writeSize); got != want {
+							t.Errorf("got client.TxStates.Drops.Value() = %d, want %d", got, want)
+						}
+
 						// NB: only assert on the writes, since TX reads are unsynchronized wrt this test.
-						if diff := cmp.Diff(wantTxWrites, fifoWritesTransformer(client.TxStats())); diff != "" {
+						if diff := cmp.Diff(wantTxWrites, fifoWritesTransformer(&client.TxStats().FifoStats)); diff != "" {
 							t.Errorf("Stats.Tx.Writes mismatch (-want +got):\n%s", diff)
 						}
 					})

@@ -11,6 +11,11 @@ import (
 	"fmt"
 )
 
+const FifoRXOK = C.ETH_FIFO_RX_OK
+const FifoTXOK = C.ETH_FIFO_TX_OK
+const FifoInvalid = C.ETH_FIFO_INVALID
+const FifoTXRX = C.ETH_FIFO_RX_TX
+
 const FifoMaxSize = C.ZX_FIFO_MAX_SIZE_BYTES
 const cookieMagic = 0x42420102 // used to fill top 32-bits of FifoEntry.cookie
 
@@ -29,6 +34,10 @@ func (e *FifoEntry) Length() uint16 {
 
 func (e *FifoEntry) SetLength(length int) {
 	e.length = C.uint16_t(length)
+}
+
+func (e *FifoEntry) Flags() uint16 {
+	return uint16(e.flags)
 }
 
 func NewFifoEntry(offset uint32, length uint16, index int32) FifoEntry {

@@ -385,6 +385,9 @@ func TestEthInfoInspectImpl(t *testing.T) {
 
 	if diff := cmp.Diff(inspect.Object{
 		Name: v.name,
+		Metrics: []inspect.Metric{
+			{Key: "TxDrops", Value: inspect.MetricValueWithUintValue(client.TxStats().Drops.Value())},
+		},
 		Properties: []inspect.Property{
 			{Key: "Topopath", Value: inspect.PropertyValueWithStr(topopath)},
 			{Key: "Filepath", Value: inspect.PropertyValueWithStr(filepath)},

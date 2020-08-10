@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -172,10 +173,10 @@ func createTunWithConfig(t *testing.T, ctx context.Context, config tun.DeviceCon
 	return device
 }
 
-func createTun(t *testing.T, ctx context.Context) *tun.DeviceWithCtxInterface {
+func createTunWithOnline(t *testing.T, ctx context.Context, online bool) *tun.DeviceWithCtxInterface {
 	t.Helper()
 	var config tun.DeviceConfig
-	config.SetOnline(true)
+	config.SetOnline(online)
 	config.SetBlocking(true)
 	config.SetMac(getTunMac())
 
@@ -220,8 +221,12 @@ func createTunPair(t *testing.T, ctx context.Context, frameTypes []network.Frame
 }
 
 func createTunClientPair(t *testing.T, ctx context.Context) (*tun.DeviceWithCtxInterface, *MacAddressingClient) {
+	return createTunClientPairWithOnline(t, ctx, true)
+}
+
+func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.DeviceWithCtxInterface, *MacAddressingClient) {
 	t.Helper()
-	tundev := createTun(t, ctx)
+	tundev := createTunWithOnline(t, ctx, online)
 	netdev, mac := connectProtos(t, ctx, tundev)
 
 	client, err := NewMacAddressingClient(ctx, netdev, mac, &SimpleSessionConfigFactory{})
@@ -263,6 +268,50 @@ func connectProtos(t *testing.T, ctx context.Context, tunDevice *tun.DeviceWithC
 func TestMain(m *testing.M) {
 	syslog.SetVerbosity(syslog.DebugVerbosity)
 	os.Exit(m.Run())
+}
+
+func TestClient_WritePacket(t *testing.T) {
+	ctx := context.Background()
+
+	tunDev, client := createTunClientPairWithOnline(t, ctx, false)
+	defer func() {
+		if err := tunDev.Close(); err != nil {
+			t.Fatalf("tunDev.Close() failed: %s", err)
+		}
+		client.Wait()
+	}()
+
+	linkEndpoint := eth.NewLinkEndpoint(client)
+
+	client.SetOnLinkClosed(func() {})
+	client.SetOnLinkOnlineChanged(func(bool) {})
+
+	dispatcher := make(dispatcherChan)
+	close(dispatcher)
+	linkEndpoint.Attach(&dispatcher)
+
+	if err := client.Up(); err != nil {
+		t.Fatalf("failed to start client %s", err)
+	}
+
+	if err := linkEndpoint.WritePacket(&stack.Route{}, nil, header.IPv4ProtocolNumber, &stack.PacketBuffer{
+		Header: buffer.NewPrependable(int(linkEndpoint.MaxHeaderLength())),
+	}); err != nil {
+		t.Fatalf("WritePacket failed: %s", err)
+	}
+
+	// This is unfortunate, but we don't have a way of being notified.
+	now := time.Now()
+	for {
+		if client.handler.Stats.Tx.Drops.Value() == 0 {
+			if time.Since(now) < 10*time.Second {
+				runtime.Gosched()
+				continue
+			}
+			t.Error("drop not incremented")
+		}
+		break
+	}
 }
 
 func TestWritePacket(t *testing.T) {
@@ -567,7 +616,7 @@ func TestDestroyDeviceCausesClose(t *testing.T) {
 func TestCreationFailsIBadFrameType(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev := createTun(t, ctx)
+	tunDev := createTunWithOnline(t, ctx, true)
 
 	dev, mac := connectProtos(t, ctx, tunDev)
 
