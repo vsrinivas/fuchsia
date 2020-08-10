@@ -123,13 +123,13 @@ pub struct InspectMetadata {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-pub struct Schema<Key> {
+pub struct Schema<Key, Metadata> {
     /// Enum specifying that this schema is encoding data.
     #[serde(default)]
+    // TODO(fxb/NNNNN) remove this once the Metadata enum is gone everywhere
     pub data_source: DataSource,
 
     /// The metadata for the diagnostics payload.
-    #[serde(default)]
     pub metadata: Metadata,
 
     /// Moniker of the component that generated the payload.
@@ -147,9 +147,10 @@ pub struct Schema<Key> {
     pub version: u64,
 }
 
-pub type InspectSchema = Schema<String>;
+pub type InspectSchema = Schema<String, InspectMetadata>;
+pub type LifecycleSchema = Schema<String, LifecycleEventMetadata>;
 
-impl Schema<String> {
+impl Schema<String, LifecycleEventMetadata> {
     /// Creates a new schema for a lifecycle event.
     pub fn for_lifecycle_event(
         moniker: impl Into<String>,
@@ -158,25 +159,25 @@ impl Schema<String> {
         component_url: impl Into<String>,
         timestamp: impl Into<Timestamp>,
         errors: Vec<Error>,
-    ) -> Schema<String> {
+    ) -> LifecycleSchema {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
-
-        let lifecycle_event_metadata = LifecycleEventMetadata {
-            timestamp: timestamp.into(),
-            component_url: component_url.into(),
-            lifecycle_event_type,
-            errors: errors_opt,
-        };
 
         Schema {
             moniker: moniker.into(),
             version: *SCHEMA_VERSION,
             data_source: DataSource::LifecycleEvent,
             payload,
-            metadata: Metadata::LifecycleEvent(lifecycle_event_metadata),
+            metadata: LifecycleEventMetadata {
+                timestamp: timestamp.into(),
+                component_url: component_url.into(),
+                lifecycle_event_type,
+                errors: errors_opt,
+            },
         }
     }
+}
 
+impl Schema<String, InspectMetadata> {
     /// Creates a new schema for inspect data.
     pub fn for_inspect(
         moniker: impl Into<String>,
@@ -188,19 +189,17 @@ impl Schema<String> {
     ) -> InspectSchema {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
-        let inspect_metadata = InspectMetadata {
-            timestamp: timestamp_nanos.into(),
-            component_url: component_url.into(),
-            filename: filename.into(),
-            errors: errors_opt,
-        };
-
         Schema {
             moniker: moniker.into(),
             version: *SCHEMA_VERSION,
             data_source: DataSource::Inspect,
             payload: inspect_hierarchy,
-            metadata: Metadata::Inspect(inspect_metadata),
+            metadata: InspectMetadata {
+                timestamp: timestamp_nanos.into(),
+                component_url: component_url.into(),
+                filename: filename.into(),
+                errors: errors_opt,
+            },
         }
     }
 }

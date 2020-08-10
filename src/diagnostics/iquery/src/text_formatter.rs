@@ -23,18 +23,15 @@ pub fn format(path: &str, node_hierarchy: NodeHierarchy) -> String {
 
 pub fn format_schema(schema: InspectSchema) -> String {
     let mut result = format!("{}:\n", schema.moniker);
-    match schema.metadata.inspect() {
-        Some(metadata) => {
-            result.push_str("  metadata:\n");
-            if let Some(errors) = &metadata.errors {
-                result.push_str(&format!("    errors = {}\n", errors.join(", ")));
-            }
-            result.push_str(&format!("    filename = {}\n", metadata.filename));
-            result.push_str(&format!("    component_url = {}\n", metadata.component_url));
-            result.push_str(&format!("    timestamp = {}\n", metadata.timestamp));
-        }
-        None => {}
+
+    result.push_str("  metadata:\n");
+    if let Some(errors) = &schema.metadata.errors {
+        result.push_str(&format!("    errors = {}\n", errors.join(", ")));
     }
+    result.push_str(&format!("    filename = {}\n", schema.metadata.filename));
+    result.push_str(&format!("    component_url = {}\n", schema.metadata.component_url));
+    result.push_str(&format!("    timestamp = {}\n", schema.metadata.timestamp));
+
     match schema.payload {
         Some(hierarchy) => {
             let payload = output_hierarchy(hierarchy, 2);

@@ -10,7 +10,7 @@ use {
     anyhow::Context,
     argh::FromArgs,
     async_trait::async_trait,
-    diagnostics_data::{LifecycleType, Schema},
+    diagnostics_data::{LifecycleSchema, LifecycleType},
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorMarker, BatchIteratorMarker, ClientSelectorConfiguration, DataType, Format,
         FormattedContent, StreamMode, StreamParameters,
@@ -126,21 +126,17 @@ async fn get_ready_components() -> Result<Vec<MonikerWithUrl>, Error> {
     for value in values {
         // TODO(fxbug.dev/55118): when we can filter on metadata on a StreamDiagnostics
         // request, this manual filtering won't be necessary.
-        let metadata = value
-            .metadata
-            .lifecycle_event()
-            .ok_or(Error::invalid_archive_response("no lifecycle metadata"))?;
-        if metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady {
+        if value.metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady {
             result.push(MonikerWithUrl {
                 moniker: value.moniker,
-                component_url: metadata.component_url.clone(),
+                component_url: value.metadata.component_url.clone(),
             });
         }
     }
     Ok(result)
 }
 
-async fn get_lifecycle_response() -> Result<Vec<Schema<String>>, anyhow::Error> {
+async fn get_lifecycle_response() -> Result<Vec<LifecycleSchema>, anyhow::Error> {
     // TODO(fxbug.dev/55138): refactor into DiagnosticsDataFetcher
     let archive =
         client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?;
@@ -166,7 +162,7 @@ async fn get_lifecycle_response() -> Result<Vec<Schema<String>>, anyhow::Error> 
                     let mut buf = vec![0; data.size as usize];
                     data.vmo.read(&mut buf, 0).context("reading vmo")?;
                     let hierarchy_json = std::str::from_utf8(&buf).unwrap();
-                    let output: Schema<String> =
+                    let output: LifecycleSchema =
                         serde_json::from_str(&hierarchy_json).context("valid json")?;
                     result.push(output);
                 }

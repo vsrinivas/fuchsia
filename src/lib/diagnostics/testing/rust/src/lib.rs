@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use anyhow::Error;
-use diagnostics_data::{InspectSchema, Metadata};
+use diagnostics_data::InspectSchema;
 use diagnostics_reader::ArchiveReader;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
@@ -100,10 +100,7 @@ impl AppWithDiagnostics {
         let archive = self.observer.connect_to_service::<ArchiveAccessorMarker>()?;
 
         let mut results = ArchiveReader::new().with_archive(archive).get().await?;
-        results.retain(|root| match &root.metadata {
-            Metadata::Inspect(meta) => &meta.component_url != ARCHIVIST_URL,
-            other => panic!("expected only inspect metadata, got {:?}", other),
-        });
+        results.retain(|root| &root.metadata.component_url != ARCHIVIST_URL);
 
         Ok(results)
     }

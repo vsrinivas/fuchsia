@@ -26,9 +26,6 @@ pub enum Error {
 
     #[error("Failed to find inspect data in location {}: {}", _0, _1)]
     ReadLocation(String, anyhow::Error),
-
-    #[error("The archivist returned an invalid reponse: {}", _0)]
-    InvalidArchiveResponse(String),
 }
 
 impl Error {
@@ -38,10 +35,6 @@ impl Error {
 
     pub fn invalid_arguments(msg: impl Into<String>) -> Error {
         Error::InvalidArguments(msg.into())
-    }
-
-    pub fn invalid_archive_response(msg: impl Into<String>) -> Error {
-        Error::InvalidArchiveResponse(msg.into())
     }
 }
 
