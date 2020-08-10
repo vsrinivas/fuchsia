@@ -10,13 +10,17 @@ use {
 };
 
 pub use {
-    self::uuid::*, adapter_info::*, address::*, bonding_data::*, host_info::*, id::*, peer::*,
+    self::uuid::*, adapter_info::*, address::*, bonding_data::*, channel::*, host_info::*, id::*,
+    peer::*,
 };
+
 mod adapter_info;
 mod address;
 /// Types related to bonding data. This module defines helper functions for unit tests that utilize
 /// proptest.
 pub mod bonding_data;
+/// Channel type
+mod channel;
 /// Bluetooth HCI emulator protocol types
 pub mod emulator;
 pub mod host_info;

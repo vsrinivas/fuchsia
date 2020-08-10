@@ -7,11 +7,11 @@ use {
     bt_a2dp::media_types::*,
     bt_a2dp::{peer::Peer, stream::Streams},
     bt_avdtp as avdtp,
-    fidl_fuchsia_bluetooth_bredr::{Channel, ProfileDescriptor, ProfileProxy},
+    fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak},
-        types::PeerId,
+        types::{Channel, PeerId},
     },
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
@@ -125,28 +125,15 @@ impl ConnectedPeers {
     /// Accept a channel that was connected to the peer `id`.  If `initiator` is true, we initiated
     /// this connection (and should take the INT role)
     pub fn connected(&mut self, id: PeerId, channel: Channel, initiator: bool) {
-        let socket = match channel.socket {
-            Some(socket) => socket,
-            None => {
-                fx_log_warn!("Peer {} delivered a channel with no socket", id);
-                return;
-            }
-        };
         match self.get(&id) {
             Some(peer) => {
-                if let Err(e) = peer.receive_channel(socket) {
+                if let Err(e) = peer.receive_channel(channel) {
                     fx_log_warn!("{} failed to connect channel: {}", id, e);
                 }
             }
             None => {
                 fx_log_info!("Adding new peer for {}", id);
-                let avdtp_peer = match avdtp::Peer::new(socket) {
-                    Ok(peer) => peer,
-                    Err(e) => {
-                        fx_log_warn!("Error adding signaling peer {}: {:?}", id, e);
-                        return;
-                    }
-                };
+                let avdtp_peer = avdtp::Peer::new(channel);
 
                 let mut peer = Peer::create(
                     id,
@@ -213,11 +200,9 @@ mod tests {
     use super::*;
 
     use bt_avdtp::Request;
-    use fidl::encoding::Decodable;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
     use fidl_fuchsia_cobalt::CobaltEvent;
-    use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::{self, task::Poll, StreamExt};
     use std::convert::TryFrom;
@@ -232,8 +217,8 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn exercise_avdtp(exec: &mut fasync::Executor, remote: zx::Socket, peer: &Peer) {
-        let remote_avdtp = avdtp::Peer::new(remote).expect("remote control should be creatable");
+    fn exercise_avdtp(exec: &mut fasync::Executor, remote: Channel, peer: &Peer) {
+        let remote_avdtp = avdtp::Peer::new(remote);
         let mut remote_requests = remote_avdtp.take_request_stream();
 
         // Should be able to actually communicate via the peer.
@@ -286,17 +271,11 @@ mod tests {
         (exec, id, peers, stream)
     }
 
-    fn new_channel() -> (zx::Socket, Channel) {
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let chan = Channel { socket: Some(signaling), ..Channel::new_empty() };
-        (remote, chan)
-    }
-
     #[test]
     fn connected_peers_connect_creates_peer() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
-        let (remote, channel) = new_channel();
+        let (remote, channel) = Channel::create();
 
         peers.connected(id, channel, false);
 
@@ -312,7 +291,7 @@ mod tests {
     fn connected_peers_peer_disconnect_removes_peer() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
-        let (remote, channel) = new_channel();
+        let (remote, channel) = Channel::create();
 
         peers.connected(id, channel, false);
         run_to_stalled(&mut exec);
@@ -329,7 +308,7 @@ mod tests {
     fn connected_peers_reconnect_works() {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
-        let (remote, channel) = new_channel();
+        let (remote, channel) = Channel::create();
         peers.connected(id, channel, false);
         run_to_stalled(&mut exec);
 
@@ -341,7 +320,7 @@ mod tests {
         assert!(peers.get(&id).is_none());
 
         // Connect another peer with the same ID
-        let (_remote, channel) = new_channel();
+        let (_remote, channel) = Channel::create();
 
         peers.connected(id, channel, false);
         run_to_stalled(&mut exec);

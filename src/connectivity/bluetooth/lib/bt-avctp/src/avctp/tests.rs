@@ -3,37 +3,38 @@
 // found in the LICENSE file.
 
 use {
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
     futures::{executor::block_on, StreamExt},
+    std::result,
 };
 
 use super::*;
 
-pub(crate) fn setup_peer() -> (Peer, zx::Socket) {
-    let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+pub(crate) fn setup_peer() -> (Peer, Channel) {
+    let (remote, signaling) = Channel::create();
 
     let peer = Peer::new(signaling);
-    assert!(peer.is_ok());
-    (peer.unwrap(), remote)
+    (peer, remote)
 }
 
-fn setup_stream_test() -> (CommandStream, Peer, zx::Socket, fasync::Executor) {
+fn setup_stream_test() -> (CommandStream, Peer, Channel, fasync::Executor) {
     let exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let stream = peer.take_command_stream();
     (stream, peer, remote, exec)
 }
 
-pub(crate) fn recv_remote(remote: &zx::Socket) -> result::Result<Vec<u8>, zx::Status> {
-    let waiting = remote.outstanding_read_bytes();
+pub(crate) fn recv_remote(remote: &Channel) -> result::Result<Vec<u8>, zx::Status> {
+    let waiting = remote.as_ref().outstanding_read_bytes();
     assert!(waiting.is_ok());
     let mut response: Vec<u8> = vec![0; waiting.unwrap()];
-    let response_read = remote.read(response.as_mut_slice())?;
+    let response_read = remote.as_ref().read(response.as_mut_slice())?;
     assert_eq!(response.len(), response_read);
     Ok(response)
 }
 
-pub(crate) fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
+pub(crate) fn expect_remote_recv(expected: &[u8], remote: &Channel) {
     let r = recv_remote(&remote);
     assert!(r.is_ok());
     let response = r.unwrap();
@@ -56,16 +57,15 @@ fn next_request(stream: &mut CommandStream, exec: &mut fasync::Executor) -> Comm
 #[test]
 fn closes_socket_when_dropped() {
     let mut _exec = fasync::Executor::new().expect("failed to create an executor");
-    let (peer_sock, control) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+    let (peer_chan, control) = Channel::create();
 
     {
         let peer = Peer::new(control);
-        assert!(peer.is_ok());
-        let mut _stream = peer.unwrap().take_command_stream();
+        let mut _stream = peer.take_command_stream();
     }
 
     // Writing to the sock from the other end should fail.
-    let write_res = peer_sock.write(&[0; 1]);
+    let write_res = peer_chan.as_ref().write(&[0; 1]);
     assert!(write_res.is_err());
     assert_eq!(Status::PEER_CLOSED, write_res.err().unwrap());
 }
@@ -73,23 +73,22 @@ fn closes_socket_when_dropped() {
 #[test]
 fn socket_open_when_stream_open() {
     let mut _exec = fasync::Executor::new().expect("failed to create an executor");
-    let (peer_sock, control) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+    let (peer_chan, control) = Channel::create();
 
     {
         let mut _stream;
         {
             let peer = Peer::new(control);
-            assert!(peer.is_ok());
-            _stream = peer.unwrap().take_command_stream();
+            _stream = peer.take_command_stream();
         }
 
         // Writing to the sock from the other end should pass.
-        let write_res = peer_sock.write(&[0; 1]);
+        let write_res = peer_chan.as_ref().write(&[0; 1]);
         assert!(write_res.is_ok());
     }
 
     // Writing to the sock from the other end should fail.
-    let write_res = peer_sock.write(&[0; 1]);
+    let write_res = peer_chan.as_ref().write(&[0; 1]);
     assert!(write_res.is_err());
     assert_eq!(Status::PEER_CLOSED, write_res.err().unwrap());
 }
@@ -98,11 +97,9 @@ fn socket_open_when_stream_open() {
 #[should_panic(expected = "Command stream has already been taken")]
 fn can_only_take_stream_once() {
     let mut _exec = fasync::Executor::new().expect("failed to create an executor");
-    let (_, control) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+    let (_, control) = Channel::create();
 
-    let p = Peer::new(control);
-    assert!(p.is_ok());
-    let peer = p.unwrap();
+    let peer = Peer::new(control);
     let mut _stream = peer.take_command_stream();
     let mut _stream2 = peer.take_command_stream();
 }
@@ -138,6 +135,7 @@ fn send_command_receive_response() {
     let stream_ret: Poll<Option<Result<Packet>>> = exec.run_until_stalled(&mut response_fut);
     assert!(stream_ret.is_pending());
     assert!(socket
+        .as_ref()
         .write(&[
             0x02, // TxLabel 0, Single 0, Response 1, Ipid 0,
             0x11, // AV PROFILE
@@ -177,7 +175,7 @@ fn receive_command_send_response() {
         0x0D, // Event ID
         0x00, 0x00, 0x00, 0x00, // Playback interval
     ];
-    assert!(socket.write(notif_command_packet).is_ok());
+    assert!(socket.as_ref().write(notif_command_packet).is_ok());
     let command = next_request(&mut stream, &mut exec);
     assert!(command.header().is_type(&MessageType::Command));
     assert!(command.header().is_single());
@@ -228,7 +226,7 @@ fn receive_command_too_short_is_dropped() {
         0x11, // AV PROFILE
         0x0e, // AV PROFILE
     ];
-    assert!(socket.write(notif_command_packet).is_ok());
+    assert!(socket.as_ref().write(notif_command_packet).is_ok());
 
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut);
@@ -239,7 +237,7 @@ fn receive_command_too_short_is_dropped() {
 fn receive_invalid_is_dropped() {
     let (mut stream, _peer, socket, mut exec) = setup_stream_test();
     let notif_command_packet = &[0];
-    assert!(socket.write(notif_command_packet).is_ok());
+    assert!(socket.as_ref().write(notif_command_packet).is_ok());
 
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut);
@@ -255,7 +253,7 @@ fn invalid_profile_id_response() {
         0x11, 0x00, // random profile ID
         3, 72, 0, // random payload
     ];
-    assert!(socket.write(notif_command_packet).is_ok());
+    assert!(socket.as_ref().write(notif_command_packet).is_ok());
 
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut); // wake and pump.

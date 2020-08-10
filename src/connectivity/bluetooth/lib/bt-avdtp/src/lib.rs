@@ -3,21 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync,
+    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_bluetooth::types::Channel,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
     futures::{
         future::FusedFuture,
-        ready, select,
+        ready,
         stream::Stream,
         task::{Context, Poll, Waker},
-        FutureExt,
     },
     parking_lot::Mutex,
     slab::Slab,
-    std::{
-        collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, result, sync::Arc,
-    },
+    std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
 };
 
 #[cfg(test)]
@@ -55,15 +53,15 @@ pub struct Peer {
 }
 
 impl Peer {
-    /// Create a new peer from a signaling channel socket.
-    pub fn new(signaling: zx::Socket) -> result::Result<Peer, zx::Status> {
-        Ok(Peer {
+    /// Create a new peer from a signaling channel.
+    pub fn new(signaling: Channel) -> Self {
+        Self {
             inner: Arc::new(PeerInner {
-                signaling: fasync::Socket::from_socket(signaling)?,
+                signaling,
                 response_waiters: Mutex::new(Slab::<ResponseWaiter>::new()),
                 incoming_requests: Mutex::<RequestQueue>::default(),
             }),
-        })
+        }
     }
 
     /// Take the event listener for this peer. Panics if the stream is already
@@ -289,12 +287,10 @@ impl Peer {
     }
 
     /// The maximum amount of time we will wait for a response to a signaling command.
-    fn command_timeout() -> Duration {
-        const RTX_SIG_TIMER_MS: i64 = 3000;
-        Duration::from_millis(RTX_SIG_TIMER_MS)
-    }
+    const RTX_SIG_TIMER_MS: i64 = 3000;
+    const COMMAND_TIMEOUT: Duration = Duration::from_millis(Peer::RTX_SIG_TIMER_MS);
 
-    /// Sends a signal on the socket and receive a future that will complete
+    /// Sends a signal on the channel and receive a future that will complete
     /// when we get the expected response.
     async fn send_command<'a, D: Decodable>(
         &'a self,
@@ -313,17 +309,11 @@ impl Peer {
             self.inner.send_signal(buf.as_slice())?;
         }
 
-        let mut response = CommandResponse { id: header.label(), inner: Some(self.inner.clone()) };
+        let response = CommandResponse { id: header.label(), inner: Some(self.inner.clone()) };
 
-        let mut timeout = fasync::Timer::new(fasync::Time::after(Peer::command_timeout())).fuse();
-
-        select! {
-            _ = timeout => Err(Error::Timeout),
-            r = response => {
-                let response_buf = r?;
-                decode_signaling_response(header.signal(), response_buf)
-            },
-        }
+        let deadline = Peer::COMMAND_TIMEOUT.after_now();
+        let response_buf = response.on_timeout(deadline, || Err(Error::Timeout)).await?;
+        decode_signaling_response(header.signal(), response_buf)
     }
 }
 
@@ -883,7 +873,7 @@ impl Drop for CommandResponse {
 #[derive(Debug)]
 struct PeerInner {
     /// The signaling channel
-    signaling: fasync::Socket,
+    signaling: Channel,
 
     /// A map of transaction ids that have been sent but the response has not
     /// been received and/or processed yet.

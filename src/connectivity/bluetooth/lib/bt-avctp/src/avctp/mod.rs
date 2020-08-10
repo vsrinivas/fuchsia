@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::Channel,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
@@ -13,9 +13,7 @@ use {
     },
     parking_lot::Mutex,
     slab::Slab,
-    std::{
-        collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, result, sync::Arc,
-    },
+    std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
 };
 
 #[cfg(test)]
@@ -39,8 +37,8 @@ pub struct Peer {
 
 #[derive(Debug)]
 struct PeerInner {
-    /// Socket to the remote device owned by this peer object.
-    socket: fasync::Socket,
+    /// Channel to the remote device owned by this peer object.
+    channel: Channel,
 
     /// A map of transaction ids that have been sent but the response has not
     /// been received and/or processed yet.
@@ -57,14 +55,8 @@ struct PeerInner {
 
 impl Peer {
     /// Create a new peer object from a established L2CAP socket with the peer.
-    pub fn new(socket: zx::Socket) -> result::Result<Peer, zx::Status> {
-        Ok(Peer {
-            inner: Arc::new(PeerInner {
-                socket: fasync::Socket::from_socket(socket)?,
-                response_waiters: Mutex::new(Slab::<ResponseWaiter>::new()),
-                incoming_requests: Mutex::<CommandQueue>::default(),
-            }),
-        })
+    pub fn new(channel: Channel) -> Self {
+        Self { inner: Arc::new(PeerInner::new(channel)) }
     }
 
     /// Returns a stream of incoming commands from a remote peer.
@@ -96,6 +88,14 @@ impl Peer {
 }
 
 impl PeerInner {
+    fn new(channel: Channel) -> Self {
+        Self {
+            channel,
+            response_waiters: Mutex::new(Slab::<ResponseWaiter>::new()),
+            incoming_requests: Mutex::<CommandQueue>::default(),
+        }
+    }
+
     /// Add a response waiter, and return a id that can be used to send the
     /// transaction.  Responses then can be received using poll_recv_response
     fn add_response_waiter(&self) -> Result<TxLabel> {
@@ -172,7 +172,7 @@ impl PeerInner {
     fn recv_all(&self, cx: &mut Context<'_>) -> Result<bool> {
         let mut buf = Vec::<u8>::new();
         loop {
-            let packet_size = match self.socket.poll_datagram(cx, &mut buf) {
+            let packet_size = match self.channel.poll_datagram(cx, &mut buf) {
                 Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
                     fx_vlog!(tag: "avctp", 1, "Peer closed");
                     return Ok(true);
@@ -282,7 +282,7 @@ impl PeerInner {
         if body.len() > 0 {
             rbuf.extend_from_slice(body);
         }
-        self.socket.as_ref().write(rbuf.as_slice()).map_err(|x| Error::PeerWrite(x))?;
+        self.channel.as_ref().write(rbuf.as_slice()).map_err(|x| Error::PeerWrite(x))?;
         Ok(())
     }
 }

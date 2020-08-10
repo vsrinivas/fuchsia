@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 use {
     anyhow::{format_err, Context as _, Error},
@@ -11,14 +11,14 @@ use {
     bt_a2dp::{codec::MediaCodecConfig, media_types::*, peer::ControllerPool, peer::Peer, stream},
     bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory},
     fidl::{encoding::Decodable, endpoints::create_request_stream},
-    fidl_fuchsia_bluetooth_bredr::*,
+    fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_component::LifecycleState,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
         detachable_map::{DetachableMap, DetachableWeak, LazyEntry},
         profile::find_profile_descriptors,
-        types::{PeerId, Uuid},
+        types::{Channel, PeerId, Uuid},
     },
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
@@ -40,25 +40,25 @@ use crate::pcm_audio::PcmAudio;
 use sources::AudioSourceType;
 
 /// Make the SDP definition for the A2DP source service.
-fn make_profile_service_definition() -> ServiceDefinition {
-    ServiceDefinition {
+fn make_profile_service_definition() -> bredr::ServiceDefinition {
+    bredr::ServiceDefinition {
         service_class_uuids: Some(vec![Uuid::new16(0x110A).into()]), // Audio Source UUID
         protocol_descriptor_list: Some(vec![
-            ProtocolDescriptor {
-                protocol: ProtocolIdentifier::L2Cap,
-                params: vec![DataElement::Uint16(PSM_AVDTP)],
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::L2Cap,
+                params: vec![bredr::DataElement::Uint16(bredr::PSM_AVDTP)],
             },
-            ProtocolDescriptor {
-                protocol: ProtocolIdentifier::Avdtp,
-                params: vec![DataElement::Uint16(0x0103)], // Indicate v1.3
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::Avdtp,
+                params: vec![bredr::DataElement::Uint16(0x0103)], // Indicate v1.3
             },
         ]),
-        profile_descriptors: Some(vec![ProfileDescriptor {
-            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+        profile_descriptors: Some(vec![bredr::ProfileDescriptor {
+            profile_id: bredr::ServiceClassProfileIdentifier::AdvancedAudioDistribution,
             major_version: 1,
             minor_version: 2,
         }]),
-        ..ServiceDefinition::new_empty()
+        ..Decodable::new_empty()
     }
 }
 
@@ -165,9 +165,9 @@ async fn test_encode_sbc() -> Result<(), Error> {
 struct Peers {
     peers: DetachableMap<PeerId, Peer>,
     streams: stream::Streams,
-    profile: ProfileProxy,
+    profile: bredr::ProfileProxy,
     /// The L2CAP channel mode preference for the AVDTP signaling channel.
-    channel_mode: ChannelMode,
+    channel_mode: bredr::ChannelMode,
     /// The controller used for sending out-of-band commands.
     controller: Arc<ControllerPool>,
 }
@@ -177,8 +177,8 @@ const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
 impl Peers {
     fn new(
         streams: stream::Streams,
-        profile: ProfileProxy,
-        channel_mode: ChannelMode,
+        profile: bredr::ProfileProxy,
+        channel_mode: bredr::ChannelMode,
         controller: Arc<ControllerPool>,
     ) -> Self {
         Peers { peers: DetachableMap::new(), profile, streams, channel_mode, controller }
@@ -195,14 +195,13 @@ impl Peers {
     fn add_control_connection(
         entry: LazyEntry<PeerId, Peer>,
         channel: Channel,
-        desc: Option<ProfileDescriptor>,
+        desc: Option<bredr::ProfileDescriptor>,
         streams: stream::Streams,
-        profile: ProfileProxy,
+        profile: bredr::ProfileProxy,
         controller_pool: Arc<ControllerPool>,
     ) -> Result<(), Error> {
         let id = entry.key();
-        let socket = channel.socket.ok_or(format_err!("No socket in control connection"))?;
-        let avdtp_peer = avdtp::Peer::new(socket).map_err(|e| avdtp::Error::ChannelSetup(e))?;
+        let avdtp_peer = avdtp::Peer::new(channel);
         let peer = Peer::create(id.clone(), avdtp_peer, streams, profile, None);
         // Start the streaming task if the profile information is populated.
         // Otherwise, `self.discovered()` will do so.
@@ -238,7 +237,7 @@ impl Peers {
     }
 
     /// Called when a peer is discovered via SDP.
-    fn discovered(&mut self, id: PeerId, desc: ProfileDescriptor) {
+    fn discovered(&mut self, id: PeerId, desc: bredr::ProfileDescriptor) {
         let entry = self.peers.lazy_entry(&id);
         let profile = self.profile.clone();
         let streams = self.streams.as_new();
@@ -260,13 +259,13 @@ impl Peers {
             let channel = match profile
                 .connect(
                     &mut id.into(),
-                    &mut ConnectParameters::L2cap(L2capParameters {
-                        psm: Some(PSM_AVDTP),
-                        parameters: Some(ChannelParameters {
+                    &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+                        psm: Some(bredr::PSM_AVDTP),
+                        parameters: Some(bredr::ChannelParameters {
                             channel_mode: Some(channel_mode),
-                            ..ChannelParameters::new_empty()
+                            ..Decodable::new_empty()
                         }),
-                        ..L2capParameters::new_empty()
+                        ..Decodable::new_empty()
                     }),
                 )
                 .await
@@ -280,6 +279,13 @@ impl Peers {
                     return;
                 }
                 Ok(Ok(channel)) => channel,
+            };
+            let channel = match channel.try_into() {
+                Ok(chan) => chan,
+                Err(e) => {
+                    fx_log_warn!("No channel from peer {}: {:?}", id, e);
+                    return;
+                }
             };
             if let Err(e) = Peers::add_control_connection(
                 entry,
@@ -301,8 +307,7 @@ impl Peers {
         let entry = self.peers.lazy_entry(&id);
         if let Some(peer) = entry.get() {
             if let Some(peer) = peer.upgrade() {
-                let socket = channel.socket.ok_or(format_err!("Socket not included in channel"))?;
-                if let Err(e) = peer.receive_channel(socket) {
+                if let Err(e) = peer.receive_channel(channel) {
                     fx_log_warn!("{} connected an unexpected channel: {}", id, e);
                 }
             }
@@ -464,11 +469,11 @@ async fn start_streaming(peer: &DetachableWeak<PeerId, Peer>) -> Result<(), anyh
 /// Parses the ChannelMode from the String argument.
 ///
 /// Returns an Error if the provided argument is an invalid string.
-fn channel_mode_from_arg(channel_mode: Option<String>) -> Result<ChannelMode, Error> {
+fn channel_mode_from_arg(channel_mode: Option<String>) -> Result<bredr::ChannelMode, Error> {
     match channel_mode {
-        None => Ok(ChannelMode::Basic),
-        Some(s) if s == "basic" => Ok(ChannelMode::Basic),
-        Some(s) if s == "ertm" => Ok(ChannelMode::EnhancedRetransmission),
+        None => Ok(bredr::ChannelMode::Basic),
+        Some(s) if s == "basic" => Ok(bredr::ChannelMode::Basic),
+        Some(s) if s == "ertm" => Ok(bredr::ChannelMode::EnhancedRetransmission),
         Some(s) => return Err(format_err!("invalid channel mode: {}", s)),
     }
 }
@@ -516,7 +521,7 @@ async fn main() -> Result<(), Error> {
 
     fasync::Task::spawn(fs.collect::<()>()).detach();
 
-    let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
+    let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
         .context("connecting to Bluetooth profile service")?;
 
     let service_defs = vec![make_profile_service_definition()];
@@ -527,26 +532,26 @@ async fn main() -> Result<(), Error> {
     profile_svc
         .advertise(
             &mut service_defs.into_iter(),
-            SecurityRequirements::new_empty(),
-            ChannelParameters {
+            Decodable::new_empty(),
+            bredr::ChannelParameters {
                 channel_mode: Some(signaling_channel_mode),
-                ..ChannelParameters::new_empty()
+                ..Decodable::new_empty()
             },
             connect_client,
         )
         .context("advertising A2DP service")?;
 
     const ATTRS: [u16; 4] = [
-        ATTR_PROTOCOL_DESCRIPTOR_LIST,
-        ATTR_SERVICE_CLASS_ID_LIST,
-        ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+        bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
+        bredr::ATTR_SERVICE_CLASS_ID_LIST,
+        bredr::ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
     let (results_client, results_requests) =
         create_request_stream().context("SearchResults creation")?;
 
-    profile_svc.search(ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
+    profile_svc.search(bredr::ServiceClassProfileIdentifier::AudioSink, &ATTRS, results_client)?;
 
     let streams = build_local_streams(opts.source)?;
     let peers = Peers::new(streams, profile_svc, signaling_channel_mode, controller_pool);
@@ -558,8 +563,8 @@ async fn main() -> Result<(), Error> {
 
 async fn handle_profile_events(
     mut peers: Peers,
-    mut connect_requests: ConnectionReceiverRequestStream,
-    mut results_requests: SearchResultsRequestStream,
+    mut connect_requests: bredr::ConnectionReceiverRequestStream,
+    mut results_requests: bredr::SearchResultsRequestStream,
 ) -> Result<(), Error> {
     loop {
         select! {
@@ -568,9 +573,16 @@ async fn handle_profile_events(
                     None => return Err(format_err!("BR/EDR ended service registration")),
                     Some(request) => request,
                 };
-                let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
+                let bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } = connected;
                 let peer_id: PeerId = peer_id.into();
                 fx_log_info!("Connected sink {}", peer_id);
+                let channel = match channel.try_into() {
+                    Ok(chan) => chan,
+                    Err(e) => {
+                        fx_log_info!("Peer {}: channel is not usable: {:?}", peer_id, e);
+                        continue;
+                    }
+                };
                 if let Err(e) = peers.connected(peer_id, channel) {
                     fx_log_info!("Error connecting peer {}: {:?}", peer_id, e);
                     continue;
@@ -581,7 +593,7 @@ async fn handle_profile_events(
                     None => return Err(format_err!("BR/EDR ended service search")),
                     Some(request) => request,
                 };
-                let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
+                let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
                 let peer_id: PeerId = peer_id.into();
                 fx_log_info!(
                     "Discovered sink {} - protocol {:?}: {:?}",
@@ -615,17 +627,22 @@ mod tests {
     #[test]
     fn test_responds_to_search_results() {
         let mut exec = fasync::Executor::new().expect("executor should build");
-        let (profile_proxy, _profile_stream) =
-            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
-        let (results_proxy, results_stream) = create_proxy_and_stream::<SearchResultsMarker>()
-            .expect("SearchResults proxy should be created");
+        let (profile_proxy, _profile_stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
+            .expect("Profile proxy should be created");
+        let (results_proxy, results_stream) =
+            create_proxy_and_stream::<bredr::SearchResultsMarker>()
+                .expect("SearchResults proxy should be created");
         let (_connect_proxy, connect_stream) =
-            create_proxy_and_stream::<ConnectionReceiverMarker>()
+            create_proxy_and_stream::<bredr::ConnectionReceiverMarker>()
                 .expect("ConnectionReceiver proxy should be created");
         let controller = Arc::new(ControllerPool::new());
 
-        let peers =
-            Peers::new(stream::Streams::new(), profile_proxy, ChannelMode::Basic, controller);
+        let peers = Peers::new(
+            stream::Streams::new(),
+            profile_proxy,
+            bredr::ChannelMode::Basic,
+            controller,
+        );
 
         let handler_fut = handle_profile_events(peers, connect_stream, results_stream);
         pin_mut!(handler_fut);
@@ -655,14 +672,15 @@ mod tests {
         assert!(result.is_err());
     }
 
-    fn setup_peers_test() -> (fasync::Executor, PeerId, Peers, ProfileRequestStream) {
+    fn setup_peers_test() -> (fasync::Executor, PeerId, Peers, bredr::ProfileRequestStream) {
         let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
-        let (proxy, stream) =
-            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
+        let (proxy, stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
+            .expect("Profile proxy should be created");
         let controller = Arc::new(ControllerPool::new());
         let id = PeerId(1);
 
-        let peers = Peers::new(stream::Streams::new(), proxy, ChannelMode::Basic, controller);
+        let peers =
+            Peers::new(stream::Streams::new(), proxy, bredr::ChannelMode::Basic, controller);
 
         (exec, id, peers, stream)
     }
@@ -671,16 +689,11 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn get_channel() -> (zx::Socket, Channel) {
-        let (remote, socket) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        (remote, Channel { socket: Some(socket), ..Channel::new_empty() })
-    }
-
     #[test]
     fn peers_peer_disconnect_removes_peer() {
         let (mut exec, id, mut peers, _stream) = setup_peers_test();
 
-        let (remote, signaling) = get_channel();
+        let (remote, signaling) = Channel::create();
 
         let _ = peers.connected(id, signaling);
         run_to_stalled(&mut exec);
@@ -697,9 +710,8 @@ mod tests {
     fn peers_reconnect_works() {
         let (mut exec, id, mut peers, _stream) = setup_peers_test();
 
-        let (remote, signaling) = get_channel();
+        let (remote, signaling) = Channel::create();
         let _ = peers.connected(id, signaling);
-        run_to_stalled(&mut exec);
 
         assert!(peers.get(&id).is_some());
 
@@ -711,9 +723,10 @@ mod tests {
         assert!(peers.get(&id).is_none());
 
         // Connect another peer with the same ID
-        let (_remote, signaling) = get_channel();
-        let _ = peers.connected(id, signaling);
-        run_to_stalled(&mut exec);
+        let (_remote, signaling) = Channel::create();
+        if let Err(e) = peers.connected(id, signaling) {
+            panic!("Expected connected to return Ok(()), got {:?}", e);
+        }
 
         // Should be connected.
         assert!(peers.get(&id).is_some());
@@ -810,15 +823,15 @@ mod tests {
     #[test]
     fn test_channel_mode_from_arg() {
         let channel_string = None;
-        assert_matches!(channel_mode_from_arg(channel_string), Ok(ChannelMode::Basic));
+        assert_matches!(channel_mode_from_arg(channel_string), Ok(bredr::ChannelMode::Basic));
 
         let channel_string = Some("basic".to_string());
-        assert_matches!(channel_mode_from_arg(channel_string), Ok(ChannelMode::Basic));
+        assert_matches!(channel_mode_from_arg(channel_string), Ok(bredr::ChannelMode::Basic));
 
         let channel_string = Some("ertm".to_string());
         assert_matches!(
             channel_mode_from_arg(channel_string),
-            Ok(ChannelMode::EnhancedRetransmission)
+            Ok(bredr::ChannelMode::EnhancedRetransmission)
         );
 
         let channel_string = Some("foobar123".to_string());

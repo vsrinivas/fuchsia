@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream, PSM_AVCTP},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::types::{Channel, PeerId},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, task::Poll},
     matches::assert_matches,
@@ -173,7 +173,7 @@ fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
 // controller logic.
 // 1. Creates a front end FIDL endpoints for the test controller interface, a peer manager, and mock
 //    backend.
-// 2. It then creates a socket and injects a fake services discovered and incoming connection
+// 2. It then creates a channel and injects a fake services discovered and incoming connection
 //    event into the mock profile service.
 // 3. Obtains both a regular and test controller from the FIDL service.
 // 4. Issues a Key0 passthrough keypress and validates we got both a key up and key down event
@@ -223,11 +223,8 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
 
     let (client_sender, mut peer_controller_request_receiver) = mpsc::channel(512);
 
-    let (local, remote) =
-        zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("unable to make socket");
-
-    let remote_peer = AvcPeer::new(remote)?;
-
+    let (local, remote) = Channel::create();
+    let remote_peer = AvcPeer::new(remote);
     let (profile_proxy, _requests) = create_proxy::<ProfileMarker>()?;
 
     let mut peer_manager = PeerManager::new(profile_proxy).expect("unable to create peer manager");

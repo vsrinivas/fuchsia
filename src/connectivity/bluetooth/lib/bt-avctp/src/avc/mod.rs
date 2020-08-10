@@ -4,10 +4,11 @@
 
 use {
     fuchsia_async::{Time, TimeoutExt},
+    fuchsia_bluetooth::types::Channel,
     fuchsia_syslog::{fx_log_info, fx_vlog},
-    fuchsia_zircon::{self as zx, Duration},
+    fuchsia_zircon::Duration,
     futures::{future, future::Ready, stream::FilterMap, Stream, StreamExt},
-    std::{convert::TryFrom, result},
+    std::convert::TryFrom,
 };
 
 #[cfg(test)]
@@ -122,8 +123,8 @@ pub struct Peer {
 
 impl Peer {
     /// Create a new peer object from a established L2CAP socket with the peer.
-    pub fn new(socket: zx::Socket) -> result::Result<Peer, zx::Status> {
-        Ok(Peer { inner: AvctpPeer::new(socket)? })
+    pub fn new(channel: Channel) -> Self {
+        Self { inner: AvctpPeer::new(channel) }
     }
 
     /// Decodes AV\C commands received over encapsulated AVCTP socket. Invalid AV|C commands are

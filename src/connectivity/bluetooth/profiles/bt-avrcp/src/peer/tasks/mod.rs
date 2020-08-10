@@ -10,6 +10,7 @@ use {
     log::{error, info, trace},
     notification_stream::NotificationStream,
     rand::Rng,
+    std::convert::TryInto,
 };
 
 mod notification_stream;
@@ -179,26 +180,20 @@ fn start_make_connection_task(peer: Arc<RwLock<RemotePeer>>) {
             }
             Ok(Ok(channel)) => {
                 let mut peer_guard = peer.write();
-                if channel.socket.is_none() {
-                    error!("Connect didn't return a socket?!");
-                    peer_guard.reset_connection(false);
-                    return;
-                }
-                let socket = channel.socket.expect("socket isn't None");
+                let channel = match channel.try_into() {
+                    Ok(chan) => chan,
+                    Err(e) => {
+                        error!("Unable to make peer {} from socket: {:?}", peer_id, e);
+                        peer_guard.reset_connection(false);
+                        return;
+                    }
+                };
                 match peer_guard.control_channel {
-                    PeerChannel::Connecting => match AvcPeer::new(socket) {
-                        Ok(peer) => {
-                            trace!(
-                                "Successfully established outgoing connection for peer {}",
-                                peer_id
-                            );
-                            peer_guard.set_control_connection(peer);
-                        }
-                        Err(e) => {
-                            error!("Unable to make peer {} from socket: {:?}", peer_id, e);
-                            peer_guard.reset_connection(false);
-                        }
-                    },
+                    PeerChannel::Connecting => {
+                        let peer = AvcPeer::new(channel);
+                        trace!("Successfully established outgoing connection for peer {}", peer_id);
+                        peer_guard.set_control_connection(peer);
+                    }
                     _ => {
                         trace!(
                             "Incoming connection by peer {} established while making outgoing.",

@@ -464,17 +464,11 @@ mod tests {
     use crate::profile::{AvcrpTargetFeatures, AvrcpProtocolVersion};
     use anyhow::Error;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_bredr::{
-        Channel, ProfileMarker, ProfileRequest, ProfileRequestStream,
-    };
+    use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest, ProfileRequestStream};
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+    use fuchsia_bluetooth::types::Channel;
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::{pin_mut, task::Poll};
-
-    fn get_channel() -> (zx::Socket, Channel) {
-        let (remote, socket) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        (remote, Channel { socket: Some(socket), ..Channel::new_empty() })
-    }
 
     fn setup_remote_peer(
         id: PeerId,
@@ -515,10 +509,10 @@ mod tests {
         exec.wake_expired_timers();
 
         // Peer should have requested a connection.
-        let (_remote, channel) = get_channel();
+        let (_remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+                responder.send(&mut Ok(channel.into())).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -559,10 +553,10 @@ mod tests {
         exec.wake_expired_timers();
 
         // Peer should have requested a connection.
-        let (remote, channel) = get_channel();
+        let (remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+                responder.send(&mut Ok(channel.into())).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -572,7 +566,7 @@ mod tests {
         assert!(peer_handle.is_connected());
 
         // Should be able to send data over the channel.
-        match remote.write(&[0; 1]) {
+        match remote.as_ref().write(&[0; 1]) {
             Ok(1) => {}
             x => panic!("Expected data write but got {:?} instead", x),
         }
@@ -583,8 +577,8 @@ mod tests {
 
         // Peer reconnects with a new l2cap connection. Keep the old one alive to validate that it's
         // closed.
-        let (remote2, socket2) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let reconnect_peer = AvcPeer::new(socket2)?;
+        let (remote2, channel2) = Channel::create();
+        let reconnect_peer = AvcPeer::new(channel2);
         peer_handle.set_control_connection(reconnect_peer);
 
         // Run to update watcher state. Peer should be connected.
@@ -592,13 +586,13 @@ mod tests {
         assert!(peer_handle.is_connected());
 
         // Shouldn't be able to send data over the old channel.
-        match remote.write(&[0; 1]) {
+        match remote.as_ref().write(&[0; 1]) {
             Err(zx::Status::PEER_CLOSED) => {}
             x => panic!("Expected PEER_CLOSED but got {:?}", x),
         }
 
         // Should be able to send data over the new channel.
-        match remote2.write(&[0; 1]) {
+        match remote2.as_ref().write(&[0; 1]) {
             Ok(1) => {}
             x => panic!("Expected data write but got {:?} instead", x),
         }
@@ -634,10 +628,10 @@ mod tests {
         exec.wake_expired_timers();
 
         // We expect to initiate an outbound connection through the profile server.
-        let (remote, channel) = get_channel();
+        let (remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel)).expect("FIDL response should work");
+                responder.send(&mut Ok(channel.into())).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -647,7 +641,7 @@ mod tests {
         assert!(peer_handle.is_connected());
 
         // Should be able to send data over the channel.
-        match remote.write(&[0; 1]) {
+        match remote.as_ref().write(&[0; 1]) {
             Ok(1) => {}
             x => panic!("Expected data write but got {:?} instead", x),
         }
@@ -658,8 +652,8 @@ mod tests {
         exec.wake_expired_timers();
 
         // Simulate inbound connection.
-        let (remote2, socket2) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let reconnect_peer = AvcPeer::new(socket2)?;
+        let (remote2, channel2) = Channel::create();
+        let reconnect_peer = AvcPeer::new(channel2);
         peer_handle.set_control_connection(reconnect_peer);
 
         // Run to update watcher state.
@@ -667,11 +661,11 @@ mod tests {
 
         // Both the inbound and outbound-initiated channels should be dropped.
         // Sending data should not work.
-        match remote.write(&[0; 1]) {
+        match remote.as_ref().write(&[0; 1]) {
             Err(zx::Status::PEER_CLOSED) => {}
             x => panic!("Expected PEER_CLOSED but got {:?}", x),
         }
-        match remote2.write(&[0; 1]) {
+        match remote2.as_ref().write(&[0; 1]) {
             Err(zx::Status::PEER_CLOSED) => {}
             x => panic!("Expected PEER_CLOSED but got {:?}", x),
         }
@@ -682,10 +676,10 @@ mod tests {
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
         exec.wake_expired_timers();
 
-        let (remote3, channel3) = get_channel();
+        let (remote3, channel3) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel3)).expect("FIDL response should work");
+                responder.send(&mut Ok(channel3.into())).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -695,7 +689,7 @@ mod tests {
         assert!(peer_handle.is_connected());
 
         // New channel should be good to go.
-        match remote3.write(&[0; 1]) {
+        match remote3.as_ref().write(&[0; 1]) {
             Ok(1) => {}
             x => panic!("Expected successful write but got {:?}", x),
         }

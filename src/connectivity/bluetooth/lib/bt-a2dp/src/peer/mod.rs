@@ -13,12 +13,13 @@ use {
     fidl_fuchsia_bluetooth_bredr::{
         ConnectParameters, L2capParameters, ProfileDescriptor, ProfileProxy, PSM_AVDTP,
     },
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
+    fuchsia_bluetooth::{
+        inspect::DebugExt,
+        types::{Channel, PeerId},
+    },
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
-    fuchsia_zircon as zx,
     futures::{
         task::{Context as TaskContext, Poll, Waker},
         Future, StreamExt,
@@ -27,6 +28,7 @@ use {
     parking_lot::Mutex,
     std::{
         collections::HashSet,
+        convert::TryInto,
         pin::Pin,
         sync::{Arc, Weak},
     },
@@ -48,7 +50,7 @@ pub struct Peer {
     /// Inner keeps track of the peer and the streams.
     #[inspect(forward)]
     inner: Arc<Mutex<PeerInner>>,
-    /// Profile Proxy to connect new transport sockets.
+    /// Profile Proxy to connect new transport channels
     #[inspect(skip)]
     profile: ProfileProxy,
     /// The profile descriptor for this peer, if it has been discovered.
@@ -95,7 +97,7 @@ impl Peer {
 
     /// Receive a channel from the peer that was initiated remotely.
     /// This function should be called whenever the peer associated with this opens an L2CAP channel.
-    pub fn receive_channel(&self, channel: zx::Socket) -> avdtp::Result<()> {
+    pub fn receive_channel(&self, channel: Channel) -> avdtp::Result<()> {
         let mut lock = self.inner.lock();
         lock.receive_channel(channel)
     }
@@ -205,14 +207,18 @@ impl Peer {
                 .await
                 .context("FIDL error: {}")?
                 .or(Err(avdtp::Error::PeerDisconnected))?;
-            if channel.socket.is_none() {
-                warn!("Couldn't connect media transport {}: no socket", peer_id);
-                return Err(avdtp::Error::PeerDisconnected);
-            }
+            let channel = match channel.try_into() {
+                Err(_e) => {
+                    warn!("Couldn't connect media transport {}: no channel", peer_id);
+                    return Err(avdtp::Error::PeerDisconnected);
+                }
+                Ok(c) => c,
+            };
+
             {
                 let strong_peer = peer.upgrade().ok_or(avdtp::Error::PeerDisconnected)?;
                 let mut strong_peer = strong_peer.lock();
-                strong_peer.receive_channel(channel.socket.unwrap())?;
+                strong_peer.receive_channel(channel)?;
             }
 
             let to_start = &[remote_id];
@@ -419,11 +425,9 @@ impl PeerInner {
     /// Provide a new established L2CAP channel to this remote peer.
     /// This function should be called whenever the remote associated with this peer opens an
     /// L2CAP channel after the first.
-    fn receive_channel(&mut self, channel: zx::Socket) -> avdtp::Result<()> {
+    fn receive_channel(&mut self, channel: Channel) -> avdtp::Result<()> {
         let stream_id = self.opening.as_ref().cloned().ok_or(avdtp::Error::InvalidState)?;
         let stream = self.get_mut(&stream_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
-        let channel =
-            fasync::Socket::from_socket(channel).or_else(|e| Err(avdtp::Error::ChannelSetup(e)))?;
         if !stream.endpoint_mut().receive_channel(channel)? {
             self.opening = None;
         }
@@ -572,10 +576,11 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::ErrorCode;
     use fidl_fuchsia_bluetooth_bredr::{
-        Channel, ChannelMode, ProfileMarker, ProfileRequest, ProfileRequestStream,
-        ServiceClassProfileIdentifier,
+        ProfileMarker, ProfileRequest, ProfileRequestStream, ServiceClassProfileIdentifier,
     };
     use fidl_fuchsia_cobalt::CobaltEvent;
+    use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::pin_mut;
     use matches::assert_matches;
@@ -592,11 +597,9 @@ mod tests {
         (CobaltSender::new(sender), receiver)
     }
 
-    fn setup_avdtp_peer() -> (avdtp::Peer, zx::Socket) {
-        let (remote, signaling) =
-            zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
-
-        let peer = avdtp::Peer::new(signaling).expect("create peer failure");
+    fn setup_avdtp_peer() -> (avdtp::Peer, Channel) {
+        let (remote, signaling) = Channel::create();
+        let peer = avdtp::Peer::new(signaling);
         (peer, remote)
     }
 
@@ -607,18 +610,18 @@ mod tests {
         streams
     }
 
-    pub(crate) fn recv_remote(remote: &zx::Socket) -> Result<Vec<u8>, zx::Status> {
-        let waiting = remote.outstanding_read_bytes();
+    pub(crate) fn recv_remote(remote: &Channel) -> Result<Vec<u8>, zx::Status> {
+        let waiting = remote.as_ref().outstanding_read_bytes();
         assert!(waiting.is_ok());
         let mut response: Vec<u8> = vec![0; waiting.unwrap()];
-        let response_read = remote.read(response.as_mut_slice())?;
+        let response_read = remote.as_ref().read(response.as_mut_slice())?;
         assert_eq!(response.len(), response_read);
         Ok(response)
     }
 
-    /// Creates a Peer object, returning a socket connected ot the remote end, a
+    /// Creates a Peer object, returning a channel connected ot the remote end, a
     /// ProfileRequestStream connected to the profile_proxy, and the Peer object.
-    fn setup_peer_test() -> (zx::Socket, ProfileRequestStream, mpsc::Receiver<CobaltEvent>, Peer) {
+    fn setup_peer_test() -> (Channel, ProfileRequestStream, mpsc::Receiver<CobaltEvent>, Peer) {
         let (avdtp, remote) = setup_avdtp_peer();
         let (cobalt_sender, cobalt_receiver) = fake_cobalt_sender();
         let (profile_proxy, requests) =
@@ -635,7 +638,7 @@ mod tests {
     }
 
     fn expect_get_capabilities_and_respond(
-        remote: &zx::Socket,
+        remote: &Channel,
         expected_seid: u8,
         response_capabilities: &[u8],
     ) {
@@ -656,11 +659,11 @@ mod tests {
 
         get_capabilities_rsp.extend_from_slice(response_capabilities);
 
-        assert!(remote.write(&get_capabilities_rsp).is_ok());
+        assert!(remote.as_ref().write(&get_capabilities_rsp).is_ok());
     }
 
     fn expect_get_all_capabilities_and_respond(
-        remote: &zx::Socket,
+        remote: &Channel,
         expected_seid: u8,
         response_capabilities: &[u8],
     ) {
@@ -681,7 +684,7 @@ mod tests {
 
         get_capabilities_rsp.extend_from_slice(response_capabilities);
 
-        assert!(remote.write(&get_capabilities_rsp).is_ok());
+        assert!(remote.as_ref().write(&get_capabilities_rsp).is_ok());
     }
 
     #[test]
@@ -689,11 +692,11 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let (proxy, _stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (remote, signaling) = Channel::create();
 
         let id = PeerId(1);
 
-        let avdtp = avdtp::Peer::new(signaling).expect("peer should be creatable");
+        let avdtp = avdtp::Peer::new(signaling);
         let peer = Peer::create(id, avdtp, Streams::new(), proxy, None);
 
         let closed_fut = peer.closed();
@@ -702,7 +705,7 @@ mod tests {
 
         assert!(exec.run_until_stalled(&mut closed_fut).is_pending());
 
-        // Close the remote socket.
+        // Close the remote channel
         drop(remote);
 
         assert!(exec.run_until_stalled(&mut closed_fut).is_ready());
@@ -743,7 +746,7 @@ mod tests {
             0x01 << 2 | 0x1 << 1,              // SEID (1), In Use (0b1)
             0x00 << 4 | 0x1 << 3,              // Audio (0x00), Sink (0x01)
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
 
         assert!(exec.run_until_stalled(&mut collect_future).is_pending());
 
@@ -850,7 +853,7 @@ mod tests {
             0x01 << 2 | 0x1 << 1,              // SEID (1), In Use (0b1)
             0x00 << 4 | 0x1 << 3,              // Audio (0x00), Sink (0x01)
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
 
         assert!(exec.run_until_stalled(&mut collect_future).is_pending());
 
@@ -949,7 +952,7 @@ mod tests {
             0x01,                         // Discover
             0x31,                         // BAD_STATE
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
 
         // Should be done with an error.
         // Should finish!
@@ -989,7 +992,7 @@ mod tests {
             0x01 << 2 | 0x1 << 1,              // SEID (1), In Use (0b1)
             0x00 << 4 | 0x1 << 3,              // Audio (0x00), Sink (0x01)
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
 
         assert!(exec.run_until_stalled(&mut collect_future).is_pending());
 
@@ -1008,7 +1011,7 @@ mod tests {
             0x02,                         // Get Capabilities
             0x12,                         // BAD_ACP_SEID
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
 
         assert!(exec.run_until_stalled(&mut collect_future).is_pending());
 
@@ -1027,7 +1030,7 @@ mod tests {
             0x02,                         // Get Capabilities
             0x12,                         // BAD_ACP_SEID
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
 
         // Should be done without an error, but with no streams.
         match exec.run_until_stalled(&mut collect_future) {
@@ -1037,7 +1040,7 @@ mod tests {
         }
     }
 
-    fn receive_simple_accept(remote: &zx::Socket, signal_id: u8) {
+    fn receive_simple_accept(remote: &Channel, signal_id: u8) {
         let received = recv_remote(&remote).expect("expected a packet");
         // Last half of header must be Single (0b00) and Command (0b00)
         assert_eq!(0x00, received[0] & 0xF);
@@ -1049,7 +1052,7 @@ mod tests {
             txlabel_raw | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
             signal_id,
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
     }
 
     #[test]
@@ -1085,22 +1088,14 @@ mod tests {
             Poll::Ready(Ok(_)) => panic!("Expected to be pending but finished!"),
         };
 
-        // Should connect the media socket after open.
-        let (_, transport) =
-            zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
+        // Should connect the media channel after open.
+        let (_, transport) = Channel::create();
 
         let request = exec.run_until_stalled(&mut profile_request_stream.next());
         match request {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { peer_id, responder, .. }))) => {
                 assert_eq!(PeerId(1), peer_id.into());
-                responder
-                    .send(&mut Ok(Channel {
-                        socket: Some(transport),
-                        channel_mode: Some(ChannelMode::Basic),
-                        max_tx_sdu_size: Some(672),
-                        ..Decodable::new_empty()
-                    }))
-                    .expect("responder sends");
+                responder.send(&mut Ok(transport.into())).expect("responder sends");
             }
             x => panic!("Should have sent a open l2cap request, but got {:?}", x),
         };
@@ -1156,7 +1151,7 @@ mod tests {
             Poll::Ready(Ok(_)) => panic!("Expected to be pending but finished!"),
         };
 
-        // Should connect the media socket after open.
+        // Should connect the media channel after open.
         let request = exec.run_until_stalled(&mut profile_request_stream.next());
         match request {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { peer_id, responder, .. }))) => {
@@ -1188,7 +1183,7 @@ mod tests {
         streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));
 
         let _peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
-        let remote_peer = avdtp::Peer::new(remote).expect("create peer failure");
+        let remote_peer = avdtp::Peer::new(remote);
 
         // Stream ID chosen randomly by fair dice roll
         let seid: StreamEndpointId = 0x09_u8.try_into().unwrap();
@@ -1216,7 +1211,7 @@ mod tests {
         pin_mut!(next_task_fut);
 
         let peer = Peer::create(PeerId(1), avdtp, streams, profile_proxy, None);
-        let remote_peer = avdtp::Peer::new(remote).expect("create peer failure");
+        let remote_peer = avdtp::Peer::new(remote);
 
         let discover_fut = remote_peer.discover();
         pin_mut!(discover_fut);
@@ -1301,8 +1296,7 @@ mod tests {
         };
 
         // Establish a media transport stream
-        let (_remote_transport, transport) =
-            zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
+        let (_remote_transport, transport) = Channel::create();
 
         assert_eq!(Some(()), peer.receive_channel(transport).ok());
 

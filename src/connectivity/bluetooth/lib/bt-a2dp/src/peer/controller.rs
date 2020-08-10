@@ -397,8 +397,7 @@ mod tests {
     use fidl_fuchsia_bluetooth_avdtp::*;
     use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
     use fuchsia_async as fasync;
-    use fuchsia_bluetooth::detachable_map::DetachableMap;
-    use fuchsia_zircon as zx;
+    use fuchsia_bluetooth::{detachable_map::DetachableMap, types::Channel};
     use futures::{self, StreamExt};
     use std::convert::TryFrom;
 
@@ -406,8 +405,8 @@ mod tests {
     use crate::stream::{tests::make_sbc_endpoint, Stream, Streams};
 
     /// Reads from the AVDTP request stream, sending back acknowledgements, unless otherwise noted.
-    async fn listen_for_avdtp_requests(remote: zx::Socket) {
-        let remote_avdtp = AvdtpPeer::new(remote).expect("remote control should be creatable");
+    async fn listen_for_avdtp_requests(remote: Channel) {
+        let remote_avdtp = AvdtpPeer::new(remote);
         let mut remote_requests = remote_avdtp.take_request_stream();
         while let Some(request) = remote_requests.next().await {
             match request {
@@ -467,8 +466,8 @@ mod tests {
         let fake_peer_id = PeerId(12345);
         let (profile_proxy, _requests) =
             create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
-        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        let avdtp_peer = AvdtpPeer::new(signaling).expect("Should succeed");
+        let (remote, signaling) = Channel::create();
+        let avdtp_peer = AvdtpPeer::new(signaling);
         let mut streams = Streams::new();
         let test_builder = TestMediaTaskBuilder::new();
         streams.insert(Stream::build(make_sbc_endpoint(1), test_builder.builder()));

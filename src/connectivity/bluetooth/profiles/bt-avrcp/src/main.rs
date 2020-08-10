@@ -5,10 +5,10 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_bluetooth_bredr::*,
-    fuchsia_async as fasync,
+    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
     futures::{channel::mpsc, stream::StreamExt, FutureExt},
     log::{error, info},
+    std::convert::TryInto,
 };
 
 mod packets;
@@ -53,19 +53,19 @@ async fn main() -> Result<(), Error> {
                     Some(Err(e)) => return Err(format_err!("BR/EDR Profile connection target error: {}", e)),
                     Some(Ok(request)) => request,
                 };
-                let ConnectionReceiverRequest::Connected { peer_id, channel, protocol, .. } = connected;
-                if channel.socket.is_none() {
-                    info!("BR/EDR connection target didn't provide socket?!");
-                    continue;
-                }
+                let bredr::ConnectionReceiverRequest::Connected { peer_id, channel, protocol, .. } = connected;
+                let channel = match channel.try_into() {
+                    Ok(chan) => chan,
+                    Err(e) => {
+                        info!("Couldn't convert channel: {:?}", e);
+                        continue;
+                    }
+                };
+                let peer_id = peer_id.into();
 
                 match protocol_to_channel_type(&protocol) {
-                    Some(ChannelType::Control) => {
-                        peer_manager.new_control_connection(&peer_id.into(), channel.socket.unwrap());
-                    }
-                    Some(ChannelType::Browse) => {
-                        peer_manager.new_browse_connection(&peer_id.into(), channel.socket.unwrap());
-                    }
+                    Some(ChannelType::Control) => peer_manager.new_control_connection(&peer_id, channel),
+                    Some(ChannelType::Browse) => peer_manager.new_browse_connection(&peer_id, channel),
                     None => {
                         info!("Received connection over non-AVRCP protocol: {:?}", protocol);
                         continue
@@ -78,7 +78,7 @@ async fn main() -> Result<(), Error> {
                     Some(Err(e)) => return Err(format_err!("BR/EDR Profile service search error: {}", e)),
                     Some(Ok(request)) => request,
                 };
-                let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
+                let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
 
                 if let Some(service) = AvrcpService::from_attributes(attributes) {
                     info!("Service found on {:?}: {:?}", peer_id, service);

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::Channel,
     fuchsia_zircon::{self as zx, Status},
     futures::{executor::block_on, future, StreamExt, TryStreamExt},
     matches::assert_matches,
@@ -13,15 +15,14 @@ use crate::*;
 
 // Helper functions
 
-pub(crate) fn setup_peer() -> (Peer, zx::Socket) {
-    let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+pub(crate) fn setup_peer() -> (Peer, Channel) {
+    let (remote, signaling) = Channel::create();
 
     let peer = Peer::new(signaling);
-    assert!(peer.is_ok());
-    (peer.unwrap(), remote)
+    (peer, remote)
 }
 
-fn setup_stream_test() -> (RequestStream, Peer, zx::Socket, fasync::Executor) {
+fn setup_stream_test() -> (RequestStream, Peer, Channel, fasync::Executor) {
     let exec = fasync::Executor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let stream = peer.take_request_stream();
@@ -38,16 +39,15 @@ fn next_request(stream: &mut RequestStream, exec: &mut fasync::Executor) -> Requ
     }
 }
 
-pub(crate) fn recv_remote(remote: &zx::Socket) -> result::Result<Vec<u8>, zx::Status> {
-    let waiting = remote.outstanding_read_bytes();
-    assert!(waiting.is_ok());
-    let mut response: Vec<u8> = vec![0; waiting.unwrap()];
-    let response_read = remote.read(response.as_mut_slice())?;
+pub(crate) fn recv_remote(remote: &Channel) -> result::Result<Vec<u8>, zx::Status> {
+    let waiting = remote.as_ref().outstanding_read_bytes().expect("bytes ready");
+    let mut response: Vec<u8> = vec![0; waiting];
+    let response_read = remote.as_ref().read(response.as_mut_slice())?;
     assert_eq!(response.len(), response_read);
     Ok(response)
 }
 
-pub(crate) fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
+pub(crate) fn expect_remote_recv(expected: &[u8], remote: &Channel) {
     let r = recv_remote(&remote);
     assert!(r.is_ok());
     let response = r.unwrap();
@@ -60,11 +60,11 @@ pub(crate) fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
 fn stream_request_response(
     exec: &mut fasync::Executor,
     stream: &mut RequestStream,
-    remote: &zx::Socket,
+    remote: &Channel,
     cmd: &[u8],
     expect: &[u8],
 ) {
-    assert!(remote.write(cmd).is_ok());
+    assert!(remote.as_ref().write(cmd).is_ok());
 
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut);
@@ -79,16 +79,15 @@ fn stream_request_response(
 #[test]
 fn closes_socket_when_dropped() {
     let mut _exec = fasync::Executor::new().expect("failed to create an executor");
-    let (peer_sock, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+    let (peer_chan, signaling) = Channel::create();
 
     {
         let peer = Peer::new(signaling);
-        assert!(peer.is_ok());
-        let mut _stream = peer.unwrap().take_request_stream();
+        let mut _stream = peer.take_request_stream();
     }
 
     // Writing to the sock from the other end should fail.
-    let write_res = peer_sock.write(&[0; 1]);
+    let write_res = peer_chan.as_ref().write(&[0; 1]);
     assert!(write_res.is_err());
     assert_eq!(Status::PEER_CLOSED, write_res.err().unwrap());
 }
@@ -97,11 +96,9 @@ fn closes_socket_when_dropped() {
 #[should_panic]
 fn can_only_take_stream_once() {
     let mut _exec = fasync::Executor::new().expect("failed to create an executor");
-    let (_, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+    let (_, signaling) = Channel::create();
 
-    let p = Peer::new(signaling);
-    assert!(p.is_ok());
-    let peer = p.unwrap();
+    let peer = Peer::new(signaling);
     let mut _stream = peer.take_request_stream();
     peer.take_request_stream();
 }
@@ -125,7 +122,7 @@ fn command_not_supported_response() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
     // TxLabel 4, SecurityControl, which is not implemented
-    assert!(remote.write(&[0x40, 0x0B, 0x40, 0x00, 0x00]).is_ok());
+    assert!(remote.as_ref().write(&[0x40, 0x0B, 0x40, 0x00, 0x00]).is_ok());
 
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut);
@@ -141,7 +138,7 @@ fn command_not_supported_response() {
 #[test]
 fn requests_are_queued_if_they_arrive_early() {
     let (stream, _, remote, mut exec) = setup_stream_test();
-    assert!(remote.write(&CMD_DISCOVER).is_ok());
+    assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
     let mut collected = Vec::<Request>::new();
 
     let mut fut = stream.try_for_each(|r| {
@@ -158,7 +155,7 @@ fn requests_are_queued_if_they_arrive_early() {
 fn responds_with_same_tx_id() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_DISCOVER).is_ok());
+    assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Discover { responder } => {
@@ -191,7 +188,7 @@ fn invalid_signal_id_responds_error() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
     // This is TxLabel 4, Signal Id 0b110000, which is invalid.
-    assert!(remote.write(&[0x40, 0x30]).is_ok());
+    assert!(remote.as_ref().write(&[0x40, 0x30]).is_ok());
 
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut);
@@ -238,7 +235,7 @@ fn exhaust_request_ids() {
             0x3E << 2 | 0x0 << 1,         // SEID (3E), Not In Use (0b0)
             0x00 << 4 | 0x1 << 3,         // Audio (0x00), Sink (0x01)
         ];
-        assert!(remote.write(response).is_ok());
+        assert!(remote.as_ref().write(response).is_ok());
     }
 
     for idx in 0..4 {
@@ -282,7 +279,7 @@ fn command_timeout() {
         0x00 << 4 | 0x1 << 3,         // Audio (0x00), Sink (0x01)
     ];
 
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     assert!(exec.run_until_stalled(&mut another_fut).is_pending());
 }
@@ -300,7 +297,7 @@ macro_rules! incoming_cmd_length_fail_test {
             incoming_cmd.extend_from_slice(&[0; $length]);
 
             // Send the command
-            assert!(remote.write(&incoming_cmd).is_ok());
+            assert!(remote.as_ref().write(&incoming_cmd).is_ok());
 
             let mut fut = stream.next();
             let complete = exec.run_until_stalled(&mut fut);
@@ -325,7 +322,7 @@ incoming_cmd_length_fail_test!(discover_invalid_length_two, *CMD_DISCOVER_VALUE,
 fn discover_event_responder_send_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_DISCOVER).is_ok());
+    assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Discover { responder } => {
@@ -349,7 +346,7 @@ fn discover_event_responder_send_works() {
 fn discover_event_responder_reject_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_DISCOVER).is_ok());
+    assert!(remote.as_ref().write(&CMD_DISCOVER).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Discover { responder } => responder.reject(ErrorCode::BadState),
@@ -390,7 +387,7 @@ fn discover_command_works() {
         0x17 << 2 | 0x0 << 1,              // SEID (17), Not In Use (0b0)
         0x02 << 4 | 0x1 << 3,              // Multimedia (0x02), Sink (0x01)
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -439,7 +436,7 @@ fn discover_command_rejected() {
         0x31,                         // BAD_STATE
     ];
 
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -466,7 +463,7 @@ incoming_cmd_length_fail_test!(get_capabilities_too_long, *CMD_GET_CAPABILITIES_
 fn get_capabilities_event_responder_send_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_GET_CAPABILITIES).is_ok());
+    assert!(remote.as_ref().write(&CMD_GET_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::GetCapabilities { responder, stream_id } => {
@@ -523,7 +520,7 @@ fn get_capabilities_event_responder_send_works() {
 fn get_capabilities_responder_reject_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_GET_CAPABILITIES).is_ok());
+    assert!(remote.as_ref().write(&CMD_GET_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::GetCapabilities { responder, stream_id } => {
@@ -572,7 +569,7 @@ fn get_capabilities_command_works() {
         // Content Protection (LOSC = 2 + 1), SCMS (0x02, 0x00), CP Specific (0x7A)
         0x04, 0x03, 0x02, 0x00, 0x7A,
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -625,7 +622,7 @@ fn get_capabilities_reject_command() {
         0x12,                         // BAD_ACP_SEID
     ];
 
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -652,7 +649,7 @@ incoming_cmd_length_fail_test!(get_all_capabilities_too_long, *CMD_GET_ALL_CAPAB
 fn get_all_capabilities_event_responder_send_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_GET_ALL_CAPABILITIES).is_ok());
+    assert!(remote.as_ref().write(&CMD_GET_ALL_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::GetAllCapabilities { responder, stream_id } => {
@@ -709,7 +706,7 @@ fn get_all_capabilities_event_responder_send_works() {
 fn get_all_capabilities_responder_reject_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_GET_ALL_CAPABILITIES).is_ok());
+    assert!(remote.as_ref().write(&CMD_GET_ALL_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::GetAllCapabilities { responder, stream_id } => {
@@ -760,7 +757,7 @@ fn get_all_capabilities_command_works() {
         // Delay Reporting
         0x08, 0x00,
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -811,7 +808,7 @@ fn get_all_capabilities_reject_command() {
         0x12,                         // BAD_ACP_SEID
     ];
 
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -838,7 +835,7 @@ incoming_cmd_length_fail_test!(get_configuration_too_long, *CMD_GET_CONFIGURATIO
 fn get_configuration_event_responder_send_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_GET_CONFIGURATION).is_ok());
+    assert!(remote.as_ref().write(&CMD_GET_CONFIGURATION).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::GetConfiguration { responder, stream_id } => {
@@ -895,7 +892,7 @@ fn get_configuration_event_responder_send_works() {
 fn get_configuration_responder_reject_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_GET_CONFIGURATION).is_ok());
+    assert!(remote.as_ref().write(&CMD_GET_CONFIGURATION).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::GetConfiguration { responder, stream_id } => {
@@ -946,7 +943,7 @@ fn get_configuration_command_works() {
         // Delay Reporting
         0x08, 0x00,
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -997,7 +994,7 @@ fn get_configuration_reject_command() {
         0x12,                         // BAD_ACP_SEID
     ];
 
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -1032,7 +1029,7 @@ macro_rules! seid_command_test {
                 txlabel_raw << 4 | 0x0 << 2 | 0x2,
                 $signal_value, // $request_variant
             ];
-            assert!(remote.write(response).is_ok());
+            assert!(remote.as_ref().write(response).is_ok());
 
             let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -1067,7 +1064,7 @@ macro_rules! seids_command_test {
                 txlabel_raw << 4 | 0x0 << 2 | 0x2,
                 $signal_value, // Signal value
             ];
-            assert!(remote.write(response).is_ok());
+            assert!(remote.as_ref().write(response).is_ok());
 
             let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -1101,7 +1098,7 @@ macro_rules! seid_command_reject_test {
                 0x12,          // BAD_ACP_SEID
             ];
 
-            assert!(remote.write(response).is_ok());
+            assert!(remote.as_ref().write(response).is_ok());
 
             let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -1144,7 +1141,7 @@ macro_rules! seids_command_reject_test {
                 0x12,          // BAD_ACP_SEID
             ];
 
-            assert!(remote.write(response).is_ok());
+            assert!(remote.as_ref().write(response).is_ok());
 
             let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -1163,7 +1160,7 @@ macro_rules! seid_event_responder_send_test {
         fn $test_name() {
             let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-            assert!(remote.write(&$command_var).is_ok());
+            assert!(remote.as_ref().write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
                 Request::$variant { responder, stream_id } => {
@@ -1191,7 +1188,7 @@ macro_rules! seids_event_responder_send_test {
         fn $test_name() {
             let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-            assert!(remote.write(&$command_var).is_ok());
+            assert!(remote.as_ref().write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
                 Request::$variant { responder, stream_ids } => {
@@ -1222,7 +1219,7 @@ macro_rules! seid_event_responder_reject_test {
         fn $test_name() {
             let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-            assert!(remote.write(&$command_var).is_ok());
+            assert!(remote.as_ref().write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
                 Request::$variant { responder, stream_id } => {
@@ -1250,7 +1247,7 @@ macro_rules! stream_event_responder_reject_test {
         fn $test_name() {
             let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-            assert!(remote.write(&$command_var).is_ok());
+            assert!(remote.as_ref().write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
                 Request::$variant { responder, stream_ids } => {
@@ -1397,7 +1394,7 @@ fn expect_config_recv_cap_okay(
 
     let txlabel_mask = cmd[0] & 0xF0;
 
-    assert!(remote.write(cmd).is_ok());
+    assert!(remote.as_ref().write(cmd).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::SetConfiguration {
@@ -1463,7 +1460,7 @@ fn set_config_event_responder_reject_works() {
         0x01, 0x00, // Media Transport, Length 0
     ];
 
-    assert!(remote.write(set_config_cmd).is_ok());
+    assert!(remote.as_ref().write(set_config_cmd).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::SetConfiguration {
@@ -1550,7 +1547,7 @@ fn set_config_command_works() {
         txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
         0x03,                              // Set Configuration
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
     assert_matches!(complete, Poll::Ready(Ok(())));
@@ -1600,7 +1597,7 @@ fn set_config_error_response() {
         0x07,                              // Relevant Capability (Media Codec)
         0x29,                              // Unsupported configuration
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
     assert_matches!(complete, Poll::Ready(Err(Error::RemoteConfigRejected(0x07, 0x29))));
@@ -1832,7 +1829,7 @@ fn reconfig_event_responder_send_works() {
         0x00, // Media Codec Type: SBC
     ];
 
-    assert!(remote.write(reconfigure_cmd).is_ok());
+    assert!(remote.as_ref().write(reconfigure_cmd).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Reconfigure { responder, local_stream_id, capabilities } => {
@@ -1867,7 +1864,7 @@ fn reconfig_event_responder_reject_works() {
         0x00, // Media Codec Type: SBC
     ];
 
-    assert!(remote.write(reconfigure_cmd).is_ok());
+    assert!(remote.as_ref().write(reconfigure_cmd).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::Reconfigure { responder, local_stream_id, capabilities } => {
@@ -1937,7 +1934,7 @@ fn reconfigure_command_works() {
         txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
         0x05,                              // Reconfigure
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
     assert_matches!(complete, Poll::Ready(Ok(())));
@@ -1992,7 +1989,7 @@ fn reconfigure_error_response() {
         0x00,                              // Relevant Capability (none)
         0x13,                              // SEP In Use
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
     assert_matches!(complete, Poll::Ready(Err(Error::RemoteConfigRejected(0x00, 0x13))));
@@ -2033,7 +2030,7 @@ fn get_capabilities_command_with_all_service_capabilities_works() {
         // Multiplexing (LOSC = 7), Frag (0x10), TSID (), TCID () ... TCID ()
         0x06, 0x07, 0x10, 0x00, 0x00, 0x08, 0x08, 0x10, 0x10,
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -2103,7 +2100,7 @@ fn get_capabilities_command_with_invalid_service_capabilities_works() {
         // Invalid Capability that contains no payload. Should skip over it.
         0xFF, 0x00,
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -2156,7 +2153,7 @@ fn get_capabilities_command_with_only_invalid_service_capabilities_works() {
         // Invalid Capability that contains no payload. Should skip over it.
         0xAA, 0x00,
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -2187,7 +2184,7 @@ incoming_cmd_length_fail_test!(delay_report_too_long, *CMD_DELAY_REPORT_VALUE, 4
 fn delay_report_event_responder_send_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_DELAY_REPORT).is_ok());
+    assert!(remote.as_ref().write(&CMD_DELAY_REPORT).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::DelayReport { responder, stream_id, delay } => {
@@ -2213,7 +2210,7 @@ fn delay_report_event_responder_send_works() {
 fn delay_report_responder_reject_works() {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
 
-    assert!(remote.write(&CMD_DELAY_REPORT).is_ok());
+    assert!(remote.as_ref().write(&CMD_DELAY_REPORT).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
         Request::DelayReport { responder, stream_id, delay } => {
@@ -2257,7 +2254,7 @@ fn delay_report_command_works() {
         txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
         0x0D,                              // Delay Report
     ];
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 
@@ -2289,7 +2286,7 @@ fn delay_report_reject_command() {
         0x12,                         // BAD_ACP_SEID
     ];
 
-    assert!(remote.write(response).is_ok());
+    assert!(remote.as_ref().write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
 

@@ -263,7 +263,7 @@ pub(crate) mod tests {
     use super::*;
 
     use fuchsia_async as fasync;
-    use fuchsia_zircon as zx;
+    use fuchsia_bluetooth::types::Channel;
     use futures::pin_mut;
     use std::convert::TryInto;
     use std::task::Poll;
@@ -396,9 +396,8 @@ pub(crate) mod tests {
 
         // need to be in the open state for reconfigure
         assert!(stream.endpoint_mut().establish().is_ok());
-        let (_remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        match stream.endpoint_mut().receive_channel(fasync::Socket::from_socket(transport).unwrap())
-        {
+        let (_remote, transport) = Channel::create();
+        match stream.endpoint_mut().receive_channel(transport) {
             Ok(false) => {}
             Ok(true) => panic!("Only should be expecting one channel"),
             Err(e) => panic!("Expected channel to be accepted, got {:?}", e),
@@ -444,9 +443,7 @@ pub(crate) mod tests {
         assert_eq!(task.codec_config, expected_codec_config);
 
         stream.endpoint_mut().establish().expect("establishment should start okay");
-        let (_remote, transport) =
-            zx::Socket::create(zx::SocketOpts::DATAGRAM).expect("socket creation fail");
-        let transport = fasync::Socket::from_socket(transport).expect("async socket");
+        let (_remote, transport) = Channel::create();
         stream.endpoint_mut().receive_channel(transport).expect("should be ready for a channel");
 
         match stream.start() {
