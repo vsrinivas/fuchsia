@@ -9,6 +9,8 @@
 
 #ifdef __cplusplus
 
+#include <cstdint>
+
 // Provide the machine-independent <lib/arch/intrin.h> API.  This file defines
 // dummy versions that are sufficient to compile code using the generic API
 // in host contexts, e.g. for unit tests and generator programs.
