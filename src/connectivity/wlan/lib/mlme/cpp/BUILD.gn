@@ -77,6 +77,8 @@ source_set("mlme") {
 
   public_deps = [
     "//garnet/lib/wlan/protocol",
+    "//sdk/banjo/ddk.hw.wlan.ieee80211",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.stats",
     "//sdk/lib/fdio",
@@ -87,14 +89,7 @@ source_set("mlme") {
     "//src/lib/timekeeper:system",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
-
-    # Needed in order to link rust wlan-mlme, which depends on fuchsia-syslog, which has
-    # non_rust_deps = ["//zircon/system/ulib/syslog"]
-    # Noting that non_rust_deps do not propagate.
-    "//sdk/banjo/ddk.hw.wlan.ieee80211",
-    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//zircon/public/lib/zx",
-    "//zircon/system/ulib/syslog",
   ]
 
   if (fidl_trace_level != 0) {

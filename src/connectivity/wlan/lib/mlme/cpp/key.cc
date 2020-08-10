@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+
 #include <optional>
 
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/mlme/key.h>
 #include <wlan/protocol/mac.h>
 
