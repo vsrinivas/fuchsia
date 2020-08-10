@@ -10,7 +10,7 @@ use {
                 ApListenerMessageSender, ApStateUpdate, ApStatesUpdate, ConnectedClientInformation,
                 Message::NotifyListeners,
             },
-            state_machine::{self, IntoStateExt},
+            state_machine::{self, ExitReason, IntoStateExt},
         },
     },
     anyhow::format_err,
@@ -35,7 +35,7 @@ const DEFAULT_CBW: Cbw = Cbw::Cbw20;
 const DEFAULT_CHANNEL: u8 = 6;
 const DEFAULT_PHY: Phy = Phy::Ht;
 
-type State = state_machine::State<anyhow::Error>;
+type State = state_machine::State<ExitReason>;
 type NextReqFut = stream::StreamFuture<mpsc::Receiver<ManualRequest>>;
 
 pub type StartResponder = oneshot::Sender<fidl_sme::StartApResultCode>;
@@ -145,9 +145,14 @@ pub async fn serve(
         .into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
-        state_machine = state_machine.fuse() =>
-            info!("AP state machine for iface #{} terminated with an error: {}",
-                iface_id, state_machine.void_unwrap_err()),
+        state_machine = state_machine.fuse() => {
+            match state_machine.void_unwrap_err() {
+                ExitReason(Ok(())) => info!("AP state machine for iface #{} exited", iface_id),
+                ExitReason(Err(e)) => {
+                    info!("AP state machine for iface #{} terminated with an error: {}", iface_id, e)
+                }
+            }
+        },
         removal_watcher = removal_watcher.fuse() => if let Err(e) = removal_watcher {
             info!("Error reading from AP SME channel of iface #{}: {}",
                 iface_id, e);
@@ -161,7 +166,7 @@ fn perform_manual_request(
     req: Option<ManualRequest>,
     req_stream: mpsc::Receiver<ManualRequest>,
     sender: ApListenerMessageSender,
-) -> Result<State, anyhow::Error> {
+) -> Result<State, ExitReason> {
     match req {
         Some(ManualRequest::Start((req, responder))) => {
             Ok(starting_state(proxy, req_stream.into_future(), req, Some(responder), sender)
@@ -172,9 +177,13 @@ fn perform_manual_request(
         }
         Some(ManualRequest::Exit(responder)) => {
             responder.send(()).unwrap_or_else(|_| ());
-            Err(format_err!("AP state machine exiting per caller's request"))
+            Err(ExitReason(Ok(())))
         }
-        None => return Err(format_err!("The stream of user requests ended unexpectedly")),
+        None => {
+            return Err(ExitReason(Err(format_err!(
+                "The stream of user requests ended unexpectedly"
+            ))))
+        }
     }
 }
 
@@ -197,20 +206,21 @@ async fn starting_state(
     mut req: ApConfig,
     responder: Option<StartResponder>,
     sender: ApListenerMessageSender,
-) -> Result<State, anyhow::Error> {
+) -> Result<State, ExitReason> {
     // Apply default PHY, CBW, and channel settings.
     req.radio_config.phy.get_or_insert(DEFAULT_PHY);
     req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
     req.radio_config.primary_chan.get_or_insert(DEFAULT_CHANNEL);
 
     // Send a stop request to ensure that the AP begin in an unstarting state.
-    proxy.stop().await?;
-    send_ap_stopped_update(&sender)?;
+    proxy.stop().await.map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+    send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     // Create an initial AP state
     let mut state =
         ApStateUpdate::new(req.id.clone(), types::OperatingState::Starting, req.mode, req.band);
-    send_state_update(&sender, state.clone())?;
+    send_state_update(&sender, state.clone())
+        .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
 
     let mut ap_config = fidl_sme::ApConfig::from(req.clone());
     let pending_start_request = proxy.start(&mut ap_config).fuse();
@@ -226,13 +236,13 @@ async fn starting_state(
                     state.state = types::OperatingState::Failed;
                     let _ = send_state_update(&sender, state);
                     format_err!("Failed to send a start command to wlanstack: {}", e)
-                })?;
+                }).map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
                 match responder {
                     Some(responder) => responder.send(res).unwrap_or_else(|_| ()),
                     None => {}
                 }
                 state.state = types::OperatingState::Active;
-                send_state_update(&sender, state.clone())?;
+                send_state_update(&sender, state.clone()).map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
                 return Ok(started_state(proxy, next_req, req, state, sender).into_state());
             },
             (new_req, req_stream) = next_req => {
@@ -270,7 +280,7 @@ async fn stopping_state(
     proxy: fidl_sme::ApSmeProxy,
     mut next_req: NextReqFut,
     sender: ApListenerMessageSender,
-) -> Result<State, anyhow::Error> {
+) -> Result<State, ExitReason> {
     let mut responders = vec![responder];
     let pending_stop_request = proxy.stop().fuse();
 
@@ -281,8 +291,7 @@ async fn stopping_state(
             res = pending_stop_request => {
                 // If 'stop' call to SME failed, return an error since we can't
                 // recover from it
-                res.map_err(
-                    |e| format_err!("Failed to send a stop command to wlanstack: {}", e))?;
+                res.map_err(|e| { ExitReason(Err(format_err!("Failed to send a stop command to wlanstack: {}", e))) })?;
                 break 'waiting_to_stop;
             },
             (req, req_stream) = next_req => {
@@ -307,7 +316,8 @@ async fn stopping_state(
         responder.send(()).unwrap_or_else(|_| ())
     }
 
-    send_ap_stopped_update(&sender)?;
+    send_ap_stopped_update(&sender).map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
+
     Ok(stopped_state(proxy, next_req, sender).into_state())
 }
 
@@ -315,7 +325,7 @@ async fn stopped_state(
     proxy: fidl_sme::ApSmeProxy,
     mut next_req: NextReqFut,
     sender: ApListenerMessageSender,
-) -> Result<State, anyhow::Error> {
+) -> Result<State, ExitReason> {
     // Wait for the next request from the caller
     loop {
         let (req, req_stream) = next_req.await;
@@ -337,7 +347,7 @@ async fn started_state(
     req: ApConfig,
     mut prev_state: ApStateUpdate,
     sender: ApListenerMessageSender,
-) -> Result<State, anyhow::Error> {
+) -> Result<State, ExitReason> {
     // Holds a pending status request.  Request status immediately upon entering the started state.
     let mut pending_status_req = FuturesUnordered::new();
     pending_status_req.push(proxy.status());
@@ -351,19 +361,22 @@ async fn started_state(
     loop {
         select! {
             status_response = pending_status_req.select_next_some() => {
-                let status_response = status_response?;
+                let status_response = status_response
+                    .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
                 match status_response.running_ap {
                     Some(state) => {
                         let mut new_state = prev_state.clone();
                         consume_sme_status_update(&mut new_state, cbw, *state);
                         if new_state != prev_state {
                             prev_state = new_state;
-                            send_state_update(&sender, prev_state.clone())?;
+                            send_state_update(&sender, prev_state.clone())
+                                .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
                         }
                     }
                     None => {
                         prev_state.state = types::OperatingState::Failed;
-                        send_state_update(&sender, prev_state)?;
+                        send_state_update(&sender, prev_state)
+                            .map_err(|e| { ExitReason(Err(anyhow::Error::from(e))) })?;
 
                         // The compiler detects a cycle on a direct transition back to the
                         // starting state.  This intermediate state allows the transition from
@@ -373,7 +386,7 @@ async fn started_state(
                             next_req: NextReqFut,
                             req: ApConfig,
                             sender: ApListenerMessageSender
-                        ) -> Result<State, anyhow::Error> {
+                        ) -> Result<State, ExitReason> {
                             Ok(starting_state(proxy, next_req, req, None, sender).into_state())
                         }
 
@@ -455,7 +468,7 @@ mod tests {
     }
 
     async fn run_state_machine(
-        fut: impl Future<Output = Result<State, anyhow::Error>> + Send + 'static,
+        fut: impl Future<Output = Result<State, ExitReason>> + Send + 'static,
     ) {
         let state_machine = fut.into_state_machine();
         select! {

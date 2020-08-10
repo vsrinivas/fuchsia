@@ -11,7 +11,7 @@ use {
                 ClientListenerMessageSender, ClientNetworkState, ClientStateUpdate,
                 Message::NotifyListeners,
             },
-            state_machine::{self, IntoStateExt},
+            state_machine::{self, ExitReason, IntoStateExt},
         },
     },
     anyhow::format_err,
@@ -34,9 +34,6 @@ use {
 
 const SME_STATUS_INTERVAL_SEC: i64 = 1; // this poll is very cheap, so we can do it frequently
 const MAX_CONNECTION_ATTEMPTS: u8 = 4; // arbitrarily chosen until we have some data
-
-#[derive(Debug)]
-pub struct ExitReason(Result<(), anyhow::Error>);
 
 type State = state_machine::State<ExitReason>;
 type ReqStream = stream::Fuse<mpsc::Receiver<ManualRequest>>;

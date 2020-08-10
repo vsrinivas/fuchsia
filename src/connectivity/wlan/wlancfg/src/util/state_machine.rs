@@ -11,6 +11,9 @@ use futures::{
 };
 use std::{marker::Unpin, pin::Pin};
 
+#[derive(Debug)]
+pub struct ExitReason(pub Result<(), anyhow::Error>);
+
 pub struct State<E>(FutureObj<'static, Result<State<E>, E>>);
 
 pub struct StateMachine<E> {
