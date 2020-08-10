@@ -29,10 +29,10 @@ source_set("lib") {
   sources = [
     "roughtime_server.cc",
     "roughtime_server.h",
+    "system_time_updater.cc",
+    "system_time_updater.h",
     "time_server_config.cc",
     "time_server_config.h",
-    "timezone.cc",
-    "timezone.h",
   ]
 
   deps = [

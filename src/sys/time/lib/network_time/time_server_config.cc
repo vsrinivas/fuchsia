@@ -128,12 +128,15 @@ bool TimeServerConfig::Parse(std::string config_file) {
         public_key[k] = strtoul(hex, NULL, 16);
       }
 
-      RoughTimeServer server(std::move(name), std::move(address_str), public_key,
-                             roughtime::kPublicKeyLength);
-      server_list_.push_back(server);
+      RoughTimeServer server(name, std::move(address_str), public_key, roughtime::kPublicKeyLength);
+      if (server.IsValid()) {
+        server_list_.push_back(server);
+      } else {
+        FX_LOGS(ERROR) << "Roughtime configuration contained invalid server " << name;
+      }
     }
   }
-  return true;
+  return server_list_.size() > 0;
 }
 
 }  // namespace time_server

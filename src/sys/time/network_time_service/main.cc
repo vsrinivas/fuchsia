@@ -11,6 +11,8 @@
 #include "lib/fit/function.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/sys/time/lib/network_time/system_time_updater.h"
+#include "src/sys/time/lib/network_time/time_server_config.h"
 #include "src/sys/time/network_time_service/service.h"
 
 constexpr char kServerConfigPath[] = "/pkg/data/roughtime-servers.json";
@@ -24,16 +26,25 @@ int main(int argc, char** argv) {
   const std::string config_path =
       command_line.GetOptionValueWithDefault("config", kServerConfigPath);
   FX_LOGS(INFO) << "Opening client config from " << config_path;
+  time_server::TimeServerConfig server_config;
+  if (!server_config.Parse(std::move(config_path))) {
+    FX_LOGS(FATAL) << "Failed to parse client config";
+    return 1;
+  }
+  // Currently this only supports one roughtime server.
+  time_server::RoughTimeServer server = server_config.ServerList()[0];
 
   const std::string rtc_path =
       command_line.GetOptionValueWithDefault("rtc_path", time_server::kRealRtcDevicePath);
   FX_LOGS(INFO) << "Connecting to RTC device at " << rtc_path;
   bool immediate = command_line.HasOption("immediate");
 
+  time_server::SystemTimeUpdater updater(std::move(rtc_path));
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   network_time_service::TimeServiceImpl svc(
-      sys::ComponentContext::CreateAndServeOutgoingDirectory(), config_path.c_str(),
-      rtc_path.c_str());
+      sys::ComponentContext::CreateAndServeOutgoingDirectory(), std::move(updater),
+      std::move(server));
   if (immediate) {
     svc.Update(3, fuchsia::deprecatedtimezone::TimeService::UpdateCallback([&loop](auto result) {
                  FX_LOGS(INFO) << "time sync result " << (result ? "succeeded" : "failed");

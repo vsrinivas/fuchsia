@@ -26,7 +26,6 @@
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
-#include "src/sys/time/lib/network_time/timezone.h"
 #include "third_party/roughtime/protocol.h"
 
 namespace time_server {
@@ -45,7 +44,6 @@ using sys::testing::EnvironmentServices;
 using sys::testing::TestWithEnvironment;
 using time_server::FakeRtcDevice;
 using time_server::LocalRoughtimeServer;
-using time_server::Timezone;
 
 #define GARNET_BIN_NETWORK_TIME_TEST_PUBLIC_KEY                                                   \
   0x3b, 0x6a, 0x27, 0xbc, 0xce, 0xb6, 0xa4, 0x2d, 0x62, 0xa3, 0xa8, 0xd0, 0x2a, 0x6f, 0x0d, 0x73, \

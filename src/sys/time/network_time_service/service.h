@@ -11,7 +11,8 @@
 #include <vector>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/sys/time/lib/network_time/timezone.h"
+#include "src/sys/time/lib/network_time/system_time_updater.h"
+#include "src/sys/time/lib/network_time/time_server_config.h"
 
 namespace network_time_service {
 
@@ -27,17 +28,22 @@ class TimeServiceImpl : public fuchsia::deprecatedtimezone::TimeService {
 
  public:
   // Constructs the time service with a caller-owned application context.
-  TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context, const char server_config_path[],
-                  const char rtc_device_path[]);
+  TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
+                  time_server::SystemTimeUpdater time_updater,
+                  time_server::RoughTimeServer rough_time_server);
   ~TimeServiceImpl();
 
   // |TimeServiceImpl|:
   void Update(uint8_t num_retries, UpdateCallback callback) override;
 
  private:
+  // Attempt to retrieve UTC and update system time without retries.
+  std::optional<zx::time_utc> UpdateSystemTime();
+
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::deprecatedtimezone::TimeService> deprecated_bindings_;
-  time_server::Timezone time_server_;
+  time_server::SystemTimeUpdater time_updater_;
+  time_server::RoughTimeServer rough_time_server_;
 };
 
 }  // namespace network_time_service
