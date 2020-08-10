@@ -1187,9 +1187,8 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
     };
     let len = len as usize;
     decoder.read_out_of_line(len, |decoder, offset| {
-        string.truncate(0);
         let bytes = &decoder.buf[offset..offset + len];
-        string.push_str(str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?);
+        *string = str::from_utf8(bytes).map_err(|_| Error::Utf8Error)?.to_string();
         Ok(true)
     })
 }
