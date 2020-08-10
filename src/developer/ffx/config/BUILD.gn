@@ -16,6 +16,7 @@ if (host_toolchain == current_toolchain) {
       "//src/connectivity/overnet/lib/hoist",
       "//src/developer/ffx:ffx_lib_args",
       "//src/developer/ffx:ffx_lib_sub_command",
+      "//src/developer/ffx/core:lib",
       "//src/developer/ffx/plugins/config:ffx_config_plugin_args",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",

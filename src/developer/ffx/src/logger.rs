@@ -4,8 +4,8 @@ use {
     simplelog::{
         CombinedLogger, Config, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
     },
-    std::fs::OpenOptions,
-    std::path::{Path, PathBuf},
+    std::fs::{create_dir_all, OpenOptions},
+    std::path::PathBuf,
 };
 
 fn debug_config() -> Config {
@@ -16,8 +16,15 @@ fn debug_config() -> Config {
 
 async fn log_location(name: &str) -> PathBuf {
     let log_file = format!("{}.log", name);
-    let log_dir = get!(str, LOG_DIR, "").await;
-    Path::new(&log_dir).join::<_>(log_file)
+    let mut default_log_dir = ffx_core::get_base_path();
+    default_log_dir.push("logs");
+    let mut log_dir = match get!(str, LOG_DIR).await {
+        Ok(Some(v)) => PathBuf::from(v),
+        _ => default_log_dir,
+    };
+    create_dir_all(&log_dir).expect("cannot create log directory");
+    log_dir.push(log_file);
+    log_dir
 }
 
 async fn is_enabled() -> bool {

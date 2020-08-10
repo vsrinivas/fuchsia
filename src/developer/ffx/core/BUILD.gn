@@ -16,6 +16,7 @@ if (host_toolchain == current_toolchain) {
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:home",
     ]
     non_rust_deps = [ "//third_party/boringssl" ]
 

@@ -77,7 +77,7 @@ fn exec_env_set(env: &mut Environment, s: &EnvSetCommand, file: String) -> Resul
                     env.build = Some(build);
                 }
             },
-            None => bail!("Missing build-dir flag"),
+            None => bail!("Missing --build-dir flag"),
         },
         ConfigLevel::Global => match env.global.as_mut() {
             Some(v) => *v = file_str,
