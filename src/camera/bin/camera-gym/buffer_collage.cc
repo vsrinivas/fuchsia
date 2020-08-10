@@ -120,9 +120,11 @@ fit::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Create(
     return fit::error(status);
   }
 
+#if CAMERA_GYM_ENABLE_ROOT_PRESENTER
   async::PostDelayedTask(collage->loop_.dispatcher(),
                          fit::bind_member(collage.get(), &BufferCollage::MaybeTakeDisplay),
                          zx::msec(kViewRequestTimeoutMs));
+#endif
 
   return fit::ok(std::move(collage));
 }
@@ -637,6 +639,37 @@ void BufferCollage::MaybeTakeDisplay() {
   presenter_->PresentOrReplaceView(std::move(tokens.second), nullptr);
 }
 
+void BufferCollage::SetupView() {
+  ZX_ASSERT(view_);
+  heartbeat_indicator_.material = std::make_unique<scenic::Material>(session_.get());
+  constexpr float kIndicatorRadius = 12.0f;
+  heartbeat_indicator_.shape = std::make_unique<scenic::Circle>(session_.get(), kIndicatorRadius);
+  heartbeat_indicator_.node = std::make_unique<scenic::ShapeNode>(session_.get());
+  heartbeat_indicator_.node->SetShape(*heartbeat_indicator_.shape);
+  heartbeat_indicator_.node->SetMaterial(*heartbeat_indicator_.material);
+  view_->AddChild(*heartbeat_indicator_.node);
+
+  constexpr uint32_t kMuteIconSize = 64;
+  mute_indicator_ =
+      std::make_unique<BitmapImageNode>(session_.get(), "mute.bin", kMuteIconSize, kMuteIconSize);
+  view_->AddChild(mute_indicator_->node);
+
+  session_->set_on_frame_presented_handler(
+      [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+        constexpr std::array kHeartbeatColor = {0xFF, 0x00, 0xFF};
+        constexpr auto kHeartbeatPeriod = zx::sec(1);
+        zx::duration t = (zx::clock::get_monotonic() - start_time_) % kHeartbeatPeriod.get();
+        float phase = static_cast<float>(t.to_msecs()) / kHeartbeatPeriod.to_msecs();
+        float amplitude = pow(1 - abs(1 - 2 * phase), 5.0f);
+        heartbeat_indicator_.material->SetColor(kHeartbeatColor[0] * amplitude,
+                                                kHeartbeatColor[1] * amplitude,
+                                                kHeartbeatColor[2] * amplitude, 0xFF);
+        session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
+      });
+  session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
+  UpdateLayout();
+}
+
 void BufferCollage::OnScenicError(zx_status_t status) {
   FX_PLOGS(ERROR, status) << "Scenic session error.";
   Stop();
@@ -674,34 +707,25 @@ void BufferCollage::CreateView(
     }
     view_ = std::make_unique<scenic::View>(
         session_.get(), scenic::ToViewToken(std::move(view_token)), "Camera Gym");
-    heartbeat_indicator_.material = std::make_unique<scenic::Material>(session_.get());
-    constexpr float kIndicatorRadius = 12.0f;
-    heartbeat_indicator_.shape = std::make_unique<scenic::Circle>(session_.get(), kIndicatorRadius);
-    heartbeat_indicator_.node = std::make_unique<scenic::ShapeNode>(session_.get());
-    heartbeat_indicator_.node->SetShape(*heartbeat_indicator_.shape);
-    heartbeat_indicator_.node->SetMaterial(*heartbeat_indicator_.material);
-    view_->AddChild(*heartbeat_indicator_.node);
+    SetupView();
+  });
+}
 
-    constexpr uint32_t kMuteIconSize = 64;
-    mute_indicator_ =
-        std::make_unique<BitmapImageNode>(session_.get(), "mute.bin", kMuteIconSize, kMuteIconSize);
-    view_->AddChild(mute_indicator_->node);
-
-    session_->set_on_frame_presented_handler(
-        [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
-          constexpr std::array kHeartbeatColor = {0xFF, 0x00, 0xFF};
-          constexpr auto kHeartbeatPeriod = zx::sec(1);
-          zx::duration t = (zx::clock::get_monotonic() - start_time_) % kHeartbeatPeriod.get();
-          float phase = static_cast<float>(t.to_msecs()) / kHeartbeatPeriod.to_msecs();
-          float amplitude = pow(1 - abs(1 - 2 * phase), 5.0f);
-          heartbeat_indicator_.material->SetColor(kHeartbeatColor[0] * amplitude,
-                                                  kHeartbeatColor[1] * amplitude,
-                                                  kHeartbeatColor[2] * amplitude, 0xFF);
-          session_->Present2(0, 0,
-                             [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
-        });
-    session_->Present2(0, 0, [](fuchsia::scenic::scheduling::FuturePresentationTimes times) {});
-    UpdateLayout();
+void BufferCollage::CreateViewWithViewRef(zx::eventpair view_token,
+                                          fuchsia::ui::views::ViewRefControl view_ref_control,
+                                          fuchsia::ui::views::ViewRef view_ref) {
+  async::PostTask(loop_.dispatcher(), [this, view_token = std::move(view_token),
+                                       view_ref_control = std::move(view_ref_control),
+                                       view_ref = std::move(view_ref)]() mutable {
+    if (view_) {
+      FX_LOGS(ERROR) << "Clients may only call this method once per view provider lifetime.";
+      view_provider_binding_.Close(ZX_ERR_BAD_STATE);
+      return;
+    }
+    view_ = std::make_unique<scenic::View>(
+        session_.get(), scenic::ToViewToken(std::move(view_token)), std::move(view_ref_control),
+        std::move(view_ref), "Camera Gym");
+    SetupView();
   });
 }
 

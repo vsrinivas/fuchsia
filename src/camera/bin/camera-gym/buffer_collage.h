@@ -116,6 +116,9 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // the display and calls CreateView using a manually created view token.
   void MaybeTakeDisplay();
 
+  // Initializes view-dependent state after the parent scenic::View has been created.
+  void SetupView();
+
   // |scenic::Session| callbacks.
   void OnScenicError(zx_status_t status);
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
@@ -124,6 +127,9 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   void CreateView(zx::eventpair view_token,
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
+  void CreateViewWithViewRef(zx::eventpair view_token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override;
 
   async::Loop loop_;
   fuchsia::ui::scenic::ScenicPtr scenic_;

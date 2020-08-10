@@ -9,6 +9,7 @@ import("//src/camera/debug.gni")
 
 declare_args() {
   camera_gym_configuration_cycle_time_ms = 10000
+  camera_gym_enable_root_presenter = false
 }
 
 name = "camera-gym"
@@ -50,6 +51,12 @@ source_set("lib") {
     camera_debug_define,
     "CONFIGURATION_CYCLE_TIME_MS=(${camera_gym_configuration_cycle_time_ms})",
   ]
+
+  if (camera_gym_enable_root_presenter) {
+    defines += [ "CAMERA_GYM_ENABLE_ROOT_PRESENTER=(true)" ]
+  } else {
+    defines += [ "CAMERA_GYM_ENABLE_ROOT_PRESENTER=(false)" ]
+  }
 }
 
 executable("bin") {
