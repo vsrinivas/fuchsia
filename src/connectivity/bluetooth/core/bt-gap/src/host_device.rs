@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
     fidl_fuchsia_bluetooth_control::{self as control, PairingOptions},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
-    fidl_fuchsia_bluetooth_sys as sys,
+    fidl_fuchsia_bluetooth_sys::{self as sys, LeSecurityMode},
     fuchsia_bluetooth::{
         inspect::Inspectable,
         types::{BondingData, HostData, HostInfo, Peer, PeerId},
@@ -159,6 +159,10 @@ impl HostDevice {
         self.host.enable_background_scan(enable).map_err(Error::from)
     }
 
+    pub fn set_le_security_mode(&self, mode: LeSecurityMode) -> types::Result<()> {
+        self.host.set_le_security_mode(mode).map_err(Error::from)
+    }
+
     /// `apply_sys_settings` applies each field present in `settings` to the host device, leaving
     /// omitted parameters unchanged. If present, the `Err` arm of the returned future's output
     /// is the error associated with the first failure to apply a setting to the host device.
@@ -170,6 +174,10 @@ impl HostDevice {
         if let Ok(_) = error_occurred {
             error_occurred =
                 settings.le_background_scan.map(|en| self.enable_background_scan(en)).transpose()
+        }
+        if let Ok(_) = error_occurred {
+            error_occurred =
+                settings.le_security_mode.map(|m| self.set_le_security_mode(m)).transpose();
         }
         let connectable_fut = error_occurred
             .map(|_| settings.bredr_connectable_mode.map(|c| self.set_connectable(c)));

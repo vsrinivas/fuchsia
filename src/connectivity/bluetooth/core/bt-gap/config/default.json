@@ -1,7 +1,8 @@
 {
   "le" : {
     "privacy-enabled": true,
-    "background-scan-enabled": true
+    "background-scan-enabled": true,
+    "security-mode": "Mode1"
   },
   "bredr" : {
     "connectable": true

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_bluetooth_sys as sys,
+    fidl_fuchsia_bluetooth_sys::{self as sys, LeSecurityMode},
     futures::Future,
     serde::{Deserialize, Serialize},
     serde_json,
@@ -40,11 +40,21 @@ pub struct LeConfig {
     pub privacy_enabled: bool,
     #[serde(rename = "background-scan-enabled")]
     pub background_scan_enabled: bool,
+    #[serde(rename = "security-mode")]
+    #[serde(with = "LeSecurityModeDef")]
+    pub security_mode: LeSecurityMode,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct BrEdrConfig {
     pub connectable: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "LeSecurityMode")]
+pub enum LeSecurityModeDef {
+    Mode1 = 1,
+    SecureConnectionsOnly = 2,
 }
 
 impl Config {
@@ -58,6 +68,8 @@ impl Config {
         new_config.le.privacy_enabled = new_settings.le_privacy.unwrap_or(self.le.privacy_enabled);
         new_config.le.background_scan_enabled =
             new_settings.le_background_scan.unwrap_or(self.le.background_scan_enabled);
+        new_config.le.security_mode =
+            new_settings.le_security_mode.unwrap_or(self.le.security_mode);
         new_config.bredr.connectable =
             new_settings.bredr_connectable_mode.unwrap_or(self.bredr.connectable);
         new_config
@@ -70,6 +82,7 @@ impl Into<sys::Settings> for Config {
             le_privacy: Some(self.le.privacy_enabled),
             le_background_scan: Some(self.le.background_scan_enabled),
             bredr_connectable_mode: Some(self.bredr.connectable),
+            le_security_mode: Some(self.le.security_mode),
         }
     }
 }
@@ -101,7 +114,11 @@ mod tests {
     };
 
     static BASIC_CONFIG: Config = Config {
-        le: LeConfig { privacy_enabled: true, background_scan_enabled: true },
+        le: LeConfig {
+            privacy_enabled: true,
+            background_scan_enabled: true,
+            security_mode: LeSecurityMode::Mode1,
+        },
         bredr: BrEdrConfig { connectable: true },
     };
 
@@ -119,7 +136,11 @@ mod tests {
         // Write a different config file and set it as the override location to verify that `load`
         // picks up and prefers the override file.
         let override_config = Config {
-            le: LeConfig { privacy_enabled: true, background_scan_enabled: false },
+            le: LeConfig {
+                privacy_enabled: true,
+                background_scan_enabled: false,
+                security_mode: LeSecurityMode::SecureConnectionsOnly,
+            },
             bredr: BrEdrConfig { connectable: false },
         };
         let override_file = NamedTempFile::new().unwrap();
@@ -138,7 +159,11 @@ mod tests {
             host_proxy,
         );
         let test_config = Config {
-            le: LeConfig { privacy_enabled: true, background_scan_enabled: false },
+            le: LeConfig {
+                privacy_enabled: true,
+                background_scan_enabled: false,
+                security_mode: LeSecurityMode::Mode1,
+            },
             bredr: BrEdrConfig { connectable: false },
         };
         let run_host = async {
@@ -146,6 +171,7 @@ mod tests {
             expected_reqs.insert("enable_privacy".into());
             expected_reqs.insert("enable_background_scan".into());
             expected_reqs.insert("set_connectable".into());
+            expected_reqs.insert("set_le_security_mode".into());
             host_server
                 .try_for_each(|req| {
                     match req {
@@ -161,6 +187,10 @@ mod tests {
                             assert!(expected_reqs.remove("set_connectable"));
                             assert_eq!(test_config.bredr.connectable, enabled);
                             assert_matches!(responder.send(&mut Ok(())), Ok(()));
+                        }
+                        HostRequest::SetLeSecurityMode { le_security_mode, .. } => {
+                            assert!(expected_reqs.remove("set_le_security_mode"));
+                            assert_eq!(test_config.le.security_mode, le_security_mode);
                         }
                         _ => panic!("unexpected HostRequest!"),
                     };

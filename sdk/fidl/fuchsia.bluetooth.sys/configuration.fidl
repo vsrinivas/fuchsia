@@ -26,6 +26,12 @@ table Settings {
     /// the current value unchanged. When enabled, bt-host devices are put into BR/EDR page scan
     /// mode and accept connections.
     3: bool bredr_connectable_mode;
+
+    /// If present then sets the LE Security mode of the Host Subsystem, if not present leaves the
+    /// current value unchanged. See BT Core Spec v5.2 Vol. 3 Part C 10.2 for more details. If
+    /// present and set to Secure Connections Only mode, any active connections not meeting the
+    /// requirements of Secure Connections Only mode are disconnected.
+    4: LeSecurityMode le_security_mode;
 };
 
 /// Protocol to configure parameters and features for the core Bluetooth system. These settings

@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_bluetooth_host::{HostRequest, HostRequestStream, HostSetConnectableResponder},
     fidl_fuchsia_bluetooth_sys::{
         self as sys, ConfigurationMarker, ConfigurationProxy, ConfigurationRequestStream,
+        LeSecurityMode,
     },
     fuchsia_bluetooth::types::HostId,
     futures::{future, stream::TryStreamExt},
@@ -122,6 +123,36 @@ async fn disable_connectable_mode() {
         }),
         enabled,
         responder
+    );
+
+    future::try_join3(make_request, run_host, run_configuration).await.unwrap();
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn set_secure_connections_only() {
+    let (host_server, dispatcher, config_client, server) = setup_configuration_test().unwrap();
+    let run_configuration = configuration::run(dispatcher, server);
+    let make_request = async move {
+        let response = config_client
+            .update(sys::Settings {
+                le_security_mode: Some(LeSecurityMode::SecureConnectionsOnly),
+                ..sys::Settings::new_empty()
+            })
+            .await;
+        assert_matches!(
+            response,
+            Ok(sys::Settings {
+                le_security_mode: Some(LeSecurityMode::SecureConnectionsOnly), ..
+            })
+        );
+        Ok(())
+    };
+
+    let run_host = handle_host_req_fut!(
+        host_server,
+        SetLeSecurityMode,
+        (|mode: LeSecurityMode| assert_eq!(LeSecurityMode::SecureConnectionsOnly, mode)),
+        le_security_mode
     );
 
     future::try_join3(make_request, run_host, run_configuration).await.unwrap();
