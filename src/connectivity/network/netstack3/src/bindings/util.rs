@@ -4,7 +4,9 @@
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
-use net_types::ip::{AddrSubnetEither, AddrSubnetError, IpAddr, SubnetEither, SubnetError};
+use net_types::ip::{
+    AddrSubnetEither, AddrSubnetError, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither, SubnetError,
+};
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{DeviceId, EntryDest, EntryDestEither, EntryEither, NetstackError};
 use never::Never;
@@ -163,8 +165,8 @@ impl TryFromFidl<fidl_net::IpAddress> for IpAddr {
 
     fn try_from_fidl(addr: fidl_net::IpAddress) -> Result<IpAddr, Never> {
         match addr {
-            fidl_net::IpAddress::Ipv4(v4) => Ok(IpAddr::V4(v4.addr.into())),
-            fidl_net::IpAddress::Ipv6(v6) => Ok(IpAddr::V6(v6.addr.into())),
+            fidl_net::IpAddress::Ipv4(v4) => Ok(IpAddr::V4(v4.into_core())),
+            fidl_net::IpAddress::Ipv6(v6) => Ok(IpAddr::V6(v6.into_core())),
         }
     }
 }
@@ -174,13 +176,41 @@ impl TryIntoFidl<fidl_net::IpAddress> for IpAddr {
 
     fn try_into_fidl(self) -> Result<fidl_net::IpAddress, Never> {
         match self {
-            IpAddr::V4(addr) => {
-                Ok(fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address { addr: addr.ipv4_bytes() }))
-            }
-            IpAddr::V6(addr) => {
-                Ok(fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address { addr: addr.ipv6_bytes() }))
-            }
+            IpAddr::V4(addr) => Ok(fidl_net::IpAddress::Ipv4(addr.into_fidl())),
+            IpAddr::V6(addr) => Ok(fidl_net::IpAddress::Ipv6(addr.into_fidl())),
         }
+    }
+}
+
+impl TryFromFidl<fidl_net::Ipv4Address> for Ipv4Addr {
+    type Error = Never;
+
+    fn try_from_fidl(addr: fidl_net::Ipv4Address) -> Result<Ipv4Addr, Never> {
+        Ok(addr.addr.into())
+    }
+}
+
+impl TryIntoFidl<fidl_net::Ipv4Address> for Ipv4Addr {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net::Ipv4Address, Never> {
+        Ok(fidl_net::Ipv4Address { addr: self.ipv4_bytes() })
+    }
+}
+
+impl TryFromFidl<fidl_net::Ipv6Address> for Ipv6Addr {
+    type Error = Never;
+
+    fn try_from_fidl(addr: fidl_net::Ipv6Address) -> Result<Ipv6Addr, Never> {
+        Ok(addr.addr.into())
+    }
+}
+
+impl TryIntoFidl<fidl_net::Ipv6Address> for Ipv6Addr {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net::Ipv6Address, Never> {
+        Ok(fidl_net::Ipv6Address { addr: self.ipv6_bytes() })
     }
 }
 

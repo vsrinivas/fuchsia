@@ -9,8 +9,8 @@ pub(crate) mod udp;
 use std::convert::{TryFrom, TryInto};
 use std::num::NonZeroU16;
 
-use byteorder::{NativeEndian, NetworkEndian};
 use fidl::endpoints::{ClientEnd, RequestStream};
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_posix::Errno;
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
@@ -22,9 +22,9 @@ use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{
     LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
 };
-use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned, U16, U32};
 
 use super::{context::InnerValue, StackContext};
+use crate::bindings::util::{IntoCore, IntoFidl};
 
 // Socket constants defined in FDIO in
 // `//sdk/lib/fdio/private-socket.h`
@@ -200,42 +200,22 @@ where
 /// `SockAddr` implementers are typically passed to POSIX socket calls as a blob
 /// of bytes. It represents a type that can be parsed from a C API `struct
 /// sockaddr`, expressed as a stream of bytes.
-pub(crate) trait SockAddr:
-    std::fmt::Debug + Sized + AsBytes + FromBytes + Unaligned
-{
+pub(crate) trait SockAddr: std::fmt::Debug + Sized {
     /// The concrete address type for this `SockAddr`.
     type AddrType: IpAddress;
-    /// The socket family (`AF_INET` or `AF_INET6`) that the implementer
-    /// accepts.
-    const FAMILY: u16;
+    /// The socket's domain.
+    const DOMAIN: psocket::Domain;
 
     /// Creates a new `SockAddr`.
     ///
     /// Implementations must set their family field to `Self::FAMILY`.
     fn new(addr: Self::AddrType, port: u16) -> Self;
 
-    /// Creates a new `SockAddr` with the specified `addr` and `port` serialized
-    /// directly into a `Vec`.
-    fn new_vec(addr: Self::AddrType, port: u16) -> Vec<u8> {
-        let mut v = Vec::new();
-        v.resize(std::mem::size_of::<Self>(), 0);
-        let mut b = LayoutVerified::<_, Self>::new(&mut v[..]).unwrap();
-        b.set_family(Self::FAMILY);
-        b.set_addr(addr.bytes());
-        b.set_port(port);
-        v
-    }
-
     /// Gets this `SockAddr`'s address.
     fn addr(&self) -> Self::AddrType;
 
     /// Set this [`SockAddr`]'s address.
-    ///
-    /// # Panics
-    ///
-    /// Panics id `addr` does not have the correct length for this
-    /// [`SockAddr`] implementation.
-    fn set_addr(&mut self, addr: &[u8]);
+    fn set_addr(&mut self, addr: Self::AddrType);
 
     /// Gets this `SockAddr`'s port.
     fn port(&self) -> u16;
@@ -243,145 +223,94 @@ pub(crate) trait SockAddr:
     /// Set this [`SockAddr`]'s port.
     fn set_port(&mut self, port: u16);
 
-    /// Gets this `SockAddr`'s family.
-    fn family(&self) -> u16;
-
-    /// Set this [`SockAddr`]'s family.
-    fn set_family(&mut self, family: u16);
-
     /// Gets a `SpecifiedAddr` witness type for this `SockAddr`'s address.
     fn get_specified_addr(&self) -> Option<SpecifiedAddr<Self::AddrType>> {
         SpecifiedAddr::<Self::AddrType>::new(self.addr())
-    }
-
-    /// Attempts to create an inline `LayoutVerified` version of this `SockAddr`
-    /// from a slice of bytes.
-    fn parse(bytes: &[u8]) -> Option<LayoutVerified<&[u8], Self>> {
-        LayoutVerified::new_from_prefix(bytes).map(|(x, _)| x)
     }
 
     /// Gets a `NonZeroU16` witness type for this `SockAddr`'s port.
     fn get_specified_port(&self) -> Option<NonZeroU16> {
         NonZeroU16::new(self.port())
     }
+
+    /// Converts this `SockAddr` into an [`fnet::SocketAddress`].
+    fn into_sock_addr(self) -> fnet::SocketAddress;
+
+    /// Converts an [`fnet::SocketAddress`] into a `SockAddr`.
+    fn from_sock_addr(addr: fnet::SocketAddress) -> Result<Self, Errno>;
 }
 
-/// POSIX representation of an IPv6 socket address.
-///
-/// `SockAddr6` is equivalent to `struct sockaddr_in6` in the POSIX C API.
-#[derive(AsBytes, FromBytes, Unaligned, Debug)]
-#[repr(C)]
-pub(crate) struct SockAddr6 {
-    family: U16<NativeEndian>,
-    port: U16<NetworkEndian>,
-    flow_info: U32<NativeEndian>,
-    addr: [u8; 16],
-    scope_id: U32<NetworkEndian>,
-}
-
-impl SockAddr for SockAddr6 {
+impl SockAddr for fnet::Ipv6SocketAddress {
     type AddrType = Ipv6Addr;
-    const FAMILY: u16 = libc::AF_INET6 as u16;
+    const DOMAIN: psocket::Domain = psocket::Domain::Ipv6;
 
     /// Creates a new `SockAddr6`.
-    fn new(addr: Self::AddrType, port: u16) -> Self {
-        SockAddr6 {
-            family: U16::new(Self::FAMILY),
-            port: U16::new(port),
-            flow_info: U32::ZERO,
-            addr: addr.ipv6_bytes(),
-            scope_id: U32::ZERO,
-        }
+    fn new(addr: Ipv6Addr, port: u16) -> Self {
+        fnet::Ipv6SocketAddress { address: addr.into_fidl(), port, zone_index: 0 }
     }
 
     fn addr(&self) -> Ipv6Addr {
-        Ipv6Addr::new(self.addr)
+        self.address.into_core()
     }
 
-    fn set_addr(&mut self, addr: &[u8]) {
-        self.addr.copy_from_slice(addr)
+    fn set_addr(&mut self, addr: Ipv6Addr) {
+        self.address = addr.into_fidl();
     }
 
     fn port(&self) -> u16 {
-        self.port.get()
+        self.port
     }
 
     fn set_port(&mut self, port: u16) {
-        self.port.set(port)
+        self.port = port
     }
 
-    fn family(&self) -> u16 {
-        self.family.get()
+    fn into_sock_addr(self) -> fnet::SocketAddress {
+        fnet::SocketAddress::Ipv6(self)
     }
 
-    fn set_family(&mut self, family: u16) {
-        self.family.set(family)
+    fn from_sock_addr(addr: fnet::SocketAddress) -> Result<Self, Errno> {
+        match addr {
+            fnet::SocketAddress::Ipv6(a) => Ok(a),
+            fnet::SocketAddress::Ipv4(_) => Err(Errno::Eafnosupport),
+        }
     }
 }
 
-/// POSIX representation of an IPv4 socket address.
-///
-/// `SockAddr` is equivalent to `struct sockaddr_in` in the POSIX C API.
-#[derive(AsBytes, FromBytes, Unaligned, Debug)]
-#[repr(C)]
-pub(crate) struct SockAddr4 {
-    family: U16<NativeEndian>,
-    port: U16<NetworkEndian>,
-    addr: [u8; 4],
-}
-
-impl SockAddr for SockAddr4 {
+impl SockAddr for fnet::Ipv4SocketAddress {
     type AddrType = Ipv4Addr;
-    const FAMILY: u16 = libc::AF_INET as u16;
+    const DOMAIN: psocket::Domain = psocket::Domain::Ipv4;
 
     /// Creates a new `SockAddr4`.
-    fn new(addr: Self::AddrType, port: u16) -> Self {
-        SockAddr4 { family: U16::new(Self::FAMILY), port: U16::new(port), addr: addr.ipv4_bytes() }
+    fn new(addr: Ipv4Addr, port: u16) -> Self {
+        fnet::Ipv4SocketAddress { address: addr.into_fidl(), port }
     }
 
     fn addr(&self) -> Ipv4Addr {
-        Ipv4Addr::new(self.addr)
+        self.address.into_core()
     }
 
-    fn set_addr(&mut self, addr: &[u8]) {
-        self.addr.copy_from_slice(addr)
+    fn set_addr(&mut self, addr: Ipv4Addr) {
+        self.address = addr.into_fidl();
     }
 
     fn port(&self) -> u16 {
-        self.port.get()
+        self.port
     }
 
     fn set_port(&mut self, port: u16) {
-        self.port.set(port)
+        self.port = port
     }
 
-    fn family(&self) -> u16 {
-        self.family.get()
+    fn into_sock_addr(self) -> fnet::SocketAddress {
+        fnet::SocketAddress::Ipv4(self)
     }
 
-    fn set_family(&mut self, family: u16) {
-        self.family.set(family)
-    }
-}
-
-/// Backing storage for `SockAddr` when used in headers for datagram POSIX
-/// sockets.
-///
-/// Defined in C code in `sys/socket.h`.
-// NOTE(brunodalbo) this struct is expected to be short-lived. Upcoming changes
-// to the POSIX FIDL API will render this obsolete.
-#[derive(AsBytes, FromBytes, Unaligned)]
-#[repr(C)]
-struct SockAddrStorage {
-    family: U16<NativeEndian>,
-    storage: [u8; 128 - 2],
-}
-
-// We need to implement Default manually because [u8; 128-2] does not provide a
-// `Default` impl
-impl Default for SockAddrStorage {
-    fn default() -> Self {
-        Self { family: Default::default(), storage: [0u8; 128 - 2] }
+    fn from_sock_addr(addr: fnet::SocketAddress) -> Result<Self, Errno> {
+        match addr {
+            fnet::SocketAddress::Ipv4(a) => Ok(a),
+            fnet::SocketAddress::Ipv6(_) => Err(Errno::Eafnosupport),
+        }
     }
 }
 
@@ -392,11 +321,11 @@ pub(crate) trait IpSockAddrExt: Ip {
 }
 
 impl IpSockAddrExt for Ipv4 {
-    type SocketAddress = SockAddr4;
+    type SocketAddress = fnet::Ipv4SocketAddress;
 }
 
 impl IpSockAddrExt for Ipv6 {
-    type SocketAddress = SockAddr6;
+    type SocketAddress = fnet::Ipv6SocketAddress;
 }
 
 #[cfg(test)]
@@ -405,21 +334,14 @@ mod testutil {
 
     use super::*;
 
-    /// A struct that holds parameters to create a `SockAddr` value that can be used in tests.
-    ///
-    /// Used as a parameter by [`TestSockAddr::create_for_test`].
-    pub(crate) struct SockAddrTestOptions {
-        /// The port in the created `SockAddr`
-        pub(crate) port: u16,
-        /// Whether to set a bad socket family value (an unsupported one).
-        pub(crate) bad_family: bool,
-        // Whether to set the unspecified address.
-        pub(crate) bad_address: bool,
-    }
-
     /// A trait that exposes common test behavior to implementers of
     /// [`SockAddr`].
     pub(crate) trait TestSockAddr: SockAddr {
+        /// A different domain.
+        ///
+        /// `Ipv4SocketAddress` defines it as `Ipv6SocketAddress` and
+        /// vice-versa.
+        type DifferentDomain: TestSockAddr;
         /// The local address used for tests.
         const LOCAL_ADDR: Self::AddrType;
         /// The remote address used for tests.
@@ -432,44 +354,9 @@ mod testutil {
         /// The default subnet prefix used for tests.
         const DEFAULT_PREFIX: u8;
 
-        /// Get the [`psocket::Domain`] for this `SockAddr`'s family.
-        fn domain() -> psocket::Domain {
-            match i32::from(Self::FAMILY) {
-                libc::AF_INET => psocket::Domain::Ipv4,
-                libc::AF_INET6 => psocket::Domain::Ipv6,
-                _ => panic!("Unrecognized socket family {}", Self::FAMILY),
-            }
-        }
-
-        /// Creates the serialized representation of this [`SockAddr`] with the
-        /// informed `options`.
-        fn create_for_test(options: SockAddrTestOptions) -> Vec<u8> {
-            let mut v = Vec::new();
-            v.resize(std::mem::size_of::<Self>(), 0);
-            let mut sockaddr = LayoutVerified::<_, Self>::new(&mut v[..]).unwrap();
-            sockaddr.set_options(&options);
-            v
-        }
-
-        /// Creates a [`SockAddr`] with the appropriate family with the given
-        /// `addr` and `port`.
-        fn create(addr: Self::AddrType, port: u16) -> Vec<u8> {
-            let mut v = Vec::new();
-            v.resize(std::mem::size_of::<Self>(), 0);
-            let mut sockaddr = LayoutVerified::<_, Self>::new(&mut v[..]).unwrap();
-            sockaddr.set_family(Self::FAMILY);
-            sockaddr.set_port(port);
-            sockaddr.set_addr(addr.bytes());
-            v
-        }
-
-        /// Sets the options in `options` to this [`SockAddr`].
-        fn set_options(&mut self, options: &SockAddrTestOptions) {
-            self.set_family(if options.bad_family { Self::bad_family() } else { Self::FAMILY });
-            self.set_port(options.port);
-            if !options.bad_address {
-                self.set_addr(Self::REMOTE_ADDR.bytes());
-            }
+        /// Creates an [`fnet::SocketAddress`] with the given `addr` and `port`.
+        fn create(addr: Self::AddrType, port: u16) -> fnet::SocketAddress {
+            Self::new(addr, port).into_sock_addr()
         }
 
         /// Gets the local address and prefix configured for the test
@@ -482,19 +369,11 @@ mod testutil {
         fn config_addr_subnet_remote() -> AddrSubnetEither {
             AddrSubnetEither::new(IpAddr::from(Self::REMOTE_ADDR), Self::DEFAULT_PREFIX).unwrap()
         }
-
-        /// Returns a bad socket family value (one that will cause errors when
-        /// used with this [`SockAddr`].
-        fn bad_family() -> u16 {
-            match Self::FAMILY as i32 {
-                libc::AF_INET => libc::AF_INET6 as u16,
-                libc::AF_INET6 => libc::AF_INET as u16,
-                _ => unreachable!(),
-            }
-        }
     }
 
-    impl TestSockAddr for SockAddr6 {
+    impl TestSockAddr for fnet::Ipv6SocketAddress {
+        type DifferentDomain = fnet::Ipv4SocketAddress;
+
         const LOCAL_ADDR: Ipv6Addr =
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1]);
         const REMOTE_ADDR: Ipv6Addr =
@@ -506,7 +385,9 @@ mod testutil {
         const DEFAULT_PREFIX: u8 = 64;
     }
 
-    impl TestSockAddr for SockAddr4 {
+    impl TestSockAddr for fnet::Ipv4SocketAddress {
+        type DifferentDomain = fnet::Ipv6SocketAddress;
+
         const LOCAL_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 1]);
         const REMOTE_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 2]);
         const REMOTE_ADDR_2: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 3]);

@@ -56,7 +56,16 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void Bind2(::llcpp::fuchsia::net::SocketAddress addr, Bind2Completer::Sync completer) override {
+    return completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
   void Connect(fidl::VectorView<uint8_t> addr, ConnectCompleter::Sync completer) override {
+    return completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Connect2(::llcpp::fuchsia::net::SocketAddress addr,
+                Connect2Completer::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -72,12 +81,32 @@ class Server final : public llcpp::fuchsia::posix::socket::StreamSocket::Interfa
     return completer.Close(sync_completion_wait(&accept_end_, ZX_TIME_INFINITE));
   }
 
+  void Accept2(Accept2Completer::Sync completer) override {
+    zx_status_t status = zx_object_signal_peer(channel_, 0, ZX_USER_SIGNAL_0);
+    if (status != ZX_OK) {
+      return completer.Close(status);
+    }
+    return completer.Close(sync_completion_wait(&accept_end_, ZX_TIME_INFINITE));
+  }
+
   void GetSockName(GetSockNameCompleter::Sync completer) override {
+    return completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void GetSockName2(GetSockName2Completer::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   void GetPeerName(GetPeerNameCompleter::Sync completer) override {
     return completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void GetPeerName2(GetPeerName2Completer::Sync completer) override {
+    return completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Disconnect(DisconnectCompleter::Sync completer) override {
+    return completer.Close(ZX_ERR_NOT_CONNECTED);
   }
 
   void SetSockOpt(int16_t level, int16_t optname, fidl::VectorView<uint8_t> optval,

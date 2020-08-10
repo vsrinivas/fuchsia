@@ -7,11 +7,14 @@ package netstack
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"net"
 	"time"
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
+
+	fidlnet "fidl/fuchsia/net"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -20,6 +23,9 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
+
+// TODO(fxbug.dev/44347) We shouldn't need any of this includes after we remove
+// C structs from the wire.
 
 // #cgo CFLAGS: -D_GNU_SOURCE
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include/
@@ -1092,6 +1098,65 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 // isLinkLocal determines if the given IPv6 address is link-local. This is the
 // case when it has the fe80::/10 prefix. This check is used to determine when
 // the NICID is relevant for a given IPv6 address.
-func isLinkLocal(addr tcpip.Address) bool {
-	return len(addr) >= 2 && addr[0] == 0xfe && addr[1]&0xc0 == 0x80
+func isLinkLocal(addr fidlnet.Ipv6Address) bool {
+	return addr.Addr[0] == 0xfe && addr.Addr[1]&0xc0 == 0x80
+}
+
+// toNetSocketAddress converts a tcpip.FullAddress into a fidlnet.SocketAddress
+// taking the protocol into consideration. If addr is unspecified, the
+// unspecified address for the provided protocol is returned.
+//
+// Panics if protocol is neither IPv4 nor IPv6.
+func toNetSocketAddress(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress) fidlnet.SocketAddress {
+	switch protocol {
+	case ipv4.ProtocolNumber:
+		out := fidlnet.Ipv4SocketAddress{
+			Port: addr.Port,
+		}
+		copy(out.Address.Addr[:], addr.Addr)
+		return fidlnet.SocketAddressWithIpv4(out)
+	case ipv6.ProtocolNumber:
+		out := fidlnet.Ipv6SocketAddress{
+			Port: addr.Port,
+		}
+		if len(addr.Addr) == header.IPv4AddressSize {
+			// Copy address in v4-mapped format.
+			copy(out.Address.Addr[header.IPv6AddressSize-header.IPv4AddressSize:], addr.Addr)
+			out.Address.Addr[header.IPv6AddressSize-header.IPv4AddressSize-1] = 0xff
+			out.Address.Addr[header.IPv6AddressSize-header.IPv4AddressSize-2] = 0xff
+		} else {
+			copy(out.Address.Addr[:], addr.Addr)
+			if isLinkLocal(out.Address) {
+				out.ZoneIndex = uint64(addr.NIC)
+			}
+		}
+		return fidlnet.SocketAddressWithIpv6(out)
+	default:
+		panic(fmt.Sprintf("invalid protocol for conversion: %d", protocol))
+	}
+}
+
+func toTCPIPFullAddress(addr fidlnet.SocketAddress) (tcpip.FullAddress, error) {
+	skipZeros := func(b []uint8) tcpip.Address {
+		if isZeros(b) {
+			return ""
+		}
+		return tcpip.Address(b)
+	}
+	switch addr.Which() {
+	case fidlnet.SocketAddressIpv4:
+		return tcpip.FullAddress{
+			NIC:  0,
+			Addr: skipZeros(addr.Ipv4.Address.Addr[:]),
+			Port: addr.Ipv4.Port,
+		}, nil
+	case fidlnet.SocketAddressIpv6:
+		return tcpip.FullAddress{
+			NIC:  tcpip.NICID(addr.Ipv6.ZoneIndex),
+			Addr: skipZeros(addr.Ipv6.Address.Addr[:]),
+			Port: addr.Ipv6.Port,
+		}, nil
+	default:
+		return tcpip.FullAddress{}, fmt.Errorf("invalid fuchsia.net/SocketAddress variant: %d", addr.Which())
+	}
 }
