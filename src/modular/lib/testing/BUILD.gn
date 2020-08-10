@@ -9,8 +9,6 @@ group("testing") {
     ":component_main",
     ":session_shell_base",
     ":session_shell_impl",
-    ":story_controller_mock",
-    ":story_provider_mock",
     ":test_driver",
     ":test_story_command_executor",
     ":test_with_session_storage",
@@ -71,32 +69,6 @@ source_set("session_shell_impl") {
     "//src/modular/lib/integration_testing/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-source_set("story_controller_mock") {
-  testonly = true
-
-  sources = [ "story_controller_mock.h" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.views",
-  ]
-
-  deps = [ "//sdk/lib/fidl/cpp" ]
-}
-
-source_set("story_provider_mock") {
-  testonly = true
-
-  sources = [ "story_provider_mock.h" ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.modular" ]
-
-  deps = [
-    ":story_controller_mock",
-    "//sdk/lib/fidl/cpp",
   ]
 }
 
