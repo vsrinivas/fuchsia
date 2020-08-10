@@ -796,7 +796,7 @@ To heap allocate objects, use the standard `std::make_unique`.
 An example with an optional uint32 field represented as a `tracking_ptr`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-field" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-field" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 This applies to all union and table fields and data arrays within vectors and strings.
@@ -804,21 +804,21 @@ Vector and string data arrays must use the array specialization of `std::unique_
 which takes the element count as an argument.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 
 To copy a collection to a `VectorView`, use `heap_copy_vec`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 
 To copy a string to a `StringView`, use `heap_copy_str`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-str" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-str" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 #### Allocators
@@ -849,26 +849,26 @@ maintained as code and FIDL tables are changed.
 Example:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-field" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-field" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 The arguments to `allocator.make` are identical to the arguments to `std::make_unique`.
 This also applies to VectorViews.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 To copy a collection to a `VectorView` using an allocator, use `copy_vec`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a copy of a string using an allocator, use `copy_str`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-str" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-str" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 #### Unowned pointers
@@ -881,27 +881,27 @@ The `unowned_ptr` helper is the recommended way to create `unowned_ptr_t`s,
 which is more ergonomic than using the `unowned_ptr_t` constructor directly.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-ptr" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-ptr" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a `VectorView` from a collection using an unowned pointer to the
 collection's data array, use `unowned_vec`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-vec" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a `StringView` from unowned memory, use `unowned_str`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-str" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unowned-str" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 A `StringView` can also be created directly from string literals without using
 `unowned_ptr`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ## Code generator

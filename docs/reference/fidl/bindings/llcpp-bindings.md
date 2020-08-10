@@ -105,7 +105,7 @@ this example `0b111`):
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="bits" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Enums {#enums}
@@ -130,7 +130,7 @@ enum class LocationType : uint32_t {
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="enums" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Structs {#structs}
@@ -156,7 +156,7 @@ all fields of the struct.
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="structs" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="structs" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Unions {#unions}
@@ -214,7 +214,7 @@ definition. Reserved fields do not have any generated code
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unions" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="unions" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 #### Flexible unions and unknown variants
@@ -300,7 +300,7 @@ Builder(fidl::tracking_ptr<User::Frame>&& frame_ptr)
 Example usage:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="2" exclude_regexp="^TEST|^}" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 In addition to assigning fields with `std::unique_ptr`, any of the allocation
