@@ -68,16 +68,6 @@ constexpr uint32_t kOutputDefaultPerPacketBufferBytes = kOutputPerPacketBufferBy
 
 }  // namespace
 
-DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
-                                   bool secure_mode)
-    : CodecAdapter(lock, codec_adapter_events),
-      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-  ZX_DEBUG_ASSERT(codec_adapter_events);
-  // TODO(dustingreen): This constructor is deprecated.  For now, secure_mode is ignored, since the
-  // call to CoreCodecSetSecureMemoryMode() would override anyway.
-  (void)secure_mode;
-}
-
 DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
     : CodecAdapter(lock, codec_adapter_events),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {

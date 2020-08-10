@@ -20,9 +20,6 @@
 
 class DecryptorAdapter : public CodecAdapter {
  public:
-  // TODO(dustingreen): Switch to constructor without secure_mode (soft transition).
-  explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
-                            bool secure_mode);
   explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   ~DecryptorAdapter() = default;
 
