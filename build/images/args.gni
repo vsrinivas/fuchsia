@@ -112,6 +112,17 @@ declare_args() {
   # in the build but will not include it as the default zirconr image.
   # Example value: "//build/images/recovery"
   override_recovery_label = ""
+
+  # List of paths to board-specific tools to include in the build output.
+  #
+  # Most development tools can just be used in-tree and do not need to be
+  # included here. This arg is only meant for tools which may need to be
+  # distributed along with the build files, for example tools for flashing
+  # from SoC recovery mode.
+  #
+  # Assets included in this way are included best-effort only and do not form
+  # any kind of stable contract for users of the archive.
+  board_tools = []
 }
 
 assert(custom_signing_script == "" || !use_vboot,

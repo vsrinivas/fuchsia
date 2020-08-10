@@ -1362,6 +1362,34 @@ if (gpt_image != "") {
   default_image_deps += [ ":gpt" ]
 }
 
+# Copy any board-specific tools.
+group("board_tools") {
+  deps = []
+
+  foreach(tool_path, board_tools) {
+    basename = get_path_info(tool_path, "file")
+    copy("board_tool_$basename") {
+      sources = [ rebase_path(tool_path, root_build_dir) ]
+      outputs = [ "$root_out_dir/board_tools/$basename" ]
+
+      metadata = {
+        images = [
+          {
+            archive = true
+            name = "$basename"
+            path = "board_tools/$basename"
+            type = "script"
+          },
+        ]
+      }
+    }
+
+    deps += [ ":board_tool_$basename" ]
+  }
+}
+
+default_image_deps += [ ":board_tools" ]
+
 action("filesystem_sizes.json") {
   testonly = true
   script = "format_filesystem_sizes.py"
