@@ -10,16 +10,10 @@
 
 namespace spi {
 
-void SpiDevice::DdkUnbindDeprecated() {
-  for (size_t i = 0; i < children_.size(); i++) {
-    auto child = children_[i].get();
-    if (child->zxdev()) {
-      child->DdkRemoveDeprecated();
-    }
-  }
+void SpiDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   children_.reset();
 
-  DdkRemoveDeprecated();
+  txn.Reply();
 }
 
 void SpiDevice::DdkRelease() { delete this; }

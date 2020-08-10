@@ -15,7 +15,7 @@
 namespace spi {
 
 class SpiDevice;
-using SpiDeviceType = ddk::Device<SpiDevice, ddk::UnbindableDeprecated>;
+using SpiDeviceType = ddk::Device<SpiDevice, ddk::UnbindableNew>;
 
 class SpiDevice : public SpiDeviceType {
  public:
@@ -24,7 +24,7 @@ class SpiDevice : public SpiDeviceType {
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindDeprecated();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
  private:

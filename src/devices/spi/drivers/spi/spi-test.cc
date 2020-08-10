@@ -49,6 +49,19 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     if (device == reinterpret_cast<zx_device_t*>(bus_device_)) {
       delete bus_device_;
       bus_device_ = nullptr;
+
+      // The SpiChild device's unbind hooks will be called after the
+      // Spi device has replied to its unbind.
+      // We need to make a copy before iterating, as the SpiChild will be
+      // erased from this |children_| list when it replies to its unbind.
+      fbl::Vector<SpiChild*> children_copy;
+      for (size_t i = 0; i < children_.size(); i++) {
+        children_copy.push_back(children_[i]);
+      }
+      for (size_t i = 0; i < children_copy.size(); i++) {
+        zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(children_copy[i]);
+        children_copy[i]->DdkUnbindNew(ddk::UnbindTxn(zxdev));
+      }
       return ZX_OK;
     } else {
       for (size_t i = 0; i < children_.size(); i++) {
@@ -178,7 +191,8 @@ TEST(SpiDevice, SpiTest) {
   }
 
   // clean it up
-  ddk.bus_device_->DdkUnbindDeprecated();
+  zx_device_t* zxdev = reinterpret_cast<zx_device_t*>(ddk.bus_device_);
+  ddk.bus_device_->DdkUnbindNew(ddk::UnbindTxn(zxdev));
   EXPECT_EQ(ddk.children_.size(), 0, "");
   EXPECT_EQ(ddk.bus_device_, nullptr, "");
 }
