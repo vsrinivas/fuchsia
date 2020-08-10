@@ -144,16 +144,19 @@ impl TestContext {
         })
     }
 
-    fn run_client(&self, mut cmd: Command) -> Result<(), Error> {
+    fn run_client(&self, mut cmd: Command) -> Result<String, Error> {
         let name = format!("{:?}", cmd);
+        cmd.stdout(Stdio::piped());
         if self.args.capture_output {
-            cmd.stdout(Stdio::piped());
             cmd.stderr(Stdio::piped());
         }
         let mut child = cmd.spawn().context("spawning client")?;
-        self.state.lock().run_things.push(ChildInfo::new(name, &mut child));
+        let child_info = ChildInfo::new(name, &mut child);
+        let stdout_path: std::path::PathBuf =
+            child_info.stdout.as_ref().unwrap().to_owned().to_path_buf();
+        self.state.lock().run_things.push(child_info);
         assert!(child.wait().expect("client should succeed").success());
-        Ok(())
+        Ok(std::fs::read_to_string(stdout_path)?)
     }
 
     fn new_daemon(&self, command: Command) -> Result<(), Error> {
@@ -321,10 +324,13 @@ impl Ascendd {
         Ok((input, output))
     }
 
-    fn onet_client(&self, cmd: &str) -> Command {
+    fn onet_client(&self, cmd: &str, exclude_self: Option<bool>) -> Command {
         let mut c = self.labelled_cmd("onet", cmd);
         c.arg(cmd);
-        c.arg("--exclude_self");
+        if let Some(exclude_self) = exclude_self {
+            c.arg("--exclude-self");
+            c.arg(format!("{}", exclude_self));
+        }
         c
     }
 }
@@ -361,7 +367,8 @@ mod tests {
         ctx.clone().show_reports_if_failed(move || {
             ascendd.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd.echo_client()).context("running client")?;
-            ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
+            ctx.run_client(ascendd.onet_client("full-map", Some(true)))
+                .context("running onet full-map")?;
             Ok(())
         })
     }
@@ -379,7 +386,17 @@ mod tests {
             bridge(&mut ascendd1, &mut ascendd2).context("bridging ascendds")?;
             ascendd1.add_echo_server().context("starting server")?;
             ctx.run_client(ascendd1.echo_client()).context("running client")?;
-            ctx.run_client(ascendd1.onet_client("full-map")).context("running onet full-map")?;
+            let output = ctx
+                .run_client(ascendd1.onet_client("list-peers", None))
+                .context("running onet list-peers")?;
+            // The following should be running: 2 ascendd's, 2 bridging onet's,
+            // the query onet, and the server
+            assert_eq!(output.lines().count(), 6);
+            assert_eq!(output.matches("Ascendd").count(), 2);
+            #[cfg(target_os = "linux")]
+            assert_eq!(output.matches("Linux").count(), 6);
+            #[cfg(target_os = "macos")]
+            assert_eq!(output.matches("Mac").count(), 6);
             Ok(())
         })
     }
@@ -395,7 +412,8 @@ mod tests {
         ctx.clone().show_reports_if_failed(move || {
             ascendd.add_interface_passing_server().context("starting server")?;
             ctx.run_client(ascendd.interface_passing_client()).context("running client")?;
-            ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
+            ctx.run_client(ascendd.onet_client("full-map", Some(false)))
+                .context("running onet full-map")?;
             Ok(())
         })
     }
@@ -436,7 +454,8 @@ mod tests {
         ctx.clone().show_reports_if_failed(move || {
             ascendd.add_socket_passing_server(&config).context("starting server")?;
             ctx.run_client(ascendd.socket_passing_client(&config)).context("running client")?;
-            ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
+            ctx.run_client(ascendd.onet_client("full-map", Some(true)))
+                .context("running onet full-map")?;
             Ok(())
         })
     }

@@ -14,7 +14,7 @@ use {
     },
     fidl_fuchsia_overnet_protocol::StreamSocketGreeting,
     fuchsia_async::{Task, Timer},
-    futures::prelude::*,
+    futures::{lock::Mutex, prelude::*},
     overnet_core::{
         log_errors, new_deframer, new_framer, DeframerWriter, FrameType, FramerReader,
         ListPeersContext, LosslessBinary, Router, RouterOptions, SecurityContext,
@@ -75,7 +75,10 @@ async fn write_outgoing(
     }
 }
 
-async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
+async fn run_ascendd_connection(
+    node: Arc<Router>,
+    tx_ready: Arc<Mutex<Option<futures::channel::oneshot::Sender<()>>>>,
+) -> Result<(), Error> {
     let ascendd_path = std::env::var("ASCENDD").unwrap_or(DEFAULT_ASCENDD_PATH.to_string());
     let mut connection_label = std::env::var("OVERNET_CONNECTION_LABEL").ok();
     if connection_label.is_none() {
@@ -146,6 +149,11 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
             };
 
             let (link_sender, link_receiver) = node.new_link(ascendd_node_id.into()).await?;
+
+            if let Some(tx_ready) = tx_ready.lock().await.take() {
+                let _ = tx_ready.send(());
+            }
+
             let _: ((), ()) = futures::future::try_join(
                 async move {
                     loop {
@@ -176,8 +184,11 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
 }
 
 /// Retry a future until it succeeds or retries run out.
-async fn retry_with_backoff<E, F>(backoff0: Duration, max_backoff: Duration, f: impl Fn() -> F)
-where
+async fn retry_with_backoff<E, F>(
+    backoff0: Duration,
+    max_backoff: Duration,
+    mut f: impl FnMut() -> F,
+) where
     F: futures::Future<Output = Result<(), E>>,
     E: std::fmt::Debug,
 {
@@ -303,12 +314,20 @@ async fn run_overnet(rx: HostOvernetRequestStream) -> Result<(), Error> {
         Box::new(hard_coded_security_context()),
     )?;
 
+    let (tx_ready, rx_ready) = futures::channel::oneshot::channel();
+
     let _connect = Task::spawn({
         let node = node.clone();
-        retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), move || {
-            run_ascendd_connection(node.clone())
-        })
+        let tx_ready = Arc::new(Mutex::new(Some(tx_ready)));
+        async move {
+            retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
+                run_ascendd_connection(node.clone(), tx_ready.clone())
+            })
+            .await
+        }
     });
+
+    rx_ready.await?;
 
     // Run application loop
     rx.map_err(Into::into)

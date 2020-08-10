@@ -3,78 +3,28 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
+    crate::list_peers::{list_peers, own_id},
+    crate::probe_node::probe_node,
+    anyhow::Error,
+    argh::FromArgs,
     fidl_fuchsia_overnet_protocol::{
-        DiagnosticMarker, DiagnosticProxy, LinkDiagnosticInfo, NodeDescription, NodeId,
-        PeerConnectionDiagnosticInfo, ProbeResult, ProbeSelector,
+        LinkDiagnosticInfo, NodeDescription, NodeId, PeerConnectionDiagnosticInfo, ProbeSelector,
     },
     fuchsia_async::TimeoutExt,
-    futures::prelude::*,
-    std::{collections::HashMap, time::Duration},
-    structopt::StructOpt,
+    futures::{lock::Mutex, prelude::*},
+    std::{
+        collections::{HashMap, HashSet},
+        time::Duration,
+    },
 };
 
-const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
-const LIST_PEERS_TIMEOUT: Duration = Duration::from_millis(500);
-
-async fn probe_node(
-    mut node_id: NodeId,
-    probe_bits: ProbeSelector,
-) -> Result<(NodeId, ProbeResult), Error> {
-    async move {
-        let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        hoist::connect_as_service_consumer()?.connect_to_service(
-            &mut node_id,
-            DiagnosticMarker::NAME,
-            s,
-        )?;
-        let probe_result = DiagnosticProxy::new(
-            fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?,
-        )
-        .probe(probe_bits)
-        .await?;
-        Ok((node_id, probe_result))
-    }
-    .on_timeout(PROBE_TIMEOUT, || Err(format_err!("probe {:?} timed out", node_id)))
-    .await
-}
-
-// List peers, but wait for things to settle out first
-async fn list_peers() -> Result<(NodeId, Vec<NodeId>), Error> {
-    let svc = hoist::connect_as_service_consumer()?;
-    // Do an initial query without timeout
-    let mut peers = svc.list_peers().await?;
-    // Now loop until we see an error
-    loop {
-        match svc
-            .list_peers()
-            .map_err(Into::into)
-            .on_timeout(LIST_PEERS_TIMEOUT, || Err(format_err!("list peers timed out")))
-            .await
-        {
-            Ok(r) => peers = r,
-            Err(_) => break,
-        }
-    }
-    let own_id = (|| -> Result<NodeId, Error> {
-        for peer in peers.iter() {
-            if peer.is_self {
-                return Ok(peer.id);
-            }
-        }
-        return Err(anyhow::format_err!("Cannot find myself"));
-    })()?;
-    let peers = peers.into_iter().map(|peer| peer.id).collect();
-    Ok((own_id, peers))
-}
+const TIMEOUT: Duration = Duration::from_secs(10);
 
 async fn probe(
-    mut descriptions: Option<&mut HashMap<NodeId, NodeDescription>>,
-    mut peer_connections: Option<&mut Vec<PeerConnectionDiagnosticInfo>>,
-    mut links: Option<&mut Vec<LinkDiagnosticInfo>>,
-) -> Result<NodeId, Error> {
+    descriptions: Option<&mut HashMap<NodeId, NodeDescription>>,
+    peer_connections: Option<&mut Vec<PeerConnectionDiagnosticInfo>>,
+    links: Option<&mut Vec<LinkDiagnosticInfo>>,
+) -> Result<(), Error> {
     let probe_bits = ProbeSelector::empty()
         | descriptions.as_ref().map_or(ProbeSelector::empty(), |_| ProbeSelector::NodeDescription)
         | peer_connections
@@ -83,67 +33,77 @@ async fn probe(
         | links.as_ref().map_or(ProbeSelector::empty(), |_| ProbeSelector::Links);
     assert_ne!(probe_bits, ProbeSelector::empty());
 
-    let (own_id, peers) = list_peers().await?;
-    let mut futures: futures::stream::FuturesUnordered<_> =
-        peers.into_iter().map(|peer| probe_node(peer, probe_bits)).collect();
-    loop {
-        let (node_id, result) = match futures.try_next().await {
-            Ok(Some((node_id, result))) => (node_id, result),
-            Ok(None) => break,
-            Err(e) => {
-                log::warn!("Error probing node: {:?}", e);
-                continue;
+    let descriptions = &Mutex::new(descriptions);
+    let peer_connections = &Mutex::new(peer_connections);
+    let links = &Mutex::new(links);
+
+    list_peers()
+        .try_for_each_concurrent(None, move |node_id| async move {
+            let result = match probe_node(node_id, probe_bits).await {
+                Ok(x) => x,
+                Err(e) => {
+                    log::warn!("Error probing node: {:?}", e);
+                    return Ok(());
+                }
+            };
+            if let Some(node_description) = result.node_description {
+                if let Some(ref mut descriptions) = &mut *descriptions.lock().await {
+                    descriptions.insert(node_id, node_description);
+                }
             }
-        };
-        if let Some(node_description) = result.node_description {
-            if let Some(ref mut descriptions) = descriptions {
-                descriptions.insert(node_id, node_description);
-            }
-        }
-        if let Some(node_peer_connections) = result.peer_connections {
-            for peer_connection in node_peer_connections.iter() {
-                if let Some(source) = peer_connection.source {
-                    if node_id != source {
+            if let Some(node_peer_connections) = result.peer_connections {
+                for peer_connection in node_peer_connections.iter() {
+                    if let Some(source) = peer_connection.source {
+                        if node_id != source {
+                            return Err(anyhow::format_err!(
+                                "Invalid source node id {:?} from {:?}",
+                                source,
+                                node_id
+                            ));
+                        }
+                    } else {
+                        return Err(anyhow::format_err!("No source node id from {:?}", node_id));
+                    }
+                    if peer_connection.destination.is_none() {
                         return Err(anyhow::format_err!(
-                            "Invalid source node id {:?} from {:?}",
-                            source,
+                            "No destination node id from {:?}",
                             node_id
                         ));
                     }
-                } else {
-                    return Err(anyhow::format_err!("No source node id from {:?}", node_id));
                 }
-                if peer_connection.destination.is_none() {
-                    return Err(anyhow::format_err!("No destination node id from {:?}", node_id));
+                if let Some(ref mut peer_connections) = &mut *peer_connections.lock().await {
+                    peer_connections.extend(node_peer_connections.into_iter());
                 }
             }
-            if let Some(ref mut peer_connections) = peer_connections {
-                peer_connections.extend(node_peer_connections.into_iter());
-            }
-        }
-        if let Some(node_links) = result.links {
-            for link in node_links.iter() {
-                if let Some(source) = link.source {
-                    if node_id != source {
+            if let Some(node_links) = result.links {
+                for link in node_links.iter() {
+                    if let Some(source) = link.source {
+                        if node_id != source {
+                            return Err(anyhow::format_err!(
+                                "Invalid source node id {:?} from {:?}",
+                                source,
+                                node_id
+                            ));
+                        }
+                    } else {
+                        return Err(anyhow::format_err!("No source node id from {:?}", node_id));
+                    }
+                    if link.destination.is_none() {
                         return Err(anyhow::format_err!(
-                            "Invalid source node id {:?} from {:?}",
-                            source,
+                            "No destination node id from {:?}",
                             node_id
                         ));
                     }
-                } else {
-                    return Err(anyhow::format_err!("No source node id from {:?}", node_id));
                 }
-                if link.destination.is_none() {
-                    return Err(anyhow::format_err!("No destination node id from {:?}", node_id));
+                if let Some(ref mut links) = &mut *links.lock().await {
+                    links.extend(node_links.into_iter());
                 }
             }
-            if let Some(ref mut links) = links {
-                links.extend(node_links.into_iter());
-            }
-        }
-    }
-    Ok(own_id)
+            Ok(())
+        })
+        .on_timeout(TIMEOUT, || Ok(()))
+        .await?;
+    Ok(())
 }
 
 enum Attr {
@@ -226,9 +186,12 @@ impl LabelAttrWriter {
     }
 }
 
-#[derive(StructOpt)]
+#[derive(FromArgs)]
+#[argh(subcommand, name = "full-map")]
+/// Construct a detailed graphviz map of the Overnet mesh - experts only!
 pub struct FullMapArgs {
-    #[structopt(short, long)]
+    #[argh(option)]
+    /// if set, exclude the onet tool from output
     exclude_self: bool,
 }
 
@@ -236,19 +199,18 @@ pub async fn full_map(args: FullMapArgs) -> Result<String, Error> {
     let mut descriptions = HashMap::new();
     let mut peer_connections = Vec::new();
     let mut links = Vec::new();
-    let own_id =
-        probe(Some(&mut descriptions), Some(&mut peer_connections), Some(&mut links)).await?;
+    probe(Some(&mut descriptions), Some(&mut peer_connections), Some(&mut links)).await?;
+    let mut exclude_nodes = HashSet::new();
+    if args.exclude_self {
+        exclude_nodes.insert(own_id().await?);
+    }
     let mut out = String::new();
     out += "digraph G {\n";
     for (node_id, description) in descriptions.iter() {
-        let is_self = node_id.id == own_id.id;
-        if args.exclude_self && is_self {
+        if exclude_nodes.contains(node_id) {
             continue;
         }
         let mut attrs = AttrWriter::new();
-        if is_self {
-            attrs.set("shape", "box");
-        }
         let mut label = String::new();
         if let Some(os) = description.operating_system {
             label += &format!("{:?}", os);
@@ -265,7 +227,7 @@ pub async fn full_map(args: FullMapArgs) -> Result<String, Error> {
     for conn in peer_connections.iter() {
         let source = conn.source.unwrap();
         let dest = conn.destination.unwrap();
-        if args.exclude_self && (source.id == own_id.id || dest.id == own_id.id) {
+        if exclude_nodes.contains(&source) || exclude_nodes.contains(&dest) {
             continue;
         }
         let mut attrs = AttrWriter::new();
@@ -313,7 +275,7 @@ pub async fn full_map(args: FullMapArgs) -> Result<String, Error> {
     for link in links {
         let source = link.source.unwrap();
         let dest = link.destination.unwrap();
-        if args.exclude_self && (source.id == own_id.id || dest.id == own_id.id) {
+        if exclude_nodes.contains(&source) || exclude_nodes.contains(&dest) {
             continue;
         }
         let mut attrs = AttrWriter::new();

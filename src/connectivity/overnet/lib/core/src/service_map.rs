@@ -58,14 +58,16 @@ pub struct ServiceMap {
 
 impl ServiceMap {
     pub fn new(local_node_id: NodeId) -> ServiceMap {
+        let listable_peers =
+            vec![ListablePeer { node_id: local_node_id, is_self: true, services: vec![] }];
         ServiceMap {
             local_services: Mutex::new(BTreeMap::new()),
             local_node_id,
             local_service_list: Observable::new_traced(Vec::new(), false),
-            list_peers: Observable::new(Vec::new()),
+            list_peers: Observable::new(listable_peers.clone()),
             listable_peer_set: Mutex::new(ListablePeerSet {
-                listable_peers: Vec::new(),
-                peers_with_client_connection: BTreeMap::new(),
+                listable_peers,
+                peers_with_client_connection: std::iter::once((local_node_id, 1)).collect(),
             }),
         }
     }
@@ -97,12 +99,6 @@ impl ServiceMap {
             let services: Vec<String> = local_services.keys().cloned().collect();
             drop(local_services);
             self.local_service_list.push(services.clone()).await;
-            self.update_list_peers(ListablePeer {
-                node_id: self.local_node_id,
-                is_self: true,
-                services,
-            })
-            .await;
         }
     }
 

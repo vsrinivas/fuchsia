@@ -249,9 +249,10 @@ fn square(a: i64) -> Option<i64> {
 
 impl PingTracker {
     /// Setup a new (empty) PingTracker
-    pub fn new() -> (PingTracker, Observer<Option<Duration>>) {
+    pub fn new() -> (PingTracker, Observer<Option<Duration>>, Observer<Option<Duration>>) {
         let observable = Observable::new(None);
-        let observer = observable.new_observer();
+        let observer1 = observable.new_observer();
+        let observer2 = observable.new_observer();
         let state = Arc::new(Mutex::new(State {
             round_trip_time: observable,
             send_ping: true,
@@ -272,7 +273,7 @@ impl PingTracker {
             wake_on_change_timeout: None,
             published_mean: 0i64,
         }));
-        (Self(state), observer)
+        (Self(state), observer1, observer2)
     }
 
     pub fn run(&self) -> impl Future<Output = Result<(), Error>> {
@@ -337,7 +338,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn published_mean_updates(run: usize) {
         crate::test_util::init();
-        let (pt, mut rtt_obs) = PingTracker::new();
+        let (pt, mut rtt_obs, _) = PingTracker::new();
         let pt_run = pt.run();
         let _pt_run = Task::spawn(async move {
             pt_run.await.unwrap();

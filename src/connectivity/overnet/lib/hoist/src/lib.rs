@@ -51,9 +51,22 @@ mod test {
         }
     }
 
+    #[cfg(not(target_os = "fuchsia"))]
+    lazy_static::lazy_static! {
+        static ref ASCENDD: Task<()> = Task::spawn(async move {
+            ascendd_lib::run_ascendd(Default::default(), Box::new(async_std::io::stdout())).await.unwrap();
+        });
+    }
+
+    fn init() {
+        logger::init().unwrap();
+        #[cfg(not(target_os = "fuchsia"))]
+        lazy_static::initialize(&ASCENDD);
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn one_bad_channel_doesnt_take_everything_down() {
-        logger::init().unwrap();
+        init();
         let (tx_complete, mut rx_complete) = oneshot::channel();
         let (tx_complete_ack, rx_complete_ack) = oneshot::channel();
         let service_consumer1 = connect_as_service_consumer().unwrap();
@@ -86,7 +99,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn one_bad_link_doesnt_take_the_rest_down() {
-        logger::init().unwrap();
+        init();
         let mesh_controller = &connect_as_mesh_controller().unwrap();
         let (s1a, s1b) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         let (s2a, s2b) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();

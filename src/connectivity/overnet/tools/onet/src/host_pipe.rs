@@ -4,12 +4,18 @@
 
 use {
     anyhow::{Context as _, Error},
+    argh::FromArgs,
     fidl_fuchsia_overnet::MeshControllerProxyInterface,
     futures::{future::try_join, prelude::*},
     parking_lot::Mutex,
     std::io::{Read, Write},
     std::sync::Arc,
 };
+
+#[derive(FromArgs)]
+#[argh(subcommand, name = "host-pipe")]
+/// Use stdin/stdout as a link to another overnet instance
+pub struct HostPipe {}
 
 async fn copy_stdin_to_socket(
     mut tx_socket: futures::io::WriteHalf<fidl::AsyncSocket>,

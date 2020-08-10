@@ -86,6 +86,7 @@ pub(crate) struct LinkRouting {
     node_link_id: NodeLinkId,
     gatherer: Mutex<PacketGatherer>,
     stats: LinkStats,
+    rtt_observer: Mutex<Observer<Option<Duration>>>,
 }
 
 /// Sender for a link
@@ -111,7 +112,7 @@ pub(crate) fn new_link(
     node_link_id: NodeLinkId,
     router: &Arc<Router>,
 ) -> (LinkSender, LinkReceiver, Arc<LinkRouting>, Observer<Option<Duration>>) {
-    let (ping_tracker, observer) = PingTracker::new();
+    let (ping_tracker, observer1, observer2) = PingTracker::new();
     let pt_run = log_errors(ping_tracker.run(), "ping tracker failed");
     let routing = Arc::new(LinkRouting {
         own_node_id: router.node_id(),
@@ -122,6 +123,7 @@ pub(crate) fn new_link(
             peers: Vec::new(),
             waker: None,
         }),
+        rtt_observer: Mutex::new(observer2),
         stats: LinkStats {
             packets_forwarded: AtomicU64::new(0),
             pings_sent: AtomicU64::new(0),
@@ -137,7 +139,7 @@ pub(crate) fn new_link(
         LinkSender { routing: routing.clone(), runner: runner.clone() },
         LinkReceiver { routing: routing.clone(), runner: runner.clone() },
         routing,
-        observer,
+        observer1,
     )
 }
 
@@ -166,8 +168,14 @@ impl LinkRouting {
             received_bytes: Some(stats.received_bytes.load(Ordering::Relaxed)),
             pings_sent: Some(stats.pings_sent.load(Ordering::Relaxed)),
             packets_forwarded: Some(stats.packets_forwarded.load(Ordering::Relaxed)),
-            // TODO: find a way to get this again
-            round_trip_time_microseconds: None,
+            round_trip_time_microseconds: self
+                .rtt_observer
+                .lock()
+                .await
+                .peek()
+                .await
+                .flatten()
+                .map(|d| d.as_micros().try_into().unwrap_or(std::u64::MAX)),
         }
     }
 

@@ -273,6 +273,13 @@ impl<T: std::fmt::Debug> Observable<T> {
     }
 }
 
+impl<T: Clone + std::fmt::Debug> Observer<T> {
+    /// Get the current value, don't move forward the most recent observed value.
+    pub async fn peek(&mut self) -> Option<T> {
+        self.lock.with_lock(|state| state.current.clone()).await
+    }
+}
+
 impl<T: Clone + std::fmt::Debug> futures::Stream for Observer<T> {
     type Item = T;
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
