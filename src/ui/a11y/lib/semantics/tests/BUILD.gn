@@ -136,6 +136,7 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/semantics/util",
     "//src/ui/a11y/lib/view",
     "//src/ui/a11y/lib/view/tests/mocks",
   ]

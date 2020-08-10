@@ -14,6 +14,7 @@
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
+#include <stack>
 #include <vector>
 
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
@@ -92,6 +93,81 @@ const Node* SemanticsIntegrationTest::FindNodeWithLabel(const Node* node, zx_koi
   }
 
   return nullptr;
+}
+
+a11y::SemanticTransform SemanticsIntegrationTest::GetTransformForNode(zx_koid_t view_ref_koid,
+                                                                      uint32_t node_id) {
+  std::stack<const Node*> path;
+  // Perform a DFS to find the path to the target node
+  std::function<bool(const Node*)> traverse = [&](const Node* node) {
+    if (node->node_id() == node_id) {
+      path.push(node);
+      return true;
+    }
+    if (!node->has_child_ids()) {
+      return false;
+    }
+    for (const auto& child_id : node->child_ids()) {
+      const auto* child = view_manager()->GetSemanticNode(view_ref_koid, child_id);
+      FX_DCHECK(child);
+      if (traverse(child)) {
+        path.push(node);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  auto root = view_manager()->GetSemanticNode(view_ref_koid, 0u);
+  traverse(root);
+
+  a11y::SemanticTransform transform;
+  while (!path.empty()) {
+    auto node = path.top();
+    if (node->has_transform()) {
+      transform.ChainLocalTransform(node->transform());
+    }
+    path.pop();
+  }
+
+  return transform;
+}
+
+std::optional<uint32_t> SemanticsIntegrationTest::HitTest(zx_koid_t view_ref_koid,
+                                                          fuchsia::math::PointF target) {
+  std::optional<fuchsia::accessibility::semantics::Hit> target_hit;
+  auto hit_callback = [&](fuchsia::accessibility::semantics::Hit hit) {
+    target_hit = std::move(hit);
+  };
+
+  view_manager()->ExecuteHitTesting(view_ref_koid, target, hit_callback);
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return target_hit.has_value(); }, kTimeout));
+  if (!target_hit.has_value() || !target_hit->has_node_id()) {
+    return std::nullopt;
+  }
+  return target_hit->node_id();
+}
+
+fuchsia::math::PointF SemanticsIntegrationTest::CalculateViewTargetPoint(
+    zx_koid_t view_ref_koid, const fuchsia::accessibility::semantics::Node* node,
+    fuchsia::math::PointF offset) {
+  // Semantic trees may have transforms in each node.  That transform defines the spatial relation
+  // between coordinates in the node's space to coordinates in it's parent's space.  This is done
+  // to enable semantic providers to avoid recomputing location information on every child node
+  // when a parent node (or the entire view) undergoes a spatial change.
+
+  // Get the transform from the node's local space to the view's local space.
+  auto transform = GetTransformForNode(view_ref_koid, node->node_id());
+  // Calculate the point within the node's local space we want to target
+  fuchsia::ui::gfx::vec3 node_local_target_point = {
+      node->location().min.x + offset.x,
+      node->location().min.y + offset.y,
+      node->location().min.z,
+  };
+  // Transform that point into the view's local space.
+  auto view_local_target_point = transform.Apply(node_local_target_point);
+  return {view_local_target_point.x, view_local_target_point.y};
 }
 
 }  // namespace accessibility_test
