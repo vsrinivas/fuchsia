@@ -10,7 +10,7 @@ use {
     anyhow::Context,
     argh::FromArgs,
     async_trait::async_trait,
-    diagnostics_schema::{LifecycleType, Schema},
+    diagnostics_data::{LifecycleType, Schema},
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorMarker, BatchIteratorMarker, ClientSelectorConfiguration, DataType, Format,
         FormattedContent, StreamMode, StreamParameters,

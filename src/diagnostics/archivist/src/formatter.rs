@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     anyhow::{format_err, Error},
-    diagnostics_schema::Schema,
+    diagnostics_data::Schema,
     fidl_fuchsia_diagnostics,
     fuchsia_zircon::{self as zx, HandleBased},
 };

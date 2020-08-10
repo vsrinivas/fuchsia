@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    diagnostics_schema::InspectSchema,
+    diagnostics_data::InspectSchema,
     fidl,
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker,
@@ -247,7 +247,7 @@ mod tests {
     use {
         super::*,
         anyhow::format_err,
-        diagnostics_schema::Schema,
+        diagnostics_data::Schema,
         fidl_fuchsia_diagnostics as fdiagnostics,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_component::{

@@ -3,11 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-rustc_library("diagnostics-schema") {
-  version = "0.1.0"
-  edition = "2018"
+group("rust") {
+  deps = [ ":lib" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":diagnostics-data-tests" ]
+}
+
+rustc_library("lib") {
+  name = "diagnostics_data"
   with_unit_tests = true
 
   deps = [
@@ -21,16 +29,7 @@ rustc_library("diagnostics-schema") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("diagnostics-schema-tests") {
-  deps = [ ":diagnostics-schema_test" ]
-  tests = [
-    {
-      name = "diagnostics_schema_lib_test"
-    },
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":diagnostics-schema-tests" ]
+fuchsia_unittest_package("diagnostics-data-tests") {
+  executable_path = "bin/diagnostics_data_lib_test"
+  deps = [ ":lib_test" ]
 }

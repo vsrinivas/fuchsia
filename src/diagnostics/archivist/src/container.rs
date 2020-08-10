@@ -7,7 +7,7 @@ use {
         inspect::collector::InspectDataCollector,
     },
     anyhow::format_err,
-    diagnostics_schema::{self as schema, LifecycleType},
+    diagnostics_data::{self as schema, LifecycleType},
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    diagnostics_schema::InspectSchema,
+    diagnostics_data::InspectSchema,
     fuchsia_inspect::reader::{ArrayContent, NodeHierarchy, Property},
     nom::HexDisplay,
     num_traits::Bounded,

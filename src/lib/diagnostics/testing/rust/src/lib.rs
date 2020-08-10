@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use anyhow::Error;
+use diagnostics_data::{InspectSchema, Metadata};
 use diagnostics_reader::ArchiveReader;
-use diagnostics_schema::{InspectSchema, Metadata};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};

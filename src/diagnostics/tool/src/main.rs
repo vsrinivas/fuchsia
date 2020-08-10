@@ -3,7 +3,7 @@
 // // found in the LICENSE file.
 use {
     anyhow::Error,
-    diagnostics_schema::InspectSchema,
+    diagnostics_data::InspectSchema,
     difference::{
         self,
         Difference::{Add, Rem, Same},

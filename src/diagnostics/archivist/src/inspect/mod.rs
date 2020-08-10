@@ -17,7 +17,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     collector::Moniker,
-    diagnostics_schema::{self as schema, Schema},
+    diagnostics_data::{self as schema, Schema},
     fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::{reader::PartialNodeHierarchy, NumericProperty},

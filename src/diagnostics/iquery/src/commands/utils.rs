@@ -7,7 +7,7 @@ use {
         commands::{Command, ListCommand},
         types::Error,
     },
-    diagnostics_schema::InspectSchema,
+    diagnostics_data::InspectSchema,
     fuchsia_inspect_contrib::reader::ArchiveReader,
 };
 

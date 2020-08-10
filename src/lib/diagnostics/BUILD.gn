@@ -3,6 +3,7 @@
 
 group("diagnostics") {
   deps = [
+    "//src/lib/diagnostics/data",
     "//src/lib/diagnostics/reader",
     "//src/lib/diagnostics/testing",
   ]
@@ -11,6 +12,7 @@ group("diagnostics") {
 group("tests") {
   testonly = true
   deps = [
+    "//src/lib/diagnostics/data:tests",
     "//src/lib/diagnostics/reader:tests",
     "//src/lib/diagnostics/testing:tests",
   ]

@@ -8,7 +8,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    diagnostics_schema::Schema,
+    diagnostics_data::Schema,
     fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
     fuchsia_inspect::NumericProperty,
     futures::stream::FusedStream,

@@ -11,7 +11,7 @@ use {
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
-    diagnostics_schema::InspectSchema,
+    diagnostics_data::InspectSchema,
     serde::Serialize,
     std::{cmp::Ordering, ops::Deref},
 };
