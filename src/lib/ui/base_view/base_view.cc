@@ -17,15 +17,22 @@ BaseView::BaseView(ViewContext context, const std::string& debug_name)
     : component_context_(context.component_context),
       listener_binding_(this, std::move(context.session_and_listener_request.second)),
       session_(std::move(context.session_and_listener_request.first)),
-      view_(&session_, std::move(context.view_token), debug_name),
       root_node_(&session_),
       ime_client_(this),
       enable_ime_(context.enable_ime) {
+  if (!context.view_ref_pair) {
+    context.view_ref_pair = scenic::ViewRefPair::New();
+  }
+  view_.emplace(&session_, std::move(context.view_token),
+                std::move(context.view_ref_pair->control_ref),
+                std::move(context.view_ref_pair->view_ref), debug_name);
+  FX_DCHECK(view_);
+
   session_.SetDebugName(debug_name);
 
   // Listen for metrics events on our top node.
   root_node_.SetEventMask(fuchsia::ui::gfx::kMetricsEventMask);
-  view_.AddChild(root_node_);
+  view_->AddChild(root_node_);
 
   if (enable_ime_) {
     ime_manager_ = component_context_->svc()->Connect<fuchsia::ui::input::ImeService>();
@@ -79,7 +86,7 @@ void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
         switch (event.gfx().Which()) {
           case ::fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged: {
             auto& evt = event.gfx().view_properties_changed();
-            FX_DCHECK(view_.id() == evt.view_id);
+            FX_DCHECK(view_->id() == evt.view_id);
             auto old_props = view_properties_;
             view_properties_ = evt.properties;
 

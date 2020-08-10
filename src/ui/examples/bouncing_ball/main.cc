@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <cmath>
@@ -15,7 +16,9 @@
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
  public:
   BouncingBallView(sys::ComponentContext* component_context,
-                   fuchsia::ui::views::ViewToken view_token)
+                   fuchsia::ui::views::ViewToken view_token,
+                   fuchsia::ui::views::ViewRefControl view_ref_control,
+                   fuchsia::ui::views::ViewRef view_ref)
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
@@ -24,7 +27,7 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     // Create a Scenic Session and a Scenic SessionListener.
     scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
 
-    InitializeScene(std::move(view_token));
+    InitializeScene(std::move(view_token), std::move(view_ref_control), std::move(view_ref));
   }
 
  private:
@@ -34,13 +37,16 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     cmds->push_back(scenic::NewCommand(std::move(cmd)));
   }
 
-  void InitializeScene(fuchsia::ui::views::ViewToken view_token) {
+  void InitializeScene(fuchsia::ui::views::ViewToken view_token,
+                       fuchsia::ui::views::ViewRefControl view_ref_control,
+                       fuchsia::ui::views::ViewRef view_ref) {
     // Build up a list of commands we will send over our Scenic Session.
     std::vector<fuchsia::ui::scenic::Command> cmds;
 
     // View: Use |view_token| to create a View in the Session.
-    PushCommand(&cmds,
-                scenic::NewCreateViewCmd(kViewId, std::move(view_token), "bouncing_circle_view"));
+    PushCommand(
+        &cmds, scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(view_ref_control),
+                                        std::move(view_ref), "bouncing_circle_view"));
 
     // Root Node.
     PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -281,8 +287,17 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
   void CreateView(zx::eventpair view_token,
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
-    auto view = std::make_unique<BouncingBallView>(component_context_,
-                                                   scenic::ToViewToken(std::move(view_token)));
+    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+    CreateViewWithViewRef(std::move(view_token), std::move(control_ref), std::move(view_ref));
+  }
+
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateViewWithViewRef(zx::eventpair view_token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {
+    auto view = std::make_unique<BouncingBallView>(
+        component_context_, scenic::ToViewToken(std::move(view_token)), std::move(view_ref_control),
+        std::move(view_ref));
     views_.push_back(std::move(view));
   }
 

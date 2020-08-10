@@ -11,6 +11,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/lib/ui/base_view/math.h"
@@ -21,8 +22,7 @@ namespace scenic {
 struct ViewContext {
   scenic::SessionPtrAndListenerRequest session_and_listener_request;
   fuchsia::ui::views::ViewToken view_token;
-  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services;
-  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services;
+  std::optional<ViewRefPair> view_ref_pair;
   sys::ComponentContext* component_context;
   bool enable_ime = false;
 };
@@ -177,7 +177,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   sys::ComponentContext* const component_context_;
   fidl::Binding<fuchsia::ui::scenic::SessionListener> listener_binding_;
   Session session_;
-  scenic::View view_;
+  std::optional<scenic::View> view_;
   scenic::EntityNode root_node_;
 
   fidl::Binding<fuchsia::ui::input::InputMethodEditorClient> ime_client_;

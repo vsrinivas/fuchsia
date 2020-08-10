@@ -85,7 +85,8 @@ class FakeSession : public fuchsia::ui::scenic::Session {
     bool is_shape_node() const { return args_.is_shape_node(); };
 
     bool can_have_children() const {
-      return args_.is_view() || args_.is_view_holder() || args_.is_entity_node();
+      return args_.is_view() || args_.is_view3() || args_.is_view_holder() ||
+             args_.is_entity_node();
     };
     bool can_have_parts() const { return args_.is_entity_node(); };
     bool can_be_part() const { return args_.is_shape_node(); };

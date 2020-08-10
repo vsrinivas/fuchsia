@@ -20,7 +20,7 @@ namespace {
 
 constexpr uint64_t kPresentationRatePerSecond = 60;
 constexpr zx::duration kPresentationInterval = zx::duration(ZX_SEC(1) / kPresentationRatePerSecond);
-constexpr uint32_t kRootNodeId = 1;
+constexpr uint32_t kRootNodeId = 333333;
 
 }  // namespace
 
@@ -205,7 +205,7 @@ void FakeSession::HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::R
       image_pipe_->SetExpectations(expected_black_image_id_, *expected_black_image_format_,
                                    *expected_image_format_, std::move(expected_packets_info_));
     }
-  } else if (args.is_view()) {
+  } else if (args.is_view() || args.is_view3()) {
     fuchsia::ui::gfx::ViewProperties view_properties;
     view_properties.bounding_box.min = {0.0f, 0.0f, -1000.0f};
     view_properties.bounding_box.max = {1353.3f, 902.203f, 0.0f};
@@ -214,7 +214,8 @@ void FakeSession::HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::R
     SendGfxEvent(std::move(gfx_event));
   }
 
-  resources_by_id_.emplace(resource_id, std::move(args));
+  auto [it, success] = resources_by_id_.emplace(resource_id, std::move(args));
+  FX_CHECK(success);
 }
 
 void FakeSession::HandleReleaseResource(uint32_t resource_id) {

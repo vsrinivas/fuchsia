@@ -2973,7 +2973,8 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
   demo->fuchsia_state->context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   ImagePipeViewProviderService::CreateViewCallback create_view_callback =
-      [demo](fuchsia::ui::views::ViewToken view_token) {
+      [demo](fuchsia::ui::views::ViewToken view_token,
+             fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref) {
         auto resize_callback = [demo](float width, float height) {
           demo->width = width;
           demo->height = height;
@@ -2984,8 +2985,9 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv) {
           }
         };
 
-        auto view = ImagePipeView::Create(demo->fuchsia_state->context.get(), std::move(view_token),
-                                          resize_callback);
+        auto view =
+            ImagePipeView::Create(demo->fuchsia_state->context.get(), std::move(view_token),
+                                  std::move(control_ref), std::move(view_ref), resize_callback);
         if (!view)
           ERR_EXIT("Failed to created ImagePipeView", "CreateViewCallback failure");
 

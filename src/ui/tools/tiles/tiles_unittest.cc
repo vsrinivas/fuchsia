@@ -49,8 +49,6 @@ class TilesTest : public gtest::TestLoopFixture {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
         .view_token = std::move(view_token),
-        .incoming_services = {},
-        .outgoing_services = {},
         .component_context = component_context.get(),
     };
 

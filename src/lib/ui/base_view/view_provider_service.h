@@ -28,7 +28,6 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
  public:
   ViewProviderService(sys::ComponentContext* component_context, fuchsia::ui::scenic::Scenic* scenic,
                       ViewFactory factory);
-
   ~ViewProviderService();
 
   // |fuchsia::ui::app::ViewProvider|
@@ -36,16 +35,19 @@ class ViewProviderService : private fuchsia::ui::app::ViewProvider {
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateViewWithViewRef(zx::eventpair view_token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override;
+
  private:
-  ViewProviderService(sys::ComponentContext* component_context,
-                      fuchsia::ui::scenic::Scenic* scenic);
   ViewProviderService(const ViewProviderService&) = delete;
   ViewProviderService& operator=(const ViewProviderService&) = delete;
 
   sys::ComponentContext* const component_context_;
   fuchsia::ui::scenic::Scenic* const scenic_;
+  const ViewFactory view_factory_;
 
-  ViewFactory view_factory_ = nullptr;
   std::vector<std::unique_ptr<BaseView>> views_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
 };

@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture.h"
 #include "src/ui/testing/views/embedder_view.h"
@@ -25,9 +26,12 @@ class FlutterSemanticsTests : public SemanticsIntegrationTest {
 TEST_F(FlutterSemanticsTests, StaticSemantics) {
   view_manager()->SetSemanticsEnabled(true);
 
-  auto flutter_runner =
+  scenic::EmbeddedViewInfo flutter_runner =
       scenic::LaunchComponentAndCreateView(environment()->launcher_ptr(), kClientUrl);
   flutter_runner.controller.events().OnTerminated = [](auto...) { FAIL(); };
+
+  // Get the viewref koid.
+  const zx_koid_t view_ref_koid = fsl::GetKoid(flutter_runner.view_ref.reference.get());
 
   // Present the view.
   scenic::EmbedderView embedder_view({
@@ -38,18 +42,10 @@ TEST_F(FlutterSemanticsTests, StaticSemantics) {
   // Embed the view.
   bool is_rendering = false;
   embedder_view.EmbedView(std::move(flutter_runner),
-                          [this, &is_rendering](fuchsia::ui::gfx::ViewState view_state) {
+                          [&is_rendering](fuchsia::ui::gfx::ViewState view_state) {
                             is_rendering = view_state.is_rendering;
-                            QuitLoop();
                           });
-  RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kTimeout);
-  EXPECT_TRUE(is_rendering);
-
-  // Get the viewref koid.
-  zx_koid_t view_ref_koid = WaitForKoid();
-  EXPECT_NE(view_ref_koid, ZX_KOID_INVALID)
-      << "No view ref could be intercepted. Possible Accessibility input wiring issue.";
-
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kTimeout));
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] {
         auto node = view_manager()->GetSemanticNode(view_ref_koid, 0u);

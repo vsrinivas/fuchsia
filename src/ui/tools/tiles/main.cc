@@ -55,8 +55,6 @@ int main(int argc, const char** argv) {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
       .view_token = std::move(view_token),
-      .incoming_services = {},
-      .outgoing_services = {},
       .component_context = component_context.get(),
   };
   tiles::Tiles tiles(std::move(view_context), command_line.positional_args(), border);

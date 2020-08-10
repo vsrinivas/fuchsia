@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_VULKAN_SRC_IMAGEPIPE_VIEW_IMAGEPIPE_VIEW_H
-#define GARNET_LIB_VULKAN_SRC_IMAGEPIPE_VIEW_IMAGEPIPE_VIEW_H
+#ifndef SRC_LIB_VULKAN_IMAGEPIPE_VIEW_IMAGEPIPE_VIEW_H_
+#define SRC_LIB_VULKAN_IMAGEPIPE_VIEW_IMAGEPIPE_VIEW_H_
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
@@ -25,13 +25,16 @@ class ImagePipeView : public fuchsia::ui::scenic::SessionListener {
 
   static std::unique_ptr<ImagePipeView> Create(sys::ComponentContext* context,
                                                fuchsia::ui::views::ViewToken view_token,
+                                               fuchsia::ui::views::ViewRefControl control_ref,
+                                               fuchsia::ui::views::ViewRef view_ref,
                                                ResizeCallback resize_callback);
 
   ImagePipeView(ResizeCallback resize_callback);
 
   zx::channel TakeImagePipeChannel() { return std::move(image_pipe_endpoint_); }
 
-  bool Init(sys::ComponentContext* context, fuchsia::ui::views::ViewToken view_token);
+  bool Init(sys::ComponentContext* context, fuchsia::ui::views::ViewToken view_token,
+            fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref);
 
   // fuchsia::ui::scenic::SessionListener methods.
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override;
@@ -55,7 +58,9 @@ class ImagePipeView : public fuchsia::ui::scenic::SessionListener {
 
 class ImagePipeViewProviderService : public fuchsia::ui::app::ViewProvider {
  public:
-  using CreateViewCallback = fit::function<void(fuchsia::ui::views::ViewToken view_token)>;
+  using CreateViewCallback = fit::function<void(fuchsia::ui::views::ViewToken view_token,
+                                                fuchsia::ui::views::ViewRefControl control_ref,
+                                                fuchsia::ui::views::ViewRef view_ref)>;
 
   ImagePipeViewProviderService(sys::ComponentContext* context,
                                CreateViewCallback create_view_callback);
@@ -65,6 +70,11 @@ class ImagePipeViewProviderService : public fuchsia::ui::app::ViewProvider {
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateViewWithViewRef(zx::eventpair view_token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override;
+
  private:
   void HandleViewProviderRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request);
 
@@ -72,4 +82,4 @@ class ImagePipeViewProviderService : public fuchsia::ui::app::ViewProvider {
   fidl::BindingSet<ViewProvider> bindings_;
 };
 
-#endif  // GARNET_LIB_VULKAN_SRC_IMAGEPIPE_VIEW_IMAGEPIPE_VIEW_H
+#endif  // SRC_LIB_VULKAN_IMAGEPIPE_VIEW_IMAGEPIPE_VIEW_H_

@@ -5,6 +5,7 @@
 #include "imagepipe_view.h"
 
 #include <lib/syslog/global.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 enum {
   kViewId = 1,
@@ -17,11 +18,13 @@ enum {
 
 std::unique_ptr<ImagePipeView> ImagePipeView::Create(sys::ComponentContext* context,
                                                      fuchsia::ui::views::ViewToken view_token,
+                                                     fuchsia::ui::views::ViewRefControl control_ref,
+                                                     fuchsia::ui::views::ViewRef view_ref,
                                                      ResizeCallback resize_callback) {
   auto view = std::make_unique<ImagePipeView>(std::move(resize_callback));
   if (!view)
     return nullptr;
-  if (!view->Init(context, std::move(view_token)))
+  if (!view->Init(context, std::move(view_token), std::move(control_ref), std::move(view_ref)))
     return nullptr;
   return view;
 }
@@ -37,7 +40,9 @@ static void PushCommand(std::vector<fuchsia::ui::scenic::Command>* cmds,
   cmds->push_back(scenic::NewCommand(std::move(cmd)));
 }
 
-bool ImagePipeView::Init(sys::ComponentContext* context, fuchsia::ui::views::ViewToken view_token) {
+bool ImagePipeView::Init(sys::ComponentContext* context, fuchsia::ui::views::ViewToken view_token,
+                         fuchsia::ui::views::ViewRefControl control_ref,
+                         fuchsia::ui::views::ViewRef view_ref) {
   fuchsia::ui::scenic::ScenicPtr scenic = context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
   scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
@@ -51,7 +56,9 @@ bool ImagePipeView::Init(sys::ComponentContext* context, fuchsia::ui::views::Vie
 
   std::vector<fuchsia::ui::scenic::Command> cmds;
 
-  PushCommand(&cmds, scenic::NewCreateViewCmd(kViewId, std::move(view_token), "imagepipe_view"));
+  PushCommand(&cmds,
+              scenic::NewCreateViewCmd(kViewId, std::move(view_token), std::move(control_ref),
+                                       std::move(view_ref), "imagepipe_view"));
   PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kRootNodeId));
   PushCommand(&cmds, scenic::NewAddChildCmd(kViewId, kRootNodeId));
   PushCommand(&cmds, scenic::NewCreateMaterialCmd(kMaterialId));
@@ -137,7 +144,15 @@ void ImagePipeViewProviderService::CreateView(
     zx::eventpair view_token,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
-  create_view_callback_(scenic::ToViewToken(std::move(view_token)));
+  auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
+  CreateViewWithViewRef(std::move(view_token), std::move(view_ref_control), std::move(view_ref));
+}
+
+void ImagePipeViewProviderService::CreateViewWithViewRef(
+    zx::eventpair view_token, fuchsia::ui::views::ViewRefControl view_ref_control,
+    fuchsia::ui::views::ViewRef view_ref) {
+  create_view_callback_(scenic::ToViewToken(std::move(view_token)), std::move(view_ref_control),
+                        std::move(view_ref));
 }
 
 void ImagePipeViewProviderService::HandleViewProviderRequest(

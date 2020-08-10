@@ -38,13 +38,8 @@ struct EmbeddedViewInfo {
   // ViewHolder created with this token.
   fuchsia::ui::views::ViewHolderToken view_holder_token;
 
-  // Handle to services provided by ViewProvider.CreateView().
-  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> services_from_child_view;
-
-  // Interface request for services provided to ViewProvider.CreateView(); the
-  // caller of LaunchAppAndCreateView() may choose to attach this request to a
-  // ServiceProvider implementation.
-  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_to_child_view;
+  // The ViewRef of the embedded View.
+  fuchsia::ui::views::ViewRef view_ref;
 };
 
 // Launch a component and connect to its ViewProvider service, passing it the

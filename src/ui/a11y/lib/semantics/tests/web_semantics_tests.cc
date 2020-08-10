@@ -43,11 +43,14 @@ TEST_F(WebSemanticsTest, StaticSemantics) {
 
   view_manager()->SetSemanticsEnabled(true);
 
-  auto web_runner = scenic::LaunchComponentAndCreateView(
+  scenic::EmbeddedViewInfo web_runner = scenic::LaunchComponentAndCreateView(
       environment()->launcher_ptr(),
       fxl::StringPrintf("http://localhost:%d/static.html", server.port()), {});
 
   web_runner.controller.events().OnTerminated = [](auto...) { FAIL(); };
+
+  // Get the viewref koid.
+  const zx_koid_t view_ref_koid = fsl::GetKoid(web_runner.view_ref.reference.get());
 
   // Present the view.
   scenic::EmbedderView embedder_view({
@@ -56,16 +59,12 @@ TEST_F(WebSemanticsTest, StaticSemantics) {
   });
 
   // Embed the view.
-  embedder_view.EmbedView(std::move(web_runner), [this](fuchsia::ui::gfx::ViewState view_state) {
-    EXPECT_TRUE(view_state.is_rendering);
-    QuitLoop();
-  });
-
-  // Get the viewref koid.
-  zx_koid_t view_ref_koid = WaitForKoid();
-  EXPECT_NE(view_ref_koid, ZX_KOID_INVALID)
-      << "No view ref could be intercepted. Possible Accessibility input wiring issue.";
-
+  bool is_rendering = false;
+  embedder_view.EmbedView(std::move(web_runner),
+                          [&is_rendering](fuchsia::ui::gfx::ViewState view_state) {
+                            is_rendering = view_state.is_rendering;
+                          });
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&is_rendering] { return is_rendering; }, kTimeout));
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] {
         auto node = view_manager()->GetSemanticNode(view_ref_koid, 0u);

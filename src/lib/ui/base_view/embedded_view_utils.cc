@@ -5,6 +5,7 @@
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace scenic {
@@ -13,8 +14,6 @@ EmbeddedViewInfo LaunchComponentAndCreateView(const fuchsia::sys::LauncherPtr& l
                                               const std::string& component_url,
                                               const std::vector<std::string>& component_args) {
   FX_DCHECK(launcher);
-
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   EmbeddedViewInfo info;
 
@@ -29,14 +28,14 @@ EmbeddedViewInfo LaunchComponentAndCreateView(const fuchsia::sys::LauncherPtr& l
 
   info.view_provider = info.app_services->Connect<fuchsia::ui::app::ViewProvider>();
 
-  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> services_to_child_view;
-  info.services_to_child_view = services_to_child_view.NewRequest();
-
-  info.view_provider->CreateView(std::move(view_token.value),
-                                 info.services_from_child_view.NewRequest(),
-                                 std::move(services_to_child_view));
-
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   info.view_holder_token = std::move(view_holder_token);
+
+  auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
+  fidl::Clone(view_ref, &info.view_ref);
+
+  info.view_provider->CreateViewWithViewRef(std::move(view_token.value),
+                                            std::move(view_ref_control), std::move(view_ref));
 
   return info;
 }

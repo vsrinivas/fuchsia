@@ -8,7 +8,6 @@
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
                 "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
-                "fuchsia.ui.input.InputDeviceRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.policy.accessibility.PointerEventRegistry": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
@@ -24,9 +23,6 @@
         "binary": "test/flutter_semantics_tests"
     },
     "sandbox": {
-        "features": [
-            "shell-commands"
-        ],
         "services": [
             "fuchsia.accessibility.ColorTransform",
             "fuchsia.accessibility.Magnifier",
@@ -42,7 +38,6 @@
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
-            "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.input.accessibility.PointerEventRegistry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",

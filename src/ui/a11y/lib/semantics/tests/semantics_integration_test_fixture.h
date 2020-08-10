@@ -46,10 +46,6 @@ class SemanticsIntegrationTest : public sys::testing::TestWithEnvironment {
   // with |label|.
   const Node* FindNodeWithLabel(const Node* node, zx_koid_t view_ref_koid, std::string label);
 
-  // Runs the event loop and sends taps on the center of the screen until a view ref KOID is
-  // registered. May return ZX_KOID_INVALID if no KOID is intercepted after repeated attempts.
-  zx_koid_t WaitForKoid();
-
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
  private:
