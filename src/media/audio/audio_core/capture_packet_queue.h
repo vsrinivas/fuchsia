@@ -9,6 +9,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <condition_variable>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -176,6 +177,13 @@ class CapturePacketQueue {
   // Returns an error if stream_packet was not in flight.
   fit::result<void, std::string> Recycle(const StreamPacket& stream_packet);
 
+  // Stop accepting packets. All further calls to PushPending and Recycle will be
+  // ignored, and NextMixerJob will return nullopt.
+  void Shutdown();
+
+  // Block until the pending queue is non-empty or the queue has been shut down.
+  void WaitForPendingPacket();
+
  private:
   enum class Mode { Preallocated, DynamicallyAllocated };
 
@@ -195,9 +203,13 @@ class CapturePacketQueue {
   Allocator allocator_;
   mutable std::mutex mutex_;
 
+  // Set by Shutdown.
+  bool shutdown_ FXL_GUARDED_BY(mutex_) = false;
+
   // Pending and ready queues.
   std::deque<fbl::RefPtr<Packet>> pending_ FXL_GUARDED_BY(mutex_);
   std::deque<fbl::RefPtr<Packet>> ready_ FXL_GUARDED_BY(mutex_);
+  std::condition_variable pending_signal_ FXL_GUARDED_BY(mutex_);
 
   // Mapping from payload_offset to packet, for packets that have been popped from ready_.
   // These packets will be returned to pending_ by Recycle().

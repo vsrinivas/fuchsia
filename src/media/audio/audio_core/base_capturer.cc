@@ -102,6 +102,12 @@ void BaseCapturer::UpdateState(State new_state) {
   if (new_state == State::OperatingSync) {
     set_packet_queue(CapturePacketQueue::CreateDynamicallyAllocated(payload_buf_, format_));
   }
+  if (new_state == State::Shutdown) {
+    // This can be null if we shutdown before initialization completes.
+    if (auto pq = packet_queue(); pq) {
+      pq->Shutdown();
+    }
+  }
   State old_state = state_.exchange(new_state);
   OnStateChanged(old_state, new_state);
 }
@@ -529,8 +535,8 @@ zx_status_t BaseCapturer::Process() {
     // 1) We are OperatingSync and our user is not supplying packets fast enough.
     // 2) We are OperatingAsync and our user is not releasing packets fast enough.
     //
-    // Either way, invalidate the frames_to_ref_clock transformation and make sure we don't have a
-    // wakeup timer pending.
+    // Either way, this is an underflow. Invalidate the frames_to_ref_clock transformation and make
+    // sure we don't have a wakeup timer pending.
     if (!mix_state) {
       ref_clock_to_fractional_dest_frames_->Update(TimelineFunction());
       frame_count_ = 0;
@@ -540,6 +546,14 @@ zx_status_t BaseCapturer::Process() {
         ReportStop();
         return ZX_OK;
       }
+
+      // Wait until we have another packet or have shut down.
+      pq->WaitForPendingPacket();
+      if (state_.load() == State::Shutdown) {
+        return ZX_OK;
+      }
+
+      // Have another packet: continue capturing.
       continue;
     }
 

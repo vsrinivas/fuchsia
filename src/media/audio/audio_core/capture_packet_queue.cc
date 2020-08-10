@@ -96,7 +96,7 @@ size_t CapturePacketQueue::ReadySize() const {
 std::optional<CapturePacketQueue::PacketMixState> CapturePacketQueue::NextMixerJob() {
   TRACE_INSTANT("audio", "CapturePacketQueue::NextMixerJob", TRACE_SCOPE_THREAD);
   std::lock_guard<std::mutex> lock(mutex_);
-  if (pending_.empty()) {
+  if (shutdown_ || pending_.empty()) {
     return std::nullopt;
   }
   auto p = pending_.front();
@@ -192,7 +192,10 @@ fit::result<void, std::string> CapturePacketQueue::PushPending(size_t offset_fra
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
-  pending_.push_back(p);
+  if (!shutdown_) {
+    pending_.push_back(p);
+    pending_signal_.notify_all();
+  }
   return fit::ok();
 }
 
@@ -201,6 +204,9 @@ fit::result<void, std::string> CapturePacketQueue::Recycle(const StreamPacket& s
   FX_CHECK(mode_ == Mode::Preallocated);
 
   std::lock_guard<std::mutex> lock(mutex_);
+  if (shutdown_) {
+    return fit::ok();
+  }
   auto it = inflight_.find(stream_packet.payload_offset);
   if (it == inflight_.end()) {
     return fit::error(
@@ -222,8 +228,34 @@ fit::result<void, std::string> CapturePacketQueue::Recycle(const StreamPacket& s
   // Move from inflight to pending.
   p->Reset();
   pending_.push_back(p);
+  pending_signal_.notify_all();
   inflight_.erase(it);
   return fit::ok();
+}
+
+void CapturePacketQueue::Shutdown() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  shutdown_ = true;
+  pending_signal_.notify_all();
+}
+
+namespace {
+// WaitForPendingPacket uses std::unique_lock as required by std::condition_variable::wait.
+// Unfortunately, std::unique_lock supports optional locking, which is not supported by clang's
+// thread annotations. We use std::unique_lock in a purely scoped way, which is supported,
+// so we wrap it with a simple class annotated as a scoped lock.
+class FXL_SCOPED_LOCKABLE scoped_unique_lock : public std::unique_lock<std::mutex> {
+ public:
+  explicit scoped_unique_lock(std::mutex& m) FXL_ACQUIRE(m) : std::unique_lock<std::mutex>(m) {}
+  ~scoped_unique_lock() FXL_RELEASE() { std::unique_lock<std::mutex>::~unique_lock(); }
+};
+}  // namespace
+
+void CapturePacketQueue::WaitForPendingPacket() {
+  scoped_unique_lock lock(mutex_);
+  while (!shutdown_ && pending_.empty()) {
+    pending_signal_.wait(lock);
+  }
 }
 
 }  // namespace media::audio
