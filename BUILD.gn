@@ -243,7 +243,8 @@ build_api_module("api") {
   ]
 }
 
-# This describes the location of the package repository.
+# This describes the location of the package repository, in:
+#  "$root_build_dir/package-repositories.json"
 #
 # Type: list(scope)
 #
@@ -267,7 +268,8 @@ build_api_module("package-repositories") {
   deps = [ "//build/images:updates" ]
 }
 
-# This describes all the archives the build can produce.
+# This describes all the archives the build can produce, in:
+# "$root_build_dir/archives.json"
 #
 # TODO(fxbug.dev/43568): Delete me ASAP. Archives are targets that necessarily
 # depend on 'everything'; targets like this should be migrated away from.
@@ -299,6 +301,8 @@ build_api_module("archives") {
 # TODO(crbug.com/gn/132): Remove when GN emits the equivalent information
 # itself.
 #
+# in file: "$root_build_dir/args.json"
+#
 # This just regurgitates the build arguments specified to `gn gen`.  This is
 # the exact JSON representation of the settings in "$root_build_dir/args.gn".
 # It does not include build arguments left to their default values.  So to
@@ -313,6 +317,7 @@ build_api_module("args") {
 }
 
 # See //zircon:binaries for a description and schema definition.
+# in file: "$root_build_dir/binaries.json"
 #
 build_api_module("binaries") {
   testonly = true
@@ -344,7 +349,8 @@ group("binaries.zircon") {
   }
 }
 
-# Describes the configuration of the build.
+# Describes the configuration of the build in the file:
+#  "$root_build_dir/build_info.json"
 #
 # Type: list(scope)
 #
@@ -376,6 +382,8 @@ build_api_module("build_info") {
 
 # Artifacts from the checkout. Though a priori unrelated to the build, they are
 # useful to track here.
+#
+# in file: "$root_build_dir/checkout_artifacts.json"
 #
 # Type: list(scope)
 #
@@ -426,6 +434,7 @@ group("checkout_artifacts.metadata") {
 }
 
 # See //zircon:generated_sources for a description and schema definition.
+# in file: "$root_build_dir/generated_sources.json"
 #
 build_api_module("generated_sources") {
   testonly = true
@@ -450,7 +459,8 @@ group("generated_sources.zircon") {
   }
 }
 
-# Describes the "fuzzers" in the build.
+# Describes the "fuzzers" in the build, in the file:
+#  "$root_build_dir/fuzzers.json"
 #
 # See //build/fuzzing/fuzzer.gni for more details.
 #
@@ -476,7 +486,8 @@ build_api_module("fuzzers") {
   deps = [ "//build/images:packages" ]
 }
 
-# This describes all the "image" files the build can produce.
+# This describes all the "image" files the build can produce, in the file:
+#  "$root_build_dir/images.json"
 #
 # See //zircon:images for a description and partial schema definition. Fields
 # additionally found in this build API module include
@@ -504,7 +515,8 @@ build_api_module("images") {
   ]
 }
 
-# Describes the platforms available for testing.
+# Describes the platforms available for testing, in the file:
+#  "$root_build_dir/platforms.json"
 #
 # TODO(fxbug.dev/10429): the fuchsia platform should not know about such things.
 #
@@ -520,7 +532,8 @@ build_api_module("platforms") {
   }
 }
 
-# This describes where to find all prebuilt binaries.
+# This describes where to find all prebuilt binaries, in the file:
+#  "$root_build_dir/prebuilt_binaries.json"
 #
 # The `manifest` field will point to another JSON file that is almost a subset
 # of the :binaries build API module: the only fields present are `cpu`,
@@ -555,6 +568,7 @@ build_api_module("prebuilt_binaries") {
 }
 
 # See //zircon:tests for a description and schema definition.
+# in file: "$root_build_dir/tests.json"
 #
 build_api_module("tests") {
   testonly = true
@@ -587,6 +601,7 @@ build_api_module("test_durations") {
 }
 
 # See //zircon:tool_paths for a description and schema definition.
+# in file: "$root_build_dir/tool_paths.json"
 #
 build_api_module("tool_paths") {
   testonly = true
@@ -652,6 +667,7 @@ group("tool_paths.zircon") {
 }
 
 # This describes all the "ZBI tests" the build can produce.
+# in file: "$root_build_dir/zbi_tests.json"
 #
 # See //zircon:zbi_tests for a description and a schema definition.
 #
@@ -666,6 +682,7 @@ build_api_module("zbi_tests") {
 }
 
 # Describes how to invoke Njnja for the Zircon build.
+# in file: "$root_build_dir/zircon.json"
 #
 # These instructions are a prerequisite for this build.
 #
