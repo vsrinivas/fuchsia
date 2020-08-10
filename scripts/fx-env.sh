@@ -21,17 +21,10 @@
 
 function __fx_env_main() {
   local bash_build_completion=false
-  while [[ $# -ne 0 ]]; do
-    case "$1" in
-      --bash-build-completion)
-        bash_build_completion=true
-        ;;
-      *)
-        echo -e >&2 "ERROR: Unknown argument \"$1\""
-        return 1
-        ;;
-    esac
-    shift
+  for arg in "$@"; do
+    if [[ "${arg}" == "--bash-build-completion" ]]; then
+      bash_build_completion=true
+    fi
   done
 
   if [[ -n "${ZSH_VERSION}" ]]; then
