@@ -17,6 +17,7 @@ group("tests") {
 if (is_host) {
   triage_config_test("triage_configs_test") {
     sources = [
+      "cpu.triage",
       "crashes.triage",
       "disk.triage",
       "intl.dart_aot.triage",

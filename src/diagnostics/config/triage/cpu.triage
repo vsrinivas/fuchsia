@@ -1,0 +1,49 @@
+{
+    // Appmgr samples total CPU and queuing time for all components it
+    // knows about (v1 only) every minute.  The last two samples are retained
+    // to calculate average CPU load over approximately the last minute.
+    select: {
+        // The total number of nanoseconds any component was scheduled
+        // and running on a CPU in the second to most recent sample.
+        prev_cpu: "INSPECT:core/appmgr:root/cpu_stats/recent_usage:previous_cpu_time",
+
+        // The total number of nanoseconds any component was queued to
+        // run, but was not actually running in the second to most recent sample.
+        prev_queue: "INSPECT:core/appmgr:root/cpu_stats/recent_usage:previous_queue_time",
+
+        // The timestamp of the second to most recent sample.
+        prev_time: "INSPECT:core/appmgr:root/cpu_stats/recent_usage:previous_timestamp",
+
+        // The total number of nanoseconds any component was scheduled
+        // and running on a CPU in the most recent sample.
+        current_cpu: "INSPECT:core/appmgr:root/cpu_stats/recent_usage:recent_cpu_time",
+
+        // The total number of nanoseconds any component was queued to
+        // run, but was not actually running in the most recent sample.
+        current_queue: "INSPECT:core/appmgr:root/cpu_stats/recent_usage:recent_queue_time",
+
+        // The timestamp of the most recent sample.
+        current_time: "INSPECT:core/appmgr:root/cpu_stats/recent_usage:recent_timestamp",
+    },
+    eval: {
+        // The average CPU and queue times during the two most recent samples in
+        // appmgr (typically every minute). This includes only CPU time for
+        // components known to appmgr (v1 components). The percentage is out
+        // of the total CPU time available on a single processor, so on a 4
+        // core system the percentage can go up to 400%.
+        cpu_average: "(current_cpu - prev_cpu) / (current_time - prev_time)",
+        queue_average: "(current_queue - prev_queue) / (current_time - prev_time)",
+    },
+    act: {
+        v1_component_cpu_usage: {
+            type: "Gauge",
+            value: "cpu_average",
+            format: "percentage",
+        },
+        v1_component_queue_average: {
+            type: "Gauge",
+            value: "queue_average",
+            format: "percentage",
+        },
+    },
+}
