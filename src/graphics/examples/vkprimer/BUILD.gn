@@ -3,16 +3,17 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//src/graphics/examples/vkprimer/common/common.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
-package("vkprimer") {
-  testonly = true
-
-  binaries = [
+test_package("vkprimer") {
+  tests = [
     {
       name = "vkprimer"
+      environments = magma_hardware_envs
     },
   ]
   deps = [ ":bin" ]
@@ -29,13 +30,6 @@ package("vkprimer") {
   ]
 
   if (is_fuchsia) {
-    meta = [
-      {
-        path = rebase_path("meta/vkprimer.cmx")
-        dest = "vkprimer.cmx"
-      },
-    ]
-
     public_deps = vulkan_validation_layers.public_deps +
                   image_pipe_swapchain_fb.public_deps
     loadable_modules = vulkan_validation_layers.loadable_modules +

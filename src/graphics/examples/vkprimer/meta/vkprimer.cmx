@@ -1,9 +1,17 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
+            ]
+        }
+    },
     "program": {
         "args": [
             "-offscreen"
         ],
-        "binary": "bin/vkprimer"
+        "binary": "test/vkprimer"
     },
     "sandbox": {
         "dev": [

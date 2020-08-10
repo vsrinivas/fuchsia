@@ -61,7 +61,7 @@ bool VulkanLayer::Init() {
 
   const auto &instance = *instance_->instance();
   dispatch_loader_ = vk::DispatchLoaderDynamic();
-  dispatch_loader_.init(instance);
+  dispatch_loader_.init(instance, vkGetInstanceProcAddr);
 
   vk::DebugUtilsMessengerCreateInfoEXT info;
   info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |

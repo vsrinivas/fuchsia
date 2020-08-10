@@ -14,6 +14,7 @@ group("tests") {
   deps = [
     "display:tests",
     "drivers:tests",
+    "examples/vkprimer",
     "lib/compute:tests",
     "lib/magma/tests",
     "tests:tests",
