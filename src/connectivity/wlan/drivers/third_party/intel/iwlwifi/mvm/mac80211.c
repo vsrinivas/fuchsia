@@ -2823,29 +2823,38 @@ static int iwl_mvm_mac_conf_tx(struct ieee80211_hw* hw, struct ieee80211_vif* vi
     }
     return 0;
 }
+#endif  // NEEDS_PORTING
 
-static void iwl_mvm_mac_mgd_prepare_tx(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
-                                       uint16_t req_duration) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    uint32_t duration = IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS;
-    uint32_t min_duration = IWL_MVM_TE_SESSION_PROTECTION_MIN_TIME_MS;
+// Prepare for transmitting a management frame for association before associated.
+//
+// This function is used to tell firmware to sync the channel time.
+//
+void iwl_mvm_mac_mgd_prepare_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                uint16_t req_duration) {
+  uint32_t duration = IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS;
+  uint32_t min_duration = IWL_MVM_TE_SESSION_PROTECTION_MIN_TIME_MS;
 
-    /*
-     * iwl_mvm_protect_session() reads directly from the device
-     * (the system time), so make sure it is available.
-     */
-    if (iwl_mvm_ref_sync(mvm, IWL_MVM_REF_PREPARE_TX)) { return; }
+  /*
+   * iwl_mvm_protect_session() reads directly from the device
+   * (the system time), so make sure it is available.
+   */
+  if (iwl_mvm_ref_sync(mvm, IWL_MVM_REF_PREPARE_TX)) {
+    return;
+  }
 
-    if (req_duration > duration) { duration = req_duration; }
+  if (req_duration > duration) {
+    duration = req_duration;
+  }
 
-    mutex_lock(&mvm->mutex);
-    /* Try really hard to protect the session and hear a beacon */
-    iwl_mvm_protect_session(mvm, vif, duration, min_duration, 500, false);
-    mutex_unlock(&mvm->mutex);
+  mtx_lock(&mvm->mutex);
+  /* Try really hard to protect the session and hear a beacon */
+  iwl_mvm_protect_session(mvm, mvmvif, duration, min_duration, 500, false);
+  mtx_unlock(&mvm->mutex);
 
-    iwl_mvm_unref(mvm, IWL_MVM_REF_PREPARE_TX);
+  iwl_mvm_unref(mvm, IWL_MVM_REF_PREPARE_TX);
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_mvm_mac_sched_scan_start(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                                         struct cfg80211_sched_scan_request* req,
                                         struct ieee80211_scan_ies* ies) {

@@ -2140,6 +2140,9 @@ zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
 zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta,
                                   enum iwl_sta_state old_state, enum iwl_sta_state new_state);
 
+void iwl_mvm_mac_mgd_prepare_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                uint16_t req_duration);
+
 zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chandef,
                                 uint16_t* phy_ctxt_id);
 zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id);

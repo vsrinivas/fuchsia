@@ -59,6 +59,7 @@
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 
 ////////////////////////////////////  Helper Functions  ////////////////////////////////////////////
 
@@ -285,7 +286,7 @@ static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss
   }
   // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
 
-  // Add AP into the STA table in firmware.
+  // Add AP into the STA table in the firmware.
   struct iwl_mvm_sta* mvm_sta = alloc_ap_mvm_sta(config->bssid);
   if (!mvm_sta) {
     IWL_ERR(mvmvif, "cannot allocate MVM STA for AP.\n");
@@ -298,12 +299,30 @@ static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss
     goto exit;
   }
 
+  // Simulates the behavior of iwl_mvm_bss_info_changed_station().
   mtx_lock(&mvmvif->mvm->mutex);
+  memcpy(mvmvif->bss_conf.bssid, config->bssid, ETH_ALEN);
+  memcpy(mvmvif->bssid, config->bssid, ETH_ALEN);
+  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, mvmvif->bssid);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set BSSID: %s\n", zx_status_get_string(ret));
+    goto unlock;
+  }
+  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot clear BSSID: %s\n", zx_status_get_string(ret));
+    goto unlock;
+  }
+  mtx_unlock(&mvmvif->mvm->mutex);
 
+  // Ask the firmware to pay attention for beacon.
+  iwl_mvm_mac_mgd_prepare_tx(mvmvif->mvm, mvmvif, IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS);
+
+  // Allocate a Tx queue for this station.
+  mtx_lock(&mvmvif->mvm->mutex);
   ret = iwl_mvm_sta_alloc_queue(mvmvif->mvm, mvm_sta, IEEE80211_AC_BE, IWL_MAX_TID_COUNT);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot allocate queue for STA: %s\n", zx_status_get_string(ret));
-    goto unlock;
   }
 
 unlock:
