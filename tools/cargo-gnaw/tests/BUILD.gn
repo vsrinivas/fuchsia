@@ -36,18 +36,122 @@ if (is_host) {
     sources = [ "golden.rs" ]
   }
 
-  host_test_data("cargo_gnaw_rust") {
-    sources = [ "//prebuilt/third_party/rust/${host_platform}" ]
-    outputs = [ "$root_out_dir/test_data/tools/cargo-gnaw/runfiles/rust" ]
-  }
+  visibility = [ ":*" ]
 
   host_test_data("cargo_gnaw_tests") {
-    sources = [ "//tools/cargo-gnaw/tests" ]
-    outputs = [ "$root_out_dir/test_data/tools/cargo-gnaw/tests" ]
+    sources = [
+      "golden.rs",
+      "platform_deps/.cargo/config",
+      "platform_deps/BUILD.gn",
+      "platform_deps/Cargo.lock",
+      "platform_deps/Cargo.toml",
+      "platform_deps/src/lib.rs",
+      "platform_deps/vendor/anyhow/.cargo-checksum.json",
+      "platform_deps/vendor/anyhow/Cargo.toml",
+      "platform_deps/vendor/anyhow/LICENSE-APACHE",
+      "platform_deps/vendor/anyhow/LICENSE-MIT",
+      "platform_deps/vendor/anyhow/README.md",
+      "platform_deps/vendor/anyhow/build.rs",
+      "platform_deps/vendor/anyhow/src/backtrace.rs",
+      "platform_deps/vendor/anyhow/src/chain.rs",
+      "platform_deps/vendor/anyhow/src/context.rs",
+      "platform_deps/vendor/anyhow/src/error.rs",
+      "platform_deps/vendor/anyhow/src/fmt.rs",
+      "platform_deps/vendor/anyhow/src/kind.rs",
+      "platform_deps/vendor/anyhow/src/lib.rs",
+      "platform_deps/vendor/anyhow/src/macros.rs",
+      "platform_deps/vendor/anyhow/src/wrapper.rs",
+      "platform_deps/vendor/anyhow/tests/common/mod.rs",
+      "platform_deps/vendor/anyhow/tests/compiletest.rs",
+      "platform_deps/vendor/anyhow/tests/drop/mod.rs",
+      "platform_deps/vendor/anyhow/tests/test_autotrait.rs",
+      "platform_deps/vendor/anyhow/tests/test_backtrace.rs",
+      "platform_deps/vendor/anyhow/tests/test_boxed.rs",
+      "platform_deps/vendor/anyhow/tests/test_chain.rs",
+      "platform_deps/vendor/anyhow/tests/test_context.rs",
+      "platform_deps/vendor/anyhow/tests/test_convert.rs",
+      "platform_deps/vendor/anyhow/tests/test_downcast.rs",
+      "platform_deps/vendor/anyhow/tests/test_fmt.rs",
+      "platform_deps/vendor/anyhow/tests/test_macros.rs",
+      "platform_deps/vendor/anyhow/tests/test_repr.rs",
+      "platform_deps/vendor/anyhow/tests/test_source.rs",
+      "platform_deps/vendor/anyhow/tests/ui/no-impl.rs",
+      "platform_deps/vendor/anyhow/tests/ui/no-impl.stderr",
+      "simple/BUILD.gn",
+      "simple/Cargo.lock",
+      "simple/Cargo.toml",
+      "simple/src/lib.rs",
+      "simple_deps/.cargo/config",
+      "simple_deps/BUILD.gn",
+      "simple_deps/BUILD_WITH_NO_ROOT.gn",
+      "simple_deps/Cargo.lock",
+      "simple_deps/Cargo.toml",
+      "simple_deps/src/lib.rs",
+      "simple_deps/vendor/anyhow/.cargo-checksum.json",
+      "simple_deps/vendor/anyhow/Cargo.toml",
+      "simple_deps/vendor/anyhow/LICENSE-APACHE",
+      "simple_deps/vendor/anyhow/LICENSE-MIT",
+      "simple_deps/vendor/anyhow/README.md",
+      "simple_deps/vendor/anyhow/build.rs",
+      "simple_deps/vendor/anyhow/src/backtrace.rs",
+      "simple_deps/vendor/anyhow/src/chain.rs",
+      "simple_deps/vendor/anyhow/src/context.rs",
+      "simple_deps/vendor/anyhow/src/error.rs",
+      "simple_deps/vendor/anyhow/src/fmt.rs",
+      "simple_deps/vendor/anyhow/src/kind.rs",
+      "simple_deps/vendor/anyhow/src/lib.rs",
+      "simple_deps/vendor/anyhow/src/macros.rs",
+      "simple_deps/vendor/anyhow/src/wrapper.rs",
+      "simple_deps/vendor/anyhow/tests/common/mod.rs",
+      "simple_deps/vendor/anyhow/tests/compiletest.rs",
+      "simple_deps/vendor/anyhow/tests/drop/mod.rs",
+      "simple_deps/vendor/anyhow/tests/test_autotrait.rs",
+      "simple_deps/vendor/anyhow/tests/test_backtrace.rs",
+      "simple_deps/vendor/anyhow/tests/test_boxed.rs",
+      "simple_deps/vendor/anyhow/tests/test_chain.rs",
+      "simple_deps/vendor/anyhow/tests/test_context.rs",
+      "simple_deps/vendor/anyhow/tests/test_convert.rs",
+      "simple_deps/vendor/anyhow/tests/test_downcast.rs",
+      "simple_deps/vendor/anyhow/tests/test_fmt.rs",
+      "simple_deps/vendor/anyhow/tests/test_macros.rs",
+      "simple_deps/vendor/anyhow/tests/test_repr.rs",
+      "simple_deps/vendor/anyhow/tests/test_source.rs",
+      "simple_deps/vendor/anyhow/tests/ui/no-impl.rs",
+      "simple_deps/vendor/anyhow/tests/ui/no-impl.stderr",
+    ]
+    outputs = [ "$root_out_dir/test_data/tools/cargo-gnaw/tests/{{source_target_relative}}" ]
   }
 
-  host_test_data("cargo_gnaw_gn") {
-    sources = [ "//prebuilt/third_party/gn/${host_platform}/gn" ]
-    outputs = [ "$root_out_dir/test_data/tools/cargo-gnaw/runfiles/gn" ]
+  template("_copy_tool") {
+    action(target_name) {
+      source = "//prebuilt/third_party/${invoker.tool}/${host_platform}"
+      target = "${invoker.out_dir}/${invoker.tool}"
+      inputs = [ "$source/.versions/${invoker.tool}.cipd_version" ]
+      script = "copy_tool.py"
+      args = [
+        rebase_path(source, root_build_dir),
+        rebase_path(target, root_build_dir),
+      ]
+
+      # In theory we could use the version file as our output, but that causes
+      # a problem: ninja will attempt to mkdir $target, and if $target exists
+      # but is not a directory, the build will fail. So we use a stamp file in
+      # the parent directory instead.
+      outputs = [ "$target.stamp" ]
+
+      metadata = {
+        test_runtime_deps = [ target ]
+      }
+    }
+  }
+
+  _copy_tool("cargo_gnaw_rust") {
+    tool = "rust"
+    out_dir = "$root_out_dir/test_data/tools/cargo-gnaw/runfiles"
+  }
+
+  _copy_tool("cargo_gnaw_gn") {
+    tool = "gn"
+    out_dir = "$root_out_dir/test_data/tools/cargo-gnaw/runfiles"
   }
 }

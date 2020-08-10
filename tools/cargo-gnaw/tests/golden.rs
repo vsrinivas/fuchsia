@@ -83,7 +83,7 @@ fn get_paths() -> Paths {
     let rustc_binary_path: PathBuf =
         [runfiles_dir.to_str().unwrap(), "rust", "bin", "rustc"].iter().collect();
 
-    let gn_binary_path: PathBuf = [runfiles_dir.to_str().unwrap(), "gn"].iter().collect();
+    let gn_binary_path: PathBuf = [runfiles_dir.to_str().unwrap(), "gn", "gn"].iter().collect();
 
     let cargo_binary_path: PathBuf =
         [runfiles_dir.to_str().unwrap(), "rust", "bin", "cargo"].iter().collect();
