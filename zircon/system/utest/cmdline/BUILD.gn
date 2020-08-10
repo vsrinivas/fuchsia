@@ -18,7 +18,10 @@ import("//build/test/test_package.gni")
 test("cmdline") {
   output_name = "cmdline-test"
 
-  sources = [ "args_parser_unittest.cc" ]
+  sources = [
+    "args_parser_unittest.cc",
+    "optional_unittest.cc",
+  ]
 
   deps = [
     "//zircon/public/lib/cmdline",

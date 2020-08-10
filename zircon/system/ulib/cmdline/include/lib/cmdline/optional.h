@@ -83,6 +83,12 @@ class Optional {
 
  private:
   std::optional<T> value_;
+
+  // Allow operator implementations to access private members.
+  template <typename U>
+  friend bool operator==(const Optional<U>& lhs, const Optional<U>& rhs);
+  template <typename U>
+  friend bool operator!=(const Optional<U>& lhs, const Optional<U>& rhs);
 };
 
 // Forward the IO stream operator>> to the inner value of an Optional<T>.
@@ -90,6 +96,16 @@ template <typename T>
 std::istream& operator>>(std::istream& is, Optional<T>& result) {
   is >> result.emplace();
   return is;
+}
+
+template <typename T>
+bool operator==(const Optional<T>& lhs, const Optional<T>& rhs) {
+  return lhs.value_ == rhs.value_;
+}
+
+template <typename T>
+bool operator!=(const Optional<T>& lhs, const Optional<T>& rhs) {
+  return lhs.value_ != rhs.value_;
 }
 
 }  // namespace cmdline
