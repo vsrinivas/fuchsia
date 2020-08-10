@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
     let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
 
     match command.cmd {
-        CommandEnum::If(If { if_cmd: cmd }) => do_if(cmd, &stack).await,
+        CommandEnum::If(If { if_cmd: cmd }) => do_if(cmd, &stack, &netstack).await,
         CommandEnum::Fwd(Fwd { fwd_cmd: cmd }) => do_fwd(cmd, stack).await,
         CommandEnum::Route(Route { route_cmd: cmd }) => do_route(cmd, netstack).await,
         CommandEnum::Filter(Filter { filter_cmd: cmd }) => do_filter(cmd, filter).await,
@@ -135,7 +135,11 @@ async fn tabulate_interfaces_info(interfaces: Vec<InterfaceInfo>) -> Result<Stri
     Ok(t.to_string())
 }
 
-async fn do_if(cmd: opts::IfEnum, stack: &StackProxy) -> Result<(), Error> {
+async fn do_if(
+    cmd: opts::IfEnum,
+    stack: &StackProxy,
+    netstack: &NetstackProxy,
+) -> Result<(), Error> {
     match cmd {
         IfEnum::List(IfList { name_pattern }) => {
             let mut response = stack.list_interfaces().await.context("error getting response")?;
@@ -205,6 +209,14 @@ async fn do_if(cmd: opts::IfEnum, stack: &StackProxy) -> Result<(), Error> {
                 info!("Address {} deleted from interface {}", net_ext::Subnet::from(fidl_addr), id);
             }
         },
+        IfEnum::Bridge(IfBridge { ids }) => {
+            let (result, bridge_id) = netstack.bridge_interfaces(&ids).await?;
+            if result.status != fidl_fuchsia_netstack::Status::Ok {
+                return Err(anyhow::anyhow!("{:?}: {}", result.status, result.message));
+            } else {
+                info!("network bridge created with id {}", bridge_id);
+            }
+        }
     }
     Ok(())
 }
@@ -581,6 +593,7 @@ mod tests {
 
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+        let (netstack, _) = fidl::endpoints::create_proxy::<NetstackMarker>().unwrap();
 
         // Make the first request.
         let succeeds = do_if(
@@ -592,6 +605,7 @@ mod tests {
                 }),
             }),
             &stack,
+            &netstack,
         );
         let success_response = async {
             // Verify that the first request is as expected and return OK.
@@ -620,6 +634,7 @@ mod tests {
                 }),
             }),
             &stack,
+            &netstack,
         );
         let fail_response = async {
             // Verify that the second request is as expected and return a NotFound error.
@@ -817,5 +832,39 @@ mod tests {
             metric: 100,
         }))
         .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_bridge() {
+        let (stack, _) = fidl::endpoints::create_proxy::<StackMarker>().unwrap();
+        let (netstack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+        // interface id test values have been selected arbitrarily
+        let bridge_ifs = vec![1, 2, 3];
+        let bridge_id = 4;
+        let bridge = do_if(IfEnum::Bridge(IfBridge { ids: bridge_ifs.clone() }), &stack, &netstack);
+        let bridge_succeeds = async move {
+            let (requested_ifs, netstack_responder) = requests
+                .try_next()
+                .await
+                .expect("bridge_interfaces FIDL error")
+                .expect("request stream should not have ended")
+                .into_bridge_interfaces()
+                .expect("request should be of type BridgeInterfaces");
+            assert_eq!(requested_ifs, bridge_ifs);
+            let () = netstack_responder
+                .send(
+                    &mut fidl_fuchsia_netstack::NetErr {
+                        status: fidl_fuchsia_netstack::Status::Ok,
+                        message: String::from(""),
+                    },
+                    bridge_id,
+                )
+                .expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(bridge, bridge_succeeds)
+            .await
+            .expect("if bridge should succeed");
     }
 }

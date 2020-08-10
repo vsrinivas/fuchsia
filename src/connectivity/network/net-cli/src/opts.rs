@@ -193,6 +193,7 @@ pub struct If {
 pub enum IfEnum {
     Add(IfAdd),
     Addr(IfAddr),
+    Bridge(IfBridge),
     Del(IfDel),
     Disable(IfDisable),
     Enable(IfEnable),
@@ -254,6 +255,15 @@ pub struct IfAddrDel {
     #[argh(positional)]
     /// optional address subnet prefix (defaults to 32 for v4, 128 for v6)
     pub prefix: Option<u8>,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "bridge")]
+/// creates a bridge between network interfaces
+pub struct IfBridge {
+    #[argh(positional)]
+    /// ids of the network interfaces to be bridged
+    pub ids: Vec<u32>,
 }
 
 #[derive(FromArgs, Clone, Debug)]
