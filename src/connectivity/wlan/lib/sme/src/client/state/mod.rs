@@ -844,7 +844,12 @@ fn log_state_change(
 
     match state_change_ctx {
         Some(inner) => match inner {
-            StateChangeContext::Disconnect { msg, reason_code, locally_initiated } => {
+            // Only log the `disconnect_ctx` if an operation had an effect of moving from
+            // non-idle state to idle state. This is so that the client that consumes
+            // `disconnect_ctx` does not log a disconnect event when it's effectively no-op.
+            StateChangeContext::Disconnect { msg, reason_code, locally_initiated }
+                if start_state != IDLE_STATE =>
+            {
                 inspect_log!(context.inspect.state_events.lock(), {
                     from: start_state,
                     to: new_state.state_name(),
@@ -855,7 +860,7 @@ fn log_state_change(
                     }
                 });
             }
-            StateChangeContext::Msg(msg) => {
+            StateChangeContext::Disconnect { msg, .. } | StateChangeContext::Msg(msg) => {
                 inspect_log!(context.inspect.state_events.lock(), {
                     from: start_state,
                     to: new_state.state_name(),
