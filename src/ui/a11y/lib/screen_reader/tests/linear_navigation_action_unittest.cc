@@ -152,7 +152,9 @@ TEST_F(LinearNavigationActionTest, NextNodeNotFound) {
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->NextNodeCalledOnId());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->message_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->message_ids()[0], fuchsia::intl::l10n::MessageIds::LAST_ELEMENT);
 }
 
 // When Previous node is not found, the Linear Navigation Action should do nothing.
@@ -177,7 +179,9 @@ TEST_F(LinearNavigationActionTest, PreviousNodeNotFound) {
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
   EXPECT_EQ(kRootNodeId, factory_ptr_->semantic_tree()->PreviousNodeCalledOnId());
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
-  EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
+  EXPECT_TRUE(mock_speaker_ptr_->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker_ptr_->message_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker_ptr_->message_ids()[0], fuchsia::intl::l10n::MessageIds::FIRST_ELEMENT);
 }
 
 // When SetA11yFocus fails then LinearNavigationAction should not call TTS to speak.

@@ -57,6 +57,21 @@ void LinearNavigationAction::Run(ActionData process_data) {
   }
 
   if (!new_node || !new_node->has_node_id()) {
+    // This is the last / first node on the tree, inform the user that the linear navigation can't
+    // continue further in this direction.
+    auto* speaker = screen_reader_context_->speaker();
+    fit::promise<> promise;
+    switch (direction_) {
+      case kNextAction:
+        promise = speaker->SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds::LAST_ELEMENT,
+                                                   {.interrupt = true, .save_utterance = false});
+        break;
+      case kPreviousAction:
+        promise = speaker->SpeakMessageByIdPromise(fuchsia::intl::l10n::MessageIds::FIRST_ELEMENT,
+                                                   {.interrupt = true, .save_utterance = false});
+        break;
+    }
+    screen_reader_context_->executor()->schedule_task(std::move(promise));
     return;
   }
 
