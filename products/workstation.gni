@@ -72,6 +72,5 @@ universe_package_labels += [
   # TODO(47690): Reenable can_browse_web test when we have a working
   # replacement for `sessionctl add_mod`
   # "//src/tests/end_to_end/can_browse_web:test",
-  "//src/tests/end_to_end/inspect_metrics:test",
   "//src/tests/end_to_end/copy_files:test",
 ]

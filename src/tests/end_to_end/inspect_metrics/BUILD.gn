@@ -14,14 +14,18 @@ dart_test("blobfs_metrics_test") {
   ]
 
   environments = [
-    nuc_env,
-    emu_env,
     {
       dimensions = {
         device_type = "Astro"
       }
     },
   ]
+
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  if (is_host && target_cpu == "x64") {
+    environments += [ emu_env ]
+  }
 }
 
 dart_test("inspect_metrics_test") {
@@ -33,15 +37,18 @@ dart_test("inspect_metrics_test") {
   ]
 
   environments = [
-    nuc_env,
-
-    # Runs on "main" builders (try and ci) in several environments.
     {
       dimensions = {
         device_type = "Astro"
       }
     },
   ]
+
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  if (is_host && target_cpu == "x64") {
+    environments += [ emu_env ]
+  }
 }
 
 dart_test("archivist_reader_test") {
@@ -53,14 +60,18 @@ dart_test("archivist_reader_test") {
   ]
 
   environments = [
-    nuc_env,
-    emu_env,
     {
       dimensions = {
         device_type = "Astro"
       }
     },
   ]
+
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  if (is_host && target_cpu == "x64") {
+    environments += [ emu_env ]
+  }
 }
 
 dart_test("inspect_metrics_emulator_test") {
@@ -72,13 +83,18 @@ dart_test("inspect_metrics_emulator_test") {
   ]
 
   environments = [
-    emu_env,
     {
       dimensions = {
         device_type = "Astro"
       }
     },
   ]
+
+  # Runs on "main" builders (try and ci) in QEMU environments, but only on x64,
+  # as we don't currently support Dart on arm64 hosts.
+  if (is_host && target_cpu == "x64") {
+    environments += [ emu_env ]
+  }
 }
 
 group("test") {
