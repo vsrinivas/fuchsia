@@ -26,7 +26,6 @@ group("bin") {
     "run_test_component",
     "runmany",
     "sched",
-    "scpi",
     "setui",
     "setui_client",
     "sl4f",

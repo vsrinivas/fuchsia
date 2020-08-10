@@ -27,7 +27,6 @@ base_package_labels += [
   "//src/connectivity/network/http_client",
   "//garnet/bin/log_listener:log_listener",
   "//garnet/bin/log_listener:log_listener_shell",
-  "//garnet/bin/scpi",
   "//garnet/bin/setui:setui_service",
   "//garnet/bin/sshd-host",
   "//garnet/bin/sshd-host:config",

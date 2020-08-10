@@ -99,7 +99,6 @@ group("deprecated_package_underscore") {
     "//garnet/bin/run_test_component:run-test-component",
     "//garnet/bin/run_test_component:run_test_component_unittests",
     "//garnet/bin/sched:sched_tests",
-    "//garnet/bin/scpi:scpi_server_tests",
     "//garnet/bin/setui:setui_service",
     "//garnet/bin/setui:setui_service_tests",
     "//garnet/bin/setui_client:setui_client",
