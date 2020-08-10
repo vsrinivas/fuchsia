@@ -15,7 +15,8 @@ use {
     },
     futures::{future, stream::TryStreamExt},
     matches::assert_matches,
-    std::{collections::HashMap, path::Path},
+    parking_lot::RwLock,
+    std::{collections::HashMap, path::Path, sync::Arc},
 };
 
 use crate::{host_device, host_dispatcher, services::access};
@@ -49,7 +50,7 @@ async fn test_pair() -> Result<(), Error> {
     let host_id = HostId(42);
     let path = Path::new("/dev/host");
     let host_device = host_device::test::new_mock(host_id, address, path, host_proxy);
-    dispatcher.add_test_host(host_id, host_device);
+    dispatcher.add_test_host(host_id, Arc::new(RwLock::new(host_device)));
 
     let (client, server) = fidl::endpoints::create_proxy_and_stream::<AccessMarker>()?;
     let run_access = access::run(dispatcher, server);

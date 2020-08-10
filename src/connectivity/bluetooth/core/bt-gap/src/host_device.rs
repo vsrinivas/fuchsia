@@ -25,10 +25,9 @@ use {
 
 use crate::types::{self, from_fidl_result, Error};
 
-// We use session tokens to track the reference counting for discovery/discoverable states
-// As long as at least one user maintains an Arc<> to the session, the state persists
-// Once all references are dropped, the `Drop` trait on the session causes the state
-// to be terminated.
+/// When the host dispatcher requests discovery on a host device, the host device starts discovery
+/// and returns a HostDiscoverySession. The state of discovery on the host device persists until
+/// this session is dropped.
 pub struct HostDiscoverySession {
     adap: Weak<RwLock<HostDevice>>,
 }
@@ -82,8 +81,8 @@ impl HostDevice {
 
     pub fn establish_discovery_session(
         host: &Arc<RwLock<HostDevice>>,
-    ) -> impl Future<Output = types::Result<Arc<HostDiscoverySession>>> {
-        let token = Arc::new(HostDiscoverySession { adap: Arc::downgrade(host) });
+    ) -> impl Future<Output = types::Result<HostDiscoverySession>> {
+        let token = HostDiscoverySession { adap: Arc::downgrade(host) };
         host.write().host.start_discovery().map(from_fidl_result).map_ok(|_| token)
     }
 

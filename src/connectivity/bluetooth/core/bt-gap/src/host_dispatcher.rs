@@ -62,6 +62,63 @@ pub enum HostService {
     Profile,
 }
 
+/// When a client requests Discovery, we establish and store two distinct sessions; the dispatcher
+/// DiscoverySession, an Arc<> of which is returned to clients and represents the dispatcher's
+/// state of discovery that perists as long as one client maintains an Arc<> to the session, and
+/// the HostDiscoverySession, which is returned by the active host device on which discovery is
+/// physically ocurring and persists until the host disappears or the host session is dropped.
+pub enum DiscoveryState {
+    NotDiscovering,
+    Discovering(Weak<DiscoverySession>, HostDiscoverySession),
+}
+
+impl DiscoveryState {
+    // If a dispatcher discovery session exists, return an Arc<> pointer to it.
+    fn get_discovery_session(&self) -> Option<Arc<DiscoverySession>> {
+        match self {
+            DiscoveryState::Discovering(weak_session, _) => weak_session.upgrade(),
+            DiscoveryState::NotDiscovering => None,
+        }
+    }
+
+    // Establish and return a new dispatcher discovery session, given the dispatcher state and
+    // a host discovery session.
+    fn new_discovery_session(
+        &mut self,
+        dispatcher_state: Arc<RwLock<HostDispatcherState>>,
+        host_session: HostDiscoverySession,
+    ) -> Arc<DiscoverySession> {
+        let dispatcher_session = Arc::new(DiscoverySession { dispatcher_state });
+        *self = DiscoveryState::Discovering(Arc::downgrade(&dispatcher_session), host_session);
+        dispatcher_session
+    }
+
+    fn end_discovery_session(&mut self) {
+        // If we are Discovering, HostDiscoverySession is dropped here
+        *self = DiscoveryState::NotDiscovering;
+    }
+
+    // If possible, replace the current host session with a given new one. This does not affect
+    // the dispatcher session.
+    fn attach_new_host_session(&mut self, new_host_session: HostDiscoverySession) {
+        if let DiscoveryState::Discovering(_, host_session) = self {
+            *host_session = new_host_session;
+        }
+    }
+}
+
+/// A dispatcher discovery session, which persists as long as at least one client holds an
+/// Arc<> to it.
+pub struct DiscoverySession {
+    dispatcher_state: Arc<RwLock<HostDispatcherState>>,
+}
+
+impl Drop for DiscoverySession {
+    fn drop(&mut self) {
+        self.dispatcher_state.write().discovery.end_discovery_session()
+    }
+}
+
 // We use tokens to track the reference counting for discovery/discoverable states
 // As long as at least one user maintains an Arc<> to the token, the state persists
 // Once all references are dropped, the `Drop` trait on the token causes the state
@@ -137,7 +194,7 @@ struct HostDispatcherState {
     // GAP state
     name: String,
     appearance: Appearance,
-    discovery: Option<Weak<HostDiscoverySession>>,
+    discovery: DiscoveryState,
     discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub input: InputCapability,
     pub output: OutputCapability,
@@ -385,7 +442,7 @@ impl HostDispatcher {
             peers: HashMap::new(),
             gas_channel_sender,
             stash,
-            discovery: None,
+            discovery: DiscoveryState::NotDiscovering,
             discoverable: None,
             pairing_delegate: None,
             pairing_dispatcher: None,
@@ -460,23 +517,6 @@ impl HostDispatcher {
         self.state.write().set_control_pairing_delegate(delegate)
     }
 
-    pub async fn start_discovery(&self) -> types::Result<Arc<HostDiscoverySession>> {
-        if let Some(existing_session) =
-            self.state.read().discovery.as_ref().and_then(|session| session.upgrade())
-        {
-            return Ok(Arc::clone(&existing_session));
-        }
-
-        match self.get_active_adapter().await {
-            Some(host) => {
-                let session = HostDevice::establish_discovery_session(&host).await?;
-                self.state.write().discovery = Some(Arc::downgrade(&session));
-                Ok(session)
-            }
-            None => Err(types::Error::no_host()),
-        }
-    }
-
     pub async fn apply_sys_settings(&self, new_settings: sys::Settings) -> build_config::Config {
         let (host_devices, new_config) = {
             let mut state = self.state.write();
@@ -492,6 +532,31 @@ impl HostDispatcher {
             }
         }
         new_config
+    }
+
+    async fn discover_on_active_host(&self) -> types::Result<HostDiscoverySession> {
+        match self.get_active_adapter().await {
+            Some(host) => HostDevice::establish_discovery_session(&host).await,
+            None => Err(types::Error::no_host()),
+        }
+    }
+
+    pub async fn start_discovery(&self) -> types::Result<Arc<DiscoverySession>> {
+        // TODO(57494): fix TOCTOU race condition between the following two cases.
+        // Case: a discovery session already exists; return Arc<> to this session
+        if let Some(existing_discovery_session) =
+            self.state.read().discovery.get_discovery_session()
+        {
+            return Ok(existing_discovery_session);
+        }
+
+        // Case: no discovery session exists; create and return new session
+        let host_session = self.discover_on_active_host().await?;
+        Ok(self
+            .state
+            .write()
+            .discovery
+            .new_discovery_session(Arc::clone(&self.state), host_session))
     }
 
     pub async fn set_discoverable(&self) -> types::Result<Arc<DiscoverableRequestToken>> {
@@ -839,6 +904,7 @@ impl HostDispatcher {
     }
 
     pub async fn rm_adapter(&self, host_path: &Path) {
+        let mut new_adapter_activated = false;
         // Scope our HostDispatcherState lock
         {
             let mut hd = self.state.write();
@@ -870,11 +936,28 @@ impl HostDispatcher {
             }
 
             // Try to assign a new active adapter. This may send an "OnActiveAdapterChanged" event.
-            if hd.active_id.is_none() {
-                let _ = hd.get_active_id();
+            if hd.active_id.is_none() && hd.get_active_id().is_some() {
+                new_adapter_activated = true;
             }
         } // Now the lock is dropped, we can run the async notify
+
+        if new_adapter_activated {
+            if let Err(err) = self.configure_newly_active_adapter().await {
+                fx_log_warn!("Failed to persist state on adapter change: {:?}", err);
+            }
+        }
         self.notify_host_watchers().await;
+    }
+
+    /// Configure a newly active adapter with the correct behavior for an active adapter.
+    async fn configure_newly_active_adapter(&self) -> types::Result<()> {
+        // Migrate discovery state to new host
+        if self.state.read().discovery.get_discovery_session().is_some() {
+            let new_host_session = self.discover_on_active_host().await?;
+            self.state.write().discovery.attach_new_host_session(new_host_session);
+        }
+
+        Ok(())
     }
 
     /// Route pairing requests from this host through our pairing dispatcher, if it exists
@@ -893,9 +976,9 @@ impl HostDispatcher {
     }
 
     #[cfg(test)]
-    pub(crate) fn add_test_host(&self, id: HostId, host: HostDevice) {
+    pub(crate) fn add_test_host(&self, id: HostId, host: Arc<RwLock<HostDevice>>) {
         let mut state = self.state.write();
-        state.add_host(id, Arc::new(RwLock::new(host)));
+        state.add_host(id, host)
     }
 }
 
@@ -1281,7 +1364,7 @@ pub(crate) mod test {
         let address = Address::Public([id_val; 6]);
         let path = format!("/dev/host{}", id_val);
         let host_device = host_device::test::new_mock(id, address, Path::new(&path), host_proxy);
-        dispatcher.add_test_host(id, host_device);
+        dispatcher.add_test_host(id, Arc::new(RwLock::new(host_device)));
         Ok(host_server)
     }
 }

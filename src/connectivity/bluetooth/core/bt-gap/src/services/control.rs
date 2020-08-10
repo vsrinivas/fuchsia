@@ -17,13 +17,12 @@ use {
 };
 
 use crate::{
-    host_device::HostDiscoverySession,
     host_dispatcher::*,
     types::{self, status_response},
 };
 
 struct ControlSession {
-    discovery_token: Option<Arc<HostDiscoverySession>>,
+    discovery_token: Option<Arc<DiscoverySession>>,
     discoverable_token: Option<Arc<DiscoverableRequestToken>>,
 }
 
