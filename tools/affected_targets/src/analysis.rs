@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        files::{contains_disabled_file_types, file_types_are_supported, FileType},
+        files::file_types_are_supported,
         gn::{Gn, GnAnalyzeInput, GnAnalyzeOutput, GnAnalyzeStatus},
     },
     serde::Serialize,
@@ -15,7 +15,7 @@ use {
 /// This is different from `GnAnalyzeOutput`, in that an `AnalysisResult`
 /// takes into account, for example, if all the file types are of a type
 /// where the tool thinks that `gn analyze` will return an accurate result.
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Serialize, PartialEq, Clone)]
 pub enum AnalysisResult {
     /// Signals that the analysis is confident that a build is required.
     Build,
@@ -37,14 +37,8 @@ pub enum AnalysisResult {
 /// - `changed_files`: The files that have changed.
 /// - `gn`: The `Gn` tool to use for the analysis.
 /// - `disabled_file_types`: Any file types that have been explicitly disabled by the user.
-pub fn is_build_required(
-    changed_files: Vec<String>,
-    gn: impl Gn,
-    disabled_file_types: Vec<FileType>,
-) -> AnalysisResult {
-    if file_types_are_supported(&changed_files)
-        && !contains_disabled_file_types(&changed_files, disabled_file_types)
-    {
+pub fn is_build_required(changed_files: Vec<String>, gn: impl Gn) -> AnalysisResult {
+    if file_types_are_supported(&changed_files) {
         analyze_files(changed_files, gn)
     } else {
         AnalysisResult::Unknown("unsupported file types".to_string())
@@ -106,52 +100,8 @@ mod tests {
         });
 
         assert_matches!(
-            is_build_required(
-                vec!["something.cc".to_string(), "nothing.foo".to_string()],
-                gn,
-                vec![]
-            ),
+            is_build_required(vec!["something.cc".to_string(), "nothing.foo".to_string()], gn,),
             AnalysisResult::Unknown(..)
-        );
-    }
-
-    /// Explicitly disabled file types should trigger build.
-    #[test]
-    fn test_explicitly_disabled_files() {
-        let gn = MockGn::new(|_analysis_input| {
-            panic!();
-        });
-
-        assert_matches!(
-            is_build_required(
-                vec!["something.cc".to_string(), "something_else.fidl".to_string()],
-                gn,
-                vec![FileType::Cpp],
-            ),
-            AnalysisResult::Unknown(..)
-        );
-    }
-
-    /// Explicitly disabled file types that are not present in changed files should not change build vs. nobuild.
-    #[test]
-    fn test_explicitly_disabled_files_not_present() {
-        let gn = MockGn::new(|_analysis_input| {
-            Ok(gn::GnAnalyzeOutput {
-                compile_targets: None,
-                test_targets: None,
-                invalid_targets: None,
-                status: Some(GnAnalyzeStatus::FoundDependency),
-                error: None,
-            })
-        });
-
-        assert_matches!(
-            is_build_required(
-                vec!["something.fidl".to_string(), "something_else.fidl".to_string()],
-                gn,
-                vec![FileType::Cpp],
-            ),
-            AnalysisResult::Build
         );
     }
 
@@ -169,7 +119,7 @@ mod tests {
         });
 
         assert_matches!(
-            is_build_required(vec!["something.cc".to_string()], gn, vec![]),
+            is_build_required(vec!["something.cc".to_string()], gn),
             AnalysisResult::Unknown(..)
         );
     }
@@ -188,7 +138,7 @@ mod tests {
         });
 
         assert_matches!(
-            is_build_required(vec!["something.cc".to_string()], gn, vec![]),
+            is_build_required(vec!["something.cc".to_string()], gn),
             AnalysisResult::Unknown(..)
         );
     }
@@ -206,10 +156,7 @@ mod tests {
             })
         });
 
-        assert_eq!(
-            is_build_required(vec!["something.cc".to_string()], gn, vec![]),
-            AnalysisResult::Build
-        );
+        assert_eq!(is_build_required(vec!["something.cc".to_string()], gn), AnalysisResult::Build);
     }
 
     /// When gn does not find a dependency, a NoBuild result is returned.
@@ -226,7 +173,7 @@ mod tests {
         });
 
         assert_eq!(
-            is_build_required(vec!["something.cc".to_string()], gn, vec![]),
+            is_build_required(vec!["something.cc".to_string()], gn),
             AnalysisResult::NoBuild
         );
     }
@@ -245,7 +192,7 @@ mod tests {
         });
 
         assert_matches!(
-            is_build_required(vec!["something.cc".to_string()], gn, vec![]),
+            is_build_required(vec!["something.cc".to_string()], gn),
             AnalysisResult::Unknown(..)
         );
     }
