@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 test("sysmem") {
   # Dependent manifests unfortunately cannot be marked as `testonly`.
@@ -23,5 +24,14 @@ test("sysmem") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-async-2",
+  ]
+}
+
+test_package("sysmem-test") {
+  deps = [ ":sysmem" ]
+  tests = [
+    {
+      name = "sysmem"
+    },
   ]
 }
