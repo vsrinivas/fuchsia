@@ -39,11 +39,6 @@ std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> GetParser() {
 
 }  // namespace
 
-std::istream& operator>>(std::istream& is, OptionalInt64& result) {
-  is >> result.emplace();
-  return is;
-}
-
 void PrintUsage() {
   puts(
       R"(usage:

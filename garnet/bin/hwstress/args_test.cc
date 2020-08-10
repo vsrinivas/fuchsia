@@ -59,14 +59,14 @@ TEST(Args, ParseFlash) {
 TEST(Args, ParseMemory) {
   // No optional arguments.
   CommandLineArgs args = ParseArgs({{"hwstress", "memory"}}).value();
-  EXPECT_EQ(args.ram_to_test_percent, std::nullopt);
-  EXPECT_EQ(args.mem_to_test_megabytes, std::nullopt);
+  EXPECT_FALSE(args.ram_to_test_percent.has_value());
+  EXPECT_FALSE(args.mem_to_test_megabytes.has_value());
 
   // Arguments given.
   EXPECT_EQ(ParseArgs({{"hwstress", "memory", "--memory", "123"}})->mem_to_test_megabytes,
-            std::optional<uint64_t>(123));
+            cmdline::Optional<int64_t>(123));
   EXPECT_EQ(ParseArgs({{"hwstress", "memory", "--percent-memory", "12"}})->ram_to_test_percent,
-            std::optional<uint64_t>(12));
+            cmdline::Optional<int64_t>(12));
 
   // Errors
   EXPECT_TRUE(ParseArgs({{"hwstress", "memory", "--memory", "0"}}).is_error());

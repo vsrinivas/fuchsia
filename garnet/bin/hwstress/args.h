@@ -26,16 +26,8 @@ enum class StressTest {
   kMemory,
 };
 
-// A std::optional<int64_t> that can be used with the arg parsing library.
-struct OptionalInt64 : public std::optional<int64_t> {
-  OptionalInt64() : std::optional<int64_t>(std::nullopt) {}
-  OptionalInt64(int64_t n) : std::optional<int64_t>(n) {}  // NOLINT(google-explicit-constructor)
-  OptionalInt64(const OptionalInt64&) = default;
-  OptionalInt64& operator=(const OptionalInt64&) = default;
-};
-
 // Parse an OptionalUint64.
-std::istream& operator>>(std::istream& is, OptionalInt64& result);
+std::istream& operator>>(std::istream& is, cmdline::Optional<int64_t>& result);
 
 // Parsed command line arguments.
 struct CommandLineArgs {
@@ -58,7 +50,7 @@ struct CommandLineArgs {
   double test_duration_seconds = 0.0;
 
   // Amount of RAM or flash memory to test.
-  OptionalInt64 mem_to_test_megabytes;
+  cmdline::Optional<int64_t> mem_to_test_megabytes;
 
   //
   // Flash-specific arguments.
@@ -75,7 +67,7 @@ struct CommandLineArgs {
   //
 
   // Amount of RAM to test.
-  OptionalInt64 ram_to_test_percent;
+  cmdline::Optional<int64_t> ram_to_test_percent;
 
   //
   // CPU-specific arguments.
