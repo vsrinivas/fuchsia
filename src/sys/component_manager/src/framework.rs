@@ -19,7 +19,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     cm_fidl_validator,
-    cm_rust::{CapabilityPath, FidlIntoNative},
+    cm_rust::{CapabilityNameOrPath, CapabilityPath, FidlIntoNative},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::DirectoryMarker,
@@ -326,7 +326,7 @@ impl RealmCapabilityHost {
         // If some other capability has already been installed, then there's nothing to
         // do here.
         match (&capability_provider, capability) {
-            (None, InternalCapability::Protocol(capability_path))
+            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path)))
                 if *capability_path == *REALM_SERVICE =>
             {
                 return Ok(Some(

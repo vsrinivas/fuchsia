@@ -13,7 +13,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleInfoError},
@@ -103,7 +103,7 @@ impl ProcessLauncher {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            InternalCapability::Protocol(capability_path)
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
                 if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
@@ -374,7 +374,9 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(PROCESS_LAUNCHER_CAPABILITY_PATH.clone()),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
+                PROCESS_LAUNCHER_CAPABILITY_PATH.clone(),
+            )),
         };
 
         let (client, mut server) = zx::Channel::create()?;

@@ -6,7 +6,7 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl_fuchsia_boot as fboot,
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -129,7 +129,7 @@ impl BuiltinCapability for Arguments {
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
         matches!(
             capability,
-            InternalCapability::Protocol(path) if *path == *BOOT_ARGS_CAPABILITY_PATH
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *BOOT_ARGS_CAPABILITY_PATH
         )
     }
 }

@@ -18,6 +18,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
+    cm_rust::CapabilityNameOrPath,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::TryStreamExt,
@@ -49,7 +50,7 @@ impl WorkScheduler {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, InternalCapability::Protocol(capability_path))
+            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path)))
                 if *capability_path == *WORK_SCHEDULER_CONTROL_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(self.clone()))
@@ -68,7 +69,7 @@ impl WorkScheduler {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, InternalCapability::Protocol(capability_path))
+            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path)))
                 if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
             {
                 // Only clients that expose the Worker protocol to the framework can

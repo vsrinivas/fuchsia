@@ -77,7 +77,7 @@ impl EchoService {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            InternalCapability::Protocol(capability_path)
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
                 if *capability_path == *ECHO_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(EchoCapabilityProvider::new()) as Box<dyn CapabilityProvider>))

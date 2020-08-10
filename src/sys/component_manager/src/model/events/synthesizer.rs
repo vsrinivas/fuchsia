@@ -209,7 +209,8 @@ mod tests {
             testing::{routing_test_helpers::*, test_helpers::*},
         },
         cm_rust::{
-            CapabilityNameOrPath, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
+            CapabilityNameOrPath, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
+            ExposeTarget,
         },
         fidl_fuchsia_io2 as fio, fuchsia_async as fasync,
         std::{collections::HashSet, convert::TryFrom, iter::FromIterator},
@@ -410,7 +411,7 @@ mod tests {
                 Err(EventError {
                     event_error_payload: EventErrorPayload::CapabilityReady { path, .. },
                     ..
-                }) if path == "/diagnostics" => {
+                }) if path == "diagnostics" || path == "/diagnostics" => {
                     result_capability_ready_monikers.insert(event.event.target_moniker.to_string());
                 }
                 payload => panic!("Expected running or capability ready. Got: {:?}", payload),
@@ -458,6 +459,7 @@ mod tests {
             (
                 "a",
                 ComponentDeclBuilder::new()
+                    .directory(diagnostics_decl())
                     .expose(expose_diagnostics_decl())
                     .add_lazy_child("b")
                     .add_lazy_child("c")
@@ -466,24 +468,33 @@ mod tests {
             (
                 "b",
                 ComponentDeclBuilder::new()
+                    .directory(diagnostics_decl())
                     .expose(expose_diagnostics_decl())
                     .add_lazy_child("d")
                     .build(),
             ),
             ("c", ComponentDeclBuilder::new().add_lazy_child("e").add_lazy_child("f").build()),
-            ("d", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .directory(diagnostics_decl())
+                    .expose(expose_diagnostics_decl())
+                    .build(),
+            ),
             (
                 "e",
                 ComponentDeclBuilder::new()
+                    .directory(diagnostics_decl())
                     .expose(expose_diagnostics_decl())
                     .add_lazy_child("g")
                     .add_lazy_child("h")
                     .build(),
             ),
             ("f", ComponentDeclBuilder::new().add_lazy_child("i").build()),
-            ("g", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
+            // Expose some diagnostics as a path so legacy path-based capabilities are still tested.
+            ("g", ComponentDeclBuilder::new().expose(expose_diagnostics_decl_with_path()).build()),
             ("h", ComponentDeclBuilder::new().build()),
-            ("i", ComponentDeclBuilder::new().expose(expose_diagnostics_decl()).build()),
+            ("i", ComponentDeclBuilder::new().expose(expose_diagnostics_decl_with_path()).build()),
         ];
         RoutingTest::new("a", components).await
     }
@@ -506,7 +517,22 @@ mod tests {
         result_monikers
     }
 
+    fn diagnostics_decl() -> DirectoryDecl {
+        DirectoryDeclBuilder::new("diagnostics").path("/diagnostics").build()
+    }
+
     fn expose_diagnostics_decl() -> ExposeDecl {
+        ExposeDecl::Directory(ExposeDirectoryDecl {
+            source: ExposeSource::Self_,
+            source_path: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
+            target_path: CapabilityNameOrPath::try_from("diagnostics").unwrap(),
+            target: ExposeTarget::Framework,
+            rights: Some(fio::Operations::Connect),
+            subdir: None,
+        })
+    }
+
+    fn expose_diagnostics_decl_with_path() -> ExposeDecl {
         ExposeDecl::Directory(ExposeDirectoryDecl {
             source: ExposeSource::Self_,
             source_path: CapabilityNameOrPath::try_from("/diagnostics").unwrap(),

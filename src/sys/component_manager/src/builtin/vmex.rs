@@ -13,7 +13,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_security_resource as fsec, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased, Resource},
@@ -72,7 +72,7 @@ impl VmexService {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            InternalCapability::Protocol(capability_path)
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
                 if *capability_path == *VMEX_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(VmexCapabilityProvider::new(self)) as Box<dyn CapabilityProvider>))
@@ -231,7 +231,9 @@ mod tests {
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(VMEX_CAPABILITY_PATH.clone()),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
+                VMEX_CAPABILITY_PATH.clone(),
+            )),
         };
 
         let (client, mut server) = zx::Channel::create()?;

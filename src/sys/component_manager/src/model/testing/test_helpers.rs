@@ -12,6 +12,7 @@ use {
             model::Model,
             moniker::{AbsoluteMoniker, PartialMoniker},
             realm::Realm,
+            rights,
             testing::{
                 mocks::{ControlMessage, MockResolver, MockRunner},
                 test_hook::TestHook,
@@ -28,6 +29,7 @@ use {
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
+    fidl_fuchsia_io2::{self as fio2},
     fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, StreamExt, TryStreamExt},
@@ -251,6 +253,18 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a custom protocol declaration.
+    pub fn protocol(mut self, protocol: cm_rust::ProtocolDecl) -> Self {
+        self.result.capabilities.push(cm_rust::CapabilityDecl::Protocol(protocol));
+        self
+    }
+
+    /// Add a custom directory declaration.
+    pub fn directory(mut self, directory: cm_rust::DirectoryDecl) -> Self {
+        self.result.capabilities.push(cm_rust::CapabilityDecl::Directory(directory));
+        self
+    }
+
     /// Add a custom storage declaration.
     pub fn storage(mut self, storage: cm_rust::StorageDecl) -> Self {
         self.result.capabilities.push(cm_rust::CapabilityDecl::Storage(storage));
@@ -433,6 +447,75 @@ impl EnvironmentDeclBuilder {
 
 impl From<EnvironmentDeclBuilder> for cm_rust::EnvironmentDecl {
     fn from(builder: EnvironmentDeclBuilder) -> Self {
+        builder.build()
+    }
+}
+
+// A convenience builder for constructing ProtocolDecls.
+#[derive(Debug)]
+pub struct ProtocolDeclBuilder(cm_rust::ProtocolDecl);
+
+impl ProtocolDeclBuilder {
+    /// Creates a new builder.
+    pub fn new(name: &str) -> Self {
+        Self(cm_rust::ProtocolDecl {
+            name: name.into(),
+            source_path: format!("/svc/foo").parse().unwrap(),
+        })
+    }
+
+    /// Sets the source path.
+    pub fn path(mut self, path: &str) -> Self {
+        self.0.source_path = path.parse().unwrap();
+        self
+    }
+
+    /// Consumes the builder and returns a ProtocolDecl.
+    pub fn build(self) -> cm_rust::ProtocolDecl {
+        self.0
+    }
+}
+
+impl From<ProtocolDeclBuilder> for cm_rust::ProtocolDecl {
+    fn from(builder: ProtocolDeclBuilder) -> Self {
+        builder.build()
+    }
+}
+
+// A convenience builder for constructing DirectoryDecls.
+#[derive(Debug)]
+pub struct DirectoryDeclBuilder(cm_rust::DirectoryDecl);
+
+impl DirectoryDeclBuilder {
+    /// Creates a new builder.
+    pub fn new(name: &str) -> Self {
+        Self(cm_rust::DirectoryDecl {
+            name: name.into(),
+            source_path: format!("/data/foo").parse().unwrap(),
+            rights: *rights::READ_RIGHTS,
+        })
+    }
+
+    /// Sets the source path.
+    pub fn path(mut self, path: &str) -> Self {
+        self.0.source_path = path.parse().unwrap();
+        self
+    }
+
+    /// Sets the rights.
+    pub fn rights(mut self, rights: fio2::Operations) -> Self {
+        self.0.rights = rights;
+        self
+    }
+
+    /// Consumes the builder and returns a DirectoryDecl.
+    pub fn build(self) -> cm_rust::DirectoryDecl {
+        self.0
+    }
+}
+
+impl From<DirectoryDeclBuilder> for cm_rust::DirectoryDecl {
+    fn from(builder: DirectoryDeclBuilder) -> Self {
         builder.build()
     }
 }

@@ -15,7 +15,7 @@ use {
     },
     anyhow::{Context as _, Error},
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2::*,
     fuchsia_async::{self as fasync},
@@ -61,7 +61,7 @@ impl SystemController {
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            InternalCapability::Protocol(capability_path)
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
                 if *capability_path == *SYSTEM_CONTROLLER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(SystemControllerCapabilityProvider::new(

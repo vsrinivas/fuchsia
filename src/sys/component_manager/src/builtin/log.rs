@@ -6,7 +6,7 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl_fuchsia_boot as fboot,
     fuchsia_zircon::{self as zx, DebugLog, DebugLogOpts, HandleBased, Resource},
     futures::prelude::*,
@@ -61,7 +61,7 @@ impl BuiltinCapability for ReadOnlyLog {
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
         matches!(
             capability,
-            InternalCapability::Protocol(path) if *path == *READ_ONLY_LOG_CAPABILITY_PATH
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *READ_ONLY_LOG_CAPABILITY_PATH
         )
     }
 }
@@ -95,7 +95,7 @@ impl BuiltinCapability for WriteOnlyLog {
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
         matches!(
             capability,
-            InternalCapability::Protocol(path) if *path == *WRITE_ONLY_LOG_CAPABILITY_PATH
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *WRITE_ONLY_LOG_CAPABILITY_PATH
         )
     }
 }
@@ -146,7 +146,9 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(READ_ONLY_LOG_CAPABILITY_PATH.clone()),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
+                READ_ONLY_LOG_CAPABILITY_PATH.clone(),
+            )),
         };
 
         let event = Event::new_for_test(
@@ -210,7 +212,9 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(WRITE_ONLY_LOG_CAPABILITY_PATH.clone()),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
+                WRITE_ONLY_LOG_CAPABILITY_PATH.clone(),
+            )),
         };
 
         let event = Event::new_for_test(

@@ -6,7 +6,7 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::InternalCapability},
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl_fuchsia_time as ftime,
     fuchsia_zircon::{Clock, ClockOpts, ClockUpdate, HandleBased, Rights, Time},
     futures::prelude::*,
@@ -54,7 +54,7 @@ impl BuiltinCapability for UtcTimeMaintainer {
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
         matches!(
             capability,
-            InternalCapability::Protocol(path) if *path == *TIME_MAINTENANCE_CAPABILITY_PATH
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *TIME_MAINTENANCE_CAPABILITY_PATH
         )
     }
 }

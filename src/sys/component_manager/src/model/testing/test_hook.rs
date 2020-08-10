@@ -15,6 +15,7 @@ use {
         path::PathBufExt,
     },
     async_trait::async_trait,
+    cm_rust::CapabilityNameOrPath,
     directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
@@ -305,7 +306,9 @@ impl HubInjectionTestHook {
         // This Hook is about injecting itself between the Hub and the Model.
         // If the Hub hasn't been installed, then there's nothing to do here.
         let mut relative_path = match (&capability_provider, capability) {
-            (Some(_), InternalCapability::Directory(source_path)) => source_path.split(),
+            (Some(_), InternalCapability::Directory(CapabilityNameOrPath::Path(source_path))) => {
+                source_path.split()
+            }
             _ => return Ok(capability_provider),
         };
 

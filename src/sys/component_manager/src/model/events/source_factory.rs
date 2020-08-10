@@ -18,7 +18,7 @@ use {
         },
     },
     async_trait::async_trait,
-    cm_rust::{CapabilityPath, ComponentDecl},
+    cm_rust::{CapabilityNameOrPath, CapabilityPath, ComponentDecl},
     futures::lock::Mutex,
     lazy_static::lazy_static,
     std::{
@@ -111,7 +111,7 @@ impl EventSourceFactory {
         capability: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
-            (None, InternalCapability::Protocol(source_path))
+            (None, InternalCapability::Protocol(CapabilityNameOrPath::Path(source_path)))
                 if *source_path == *EVENT_SOURCE_SERVICE_PATH
                     || *source_path == *EVENT_SOURCE_SYNC_SERVICE_PATH =>
             {
@@ -324,10 +324,12 @@ mod tests {
                 Ok(EventPayload::CapabilityRouted {
                     capability_provider: capability_provider.clone(),
                     source: CapabilitySource::Framework {
-                        capability: InternalCapability::Protocol(CapabilityPath {
-                            dirname: "/svc".to_string(),
-                            basename: "fuchsia.sys2.EventSource".to_string(),
-                        }),
+                        capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
+                            CapabilityPath {
+                                dirname: "/svc".to_string(),
+                                basename: "fuchsia.sys2.EventSource".to_string(),
+                            },
+                        )),
                         scope_moniker: scope.clone(),
                     },
                 }),

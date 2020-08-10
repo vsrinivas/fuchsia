@@ -101,18 +101,18 @@ impl DirTree {
     ) {
         let path = match expose {
             cm_rust::ExposeDecl::Service(d) => {
-                d.target_name.to_string().parse().expect("couldn't parse name as path")
+                format!("/{}", d.target_name).parse().expect("couldn't parse name as path")
             }
             cm_rust::ExposeDecl::Protocol(d) => match &d.target_path {
                 CapabilityNameOrPath::Path(target_path) => target_path.clone(),
-                CapabilityNameOrPath::Name(target_path) => {
-                    target_path.to_string().parse().expect("couldn't parse name as path")
+                CapabilityNameOrPath::Name(target_name) => {
+                    format!("/{}", target_name).parse().expect("couldn't parse name as path")
                 }
             },
             cm_rust::ExposeDecl::Directory(d) => match &d.target_path {
                 CapabilityNameOrPath::Path(target_path) => target_path.clone(),
-                CapabilityNameOrPath::Name(target_path) => {
-                    target_path.to_string().parse().expect("couldn't parse name as path")
+                CapabilityNameOrPath::Name(target_name) => {
+                    format!("/{}", target_name).parse().expect("couldn't parse name as path")
                 }
             },
             cm_rust::ExposeDecl::Runner(_) | cm_rust::ExposeDecl::Resolver(_) => {

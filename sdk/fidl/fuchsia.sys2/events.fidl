@@ -245,6 +245,8 @@ table CapabilityReadyPayload {
 /// Payload for CapabilityRequested events
 table CapabilityRequestedPayload {
     /// The path of the capability.
+    // TODO(56604): Once name-based capabilities have landed, this (and the
+    // filter field) should be a name.
     1: string:fuchsia.component.MAX_PATH_LENGTH path;
 
     /// A handle to the server end of the channel to host

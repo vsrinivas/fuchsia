@@ -154,7 +154,7 @@ async fn use_framework_service() {
             // If some other capability has already been installed, then there's nothing to
             // do here.
             match capability {
-                InternalCapability::Protocol(capability_path)
+                InternalCapability::Protocol(CapabilityNameOrPath::Path(capability_path))
                     if *capability_path == *REALM_SERVICE =>
                 {
                     return Ok(Some(Box::new(MockRealmCapabilityProvider::new(
@@ -217,10 +217,13 @@ async fn use_from_parent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                .protocol(ProtocolDeclBuilder::new("file").path("/svc/file").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -228,15 +231,15 @@ async fn use_from_parent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/file").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/device").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("file").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("device").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -248,19 +251,19 @@ async fn use_from_parent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/device").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("device").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/device").unwrap(),
                 }))
                 .build(),
@@ -273,7 +276,7 @@ async fn use_from_parent() {
         CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
-    test.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await
+    test.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await;
 }
 
 ///   a
@@ -291,10 +294,11 @@ async fn capability_requested_event_at_parent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -317,7 +321,7 @@ async fn capability_requested_event_at_parent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -389,10 +393,12 @@ async fn use_from_grandparent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -400,8 +406,8 @@ async fn use_from_grandparent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -413,8 +419,8 @@ async fn use_from_grandparent() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -422,8 +428,8 @@ async fn use_from_grandparent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -435,14 +441,14 @@ async fn use_from_grandparent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -515,17 +521,9 @@ async fn use_builtin_from_grandparent() {
     .await;
 }
 
-///     a
-///    /
-///   b
-///  / \
-/// d   c
-///
-/// d: exposes directory /data/foo from self as /data/bar
-/// b: offers directory /data/bar from d as /data/foobar to c
-/// c: uses /data/foobar as /data/hippo
+/// Tests legacy path-based capability routing
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_from_sibling_no_root() {
+async fn route_by_path_legacy() {
     let components = vec![
         ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
         (
@@ -598,6 +596,91 @@ async fn use_from_sibling_no_root() {
     .await;
 }
 
+///     a
+///    /
+///   b
+///  / \
+/// d   c
+///
+/// d: exposes directory /data/foo from self as /data/bar
+/// b: offers directory /data/bar from d as /data/foobar to c
+/// c: uses /data/foobar as /data/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_from_sibling_no_root() {
+    let components = vec![
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                    source: OfferDirectorySource::Child("d".to_string()),
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foobar_data").unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                    dependency_type: DependencyType::Strong,
+                }))
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferServiceSource::Child("d".to_string()),
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foobar_svc").unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("c")
+                .add_lazy_child("d")
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("foobar_data").unwrap(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *rights::READ_RIGHTS,
+                    subdir: None,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_path: CapabilityNameOrPath::try_from("foobar_svc").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target: ExposeTarget::Parent,
+                    rights: Some(*rights::READ_RIGHTS),
+                    subdir: None,
+                }))
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.check_use(vec!["b:0", "c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok))
+        .await;
+    test.check_use(
+        vec!["b:0", "c:0"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+}
+
 ///   a
 ///  / \
 /// b   c
@@ -613,8 +696,8 @@ async fn use_from_sibling_root() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -622,8 +705,8 @@ async fn use_from_sibling_root() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -634,18 +717,20 @@ async fn use_from_sibling_root() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .build(),
@@ -655,14 +740,14 @@ async fn use_from_sibling_root() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -695,8 +780,8 @@ async fn use_from_niece() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foobar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foobar_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -704,8 +789,8 @@ async fn use_from_niece() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foobar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foobar_svc").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -718,16 +803,16 @@ async fn use_from_niece() {
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Child("d".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("d".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/baz").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("baz_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .add_lazy_child("d")
@@ -738,14 +823,14 @@ async fn use_from_niece() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/foobar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foobar_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foobar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foobar_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -753,18 +838,20 @@ async fn use_from_niece() {
         (
             "d",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/bar").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("bar_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .build(),
@@ -797,17 +884,18 @@ async fn use_kitchen_sink() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foo_from_a").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_a_svc").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -822,8 +910,8 @@ async fn use_kitchen_sink() {
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("d".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
                     target: OfferTarget::Child("e".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -831,15 +919,15 @@ async fn use_kitchen_sink() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo_from_a").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foo_from_a").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_a_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_a_svc").unwrap(),
                     target: OfferTarget::Child("e".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Child("d".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -853,8 +941,8 @@ async fn use_kitchen_sink() {
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
                     target: OfferTarget::Child("f".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -862,8 +950,8 @@ async fn use_kitchen_sink() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("g".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo_from_h").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foo_from_h").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_h_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_h_svc").unwrap(),
                     target: OfferTarget::Child("f".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -874,10 +962,11 @@ async fn use_kitchen_sink() {
         (
             "d",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -889,14 +978,14 @@ async fn use_kitchen_sink() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo_from_a").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_a_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -906,14 +995,14 @@ async fn use_kitchen_sink() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo_from_d").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_d_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo_from_h").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_h_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -923,8 +1012,8 @@ async fn use_kitchen_sink() {
             ComponentDeclBuilder::new_empty_component()
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("h".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo_from_h").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foo_from_h").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_from_h_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_h_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .add_lazy_child("h")
@@ -933,10 +1022,11 @@ async fn use_kitchen_sink() {
         (
             "h",
             ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foo_from_h").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_from_h_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .build(),
@@ -1078,14 +1168,14 @@ async fn use_not_offered() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -1118,18 +1208,18 @@ async fn use_offer_source_not_exposed() {
             "a",
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     source: OfferDirectorySource::Child("b".to_string()),
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     source: OfferServiceSource::Child("b".to_string()),
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1143,14 +1233,14 @@ async fn use_offer_source_not_exposed() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -1186,18 +1276,18 @@ async fn use_offer_source_not_offered() {
             "b",
             ComponentDeclBuilder::new_empty_component()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     source: OfferDirectorySource::Parent,
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     source: OfferServiceSource::Parent,
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1209,14 +1299,14 @@ async fn use_offer_source_not_offered() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -1254,14 +1344,14 @@ async fn use_from_expose() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .add_lazy_child("c")
@@ -1270,18 +1360,20 @@ async fn use_from_expose() {
         (
             "c",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("hippo_data").build())
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     source: ExposeSource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     source: ExposeSource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .build(),
@@ -1395,19 +1487,21 @@ async fn offer_from_non_executable() {
         (
             "a",
             ComponentDeclBuilder::new_empty_component()
+                .directory(DirectoryDeclBuilder::new("hippo_data").build())
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     source: OfferDirectorySource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     source: OfferServiceSource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1419,14 +1513,14 @@ async fn offer_from_non_executable() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -1459,19 +1553,21 @@ async fn use_in_collection() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     source: OfferDirectorySource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
                     source: OfferServiceSource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1487,18 +1583,18 @@ async fn use_in_collection() {
                     target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     source: OfferDirectorySource::Parent,
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: OfferTarget::Collection("coll".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     source: OfferServiceSource::Parent,
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: OfferTarget::Collection("coll".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1510,7 +1606,7 @@ async fn use_in_collection() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -1522,7 +1618,7 @@ async fn use_in_collection() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -1574,19 +1670,21 @@ async fn use_in_collection_not_offered() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     source: OfferDirectorySource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                     dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
                     source: OfferServiceSource::Self_,
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -1609,14 +1707,14 @@ async fn use_in_collection_not_offered() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
                 }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                 }))
                 .build(),
@@ -1664,10 +1762,12 @@ async fn use_directory_with_subdir_from_grandparent() {
         (
             "a",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: Some(PathBuf::from("s1/s2")),
@@ -1681,8 +1781,8 @@ async fn use_directory_with_subdir_from_grandparent() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: Some(PathBuf::from("s3")),
@@ -1696,7 +1796,7 @@ async fn use_directory_with_subdir_from_grandparent() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: Some(PathBuf::from("s4")),
@@ -1735,9 +1835,9 @@ async fn use_directory_with_subdir_from_sibling() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: Some(PathBuf::from("s3")),
                     dependency_type: DependencyType::Strong,
@@ -1749,11 +1849,12 @@ async fn use_directory_with_subdir_from_sibling() {
         (
             "b",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: ExposeTarget::Parent,
-                    target_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: Some(PathBuf::from("s1/s2")),
                 }))
@@ -1764,7 +1865,7 @@ async fn use_directory_with_subdir_from_sibling() {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::Directory(UseDirectoryDecl {
                     source: UseSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                     rights: *rights::READ_RIGHTS,
                     subdir: None,
@@ -1805,8 +1906,8 @@ async fn expose_directory_with_subdir() {
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Child("b".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: None,
                     subdir: Some(PathBuf::from("s3")),
@@ -1819,8 +1920,8 @@ async fn expose_directory_with_subdir() {
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Child("c".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: None,
                     subdir: Some(PathBuf::from("s1/s2")),
@@ -1831,10 +1932,11 @@ async fn expose_directory_with_subdir() {
         (
             "c",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
@@ -1849,7 +1951,7 @@ async fn expose_directory_with_subdir() {
     test.check_use_exposed_dir(
         vec![].into(),
         CheckUse::Directory {
-            path: "/data/hippo".try_into().unwrap(),
+            path: "/hippo_data".try_into().unwrap(),
             file: PathBuf::from("inner"),
             expected_res: ExpectedResult::Ok,
         },
@@ -2291,16 +2393,16 @@ async fn expose_from_self_and_child() {
             ComponentDeclBuilder::new()
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Child("c".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/bar/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_bar_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Child("c".to_string()),
-                    source_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/bar/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_bar_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .add_lazy_child("c")
@@ -2309,18 +2411,20 @@ async fn expose_from_self_and_child() {
         (
             "c",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .build(),
@@ -2330,7 +2434,7 @@ async fn expose_from_self_and_child() {
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
         CheckUse::Directory {
-            path: "/data/bar/hippo".try_into().unwrap(),
+            path: "/hippo_bar_data".try_into().unwrap(),
             file: PathBuf::from("hippo"),
             expected_res: ExpectedResult::Ok,
         },
@@ -2339,19 +2443,26 @@ async fn expose_from_self_and_child() {
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
         CheckUse::Protocol {
-            path: "/svc/bar/hippo".try_into().unwrap(),
+            path: "/hippo_bar_svc".try_into().unwrap(),
             expected_res: ExpectedResult::Ok,
         },
     )
     .await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::default_directory(ExpectedResult::Ok),
+        CheckUse::Directory {
+            path: "/hippo_data".try_into().unwrap(),
+            file: PathBuf::from("hippo"),
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+        CheckUse::Protocol {
+            path: "/hippo_svc".try_into().unwrap(),
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
 }
@@ -2364,18 +2475,20 @@ async fn use_not_exposed() {
         (
             "c",
             ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("foo_data").build())
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/data/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_data").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_data").unwrap(),
                     target: ExposeTarget::Parent,
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
                 }))
                 .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
                     source: ExposeSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/hippo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("hippo_svc").unwrap(),
                     target: ExposeTarget::Parent,
                 }))
                 .build(),
@@ -2388,25 +2501,36 @@ async fn use_not_exposed() {
     // exposed dir, so no routing takes place.  Hence we don't expect an epitaph.
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
-        CheckUse::default_directory(ExpectedResult::ErrWithNoEpitaph),
+        CheckUse::Directory {
+            path: "/hippo_data".try_into().unwrap(),
+            file: PathBuf::from("hippo"),
+            expected_res: ExpectedResult::ErrWithNoEpitaph,
+        },
     )
     .await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
         CheckUse::Protocol {
-            path: default_service_capability(),
+            path: "/hippo_svc".try_into().unwrap(),
             expected_res: ExpectedResult::ErrWithNoEpitaph,
         },
     )
     .await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::default_directory(ExpectedResult::Ok),
+        CheckUse::Directory {
+            path: "/hippo_data".try_into().unwrap(),
+            file: PathBuf::from("hippo"),
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
     test.check_use_exposed_dir(
         vec!["b:0", "c:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+        CheckUse::Protocol {
+            path: "/hippo_svc".try_into().unwrap(),
+            expected_res: ExpectedResult::Ok,
+        },
     )
     .await;
 }
@@ -2425,13 +2549,14 @@ async fn use_not_exposed() {
 async fn use_with_destroyed_parent() {
     let use_decl = UseDecl::Protocol(UseProtocolDecl {
         source: UseSource::Parent,
-        source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
+        source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
     });
     let components = vec![
         (
             "a",
             ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     source: UseSource::Framework,
                     source_path: CapabilityNameOrPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
@@ -2439,8 +2564,8 @@ async fn use_with_destroyed_parent() {
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
                     target: OfferTarget::Collection("coll".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))
@@ -2452,8 +2577,8 @@ async fn use_with_destroyed_parent() {
             ComponentDeclBuilder::new()
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Parent,
-                    source_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
-                    target_path: CapabilityNameOrPath::try_from("/svc/foo").unwrap(),
+                    source_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
+                    target_path: CapabilityNameOrPath::try_from("foo_svc").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
                     dependency_type: DependencyType::Strong,
                 }))

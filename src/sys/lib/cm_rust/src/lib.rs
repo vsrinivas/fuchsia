@@ -382,21 +382,36 @@ impl ComponentDecl {
         })
     }
 
+    /// Returns the `ProtocolDecl` corresponding to `protocol_name`.
+    pub fn find_protocol_source<'a>(
+        &'a self,
+        protocol_name: &CapabilityName,
+    ) -> Option<&'a ProtocolDecl> {
+        self.capabilities.iter().find_map(|c| match c {
+            CapabilityDecl::Protocol(r) if &r.name == protocol_name => Some(r),
+            _ => None,
+        })
+    }
+
+    /// Returns the `DirectoryDecl` corresponding to `directory_name`.
+    pub fn find_directory_source<'a>(
+        &'a self,
+        directory_name: &CapabilityName,
+    ) -> Option<&'a DirectoryDecl> {
+        self.capabilities.iter().find_map(|c| match c {
+            CapabilityDecl::Directory(r) if &r.name == directory_name => Some(r),
+            _ => None,
+        })
+    }
+
     /// Returns the `RunnerDecl` corresponding to `runner_name`.
     pub fn find_runner_source<'a>(
         &'a self,
         runner_name: &CapabilityName,
     ) -> Option<&'a RunnerDecl> {
-        self.capabilities.iter().find_map(|c| {
-            match c {
-                CapabilityDecl::Runner(r) => {
-                    if &r.name == runner_name {
-                        return Some(r);
-                    }
-                }
-                _ => {}
-            }
-            None
+        self.capabilities.iter().find_map(|c| match c {
+            CapabilityDecl::Runner(r) if &r.name == runner_name => Some(r),
+            _ => None,
         })
     }
 
@@ -424,24 +439,6 @@ impl ComponentDecl {
             }
             _ => false,
         })
-    }
-
-    /// Returns directories and protocol exposed from self to framework.
-    pub fn get_self_capabilities_exposed_to_framework(&self) -> Vec<ExposeDecl> {
-        // TODO(miguelfrde): also include protocols.
-        self.exposes
-            .iter()
-            .filter(|expose_decl| match expose_decl {
-                ExposeDecl::Directory(decl) => {
-                    decl.target == ExposeTarget::Framework && decl.source == ExposeSource::Self_
-                }
-                ExposeDecl::Protocol(decl) => {
-                    decl.target == ExposeTarget::Framework && decl.source == ExposeSource::Self_
-                }
-                _ => false,
-            })
-            .cloned()
-            .collect()
     }
 }
 

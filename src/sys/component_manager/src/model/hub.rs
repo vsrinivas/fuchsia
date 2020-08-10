@@ -19,7 +19,7 @@ use {
         path::PathBufExt,
     },
     async_trait::async_trait,
-    cm_rust::ComponentDecl,
+    cm_rust::{CapabilityNameOrPath, ComponentDecl},
     directory_broker,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
@@ -489,10 +489,17 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_capability_routed_async");
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
-            capability: InternalCapability::Directory(source_path),
+            capability: InternalCapability::Directory(source_name_or_path),
             scope_moniker,
         } = source
         {
+            // TODO(56604): Support routing hub by name
+            let source_path = match source_name_or_path {
+                CapabilityNameOrPath::Path(source_path) => source_path,
+                CapabilityNameOrPath::Name(_) => {
+                    return Ok(());
+                }
+            };
             let mut relative_path = source_path.split();
             // The source path must begin with "hub"
             if relative_path.is_empty() || relative_path.remove(0) != "hub" {

@@ -47,11 +47,11 @@ impl CapabilitySource {
         }
     }
 
-    pub fn path(&self) -> Option<&CapabilityPath> {
+    pub fn name_or_path(&self) -> Option<&CapabilityNameOrPath> {
         match self {
-            CapabilitySource::Component { capability, .. } => capability.source_path(),
-            CapabilitySource::Framework { capability, .. } => capability.path(),
-            CapabilitySource::AboveRoot { capability } => capability.path(),
+            CapabilitySource::Component { capability, .. } => capability.source_name_or_path(),
+            CapabilitySource::Framework { capability, .. } => capability.name_or_path(),
+            CapabilitySource::AboveRoot { capability } => capability.name_or_path(),
         }
     }
 
@@ -100,8 +100,8 @@ impl fmt::Display for CapabilitySource {
 #[derive(Clone, Debug)]
 pub enum InternalCapability {
     Service(CapabilityName),
-    Protocol(CapabilityPath),
-    Directory(CapabilityPath),
+    Protocol(CapabilityNameOrPath),
+    Directory(CapabilityNameOrPath),
     Runner(CapabilityName),
     Event(CapabilityName),
 }
@@ -125,10 +125,10 @@ impl InternalCapability {
         }
     }
 
-    pub fn path(&self) -> Option<&CapabilityPath> {
+    pub fn name_or_path(&self) -> Option<&CapabilityNameOrPath> {
         match self {
-            InternalCapability::Protocol(source_path) => Some(&source_path),
-            InternalCapability::Directory(source_path) => Some(&source_path),
+            InternalCapability::Protocol(source_name_or_path) => Some(&source_name_or_path),
+            InternalCapability::Directory(source_name_or_path) => Some(&source_name_or_path),
             InternalCapability::Runner(_)
             | InternalCapability::Event(_)
             | InternalCapability::Service(_) => None,
@@ -145,7 +145,7 @@ impl InternalCapability {
     }
 
     pub fn id(&self) -> String {
-        self.path()
+        self.name_or_path()
             .map(|p| format!("{}", p))
             .or_else(|| self.name().map(|n| format!("{}", n)))
             .unwrap_or_default()
@@ -156,18 +156,12 @@ impl InternalCapability {
             UseDecl::Service(s) if s.source == UseSource::Parent => {
                 Ok(InternalCapability::Service(s.source_name.clone()))
             }
-            UseDecl::Protocol(s) if s.source == UseSource::Parent => match &s.source_path {
-                CapabilityNameOrPath::Path(source_path) => {
-                    Ok(InternalCapability::Protocol(source_path.clone()))
-                }
-                CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-            },
-            UseDecl::Directory(d) if d.source == UseSource::Parent => match &d.source_path {
-                CapabilityNameOrPath::Path(source_path) => {
-                    Ok(InternalCapability::Directory(source_path.clone()))
-                }
-                CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-            },
+            UseDecl::Protocol(s) if s.source == UseSource::Parent => {
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
+            }
+            UseDecl::Directory(d) if d.source == UseSource::Parent => {
+                Ok(InternalCapability::Directory(d.source_path.clone()))
+            }
             UseDecl::Event(e) if e.source == UseSource::Parent => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
             }
@@ -179,20 +173,10 @@ impl InternalCapability {
     pub fn builtin_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
             OfferDecl::Protocol(s) if s.source == OfferServiceSource::Parent => {
-                match &s.source_path {
-                    CapabilityNameOrPath::Path(source_path) => {
-                        Ok(InternalCapability::Protocol(source_path.clone()))
-                    }
-                    CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-                }
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Parent => {
-                match &d.source_path {
-                    CapabilityNameOrPath::Path(source_path) => {
-                        Ok(InternalCapability::Directory(source_path.clone()))
-                    }
-                    CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-                }
+                Ok(InternalCapability::Directory(d.source_path.clone()))
             }
             OfferDecl::Runner(s) if s.source == OfferRunnerSource::Parent => {
                 Ok(InternalCapability::Runner(s.source_name.clone()))
@@ -208,12 +192,7 @@ impl InternalCapability {
 
     pub fn builtin_from_storage_decl(decl: &StorageDecl) -> Result<Self, Error> {
         if decl.source == StorageDirectorySource::Parent {
-            match &decl.source_path {
-                CapabilityNameOrPath::Path(source_path) => {
-                    Ok(InternalCapability::Directory(source_path.clone()))
-                }
-                CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-            }
+            Ok(InternalCapability::Directory(decl.source_path.clone()))
         } else {
             Err(Error::InvalidBuiltinCapability {})
         }
@@ -224,18 +203,12 @@ impl InternalCapability {
             UseDecl::Service(s) if s.source == UseSource::Framework => {
                 Ok(InternalCapability::Service(s.source_name.clone()))
             }
-            UseDecl::Protocol(s) if s.source == UseSource::Framework => match &s.source_path {
-                CapabilityNameOrPath::Path(source_path) => {
-                    Ok(InternalCapability::Protocol(source_path.clone()))
-                }
-                CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-            },
-            UseDecl::Directory(d) if d.source == UseSource::Framework => match &d.source_path {
-                CapabilityNameOrPath::Path(source_path) => {
-                    Ok(InternalCapability::Directory(source_path.clone()))
-                }
-                CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-            },
+            UseDecl::Protocol(s) if s.source == UseSource::Framework => {
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
+            }
+            UseDecl::Directory(d) if d.source == UseSource::Framework => {
+                Ok(InternalCapability::Directory(d.source_path.clone()))
+            }
             UseDecl::Event(e) if e.source == UseSource::Framework => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
             }
@@ -248,20 +221,10 @@ impl InternalCapability {
     pub fn framework_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
             OfferDecl::Protocol(s) if s.source == OfferServiceSource::Parent => {
-                match &s.source_path {
-                    CapabilityNameOrPath::Path(source_path) => {
-                        Ok(InternalCapability::Protocol(source_path.clone()))
-                    }
-                    CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-                }
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
-                match &d.source_path {
-                    CapabilityNameOrPath::Path(source_path) => {
-                        Ok(InternalCapability::Directory(source_path.clone()))
-                    }
-                    CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-                }
+                Ok(InternalCapability::Directory(d.source_path.clone()))
             }
             OfferDecl::Event(e) if e.source == OfferEventSource::Framework => {
                 Ok(InternalCapability::Event(e.source_name.clone()))
@@ -275,20 +238,10 @@ impl InternalCapability {
     pub fn framework_from_expose_decl(decl: &ExposeDecl) -> Result<Self, Error> {
         match decl {
             ExposeDecl::Protocol(s) if s.source == ExposeSource::Framework => {
-                match &s.source_path {
-                    CapabilityNameOrPath::Path(source_path) => {
-                        Ok(InternalCapability::Protocol(source_path.clone()))
-                    }
-                    CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-                }
+                Ok(InternalCapability::Protocol(s.source_path.clone()))
             }
             ExposeDecl::Directory(d) if d.source == ExposeSource::Framework => {
-                match &d.source_path {
-                    CapabilityNameOrPath::Path(source_path) => {
-                        Ok(InternalCapability::Directory(source_path.clone()))
-                    }
-                    CapabilityNameOrPath::Name(_) => Err(Error::InvalidBuiltinCapability {}),
-                }
+                Ok(InternalCapability::Directory(d.source_path.clone()))
             }
             _ => {
                 return Err(Error::InvalidFrameworkCapability {});
@@ -334,6 +287,8 @@ pub enum ComponentCapability {
     /// Models a capability hosted from the exposed dir which is used at runtime.
     UsedExpose(ExposeDecl),
     Offer(OfferDecl),
+    Protocol(ProtocolDecl),
+    Directory(DirectoryDecl),
     Storage(StorageDecl),
     Runner(RunnerDecl),
 }
@@ -390,38 +345,28 @@ impl ComponentCapability {
                 OfferDecl::Resolver(_) => "resolver",
                 OfferDecl::Event(_) => "event",
             },
+            ComponentCapability::Protocol(_) => "protocol",
+            ComponentCapability::Directory(_) => "directory",
             ComponentCapability::Storage(_) => "storage",
             ComponentCapability::Runner(_) => "runner",
         }
     }
 
-    /// Returns the source path of the capability, if one exists.
-    pub fn source_path(&self) -> Option<&CapabilityPath> {
+    /// Returns the source name or path of the capability, if one exists (for capabilities that
+    /// accept either a name or path).
+    pub fn source_name_or_path(&self) -> Option<&CapabilityNameOrPath> {
         match self {
             ComponentCapability::Use(use_) => match use_ {
-                UseDecl::Protocol(UseProtocolDecl { source_path, .. }) => match source_path {
-                    CapabilityNameOrPath::Path(source_path) => Some(source_path),
-                    CapabilityNameOrPath::Name(_) => None,
-                },
-                UseDecl::Directory(UseDirectoryDecl { source_path, .. }) => match source_path {
-                    CapabilityNameOrPath::Path(source_path) => Some(source_path),
-                    CapabilityNameOrPath::Name(_) => None,
-                },
+                UseDecl::Protocol(UseProtocolDecl { source_path, .. }) => Some(source_path),
+                UseDecl::Directory(UseDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
             ComponentCapability::Environment(env_cap) => match env_cap {
                 EnvironmentCapability::Runner { .. } => None,
             },
             ComponentCapability::Expose(expose) => match expose {
-                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => match source_path {
-                    CapabilityNameOrPath::Path(source_path) => Some(source_path),
-                    CapabilityNameOrPath::Name(_) => None,
-                },
-                ExposeDecl::Directory(ExposeDirectoryDecl { source_path, .. }) => match source_path
-                {
-                    CapabilityNameOrPath::Path(source_path) => Some(source_path),
-                    CapabilityNameOrPath::Name(_) => None,
-                },
+                ExposeDecl::Protocol(ExposeProtocolDecl { source_path, .. }) => Some(source_path),
+                ExposeDecl::Directory(ExposeDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
             ComponentCapability::UsedExpose(expose) => {
@@ -431,38 +376,52 @@ impl ComponentCapability {
                 // target path equal to `target_path`.
                 match expose {
                     ExposeDecl::Protocol(ExposeProtocolDecl { target_path, .. }) => {
-                        match target_path {
-                            CapabilityNameOrPath::Path(target_path) => Some(target_path),
-                            CapabilityNameOrPath::Name(_) => None,
-                        }
+                        Some(target_path)
                     }
                     ExposeDecl::Directory(ExposeDirectoryDecl { target_path, .. }) => {
-                        match target_path {
-                            CapabilityNameOrPath::Path(target_path) => Some(target_path),
-                            CapabilityNameOrPath::Name(_) => None,
-                        }
+                        Some(target_path)
                     }
                     _ => None,
                 }
             }
             ComponentCapability::Offer(offer) => match offer {
-                OfferDecl::Protocol(OfferProtocolDecl { source_path, .. }) => match source_path {
-                    CapabilityNameOrPath::Path(source_path) => Some(source_path),
-                    CapabilityNameOrPath::Name(_) => None,
-                },
-                OfferDecl::Directory(OfferDirectoryDecl { source_path, .. }) => match source_path {
-                    CapabilityNameOrPath::Path(source_path) => Some(source_path),
-                    CapabilityNameOrPath::Name(_) => None,
-                },
+                OfferDecl::Protocol(OfferProtocolDecl { source_path, .. }) => Some(source_path),
+                OfferDecl::Directory(OfferDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
-            ComponentCapability::Runner(RunnerDecl { source_path, .. }) => Some(source_path),
+            ComponentCapability::Storage(storage) => Some(&storage.source_path),
+            ComponentCapability::Protocol(_) => None,
+            ComponentCapability::Directory(_) => None,
+            ComponentCapability::Runner(_) => None,
+        }
+    }
+
+    /// Return the source path of the capability, if one exists.
+    pub fn source_path(&self) -> Option<&CapabilityPath> {
+        // First look in declarations that support name or path.
+        if let Some(CapabilityNameOrPath::Path(path)) = self.source_name_or_path() {
+            return Some(path);
+        }
+        // Now check declarations that exclusively use paths.
+        match self {
             ComponentCapability::Storage(_) => None,
+            ComponentCapability::Protocol(protocol) => Some(&protocol.source_path),
+            ComponentCapability::Directory(directory) => Some(&directory.source_path),
+            ComponentCapability::Runner(runner) => Some(&runner.source_path),
+            _ => None,
         }
     }
 
     /// Return the source name of the capability, if one exists.
     pub fn source_name<'a>(&self) -> Option<&CapabilityName> {
+        // First look in declarations that support name or path.
+        match self.source_name_or_path() {
+            Some(CapabilityNameOrPath::Name(name)) => {
+                return Some(name);
+            }
+            _ => {}
+        }
+        // Now check declarations that exclusively use names.
         match self {
             ComponentCapability::Use(use_) => match use_ {
                 UseDecl::Runner(UseRunnerDecl { source_name, .. }) => Some(source_name),
@@ -489,7 +448,7 @@ impl ComponentCapability {
 
     /// Returns the source path or name of the capability as a string, useful for debugging.
     pub fn source_id(&self) -> String {
-        self.source_path()
+        self.source_name_or_path()
             .map(|p| format!("{}", p))
             .or_else(|| self.source_name().map(|n| format!("{}", n)))
             .unwrap_or_default()
@@ -734,7 +693,19 @@ impl ComponentCapability {
             .collect()
     }
 
-    /// Given a offer/expose of a Runner from `Self`, return the associated RunnerDecl,
+    /// Given an offer/expose of a protocol from `self`, return the associated ProtocolDecl,
+    /// if it exists.
+    pub fn find_protocol_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a ProtocolDecl> {
+        decl.find_protocol_source(self.source_name()?)
+    }
+
+    /// Given an offer/expose of a directory from `self`, return the associated DirectoryDecl,
+    /// if it exists.
+    pub fn find_directory_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a DirectoryDecl> {
+        decl.find_directory_source(self.source_name()?)
+    }
+
+    /// Given an offer/expose of a runner from `self`, return the associated RunnerDecl,
     /// if it exists.
     pub fn find_runner_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a RunnerDecl> {
         decl.find_runner_source(self.source_name()?)
@@ -755,15 +726,6 @@ impl ComponentCapability {
         target: &OfferTarget,
         target_path: &CapabilityNameOrPath,
     ) -> bool {
-        let (path, target_path) = match (path, target_path) {
-            (CapabilityNameOrPath::Path(path), CapabilityNameOrPath::Path(target_path)) => {
-                (path, target_path)
-            }
-            _ => {
-                // Name-based protocols and directories not yet supported.
-                return false;
-            }
-        };
         path == target_path && target_matches_moniker(target, child_moniker)
     }
 

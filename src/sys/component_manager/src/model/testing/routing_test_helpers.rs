@@ -264,7 +264,7 @@ impl RoutingTest {
         }
     }
 
-    /// Installs a new directory at /hippo in our namespace. Does nothing if this directory already
+    /// Installs a new directory at `path` in our namespace. Does nothing if this directory already
     /// exists.
     pub fn install_hippo_dir(&self, path: &str) {
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
@@ -558,10 +558,14 @@ impl RoutingTest {
             match expose {
                 ExposeDecl::Service(_) => panic!("service capability unsupported"),
                 ExposeDecl::Protocol(s) if s.source == ExposeSource::Self_ => {
-                    Self::install_default_out_files(&mut out_dir);
+                    if let CapabilityNameOrPath::Path(_) = s.source_path {
+                        Self::install_default_out_files(&mut out_dir);
+                    }
                 }
                 ExposeDecl::Directory(d) if d.source == ExposeSource::Self_ => {
-                    out_dir.add_directory_proxy(test_dir_proxy)
+                    if let CapabilityNameOrPath::Path(_) = d.source_path {
+                        out_dir.add_directory_proxy(test_dir_proxy)
+                    }
                 }
                 _ => (),
             }
@@ -570,23 +574,34 @@ impl RoutingTest {
             match offer {
                 OfferDecl::Service(_) => panic!("service capability unsupported"),
                 OfferDecl::Protocol(s) if s.source == OfferServiceSource::Self_ => {
-                    Self::install_default_out_files(&mut out_dir);
+                    if let CapabilityNameOrPath::Path(_) = s.source_path {
+                        Self::install_default_out_files(&mut out_dir);
+                    }
                 }
                 OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {
-                    out_dir.add_directory_proxy(test_dir_proxy)
+                    if let CapabilityNameOrPath::Path(_) = d.source_path {
+                        out_dir.add_directory_proxy(test_dir_proxy)
+                    }
                 }
                 _ => (),
             }
         }
         for capability in decl.capabilities.iter() {
-            if let CapabilityDecl::Storage(storage) = capability {
-                // Storage capabilities can have a source of "self", so there are situations we
-                // want to test where a storage capability is offered and used and there's no
-                // directory capability in the manifest, so we must host the directory structure
-                // for this case in addition to directory offers.
-                if storage.source == StorageDirectorySource::Self_ {
-                    out_dir.add_directory_proxy(test_dir_proxy)
+            match capability {
+                CapabilityDecl::Protocol(_) => {
+                    Self::install_default_out_files(&mut out_dir);
                 }
+                CapabilityDecl::Directory(_) => out_dir.add_directory_proxy(test_dir_proxy),
+                CapabilityDecl::Storage(storage) => {
+                    // Storage capabilities can have a source of "self", so there are situations we
+                    // want to test where a storage capability is offered and used and there's no
+                    // directory capability in the manifest, so we must host the directory structure
+                    // for this case in addition to directory offers.
+                    if storage.source == StorageDirectorySource::Self_ {
+                        out_dir.add_directory_proxy(test_dir_proxy)
+                    }
+                }
+                _ => {}
             }
         }
         // Add any user-specific DirectoryEntry objects into the outgoing namespace.
@@ -675,7 +690,10 @@ pub mod capability_util {
             io_util::open_file(&dir_proxy, file, OPEN_RIGHT_READABLE).expect("failed to open file");
         let res = io_util::read_file(&file_proxy).await;
         match expected_res {
-            ExpectedResult::Ok => assert_eq!("hippo", res.expect("failed to read file")),
+            ExpectedResult::Ok => assert_eq!(
+                "hippo",
+                res.expect(&format!("failed to read file {}", path.to_string()))
+            ),
             ExpectedResult::Err => {
                 assert!(res.is_err(), "read file successfully when it should fail");
                 let epitaph = dir_proxy.take_event_stream().next().await.expect("no epitaph");

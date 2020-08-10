@@ -6,7 +6,7 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl_fuchsia_boot as fboot,
     fuchsia_zircon::{self as zx, HandleBased, Resource},
     futures::prelude::*,
@@ -48,7 +48,7 @@ impl BuiltinCapability for RootResource {
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
         matches!(
             capability,
-            InternalCapability::Protocol(path) if *path == *ROOT_RESOURCE_CAPABILITY_PATH
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *ROOT_RESOURCE_CAPABILITY_PATH
         )
     }
 }
@@ -75,7 +75,9 @@ mod tests {
 
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::AboveRoot {
-            capability: InternalCapability::Protocol(ROOT_RESOURCE_CAPABILITY_PATH.clone()),
+            capability: InternalCapability::Protocol(CapabilityNameOrPath::Path(
+                ROOT_RESOURCE_CAPABILITY_PATH.clone(),
+            )),
         };
 
         let event = Event::new_for_test(

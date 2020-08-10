@@ -6,7 +6,7 @@ use {
     crate::{builtin::capability::BuiltinCapability, capability::*},
     anyhow::Error,
     async_trait::async_trait,
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityNameOrPath, CapabilityPath},
     fidl_fuchsia_kernel as fkernel,
     fuchsia_zircon::Resource,
     futures::prelude::*,
@@ -91,7 +91,7 @@ impl BuiltinCapability for KernelStats {
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
         matches!(
             capability,
-            InternalCapability::Protocol(path) if *path == *KERNEL_STATS_CAPABILITY_PATH
+            InternalCapability::Protocol(CapabilityNameOrPath::Path(path)) if *path == *KERNEL_STATS_CAPABILITY_PATH
         )
     }
 }
