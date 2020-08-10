@@ -487,7 +487,6 @@ void BaseCapturer::RecomputeMinFenceTime() {
 
 zx_status_t BaseCapturer::Process() {
   TRACE_DURATION("audio", "BaseCapturer::Process");
-  uint32_t packets_produced = 0;
   while (true) {
     // Start by figure out what state we are currently in for this cycle.
     bool async_mode = false;
@@ -644,9 +643,9 @@ zx_status_t BaseCapturer::Process() {
       case CapturePacketQueue::PacketMixStatus::Done:
         // If we filled the entire packet, wake the FIDL thread.
         ready_packets_wakeup_.Signal();
-        if (pq->ReadySize() % 20 == 0) {
-          FX_LOGS_FIRST_N(WARNING, 100) << "Process producing a lot of packets " << packets_produced
-                                        << " frame_count_ " << frame_count_;
+        if (auto s = pq->ReadySize(); s > 0 && s % 20 == 0) {
+          FX_LOGS_FIRST_N(WARNING, 100)
+              << "Process producing a lot of packets " << s << " frame_count_ " << frame_count_;
         }
         break;
 
