@@ -113,6 +113,7 @@ rustc_binary("button_example") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/button.rs"
+  sources = [ "examples/button.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
@@ -152,6 +153,7 @@ rustc_binary("clockface") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/clockface.rs"
+  sources = [ "examples/clockface.rs" ]
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -198,6 +200,8 @@ rustc_binary("infinite_scroll") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/infinite_scroll.rs"
+  sources = [ "examples/infinite_scroll.rs" ]
+  inputs = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
@@ -267,6 +271,7 @@ rustc_binary("ink") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/ink.rs"
+  sources = [ "examples/ink.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
@@ -317,6 +322,7 @@ rustc_binary("shapes") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/shapes.rs"
+  sources = [ "examples/shapes.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fuchsia-async",
@@ -360,6 +366,7 @@ rustc_binary("spinning_square") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/spinning_square.rs"
+  sources = [ "examples/spinning_square.rs" ]
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
@@ -399,6 +406,7 @@ rustc_binary("gamma") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/gamma.rs"
+  sources = [ "examples/gamma.rs" ]
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -441,6 +449,7 @@ rustc_binary("png") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/png.rs"
+  sources = [ "examples/png.rs" ]
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -499,6 +508,7 @@ rustc_binary("svg") {
   version = "0.1.0"
   edition = "2018"
   source_root = "examples/svg.rs"
+  sources = [ "examples/svg.rs" ]
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -570,6 +580,7 @@ rustc_binary("carnelian_integration_test_bin") {
   name = "carnelian_integration_test"
   edition = "2018"
   source_root = "tests/carnelian_integration_test.rs"
+  sources = [ "tests/carnelian_integration_test.rs" ]
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/ui/carnelian",
@@ -597,6 +608,7 @@ rustc_binary("carnelian_fb_integration_test_bin") {
   name = "carnelian_fb_integration_test"
   edition = "2018"
   source_root = "tests/carnelian_integration_test.rs"
+  sources = [ "tests/carnelian_integration_test.rs" ]
   deps = [
     "//src/lib/fuchsia-async",
     "//src/lib/ui/carnelian",
