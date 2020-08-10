@@ -364,24 +364,55 @@ fx build
 
 ### All Tests
 
-| Name                     | Test Command                        | Coverage                                                                  |
-|--------------------------|-------------------------------------|---------------------------------------------------------------------------|
-| gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser                                                  |
+#### Bindings Tests
+
+On device tests generally have greater coverage than host tests, due to support
+for only running a subset of features on host. However, host tests can be
+useful for debugging issues that prevent boot of the device.
+
+##### On Device
+
+| Name                     | Test Command                        | Coverage
+|--------------------------|-------------------------------------|---------------------------
+| c runtime test, coding tables      | `fx test //src/lib/fidl/c`          | //zircon/system/ulib/fidl                                                 |
+| walker, misc             | `fx test fidl-walker-tests`         |  //zircon/system/ulib/fidl
+| walker tests w/ handle closing checks | `fx test fidl-handle-closing-tests` | //zircon/system/ulib/fidl
+| hlcpp bindings tests including conformance tests     | `fx test fidl_tests`                | //sdk/lib/fidl                                                             |
+| llcpp bindings tests     | `fx test //src/lib/fidl/llcpp/tests`     | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
+| go bindings tests        | `fx test go_fidl_tests`             | //third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
+| dart bindings tests      | `fx test fidl_bindings_test`        | //topaz/public/dart/fidl                                                  |
+| rust bindings tests      | `fx test fidl-rust-tests`           | //src/lib/fidl/rust/fidl                                                  |
+
+##### Host
+
+| Name                     | Test Command                        | Coverage
+|--------------------------|-------------------------------------|---------------------------
+| walker, misc             | `fx test --host fidl-walker-host-tests`         |  //zircon/system/ulib/fidl
+| hlcpp unittests          | `fx test --host fidl_cpp_host_unittests`        |  //sdk/lib/fidl
+| hlcpp conformance tests  | `fx test --host fidl_cpp_host_conformance_test`         |  //sdk/lib/fidl
+| llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_test`            |  //zircon/system/ulib/fidl/include/lib/fidl/llcpp
+| rust conformance tests   | `fx test --host fx test fidl_rust_conformance_tests` | //src/lib/fidl/rust
+| rust fidl lib tests      | `fx test --host fidl_rust_lib_tests`     | //src/lib/fidl/rust
+
+#### Fidlgen Tests
+
+| Name                     | Test Command                        | Coverage
+|--------------------------|-------------------------------------|---------------------------
 | fidlgen type definitions | `fx test fidlgen_types_test`        | //garnet/go/src/fidl/compiler/backend/types                               |
 | fidlgen hlcpp            | `fx test fidlgen_hlcpp_test`        | //tools/fidl/fidlgen_hlcpp                                                |
 | fidlgen llcpp            | `fx test fidlgen_llcpp_test`        | //tools/fidl/fidlgen_llcpp                                                |
 | fidlgen golang           | `fx test fidlgen_go_test`           | //tools/fidl/fidlgen_golang                                               |
 | fidlgen rust             | `fx test fidlgen_rust_test`         | //tools/fidl/fidlgen_rust                                                 |
 | fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | //tools/fidl/fidlgen_syzkaller                                            |
-| fidlgen dart             | `fx test fidlgen_dart_backend_test` | //topaz/bin/fidlgen_dart                                                  |
-| fidl c runtime test      | `fx test //src/lib/fidl/c`          | //zircon/system/ulib/fidl                                                 |
-| c++ host unittests       | `fx test fidl_cpp_host_unittests`   | //sdk/lib/fidl                                                            |
-| c++ bindings tests       | `fx test fidl_tests`                | //sdk/lib/fidl                                                            |
-| llcpp bindings tests     | `fx test fidl_llcpp_types_test`     | //tools/fidl/fidlgen_llcpp //zircon/system/ulib/fidl                      |
-| go bindings tests        | `fx test go_fidl_tests`             | //third_party/go/syscall/zx/fidl third_party/go/syscall/zx/fidl/fidl_test |
-| dart bindings tests      | `fx test fidl_bindings_test`        | //topaz/public/dart/fidl                                                  |
-| rust bindings tests      | `fx test fidl-rust-tests`           | //src/lib/fidl/rust/fidl                                                  |
-| measure tape test        | `fx test measure-tape-tests`        | //tools/fidl/measure-tape                                                 |
+| fidlgen dart             | `fx test fidlgen_dart_backend_test` | //topaz/bin/fidlgen_dart
+
+#### Other
+
+| Name                     | Test Command                        | Coverage
+|--------------------------|-------------------------------------|---------------------------
+| fidlc compiler           | `fx test fidl-compiler`             | //zircon/tools/fidl
+| gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser
+| measure tape test        | `fx test measure-tape-tests`        | //tools/fidl/measure-tape
 
 ### All Benchmarks
 
