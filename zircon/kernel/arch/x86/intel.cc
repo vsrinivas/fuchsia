@@ -40,6 +40,19 @@ static uint32_t microcode_checksum(uint32_t* patch, size_t dwords) {
   return sum;
 }
 
+bool x86_intel_idle_state_may_empty_rsb(X86IdleState* state) {
+  const x86_microarch_config_t* const microarch = x86_get_microarch_config();
+  switch (microarch->x86_microarch) {
+  // C-states deeper than C6 may empty the return stack buffer on certain CPUs.
+  // Sequences of code that are sensitive to empty RSBs may wish to refill it when it is emptied;
+  // return true if a selected idle state may drain this structure.
+  case X86_MICROARCH_INTEL_SKYLAKE:
+    return state->MwaitHint() >= 0x20;
+  default:
+    return false;
+  }
+}
+
 bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, zx_iovec_t patch) {
   // See Intel SDM Volume 3 9.11 "Microcode Update Facilities"
   const uint32_t processor_signature = cpuid->ReadProcessorId().signature();

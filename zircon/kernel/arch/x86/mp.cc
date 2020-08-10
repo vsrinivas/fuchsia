@@ -359,8 +359,10 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
   struct x86_percpu* percpu = x86_get_percpu();
   if (use_monitor) {
     for (;;) {
+      bool rsb_maybe_empty = false;
       while (*percpu->monitor) {
         X86IdleState* next_state = percpu->idle_states->PickIdleState();
+        rsb_maybe_empty |= x86_intel_idle_state_may_empty_rsb(next_state);
         LocalTraceDuration trace{"idle"_stringref, next_state->MwaitHint(), 0u};
         x86_monitor(percpu->monitor);
         // Check percpu->monitor in case it was cleared between the first check and
@@ -376,8 +378,11 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
           next_state->CountEntry();
         }
       }
-      // TODO(fxb/33667, fxb/12540): Spectre V2 (Skylake+ only): If we enter a deep sleep state,
-      // fill the RSB before RET-ing from this function.
+      // Spectre V2: If we enter a deep sleep state, fill the RSB before RET-ing from this function.
+      // (CVE-2017-5715, see Intel "Deep Dive: Retpoline: A Branch Target Injection Mitigation").
+      if (x86_cpu_vulnerable_to_rsb_underflow() & rsb_maybe_empty) {
+        x86_ras_fill();
+      }
       Thread::Current::Preempt();
     }
   } else {
