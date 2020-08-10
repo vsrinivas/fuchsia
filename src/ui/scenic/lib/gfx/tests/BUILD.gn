@@ -56,6 +56,7 @@ source_set("testing_deps") {
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/ui/bin/root_presenter:safe_presenter",
     "//src/ui/lib/escher",
     "//src/ui/lib/escher/test/common:gtest_escher",
     "//src/ui/lib/glm_workaround",
@@ -69,6 +70,7 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/utils",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
   ]
 }

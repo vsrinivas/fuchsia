@@ -30,6 +30,7 @@
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
+#include "src/ui/bin/root_presenter/safe_presenter.h"
 #include "src/ui/lib/input_report_reader/input_reader.h"
 
 namespace root_presenter {
@@ -148,6 +149,8 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<scenic::LayerStack> layer_stack_;
 
   std::unique_ptr<Presentation> presentation_;
+
+  std::unique_ptr<SafePresenter> safe_presenter_;
 
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;

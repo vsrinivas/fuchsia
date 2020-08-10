@@ -39,6 +39,7 @@ executable("root_presenter_unittests") {
     "factory_reset_manager_test.cc",
     "media_buttons_handler_unittest.cc",
     "root_presenter_unittest.cc",
+    "safe_presenter_unittest.cc",
   ]
 
   deps = [
@@ -64,6 +65,7 @@ executable("root_presenter_unittests") {
     "//src/ui/bin/root_presenter:factory_reset_manager",
     "//src/ui/bin/root_presenter:lib",
     "//src/ui/bin/root_presenter:media_buttons_handler",
+    "//src/ui/bin/root_presenter:safe_presenter",
     "//src/ui/bin/root_presenter/tests/fakes",
     "//src/ui/lib/key_util",
     "//src/ui/testing:mock_input_device",

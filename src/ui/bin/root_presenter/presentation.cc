@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+#include "src/ui/bin/root_presenter/safe_presenter.h"
+
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 // clang-format on
@@ -38,7 +40,8 @@ Presentation::Presentation(
     fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    ActivityNotifier* activity_notifier, int32_t display_startup_rotation_adjustment)
+    SafePresenter* safe_presenter, ActivityNotifier* activity_notifier,
+    int32_t display_startup_rotation_adjustment)
     : scenic_(scenic),
       session_(session),
       compositor_id_(compositor_id),
@@ -53,8 +56,10 @@ Presentation::Presentation(
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       a11y_binding_(this),
+      safe_presenter_(safe_presenter),
       weak_factory_(this) {
   FX_DCHECK(compositor_id != 0);
+  FX_DCHECK(safe_presenter_);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
   scene_.AddChild(root_node_);
@@ -103,7 +108,7 @@ Presentation::Presentation(
         if (weak) {
           // Get display parameters and propagate values appropriately.
           weak->InitializeDisplayModel(std::move(display_info));
-          weak->PresentScene();
+          weak->safe_presenter_->QueuePresent([] {});
         }
       });
 }
@@ -131,7 +136,7 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log, bool present_changes
   bool updated = ApplyDisplayModelChangesHelper(print_log);
 
   if (updated && present_changes) {
-    PresentScene();
+    safe_presenter_->QueuePresent([] {});
   }
   return updated;
 }
@@ -301,9 +306,7 @@ void Presentation::SetClipSpaceTransform(float x, float y, float scale,
   camera_.SetClipSpaceTransform(x, y, scale);
   // The callback is used to throttle magnification transition animations and is expected to
   // approximate the framerate.
-  // TODO(35521): In the future, this may need to be downsampled as |Present| calls must be
-  // throttled, at which point the |SetClipSpaceTransformCallback|s should be consolidated.
-  session_->Present(0, [callback = std::move(callback)](auto) { callback(); });
+  safe_presenter_->QueuePresent([callback = std::move(callback)] { callback(); });
 }
 
 void Presentation::ResetClipSpaceTransform() {
@@ -347,31 +350,6 @@ void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputRe
   FX_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
 
   // No clients of sensor events at the moment.
-}
-
-void Presentation::PresentScene() {
-  if (session_present_state_ == kPresentPendingAndSceneDirty) {
-    return;
-  } else if (session_present_state_ == kPresentPending) {
-    session_present_state_ = kPresentPendingAndSceneDirty;
-    return;
-  }
-
-  // There is no present pending, so we will kick one off.
-  session_present_state_ = kPresentPending;
-
-  session_->Present(0, [weak = weak_factory_.GetWeakPtr()](fuchsia::images::PresentationInfo info) {
-    if (auto self = weak.get()) {
-      bool scene_dirty = self->session_present_state_ == kPresentPendingAndSceneDirty;
-
-      // Clear the present state.
-      self->session_present_state_ = kNoPresentPending;
-
-      if (scene_dirty) {
-        self->PresentScene();
-      }
-    }
-  });
 }
 
 void Presentation::SetScenicDisplayRotation() {
