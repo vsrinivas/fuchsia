@@ -81,12 +81,9 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(const std::vector<std::string>& module_path);
 
-  // Stops the story as part of a story provider operation. The story provider
-  // can indicate whether this is part of an operation where all stories are
-  // stopped at once in order to stop the session shell, indicated by bulk being
-  // true. Happens at logout or when session shells are swapped. In that
-  // situation, DetachView() is not called for this story.
-  void StopBulk(bool bulk, StopCallback done);
+  // Tears down the story and optionally skips notifying the session shell
+  // that the story view has gone away.
+  void Teardown(bool skip_notifying_sessionshell, StopCallback done);
 
  private:
   // Operations implemented here.

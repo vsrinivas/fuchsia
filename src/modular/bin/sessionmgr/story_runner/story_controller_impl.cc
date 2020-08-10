@@ -434,11 +434,11 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
 class StoryControllerImpl::TeardownStoryCall : public Operation<> {
  public:
-  TeardownStoryCall(StoryControllerImpl* const story_controller_impl, const bool bulk,
-                    fit::function<void()> done)
+  TeardownStoryCall(StoryControllerImpl* const story_controller_impl,
+                    const bool skip_notifying_sessionshell, fit::function<void()> done)
       : Operation("StoryControllerImpl::TeardownStoryCall", std::move(done)),
         story_controller_impl_(story_controller_impl),
-        bulk_(bulk) {}
+        skip_notifying_sessionshell_(skip_notifying_sessionshell) {}
 
  private:
   void Run() override {
@@ -449,10 +449,7 @@ class StoryControllerImpl::TeardownStoryCall : public Operation<> {
 
     story_controller_impl_->SetRuntimeState(fuchsia::modular::StoryState::STOPPING);
 
-    // If this TeardownStoryCall is part of a bulk operation of story provider that stops
-    // all stories at once, no DetachView() notification is given to the session
-    // shell.
-    if (bulk_) {
+    if (skip_notifying_sessionshell_) {
       StopStory();
       return;
     }
@@ -543,7 +540,7 @@ class StoryControllerImpl::TeardownStoryCall : public Operation<> {
 
   // Whether this Stop operation is part of stopping all stories at once. In
   // that case, DetachView() is not called.
-  const bool bulk_;
+  const bool skip_notifying_sessionshell_;
 };
 
 class StoryControllerImpl::DeleteModuleCall : public Operation<> {
@@ -584,8 +581,8 @@ class StoryControllerImpl::DeleteModuleAndTeardownStoryIfEmptyCall : public Oper
     // If this is the last module in the story, tear down the story as well.
     auto* const running_mod_info = story_controller_impl_->FindRunningModInfo(module_path_);
     if (running_mod_info && story_controller_impl_->running_mod_infos_.size() == 1) {
-      operation_queue_.Add(
-          std::make_unique<TeardownStoryCall>(story_controller_impl_, false /* bulk */, [flow] {}));
+      operation_queue_.Add(std::make_unique<TeardownStoryCall>(
+          story_controller_impl_, false /* skip_notifying_sessionshell */, [flow] {}));
     }
   }
 
@@ -891,12 +888,13 @@ void StoryControllerImpl::RequestStart() {
 }
 
 void StoryControllerImpl::Stop(StopCallback done) {
-  operation_queue_.Add(
-      std::make_unique<TeardownStoryCall>(this, false /* bulk */, std::move(done)));
+  operation_queue_.Add(std::make_unique<TeardownStoryCall>(
+      this, false /* skip_notifying_sessionshell */, std::move(done)));
 }
 
-void StoryControllerImpl::StopBulk(const bool bulk, StopCallback done) {
-  operation_queue_.Add(std::make_unique<TeardownStoryCall>(this, bulk, std::move(done)));
+void StoryControllerImpl::Teardown(const bool skip_notifying_sessionshell, StopCallback done) {
+  operation_queue_.Add(
+      std::make_unique<TeardownStoryCall>(this, skip_notifying_sessionshell, std::move(done)));
 }
 
 void StoryControllerImpl::Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) {

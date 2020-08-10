@@ -149,16 +149,15 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   void MaybeLoadStoryShell();
 
-  Environment* const session_environment_;
+  Environment* const session_environment_;  // Not owned.
+  SessionStorage* session_storage_;         // Not owned.
 
-  SessionStorage* session_storage_;  // Not owned.
-
-  // The service from the session shell run by the sessionmgr. Owned here
-  // because only used from here.
+  // SessionShell service served by the session shell component.
   fuchsia::modular::SessionShellPtr session_shell_;
 
   // The bindings for this instance.
   fidl::BindingSet<fuchsia::modular::StoryProvider> bindings_;
+  fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
 
   // Component URL and arguments used to launch story shells.
   fuchsia::modular::session::AppConfig story_shell_config_;
@@ -172,8 +171,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // Used to manufacture new StoryShells if not launching a new component for
   // every requested StoryShell instance.
   fuchsia::modular::StoryShellFactoryPtr story_shell_factory_;
-
-  fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.

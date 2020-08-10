@@ -37,11 +37,11 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
  public:
   using StoryRuntimesMap = std::map<std::string, struct StoryRuntimeContainer>;
 
-  StopStoryCall(std::string story_id, const bool bulk,
+  StopStoryCall(std::string story_id, const bool skip_notifying_sessionshell,
                 StoryRuntimesMap* const story_runtime_containers, ResultCall result_call)
       : Operation("StoryProviderImpl::StopStoryCall", std::move(result_call)),
         story_id_(std::move(story_id)),
-        bulk_(bulk),
+        skip_notifying_sessionshell_(skip_notifying_sessionshell),
         story_runtime_containers_(story_runtime_containers) {}
 
  private:
@@ -55,22 +55,26 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
     }
 
     FX_DCHECK(i->second.controller_impl != nullptr);
-    i->second.controller_impl->StopBulk(bulk_, [weak_ptr = GetWeakPtr(), this, flow] {
-      // Ensure |story_runtime_containers_| has not been destroyed.
-      //
-      // This operation and its parent |StoryProviderImpl| may be destroyed before this
-      // callback executes, for example when |StoryProviderImpl.Teardown| times out.
-      // When this happens, `operation_queue_` and this operation are destroyed before
-      // |story_runtime_containers_|, invalidating |weak_ptr|.
-      if (!weak_ptr)
-        return;
-      story_runtime_containers_->erase(story_id_);
-    });
+    i->second.controller_impl->Teardown(skip_notifying_sessionshell_,
+                                        [weak_ptr = GetWeakPtr(), this, flow] {
+                                          // Ensure |story_runtime_containers_| has not been
+                                          // destroyed.
+                                          //
+                                          // This operation and its parent |StoryProviderImpl| may
+                                          // be destroyed before this callback executes, for example
+                                          // when |StoryProviderImpl.Teardown| times out. When this
+                                          // happens, `operation_queue_` and this operation are
+                                          // destroyed before |story_runtime_containers_|,
+                                          // invalidating |weak_ptr|.
+                                          if (!weak_ptr)
+                                            return;
+                                          story_runtime_containers_->erase(story_id_);
+                                        });
   }
 
  private:
   const std::string story_id_;
-  const bool bulk_;
+  const bool skip_notifying_sessionshell_;
   StoryRuntimesMap* const story_runtime_containers_;
 };
 
@@ -158,7 +162,8 @@ class StoryProviderImpl::StopAllStoriesCall : public Operation<> {
       // OperationQueue on which we're running will block.  Moving over to
       // fit::promise will allow us to observe cancellation.
       operations_.Add(std::make_unique<StopStoryCall>(
-          it.first, true /* bulk */, &story_provider_impl_->story_runtime_containers_, [flow] {}));
+          it.first, true /* skip_notifying_sessionshell */,
+          &story_provider_impl_->story_runtime_containers_, [flow] {}));
     }
   }
 
@@ -480,12 +485,13 @@ void StoryProviderImpl::OnStoryStorageUpdated(std::string story_id,
 }
 
 void StoryProviderImpl::OnStoryStorageDeleted(std::string story_id) {
-  operation_queue_.Add(std::make_unique<StopStoryCall>(
-      story_id, false /* bulk */, &story_runtime_containers_, [this, story_id] {
-        for (const auto& i : watchers_.ptrs()) {
-          (*i)->OnDelete(story_id);
-        }
-      }));
+  operation_queue_.Add(
+      std::make_unique<StopStoryCall>(story_id, false /* skip_notifying_sessionshell */,
+                                      &story_runtime_containers_, [this, story_id] {
+                                        for (const auto& i : watchers_.ptrs()) {
+                                          (*i)->OnDelete(story_id);
+                                        }
+                                      }));
 }
 
 void StoryProviderImpl::NotifyStoryWatchers(const fuchsia::modular::internal::StoryData* story_data,
