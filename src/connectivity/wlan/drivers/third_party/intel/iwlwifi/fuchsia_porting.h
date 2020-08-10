@@ -378,6 +378,7 @@ static inline size_t find_first_bit(unsigned* bits, const size_t num_bits) {
 //     The output buffer given in the input argument. This is helpful in printf("%s").
 //     NULL if the output buffer is too small.
 //
+static const char kNP = '.';  // the character used to show non-printable character.
 void hex_dump(const char* prefix, const void* ptr, size_t len);
 // for testing
 #define HEX_DUMP_BUF_SIZE 70

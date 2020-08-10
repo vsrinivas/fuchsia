@@ -161,10 +161,10 @@ TEST_F(FuchsiaPortingTest, HexDumpExactly16Bytes) {
   EXPECT_EQ(':', buf[15 * 3 + 2]);
 
   // ASCII part
-  EXPECT_EQ('?', buf[50]);                      // non-printable
+  EXPECT_EQ(kNP, buf[50]);                      // non-printable
   EXPECT_EQ('E', buf[52]);                      // printable
-  EXPECT_EQ('?', buf[54]);                      // non-printable
-  EXPECT_EQ('?', buf[55]);                      // the last byte: non-printable
+  EXPECT_EQ(kNP, buf[54]);                      // non-printable
+  EXPECT_EQ(kNP, buf[55]);                      // the last byte: non-printable
   EXPECT_EQ('\0', buf[HEX_DUMP_BUF_SIZE - 1]);  // null-terminator
 }
 

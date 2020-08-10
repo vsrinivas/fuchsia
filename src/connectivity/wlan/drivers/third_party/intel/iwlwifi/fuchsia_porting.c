@@ -14,10 +14,10 @@
 static char hex_char(uint8_t ch) { return (ch >= 10) ? (ch - 10) + 'a' : ch + '0'; }
 
 static char printable(uint8_t ch) {
-  if (ch >= 0x20 && ch < 0x80) {
+  if (ch >= 0x20 && ch < 0x7f) {
     return ch;
   } else {
-    return '?';
+    return kNP;
   }
 }
 
@@ -47,7 +47,11 @@ char* hex_dump_str(char* output, size_t output_size, const void* ptr, size_t len
 }
 
 void hex_dump(const char* prefix, const void* ptr, size_t len) {
-  IWL_INFO(NULL, "%sdump %zu (0x%zx) bytes:\n", prefix, len, len);
+  IWL_INFO(NULL, "%sdump %zu (0x%zx) bytes %p:\n", prefix, len, len, ptr);
+  if (!ptr) {
+    return;
+  }
+
   for (size_t i = 0; i < len; i += MAX_DUMP_LEN_IN_A_ROW) {
     char buf[HEX_DUMP_BUF_SIZE];
     hex_dump_str(buf, sizeof(buf), ptr + i, MIN(len - i, MAX_DUMP_LEN_IN_A_ROW));
