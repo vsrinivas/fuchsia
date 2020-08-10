@@ -86,17 +86,30 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 	var fields []string
 	if decl, ok := decl.(*gidlmixer.UnionDecl); ok && len(value.Fields) >= 1 {
+		field := value.Fields[0]
+		fullName := declName(decl)
+		var tagValue string
+		if field.Key.IsUnknown() {
+			tagValue = fmt.Sprintf("%d", field.Key.UnknownOrdinal)
+		} else {
+			fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
+			tagValue = fmt.Sprintf("%s%s", fullName, fieldName)
+		}
 		parts := strings.Split(string(decl.Name()), "/")
 		unqualifiedName := fidlcommon.ToLowerCamelCase(parts[len(parts)-1])
-		fullName := declName(decl)
-		fieldName := fidlcommon.ToUpperCamelCase(value.Fields[0].Key.Name)
 		fields = append(fields,
-			fmt.Sprintf("I_%sTag: %s%s", unqualifiedName, fullName, fieldName))
+			fmt.Sprintf("I_%sTag: %s", unqualifiedName, tagValue))
 	}
 	_, isTable := decl.(*gidlmixer.TableDecl)
 	for _, field := range value.Fields {
 		if field.Key.IsUnknown() {
-			panic("unknown field not supported")
+			if isTable {
+				panic("Go does not store unknown data for tables")
+			}
+			unknownData := field.Value.(gidlir.UnknownData)
+			fields = append(fields,
+				fmt.Sprintf("I_unknownData: %s", bytesBuilder(unknownData.Bytes)))
+			continue
 		}
 		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)

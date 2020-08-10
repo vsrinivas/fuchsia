@@ -163,9 +163,6 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
-		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
-			continue
-		}
 		value := visit(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -189,9 +186,6 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
-		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
-			continue
-		}
 		value := visit(decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -214,9 +208,6 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		decl, err := schema.ExtractDeclarationUnsafe(encodeFailure.Value)
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
-		}
-		if gidlir.ContainsUnknownField(encodeFailure.Value) {
-			continue
 		}
 		code, err := goErrorCode(encodeFailure.Err)
 		if err != nil {
