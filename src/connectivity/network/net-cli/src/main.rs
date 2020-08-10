@@ -265,7 +265,7 @@ async fn do_fwd(cmd: opts::FwdEnum, stack: StackProxy) -> Result<(), Error> {
 
 async fn do_route(cmd: opts::RouteEnum, netstack: NetstackProxy) -> Result<(), Error> {
     match cmd {
-        RouteEnum::List(_) => {
+        RouteEnum::List(RouteList {}) => {
             let response =
                 netstack.get_route_table2().await.context("error retrieving routing table")?;
 
@@ -291,7 +291,35 @@ async fn do_route(cmd: opts::RouteEnum, netstack: NetstackProxy) -> Result<(), E
             t.printstd();
             println!();
         }
+        RouteEnum::Add(route) => {
+            let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
+                transaction.add_route(&mut route.into())
+            })
+            .await?;
+        }
+        RouteEnum::Del(route) => {
+            let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
+                transaction.del_route(&mut route.into())
+            })
+            .await?;
+        }
     }
+    Ok(())
+}
+
+async fn with_route_table_transaction_and_entry<T, F>(
+    netstack: &fidl_fuchsia_netstack::NetstackProxy,
+    func: T,
+) -> Result<(), Error>
+where
+    F: core::future::Future<Output = Result<i32, fidl::Error>>,
+    T: FnOnce(&fidl_fuchsia_netstack::RouteTableTransactionProxy) -> F,
+{
+    let (route_table, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_netstack::RouteTableTransactionMarker>()?;
+    let () = fuchsia_zircon::Status::ok(netstack.start_route_table_transaction(server_end).await?)?;
+    let status = func(&route_table).await?;
+    let () = fuchsia_zircon::Status::ok(status)?;
     Ok(())
 }
 
@@ -711,5 +739,83 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_dhcp_stop() {
         let () = test_do_dhcp(DhcpEnum::Stop(DhcpStop { id: 1 })).await;
+    }
+
+    async fn test_modify_route(cmd: RouteEnum) {
+        let (netstack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+        let op = do_route(cmd.clone(), netstack.clone());
+        let op_succeeds = async move {
+            let (route_table_requests, netstack_responder) = requests
+                .try_next()
+                .await
+                .expect("start route table transaction FIDL error")
+                .expect("request stream should not have ended")
+                .into_start_route_table_transaction()
+                .expect("request should be of type StartRouteTableTransaction");
+            let mut route_table_requests =
+                route_table_requests.into_stream().expect("should convert to request stream");
+            netstack_responder
+                .send(fuchsia_zircon::Status::OK.into_raw())
+                .expect("netstack_responder.send should succeed");
+            let () = match cmd {
+                RouteEnum::List(RouteList {}) => {
+                    panic!("test_modify_route should not take a List command")
+                }
+                RouteEnum::Add(route) => {
+                    let expected_entry = route.into();
+                    let (entry, responder) = route_table_requests
+                        .try_next()
+                        .await
+                        .expect("add route FIDL error")
+                        .expect("request stream should not have ended")
+                        .into_add_route()
+                        .expect("request should be of type AddRoute");
+                    assert_eq!(entry, expected_entry);
+                    responder.send(fuchsia_zircon::Status::OK.into_raw())
+                }
+                RouteEnum::Del(route) => {
+                    let expected_entry = route.into();
+                    let (entry, responder) = route_table_requests
+                        .try_next()
+                        .await
+                        .expect("del route FIDL error")
+                        .expect("request stream should not have ended")
+                        .into_del_route()
+                        .expect("request should be of type DelRoute");
+                    assert_eq!(entry, expected_entry);
+                    responder.send(fuchsia_zircon::Status::OK.into_raw())
+                }
+            }?;
+            Ok(())
+        };
+        let ((), ()) =
+            futures::future::try_join(op, op_succeeds).await.expect("dhcp command should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_route_add() {
+        // Test arguments have been arbitrarily selected.
+        let () = test_modify_route(RouteEnum::Add(RouteAdd {
+            destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
+            netmask: std::net::IpAddr::V4(std::net::Ipv4Addr::new(255, 255, 255, 0)),
+            gateway: None,
+            nicid: 2,
+            metric: 100,
+        }))
+        .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_route_del() {
+        // Test arguments have been arbitrarily selected.
+        let () = test_modify_route(RouteEnum::Del(RouteDel {
+            destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
+            netmask: std::net::IpAddr::V4(std::net::Ipv4Addr::new(255, 255, 255, 0)),
+            gateway: None,
+            nicid: 2,
+            metric: 100,
+        }))
+        .await;
     }
 }

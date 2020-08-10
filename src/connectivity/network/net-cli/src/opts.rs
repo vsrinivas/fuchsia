@@ -336,12 +336,64 @@ pub struct Route {
 #[argh(subcommand)]
 pub enum RouteEnum {
     List(RouteList),
+    Add(RouteAdd),
+    Del(RouteDel),
 }
 
 #[derive(FromArgs, Clone, Debug)]
 #[argh(subcommand, name = "list")]
 /// lists devices
 pub struct RouteList {}
+
+macro_rules! route_struct {
+    ($ty_name:ident, $name:literal, $comment:expr) => {
+        #[derive(FromArgs, Clone, Debug)]
+        #[argh(subcommand, name = $name)]
+        #[doc = $comment]
+        pub struct $ty_name {
+            #[argh(option)]
+            /// the network id of the destination network
+            pub destination: std::net::IpAddr,
+            #[argh(option)]
+            /// the netmask corresponding to destination
+            pub netmask: std::net::IpAddr,
+            #[argh(option)]
+            /// the ip address of the first hop router
+            pub gateway: Option<std::net::IpAddr>,
+            #[argh(option)]
+            /// the outgoing network interface id of the route
+            pub nicid: u32,
+            #[argh(option)]
+            /// the metric for the route
+            pub metric: u32,
+        }
+
+        impl Into<fidl_fuchsia_netstack::RouteTableEntry2> for $ty_name {
+            fn into(self) -> fidl_fuchsia_netstack::RouteTableEntry2 {
+                let Self {
+                    destination,
+                    netmask,
+                    gateway,
+                    nicid,
+                    metric,
+                } = self;
+                fidl_fuchsia_netstack::RouteTableEntry2 {
+                    destination: fidl_fuchsia_net_ext::IpAddress(destination).into(),
+                    netmask: fidl_fuchsia_net_ext::IpAddress(netmask).into(),
+                    gateway: gateway.map(|gateway| {
+                        Box::new(fidl_fuchsia_net_ext::IpAddress(gateway).into())
+                    }),
+                    nicid,
+                    metric,
+                }
+            }
+        }
+    };
+}
+
+// TODO(https://github.com/google/argh/issues/48): do this more sanely.
+route_struct!(RouteAdd, "add", "adds a route to the route table");
+route_struct!(RouteDel, "del", "deletes a route from the route table");
 
 #[derive(FromArgs, Clone, Debug)]
 #[argh(subcommand, name = "stat")]
