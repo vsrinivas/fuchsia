@@ -26,7 +26,6 @@ TEST(InspectorParser, ParseSuperblock) {
   Superblock out_superblock = GetSuperblock(&device);
   ASSERT_EQ(superblock.magic0, out_superblock.magic0);
   ASSERT_EQ(superblock.magic1, out_superblock.magic1);
-  ASSERT_EQ(superblock.blob_header_next, out_superblock.blob_header_next);
   ASSERT_EQ(superblock.alloc_block_count, out_superblock.alloc_block_count);
 }
 

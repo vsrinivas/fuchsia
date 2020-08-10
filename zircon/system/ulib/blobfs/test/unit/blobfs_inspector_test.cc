@@ -183,7 +183,7 @@ TEST(BlobfsInspector, InspectSuperblock) {
   EXPECT_EQ(kBlobfsBlockSize, sb.block_size);
   EXPECT_EQ(1, sb.alloc_block_count);
   EXPECT_EQ(0, sb.alloc_inode_count);
-  EXPECT_EQ(0, sb.blob_header_next);
+  EXPECT_EQ(0, sb.reserved2);
 }
 
 TEST(BlobfsInspector, GetInodeCount) {

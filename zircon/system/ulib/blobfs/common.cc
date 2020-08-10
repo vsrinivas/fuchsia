@@ -54,8 +54,6 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "\n"
           "info.alloc_inode_count: %" PRIu64
           "\n"
-          "info.blob_header_next: %" PRIu64
-          "\n"
           "info.slice_size: %" PRIu64
           "\n"
           "info.vslice_count: %" PRIu64
@@ -69,8 +67,8 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "info.journal_slices: %" PRIu32 "\n",
           info.magic0, info.magic1, info.version, info.flags, info.block_size,
           info.data_block_count, info.journal_block_count, info.inode_count, info.alloc_block_count,
-          info.alloc_inode_count, info.blob_header_next, info.slice_size, info.vslice_count,
-          info.abm_slices, info.ino_slices, info.dat_slices, info.journal_slices);
+          info.alloc_inode_count, info.slice_size, info.vslice_count, info.abm_slices,
+          info.ino_slices, info.dat_slices, info.journal_slices);
 }
 
 }  // namespace
@@ -189,11 +187,6 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
       return ZX_ERR_INVALID_ARGS;
     }
   }
-  if (info->blob_header_next != 0) {
-    FS_TRACE_ERROR("blobfs: linked blob headers not yet supported\n");
-    DumpSuperblock(*info, stderr);
-    return ZX_ERR_INVALID_ARGS;
-  }
   return ZX_OK;
 }
 
@@ -222,7 +215,6 @@ void InitializeSuperblock(uint64_t block_count, Superblock* info) {
   info->inode_count = inodes;
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
-  info->blob_header_next = 0;  // TODO(smklein): Allow chaining
 
   // Temporarily set the data_block_count to the total block_count so we can estimate the number
   // of pre-data blocks.

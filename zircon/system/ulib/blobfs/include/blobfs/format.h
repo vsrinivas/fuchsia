@@ -100,7 +100,10 @@ struct __PACKED Superblock {
   uint64_t inode_count;          // Number of blobs in this area.
   uint64_t alloc_block_count;    // Total number of allocated blocks.
   uint64_t alloc_inode_count;    // Total number of allocated blobs and container nodes.
-  uint64_t blob_header_next;     // Block containing next blobfs, or zero if this is the last one.
+  // NOTE: prior to https://fuchsia-review.googlesource.com/c/fuchsia/+/404619, |reserved2| was
+  // explicitly required to be zero. This field may be used for other purposes, but doing so is a
+  // backwards-incompatible change.
+  uint64_t reserved2;            // Unused.
 
   // The following fields are only valid with (flags & kBlobFlagFVM):
   uint64_t slice_size;      // Underlying slice size.
