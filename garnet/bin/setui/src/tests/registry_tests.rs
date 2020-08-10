@@ -5,11 +5,13 @@ use crate::internal::core::{message::create_hub, Address, Payload};
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor as BaseReceptor;
-use crate::registry::base::{Command, SettingHandlerFactory, SettingHandlerFactoryError, State};
+use crate::registry::base::{
+    Command, SettingHandlerFactory, SettingHandlerFactoryError, SettingHandlerResult, State,
+};
 use crate::registry::registry_impl::RegistryImpl;
+use crate::registry::setting_handler::ControllerError;
 use crate::switchboard::base::{
-    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingResponseResult,
-    SettingType, SwitchboardError,
+    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
 
 use async_trait::async_trait;
@@ -27,18 +29,18 @@ struct SettingHandler {
     setting_type: SettingType,
     messenger: handler::message::Messenger,
     state_tx: UnboundedSender<State>,
-    next_response: Option<(SettingRequest, SettingResponseResult)>,
+    next_response: Option<(SettingRequest, SettingHandlerResult)>,
     done_tx: Option<oneshot::Sender<()>>,
     proxy_signature: handler::message::Signature,
 }
 
 impl SettingHandler {
-    fn process_state(&mut self, state: State) -> SettingResponseResult {
+    fn process_state(&mut self, state: State) -> SettingHandlerResult {
         self.state_tx.unbounded_send(state).ok();
         Ok(None)
     }
 
-    pub fn set_next_response(&mut self, request: SettingRequest, response: SettingResponseResult) {
+    pub fn set_next_response(&mut self, request: SettingRequest, response: SettingHandlerResult) {
         self.next_response = Some((request, response));
     }
 
@@ -52,14 +54,14 @@ impl SettingHandler {
             .ack();
     }
 
-    fn process_request(&mut self, request: SettingRequest) -> SettingResponseResult {
+    fn process_request(&mut self, request: SettingRequest) -> SettingHandlerResult {
         if let Some((match_request, result)) = self.next_response.take() {
             if request == match_request {
                 return result;
             }
         }
 
-        Err(SwitchboardError::UnimplementedRequest(self.setting_type, request))
+        Err(ControllerError::UnimplementedRequest(self.setting_type, request))
     }
 
     fn create(
@@ -497,7 +499,7 @@ async fn test_regeneration() {
     assert_eq!(2, handler_factory.lock().await.get_request_count(setting_type));
 }
 
-async fn get_response(mut receptor: SwitchboardReceptor) -> Option<(u64, SettingResponseResult)> {
+async fn get_response(mut receptor: SwitchboardReceptor) -> Option<(u64, SettingHandlerResult)> {
     while let Some(event) = receptor.next().await {
         if let MessageEvent::Message(
             Payload::Event(SettingEvent::Response(response_id, response)),

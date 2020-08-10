@@ -4,24 +4,23 @@
 
 use {
     crate::call_async,
+    crate::registry::base::SettingHandlerResult,
     crate::registry::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::{
-        SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
-    },
+    crate::switchboard::base::{SettingRequest, SettingType},
     async_trait::async_trait,
     fidl_fuchsia_hardware_power_statecontrol::RebootReason,
     fuchsia_syslog::fx_log_err,
 };
 
-async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), SwitchboardError> {
+async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), ControllerError> {
     let hardware_power_statecontrol_admin = service_context_handle
         .lock()
         .await
         .connect::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
         .await
         .or_else(|_| {
-            Err(SwitchboardError::ExternalFailure(
+            Err(ControllerError::ExternalFailure(
                 SettingType::Power,
                 "hardware_power_statecontrol_manager".into(),
                 "connect".into(),
@@ -29,7 +28,7 @@ async fn reboot(service_context_handle: &ServiceContextHandle) -> Result<(), Swi
         })?;
 
     let build_err = || {
-        SwitchboardError::ExternalFailure(
+        ControllerError::ExternalFailure(
             SettingType::Power,
             "hardware_power_statecontrol_manager".into(),
             "reboot".into(),
@@ -61,7 +60,7 @@ impl controller::Create for PowerController {
 
 #[async_trait]
 impl controller::Handle for PowerController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Reboot => Some(reboot(&self.service_context).await.map(|_| None)),
             _ => None,

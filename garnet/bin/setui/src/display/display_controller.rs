@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::call;
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -10,8 +11,7 @@ use crate::registry::setting_handler::persist::{
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
-    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    SwitchboardError,
+    DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType,
 };
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
@@ -37,7 +37,7 @@ pub trait BrightnessManager: Sized {
         &self,
         info: DisplayInfo,
         client: &ClientProxy<DisplayInfo>,
-    ) -> SettingResponseResult;
+    ) -> SettingHandlerResult;
 }
 
 #[async_trait]
@@ -52,8 +52,8 @@ impl BrightnessManager for () {
         &self,
         info: DisplayInfo,
         client: &ClientProxy<DisplayInfo>,
-    ) -> SettingResponseResult {
-        write(&client, info, false).await.into_response_result()
+    ) -> SettingHandlerResult {
+        write(&client, info, false).await.into_handler_result()
     }
 }
 
@@ -81,7 +81,7 @@ impl BrightnessManager for ExternalBrightnessControl {
         &self,
         info: DisplayInfo,
         client: &ClientProxy<DisplayInfo>,
-    ) -> SettingResponseResult {
+    ) -> SettingHandlerResult {
         write(&client, info, false).await?;
 
         if info.auto_brightness {
@@ -91,7 +91,7 @@ impl BrightnessManager for ExternalBrightnessControl {
         }
         .map(|_| None)
         .map_err(|_| {
-            SwitchboardError::ExternalFailure(
+            ControllerError::ExternalFailure(
                 SettingType::Display,
                 "brightness_service".into(),
                 "set_brightness".into(),
@@ -125,7 +125,7 @@ impl<T> controller::Handle for DisplayController<T>
 where
     T: BrightnessManager + Send + Sync,
 {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Restore => {
                 // Load and set value.

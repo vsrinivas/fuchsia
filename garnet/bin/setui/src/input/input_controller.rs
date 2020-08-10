@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::registry::base::State;
+use crate::registry::base::{SettingHandlerResult, State};
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -12,7 +12,6 @@ use {
     crate::input::{InputMonitor, InputMonitorHandle, InputType},
     crate::switchboard::base::{
         ControllerStateResult, InputInfo, Microphone, SettingRequest, SettingResponse,
-        SettingResponseResult, SwitchboardError,
     },
     futures::lock::Mutex,
     std::sync::Arc,
@@ -47,7 +46,7 @@ struct InputControllerInner {
 
 impl InputControllerInner {
     /// Gets the input state.
-    async fn get_info(&mut self) -> Result<InputInfo, SwitchboardError> {
+    async fn get_info(&mut self) -> Result<InputInfo, ControllerError> {
         let mut input_info = self.client.read().await;
         let mut input_monitor = self.input_monitor.lock().await;
         input_monitor.ensure_monitor().await;
@@ -70,7 +69,7 @@ impl InputControllerInner {
     }
 
     /// Sets the software mic state to [muted].
-    async fn set_mic_mute(&mut self, muted: bool) -> SettingResponseResult {
+    async fn set_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
         let mut input_info = self.client.read().await;
         input_info.microphone.muted = muted;
 
@@ -81,7 +80,7 @@ impl InputControllerInner {
         self.software_mic_muted = muted;
 
         // Store the newly set value.
-        write(&self.client, input_info, false).await.into_response_result()
+        write(&self.client, input_info, false).await.into_handler_result()
     }
 }
 
@@ -107,7 +106,7 @@ impl data_controller::Create<InputInfo> for InputController {
 
 #[async_trait]
 impl controller::Handle for InputController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         #[allow(unreachable_patterns)]
         match request {
             SettingRequest::Restore => {

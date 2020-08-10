@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::audio::ModifiedTimestamps;
+use crate::registry::base::SettingHandlerResult;
+use crate::registry::setting_handler::ControllerError;
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::{LightInfo, LightState};
@@ -16,7 +18,7 @@ use bitflags::bitflags;
 use std::borrow::Cow;
 
 /// Return type from a controller after handling a state change.
-pub type ControllerStateResult = Result<(), SwitchboardError>;
+pub type ControllerStateResult = Result<(), ControllerError>;
 pub type SettingResponseResult = Result<Option<SettingResponse>, SwitchboardError>;
 
 /// A trait for structs where all fields are options. Recursively performs
@@ -33,6 +35,12 @@ pub enum SwitchboardError {
     #[error("Storage failure for setting type: {0:?}")]
     StorageFailure(SettingType),
 
+    #[error("Initialization failure: cause {0:?}")]
+    InitFailure(Cow<'static, str>),
+
+    #[error("Restoration of setting on controller startup failed: cause {0:?}")]
+    RestoreFailure(Cow<'static, str>),
+
     #[error("Invalid argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
     InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
 
@@ -48,11 +56,44 @@ pub enum SwitchboardError {
     #[error("Unexpected error: {0}")]
     UnexpectedError(Cow<'static, str>),
 
-    #[error("Undeliverable Request:{0:?} for setting type: {1:?}")]
+    #[error("Undeliverable Request:{1:?} for setting type: {0:?}")]
     UndeliverableError(SettingType, SettingRequest),
 
     #[error("Communication error")]
     CommunicationError,
+}
+
+impl From<ControllerError> for SwitchboardError {
+    fn from(error: ControllerError) -> Self {
+        match error {
+            ControllerError::UnimplementedRequest(setting_type, request) => {
+                SwitchboardError::UnimplementedRequest(setting_type, request)
+            }
+            ControllerError::WriteFailure(setting_type) => {
+                SwitchboardError::StorageFailure(setting_type)
+            }
+            ControllerError::InitFailure(description) => SwitchboardError::InitFailure(description),
+            ControllerError::RestoreFailure(description) => {
+                SwitchboardError::RestoreFailure(description)
+            }
+            ControllerError::ExternalFailure(setting_type, dependency, request) => {
+                SwitchboardError::ExternalFailure(setting_type, dependency, request)
+            }
+            ControllerError::InvalidArgument(setting_type, argument, value) => {
+                SwitchboardError::InvalidArgument(setting_type, argument, value)
+            }
+            ControllerError::UnhandledType(setting_type) => {
+                SwitchboardError::UnhandledType(setting_type)
+            }
+            ControllerError::UnexpectedError(error) => SwitchboardError::UnexpectedError(error),
+            ControllerError::UndeliverableError(setting_type, request) => {
+                SwitchboardError::UndeliverableError(setting_type, request)
+            }
+            ControllerError::DeliveryError(setting_type, setting_type_2) => {
+                SwitchboardError::DeliveryError(setting_type, setting_type_2)
+            }
+        }
+    }
 }
 
 /// The setting types supported by the messaging system. This is used as a key
@@ -413,7 +454,7 @@ pub enum SettingEvent {
     Changed(SettingType),
     /// A response to a previous SettingActionData::Request is ready. The source
     /// SettingAction's id is provided alongside the result.
-    Response(u64, SettingResponseResult),
+    Response(u64, SettingHandlerResult),
 }
 
 /// A trait handed back from Switchboard's listen interface. Allows client to

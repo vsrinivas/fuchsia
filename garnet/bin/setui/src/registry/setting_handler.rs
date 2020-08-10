@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 use crate::internal::handler::{message, reply, Payload};
 use crate::message::base::{Audience, MessageEvent};
-use crate::registry::base::{Command, Context, ControllerGenerateResult, State};
+use crate::registry::base::{
+    Command, Context, ControllerGenerateResult, SettingHandlerResult, State,
+};
 use crate::registry::device_storage::DeviceStorageFactory;
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{
-    ControllerStateResult, SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
-};
+use crate::switchboard::base::{ControllerStateResult, SettingRequest, SettingType};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -25,14 +25,26 @@ impl<T: DeviceStorageFactory + Send + Sync> StorageFactory for T {}
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ControllerError {
-    #[error("Unimplemented Request")]
-    Unimplemented,
+    #[error("Unimplemented Request:{1:?} for setting type: {0:?}")]
+    UnimplementedRequest(SettingType, SettingRequest),
     #[error("Write failed. setting type: {0:?}")]
     WriteFailure(SettingType),
     #[error("Initialization failure: cause {0:?}")]
     InitFailure(Cow<'static, str>),
     #[error("Restoration of setting on controller startup failed: cause {0:?}")]
     RestoreFailure(Cow<'static, str>),
+    #[error("Call to an external dependency {1:?} for setting type {0:?} failed. Request:{2:?}")]
+    ExternalFailure(SettingType, Cow<'static, str>, Cow<'static, str>),
+    #[error("Invalid input argument for setting type: {0:?} argument:{1:?} value:{2:?}")]
+    InvalidArgument(SettingType, Cow<'static, str>, Cow<'static, str>),
+    #[error("Unhandled type: {0:?}")]
+    UnhandledType(SettingType),
+    #[error("Unexpected error: {0:?}")]
+    UnexpectedError(Cow<'static, str>),
+    #[error("Undeliverable Request:{1:?} for setting type: {0:?}")]
+    UndeliverableError(SettingType, SettingRequest),
+    #[error("Delivery error for type: {0:?} received by: {1:?}")]
+    DeliveryError(SettingType, SettingType),
 }
 
 pub type BoxedController = Box<dyn controller::Handle + Send + Sync>;
@@ -51,7 +63,7 @@ pub mod controller {
 
     #[async_trait]
     pub trait Handle: Send {
-        async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult>;
+        async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult>;
         async fn change_state(&mut self, _state: State) -> Option<ControllerStateResult> {
             None
         }
@@ -100,11 +112,11 @@ impl ClientImpl {
         setting_type: SettingType,
         controller: &BoxedController,
         request: SettingRequest,
-    ) -> SettingResponseResult {
+    ) -> SettingHandlerResult {
         let result = controller.handle(request.clone()).await;
         match result {
             Some(response_result) => response_result,
-            None => Err(SwitchboardError::UnimplementedRequest(setting_type, request)),
+            None => Err(ControllerError::UnimplementedRequest(setting_type, request)),
         }
     }
 
@@ -301,20 +313,20 @@ pub mod persist {
     }
 
     /// A trait for interpreting a `Result` into whether a notification occurred
-    /// and converting the `Result` into a `SettingResponseResult`.
+    /// and converting the `Result` into a `SettingHandlerResult`.
     pub trait WriteResult {
         /// Indicates whether a notification occurred as a result of the write.
         fn notified(&self) -> bool;
-        /// Converts the result into a `SettingResponseResult`.
-        fn into_response_result(self) -> SettingResponseResult;
+        /// Converts the result into a `SettingHandlerResult`.
+        fn into_handler_result(self) -> SettingHandlerResult;
     }
 
-    impl WriteResult for Result<UpdateState, SwitchboardError> {
+    impl WriteResult for Result<UpdateState, ControllerError> {
         fn notified(&self) -> bool {
             self.as_ref().map_or(false, |update_state| UpdateState::Updated == *update_state)
         }
 
-        fn into_response_result(self) -> SettingResponseResult {
+        fn into_handler_result(self) -> SettingHandlerResult {
             self.map(|_| None)
         }
     }
@@ -323,14 +335,8 @@ pub mod persist {
         client: &ClientProxy<S>,
         value: S,
         write_through: bool,
-    ) -> Result<UpdateState, SwitchboardError> {
-        client.write(value, write_through).await.map_err(|e| {
-            if let ControllerError::WriteFailure(setting_type) = e {
-                SwitchboardError::StorageFailure(setting_type)
-            } else {
-                SwitchboardError::UnexpectedError("client write failure".into())
-            }
-        })
+    ) -> Result<UpdateState, ControllerError> {
+        client.write(value, write_through).await
     }
 
     pub struct Handler<

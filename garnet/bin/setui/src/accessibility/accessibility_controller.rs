@@ -1,13 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::accessibility_types::AccessibilityInfo;
-use crate::switchboard::base::{Merge, SettingRequest, SettingResponse, SettingResponseResult};
+use crate::switchboard::base::{Merge, SettingRequest, SettingResponse};
 
 use async_trait::async_trait;
 
@@ -40,7 +42,7 @@ impl data_controller::Create<AccessibilityInfo> for AccessibilityController {
 
 #[async_trait]
 impl controller::Handle for AccessibilityController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Get => {
                 Some(Ok(Some(SettingResponse::Accessibility(self.client.read().await))))
@@ -48,7 +50,7 @@ impl controller::Handle for AccessibilityController {
             SettingRequest::SetAccessibilityInfo(info) => Some(
                 write(&self.client, info.merge(self.client.read().await), false)
                     .await
-                    .into_response_result(),
+                    .into_handler_result(),
             ),
             _ => None,
         }

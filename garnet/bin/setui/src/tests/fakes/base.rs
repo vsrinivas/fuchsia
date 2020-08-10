@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 use crate::internal::handler::{reply, Payload};
 use crate::message::base::MessageEvent;
-use crate::registry::base::Command;
-use crate::registry::base::{GenerateHandler, State};
+use crate::registry::base::{Command, GenerateHandler, SettingHandlerResult, State};
 use crate::registry::device_storage::DeviceStorageFactory;
-use crate::switchboard::base::{SettingRequest, SettingResponseResult};
+use crate::switchboard::base::SettingRequest;
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -29,7 +28,7 @@ pub trait Service {
 /// A helper function for creating a simple setting handler.
 pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
     request_handler: Box<
-        dyn Fn(SettingRequest) -> BoxFuture<'static, SettingResponseResult> + Send + Sync + 'static,
+        dyn Fn(SettingRequest) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync + 'static,
     >,
 ) -> GenerateHandler<T> {
     let shared_handler = Arc::new(Mutex::new(request_handler));

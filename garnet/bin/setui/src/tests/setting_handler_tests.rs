@@ -6,7 +6,7 @@ use {
     crate::agent::restore_agent,
     crate::internal::handler::{message, Payload},
     crate::message::base::{Audience, MessageEvent, MessengerType},
-    crate::registry::base::{Command, ContextBuilder, State},
+    crate::registry::base::{Command, ContextBuilder, SettingHandlerResult, State},
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::device_storage::{testing::*, DeviceStorageCompatible},
     crate::registry::setting_handler::persist::WriteResult,
@@ -17,8 +17,7 @@ use {
     },
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
-        get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest,
-        SettingResponseResult, SettingType, SwitchboardError,
+        get_all_setting_types, ControllerStateResult, DoNotDisturbInfo, SettingRequest, SettingType,
     },
     crate::EnvironmentBuilder,
     async_trait::async_trait,
@@ -50,7 +49,7 @@ macro_rules! gen_controller {
 
         #[async_trait]
         impl controller::Handle for $name {
-            async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+            async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
                 return None;
             }
 
@@ -85,7 +84,7 @@ macro_rules! gen_data_controller {
 
         #[async_trait]
         impl<S: Storage> controller::Handle for $name<S> {
-            async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+            async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
                 return None;
             }
 
@@ -213,7 +212,7 @@ async fn verify_write_behavior<S: DeviceStorageCompatible + Send + Sync>(
     let result = write(proxy, value, false).await;
 
     assert_eq!(notified, result.notified());
-    assert!(result.is_ok() && result.into_response_result().is_ok());
+    assert!(result.is_ok() && result.into_handler_result().is_ok());
 }
 
 /// StateController allows for exposing incoming handler state to an outside
@@ -250,7 +249,7 @@ impl StateController {
 
 #[async_trait]
 impl controller::Handle for StateController {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
         None
     }
 
@@ -266,7 +265,7 @@ struct BlankController {}
 
 #[async_trait]
 impl controller::Handle for BlankController {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
         return None;
     }
 
@@ -413,7 +412,7 @@ impl StubController {
 
 #[async_trait]
 impl controller::Handle for StubController {
-    async fn handle(&self, _: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, _: SettingRequest) -> Option<SettingHandlerResult> {
         return None;
     }
 
@@ -454,7 +453,7 @@ async fn test_unimplemented_error() {
 
         while let Some(message_event) = receptor.next().await {
             if let MessageEvent::Message(incoming_payload, _) = message_event {
-                if let Payload::Result(Err(SwitchboardError::UnimplementedRequest(
+                if let Payload::Result(Err(ControllerError::UnimplementedRequest(
                     incoming_type,
                     _,
                 ))) = incoming_payload

@@ -6,8 +6,9 @@ use crate::internal::core;
 use crate::internal::handler;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::registry::base::{Command, SettingHandlerFactory, State};
+use crate::registry::setting_handler::ControllerError;
 use crate::switchboard::base::{
-    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType, SwitchboardError,
+    SettingAction, SettingActionData, SettingEvent, SettingRequest, SettingType,
 };
 
 use anyhow::Error;
@@ -152,7 +153,7 @@ impl RegistryImpl {
             message_client
                 .reply(core::Payload::Event(SettingEvent::Response(
                     action.id,
-                    Err(SwitchboardError::DeliveryError(action.setting_type, self.setting_type)),
+                    Err(ControllerError::DeliveryError(action.setting_type, self.setting_type)),
                 )))
                 .send();
             return;
@@ -254,12 +255,12 @@ impl RegistryImpl {
                 client
                     .reply(core::Payload::Event(SettingEvent::Response(
                         id,
-                        Err(SwitchboardError::UnhandledType(self.setting_type)),
+                        Err(ControllerError::UnhandledType(self.setting_type)),
                     )))
                     .send();
             }
             Some(signature) => {
-                // Mark the request as being handled.
+                // Mark the request as currently being handled.
                 let active_request =
                     ActiveRequest { request: request.clone(), client: client.clone() };
                 self.active_controller_sender
@@ -291,16 +292,33 @@ impl RegistryImpl {
                                     .unbounded_send(ActiveControllerRequest::RemoveActive(id))
                                     .ok();
 
-                                client
-                                    .reply(core::Payload::Event(SettingEvent::Response(id, result)))
-                                    .send();
+                                match result {
+                                    Err(_) => {
+                                        // Handle ControllerError.
+
+                                        // TODO(fxb/57171): add retry logic.
+                                        // If unable to succeed with retries, reply with error.
+                                        client
+                                            .reply(core::Payload::Event(SettingEvent::Response(
+                                                id, result,
+                                            )))
+                                            .send();
+                                    }
+                                    Ok(_) => {
+                                        client
+                                            .reply(core::Payload::Event(SettingEvent::Response(
+                                                id, result,
+                                            )))
+                                            .send();
+                                    }
+                                }
                                 return;
                             }
                             MessageEvent::Status(Status::Undeliverable) => {
                                 client
                                     .reply(core::Payload::Event(SettingEvent::Response(
                                         id,
-                                        Err(SwitchboardError::UndeliverableError(
+                                        Err(ControllerError::UndeliverableError(
                                             setting_type,
                                             request,
                                         )),

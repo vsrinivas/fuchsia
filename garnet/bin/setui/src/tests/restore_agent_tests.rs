@@ -5,10 +5,10 @@
 use crate::agent::restore_agent;
 use crate::internal::event::{self as event, message::Receptor, restore, Event};
 use crate::message::base::{MessageEvent, MessengerType};
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::device_storage::testing::InMemoryStorageFactory;
-use crate::switchboard::base::{
-    SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
-};
+use crate::registry::setting_handler::ControllerError;
+use crate::switchboard::base::{SettingRequest, SettingType};
 use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::scaffold::event::subscriber::Blueprint;
@@ -55,7 +55,7 @@ async fn create_event_environment(
 // Helper function for bringing up an environment with a single handler for a
 // single SettingType and validating the environment initialization result.
 async fn verify_restore_handling(
-    response_generate: Box<dyn Fn() -> SettingResponseResult + Send + Sync + 'static>,
+    response_generate: Box<dyn Fn() -> SettingHandlerResult + Send + Sync + 'static>,
     success: bool,
 ) {
     let counter: Arc<Mutex<u64>> = Arc::new(Mutex::new(0));
@@ -98,7 +98,7 @@ async fn test_restore() {
     // Snould succeed when the restore command is explicitly not handled.
     verify_restore_handling(
         Box::new(|| {
-            Err(SwitchboardError::UnimplementedRequest(
+            Err(ControllerError::UnimplementedRequest(
                 SettingType::Unknown,
                 SettingRequest::Restore,
             ))
@@ -109,14 +109,14 @@ async fn test_restore() {
 
     // Should succeed when the setting is not available.
     verify_restore_handling(
-        Box::new(|| Err(SwitchboardError::UnhandledType(SettingType::Unknown))),
+        Box::new(|| Err(ControllerError::UnhandledType(SettingType::Unknown))),
         true,
     )
     .await;
 
     // Snould fail when any other error is introduced.
     verify_restore_handling(
-        Box::new(|| Err(SwitchboardError::UnexpectedError("foo".into()))),
+        Box::new(|| Err(ControllerError::UnexpectedError("foo".into()))),
         false,
     )
     .await;

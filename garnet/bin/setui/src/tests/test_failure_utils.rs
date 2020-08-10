@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::registry::device_storage::testing::InMemoryStorageFactory;
-use crate::switchboard::base::{SettingRequest, SettingType, SwitchboardError};
+use crate::registry::setting_handler::ControllerError;
+use crate::switchboard::base::{SettingRequest, SettingType};
 use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;
 use futures::lock::Mutex;
@@ -23,7 +24,7 @@ pub async fn create_test_env_with_failures(
             setting_type,
             create_setting_handler(Box::new(move |request| {
                 if request == SettingRequest::Get {
-                    Box::pin(async move { Err(SwitchboardError::UnhandledType(setting_type)) })
+                    Box::pin(async move { Err(ControllerError::UnhandledType(setting_type)) })
                 } else {
                     Box::pin(async { Ok(None) })
                 }

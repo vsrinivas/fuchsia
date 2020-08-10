@@ -372,7 +372,7 @@ impl SwitchboardImpl {
                 {
                     reply_client
                         .reply(switchboard::Payload::Action(switchboard::Action::Response(
-                            response,
+                            response.map_err(|controller_err| controller_err.into()),
                         )))
                         .send();
                     return;

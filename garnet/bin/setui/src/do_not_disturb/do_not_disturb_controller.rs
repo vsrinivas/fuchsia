@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{
-    DoNotDisturbInfo, SettingRequest, SettingResponse, SettingResponseResult,
-};
+use crate::switchboard::base::{DoNotDisturbInfo, SettingRequest, SettingResponse};
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {
@@ -34,7 +33,7 @@ impl data_controller::Create<DoNotDisturbInfo> for DoNotDisturbController {
 
 #[async_trait]
 impl controller::Handle for DoNotDisturbController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::SetDnD(dnd_info) => {
                 let mut stored_value = self.client.read().await;
@@ -44,7 +43,7 @@ impl controller::Handle for DoNotDisturbController {
                 if dnd_info.night_mode_dnd.is_some() {
                     stored_value.night_mode_dnd = dnd_info.night_mode_dnd;
                 }
-                Some(write(&self.client, stored_value, false).await.into_response_result())
+                Some(write(&self.client, stored_value, false).await.into_handler_result())
             }
             SettingRequest::Get => {
                 Some(Ok(Some(SettingResponse::DoNotDisturb(self.client.read().await))))

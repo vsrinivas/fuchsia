@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 use crate::call_async;
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
-use crate::switchboard::base::{
-    Merge, SettingRequest, SettingResponse, SettingResponseResult, SettingType, SwitchboardError,
-};
+use crate::switchboard::base::{Merge, SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
 use std::collections::HashSet;
@@ -49,7 +48,7 @@ impl data_controller::Create<IntlInfo> for IntlController {
 
 #[async_trait]
 impl controller::Handle for IntlController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::SetIntlInfo(info) => Some(self.set(info).await),
             SettingRequest::Get => Some(Ok(Some(SettingResponse::Intl(self.client.read().await)))),
@@ -83,7 +82,7 @@ impl IntlController {
         time_zone_set
     }
 
-    async fn set(&self, info: IntlInfo) -> SettingResponseResult {
+    async fn set(&self, info: IntlInfo) -> SettingHandlerResult {
         if let Err(err) = self.validate_intl_info(info.clone()) {
             fx_log_err!("Invalid IntlInfo provided: {:?}", err);
             return Err(err);
@@ -93,15 +92,15 @@ impl IntlController {
 
         let current = self.client.read().await;
 
-        write(&self.client, info.merge(current), false).await.into_response_result()
+        write(&self.client, info.merge(current), false).await.into_handler_result()
     }
 
     /// Checks if the given IntlInfo is valid.
-    fn validate_intl_info(&self, info: IntlInfo) -> Result<(), SwitchboardError> {
+    fn validate_intl_info(&self, info: IntlInfo) -> Result<(), ControllerError> {
         if let Some(time_zone_id) = info.time_zone_id {
             // Make sure the given time zone ID is valid.
             if !self.time_zone_ids.contains(time_zone_id.as_str()) {
-                return Err(SwitchboardError::InvalidArgument(
+                return Err(ControllerError::InvalidArgument(
                     SettingType::Intl,
                     "timezone id".into(),
                     time_zone_id.into(),

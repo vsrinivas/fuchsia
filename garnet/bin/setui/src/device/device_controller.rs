@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
-use crate::switchboard::base::{
-    DeviceInfo, SettingRequest, SettingResponse, SettingResponseResult,
-};
+use crate::switchboard::base::{DeviceInfo, SettingRequest, SettingResponse};
 use async_trait::async_trait;
 use std::fs;
 
@@ -23,7 +22,7 @@ impl controller::Create for DeviceController {
 
 #[async_trait]
 impl controller::Handle for DeviceController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Get => {
                 let contents =

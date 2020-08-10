@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::display::light_sensor::{open_sensor, read_sensor, Sensor};
-use crate::registry::base::State;
+use crate::registry::base::{SettingHandlerResult, State};
 use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
-use crate::switchboard::base::{
-    ControllerStateResult, LightData, SettingRequest, SettingResponse, SettingResponseResult,
-};
+use crate::switchboard::base::{ControllerStateResult, LightData, SettingRequest, SettingResponse};
 use async_trait::async_trait;
 use fidl_fuchsia_input_report::InputDeviceMarker;
 use fuchsia_async::{self as fasync, DurationExt};
@@ -62,7 +60,7 @@ impl controller::Create for LightSensorController {
 
 #[async_trait]
 impl controller::Handle for LightSensorController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Get => Some(Ok(Some(SettingResponse::LightSensor(
                 self.current_value.lock().await.clone(),

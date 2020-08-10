@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::message_hub_definition;
-use crate::registry::base::Command;
-use crate::switchboard::base::{SettingResponseResult, SettingType};
+use crate::registry::base::{Command, SettingHandlerResult};
+use crate::switchboard::base::SettingType;
 use std::fmt::Debug;
 
 // Registry addresses senders by the type they service.
@@ -18,10 +18,10 @@ pub enum Address {
 pub enum Payload {
     Command(Command),
     Changed(SettingType),
-    Result(SettingResponseResult),
+    Result(SettingHandlerResult),
 }
 
-pub fn reply(client: message::Client, result: SettingResponseResult) {
+pub fn reply(client: message::Client, result: SettingHandlerResult) {
     client.reply(Payload::Result(result)).send().ack();
 }
 

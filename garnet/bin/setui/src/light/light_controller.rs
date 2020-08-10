@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
 use crate::call_async;
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
@@ -13,14 +14,13 @@ use crate::registry::setting_handler::persist::{
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
-    ControllerStateResult, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    SwitchboardError,
+    ControllerStateResult, SettingRequest, SettingResponse, SettingType,
 };
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use std::collections::hash_map::Entry;
 use std::convert::TryInto;
 
-/// Used as the argument field in a SwitchboardError::InvalidArgument to signal the FIDL handler to
+/// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that a LightError::INVALID_NAME should be returned to the client.
 pub const ARG_NAME: &'static str = "name";
 
@@ -63,7 +63,7 @@ impl data_controller::Create<LightInfo> for LightController {
 
 #[async_trait]
 impl controller::Handle for LightController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Restore => Some(self.restore().await),
             SettingRequest::SetLightGroupValue(name, state) => Some(self.set(name, state).await),
@@ -82,13 +82,13 @@ impl controller::Handle for LightController {
 /// Controller for processing switchboard messages surrounding the Light
 /// protocol.
 impl LightController {
-    async fn set(&self, name: String, state: Vec<LightState>) -> SettingResponseResult {
+    async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
         let mut current = self.client.read().await;
 
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
                 // Reject sets if the light name is not known.
-                return Err(SwitchboardError::InvalidArgument(
+                return Err(ControllerError::InvalidArgument(
                     SettingType::Light,
                     ARG_NAME.into(),
                     name.into(),
@@ -102,7 +102,7 @@ impl LightController {
         if state.len() != group.lights.len() {
             // If the number of light states provided doesn't match the number of lights,
             // return an error.
-            return Err(SwitchboardError::InvalidArgument(
+            return Err(ControllerError::InvalidArgument(
                 SettingType::Light,
                 "state".into(),
                 format!("{:?}", state).into(),
@@ -118,7 +118,7 @@ impl LightController {
         }) {
             // If not all the light values match the light type of this light group, return an
             // error.
-            return Err(SwitchboardError::InvalidArgument(
+            return Err(ControllerError::InvalidArgument(
                 SettingType::Light,
                 "state".into(),
                 format!("{:?}", state).into(),
@@ -128,7 +128,7 @@ impl LightController {
         // After the main validations, write the state to the hardware.
         self.write_light_group_to_hardware(group, &state).await?;
 
-        write(&self.client, current, false).await.into_response_result()
+        write(&self.client, current, false).await.into_handler_result()
     }
 
     /// Writes the given list of light states for a light group to the actual hardware.
@@ -154,7 +154,7 @@ impl LightController {
                 ),
                 Some(LightValue::Rgb(rgb)) => {
                     let mut value = rgb.clone().try_into().or_else(|_| {
-                        Err(SwitchboardError::InvalidArgument(
+                        Err(ControllerError::InvalidArgument(
                             SettingType::Light,
                             "value".into(),
                             format!("{:?}", rgb).into(),
@@ -173,7 +173,7 @@ impl LightController {
                 ),
             };
             set_result.map(|_| ()).or_else(|_| {
-                Err(SwitchboardError::ExternalFailure(
+                Err(ControllerError::ExternalFailure(
                     SettingType::Light,
                     "fuchsia.hardware.light".into(),
                     format!("{} for light {}", method_name, hardware_index).into(),
@@ -186,12 +186,12 @@ impl LightController {
         Ok(())
     }
 
-    async fn restore(&self) -> SettingResponseResult {
+    async fn restore(&self) -> SettingHandlerResult {
         // Read light info from hardware.
         let mut current = self.client.read().await;
         let num_lights =
             self.light_proxy.call_async(LightProxy::get_num_lights).await.or_else(|_| {
-                Err(SwitchboardError::ExternalFailure(
+                Err(ControllerError::ExternalFailure(
                     SettingType::Light,
                     "fuchsia.hardware.light".into(),
                     "get_num_lights".into(),
@@ -202,7 +202,7 @@ impl LightController {
             let info = match call_async!(self.light_proxy => get_info(i)).await {
                 Ok(Ok(info)) => info,
                 _ => {
-                    return Err(SwitchboardError::ExternalFailure(
+                    return Err(ControllerError::ExternalFailure(
                         SettingType::Light,
                         "fuchsia.hardware.light".into(),
                         format!("get_info for light {}", i).into(),
@@ -213,7 +213,7 @@ impl LightController {
             current.light_groups.insert(name, group);
         }
 
-        write(&self.client, current, false).await.into_response_result()
+        write(&self.client, current, false).await.into_handler_result()
     }
 
     /// Convert an Info object from fuchsia.hardware.Light into a LightGroup, the internal
@@ -222,7 +222,7 @@ impl LightController {
         &self,
         index: u32,
         info: Info,
-    ) -> Result<(String, LightGroup), SwitchboardError> {
+    ) -> Result<(String, LightGroup), ControllerError> {
         let light_type = info.capability.into();
 
         // Read the proper value depending on the light type.
@@ -231,7 +231,7 @@ impl LightController {
                 match call_async!(self.light_proxy => get_current_brightness_value(index)).await {
                     Ok(Ok(brightness)) => brightness,
                     _ => {
-                        return Err(SwitchboardError::ExternalFailure(
+                        return Err(ControllerError::ExternalFailure(
                             SettingType::Light,
                             "fuchsia.hardware.light".into(),
                             format!("get_current_brightness_value for light {}", index).into(),
@@ -243,7 +243,7 @@ impl LightController {
                 match call_async!(self.light_proxy => get_current_rgb_value(index)).await {
                     Ok(Ok(rgb)) => rgb.into(),
                     _ => {
-                        return Err(SwitchboardError::ExternalFailure(
+                        return Err(ControllerError::ExternalFailure(
                             SettingType::Light,
                             "fuchsia.hardware.light".into(),
                             format!("get_current_rgb_value for light {}", index).into(),
@@ -255,7 +255,7 @@ impl LightController {
                 match call_async!(self.light_proxy => get_current_simple_value(index)).await {
                     Ok(Ok(on)) => on,
                     _ => {
-                        return Err(SwitchboardError::ExternalFailure(
+                        return Err(ControllerError::ExternalFailure(
                             SettingType::Light,
                             "fuchsia.hardware.light".into(),
                             format!("get_current_simple_value for light {}", index).into(),

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::device_storage::DeviceStorageCompatible;
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{
-    ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingResponseResult, SetupInfo,
+    ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SetupInfo,
 };
 use async_trait::async_trait;
 
@@ -34,13 +35,13 @@ impl data_controller::Create<SetupInfo> for SetupController {
 
 #[async_trait]
 impl controller::Handle for SetupController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::SetConfigurationInterfaces(interfaces) => {
                 let mut info = self.client.read().await;
                 info.configuration_interfaces = interfaces;
 
-                return Some(write(&self.client, info, true).await.into_response_result());
+                return Some(write(&self.client, info, true).await.into_handler_result());
             }
             SettingRequest::Get => {
                 return Some(Ok(Some(SettingResponse::Setup(self.client.read().await))));

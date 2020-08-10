@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use crate::call_async;
+use crate::registry::base::SettingHandlerResult;
 use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::{
-    SettingRequest, SettingResponseResult, SettingType, SwitchboardError,
-};
+use crate::switchboard::base::{SettingRequest, SettingType};
 use async_trait::async_trait;
 
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
@@ -26,7 +25,7 @@ impl controller::Create for AccountController {
 
 #[async_trait]
 impl controller::Handle for AccountController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         #[allow(unreachable_patterns)]
         match request {
             SettingRequest::ScheduleClearAccounts => {
@@ -42,7 +41,7 @@ impl controller::Handle for AccountController {
 
 async fn schedule_clear_accounts(
     service_context_handle: &ServiceContextHandle,
-) -> Result<(), SwitchboardError> {
+) -> Result<(), ControllerError> {
     let connect_result = service_context_handle
         .lock()
         .await
@@ -50,7 +49,7 @@ async fn schedule_clear_accounts(
         .await;
 
     if connect_result.is_err() {
-        return Err(SwitchboardError::ExternalFailure(
+        return Err(ControllerError::ExternalFailure(
             SettingType::Account,
             "device_settings_manager".into(),
             "connect".into(),
@@ -61,7 +60,7 @@ async fn schedule_clear_accounts(
 
     if let Err(_) = call_async!(device_settings_manager => set_integer(FACTORY_RESET_FLAG, 1)).await
     {
-        return Err(SwitchboardError::ExternalFailure(
+        return Err(ControllerError::ExternalFailure(
             SettingType::Account,
             "device_settings_manager".into(),
             "set factory reset integer".into(),

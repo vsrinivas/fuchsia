@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::input::{InputMonitor, InputMonitorHandle, InputType};
-use crate::registry::base::State;
+use crate::registry::base::{SettingHandlerResult, State};
 use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
@@ -74,7 +74,7 @@ impl VolumeController {
         self.update_volume_streams(&stored_streams, push_to_audio_core).await;
     }
 
-    async fn get_info(&mut self) -> Result<AudioInfo, SwitchboardError> {
+    async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
         let mut audio_info = self.client.read().await;
         self.input_monitor.lock().await.ensure_monitor().await;
 
@@ -84,7 +84,7 @@ impl VolumeController {
         Ok(audio_info)
     }
 
-    async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingResponseResult {
+    async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingHandlerResult {
         let get_result = self.get_info().await;
 
         if let Err(e) = get_result {
@@ -187,7 +187,7 @@ impl data_controller::Create<AudioInfo> for AudioController {
 
 #[async_trait]
 impl controller::Handle for AudioController {
-    async fn handle(&self, request: SettingRequest) -> Option<SettingResponseResult> {
+    async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         #[allow(unreachable_patterns)]
         match request {
             SettingRequest::Restore => {
