@@ -123,7 +123,7 @@ pub struct InspectMetadata {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-pub struct Schema<Key: AsRef<str> + Hash + Eq + FromStr + Clone> {
+pub struct Schema<Key> {
     /// Enum specifying that this schema is encoding data.
     #[serde(default)]
     pub data_source: DataSource,
@@ -136,6 +136,10 @@ pub struct Schema<Key: AsRef<str> + Hash + Eq + FromStr + Clone> {
     pub moniker: String,
 
     /// Payload containing diagnostics data, if the payload exists, else None.
+    #[serde(bound(
+        deserialize = "Key: AsRef<str> + Clone + Eq + FromStr + Hash",
+        serialize = "Key: AsRef<str>",
+    ))]
     pub payload: Option<NodeHierarchy<Key>>,
 
     /// Schema version.
