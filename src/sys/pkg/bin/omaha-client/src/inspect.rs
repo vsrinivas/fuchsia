@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod bounded_node;
-
 use crate::{fidl::State, policy::PolicyConfig};
 use chrono::{DateTime, Utc};
 use fuchsia_inspect::{Node, Property, StringProperty};
@@ -15,8 +13,6 @@ use omaha_client::{
 };
 use std::collections::VecDeque;
 use std::time::SystemTime;
-
-pub use bounded_node::BoundedNode;
 
 pub struct ConfigurationNode {
     _node: Node,

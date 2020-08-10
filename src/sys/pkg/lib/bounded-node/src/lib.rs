@@ -13,7 +13,8 @@ use {
 /// Child `Node`s at indices `[begin, end)` are guaranteed to be fully constructed.
 /// ```
 /// # use fuchsia_inspect::{assert_inspect_tree, Inspector},
-/// # // TODO import this crate if this type is ever moved to a library
+/// # use bounded_node::BoundedNode,
+///
 /// let inspector = Inspector::new();
 /// let mut bounded_node =
 ///     BoundedNode::from_node_and_capacity(inspector.root().create_child("bounded-node"), 2);

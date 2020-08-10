@@ -7,6 +7,7 @@ use {
     anyhow::{anyhow, Error},
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver::{Asset, BootManagerProxy, DataSinkProxy},
+    fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     mundane::hash::{Hasher as _, Sha256},
     serde::{Deserialize, Serialize},
@@ -128,6 +129,17 @@ impl Version {
             None => "".to_string(),
         };
         Self { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version }
+    }
+
+    pub fn write_to_inspect(&self, node: &inspect::Node) {
+        // This destructure exists to use the compiler to guarantee we are copying all the
+        // UpdateAttempt fields to inspect.
+        let Version { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version } = self;
+        node.record_string("update_hash", update_hash);
+        node.record_string("system_image_hash", system_image_hash);
+        node.record_string("vbmeta_hash", vbmeta_hash);
+        node.record_string("zbi_hash", zbi_hash);
+        node.record_string("build_version", build_version);
     }
 }
 

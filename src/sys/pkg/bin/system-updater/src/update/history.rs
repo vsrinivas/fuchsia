@@ -4,9 +4,12 @@
 
 use {
     crate::update::BuildInfo,
-    anyhow::Error,
+    anyhow::{anyhow, Error},
+    bounded_node::BoundedNode,
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
     fidl_fuchsia_update_installer_ext::State,
+    fuchsia_inspect as inspect,
+    fuchsia_syslog::fx_log_warn,
     fuchsia_url::pkg_url::PkgUrl,
     futures::prelude::*,
     serde::{Deserialize, Serialize},
@@ -64,6 +67,44 @@ impl UpdateAttempt {
     fn state(&self) -> &State {
         &self.state
     }
+
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        // This destructure exists to use the compiler to guarantee we are writing all the
+        // UpdateAttempt fields to inspect.
+        let UpdateAttempt {
+            attempt_id,
+            source_version,
+            target_version,
+            options,
+            update_url,
+            start_time,
+            state,
+        } = self;
+
+        node.record_string("attempt_id", attempt_id);
+
+        node.record_child("source_version", |n| {
+            source_version.write_to_inspect(n);
+        });
+
+        node.record_child("target_version", |n| {
+            target_version.write_to_inspect(n);
+        });
+
+        node.record_child("options", |n| {
+            options.write_to_inspect(n);
+        });
+
+        node.record_string("update_url", update_url.to_string());
+        node.record_string(
+            "start_time",
+            chrono::DateTime::<chrono::Utc>::from(start_time.to_owned()).to_rfc3339(),
+        );
+
+        node.record_child("state", |n| {
+            state.write_to_inspect(n);
+        })
+    }
 }
 
 impl From<&UpdateAttempt> for fidl_fuchsia_update_installer::UpdateResult {
@@ -109,6 +150,13 @@ impl PendingAttempt {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UpdateOptions;
 
+impl UpdateOptions {
+    fn write_to_inspect(&self, _node: &inspect::Node) {
+        let UpdateOptions {} = self;
+        // TODO(55401): update this when we have fields in this struct.
+    }
+}
+
 // TODO(fxb/55401): move this to fidl-fuchsia-update-installer-ext.
 impl From<&UpdateOptions> for fidl_fuchsia_update_installer::Options {
     fn from(_options: &UpdateOptions) -> Self {
@@ -120,9 +168,10 @@ impl From<&UpdateOptions> for fidl_fuchsia_update_installer::Options {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug)]
 pub struct UpdateHistory {
     update_attempts: VecDeque<UpdateAttempt>,
+    inspectable_update_attempts: BoundedNode<inspect::Node>,
 }
 
 impl UpdateHistory {
@@ -181,6 +230,11 @@ impl UpdateHistory {
     /// number of attempts exceeds the limit.
     /// Does not write anything to disk, call `.save()` to do that.
     pub fn record_update_attempt(&mut self, update_attempt: UpdateAttempt) {
+        self.inspectable_update_attempts.push(|n| {
+            update_attempt.write_to_inspect(&n);
+            n
+        });
+
         self.update_attempts.push_front(update_attempt);
         if self.update_attempts.len() > MAX_UPDATE_ATTEMPTS {
             self.update_attempts.pop_back();
@@ -188,27 +242,58 @@ impl UpdateHistory {
     }
 
     /// Read the update history struct from disk.
-    pub async fn load() -> Self {
+    pub async fn load(node: inspect::Node) -> Self {
         let reader = io_util::file::read_in_namespace(UPDATE_HISTORY_PATH).map_err(|e| e.into());
 
-        Self::load_from_or_default(reader).await
+        Self::load_from_or_default(reader, node).await
     }
 
-    async fn load_from_or_default<R>(reader: R) -> Self
+    async fn load_from_or_default<R>(reader: R, node: inspect::Node) -> Self
     where
         R: Future<Output = Result<Vec<u8>, Error>>,
     {
-        Self::load_from(reader).await.unwrap_or_else(|_| Self::default())
+        match Self::load_from(reader).await {
+            Ok(update_attempts) => Self {
+                inspectable_update_attempts: {
+                    let mut bounded_node =
+                        BoundedNode::from_node_and_capacity(node, MAX_UPDATE_ATTEMPTS);
+
+                    // The UpdateAttempts are loaded in most recent - oldest order, and we need to
+                    // push the oldest attempts to bounded_node first.
+                    for attempt in update_attempts.iter().rev() {
+                        bounded_node.push(|n| {
+                            attempt.write_to_inspect(&n);
+                            n
+                        })
+                    }
+                    bounded_node
+                },
+                update_attempts,
+            },
+            Err(e) => {
+                fx_log_warn!("Could not load update history: {:#}", anyhow!(e));
+                Self {
+                    update_attempts: Default::default(),
+
+                    // BoundedNode doesn't implement Default, so we need to set a default here ourselves.
+                    inspectable_update_attempts: BoundedNode::from_node_and_capacity(
+                        node,
+                        MAX_UPDATE_ATTEMPTS,
+                    ),
+                }
+            }
+        }
     }
 
-    async fn load_from<R>(reader: R) -> Result<Self, Error>
+    async fn load_from<R>(reader: R) -> Result<VecDeque<UpdateAttempt>, Error>
     where
         R: Future<Output = Result<Vec<u8>, Error>>,
     {
         let contents = reader.await?;
         let history: UpdateHistoryJson = serde_json::from_slice(&contents)?;
+
         match history {
-            UpdateHistoryJson::Version1(update_attempts) => Ok(Self { update_attempts }),
+            UpdateHistoryJson::Version1(update_attempts) => Ok(update_attempts),
         }
     }
 
@@ -315,11 +400,25 @@ mod tests {
         crate::update::environment::NamespaceBuildInfo,
         anyhow::anyhow,
         fidl_fuchsia_update_installer_ext::{Progress, UpdateInfo},
+        fuchsia_inspect::{assert_inspect_tree, Inspector},
         mock_paver::MockPaverServiceBuilder,
         pretty_assertions::assert_eq,
         serde_json::json,
         std::{sync::Arc, time::Duration},
     };
+
+    fn default_inspectable_update_attempts() -> BoundedNode<inspect::Node> {
+        BoundedNode::from_node_and_capacity(inspect::Node::default(), MAX_UPDATE_ATTEMPTS)
+    }
+
+    impl Default for UpdateHistory {
+        fn default() -> UpdateHistory {
+            UpdateHistory {
+                update_attempts: Default::default(),
+                inspectable_update_attempts: default_inspectable_update_attempts(),
+            }
+        }
+    }
 
     fn make_reboot_state() -> State {
         let info = UpdateInfo::builder().download_size(42).build();
@@ -355,15 +454,352 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn uses_default_on_read_error() {
-        let history =
-            UpdateHistory::load_from_or_default(future::ready(Err(anyhow!("oops")))).await;
-        assert_eq!(history, UpdateHistory { update_attempts: VecDeque::new() });
+        let history = UpdateHistory::load_from_or_default(
+            future::ready(Err(anyhow!("oops"))),
+            inspect::Node::default(),
+        )
+        .await;
+        assert_eq!(history.update_attempts, VecDeque::new());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn uses_default_on_parse_error() {
-        let history = UpdateHistory::load_from_or_default(make_reader("not json")).await;
-        assert_eq!(history, UpdateHistory { update_attempts: VecDeque::new() });
+        let history =
+            UpdateHistory::load_from_or_default(make_reader("not json"), inspect::Node::default())
+                .await;
+        assert_eq!(history.update_attempts, VecDeque::new());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn creates_inspect_on_parse_error() {
+        let inspector = Inspector::new();
+        let history_node = inspector.root().create_child("history");
+        let history =
+            UpdateHistory::load_from_or_default(make_reader("not json"), history_node).await;
+        assert_eq!(history.update_attempts, VecDeque::new());
+
+        assert_inspect_tree! {
+            inspector,
+            root: {
+                "history": {
+                    "capacity": MAX_UPDATE_ATTEMPTS as u64,
+                    "begin": 0u64,
+                    "end": 0u64,
+                    "children": {
+                    }
+                }
+            }
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn runs_with_dropped_inspector() {
+        // Simulate the oneshot mode, in which we create an inspector and then immediately drop it.
+        // Make sure we can still parse history.
+        let inspector = Inspector::new();
+        let history_node = inspector.root().create_child("history");
+        drop(inspector);
+
+        let mut history =
+            UpdateHistory::load_from_or_default(make_reader("not json"), history_node).await;
+        assert_eq!(history.update_attempts, VecDeque::new());
+
+        // Make sure that even with a dropped inspector, we can still record update attempts
+        // (which would normally populate inspect as well)
+        record_fake_update_attempt(&mut history, 42).await;
+        let update_attempt = UpdateAttempt {
+            attempt_id: history.update_attempts[0].attempt_id.clone(),
+            source_version: Version {
+                vbmeta_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    .to_string(),
+                zbi_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    .to_string(),
+                ..Version::default()
+            },
+            target_version: Version::for_hash("new".to_owned()),
+            options: UpdateOptions,
+            update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
+            start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
+            state: State::FailPrepare,
+        };
+        assert_eq!(history.update_attempts, VecDeque::from(vec![update_attempt]));
+    }
+
+    // Ensure we populate inspect for both parsed update attempts and subsequent ones.
+    // Also a useful test that we can actually parse history.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn populates_inspect() {
+        let inspector = Inspector::new();
+        let history_node = inspector.root().create_child("history");
+        let mut history = UpdateHistory::load_from_or_default(
+            make_reader(
+                &json!({
+                    "version": "1",
+                    "content": [{
+                        "id": "1234",
+                        "source": {
+                            "update_hash": "new",
+                            "system_image_hash": "",
+                            "vbmeta_hash": "",
+                            "zbi_hash": "",
+                            "build_version": ""
+                        },
+                        "target": {
+                            "update_hash": "newer",
+                            "system_image_hash": "",
+                            "vbmeta_hash": "",
+                            "zbi_hash": "",
+                            "build_version": ""
+                        },
+                        "options": null,
+                        "url": "fuchsia-pkg://fuchsia.com/update",
+                        "start": 42,
+                        "state": {
+                            "id": "reboot",
+                            "info": {
+                                "download_size": 42,
+                            },
+                            "progress": {
+                                "bytes_downloaded": 42,
+                                "fraction_completed": 1.0,
+                            },
+                        },
+                    },
+                    {
+                        // By adding two update checks in history, we make sure that the ordering
+                        // of the history and inspect output are consistent, even when we add new update checks.
+                        "id": "4567",
+                        "source": {
+                            "update_hash": "old",
+                            "system_image_hash": "",
+                            "vbmeta_hash": "",
+                            "zbi_hash": "",
+                            "build_version": ""
+                        },
+                        "target": {
+                            "update_hash": "new",
+                            "system_image_hash": "",
+                            "vbmeta_hash": "",
+                            "zbi_hash": "",
+                            "build_version": ""
+                        },
+                        "options": null,
+                        "url": "fuchsia-pkg://fuchsia.com/update",
+                        "start": 123,
+                        "state": {
+                            "id": "reboot",
+                            "info": {
+                                "download_size": 42,
+                            },
+                            "progress": {
+                                "bytes_downloaded": 42,
+                                "fraction_completed": 1.0,
+                            },
+                        },
+                    }]
+                })
+                .to_string(),
+            ),
+            history_node,
+        )
+        .await;
+        assert_eq!(
+            history.update_attempts,
+            vec![
+                UpdateAttempt {
+                    attempt_id: "1234".to_owned(),
+                    source_version: Version::for_hash("new".to_owned()),
+                    target_version: Version::for_hash("newer".to_owned()),
+                    options: UpdateOptions,
+                    update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
+                    start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
+                    state: make_reboot_state(),
+                },
+                UpdateAttempt {
+                    attempt_id: "4567".to_owned(),
+                    source_version: Version::for_hash("old".to_owned()),
+                    target_version: Version::for_hash("new".to_owned()),
+                    options: UpdateOptions,
+                    update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
+                    start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(123),
+                    state: make_reboot_state(),
+                }
+            ]
+        );
+
+        assert_inspect_tree! {
+            inspector,
+            root: {
+                "history": {
+                    "capacity": MAX_UPDATE_ATTEMPTS as u64,
+                    "begin": 0u64,
+                    "end": 2u64,
+                    "children": {
+                        "0": {
+                            "attempt_id": "4567",
+                            "source_version": {
+                                "update_hash": "old",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "target_version": {
+                                "update_hash": "new",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "options": {},
+                            "update_url": "fuchsia-pkg://fuchsia.com/update",
+                            "start_time": "1970-01-01T00:00:00.000000123+00:00",
+                            "state": {
+                                "state": "reboot",
+                                "progress": {
+                                    "fraction_completed": 1.0f64,
+                                    "bytes_downloaded": 42u64,
+                                },
+                                "info": {
+                                    "download_size": 42u64,
+                                },
+                            },
+                        },
+                        "1": {
+                            "attempt_id": "1234",
+                            "source_version": {
+                                "update_hash": "new",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "target_version": {
+                                "update_hash": "newer",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "options": {},
+                            "update_url": "fuchsia-pkg://fuchsia.com/update",
+                            "start_time": "1970-01-01T00:00:00.000000042+00:00",
+                            "state": {
+                                "state": "reboot",
+                                "progress": {
+                                    "fraction_completed": 1.0f64,
+                                    "bytes_downloaded": 42u64,
+                                },
+                                "info": {
+                                    "download_size": 42u64,
+                                },
+                            },
+                        },
+
+                    }
+                }
+            }
+        }
+
+        record_fake_update_attempt(&mut history, 42).await;
+
+        // We should have added our new attempt in the newest bounded_node slot,
+        // with the highest index (2).
+        assert_inspect_tree! {
+            inspector,
+            root: {
+                "history": {
+                    "capacity": MAX_UPDATE_ATTEMPTS as u64,
+                    "begin": 0u64,
+                    "end": 3u64,
+                    "children": {
+                        "0": {
+                            "attempt_id": "4567",
+                            "source_version": {
+                                "update_hash": "old",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "target_version": {
+                                "update_hash": "new",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "options": {},
+                            "update_url": "fuchsia-pkg://fuchsia.com/update",
+                            "start_time": "1970-01-01T00:00:00.000000123+00:00",
+                            "state": {
+                                "state": "reboot",
+                                "progress": {
+                                    "fraction_completed": 1.0f64,
+                                    "bytes_downloaded": 42u64,
+                                },
+                                "info": {
+                                    "download_size": 42u64,
+                                },
+                            },
+                        },
+                        "1": {
+                            "attempt_id": "1234",
+                            "source_version": {
+                                "update_hash": "new",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "target_version": {
+                                "update_hash": "newer",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "options": {},
+                            "update_url": "fuchsia-pkg://fuchsia.com/update",
+                            "start_time": "1970-01-01T00:00:00.000000042+00:00",
+                            "state": {
+                                "state": "reboot",
+                                "progress": {
+                                    "fraction_completed": 1.0f64,
+                                    "bytes_downloaded": 42u64,
+                                },
+                                "info": {
+                                    "download_size": 42u64,
+                                },
+                            },
+                        },
+                        "2": {
+                            "attempt_id": history.update_attempts[0].attempt_id.clone(),
+                            "source_version": {
+                                "update_hash": "",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "build_version": ""
+                            },
+                            "target_version": {
+                                "update_hash": "new",
+                                "system_image_hash": "",
+                                "vbmeta_hash": "",
+                                "zbi_hash": "",
+                                "build_version": ""
+                            },
+                            "options": {},
+                            "update_url": "fuchsia-pkg://fuchsia.com/update",
+                            "start_time": "1970-01-01T00:00:00.000000042+00:00",
+                            "state": {
+                                "state": "fail_prepare",
+                            },
+                        },
+                    }
+                }
+            }
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -397,6 +833,7 @@ mod tests {
                     state: make_reboot_state(),
                 },
             ]),
+            inspectable_update_attempts: default_inspectable_update_attempts(),
         };
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
         let data_sink = paver.spawn_data_sink_service();
@@ -589,6 +1026,7 @@ mod tests {
                     state: make_reboot_state(),
                 },
             ]),
+            inspectable_update_attempts: default_inspectable_update_attempts(),
         };
 
         assert_eq!(history.attempts_for(&Version::for_hash("old"), &Version::for_hash("new")), 1);
@@ -618,6 +1056,7 @@ mod tests {
                     state: make_reboot_state(),
                 },
             ]),
+            inspectable_update_attempts: default_inspectable_update_attempts(),
         };
 
         assert_eq!(history.attempts_for(&Version::for_hash("old"), &Version::for_hash("new")), 1);
@@ -646,6 +1085,7 @@ mod tests {
                     state: make_reboot_state(),
                 },
             ]),
+            inspectable_update_attempts: default_inspectable_update_attempts(),
         };
 
         assert_eq!(history.attempts_for(&Version::for_hash("old"), &Version::for_hash("new")), 1);

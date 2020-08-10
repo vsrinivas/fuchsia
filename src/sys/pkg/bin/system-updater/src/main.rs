@@ -6,7 +6,7 @@ use {
     crate::{args::Args, fidl::FidlServer, update::UpdateHistory},
     anyhow::anyhow,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::prelude::*,
     parking_lot::Mutex,
     std::sync::Arc,
@@ -22,12 +22,18 @@ async fn main() {
     fx_log_info!("starting system updater");
 
     let args: Args = argh::from_env();
-    let history = Arc::new(Mutex::new(UpdateHistory::load().await));
+    let inspector = fuchsia_inspect::Inspector::new();
+    let history_node = inspector.root().create_child("history");
+
+    let history = Arc::new(Mutex::new(UpdateHistory::load(history_node).await));
 
     if args.oneshot {
+        // We don't need inspect in oneshot mode, and it won't be served anyway.
+        drop(inspector);
+
         oneshot_update(args, Arc::clone(&history)).await;
     } else {
-        serve_fidl(history).await;
+        serve_fidl(history, inspector).await;
     }
 }
 
@@ -70,12 +76,18 @@ async fn oneshot_update(args: Args, history: Arc<Mutex<UpdateHistory>>) {
 
 /// In the non-oneshot path, we serve FIDL, ignore any other provided CLI args, and do NOT
 /// perform an update on start. Instead, we wait for a FIDL request to start an update.
-async fn serve_fidl(history: Arc<Mutex<UpdateHistory>>) {
+async fn serve_fidl(history: Arc<Mutex<UpdateHistory>>, inspector: fuchsia_inspect::Inspector) {
     let mut fs = ServiceFs::new_local();
     if let Err(e) = fs.take_and_serve_directory_handle() {
         fx_log_err!("error encountered serving directory handle: {:#}", anyhow!(e));
         std::process::exit(1);
     }
+
+    if let Err(e) = inspector.serve(&mut fs) {
+        // Almost nothing should be fatal to the system-updater if we can help it.
+        fx_log_warn!("Couldn't serve inspect: {:#}", anyhow!(e));
+    }
+
     let server = FidlServer::new(history);
     server.run(fs).await;
 }

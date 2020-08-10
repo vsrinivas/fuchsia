@@ -5,7 +5,7 @@
 //! Wrapper types for the State union.
 
 use {
-    fidl_fuchsia_update_installer as fidl,
+    fidl_fuchsia_update_installer as fidl, fuchsia_inspect as inspect,
     proptest::prelude::*,
     proptest_derive::Arbitrary,
     serde::{Deserialize, Serialize},
@@ -91,6 +91,13 @@ pub struct UpdateInfo {
     download_size: u64,
 }
 
+impl UpdateInfo {
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        let UpdateInfo { download_size } = self;
+        node.record_uint("download_size", *download_size)
+    }
+}
+
 /// Builder of UpdateInfo
 #[derive(Clone, Debug)]
 pub struct UpdateInfoBuilder;
@@ -109,6 +116,14 @@ pub struct Progress {
     fraction_completed: f32,
 
     bytes_downloaded: u64,
+}
+
+impl Progress {
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        let Progress { fraction_completed, bytes_downloaded } = self;
+        node.record_double("fraction_completed", *fraction_completed as f64);
+        node.record_uint("bytes_downloaded", *bytes_downloaded);
+    }
 }
 
 /// Builder of Progress.
@@ -164,6 +179,54 @@ impl State {
     /// transitions should occur).
     pub fn is_terminal(&self) -> bool {
         self.is_success() || self.is_failure()
+    }
+
+    fn write_info_and_progress_to_inspect(
+        info: &UpdateInfo,
+        progress: &Progress,
+        node: &inspect::Node,
+    ) {
+        node.record_child("info", |n| {
+            info.write_to_inspect(n);
+        });
+        node.record_child("progress", |n| {
+            progress.write_to_inspect(n);
+        });
+    }
+
+    fn name(&self) -> &'static str {
+        match self {
+            State::Prepare => "prepare",
+            State::Fetch { .. } => "fetch",
+            State::Stage { .. } => "stage",
+            State::WaitToReboot { .. } => "wait_to_reboot",
+            State::Reboot { .. } => "reboot",
+            State::DeferReboot { .. } => "defer_reboot",
+            State::Complete { .. } => "complete",
+            State::FailPrepare => "fail_prepare",
+            State::FailFetch { .. } => "fail_fetch",
+            State::FailStage { .. } => "fail_stage",
+        }
+    }
+
+    /// Serializes this state to a Fuchsia Inspect node.
+    pub fn write_to_inspect(&self, node: &inspect::Node) {
+        node.record_string("state", self.name());
+        use State::*;
+
+        match self {
+            Prepare | FailPrepare => {}
+            Fetch { info, progress }
+            | Stage { info, progress }
+            | WaitToReboot { info, progress }
+            | Reboot { info, progress }
+            | DeferReboot { info, progress }
+            | Complete { info, progress }
+            | FailFetch { info, progress }
+            | FailStage { info, progress } => {
+                State::write_info_and_progress_to_inspect(info, progress, node);
+            }
+        }
     }
 }
 
@@ -608,7 +671,12 @@ fn arb_state_fail_stage() -> impl Strategy<Value = State> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, serde_json::json};
+    use {
+        super::*,
+        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        matches::assert_matches,
+        serde_json::json,
+    };
 
     prop_compose! {
         fn arb_progress()(fraction_completed: f32, bytes_downloaded: u64) -> Progress {
@@ -677,6 +745,23 @@ mod tests {
             prop_assert_eq!(state, state2);
         }
 
+
+        // Test that:
+        // * write_to_inspect doesn't panic on arbitrary inputs
+        // * we create a string property called 'state' in all cases
+        #[test]
+        fn state_populates_inspect_with_id(state: State) {
+            let inspector = Inspector::new();
+            state.write_to_inspect(inspector.root());
+
+            assert_inspect_tree! {
+                inspector,
+                root: contains {
+                    "state": state.name(),
+                }
+            };
+        }
+
         #[test]
         fn progress_rejects_invalid_fraction_completed(progress: Progress, fraction_completed: f32) {
             let fraction_valid = fraction_completed >= 0.0 && fraction_completed <= 1.0;
@@ -717,6 +802,29 @@ mod tests {
                 State::try_from(as_fidl),
                 Err(DecodeStateError::InconsistentUpdateInfoAndProgress(BytesFetchedExceedsDownloadSize))
             );
+        }
+    }
+
+    #[test]
+    fn state_populates_inspect() {
+        let state = State::Reboot {
+            info: UpdateInfo { download_size: 4096 },
+            progress: Progress { bytes_downloaded: 2048, fraction_completed: 0.5 },
+        };
+        let inspector = Inspector::new();
+        state.write_to_inspect(&inspector.root());
+        assert_inspect_tree! {
+            inspector,
+            root: {
+                "state": "reboot",
+                "info": {
+                    "download_size": 4096u64,
+                },
+                "progress": {
+                    "bytes_downloaded": 2048u64,
+                    "fraction_completed": 0.5f64,
+                }
+            }
         }
     }
 
