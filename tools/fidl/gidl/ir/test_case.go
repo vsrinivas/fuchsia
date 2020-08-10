@@ -4,7 +4,11 @@
 
 package ir
 
-import "strings"
+import (
+	"strings"
+
+	fidlir "fidl/compiler/backend/types"
+)
 
 type All struct {
 	EncodeSuccess []EncodeSuccess
@@ -18,23 +22,24 @@ type EncodeSuccess struct {
 	Name              string
 	Value             interface{}
 	Encodings         []Encoding
+	HandleDefs        []HandleDef
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
-	// Handles
 }
 
 type DecodeSuccess struct {
 	Name              string
 	Value             interface{}
 	Encodings         []Encoding
+	HandleDefs        []HandleDef
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
-	// Handles
 }
 
 type EncodeFailure struct {
 	Name              string
 	Value             interface{}
+	HandleDefs        []HandleDef
 	WireFormats       []WireFormat
 	Err               ErrorCode
 	BindingsAllowlist *LanguageList
@@ -45,6 +50,7 @@ type DecodeFailure struct {
 	Name              string
 	Type              string
 	Encodings         []Encoding
+	HandleDefs        []HandleDef
 	Err               ErrorCode
 	BindingsAllowlist *LanguageList
 	BindingsDenylist  *LanguageList
@@ -53,6 +59,7 @@ type DecodeFailure struct {
 type Benchmark struct {
 	Name                     string
 	Value                    interface{}
+	HandleDefs               []HandleDef
 	BindingsAllowlist        *LanguageList
 	BindingsDenylist         *LanguageList
 	EnableSendEventBenchmark bool
@@ -70,9 +77,28 @@ func (list LanguageList) Includes(targetLanguage string) bool {
 	return false
 }
 
+type HandleDef struct {
+	Subtype fidlir.HandleSubtype
+	// TODO(fxb/41920): Add a field for handle rights.
+}
+
+var supportedHandleSubtypes = map[fidlir.HandleSubtype]struct{}{
+	fidlir.Event: {},
+}
+
+func HandleSubtypeByName(s string) (fidlir.HandleSubtype, bool) {
+	subtype := fidlir.HandleSubtype(s)
+	_, ok := supportedHandleSubtypes[subtype]
+	if ok {
+		return subtype, true
+	}
+	return "", false
+}
+
 type Encoding struct {
 	WireFormat WireFormat
 	Bytes      []byte
+	Handles    []Handle
 }
 
 type WireFormat string

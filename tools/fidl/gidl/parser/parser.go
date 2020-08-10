@@ -18,6 +18,8 @@ type Parser struct {
 	scanner    scanner.Scanner
 	lookaheads []token
 	config     Config
+	// Used to validate that handles are defined and used exactly once.
+	handles map[ir.Handle]handleInfo
 }
 
 type Config struct {
@@ -27,11 +29,28 @@ type Config struct {
 	WireFormats ir.WireFormatList
 }
 
+type handleInfo struct {
+	defined       bool
+	usesInValue   int
+	usesInHandles int
+}
+
+func mergeHandleInfo(a, b handleInfo) handleInfo {
+	return handleInfo{
+		defined:       a.defined || b.defined,
+		usesInValue:   a.usesInValue + b.usesInValue,
+		usesInHandles: a.usesInHandles + b.usesInHandles,
+	}
+}
+
 func NewParser(name string, input io.Reader, config Config) *Parser {
 	var p Parser
 	p.scanner.Position.Filename = name
 	p.scanner.Init(input)
 	p.config = config
+	// This is reset in parseBody. We need to set it here too so that unit tests
+	// for functions like parseHandleDefs don't panic on nil map assignment.
+	p.handles = make(map[ir.Handle]handleInfo)
 	return &p
 }
 
@@ -63,6 +82,7 @@ const (
 	tEqual
 	tLsquare
 	tRsquare
+	tHash
 )
 
 var tokenKindStrings = []string{
@@ -80,6 +100,7 @@ var tokenKindStrings = []string{
 	"=",
 	"[",
 	"]",
+	"#",
 }
 
 var (
@@ -126,6 +147,8 @@ const (
 	isType
 	isValue
 	isBytes
+	isHandles
+	isHandleDefs
 	isErr
 	isBindingsAllowlist
 	isBindingsDenylist
@@ -141,6 +164,10 @@ func (kind bodyElement) String() string {
 		return "value"
 	case isBytes:
 		return "bytes"
+	case isHandles:
+		return "handles"
+	case isHandleDefs:
+		return "handle_defs"
 	case isErr:
 		return "err"
 	case isBindingsAllowlist:
@@ -160,11 +187,27 @@ type body struct {
 	Type                     string
 	Value                    ir.Value
 	Encodings                []ir.Encoding
+	HandleDefs               []ir.HandleDef
 	Err                      ir.ErrorCode
 	BindingsAllowlist        *ir.LanguageList
 	BindingsDenylist         *ir.LanguageList
 	EnableSendEventBenchmark bool
 	EnableEchoCallBenchmark  bool
+}
+
+func (b *body) addEncoding(e ir.Encoding) {
+	for i := range b.Encodings {
+		if b.Encodings[i].WireFormat == e.WireFormat {
+			if b.Encodings[i].Bytes == nil {
+				b.Encodings[i].Bytes = e.Bytes
+			}
+			if b.Encodings[i].Handles == nil {
+				b.Encodings[i].Handles = e.Handles
+			}
+			return
+		}
+	}
+	b.Encodings = append(b.Encodings, e)
 }
 
 type sectionMetadata struct {
@@ -176,12 +219,15 @@ type sectionMetadata struct {
 var sections = map[string]sectionMetadata{
 	"success": {
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
-		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}},
+		optionalKinds: map[bodyElement]struct{}{
+			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
 		setter: func(name string, body body, all *ir.All) {
 			encodeSuccess := ir.EncodeSuccess{
 				Name:              name,
 				Value:             body.Value,
 				Encodings:         body.Encodings,
+				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
 			}
@@ -190,6 +236,7 @@ var sections = map[string]sectionMetadata{
 				Name:              name,
 				Value:             body.Value,
 				Encodings:         body.Encodings,
+				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
 			}
@@ -198,12 +245,15 @@ var sections = map[string]sectionMetadata{
 	},
 	"encode_success": {
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
-		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}},
+		optionalKinds: map[bodyElement]struct{}{
+			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeSuccess{
 				Name:              name,
 				Value:             body.Value,
 				Encodings:         body.Encodings,
+				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 			}
 			all.EncodeSuccess = append(all.EncodeSuccess, result)
@@ -211,12 +261,15 @@ var sections = map[string]sectionMetadata{
 	},
 	"decode_success": {
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isBytes: {}},
-		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}},
+		optionalKinds: map[bodyElement]struct{}{
+			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeSuccess{
 				Name:              name,
 				Value:             body.Value,
 				Encodings:         body.Encodings,
+				HandleDefs:        body.HandleDefs,
 				BindingsAllowlist: body.BindingsAllowlist,
 			}
 			all.DecodeSuccess = append(all.DecodeSuccess, result)
@@ -224,11 +277,14 @@ var sections = map[string]sectionMetadata{
 	},
 	"encode_failure": {
 		requiredKinds: map[bodyElement]struct{}{isValue: {}, isErr: {}},
-		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}},
+		optionalKinds: map[bodyElement]struct{}{
+			isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.EncodeFailure{
-				Name:  name,
-				Value: body.Value,
+				Name:       name,
+				Value:      body.Value,
+				HandleDefs: body.HandleDefs,
 				// TODO(fxb/52495): Temporarily hardcoded to v1. We should
 				// either make encode_failure tests specify a wireformat -> err
 				// mapping, or remove the WireFormats field.
@@ -242,12 +298,15 @@ var sections = map[string]sectionMetadata{
 	},
 	"decode_failure": {
 		requiredKinds: map[bodyElement]struct{}{isType: {}, isBytes: {}, isErr: {}},
-		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}},
+		optionalKinds: map[bodyElement]struct{}{
+			isHandles: {}, isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+		},
 		setter: func(name string, body body, all *ir.All) {
 			result := ir.DecodeFailure{
 				Name:              name,
 				Type:              body.Type,
 				Encodings:         body.Encodings,
+				HandleDefs:        body.HandleDefs,
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
@@ -257,11 +316,15 @@ var sections = map[string]sectionMetadata{
 	},
 	"benchmark": {
 		requiredKinds: map[bodyElement]struct{}{isValue: {}},
-		optionalKinds: map[bodyElement]struct{}{isBindingsAllowlist: {}, isBindingsDenylist: {}, isEnableSendEventBenchmark: {}, isEnableEchoCallBenchmark: {}},
+		optionalKinds: map[bodyElement]struct{}{
+			isHandleDefs: {}, isBindingsAllowlist: {}, isBindingsDenylist: {},
+			isEnableSendEventBenchmark: {}, isEnableEchoCallBenchmark: {},
+		},
 		setter: func(name string, body body, all *ir.All) {
 			benchmark := ir.Benchmark{
 				Name:                     name,
 				Value:                    body.Value,
+				HandleDefs:               body.HandleDefs,
 				BindingsAllowlist:        body.BindingsAllowlist,
 				BindingsDenylist:         body.BindingsDenylist,
 				EnableSendEventBenchmark: body.EnableSendEventBenchmark,
@@ -324,6 +387,7 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]struct{}, optionalKinds
 	if err != nil {
 		return result, err
 	}
+	p.handles = make(map[ir.Handle]handleInfo)
 	if err := p.parseCommaSeparated(tLacco, tRacco, func() error {
 		return p.parseSingleBodyElement(&result, parsedKinds)
 	}); err != nil {
@@ -341,6 +405,21 @@ func (p *Parser) parseBody(requiredKinds map[bodyElement]struct{}, optionalKinds
 			return result, p.newParseError(bodyTok, "parameter '%s' does not apply to element", parsedKind)
 		}
 	}
+	for h, info := range p.handles {
+		if !info.defined {
+			return result, p.newParseError(bodyTok, "missing definition for handle #%d", h)
+		}
+		if info.usesInValue > 1 {
+			return result, p.newParseError(bodyTok, "handle #%d used more than once in 'value' section", h)
+		}
+		if info.usesInHandles > 1 {
+			return result, p.newParseError(bodyTok, "handle #%d used more than once in 'handles' section", h)
+		}
+		if info.usesInValue == 0 && info.usesInHandles == 0 {
+			return result, p.newParseError(bodyTok, "unused handle #%d", h)
+		}
+	}
+	p.handles = nil
 	return result, nil
 }
 
@@ -373,8 +452,26 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]struct
 		if err != nil {
 			return err
 		}
-		result.Encodings = encodings
+		for _, e := range encodings {
+			result.addEncoding(e)
+		}
 		kind = isBytes
+	case "handles":
+		encodings, err := p.parseHandleSection()
+		if err != nil {
+			return err
+		}
+		for _, e := range encodings {
+			result.addEncoding(e)
+		}
+		kind = isHandles
+	case "handle_defs":
+		handleDefs, err := p.parseHandleDefSection()
+		if err != nil {
+			return err
+		}
+		result.HandleDefs = handleDefs
+		kind = isHandleDefs
 	case "err":
 		errorCode, err := p.parseErrorCode()
 		if err != nil {
@@ -472,6 +569,8 @@ func (p *Parser) parseValue() (interface{}, error) {
 		} else {
 			return parseNum(tok, true)
 		}
+	case tHash:
+		return p.parseHandle(handleInfo{usesInValue: 1})
 	default:
 		tok, err := p.peekToken()
 		if err != nil {
@@ -542,9 +641,8 @@ func decodeFieldKey(field string) ir.FieldKey {
 	return ir.FieldKey{Name: field}
 }
 
-// TODO(fxb/8047): Parse handles when supported
-// This is not expressed in terms of parseBody since it handles the bytes
-// kind differently by expecting a bytes list instead of a bytes section
+// This is not expressed in terms of parseBody because it parses bytes/handles
+// without wire formats (e.g. `bytes = [...]`, not `bytes = { v1 = [...] }`).
 func (p *Parser) parseUnknownData() (ir.UnknownData, error) {
 	var result ir.UnknownData
 	parsedKinds := make(map[bodyElement]struct{})
@@ -562,13 +660,6 @@ func (p *Parser) parseUnknownData() (ir.UnknownData, error) {
 		}
 		var kind bodyElement
 		switch tok.value {
-		// case "handles":
-		// 	handles, err := p.parseHandleList()
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	result.Handles = handles
-		//  kind = isHandles
 		case "bytes":
 			bytes, err := p.parseByteList()
 			if err != nil {
@@ -576,6 +667,13 @@ func (p *Parser) parseUnknownData() (ir.UnknownData, error) {
 			}
 			result.Bytes = bytes
 			kind = isBytes
+		case "handles":
+			handles, err := p.parseHandleList(handleInfo{usesInValue: 1})
+			if err != nil {
+				return err
+			}
+			result.Handles = handles
+			kind = isHandles
 		default:
 			return p.newParseError(tok, "parameter '%s' does not apply to unknown data, must be bytes", tok)
 		}
@@ -663,38 +761,11 @@ func (p *Parser) parseLanguageList() (ir.LanguageList, error) {
 
 func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
 	var res []ir.Encoding
-	seenWireFormats := map[ir.WireFormat]struct{}{}
 	firstTok, err := p.peekToken()
 	if err != nil {
 		return nil, err
 	}
-	err = p.parseCommaSeparated(tLacco, tRacco, func() error {
-		var wireFormats []ir.WireFormat
-		for {
-			tok, err := p.consumeToken(tText)
-			if err != nil {
-				return err
-			}
-			wf := ir.WireFormat(tok.value)
-			if !p.config.WireFormats.Includes(wf) {
-				return p.newParseError(tok, "invalid wire format '%s'; must be one of: %s",
-					tok.value, p.config.WireFormats.Join(", "))
-			}
-			if _, ok := seenWireFormats[wf]; ok {
-				return p.newParseError(tok, "duplicate wire format: %s", tok.value)
-			}
-			seenWireFormats[wf] = struct{}{}
-			wireFormats = append(wireFormats, wf)
-			if p.peekTokenKind(tEqual) {
-				break
-			}
-			if _, err := p.consumeToken(tComma); err != nil {
-				return err
-			}
-		}
-		if _, err := p.consumeToken(tEqual); err != nil {
-			return err
-		}
+	err = p.parseWireFormatMapping(func(wireFormats []ir.WireFormat) error {
 		b, err := p.parseByteList()
 		if err != nil {
 			return err
@@ -762,6 +833,148 @@ func (p *Parser) parseByte() (byte, error) {
 		return 0, p.newParseError(tok, "invalid byte syntax: %s", tok.value)
 	}
 	return byte(b), nil
+}
+
+func (p *Parser) parseHandleSection() ([]ir.Encoding, error) {
+	var res []ir.Encoding
+	err := p.parseWireFormatMapping(func(wireFormats []ir.WireFormat) error {
+		h, err := p.parseHandleList(handleInfo{usesInHandles: 1})
+		if err != nil {
+			return err
+		}
+		for _, wf := range wireFormats {
+			res = append(res, ir.Encoding{
+				WireFormat: wf,
+				Handles:    h,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (p *Parser) parseHandleList(info handleInfo) ([]ir.Handle, error) {
+	var handles []ir.Handle
+	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
+		h, err := p.parseHandle(info)
+		if err != nil {
+			return err
+		}
+		handles = append(handles, h)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return handles, nil
+}
+
+func (p *Parser) parseHandle(info handleInfo) (ir.Handle, error) {
+	tok, err := p.consumeToken(tHash)
+	if err != nil {
+		return 0, err
+	}
+	tok, err = p.consumeToken(tText)
+	if err != nil {
+		return 0, err
+	}
+	index, err := strconv.ParseUint(tok.value, 10, 64)
+	if err != nil {
+		return 0, p.newParseError(tok, "invalid handle syntax: %s", tok.value)
+	}
+	h := ir.Handle(index)
+	p.handles[h] = mergeHandleInfo(p.handles[h], info)
+	return h, nil
+}
+
+func (p *Parser) parseHandleDefSection() ([]ir.HandleDef, error) {
+	var res []ir.HandleDef
+	expected := uint64(0)
+	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
+		tok, err := p.peekToken()
+		if err != nil {
+			return err
+		}
+		h, err := p.parseHandle(handleInfo{defined: true})
+		if err != nil {
+			return err
+		}
+		if raw := uint64(h); raw != expected {
+			return p.newParseError(
+				tok, "want #%d, got #%d (handle_defs must be #0, #1, #2, etc.)", expected, raw)
+		}
+		expected++
+		tok, err = p.consumeToken(tEqual)
+		if err != nil {
+			return err
+		}
+		hd, err := p.parseHandleDef()
+		if err != nil {
+			return err
+		}
+		res = append(res, hd)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (p *Parser) parseHandleDef() (ir.HandleDef, error) {
+	tok, err := p.consumeToken(tText)
+	if err != nil {
+		return ir.HandleDef{}, err
+	}
+	subtype, ok := ir.HandleSubtypeByName(tok.value)
+	if !ok {
+		return ir.HandleDef{}, p.newParseError(tok, "invalid handle subtype: %s", tok.value)
+	}
+	tok, err = p.consumeToken(tLparen)
+	if err != nil {
+		return ir.HandleDef{}, err
+	}
+	tok, err = p.consumeToken(tRparen)
+	if err != nil {
+		return ir.HandleDef{}, err
+	}
+	return ir.HandleDef{Subtype: subtype}, nil
+}
+
+func (p *Parser) parseWireFormatMapping(handler func([]ir.WireFormat) error) error {
+	seenWireFormats := map[ir.WireFormat]struct{}{}
+	return p.parseCommaSeparated(tLacco, tRacco, func() error {
+		var wireFormats []ir.WireFormat
+		for {
+			tok, err := p.consumeToken(tText)
+			if err != nil {
+				return err
+			}
+			wf := ir.WireFormat(tok.value)
+			if !p.config.WireFormats.Includes(wf) {
+				return p.newParseError(tok, "invalid wire format '%s'; must be one of: %s",
+					tok.value, p.config.WireFormats.Join(", "))
+			}
+			if _, ok := seenWireFormats[wf]; ok {
+				return p.newParseError(tok, "duplicate wire format: %s", tok.value)
+			}
+			seenWireFormats[wf] = struct{}{}
+			wireFormats = append(wireFormats, wf)
+			if p.peekTokenKind(tEqual) {
+				break
+			}
+			if _, err := p.consumeToken(tComma); err != nil {
+				return err
+			}
+		}
+		if _, err := p.consumeToken(tEqual); err != nil {
+			return err
+		}
+		return handler(wireFormats)
+	})
 }
 
 func (p *Parser) parseCommaSeparated(beginTok, endTok tokenKind, handler func() error) error {

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	fidlir "fidl/compiler/backend/types"
+
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -28,6 +30,8 @@ func TestParseValues(t *testing.T) {
 		{gidl: `"\""`, expectedValue: "\""},
 		{gidl: `true`, expectedValue: true},
 		{gidl: `null`, expectedValue: nil},
+		{gidl: `#0`, expectedValue: ir.Handle(0)},
+		{gidl: `#123`, expectedValue: ir.Handle(123)},
 		{gidl: `SomeRecord {}`, expectedValue: ir.Record{
 			Name: "SomeRecord",
 		}},
@@ -131,6 +135,7 @@ func TestFailsParseValues(t *testing.T) {
 	testCases := []testCase{
 		{gidl: `"`, expectedErrorSubstr: "improperly escaped string"},
 		{gidl: `"\xwrong"`, expectedErrorSubstr: "improperly escaped string"},
+		{gidl: `#-1`, expectedErrorSubstr: `want "<text>", got "-"`},
 		{gidl: `SomeRecord { 0x01020304: 5, }`, expectedErrorSubstr: "unexpected tokenKind"},
 	}
 	for _, tc := range testCases {
@@ -388,6 +393,245 @@ func TestParseBytesFailures(t *testing.T) {
 	}
 }
 
+func TestParseHandles(t *testing.T) {
+	type testCase struct {
+		gidl          string
+		expectedValue []ir.Encoding
+	}
+	testCases := []testCase{
+		// no entries
+		{
+			gidl:          `{}`,
+			expectedValue: nil,
+		},
+		// empty list
+		{
+			gidl: `{ alpha = [] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "alpha",
+					Handles:    nil,
+				},
+			},
+		},
+		// one handle
+		{
+			gidl: `{ alpha = [#0] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "alpha",
+					Handles:    []ir.Handle{0},
+				},
+			},
+		},
+		// several handles
+		{
+			gidl: `{ alpha = [#42, #1, #3] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "alpha",
+					Handles:    []ir.Handle{42, 1, 3},
+				},
+			},
+		},
+		// trailing comma allowed
+		{
+			gidl: `{ alpha = [#0,#1,] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "alpha",
+					Handles:    []ir.Handle{0, 1},
+				},
+			},
+		},
+		// multiple wire formats, same handles (empty), ordering 1
+		{
+			gidl: `{ alpha, beta = [] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "alpha",
+					Handles:    nil,
+				},
+				{
+					WireFormat: "beta",
+					Handles:    nil,
+				},
+			},
+		},
+		// multiple wire formats, same handles (empty), ordering 2
+		{
+			gidl: `{ beta, alpha = [] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "beta",
+					Handles:    nil,
+				},
+				{
+					WireFormat: "alpha",
+					Handles:    nil,
+				},
+			},
+		},
+		// multiple wire formats, same handles (non-empty)
+		{
+			gidl: `{ alpha, beta = [#0, #1] }`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "alpha",
+					Handles:    []ir.Handle{0, 1},
+				},
+				{
+					WireFormat: "beta",
+					Handles:    []ir.Handle{0, 1},
+				},
+			},
+		},
+		// multiple wire formats, different handles
+		{
+			gidl: `{
+				alpha = [#0, #1],
+				beta = [#1, #0],
+			}`,
+			expectedValue: []ir.Encoding{
+				{
+					WireFormat: "alpha",
+					Handles:    []ir.Handle{0, 1},
+				},
+				{
+					WireFormat: "beta",
+					Handles:    []ir.Handle{1, 0},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl), Config{
+			WireFormats: []ir.WireFormat{"alpha", "beta"},
+		})
+		value, err := p.parseHandleSection()
+		t.Run(tc.gidl, func(t *testing.T) {
+			checkMatch(t, value, tc.expectedValue, err)
+		})
+	}
+}
+
+func TestParseHandlesFailures(t *testing.T) {
+	type testCase struct {
+		gidl         string
+		errSubstring string
+	}
+	testCases := []testCase{
+		{
+			gidl:         `{ alpha = [0] }`,
+			errSubstring: `want "#", got "<text>"`,
+		},
+		{
+			gidl:         `{ alpha = [#-1] }`,
+			errSubstring: `want "<text>", got "-"`,
+		},
+		{
+			gidl:         `{ alpha, alpha = [] }`,
+			errSubstring: "duplicate wire format",
+		},
+		{
+			gidl:         `{ alpha = [], beta, alpha = [] }`,
+			errSubstring: "duplicate wire format",
+		},
+		{
+			gidl:         `{ this_is_not_a_wire_format = [] }`,
+			errSubstring: "invalid wire format",
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl), Config{
+			WireFormats: []ir.WireFormat{"alpha", "beta"},
+		})
+		_, err := p.parseHandleSection()
+		t.Run(tc.gidl, func(t *testing.T) {
+			if err == nil {
+				t.Fatalf("error was expected, but no error was returned")
+			}
+			if !strings.Contains(err.Error(), tc.errSubstring) {
+				t.Errorf("expected error containing %q, but got %q", tc.errSubstring, err.Error())
+			}
+		})
+	}
+}
+
+func TestParseHandleDefs(t *testing.T) {
+	type testCase struct {
+		gidl          string
+		expectedValue []ir.HandleDef
+	}
+	testCases := []testCase{
+		// no entries
+		{
+			gidl:          `{}`,
+			expectedValue: nil,
+		},
+		// one handle
+		{
+			gidl: `{ #0 = event() }`,
+			expectedValue: []ir.HandleDef{
+				{Subtype: fidlir.Event},
+			},
+		},
+		// several handles
+		{
+			gidl: `{ #0 = event(), #1 = event(), #2 = event() }`,
+			expectedValue: []ir.HandleDef{
+				{Subtype: fidlir.Event},
+				{Subtype: fidlir.Event},
+				{Subtype: fidlir.Event},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl), Config{})
+		value, err := p.parseHandleDefSection()
+		t.Run(tc.gidl, func(t *testing.T) {
+			checkMatch(t, value, tc.expectedValue, err)
+		})
+	}
+}
+
+func TestParseHandleDefsFailures(t *testing.T) {
+	type testCase struct {
+		gidl         string
+		errSubstring string
+	}
+	testCases := []testCase{
+		{
+			gidl:         `{ #1 = event() }`,
+			errSubstring: `want #0, got #1`,
+		},
+		{
+			gidl:         `{ #0 = event(), #2 = event() }`,
+			errSubstring: `want #1, got #2`,
+		},
+		{
+			gidl:         `{ #0 = invalidsubtype() }`,
+			errSubstring: "invalid handle subtype",
+		},
+		{
+			gidl:         `{ #0 = event }`,
+			errSubstring: `want "(", got "}"`,
+		},
+	}
+	for _, tc := range testCases {
+		p := NewParser("", strings.NewReader(tc.gidl), Config{})
+		_, err := p.parseHandleDefSection()
+		t.Run(tc.gidl, func(t *testing.T) {
+			if err == nil {
+				t.Fatalf("error was expected, but no error was returned")
+			}
+			if !strings.Contains(err.Error(), tc.errSubstring) {
+				t.Errorf("expected error containing %q, but got %q", tc.errSubstring, err.Error())
+			}
+		})
+	}
+}
+
 func TestParseUnknownData(t *testing.T) {
 	type testCase struct {
 		gidl          string
@@ -401,11 +645,19 @@ func TestParseUnknownData(t *testing.T) {
 				Bytes: nil,
 			},
 		},
-		// non empty
+		// bytes
 		{
 			gidl: `{ bytes = [0xde, 0xad, 0xbe, 0xef] }`,
 			expectedValue: ir.UnknownData{
 				Bytes: []byte{0xde, 0xad, 0xbe, 0xef},
+			},
+		},
+		// bytes and handles
+		{
+			gidl: `{ bytes = [0xde, 0xad, 0xbe, 0xef], handles = [#3, #4] }`,
+			expectedValue: ir.UnknownData{
+				Bytes:   []byte{0xde, 0xad, 0xbe, 0xef},
+				Handles: []ir.Handle{3, 4},
 			},
 		},
 	}
@@ -919,6 +1171,190 @@ func TestParseFailsDuplicateWireFormat(t *testing.T) {
 	}`
 	_, err := parse(gidl)
 	checkFailure(t, err, "duplicate wire format")
+}
+
+func TestParseSucceedsHandles(t *testing.T) {
+	gidl := `
+	success("HasHandles") {
+		handle_defs = {
+			#0 = event(),
+		},
+		value = HasHandles { h: #0 },
+		bytes = {
+			v1 = [ repeat(0xff):4, padding:4 ],
+		},
+		handles = {
+			v1 = [ #0 ],
+		},
+	}`
+	p := NewParser("", strings.NewReader(gidl), Config{
+		WireFormats: []ir.WireFormat{ir.V1WireFormat},
+	})
+	var all ir.All
+	err := p.parseSection(&all)
+	expectedAll := ir.All{
+		EncodeSuccess: []ir.EncodeSuccess{{
+			Name: "HasHandles",
+			Value: ir.Record{
+				Name: "HasHandles",
+				Fields: []ir.Field{
+					{
+						Key:   ir.FieldKey{Name: "h"},
+						Value: ir.Handle(0),
+					},
+				},
+			},
+			Encodings: []ir.Encoding{{
+				WireFormat: ir.V1WireFormat,
+				Bytes:      []byte{255, 255, 255, 255, 0, 0, 0, 0},
+				Handles:    []ir.Handle{0},
+			}},
+			HandleDefs: []ir.HandleDef{
+				{Subtype: fidlir.Event},
+			},
+		}},
+		DecodeSuccess: []ir.DecodeSuccess{{
+			Name: "HasHandles",
+			Value: ir.Record{
+				Name: "HasHandles",
+				Fields: []ir.Field{
+					{
+						Key:   ir.FieldKey{Name: "h"},
+						Value: ir.Handle(0),
+					},
+				},
+			},
+			Encodings: []ir.Encoding{{
+				WireFormat: ir.V1WireFormat,
+				Bytes:      []byte{255, 255, 255, 255, 0, 0, 0, 0},
+				Handles:    []ir.Handle{0},
+			}},
+			HandleDefs: []ir.HandleDef{
+				{Subtype: fidlir.Event},
+			},
+		}},
+	}
+	checkMatch(t, all, expectedAll, err)
+}
+
+func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
+	gidl := `
+	success("HasHandles") {
+		value = HasHandles { h: #0 },
+		bytes = {
+			v1 = [ repeat(0xff):4, padding:4 ],
+		},
+		handles = {
+			v1 = [ #0 ],
+		},
+		// handle_defs at the end.
+		handle_defs = {
+			#0 = event(),
+		},
+	}`
+	p := NewParser("", strings.NewReader(gidl), Config{
+		WireFormats: []ir.WireFormat{ir.V1WireFormat},
+	})
+	var all ir.All
+	err := p.parseSection(&all)
+	expectedAll := ir.All{
+		EncodeSuccess: []ir.EncodeSuccess{{
+			Name: "HasHandles",
+			Value: ir.Record{
+				Name: "HasHandles",
+				Fields: []ir.Field{
+					{
+						Key:   ir.FieldKey{Name: "h"},
+						Value: ir.Handle(0),
+					},
+				},
+			},
+			Encodings: []ir.Encoding{{
+				WireFormat: ir.V1WireFormat,
+				Bytes:      []byte{255, 255, 255, 255, 0, 0, 0, 0},
+				Handles:    []ir.Handle{0},
+			}},
+			HandleDefs: []ir.HandleDef{
+				{Subtype: fidlir.Event},
+			},
+		}},
+		DecodeSuccess: []ir.DecodeSuccess{{
+			Name: "HasHandles",
+			Value: ir.Record{
+				Name: "HasHandles",
+				Fields: []ir.Field{
+					{
+						Key:   ir.FieldKey{Name: "h"},
+						Value: ir.Handle(0),
+					},
+				},
+			},
+			Encodings: []ir.Encoding{{
+				WireFormat: ir.V1WireFormat,
+				Bytes:      []byte{255, 255, 255, 255, 0, 0, 0, 0},
+				Handles:    []ir.Handle{0},
+			}},
+			HandleDefs: []ir.HandleDef{
+				{Subtype: fidlir.Event},
+			},
+		}},
+	}
+	checkMatch(t, all, expectedAll, err)
+}
+
+func TestParseFailsUndefinedHandleInValue(t *testing.T) {
+	gidl := `
+	success("UndefinedHandleInValue") {
+		value = Value { h: #0 },
+		bytes = { v1 = [] },
+	}`
+	_, err := parse(gidl)
+	checkFailure(t, err, "missing definition for handle #0")
+}
+
+func TestParseFailsUndefinedHandleInHandles(t *testing.T) {
+	gidl := `
+	success("UndefinedHandleInHandles") {
+		value = Value {},
+		bytes = { v1 = [] },
+		handles = { v1 = [ #0 ] },
+	}`
+	_, err := parse(gidl)
+	checkFailure(t, err, "missing definition for handle #0")
+}
+
+func TestParseFailsHandleUsedTwiceInValue(t *testing.T) {
+	gidl := `
+	success("HandleUsedTwiceInValue") {
+		handle_defs = { #0 = event() },
+		value = Value { h0: #0, h1: #0 },
+		bytes = { v1 = [] },
+	}`
+	_, err := parse(gidl)
+	checkFailure(t, err, "handle #0 used more than once in 'value' section")
+}
+
+func TestParseFailsHandleUsedTwiceInHandles(t *testing.T) {
+	gidl := `
+	success("HandleUsedTwiceInHandles") {
+		handle_defs = { #0 = event() },
+		value = Value {},
+		bytes = { v1 = [] },
+		handles = { v1 = [ #0, #0 ] },
+	}`
+	_, err := parse(gidl)
+	checkFailure(t, err, "handle #0 used more than once in 'handles' section")
+}
+
+func TestParseFailsUnusedHandle(t *testing.T) {
+	gidl := `
+	success("UnusedHandle") {
+		handle_defs = { #0 = event() },
+		value = Value {},
+		bytes = { v1 = [] },
+	}`
+	_, err := parse(gidl)
+	checkFailure(t, err, "unused handle #0")
 }
 
 func parse(gidlInput string) (ir.All, error) {
