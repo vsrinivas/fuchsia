@@ -113,14 +113,19 @@ void Vdec1::PowerOn() {
     kG12xXtal = 7,  // 24 MHz
   };
 
-  // Pick 500 MHz. The maximum frequency used in linux is 648 MHz, but that
-  // requires using GP0, which is already being used by the GPU.
-  // The linux driver also uses 200MHz in some circumstances for videos <=
-  // 1080p30.
+  // We'd like to pick 500 MHz. The maximum frequency used in linux is 648 MHz, but that requires
+  // using GP0, which is already being used by the GPU. The linux driver also uses 200MHz in some
+  // circumstances for videos <= 1080p30.
+  //
+  // However, using the h264 multi decoder, we got a few intermittent decode correctness glitches
+  // when we ran at 500 MHz, and still a few though less frequent at 400 MHz.  At 285.7 we don't see
+  // those. It's possible we have something else misconfigured, or have a timing-dependent SW bug,
+  // but 285.7 is very likely to be fast enough (for now) assuming linear performance per clock
+  // rate.
   uint32_t clock_sel =
       (owner_->device_type() == DeviceType::kG12A || owner_->device_type() == DeviceType::kG12B)
-          ? kG12xFclkDiv4
-          : kGxmFclkDiv4;
+          ? kG12xFclkDiv7
+          : kGxmFclkDiv7;
 
   HhiVdecClkCntl::Get()
       .ReadFrom(mmio()->hiubus)
