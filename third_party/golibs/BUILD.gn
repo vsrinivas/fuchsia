@@ -123,9 +123,6 @@ golib("github.com/pkg/sftp") {
     ":golang.org/x/crypto",
   ]
 }
-golib("github.com/rjw57/oauth2device") {
-  deps = [ ":golang.org/x/oauth2" ]
-}
 golib("github.com/syndtr/goleveldb") {
   deps = [ ":github.com/golang/snappy" ]
 }
