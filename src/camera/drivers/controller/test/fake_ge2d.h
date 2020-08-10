@@ -83,10 +83,10 @@ class FakeGe2d {
   }
   zx_status_t Ge2dProcessFrame(uint32_t /*task_index*/, uint32_t input_buffer_index) {
     frame_available_info info = {
+        .frame_status = FRAME_STATUS_OK,
         .buffer_id = input_buffer_index,
         .metadata.input_buffer_index = input_buffer_index,
         .metadata.image_format_index = image_format_index_,
-        .frame_status = FRAME_STATUS_OK,
     };
     frame_callback_->frame_ready(frame_callback_->ctx, &info);
     return ZX_OK;
@@ -98,10 +98,10 @@ class FakeGe2d {
     image_format_index_ = new_image_format_index;
     image_format_index_ = new_image_format_index;
     frame_available_info info = {
+        .frame_status = FRAME_STATUS_OK,
         .buffer_id = 0,
         .metadata.input_buffer_index = 0,
         .metadata.image_format_index = image_format_index_,
-        .frame_status = FRAME_STATUS_OK,
     };
     res_change_callback_->frame_resolution_changed(res_change_callback_->ctx, &info);
     return ZX_OK;
@@ -111,10 +111,10 @@ class FakeGe2d {
     image_format_index_ = new_output_image_format_index;
     image_format_index_ = new_output_image_format_index;
     frame_available_info info = {
+        .frame_status = FRAME_STATUS_OK,
         .buffer_id = 0,
         .metadata.input_buffer_index = 0,
         .metadata.image_format_index = image_format_index_,
-        .frame_status = FRAME_STATUS_OK,
     };
     res_change_callback_->frame_resolution_changed(res_change_callback_->ctx, &info);
     return ZX_OK;

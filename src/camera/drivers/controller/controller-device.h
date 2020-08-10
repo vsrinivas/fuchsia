@@ -79,8 +79,8 @@ class ControllerDevice : public ControllerDeviceType,
   }
 
   static constexpr fuchsia_hardware_camera_Device_ops_t fidl_ops = {
-      .GetChannel2 = fidl::Binder<ControllerDevice>::BindMember<&ControllerDevice::GetChannel2>,
       .GetChannel = fidl::Binder<ControllerDevice>::BindMember<&ControllerDevice::GetChannel>,
+      .GetChannel2 = fidl::Binder<ControllerDevice>::BindMember<&ControllerDevice::GetChannel2>,
   };
 
   ddk::IspProtocolClient isp_;

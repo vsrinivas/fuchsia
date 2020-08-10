@@ -47,8 +47,6 @@ source_set("source") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 driver_module("driver") {
