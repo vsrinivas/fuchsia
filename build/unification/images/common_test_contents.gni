@@ -4,8 +4,7 @@
 
 # This parameter contains tests that were originally provided by the ZN build
 # and inserted into bootfs or system images.
-# This list is mostly used by //build/unification/images:migrated-tests and
-# //build/unification/images:migrated-aux.
+# This list is mostly used by //bundles/bringup:tests.
 common_test_contents = [
   "//src/devices/block/bin/biotime:biotime-test",
   "//src/devices/block/drivers/ahci:ahci-unittest",

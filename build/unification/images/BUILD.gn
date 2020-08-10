@@ -24,11 +24,7 @@ foreach(artifact, zircon_artifacts) {
 group("images") {
   deps = [
     ":legacy-aux",
-    ":legacy-image",
     ":legacy-tests",
-    ":migrated-aux",
-    ":migrated-image",
-    ":migrated-tests",
   ]
 }
 
@@ -42,12 +38,6 @@ group("images") {
 #    to in the GN build - the edit is an addition;
 #  - a binary is being migrated from the ZN build into the GN build - the edit
 #    should be a removal.
-
-aggregate_manifest("legacy-image") {
-  # Though without any dependency, this target is being kept around as its
-  # output is needed by support scripts.
-  deps = []
-}
 
 # IMPORTANT NOTE: this target is now frozen, please do not add any more
 # dependencies to it.
@@ -84,37 +74,4 @@ aggregate_manifest("legacy-tests") {
   ]
 
   reference = "legacy-tests-$target_cpu"
-}
-
-###############################################################################
-# Migrated manifests
-#
-# These manifests list binaries that were migrated from the ZN build into the
-# GN build.
-#
-# Edit these targets if:
-#  - a binary is being migrated from the ZN build into the GN build - the edit
-#    should be an addition;
-#  - a formerly migrated binary is being better integrated into the GN build
-#    using idiomatic constructs - the edit should be a removal.
-
-fini_manifest("migrated-image") {
-  # Use the same naming scheme as `aggregate_manifest`.
-  outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
-
-  deps = []
-}
-
-fini_manifest("migrated-aux") {
-  # Use the same naming scheme as `aggregate_manifest`.
-  outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
-
-  deps = []
-}
-
-fini_manifest("migrated-tests") {
-  # Use the same naming scheme as `aggregate_manifest`.
-  outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
-
-  deps = []
 }

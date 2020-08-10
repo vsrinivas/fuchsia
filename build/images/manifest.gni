@@ -23,20 +23,7 @@ zircon_boot_manifests_deps = []
 zircon_aux_manifests = []
 zircon_aux_manifests_deps = []
 
-_image_data = {
-  target = "//build/unification/images:migrated-image"
-  gen_dir = get_label_info(target, "target_out_dir")
-  name = get_label_info(target, "name")
-  file = "$gen_dir/$name.unification.manifest"
-}
-zircon_boot_manifests += [ _image_data.file ]
-zircon_boot_manifests_deps += [ _image_data.target ]
-
-foreach(flavor,
-        [
-          "legacy-aux",
-          "migrated-aux",
-        ]) {
+foreach(flavor, [ "legacy-aux" ]) {
   _aux_flavor = {
   }
   _aux_flavor = {
