@@ -24,11 +24,15 @@ impl<'a> ActionContext<'a> {
         actions: &'a Actions,
         diagnostic_data: &'a Vec<DiagnosticData>,
     ) -> ActionContext<'a> {
-        let fetcher = Fetcher::FileData(FileDataFetcher::new(diagnostic_data));
+        let fetcher = FileDataFetcher::new(diagnostic_data);
+        let mut action_results = ActionResults::new();
+        fetcher.errors().iter().for_each(|e| {
+            action_results.add_warning(format!("[ERROR] {}", e));
+        });
         ActionContext {
             actions,
-            metric_state: MetricState::new(metrics, fetcher),
-            action_results: ActionResults::new(),
+            metric_state: MetricState::new(metrics, Fetcher::FileData(fetcher)),
+            action_results,
         }
     }
 }
@@ -174,6 +178,7 @@ impl ActionContext<'_> {
 mod test {
     use {
         super::*,
+        crate::config::Source,
         crate::metrics::{Metric, Metrics},
     };
 
@@ -275,5 +280,36 @@ mod test {
         assert!(includes(results.get_gauges(), "gauge1: 0.4"));
         assert!(includes(results.get_gauges(), "gauge2: 80.00%"));
         assert!(includes(results.get_gauges(), "gauge3: 1.2"));
+    }
+
+    #[test]
+    fn action_context_errors() {
+        let metrics = Metrics::new();
+        let actions = Actions::new();
+        let data = vec![DiagnosticData::new(
+            "inspect.json".to_string(),
+            Source::Inspect,
+            r#"
+            [
+                {
+                    "moniker": "abcd",
+                    "payload": {"root": {"val": 10}}
+                },
+                {
+                    "moniker": "abcd2",
+                    "payload": null
+                }
+            ]
+            "#
+            .to_string(),
+        )
+        .expect("create data")];
+        let action_context = ActionContext::new(&metrics, &actions, &data);
+
+        assert_eq!(
+            &vec!["[ERROR] Unable to deserialize Inspect contents for abcd2 to node hierarchy"
+                .to_string()],
+            action_context.action_results.get_warnings()
+        );
     }
 }

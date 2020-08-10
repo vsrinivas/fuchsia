@@ -136,6 +136,11 @@ impl<'a> FileDataFetcher<'a> {
             }
         }
     }
+
+    // Return a vector of errors encountered by contained fetchers.
+    pub fn errors(&self) -> Vec<String> {
+        self.inspect.component_errors.iter().map(|e| format!("{}", e)).collect()
+    }
 }
 
 /// [TrialDataFetcher] stores the key-value lookup for metric names whose values are given as
@@ -955,8 +960,14 @@ mod test {
             let s = r#"[]"#;
             vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
         };
+        static ref NO_PAYLOAD_F: Vec<DiagnosticData> = {
+            let s = r#"[{"moniker": "abcd", "payload": null}]"#;
+            vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
+        };
         static ref BAR_99_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&LOCAL_F);
         static ref EMPTY_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&EMPTY_F);
+        static ref NO_PAYLOAD_FETCHER: FileDataFetcher<'static> =
+            FileDataFetcher::new(&NO_PAYLOAD_F);
         static ref BAR_SELECTOR: SelectorString =
             SelectorString::try_from("INSPECT:bar.cmx:root:bar".to_owned()).unwrap();
         static ref WRONG_SELECTOR: SelectorString =
@@ -1155,6 +1166,11 @@ mod test {
             MetricValue::Missing("Annotation() needs a string argument".to_string())
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_fetch_errors() {
+        assert_eq!(1, NO_PAYLOAD_FETCHER.errors().len());
     }
 
     // Correct operation of the klog, syslog, and bootlog fields of TrialDataFetcher are tested

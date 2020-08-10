@@ -162,6 +162,7 @@ impl TextFetcher {
 
 pub struct InspectFetcher {
     pub components: Vec<ComponentInspectInfo>,
+    pub component_errors: Vec<anyhow::Error>,
 }
 
 impl TryFrom<&str> for InspectFetcher {
@@ -212,7 +213,7 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
                 let moniker = moniker_from(&path)?;
                 let raw_contents = extract_json_value(raw_component, "payload").or_else(|_| {
                     extract_json_value(raw_component, "contents").or_else(|_| {
-                        bail!("Neither 'payload' nor 'contentsf' found in Inspect component")
+                        bail!("Neither 'payload' nor 'contents' found in Inspect component")
                     })
                 })?;
                 let processed_data: NodeHierarchy = serde_json::from_value(raw_contents.clone())
@@ -224,13 +225,26 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
                     })?;
                 Ok(ComponentInspectInfo { moniker, processed_data })
             })
-            .collect::<Result<Vec<_>, Error>>()?;
-        Ok(Self { components })
+            .collect::<Vec<_>>();
+
+        let mut component_errors = vec![];
+        let components = components
+            .into_iter()
+            .filter_map(|v| match v {
+                Ok(component) => Some(component),
+                Err(e) => {
+                    component_errors.push(e);
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        Ok(Self { components, component_errors })
     }
 }
 
 lazy_static! {
-    static ref EMPTY_INSPECT_FETCHER: InspectFetcher = InspectFetcher { components: Vec::new() };
+    static ref EMPTY_INSPECT_FETCHER: InspectFetcher =
+        InspectFetcher { components: Vec::new(), component_errors: Vec::new() };
 }
 
 impl InspectFetcher {
@@ -305,18 +319,26 @@ mod test {
         {"moniker":"asdf/foo/qwer",
          "payload":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
         {"moniker":"zxcv/bar/hjkl",
-         "payload":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
+         "payload":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}},
+        {"moniker":"fail_component",
+         "payload": null}
         ]"#,
             r#"[
         {"moniker":"asdf/foo/qwer",
          "payload":{"root":{"dataInt":5, "child":{"dataFloat":2.3}}}},
         {"path":"hub/r/zxcv/1/r/bar/2/c/hjkl.cmx/1",
-         "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
+         "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}},
+        {"moniker":"fail_component",
+         "payload": null}
         ]"#,
         ];
 
         for json in json_options.into_iter() {
             let inspect = InspectFetcher::try_from(json)?;
+            assert_eq!(
+                vec!["Unable to deserialize Inspect contents for fail_component to node hierarchy"],
+                inspect.component_errors.iter().map(|e| format!("{}", e)).collect::<Vec<_>>()
+            );
             macro_rules! assert_wrong {
                 ($selector:expr, $error:expr) => {
                     assert_eq!(
