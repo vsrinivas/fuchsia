@@ -5,6 +5,7 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
@@ -37,8 +38,10 @@
 #include <zxtest/zxtest.h>
 
 #include "src/storage/lib/paver/device-partitioner.h"
+#include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/paver.h"
 #include "src/storage/lib/paver/test/test-utils.h"
+#include "src/storage/lib/paver/utils.h"
 
 namespace {
 
@@ -1399,6 +1402,8 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
 }
 
+constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+
 #if defined(__x86_64__)
 class PaverServiceBlockTest : public PaverServiceTest {
  public:
@@ -1435,8 +1440,6 @@ class PaverServiceBlockTest : public PaverServiceTest {
   IsolatedDevmgr devmgr_;
   std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient> data_sink_;
 };
-
-constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 
 TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
@@ -1516,5 +1519,107 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipeVolume) {
   ASSERT_FALSE(wipe_result->result.is_err());
 }
 #endif
+
+class PaverServiceGptDeviceTest : public PaverServiceTest {
+ protected:
+  void SpawnIsolatedDevmgr(const char* board_name) {
+    driver_integration_test::IsolatedDevmgr::Args args;
+    args.driver_search_paths.push_back("/boot/driver");
+    args.disable_block_watcher = false;
+    args.path_prefix = "/pkg/";
+    args.board_name = board_name;
+    ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
+
+    // Forward the block watcher FIDL interface from the devmgr.
+    fake_svc_.ForwardServiceTo(llcpp::fuchsia::fshost::BlockWatcher::Name,
+                               devmgr_.fshost_outgoing_dir());
+
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
+    static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
+    static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
+    zx::channel svc_root = GetSvcRoot();
+    static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(svc_root));
+  }
+
+  void InitializeGptDevice(const char* board_name, uint64_t block_count, uint32_t block_size) {
+    SpawnIsolatedDevmgr(board_name);
+    block_count_ = block_count;
+    block_size_ = block_size;
+    ASSERT_NO_FATAL_FAILURES(
+        BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, block_size, &gpt_dev_));
+  }
+
+  zx::channel GetSvcRoot() { return zx::channel(fdio_service_clone(fake_svc_.svc_chan().get())); }
+
+  struct PartitionDescription {
+    const char* name;
+    const uint8_t* type;
+    uint64_t start;
+    uint64_t length;
+  };
+
+  void InitializeStartingGPTPartitions(const std::vector<PartitionDescription>& init_partitions) {
+    // Pause the block watcher while we write partitions to the disk.
+    // This is to avoid the block watcher seeing an intermediate state of the partition table
+    // and incorrectly treating it as an MBR.
+    // The watcher is automatically resumed when this goes out of scope.
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_OK(gpt::GptDevice::Create(gpt_dev_->fd(), gpt_dev_->block_size(),
+                                     gpt_dev_->block_count(), &gpt));
+    ASSERT_OK(gpt->Sync());
+
+    for (const auto& part : init_partitions) {
+      ASSERT_OK(
+          gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
+          "%s", part.name);
+    }
+
+    ASSERT_OK(gpt->Sync());
+
+    fdio_cpp::UnownedFdioCaller caller(gpt_dev_->fd());
+    auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+        caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
+    ASSERT_TRUE(result.ok());
+    ASSERT_FALSE(result->result.is_err());
+  }
+
+  uint8_t* GetRandomGuid() {
+    static uint8_t random_guid[GPT_GUID_LEN];
+    zx_cprng_draw(random_guid, GPT_GUID_LEN);
+    return random_guid;
+  }
+
+  driver_integration_test::IsolatedDevmgr devmgr_;
+  std::unique_ptr<BlockDevice> gpt_dev_;
+  uint64_t block_count_;
+  uint64_t block_size_;
+};
+
+class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
+ public:
+  PaverServiceLuisTest() { ASSERT_NO_FATAL_FAILURES(InitializeGptDevice("luis", 0x748034, 512)); }
+
+  void InitializeLuisGPTPartitions() {
+    constexpr uint8_t kDummyType[GPT_GUID_LEN] = {0xaf, 0x3d, 0xc6, 0x0f, 0x83, 0x84, 0x72, 0x47,
+                                                  0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4};
+    const std::vector<PartitionDescription> kLuisStartingPartitions = {
+        {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
+    };
+    ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(kLuisStartingPartitions));
+  }
+};
+
+TEST_F(PaverServiceLuisTest, CreateAbr) {
+  ASSERT_NO_FATAL_FAILURES(InitializeLuisGPTPartitions());
+  std::shared_ptr<paver::Context> context;
+  zx::channel svc_root = GetSvcRoot();
+  EXPECT_OK(
+      abr::ClientFactory::Create(devmgr_.devfs_root().duplicate(), std::move(svc_root), context));
+}
 
 }  // namespace

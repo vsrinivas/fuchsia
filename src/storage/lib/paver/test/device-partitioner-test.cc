@@ -38,6 +38,7 @@
 #include "src/storage/lib/paver/as370.h"
 #include "src/storage/lib/paver/astro.h"
 #include "src/storage/lib/paver/chromebook-x64.h"
+#include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/sherlock.h"
 #include "src/storage/lib/paver/test/test-utils.h"
 #include "src/storage/lib/paver/utils.h"
@@ -1314,6 +1315,174 @@ TEST_F(SherlockPartitionerTests, SupportsPartition) {
   // Unsupported content type.
   EXPECT_FALSE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA, "foo_type")));
+}
+
+class LuisPartitionerTests : public GptDevicePartitionerTests {
+ protected:
+  LuisPartitionerTests() : GptDevicePartitionerTests("luis", 512) {}
+
+  // Create a DevicePartition for a device.
+  zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
+      const fbl::unique_fd& device) {
+    zx::channel svc_root = GetSvcRoot();
+    return paver::LuisPartitioner::Initialize(devmgr_.devfs_root().duplicate(), std::move(svc_root),
+                                              device);
+  }
+
+  void InitializeStartingGPTPartitions(BlockDevice* gpt_dev,
+                                       const std::vector<PartitionDescription>& init_partitions) {
+    // Pause the block watcher while we write partitions to the disk.
+    // This is to avoid the block watcher seeing an intermediate state of the partition table
+    // and incorrectly treating it as an MBR.
+    // The watcher is automatically resumed when this goes out of scope.
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_OK(
+        gpt::GptDevice::Create(gpt_dev->fd(), gpt_dev->block_size(), gpt_dev->block_count(), &gpt));
+    ASSERT_OK(gpt->Sync());
+
+    for (const auto& part : init_partitions) {
+      ASSERT_OK(
+          gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
+          "%s", part.name);
+    }
+
+    ASSERT_OK(gpt->Sync());
+
+    fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
+    auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+        caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
+    ASSERT_TRUE(result.ok());
+    ASSERT_FALSE(result->result.is_err());
+  }
+};
+
+TEST_F(LuisPartitionerTests, InitializeWithoutGptFails) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(&gpt_dev));
+
+  ASSERT_NOT_OK(CreatePartitioner(kDummyDevice));
+}
+
+TEST_F(LuisPartitionerTests, InitializeWithoutFvmSucceeds) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &gpt_dev));
+
+  {
+    // Pause the block watcher while we write partitions to the disk.
+    // This is to avoid the block watcher seeing an intermediate state of the partition table
+    // and incorrectly treating it as an MBR.
+    // The watcher is automatically resumed when this goes out of scope.
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    // Set up a valid GPT.
+    std::unique_ptr<gpt::GptDevice> gpt;
+    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(gpt_dev.get(), &gpt));
+
+    ASSERT_OK(CreatePartitioner(kDummyDevice));
+  }
+}
+
+TEST_F(LuisPartitionerTests, AddPartitionNotSupported) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kMebibyte, &gpt_dev));
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+
+  ASSERT_STATUS(status->AddPartition(PartitionSpec(paver::Partition::kZirconB)),
+                ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(LuisPartitionerTests, FindPartition) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  // kBlockCount should be a value large enough to accomodate all partitions and blocks reserved by
+  // gpt. The current value is copied from the case of sherlock. As of now, we assume they have
+  // the same disk size requirement.
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  // The initial gpt partitions are randomly chosen and does not necessarily reflect the
+  // actual gpt partition layout in product.
+  const std::vector<PartitionDescription> kLuisStartingPartitions = {
+      {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
+      {GPT_BOOTLOADER_A_NAME, kDummyType, 0x30400, 0x10000},
+      {GPT_BOOTLOADER_B_NAME, kDummyType, 0x40400, 0x10000},
+      {GPT_BOOTLOADER_R_NAME, kDummyType, 0x50400, 0x10000},
+      {GPT_VBMETA_A_NAME, kDummyType, 0x60400, 0x10000},
+      {GPT_VBMETA_B_NAME, kDummyType, 0x70400, 0x10000},
+      {GPT_VBMETA_R_NAME, kDummyType, 0x80400, 0x10000},
+      {GPT_ZIRCON_A_NAME, kDummyType, 0x90400, 0x10000},
+      {GPT_ZIRCON_B_NAME, kDummyType, 0xa0400, 0x10000},
+      {GPT_ZIRCON_R_NAME, kDummyType, 0xb0400, 0x10000},
+      {GPT_FACTORY_NAME, kDummyType, 0xc0400, 0x10000},
+      {GPT_DURABLE_NAME, kDummyType, 0xd0400, 0x10000},
+      {GPT_FVM_NAME, kDummyType, 0xe0400, 0x10000},
+
+  };
+  ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kLuisStartingPartitions));
+
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Make sure we can find the important partitions.
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+}
+
+TEST_F(LuisPartitionerTests, CreateAbrClient) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  const std::vector<PartitionDescription> kStartingPartitions = {
+      {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
+  };
+  ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kStartingPartitions));
+  zx::channel svc_root = GetSvcRoot();
+  std::shared_ptr<paver::Context> context;
+  EXPECT_OK(paver::LuisAbrClientFactory().New(devmgr_.devfs_root().duplicate(), std::move(svc_root),
+                                              context));
+}
+
+TEST_F(LuisPartitionerTests, SupportsPartition) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kMebibyte, &gpt_dev));
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloader)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_TRUE(
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+  // Unsupported partition type.
+  EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kUnknown)));
+
+  // Unsupported content type.
+  EXPECT_FALSE(
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kAbrMeta, "foo_type")));
 }
 
 TEST(AstroPartitionerTests, IsFvmWithinFtl) {

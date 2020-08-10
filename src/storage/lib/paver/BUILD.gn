@@ -138,6 +138,18 @@ source_set("sherlock") {
   ]
 }
 
+source_set("luis") {
+  sources = [ "luis.cc" ]
+  deps = [
+    ":gpt",
+    ":paver-core",
+    ":sysconfig",
+    "//src/devices/lib/amlogic",
+    "//src/lib/uuid",
+    "//zircon/system/ulib/gpt",
+  ]
+}
+
 source_set("x64") {
   sources = [ "x64.cc" ]
   deps = [
@@ -157,6 +169,7 @@ zx_library("paver") {
     ":as370",
     ":astro",
     ":chromebook-x64",
+    ":luis",
     ":paver-core",
     ":sherlock",
     ":x64",
