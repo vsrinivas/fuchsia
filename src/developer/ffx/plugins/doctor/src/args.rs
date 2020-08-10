@@ -9,7 +9,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "doctor",
-    description = "diagnoses and attempts to resolve ffx connectivity issues"
+    description = "Run common checks for the ffx tool and host environment"
 )]
 pub struct DoctorCommand {
     #[argh(

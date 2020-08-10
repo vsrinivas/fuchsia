@@ -1,8 +1,15 @@
 pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut>(
+{% if includes_execution == "false" and includes_subcommands == "false" %}
+  _daemon_factory: D,
+  _remote_factory: R,
+  _is_experiment: E,
+  _cmd: {{suite_args_lib}}::FfxPluginCommand,
+{% else %}
   daemon_factory: D,
   remote_factory: R,
   is_experiment: E,
   cmd: {{suite_args_lib}}::FfxPluginCommand,
+{% endif %}
 ) -> Result<(), anyhow::Error>
     where
     D: FnOnce() -> DFut,
@@ -33,10 +40,15 @@ pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut>(
 {% endif %}
 
 {% else %}
+{% if includes_subcommands == "true" %}
     match cmd.subcommand {
 {% for plugin in plugins %}
       {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(daemon_factory, remote_factory, is_experiment, c).await,
 {% endfor %}
     }
+{% else %}
+    println!("Subcommand not implemented yet.");
+    Ok(())
+{% endif %}
 {% endif %}
 }

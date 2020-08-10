@@ -6,7 +6,7 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_target_sub_command::Subcommand};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "target", description = "target related commands")]
+#[argh(subcommand, name = "target", description = "Interact with a target device or emulator")]
 pub struct TargetCommand {
     #[argh(subcommand)]
     pub subcommand: Subcommand,

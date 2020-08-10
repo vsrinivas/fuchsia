@@ -6,18 +6,18 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_lib_sub_command::Subcommand};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-/// Fuchsia Development Bridge
+/// Fuchsia's developer tool
 pub struct Ffx {
-    #[argh(option)]
-    /// runtime configuration information
+    #[argh(option, short = 'c')]
+    /// override default configuration
     pub config: Option<String>,
 
-    #[argh(option)]
-    /// environment file where configuration is initialized
-    pub environment_file: Option<String>,
+    #[argh(option, short = 'e')]
+    /// override default environment settings
+    pub env: Option<String>,
 
-    #[argh(option)]
-    /// target selection
+    #[argh(option, short = 't')]
+    /// apply operations across single or multiple targets
     pub target: Option<String>,
 
     #[argh(subcommand)]
@@ -29,7 +29,7 @@ impl Default for Ffx {
         Self {
             target: None,
             config: None,
-            environment_file: None,
+            env: None,
             subcommand: Subcommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
                 subcommand: ffx_daemon_plugin_sub_command::Subcommand::FfxDaemonStart(
                     ffx_daemon_start_args::StartCommand {},

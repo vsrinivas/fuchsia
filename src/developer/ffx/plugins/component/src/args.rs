@@ -6,7 +6,7 @@ use {argh::FromArgs, ffx_component_sub_command::Subcommand, ffx_core::ffx_comman
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "component", description = "observe and control components")]
+#[argh(subcommand, name = "component", description = "Discover and manage components")]
 pub struct ComponentCommand {
     #[argh(subcommand)]
     pub subcommand: Subcommand,

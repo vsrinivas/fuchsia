@@ -21,12 +21,18 @@ if (host_toolchain == current_toolchain) {
     with_unit_tests = true
 
     plugin_deps = [
-      "//src/developer/ffx/doctor:ffx_doctor",
-      "//src/developer/ffx/packaging:ffx_packaging",
       "//src/developer/ffx/plugins/component:ffx_component",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin",
+      "//src/developer/ffx/plugins/diagnostic:ffx_diagnostic",
+      "//src/developer/ffx/plugins/docs:ffx_docs",
+      "//src/developer/ffx/plugins/doctor:ffx_doctor",
+      "//src/developer/ffx/plugins/emulator:ffx_emulator",
+      "//src/developer/ffx/plugins/packaging:ffx_packaging",
+      "//src/developer/ffx/plugins/sdk:ffx_sdk",
       "//src/developer/ffx/plugins/target:ffx_target",
+      "//src/developer/ffx/plugins/vendor_extensions:ffx_vendor",
+      "//src/developer/ffx/plugins/version:ffx_version",
       "//src/developer/ffx/plugins/zxdb:ffx_zxdb_plugin",
     ]
 

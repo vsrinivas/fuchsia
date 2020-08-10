@@ -6,7 +6,11 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "config", description = "configuration management")]
+#[argh(
+    subcommand,
+    name = "config",
+    description = "View and switch default and user configurations"
+)]
 pub struct ConfigCommand {
     #[argh(subcommand)]
     pub sub: SubCommand,

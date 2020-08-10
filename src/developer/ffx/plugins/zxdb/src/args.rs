@@ -9,10 +9,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "debug",
-    description = "Start a debugging session
-
-EXPERIMENTAL
-Currently only runs inside the Fuchsia tree."
+    description = "[EXPERIMENTAL] Start a debugging session. \
+    Currently only runs inside the Fuchsia tree."
 )]
 pub struct DebugCommand {
     #[argh(positional, default = "String::from(\"/tmp/zxdb.socket\")")]

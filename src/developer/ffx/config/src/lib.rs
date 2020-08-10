@@ -267,7 +267,7 @@ pub fn find_env_file() -> Result<String> {
 pub fn find_env_file() -> Result<String> {
     let ffx: Ffx = argh::from_env();
 
-    let env_path = if let Some(f) = ffx.environment_file {
+    let env_path = if let Some(f) = ffx.env {
         PathBuf::from(f)
     } else {
         let mut path = get_config_base_path();

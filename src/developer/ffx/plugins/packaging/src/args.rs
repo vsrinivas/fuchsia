@@ -7,7 +7,7 @@ use ffx_core::ffx_command;
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "package", description = "Packaging tools")]
+#[argh(subcommand, name = "package", description = "Create and publish Fuchsia packages")]
 pub struct PackageCommand {
     #[argh(subcommand)]
     pub sub: SubCommand,

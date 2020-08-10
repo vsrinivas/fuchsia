@@ -6,7 +6,7 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_daemon_plugin_sub_command::Subco
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "daemon", description = "daemon related commands")]
+#[argh(subcommand, name = "daemon", description = "Interact with/control the ffx daemon")]
 pub struct DaemonCommand {
     #[argh(subcommand)]
     pub subcommand: Subcommand,
