@@ -17,7 +17,7 @@ protocol GpioImpl {
     /// the interpretation of "function" is platform dependent.
     SetAltFunction(uint32 index, uint64 function) -> (zx.status s);
     /// Configures the GPIO pin drive strength.
-    SetDriveStrength(uint32 index, uint8 mA) -> (zx.status s);
+    SetDriveStrength(uint32 index, uint64 ua) -> (zx.status s, uint64 actual_ua);
     /// Reads the current value of a GPIO (0 or 1).
     Read(uint32 index) -> (zx.status s, uint8 value);
     /// Sets the current value of the GPIO (any non-zero value maps to 1).

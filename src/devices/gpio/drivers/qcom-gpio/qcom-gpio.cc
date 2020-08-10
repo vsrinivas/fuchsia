@@ -98,16 +98,20 @@ zx_status_t QcomGpioDevice::GpioImplSetAltFunction(uint32_t index, uint64_t func
   return ZX_OK;
 }
 
-zx_status_t QcomGpioDevice::GpioImplSetDriveStrength(uint32_t index, uint8_t mA) {
+zx_status_t QcomGpioDevice::GpioImplSetDriveStrength(uint32_t index, uint64_t ua,
+                                                     uint64_t* out_actual_ua) {
   if (index >= kGpioMax) {
     return ZX_ERR_INVALID_ARGS;
   }
-  uint8_t supported_mAs[] = {2, 4, 6, 8, 10, 12, 14, 16};
-  if (std::find(std::begin(supported_mAs), std::end(supported_mAs), mA) ==
-      std::end(supported_mAs)) {
+  uint64_t supported_uas[] = {2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000};
+  if (std::find(std::begin(supported_uas), std::end(supported_uas), ua) ==
+      std::end(supported_uas)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  GpioCfgReg::SetStrength(&gpio_mmio_, index, mA);
+  GpioCfgReg::SetStrength(&gpio_mmio_, index, static_cast<uint8_t>(ua / 1000));
+  if (out_actual_ua) {
+    *out_actual_ua = ua;
+  }
   return ZX_OK;
 }
 

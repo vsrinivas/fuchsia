@@ -457,14 +457,15 @@ zx_status_t AmlAxgGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
 // TODO(braval): Currently accepted values for drive strength are [0..3]
 // We do not know the units for these, update here after checking with Amlogic
 // so we have a uniform interface for drive strengths.
-zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint8_t m_a) {
+zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint64_t ua,
+                                                 uint64_t* out_actual_ua) {
   zx_status_t status;
 
   if (info_.pid == PDEV_PID_AMLOGIC_A113) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (m_a > kDriveStrengthMax) {
+  if (ua > kDriveStrengthMax) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -486,8 +487,11 @@ zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint8_t m_a) {
   {
     fbl::AutoLock al(&mmio_lock_);
     uint32_t regval = mmios_[block->mmio_index].Read32(block->ds_offset * sizeof(uint32_t));
-    regval = (regval & mask) | (m_a << shift);
+    regval = (regval & mask) | (static_cast<uint8_t>(ua) << shift);
     mmios_[block->mmio_index].Write32(regval, block->ds_offset * sizeof(uint32_t));
+  }
+  if (out_actual_ua) {
+    *out_actual_ua = ua;
   }
 
   return ZX_OK;

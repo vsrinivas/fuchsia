@@ -145,9 +145,9 @@ zx_status_t Astro::AudioInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOA(3), S905D2_GPIOA_3_TDMB_D0_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(6), S905D2_GPIOA_6_TDMB_DIN3_FN);
   constexpr uint8_t medium_strength = 2;  // Not mA, unitless values from AMLogic.
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(1), medium_strength);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(2), medium_strength);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOA(3), medium_strength);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(1), medium_strength, nullptr);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(2), medium_strength, nullptr);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOA(3), medium_strength, nullptr);
 
 #ifdef ENABLE_BT_PCM
   // PCM pin assignments.
@@ -155,10 +155,10 @@ zx_status_t Astro::AudioInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOX(9), 1);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(10), 1);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(11), 1);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOX(8), medium_strength);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOX(9), medium_strength);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOX(10), medium_strength);
-  gpio_impl_.SetDriveStrength(S905D2_GPIOX(11), medium_strength);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOX(8), medium_strength, nullptr);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOX(9), medium_strength, nullptr);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOX(10), medium_strength, nullptr);
+  gpio_impl_.SetDriveStrength(S905D2_GPIOX(11), medium_strength, nullptr);
 #endif
 
   // PDM pin assignments

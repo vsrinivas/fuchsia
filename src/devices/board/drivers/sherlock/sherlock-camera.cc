@@ -378,7 +378,7 @@ const pbus_dev_t sensor_dev = []() {
 zx_status_t Sherlock::CameraInit() {
   // Set GPIO alternate functions.
   gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
-  gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrength);
+  gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrength, nullptr);
 
   zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
   if (status != ZX_OK) {

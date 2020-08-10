@@ -141,8 +141,8 @@ zx_status_t Sherlock::I2cInit() {
   gpio_impl_.SetAltFunction(T931_GPIOAO(2), 1);
   gpio_impl_.SetAltFunction(T931_GPIOAO(3), 1);
   if (info.pid == PDEV_PID_LUIS) {
-    gpio_impl_.SetDriveStrength(T931_GPIOAO(2), 2);
-    gpio_impl_.SetDriveStrength(T931_GPIOAO(3), 2);
+    gpio_impl_.SetDriveStrength(T931_GPIOAO(2), 2, nullptr);
+    gpio_impl_.SetDriveStrength(T931_GPIOAO(3), 2, nullptr);
   }
   // i2c2
   gpio_impl_.SetAltFunction(T931_GPIOZ(14), 3);
@@ -153,7 +153,7 @@ zx_status_t Sherlock::I2cInit() {
 
   // Camera sensor for Luis
   if (info.pid == PDEV_PID_LUIS) {
-      i2c_channels[5].address = 0x1a;
+    i2c_channels[5].address = 0x1a;
   }
 
   status = pbus_.DeviceAdd(&i2c_dev);

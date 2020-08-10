@@ -41,7 +41,7 @@ class TestGpioDevice : public DeviceType,
   zx_status_t GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::interrupt* out_irq);
   zx_status_t GpioImplReleaseInterrupt(uint32_t pin);
   zx_status_t GpioImplSetPolarity(uint32_t pin, uint32_t polarity);
-  zx_status_t GpioImplSetDriveStrength(uint32_t pin, uint8_t mA);
+  zx_status_t GpioImplSetDriveStrength(uint32_t pin, uint64_t ua, uint64_t* out_actual_ua);
 
  private:
   static constexpr uint32_t PIN_COUNT = 10;
@@ -154,9 +154,13 @@ zx_status_t TestGpioDevice::GpioImplSetPolarity(uint32_t pin, uint32_t polarity)
   return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplSetDriveStrength(uint32_t pin, uint8_t mA) {
+zx_status_t TestGpioDevice::GpioImplSetDriveStrength(uint32_t pin, uint64_t ua,
+                                                     uint64_t* out_actual_ua) {
   if (pin >= PIN_COUNT) {
     return ZX_ERR_INVALID_ARGS;
+  }
+  if (out_actual_ua) {
+    *out_actual_ua = 0;
   }
   return ZX_OK;
 }

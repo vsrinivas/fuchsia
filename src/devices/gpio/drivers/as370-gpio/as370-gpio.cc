@@ -341,7 +341,8 @@ zx_status_t As370Gpio::GpioImplSetAltFunction(uint32_t index, uint64_t function)
   return ZX_OK;
 }
 
-zx_status_t As370Gpio::GpioImplSetDriveStrength(uint32_t index, uint8_t m_a) {
+zx_status_t As370Gpio::GpioImplSetDriveStrength(uint32_t index, uint64_t ua,
+                                                uint64_t* out_actual_ua) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

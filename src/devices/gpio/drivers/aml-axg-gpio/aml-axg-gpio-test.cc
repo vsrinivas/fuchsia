@@ -508,14 +508,16 @@ TEST_F(A113AmlAxgGpioTest, A113InterruptSetPolarityEdge) {
 
 // GpioImplSetDriveStrength Tests
 TEST_F(A113AmlAxgGpioTest, A113SetDriveStrength) {
-  EXPECT_NOT_OK(gpio_->GpioImplSetDriveStrength(0x87, 2));
+  EXPECT_NOT_OK(gpio_->GpioImplSetDriveStrength(0x87, 2, nullptr));
   mock_mmio_gpio_->VerifyAll();
   mock_mmio_gpio_a0_->VerifyAll();
   mock_mmio_interrupt_->VerifyAll();
 }
 
 TEST_F(S905d2AmlAxgGpioTest, S905d2SetDriveStrengthFail) {
-  EXPECT_NOT_OK(gpio_->GpioImplSetDriveStrength(0x87, 4));
+  uint64_t actual = 0;
+  EXPECT_NOT_OK(gpio_->GpioImplSetDriveStrength(0x87, 4, &actual));
+  EXPECT_EQ(actual, 0);
   mock_mmio_gpio_->VerifyAll();
   mock_mmio_gpio_a0_->VerifyAll();
   mock_mmio_interrupt_->VerifyAll();
@@ -523,7 +525,9 @@ TEST_F(S905d2AmlAxgGpioTest, S905d2SetDriveStrengthFail) {
 
 TEST_F(S905d2AmlAxgGpioTest, S905d2SetDriveStrength) {
   (*mock_mmio_gpio_a0_)[0x08 * sizeof(uint32_t)].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFFFB);
-  EXPECT_OK(gpio_->GpioImplSetDriveStrength(0x62, 2));
+  uint64_t actual = 0;
+  EXPECT_OK(gpio_->GpioImplSetDriveStrength(0x62, 2, &actual));
+  EXPECT_EQ(actual, 2);
   mock_mmio_gpio_->VerifyAll();
   mock_mmio_gpio_a0_->VerifyAll();
   mock_mmio_interrupt_->VerifyAll();

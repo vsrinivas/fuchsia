@@ -73,7 +73,9 @@ class AmlGxlGpio : public DeviceType, public ddk::GpioImplProtocol<AmlGxlGpio, d
   zx_status_t GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::interrupt* out_irq);
   zx_status_t GpioImplReleaseInterrupt(uint32_t pin);
   zx_status_t GpioImplSetPolarity(uint32_t pin, uint32_t polarity);
-  zx_status_t GpioImplSetDriveStrength(uint32_t index, uint8_t mA) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t GpioImplSetDriveStrength(uint32_t index, uint64_t ua, uint64_t* out_actual_ua) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }

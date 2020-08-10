@@ -219,8 +219,10 @@ TEST(GpioTest, SetDriveStrength2) {
   ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint32_t), kGpioRegSize);
   QcomGpioDeviceTest gpio(gpios_mock);
 
+  uint64_t actual = 0;
   gpios_mock[0x87000].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFFE3F);  // strength to 0x0.
-  EXPECT_OK(gpio.GpioImplSetDriveStrength(0x87, 2));
+  EXPECT_OK(gpio.GpioImplSetDriveStrength(0x87, 2000, &actual));
+  EXPECT_EQ(actual, 2000);
   gpios_mock.VerifyAll();
 }
 
@@ -230,21 +232,23 @@ TEST(GpioTest, SetDriveStrength16) {
   ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint32_t), kGpioRegSize);
   QcomGpioDeviceTest gpio(gpios_mock);
 
+  uint64_t actual = 0;
   gpios_mock[0x86000].ExpectRead(0x00000000).ExpectWrite(0x000001C0);  // strength to 0x7.
-  EXPECT_OK(gpio.GpioImplSetDriveStrength(0x86, 16));
+  EXPECT_OK(gpio.GpioImplSetDriveStrength(0x86, 16000, &actual));
+  EXPECT_EQ(actual, 16000);
   gpios_mock.VerifyAll();
 }
 
 TEST(GpioTest, SetDriveStrengthOdd) {
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), kGpioRegSize);
   QcomGpioDeviceTest gpio(unused);
-  EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x85, 1));
+  EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x85, 1, nullptr));
 }
 
 TEST(GpioTest, SetDriveStrengthLarge) {
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), kGpioRegSize);
   QcomGpioDeviceTest gpio(unused);
-  EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x84, 17));
+  EXPECT_NOT_OK(gpio.GpioImplSetDriveStrength(0x84, 17, nullptr));
 }
 
 }  // namespace gpio
