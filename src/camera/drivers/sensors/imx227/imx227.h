@@ -138,8 +138,7 @@ class Imx227Device : public DeviceType,
   zx_status_t CameraSensor2SetIntegrationTime(float int_time, float* out_int_time);
   zx_status_t CameraSensor2Update();
   zx_status_t CameraSensor2GetOtpSize(uint32_t* out_size);
-  zx_status_t CameraSensor2GetOtpData(uint32_t byte_count, uint32_t offset, const uint8_t* buf_list,
-                                      size_t buf_count);
+  zx_status_t CameraSensor2GetOtpData(uint32_t byte_count, uint32_t offset, zx::vmo* out_otp_data);
   zx_status_t CameraSensor2GetTestPatternMode(uint16_t* out_value);
   zx_status_t CameraSensor2SetTestPatternMode(uint16_t mode);
   zx_status_t CameraSensor2GetTestPatternData(color_val_t* out_data);

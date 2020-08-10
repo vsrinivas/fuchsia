@@ -243,12 +243,9 @@ zx_status_t Imx227Device::CameraSensor2GetOtpSize(uint32_t* out_size) {
 }
 
 zx_status_t Imx227Device::CameraSensor2GetOtpData(uint32_t byte_count, uint32_t offset,
-                                                  const uint8_t* buf_list, size_t buf_count) {
+                                                  zx::vmo* out_otp_data) {
   if ((byte_count + offset) > OTP_TOTAL_SIZE) {
     return ZX_ERR_OUT_OF_RANGE;
-  }
-  if (buf_count < byte_count) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
   }
   auto result = OtpRead();
   if (result.is_error()) {
@@ -259,12 +256,8 @@ zx_status_t Imx227Device::CameraSensor2GetOtpData(uint32_t byte_count, uint32_t 
     zxlogf(ERROR, "%s; OTP validation failed.", __func__);
     return ZX_ERR_INTERNAL;
   }
-  zx_status_t status =
-      vmo.read(static_cast<void*>(const_cast<uint8_t*>(buf_list)), offset, byte_count);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s; Reading from VMO failed.", __func__);
-  }
-  return status;
+  *out_otp_data = std::move(vmo);
+  return ZX_OK;
 }
 
 zx_status_t Imx227Device::CameraSensor2GetTestPatternMode(uint16_t* out_value) {

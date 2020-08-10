@@ -151,8 +151,8 @@ protocol CameraSensor2 {
     /// Retrieve the total size of the data stored in the OTP module.
     GetOtpSize() -> (zx.status s, uint32 size);
     /// Retrieve the specified amount of OTP data at the offset and write them to
-    /// the provided buffer.
-    GetOtpData(uint32 byte_count, uint32 offset, vector<uint8> buf) -> (zx.status s);
+    /// the provided vmo.
+    GetOtpData(uint32 byte_count, uint32 offset) -> (zx.status s, handle<vmo> otp_data);
 
     // Test Controls
 
