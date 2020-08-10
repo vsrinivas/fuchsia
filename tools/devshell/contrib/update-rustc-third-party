@@ -39,17 +39,28 @@ declare -x PATH=$PREBUILT_CMAKE_DIR/cmake/bin:$PATH
 export RUSTC=$PREBUILT_RUST_DIR/bin/rustc
 export CARGO=$PREBUILT_RUST_DIR/bin/cargo
 
-GNAW_BIN="${FUCHSIA_BUILD_DIR}/host-tools/gnaw"
+GNAW_TARGET="host-tools/gnaw"
+GNAW_BIN="${FUCHSIA_BUILD_DIR}/${GNAW_TARGET}"
+
+if [[ "$1" == "--no-build" ]]; then
+  if [ ! -f "$GNAW_BIN" ]; then
+    fx-error "--no-build was specified, but $GNAW_BIN does not exist."
+    fx-error "Rerun without --no-build to build cargo-gnaw."
+    exit 1
+  fi
+else
+  fx-command-run build ${GNAW_TARGET} || ( \
+    fx-error "Failed to build cargo-gnaw."; \
+    fx-error "This can happen after cargo-gnaw exits early."; \
+    fx-error "To retry an old build of cargo-gnaw, specify --no-build."; \
+    exit 1
+  )
+fi
 
 (cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo vendor \
   --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
   $FUCHSIA_DIR/third_party/rust_crates/vendor \
   -q)
-
-if [[ ! -f "$GNAW_BIN" ]]; then
-  echo "Please run: fx build tools/cargo-gnaw"
-  exit 1
-fi
 
 (cd $FUCHSIA_DIR; $GNAW_BIN \
    --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
