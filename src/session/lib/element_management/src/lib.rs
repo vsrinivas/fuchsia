@@ -13,7 +13,7 @@ use {
     fidl,
     fidl::endpoints::{DiscoverableService, Proxy, UnifiedServiceMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_session::{AdditionalCapabilities, Annotation, Annotations, ElementSpec, Value},
+    fidl_fuchsia_session::{Annotation, Annotations, ElementSpec, Value},
     fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
     fuchsia_component,
     fuchsia_component::client::connect_to_service,
@@ -377,52 +377,6 @@ impl SimpleElementManager {
         SimpleElementManager { realm, sys_launcher: Ok(sys_launcher) }
     }
 
-    /// Converts a proposed element's AdditionalCapabilities into the CFv1 `LaunchOptions`
-    /// field `additional_services`. This field accepts a `Directory` channel and a list of service
-    /// names, only. Since `AdditionalCapabilities` supports any capabilty type, and uses fully-
-    /// qualified paths to those services, this function must strip the `/svc/` prefix to convert
-    /// the paths to service names.
-    ///
-    /// # Parameters
-    /// - additional_capabilities: A directory and a list of paths to capabilities, such as to
-    /// services.
-    /// - launch_options: The launch_options to populate with additional services.
-    ///
-    /// # Returns
-    /// Ok or an error if any additional capability could not be added.
-    fn set_additional_services_option(
-        &self,
-        child_url: &str,
-        launch_options: &mut fuchsia_component::client::LaunchOptions,
-        additional_capabilities: Option<AdditionalCapabilities>,
-    ) -> Result<(), ElementManagerError> {
-        if let Some(additional_capabilities) = additional_capabilities {
-            let service_names: Vec<String> = additional_capabilities
-                .paths
-                .iter()
-                // Before attempting to strip "/svc/" from the path, make sure each path starts
-                // with the expected prefix.
-                .filter(|path| path.starts_with("/svc/"))
-                // Strip "/svc/" from the path.
-                .map(|path| String::from(&path[5..]))
-                .collect();
-            // LaunchOptions supports only services, and only if under the "/svc/" directory (assumed
-            // rather than specified). If any additional capability path(s) did not start with "/svc/"
-            // return an error.
-            if service_names.len() < additional_capabilities.paths.len() {
-                return Err(ElementManagerError::not_launched(
-                    child_url.clone(),
-                    "Service paths in spec.additional_capabilities require '/svc/' prefix",
-                ));
-            }
-            launch_options.set_additional_services(
-                service_names,
-                additional_capabilities.host_directory.into_channel(),
-            );
-        }
-        Ok(())
-    }
-
     /// Launches a component with the specified URL.
     ///
     /// #Parameters
@@ -430,23 +384,13 @@ impl SimpleElementManager {
     /// components using a fuchsia::sys::Launcher. It supports all CFv1 component URL schemes,
     /// such as URLs starting with `https`, and fuchsia component URLs ending in `.cmx`. Fuchsia
     /// components ending in `.cm` should use `launch_child_component()` instead.
-    /// - `additional_capabilities`: A directory and list of additional capabilities (such as
-    /// additional services) if offered by the Element Proposer.
     ///
     /// #Returns
     /// The launched application.
     async fn launch_component_outside_realm(
         &self,
         child_url: &str,
-        additional_capabilities: Option<AdditionalCapabilities>,
     ) -> Result<Element, ElementManagerError> {
-        let mut launch_options = fuchsia_component::client::LaunchOptions::new();
-        self.set_additional_services_option(
-            &child_url,
-            &mut launch_options,
-            additional_capabilities,
-        )?;
-
         let sys_launcher = (&self.sys_launcher).as_ref().map_err(|err: &anyhow::Error| {
             ElementManagerError::not_launched(
                 child_url.clone(),
@@ -454,15 +398,10 @@ impl SimpleElementManager {
             )
         })?;
 
-        let app = fuchsia_component::client::launch_with_options(
-            &sys_launcher,
-            child_url.to_string(),
-            None,
-            launch_options,
-        )
-        .map_err(|err: anyhow::Error| {
-            ElementManagerError::not_launched(child_url.clone(), err.to_string())
-        })?;
+        let app = fuchsia_component::client::launch(&sys_launcher, child_url.to_string(), None)
+            .map_err(|err: anyhow::Error| {
+                ElementManagerError::not_launched(child_url.clone(), err.to_string())
+            })?;
         Ok(Element::from_app(app, child_url))
     }
 
@@ -538,7 +477,7 @@ impl ElementManager for SimpleElementManager {
             self.launch_child_component(&child_name, &child_url, child_collection, &self.realm)
                 .await?
         } else {
-            self.launch_component_outside_realm(&child_url, spec.additional_capabilities).await?
+            self.launch_component_outside_realm(&child_url).await?
         };
         if spec.annotations.is_some() {
             element.set_annotations(spec.annotations.unwrap()).map_err(|err: anyhow::Error| {

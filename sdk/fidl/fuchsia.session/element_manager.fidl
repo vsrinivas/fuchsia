@@ -4,8 +4,6 @@
 
 library fuchsia.session;
 
-using fuchsia.io;
-using fuchsia.io2;
 using fuchsia.url;
 
 /// The ElementManager is responsible for service requests to add elements to a
@@ -65,28 +63,4 @@ table ElementSpec {
 
     /// Initial metadata on the element. Optional.
     2: Annotations annotations;
-
-    // TODO(fxb/44648): Remove this field after converting all components to Component Framework v2,
-    // unless the concept of providing services in this way has been approved for dynamically-routed
-    // v2->v2 interactions.
-    /// Requests the Element Manager forward the given capabilities to the component at launch.
-    /// The Element Manager should forward these capabilities to the relevant Runner, and the
-    /// Runner should expose these capabilities to the launched component's incoming namespace.
-    /// (This mechanism allows backward compatibility for Runners to launch v1 (`.cmx`) components
-    /// that require additional services.)
-    3: AdditionalCapabilities additional_capabilities;
-};
-
-// TODO(fxb/44648): Remove this field after converting all components to Component Framework v2,
-// unless the concept of providing services in this way has been approved for dynamically-routed
-// v2->v2 interactions.
-/// Provides a list of capabilities to be offered to a proposed element, and a Directory from which
-/// another component can connect to the implementations of those capabilities.
-struct AdditionalCapabilities {
-    /// A list of capabilities by absolute path name, relative to the given host_directory (for
-    /// example, "/svc/fuchsia.util.SomeService").
-    vector<fuchsia.io2.Path>:MAX paths;
-
-    /// The `Directory` from which the capabilities are served.
-    fuchsia.io.Directory host_directory;
 };
