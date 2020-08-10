@@ -73,7 +73,6 @@ template("rustc_fuzzer") {
                            [
                              "version",
                              "edition",
-                             "non_rust_deps",
                              "source_root",
                              "enforce_source_listing",
                              "sources",
@@ -93,6 +92,7 @@ template("rustc_fuzzer") {
   }
 
   fuzzer(fuzzer_name) {
+    non_rust_deps = []
     forward_variables_from(invoker,
                            "*",
                            [
@@ -105,5 +105,6 @@ template("rustc_fuzzer") {
                              "features",
                            ])
     deps = [ ":$fuzzer_lib" ]
+    deps += non_rust_deps
   }
 }
