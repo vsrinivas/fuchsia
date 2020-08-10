@@ -19,6 +19,7 @@ BT_FILE_DEPS=(
 
 BT_MOCKED_TOOLS=(
   # commands defined in tools/devshell/lib/metrics.sh constants:
+  "tools/devshell/emu"
   "tools/devshell/set"
   "tools/devshell/fidlcat"
   "tools/devshell/run-test"

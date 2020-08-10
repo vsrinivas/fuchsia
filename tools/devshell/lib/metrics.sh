@@ -8,7 +8,7 @@
 ### depends on FUCHSIA_DIR being defined correctly.
 
 _METRICS_GA_PROPERTY_ID="UA-127897021-6"
-_METRICS_TRACK_ALL_ARGS=( "set" "fidlcat" "run-test" "run-test-component" "run-host-tests" )
+_METRICS_TRACK_ALL_ARGS=( "emu" "set" "fidlcat" "run-test" "run-test-component" "run-host-tests" )
 _METRICS_TRACK_RESULTS=( "set" "build" )
 _METRICS_ALLOWS_CUSTOM_REPORTING=( "test" )
 
