@@ -309,3 +309,28 @@ template("sdk_atom") {
     }
   }
 }
+
+# TODO(fxbug.dev/42999): Remove all users of this allowlist, then
+# remove the allowlist and legacy targets. This allowlist is used by
+# the sdk_host_tool and sdk_prebuilt_executable templates that call the
+# above. The legacy target allowlist is the list of cross-compiled
+# binaries that are added to sdk://tools as well as sdk://tools/$arch.
+sdk_legacy_tool_allowlist = [
+  "bootserver",
+  "cmc",
+  "device-finder",
+  "far",
+  "fidl-format",
+  "fidlc",
+  "fidlcat",
+  "fidlgen",
+  "fidlgen_dart",
+  "fvm",
+  "loglistener",
+  "merkleroot",
+  "minfs",
+  "pm",
+  "symbol-index",
+  "symbolize",
+  "zxdb",
+]
