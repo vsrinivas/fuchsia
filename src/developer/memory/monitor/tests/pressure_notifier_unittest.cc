@@ -9,6 +9,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
 
 #include <gtest/gtest.h>
 
@@ -80,7 +81,9 @@ class PressureNotifierUnitTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  bool generate_new_crash_reports() const { return notifier_->generate_new_crash_reports_; }
+  void SetCrashReportInterval(uint32_t mins) { notifier_->crash_report_interval_ = zx::min(mins); }
+
+  bool CanGenerateNewCrashReports() const { return notifier_->CanGenerateNewCrashReports(); }
 
   size_t num_crash_reports() const { return crash_reporter_.num_crash_reports(); }
 
@@ -318,76 +321,118 @@ TEST_F(PressureNotifierUnitTest, ReleaseWatcherPendingCallback) {
 
 TEST_F(PressureNotifierUnitTest, CrashReportOnCritical) {
   ASSERT_EQ(num_crash_reports(), 0ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kCritical);
 
   ASSERT_EQ(num_crash_reports(), 1ul);
-  ASSERT_FALSE(generate_new_crash_reports());
+  ASSERT_FALSE(CanGenerateNewCrashReports());
 }
 
 TEST_F(PressureNotifierUnitTest, NoCrashReportOnWarning) {
   ASSERT_EQ(num_crash_reports(), 0ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kWarning);
 
   ASSERT_EQ(num_crash_reports(), 0ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 }
 
 TEST_F(PressureNotifierUnitTest, NoCrashReportOnNormal) {
   ASSERT_EQ(num_crash_reports(), 0ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kNormal);
 
   ASSERT_EQ(num_crash_reports(), 0ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 }
 
 TEST_F(PressureNotifierUnitTest, NoCrashReportOnCriticalToWarning) {
   ASSERT_EQ(num_crash_reports(), 0ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kCritical);
 
   ASSERT_EQ(num_crash_reports(), 1ul);
-  ASSERT_FALSE(generate_new_crash_reports());
+  ASSERT_FALSE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kWarning);
 
   // No new crash reports for Critical -> Warning
   ASSERT_EQ(num_crash_reports(), 1ul);
-  ASSERT_FALSE(generate_new_crash_reports());
+  ASSERT_FALSE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kCritical);
 
   // No new crash reports for Warning -> Critical
   ASSERT_EQ(num_crash_reports(), 1ul);
-  ASSERT_FALSE(generate_new_crash_reports());
+  ASSERT_FALSE(CanGenerateNewCrashReports());
 }
 
 TEST_F(PressureNotifierUnitTest, CrashReportOnCriticalToNormal) {
   ASSERT_EQ(num_crash_reports(), 0ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kCritical);
 
   ASSERT_EQ(num_crash_reports(), 1ul);
-  ASSERT_FALSE(generate_new_crash_reports());
+  ASSERT_FALSE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kNormal);
 
   // No new crash reports for Critical -> Normal, but can generate future reports.
   ASSERT_EQ(num_crash_reports(), 1ul);
-  ASSERT_TRUE(generate_new_crash_reports());
+  ASSERT_TRUE(CanGenerateNewCrashReports());
 
   TriggerLevelChange(Level::kCritical);
 
   // New crash report generated on Critical, but cannot generate any more reports.
   ASSERT_EQ(num_crash_reports(), 2ul);
-  ASSERT_FALSE(generate_new_crash_reports());
+  ASSERT_FALSE(CanGenerateNewCrashReports());
+}
+
+TEST_F(PressureNotifierUnitTest, CrashReportOnCriticalAfterLong) {
+  ASSERT_EQ(num_crash_reports(), 0ul);
+  ASSERT_TRUE(CanGenerateNewCrashReports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_FALSE(CanGenerateNewCrashReports());
+
+  TriggerLevelChange(Level::kWarning);
+
+  // No new crash reports for Critical -> Warning
+  ASSERT_EQ(num_crash_reports(), 1ul);
+  ASSERT_FALSE(CanGenerateNewCrashReports());
+
+  // Crash report interval set to zero. Can generate new reports.
+  SetCrashReportInterval(0);
+  ASSERT_TRUE(CanGenerateNewCrashReports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  // New crash report generated on Critical, and can generate future reports.
+  ASSERT_EQ(num_crash_reports(), 2ul);
+  ASSERT_TRUE(CanGenerateNewCrashReports());
+
+  // Crash report interval set to 30 mins. Cannot generate new reports.
+  SetCrashReportInterval(30);
+  ASSERT_FALSE(CanGenerateNewCrashReports());
+
+  TriggerLevelChange(Level::kWarning);
+
+  // No new crash reports for Critical -> Warning
+  ASSERT_EQ(num_crash_reports(), 2ul);
+  ASSERT_FALSE(CanGenerateNewCrashReports());
+
+  TriggerLevelChange(Level::kCritical);
+
+  // No new crash reports for Warning -> Critical
+  ASSERT_EQ(num_crash_reports(), 2ul);
+  ASSERT_FALSE(CanGenerateNewCrashReports());
 }
 
 }  // namespace test

@@ -42,6 +42,7 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   void NotifyWatcher(WatcherState* watcher, Level level);
   fuchsia::memorypressure::Level ConvertLevel(Level level) const;
 
+  bool CanGenerateNewCrashReports();
   void FileCrashReport();
 
   async::TaskClosureMethod<PressureNotifier, &PressureNotifier::PostLevelChange> post_task_{this};
@@ -51,7 +52,9 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   std::vector<std::unique_ptr<WatcherState>> watchers_;
   PressureObserver observer_;
 
-  bool generate_new_crash_reports_ = true;
+  bool observed_normal_level_ = true;
+  zx::time prev_crash_report_time_ = zx::time(ZX_TIME_INFINITE_PAST);
+  zx::duration crash_report_interval_ = zx::min(30);
 
   friend class test::PressureNotifierUnitTest;
 };

@@ -5,6 +5,7 @@
 #include "src/developer/memory/monitor/pressure_notifier.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
 
 namespace monitor {
 
@@ -29,9 +30,9 @@ void PressureNotifier::PostLevelChange() {
   Level level_to_send = observer_.GetCurrentLevel();
 
   if (level_to_send == Level::kNormal) {
-    // See comments about |generate_new_crash_reports_| in the definition of |FileCrashReport()|.
-    generate_new_crash_reports_ = true;
-  } else if (level_to_send == Level::kCritical && generate_new_crash_reports_) {
+    // See comments about |observed_normal_level_| in the definition of |FileCrashReport()|.
+    observed_normal_level_ = true;
+  } else if (level_to_send == Level::kCritical && CanGenerateNewCrashReports()) {
     // File crash report before notifying watchers, so that we can capture the state *before*
     // watchers can respond to memory pressure, thereby changing the state that caused the memory
     // pressure in the first place.
@@ -145,6 +146,22 @@ fuchsia::memorypressure::Level PressureNotifier::ConvertLevel(Level level) const
   }
 }
 
+bool PressureNotifier::CanGenerateNewCrashReports() {
+  // Generate a new crash report only if any of these two conditions hold:
+  // 1. |observed_normal_level_| is set to true, which indicates that a Normal level
+  // was observed after the last Critical crash report.
+  // 2. At least |crash_report_interval_| time has elapsed since the last crash report.
+  //
+  // This is done for two reasons:
+  // 1) It helps limit the number of crash reports we generate.
+  // 2) If the memory pressure changes to Critical again after going via Normal, we're
+  // presumably observing a different memory usage pattern / use case, so it makes sense to
+  // generate a new crash report. Instead if we're only observing Critical -> Warning ->
+  // Critical transitions, we might be seeing the same memory usage pattern repeat.
+  return (observed_normal_level_ ||
+          zx::clock::get_monotonic() >= (prev_crash_report_time_ + crash_report_interval_));
+}
+
 void PressureNotifier::FileCrashReport() {
   if (context_ == nullptr) {
     return;
@@ -168,16 +185,10 @@ void PressureNotifier::FileCrashReport() {
   crash_reporter->File(std::move(report),
                        [](fuchsia::feedback::CrashReporter_File_Result unused) {});
 
-  // Skip generating further crash reports on future Critical transitions, unless we also observe a
-  // Normal transition first.
-  //
-  // This is done for two reasons:
-  // 1) It helps limit the number of crash reports we generate.
-  // 2) If the memory pressure changes to Critical again after going via Normal, we're
-  // presumably observing a different memory access pattern / use case, so it makes sense to
-  // generate a new crash report. Instead if we're only observing Critical -> Warning ->
-  // Critical transitions, we might be seeing the same memory access pattern repeat.
-  generate_new_crash_reports_ = false;
+  prev_crash_report_time_ = zx::clock::get_monotonic();
+
+  // Clear |observed_normal_level_| and wait for another normal level change to occur.
+  observed_normal_level_ = false;
 }
 
 }  // namespace monitor
