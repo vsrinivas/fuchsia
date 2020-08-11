@@ -44,7 +44,6 @@ struct ExpectedStreamSettingsStruct {
     source: Option<fidl_fuchsia_settings::AudioStreamSettingSource>,
     level: Option<f32>,
     volume_muted: Option<bool>,
-    input_muted: Option<bool>,
 }
 
 const ENV_NAME: &str = "setui_client_test_environment";
@@ -66,67 +65,42 @@ async fn main() -> Result<(), Error> {
         source: None,
         level: None,
         volume_muted: None,
-        input_muted: None,
     })
     .await?;
 
-    println!("  client calls set audio input - stream");
+    println!("  client calls set audio - stream");
     validate_audio(&ExpectedStreamSettingsStruct {
         stream: Some(fidl_fuchsia_media::AudioRenderUsage::Background),
         source: None,
         level: None,
         volume_muted: None,
-        input_muted: None,
     })
     .await?;
 
-    println!("  client calls set audio input - source");
+    println!("  client calls set audio - source");
     validate_audio(&ExpectedStreamSettingsStruct {
         stream: None,
         source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::System),
         level: None,
         volume_muted: None,
-        input_muted: None,
     })
     .await?;
 
-    println!("  client calls set audio input - level");
+    println!("  client calls set audio - level");
     validate_audio(&ExpectedStreamSettingsStruct {
         stream: None,
         source: None,
         level: Some(0.3),
         volume_muted: None,
-        input_muted: None,
     })
     .await?;
 
-    println!("  client calls set audio input - volume_muted");
+    println!("  client calls set audio - volume_muted");
     validate_audio(&ExpectedStreamSettingsStruct {
         stream: None,
         source: None,
         level: None,
         volume_muted: Some(true),
-        input_muted: None,
-    })
-    .await?;
-
-    println!("  client calls set audio input - input_muted");
-    validate_audio(&ExpectedStreamSettingsStruct {
-        stream: None,
-        source: None,
-        level: None,
-        volume_muted: None,
-        input_muted: Some(false),
-    })
-    .await?;
-
-    println!("  client calls set audio input - multiple");
-    validate_audio(&ExpectedStreamSettingsStruct {
-        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
-        source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
-        level: Some(0.6),
-        volume_muted: Some(false),
-        input_muted: Some(true),
     })
     .await?;
 
@@ -540,12 +514,6 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
             if let Some(streams) = settings.streams {
                 verify_streams(streams, expected);
                 responder.send(&mut (Ok(())))?;
-            } else if let Some(input) = settings.input {
-                if let (Some(input_muted), Some(expected_input_muted)) =
-                    (input.muted, expected.input_muted) {
-                    assert_eq!(input_muted, expected_input_muted);
-                    responder.send(&mut (Ok(())))?;
-                }
             }
         },
         AudioRequest::Watch { responder } => {
@@ -558,9 +526,6 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
                         muted: Some(false)
                     }),
                 }]),
-                input: Some(AudioInput {
-                    muted: Some(true)
-                }),
             })?;
         }
     );
@@ -574,7 +539,6 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
         expected.source,
         expected.level,
         expected.volume_muted,
-        expected.input_muted,
     )
     .await?;
     Ok(())

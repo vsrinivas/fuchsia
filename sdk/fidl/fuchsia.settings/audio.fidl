@@ -71,12 +71,4 @@ table AudioSettings {
     /// Contains the volume setting for all audio stream settings. There should only be
     /// one AudioStreamSettings for each fuchsia.media.AudioRenderUsage.
     1: vector<AudioStreamSettings>:5 streams;
-
-    /// To be deprecated in favor of fuchsia.settings.InputDeviceSettings.
-    2: AudioInput input;
-};
-
-table AudioInput {
-    /// Whether the audio input is muted. Takes into consideration the hardware state.
-    1: bool muted;
 };

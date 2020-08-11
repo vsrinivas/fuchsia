@@ -13,8 +13,8 @@ use {
     crate::switchboard::hanging_get_handler::Sender,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
-        AudioInput, AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource,
-        AudioStreamSettings, AudioWatch2Responder, AudioWatchResponder, Error, Volume,
+        AudioMarker, AudioRequest, AudioSettings, AudioStreamSettingSource, AudioStreamSettings,
+        AudioWatch2Responder, AudioWatchResponder, Error, Volume,
     },
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
@@ -37,12 +37,8 @@ impl From<SettingResponse> for AudioSettings {
                 streams.push(AudioStreamSettings::from(stream.clone()));
             }
 
-            let mut audio_input = AudioInput::empty();
-            audio_input.muted = Some(info.input.mic_mute);
-
             let mut audio_settings = AudioSettings::empty();
             audio_settings.streams = Some(streams);
-            audio_settings.input = Some(audio_input);
             audio_settings
         } else {
             panic!("incorrect value sent to audio");

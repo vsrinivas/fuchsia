@@ -30,10 +30,7 @@ impl<T: FIDLClone> FIDLClone for Option<Box<T>> {
 
 impl FIDLClone for AudioSettings {
     fn clone(&self) -> Self {
-        return AudioSettings {
-            streams: Some(self.streams.as_ref().unwrap().clone()),
-            input: Some(AudioInput { muted: self.input.as_ref().unwrap().muted }),
-        };
+        return AudioSettings { streams: Some(self.streams.as_ref().unwrap().clone()) };
     }
 }
 

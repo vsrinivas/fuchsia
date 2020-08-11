@@ -6,15 +6,12 @@ use {
     crate::config::default_settings::DefaultSetting,
     crate::internal::common::default_time,
     crate::registry::device_storage::DeviceStorageCompatible,
-    crate::switchboard::base::{
-        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
-    },
+    crate::switchboard::base::{AudioInfo, AudioSettingSource, AudioStream, AudioStreamType},
     lazy_static::lazy_static,
     std::collections::HashMap,
     std::sync::Mutex,
 };
 
-const DEFAULT_MIC_MUTE: bool = false;
 const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
 const DEFAULT_VOLUME_MUTED: bool = false;
 
@@ -29,13 +26,8 @@ const DEFAULT_STREAMS: [AudioStream; 5] = [
 /// Structure for storing last modified timestamps for each audio stream.
 pub type ModifiedTimestamps = HashMap<AudioStreamType, String>;
 
-const DEFAULT_AUDIO_INPUT_INFO: AudioInputInfo = AudioInputInfo { mic_mute: DEFAULT_MIC_MUTE };
-
-const DEFAULT_AUDIO_INFO: AudioInfo = AudioInfo {
-    streams: DEFAULT_STREAMS,
-    input: DEFAULT_AUDIO_INPUT_INFO,
-    modified_timestamps: None,
-};
+const DEFAULT_AUDIO_INFO: AudioInfo =
+    AudioInfo { streams: DEFAULT_STREAMS, modified_timestamps: None };
 
 lazy_static! {
     pub static ref AUDIO_DEFAULT_SETTINGS: Mutex<DefaultSetting<AudioInfo, &'static str>> =
@@ -118,7 +110,6 @@ mod tests {
                 user_volume_muted: false,
             },
         ],
-        input: AudioInputInfo { mic_mute: true },
         modified_timestamps: None,
     };
 
