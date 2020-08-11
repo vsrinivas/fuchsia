@@ -25,8 +25,9 @@ class FakeSwapchain : public Swapchain {
   }
 
   // |Swapchain|
-  void SetDisplayColorConversion(const ColorTransform& transform) override {
+  bool SetDisplayColorConversion(const ColorTransform& transform) override {
     // Do nothing.
+    return true;
   }
   void SetUseProtectedMemory(bool use_protected_memory) override {
     // Do nothing.

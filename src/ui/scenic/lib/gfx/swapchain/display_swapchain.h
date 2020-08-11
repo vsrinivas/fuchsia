@@ -65,9 +65,9 @@ class DisplaySwapchain : public Swapchain {
   void UnregisterVsyncListener() { on_vsync_ = nullptr; }
 
   // Passes along color correction information to the display
-  void SetDisplayColorConversion(const ColorTransform& transform) override;
+  bool SetDisplayColorConversion(const ColorTransform& transform) override;
 
-  static void SetDisplayColorConversion(
+  static bool SetDisplayColorConversion(
       uint64_t display_id, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
       const ColorTransform& transform);
 

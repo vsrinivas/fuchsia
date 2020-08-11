@@ -54,7 +54,7 @@ class Swapchain {
   // display. The three parameters modify the output display pixels
   // using the following formula:
   // (coefficients * (pixel + preoffsets)) + postoffsets.
-  virtual void SetDisplayColorConversion(const ColorTransform& transform) = 0;
+  virtual bool SetDisplayColorConversion(const ColorTransform& transform) = 0;
 
   // Used to tell swapchain if protected memory should be used to allocate framebuffers. If there is
   // any state change, the caller expects swapchain to reallocate buffers immediately.

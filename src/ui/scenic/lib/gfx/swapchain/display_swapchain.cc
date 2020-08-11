@@ -304,7 +304,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings
   return true;
 }
 
-void DisplaySwapchain::SetDisplayColorConversion(
+bool DisplaySwapchain::SetDisplayColorConversion(
     uint64_t display_id, fuchsia::hardware::display::ControllerSyncPtr& display_controller,
     const ColorTransform& transform) {
   // Attempt to apply color conversion.
@@ -314,7 +314,7 @@ void DisplaySwapchain::SetDisplayColorConversion(
     FX_LOGS(WARNING)
         << "DisplaySwapchain:SetDisplayColorConversion failed, controller returned status: "
         << status;
-    return;
+    return false;
   }
 
   // Now check the config.
@@ -339,13 +339,16 @@ void DisplaySwapchain::SetDisplayColorConversion(
     display_controller->CheckConfig(/*discard=*/true, &result, &ops);
     // TODO (24591): Implement scenic software fallback for color correction.
     FX_LOGS(ERROR) << "Software fallback for color conversion not implemented.";
+    return false;
   }
+
+  return true;
 }
 
-void DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform) {
+bool DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform) {
   FX_CHECK(display_);
   uint64_t display_id = display_->display_id();
-  SetDisplayColorConversion(display_id, *display_controller_, transform);
+  return SetDisplayColorConversion(display_id, *display_controller_, transform);
 }
 
 void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {

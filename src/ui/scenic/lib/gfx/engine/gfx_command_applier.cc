@@ -377,8 +377,7 @@ bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
       transform.preoffsets = command.preoffsets;
       transform.matrix = command.matrix;
       transform.postoffsets = command.postoffsets;
-      swapchain->SetDisplayColorConversion(transform);
-      return true;
+      return swapchain->SetDisplayColorConversion(transform);
     }
   }
   return false;
