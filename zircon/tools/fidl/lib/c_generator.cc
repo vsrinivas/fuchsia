@@ -31,31 +31,127 @@ class IOFlagsGuard {
 
 constexpr const char* kIndent = "    ";
 
-const std::set<std::string> allowed_c_unions{{
-    "fuchsia_io_NodeInfo",
-}};
+// Mapping of library name to set of declaration names.
+// These declarations are treated as though they have the
+// [ForDeprecatedCBindings] attribute even though they violate the constraints
+// enforced on them.
+//
+// For protocols this means that some of the methods can't be supported and
+// will simply be left out (unless they're listed below in allowed_methods).
+//
+// For structs this means that a member can have an unsupported type such as a
+// vector of strings or a union.
+const std::map<std::string, std::set<std::string>> allowed_decls({
+    {"fuchsia.tracing.provider", {"Provider", "ProviderConfig", "StartOptions"}},
+    {"fuchsia.logger", {"Log", "LogSink", "LogMessage", "LogListenerSafe", "LogFilterOptions"}},
+    {"fuchsia.device.manager",
+     {
+         "BindInstruction",
+         "CompositeDeviceDescriptor",
+         "Coordinator",
+         "DevhostController",
+         "DeviceController",
+         "DeviceFragment",
+         "DeviceFragmentPart",
+         "DeviceMetadata",
+         "DeviceProperty",
+     }},
+    {"fuchsia.hardware.power.statecontrol", {"Admin"}},
+    {"fidl.test.llcpp.dirent", {"DirEntTestInterface"}},
+});
 
-const std::vector<std::string> allowed_c_union_prefixes{
-    "example_",
-    "fidl_test_example_codingtables_",
-};
+bool DeclAlwaysAllowed(const flat::Name& name) {
+  auto library_name = flat::LibraryName(name.library(), ".");
 
-bool CUnionAllowed(const std::string& union_name) {
-  assert(union_name.size() > 0);
-  if (union_name[union_name.size() - 1] == '*') {
-    std::string not_pointer(union_name);
-    not_pointer.resize(not_pointer.size() - 1);
-    return CUnionAllowed(not_pointer);
-  }
-  if (allowed_c_unions.find(union_name) != allowed_c_unions.end()) {
-    return true;
-  }
-  for (const auto& prefix : allowed_c_union_prefixes) {
-    if (union_name.find(prefix) == 0) {
+  auto iter = allowed_decls.find(library_name);
+  if (iter != allowed_decls.end()) {
+    const auto& decls = iter->second;
+    if (decls.find(std::string(name.decl_name())) != decls.end()) {
       return true;
     }
   }
   return false;
+}
+
+// Mapping of library name to mapping of protocol name to set of methods.
+// Data structures should be generated for these methods even if they violate
+// the constraints of the simple C bindings.
+std::map<std::string, std::map<std::string, std::set<std::string>>> allowed_methods({
+    {"fuchsia.device.manager", {{"DeviceController", {"CompleteRemoval", "Unbind"}}}},
+    {"fuchsia.hardware.power.statecontrol",
+     {{"Admin", {"Poweroff", "Reboot", "RebootToBootloader", "RebootToRecovery", "SuspendToRam"}}}},
+    {"fuchsia.io", {{"Node", {"Describe", "OnOpen", "Open"}}}},
+});
+
+bool MethodAlwaysAllowed(const flat::Protocol::Method& method) {
+  auto library_name = flat::LibraryName(method.owning_protocol->name.library(), ".");
+  auto iter = allowed_methods.find(library_name);
+  if (iter != allowed_methods.end()) {
+    const auto& protocols = iter->second;
+    auto protocol = protocols.find(std::string(method.owning_protocol->name.decl_name()));
+    if (protocol != protocols.end()) {
+      const auto& methods = protocol->second;
+      if (methods.find(std::string(method.name.data())) != methods.end()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool TypeAllowed(const flat::Library* library, const flat::Type* type);
+
+bool DeclAllowed(const flat::Decl* decl) {
+  if (HasSimpleLayout(decl) || DeclAlwaysAllowed(decl->name)) {
+    return true;
+  }
+
+  switch (decl->kind) {
+    case flat::Decl::Kind::kBits:
+    case flat::Decl::Kind::kConst:
+    case flat::Decl::Kind::kEnum:
+      // bits, const, enum are always allowed.
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool IdentifierAllowed(const flat::Library* library, const flat::Name& name) {
+  if (DeclAlwaysAllowed(name)) {
+    return true;
+  }
+  const flat::Decl* decl = library->LookupDeclByName(name);
+  assert(decl != nullptr);
+  return DeclAllowed(decl);
+}
+
+bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
+  assert(type != nullptr);
+  if (type->kind == flat::Type::Kind::kIdentifier) {
+    auto identifier_type = static_cast<const flat::IdentifierType*>(type);
+    if (!IdentifierAllowed(library, identifier_type->name)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool MessageStructAllowed(const flat::Library* library, const flat::Struct* args) {
+  if (!args) {
+    return true;
+  }
+  for (const auto& member : args->members) {
+    if (!TypeAllowed(library, member.type_ctor->type)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool MethodAllowed(const flat::Library* library, const flat::Protocol::Method& method) {
+  return MethodAlwaysAllowed(method) || (MessageStructAllowed(library, method.maybe_request) &&
+                                         MessageStructAllowed(library, method.maybe_response));
 }
 
 CGenerator::Member MessageHeader() {
@@ -87,18 +183,17 @@ CGenerator::Transport ParseTransport(std::string_view view) {
   return CGenerator::Transport::Channel;
 }
 
-bool ShouldRecursiveDeprecate(const std::vector<CGenerator::Member>& members) {
-#ifdef FIDLC_DEPRECATE_C_UNIONS
+// Can encode and decode functions be generated for these members?
+bool CanGenerateCodecFunctions(const std::vector<CGenerator::Member>& members) {
   for (const auto& m : members) {
     switch (m.decl_kind) {
       case flat::Decl::Kind::kUnion:
-        return true;
+        return false;
       default:
         break;
     }
   }
-#endif
-  return false;
+  return true;
 }
 
 // Functions named "Emit..." are called to actually emit to an std::ostream
@@ -239,10 +334,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
 void EmitClientMethodDecl(std::ostream* file, std::string_view method_name,
                           const std::vector<CGenerator::Member>& request,
                           const std::vector<CGenerator::Member>& response) {
-  bool should_recursive_deprecate =
-      ShouldRecursiveDeprecate(request) || ShouldRecursiveDeprecate(response);
-  *file << "zx_status_t " << (should_recursive_deprecate ? " __attribute__ ((deprecated)) " : "")
-        << method_name << "(zx_handle_t _channel";
+  *file << "zx_status_t " << method_name << "(zx_handle_t _channel";
   for (const auto& member : request) {
     *file << ", ";
     EmitMethodInParamDecl(file, member);
@@ -256,9 +348,9 @@ void EmitClientMethodDecl(std::ostream* file, std::string_view method_name,
 
 void EmitServerMethodDecl(std::ostream* file, std::string_view method_name,
                           const std::vector<CGenerator::Member>& request, bool has_response) {
-  bool should_recursive_deprecate = ShouldRecursiveDeprecate(request);
-  *file << "zx_status_t " << (should_recursive_deprecate ? " __attribute__ ((deprecated)) " : "")
+  *file << "zx_status_t "
         << " (*" << method_name << ")(void* ctx";
+
   for (const auto& member : request) {
     *file << ", ";
     EmitMethodInParamDecl(file, member);
@@ -283,9 +375,7 @@ void EmitServerTryDispatchDecl(std::ostream* file, std::string_view protocol_nam
 
 void EmitServerReplyDecl(std::ostream* file, std::string_view method_name,
                          const std::vector<CGenerator::Member>& response) {
-  bool should_recursive_deprecate = ShouldRecursiveDeprecate(response);
-  *file << "zx_status_t " << (should_recursive_deprecate ? " __attribute__ ((deprecated)) " : "")
-        << method_name << "_reply(fidl_txn_t* _txn";
+  *file << "zx_status_t " << method_name << "_reply(fidl_txn_t* _txn";
   for (const auto& member : response) {
     *file << ", ";
     EmitMethodInParamDecl(file, member);
@@ -439,17 +529,11 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
             *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
             break;
           case flat::Decl::Kind::kTable:
-            assert(false && "c-codegen for tables not yet implemented");
+            assert(false && "c-codegen for tables not implemented");
             break;
           case flat::Decl::Kind::kUnion:
-            if (!CUnionAllowed(member.type)) {
-              *file << kIndent
-                    << "ZX_PANIC(\"FIDL C union not supported at (%s:%d): %s\", __FILE__, "
-                       "__LINE__, \""
-                    << member.type << "\");\n";
-              break;
-            }
-            [[fallthrough]];
+            assert(false && "c-codegen for unions not implemented");
+            break;
           case flat::Decl::Kind::kStruct:
             switch (member.nullability) {
               case types::Nullability::kNullable:
@@ -602,7 +686,8 @@ void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Typ
 }
 
 template <typename T>
-CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
+CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
+                                bool* out_allowed = nullptr) {
   std::string name = NameIdentifier(decl.name);
   const flat::Type* type = decl.type_ctor->type;
   auto decl_kind = GetDeclKind(library, type);
@@ -611,6 +696,9 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
   std::vector<uint32_t> array_counts;
   types::Nullability nullability = types::Nullability::kNonnullable;
   uint32_t max_num_elements = std::numeric_limits<uint32_t>::max();
+  if (out_allowed) {
+    *out_allowed = true;
+  }
   switch (type->kind) {
     case flat::Type::Kind::kArray: {
       ArrayCountsAndElementTypeName(library, type, &array_counts, &element_type_name);
@@ -626,6 +714,9 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     case flat::Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const flat::IdentifierType*>(type);
       nullability = identifier_type->nullability;
+      if (out_allowed) {
+        *out_allowed = IdentifierAllowed(library, identifier_type->name);
+      }
       break;
     }
     case flat::Type::Kind::kString: {
@@ -653,34 +744,39 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
   };
 }
 
-std::vector<CGenerator::Member> GenerateMembers(
-    const flat::Library* library, const std::vector<flat::Union::Member>& union_members) {
-  std::vector<CGenerator::Member> members;
-  members.reserve(union_members.size());
-  for (const auto& union_member : union_members) {
-    if (union_member.maybe_used) {
-      members.push_back(CreateMember(library, *union_member.maybe_used));
-    }
-  }
-  return members;
-}
-
-void GetMethodParameters(const flat::Library* library, const CGenerator::NamedMethod& method_info,
+bool GetMethodParameters(const flat::Library* library, const CGenerator::NamedMethod& method_info,
                          std::vector<CGenerator::Member>* request,
                          std::vector<CGenerator::Member>* response) {
   if (request) {
     request->reserve(method_info.request->parameters.size());
     for (const auto& parameter : method_info.request->parameters) {
-      request->push_back(CreateMember(library, parameter));
+      bool allowed = true;
+      request->push_back(CreateMember(library, parameter, &allowed));
+      if (!allowed) {
+        request->clear();
+        if (response) {
+          response->clear();
+        }
+        return false;
+      }
     }
   }
 
   if (response && method_info.response) {
     response->reserve(method_info.response->parameters.size());
     for (const auto& parameter : method_info.response->parameters) {
-      response->push_back(CreateMember(library, parameter));
+      bool allowed = true;
+      response->push_back(CreateMember(library, parameter, &allowed));
+      if (!allowed) {
+        if (request) {
+          request->clear();
+        }
+        response->clear();
+        return false;
+      }
     }
   }
+  return true;
 }
 
 }  // namespace
@@ -770,9 +866,7 @@ void CGenerator::GenerateStructTypedef(std::string_view name) {
 
 void CGenerator::GenerateStructDeclaration(std::string_view name,
                                            const std::vector<Member>& members, StructKind kind) {
-  bool should_recursive_deprecate = ShouldRecursiveDeprecate(members);
-  file_ << "struct " << (should_recursive_deprecate ? "__attribute__ ((deprecated)) " : "") << name
-        << " {\n";
+  file_ << "struct " << name << " {\n";
 
   if (kind == StructKind::kMessage) {
     file_ << kIndent << "FIDL_ALIGNDECL\n";
@@ -780,9 +874,6 @@ void CGenerator::GenerateStructDeclaration(std::string_view name,
 
   auto emit_member = [this](const Member& member) {
     file_ << kIndent;
-    if (member.decl_kind == flat::Decl::Kind::kUnion && !CUnionAllowed(member.type)) {
-      file_ << "// ";
-    }
     EmitMemberDecl(&file_, member);
     file_ << ";\n";
   };
@@ -867,6 +958,9 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
     for (const auto& method_with_info : protocol_info->all_methods) {
       assert(method_with_info.method != nullptr);
       const auto& method = *method_with_info.method;
+      if (!MethodAllowed(library_, method)) {
+        continue;
+      }
       NamedMethod named_method;
       std::string method_name = NameMethod(named_protocol.c_name, method);
       named_method.ordinal = static_cast<uint64_t>(method.generated_ordinal64->value);
@@ -891,7 +985,9 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       }
       named_protocol.methods.push_back(std::move(named_method));
     }
-    named_protocols.emplace(protocol_info.get(), std::move(named_protocol));
+    if (named_protocol.methods.size() > 0) {
+      named_protocols.emplace(protocol_info.get(), std::move(named_protocol));
+    }
   }
   return named_protocols;
 }
@@ -908,31 +1004,6 @@ std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
                           NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
   }
   return named_structs;
-}
-
-std::map<const flat::Decl*, CGenerator::NamedTable> CGenerator::NameTables(
-    const std::vector<std::unique_ptr<flat::Table>>& table_infos) {
-  std::map<const flat::Decl*, NamedTable> named_tables;
-  for (const auto& table_info : table_infos) {
-    std::string c_name = NameCodedName(table_info->name);
-    std::string coded_name = c_name + "Coded";
-    named_tables.emplace(table_info.get(),
-                         NamedTable{std::move(c_name), std::move(coded_name), *table_info});
-  }
-  return named_tables;
-}
-
-std::map<const flat::Decl*, CGenerator::NamedUnion> CGenerator::NameUnions(
-    const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
-  std::map<const flat::Decl*, NamedUnion> named_unions;
-  for (const auto& union_info : union_infos) {
-    std::string union_name = NameCodedName(union_info->name);
-    if (!CUnionAllowed(union_name)) {
-      continue;
-    }
-    named_unions.emplace(union_info.get(), NamedUnion{std::move(union_name), *union_info});
-  }
-  return named_unions;
 }
 
 void CGenerator::ProduceBitsForwardDeclaration(const NamedBits& named_bits) {
@@ -986,19 +1057,6 @@ void CGenerator::ProduceProtocolForwardDeclaration(const NamedProtocol& named_pr
 
 void CGenerator::ProduceStructForwardDeclaration(const NamedStruct& named_struct) {
   GenerateStructTypedef(named_struct.c_name);
-}
-
-void CGenerator::ProduceTableForwardDeclaration(const NamedTable& named_struct) {
-  GenerateStructTypedef(named_struct.c_name);
-}
-
-void CGenerator::ProduceTableDeclaration(const NamedTable& named_table) {
-  GenerateTableDeclaration(named_table.c_name);
-  EmitBlank(&file_);
-}
-
-void CGenerator::ProduceUnionForwardDeclaration(const NamedUnion& named_union) {
-  GenerateStructTypedef(named_union.name);
 }
 
 void CGenerator::ProduceProtocolExternDeclaration(const NamedProtocol& named_protocol) {
@@ -1075,35 +1133,18 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
   EmitBlank(&file_);
 }
 
-void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
-  std::vector<CGenerator::Member> members =
-      GenerateMembers(library_, named_union.union_info.members);
-  GenerateTaggedUnionDeclaration(named_union.name, members);
-
-  uint32_t tag = 0u;
-  for (const auto& member : named_union.union_info.members) {
-    if (member.maybe_used) {
-      std::string tag_name = NameUnionTag(named_union.name, *member.maybe_used);
-      auto union_tag_type = types::PrimitiveSubtype::kUint32;
-      std::ostringstream value;
-      value << tag;
-      GenerateIntegerDefine(std::move(tag_name), union_tag_type, value.str());
-      ++tag;
-    }
-  }
-
-  EmitBlank(&file_);
-}
-
 void CGenerator::ProduceProtocolClientDeclaration(const NamedProtocol& named_protocol) {
   for (const auto& method_info : named_protocol.methods) {
     if (!method_info.request)
       continue;
     std::vector<Member> request;
     std::vector<Member> response;
-    GetMethodParameters(library_, method_info, &request, &response);
-    EmitClientMethodDecl(&file_, method_info.c_name, request, response);
-    file_ << ";\n";
+    if (GetMethodParameters(library_, method_info, &request, &response)) {
+      if (CanGenerateCodecFunctions(request) && CanGenerateCodecFunctions(response)) {
+        EmitClientMethodDecl(&file_, method_info.c_name, request, response);
+        file_ << ";\n";
+      }
+    }
   }
 
   EmitBlank(&file_);
@@ -1115,7 +1156,10 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       continue;
     std::vector<Member> request;
     std::vector<Member> response;
-    GetMethodParameters(library_, method_info, &request, &response);
+    if (!GetMethodParameters(library_, method_info, &request, &response) ||
+        !CanGenerateCodecFunctions(request) || !CanGenerateCodecFunctions(response)) {
+      continue;
+    }
 
     size_t count = CountSecondaryObjects(request);
     size_t request_hcount =
@@ -1301,18 +1345,11 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                 file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
                 break;
               case flat::Decl::Kind::kTable:
-                assert(false && "c-codegen for tables not yet implemented");
+                assert(false && "c-codegen for tables not implemented");
                 break;
               case flat::Decl::Kind::kUnion:
-                if (!CUnionAllowed(member.type)) {
-                  file_ << kIndent
-                        << "ZX_PANIC(\"FIDL C union not supported at (%s:%d): %s\", __FILE__, "
-                           "__LINE__, \""
-                        << member.type << "\");\n";
-                  break;
-                }
-                [[fallthrough]];
-
+                assert(false && "c-codegen for unions not implemented");
+                break;
               case flat::Decl::Kind::kStruct:
                 switch (member.nullability) {
                   case types::Nullability::kNullable:
@@ -1353,11 +1390,13 @@ void CGenerator::ProduceProtocolServerDeclaration(const NamedProtocol& named_pro
     if (!method_info.request)
       continue;
     std::vector<Member> request;
-    GetMethodParameters(library_, method_info, &request, nullptr);
-    bool has_response = method_info.response != nullptr;
-    file_ << kIndent;
-    EmitServerMethodDecl(&file_, method_info.identifier, request, has_response);
-    file_ << ";\n";
+    if (GetMethodParameters(library_, method_info, &request, nullptr) &&
+        CanGenerateCodecFunctions(request)) {
+      bool has_response = method_info.response != nullptr;
+      file_ << kIndent;
+      EmitServerMethodDecl(&file_, method_info.identifier, request, has_response);
+      file_ << ";\n";
+    }
   }
   file_ << "} " << named_protocol.c_name << "_ops_t;\n\n";
 
@@ -1370,9 +1409,11 @@ void CGenerator::ProduceProtocolServerDeclaration(const NamedProtocol& named_pro
     if (!method_info.request || !method_info.response)
       continue;
     std::vector<Member> response;
-    GetMethodParameters(library_, method_info, nullptr, &response);
-    EmitServerReplyDecl(&file_, method_info.c_name, response);
-    file_ << ";\n";
+    if (GetMethodParameters(library_, method_info, nullptr, &response) &&
+        CanGenerateCodecFunctions(response)) {
+      EmitServerReplyDecl(&file_, method_info.c_name, response);
+      file_ << ";\n";
+    }
   }
 
   EmitBlank(&file_);
@@ -1393,13 +1434,15 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
   for (const auto& method_info : named_protocol.methods) {
     if (!method_info.request)
       continue;
+    std::vector<Member> request;
+    if (!GetMethodParameters(library_, method_info, &request, nullptr)) {
+      continue;
+    }
     file_ << kIndent << "case " << method_info.ordinal_name << ": {\n";
     file_ << kIndent << kIndent << "status = fidl_decode_msg(&" << method_info.request->coded_name
           << ", msg, NULL);\n";
     file_ << kIndent << kIndent << "if (status != ZX_OK)\n";
     file_ << kIndent << kIndent << kIndent << "break;\n";
-    std::vector<Member> request;
-    GetMethodParameters(library_, method_info, &request, nullptr);
     if (!request.empty())
       file_ << kIndent << kIndent << method_info.request->c_name << "* request = ("
             << method_info.request->c_name << "*)msg->bytes;\n";
@@ -1483,8 +1526,12 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
   for (const auto& method_info : named_protocol.methods) {
     if (!method_info.request || !method_info.response)
       continue;
+
     std::vector<Member> response;
-    GetMethodParameters(library_, method_info, nullptr, &response);
+    if (!GetMethodParameters(library_, method_info, nullptr, &response) ||
+        !CanGenerateCodecFunctions(response)) {
+      continue;
+    }
 
     size_t hcount = GetMaxHandlesFor(named_protocol.transport, method_info.response->typeshape);
 
@@ -1535,12 +1582,13 @@ std::ostringstream CGenerator::ProduceHeader() {
       NameProtocols(library_->protocol_declarations_);
   std::map<const flat::Decl*, NamedStruct> named_structs =
       NameStructs(library_->struct_declarations_);
-  std::map<const flat::Decl*, NamedTable> named_tables = NameTables(library_->table_declarations_);
-  std::map<const flat::Decl*, NamedUnion> named_unions = NameUnions(library_->union_declarations_);
 
   file_ << "\n// Forward declarations\n\n";
 
   for (const auto* decl : library_->declaration_order_) {
+    if (!DeclAllowed(decl)) {
+      continue;
+    }
     switch (decl->kind) {
       case flat::Decl::Kind::kBits: {
         auto iter = named_bits.find(decl);
@@ -1583,29 +1631,25 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
-      case flat::Decl::Kind::kTable: {
-        auto iter = named_tables.find(decl);
-        if (iter != named_tables.end()) {
-          ProduceTableForwardDeclaration(iter->second);
-        }
+      case flat::Decl::Kind::kTable:
+        // Do nothing.
         break;
-      }
       case flat::Decl::Kind::kTypeAlias:
         // TODO(FIDL-483): Do more than nothing.
         break;
-      case flat::Decl::Kind::kUnion: {
-        auto iter = named_unions.find(decl);
-        if (iter != named_unions.end()) {
-          ProduceUnionForwardDeclaration(iter->second);
-        }
+      case flat::Decl::Kind::kUnion:
+        // Do nothing.
         break;
-      }
     }  // switch
   }
 
   file_ << "\n// Extern declarations\n\n";
 
   for (const auto* decl : library_->declaration_order_) {
+    if (!DeclAllowed(decl)) {
+      continue;
+    }
+
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
@@ -1631,6 +1675,10 @@ std::ostringstream CGenerator::ProduceHeader() {
   file_ << "\n// Declarations\n\n";
 
   for (const auto* decl : library_->declaration_order_) {
+    if (!DeclAllowed(decl)) {
+      continue;
+    }
+
     switch (decl->kind) {
       case flat::Decl::Kind::kBits:
         // Bits can be entirely forward declared, as they have no
@@ -1667,23 +1715,15 @@ std::ostringstream CGenerator::ProduceHeader() {
         }
         break;
       }
-      case flat::Decl::Kind::kTable: {
-        auto iter = named_tables.find(decl);
-        if (iter != named_tables.end()) {
-          ProduceTableDeclaration(iter->second);
-        }
+      case flat::Decl::Kind::kTable:
+        // Do nothing.
         break;
-      }
       case flat::Decl::Kind::kTypeAlias:
         // TODO(FIDL-483): Do more than nothing.
         break;
-      case flat::Decl::Kind::kUnion: {
-        auto iter = named_unions.find(decl);
-        if (iter != named_unions.end()) {
-          ProduceUnionDeclaration(iter->second);
-        }
+      case flat::Decl::Kind::kUnion:
+        // Do nothing.
         break;
-      }
     }  // switch
   }
 

@@ -424,8 +424,6 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
-          // all unions are assumed to take the "xunion" code path in the C generator
-          case flat::Decl::Kind::kUnion:
           case flat::Decl::Kind::kStruct: {
             std::string name = NameCodedName(identifier_type->name);
             if (identifier_type->nullability == types::Nullability::kNullable) {
@@ -433,6 +431,8 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
             }
             return name;
           }
+          case flat::Decl::Kind::kUnion:
+            return "fidl_xunion_t";
           case flat::Decl::Kind::kTable:
             return "fidl_table_t";
           case flat::Decl::Kind::kProtocol:

@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  fidlc_union_not_simple = false
-  fidlc_deprecate_c_unions = false
-}
-
 config("fidlc_config") {
   defines = []
   if (defined(fidlc_deprecate_c_unions) && fidlc_deprecate_c_unions) {

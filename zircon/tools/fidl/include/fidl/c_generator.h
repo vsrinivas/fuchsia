@@ -104,17 +104,6 @@ class CGenerator {
     const flat::Struct& struct_info;
   };
 
-  struct NamedTable {
-    std::string c_name;
-    std::string coded_name;
-    const flat::Table& table_info;
-  };
-
-  struct NamedUnion {
-    std::string name;
-    const flat::Union& union_info;
-  };
-
   enum class StructKind {
     kMessage,
     kNonmessage,
@@ -148,18 +137,12 @@ class CGenerator {
       const std::vector<std::unique_ptr<flat::Protocol>>& protocol_infos);
   std::map<const flat::Decl*, NamedStruct> NameStructs(
       const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
-  std::map<const flat::Decl*, NamedTable> NameTables(
-      const std::vector<std::unique_ptr<flat::Table>>& table_infos);
-  std::map<const flat::Decl*, NamedUnion> NameUnions(
-      const std::vector<std::unique_ptr<flat::Union>>& union_infos);
 
   void ProduceBitsForwardDeclaration(const NamedBits& named_bits);
   void ProduceConstForwardDeclaration(const NamedConst& named_const);
   void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);
   void ProduceProtocolForwardDeclaration(const NamedProtocol& named_protocol);
   void ProduceStructForwardDeclaration(const NamedStruct& named_struct);
-  void ProduceTableForwardDeclaration(const NamedTable& named_table);
-  void ProduceUnionForwardDeclaration(const NamedUnion& named_union);
 
   void ProduceProtocolExternDeclaration(const NamedProtocol& named_protocol);
 
@@ -167,8 +150,6 @@ class CGenerator {
   void ProduceMessageDeclaration(const NamedMessage& named_message);
   void ProduceProtocolDeclaration(const NamedProtocol& named_protocol);
   void ProduceStructDeclaration(const NamedStruct& named_struct);
-  void ProduceTableDeclaration(const NamedTable& named_table);
-  void ProduceUnionDeclaration(const NamedUnion& named_union);
 
   void ProduceProtocolClientDeclaration(const NamedProtocol& named_protocol);
   void ProduceProtocolClientImplementation(const NamedProtocol& named_protocol);
