@@ -124,16 +124,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: netutilconstants.CannotFindNodeErrMsg, Type: swarmingOutputType})
 	// For fxbug.dev/51015.
 	ret = append(ret, &stringInLogCheck{String: bootserverconstants.FailedToSendErrMsg(bootserverconstants.CmdlineNetsvcName), Type: swarmingOutputType})
-	// For fxbug.dev/52719.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
-	// For fxbug.dev/56651.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunBugreportMsg), Type: swarmingOutputType})
 	// For fxbug.dev/43188.
 	ret = append(ret, &stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType})
-	// For fxbug.dev/53101.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
-	// For fxbug.dev/51441.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/57463.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/43355.
@@ -141,8 +133,6 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// For fxbug.dev/53854.
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
-	// For fxbug.dev/56494.
-	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
 	// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
 	// zircon/system/ulib/ddk-platform-defs/include/ddk/platform-defs.h.
 	// That's used for a test that intentionally crashes a driver host.
@@ -168,5 +158,20 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// These may be in the output of tests, but the syslogType doesn't contain any test output.
 	ret = append(ret, &stringInLogCheck{String: "ASSERT FAILED", Type: syslogType})
 	ret = append(ret, &stringInLogCheck{String: "DEVICE SUSPEND TIMED OUT", Type: syslogType})
+
+	// For fxbug.dev/53101.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToStartTargetMsg), Type: swarmingOutputType})
+	// For fxbug.dev/51441.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.ReadConfigFileErrorMsg), Type: swarmingOutputType})
+	// For fxbug.dev/56494.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToReceiveFileMsg), Type: swarmingOutputType})
+	// For fxbug.dev/56651.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunBugreportMsg), Type: swarmingOutputType})
+	// For fxbug.dev/52719.
+	// Kernel panics and other low-level errors often cause crashes that
+	// manifest as SSH failures, so this check must come after all
+	// Zircon-related errors to ensure tefmocheck attributes these crashes to
+	// the actual root cause.
+	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToReconnectMsg), Type: swarmingOutputType})
 	return ret
 }
