@@ -55,9 +55,6 @@ test("ethernet-unittest") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(46872): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("ethernet-unittest-package") {

@@ -107,26 +107,44 @@ class FakeEthernetImplProtocol
   bool queue_tx_called_ = false;
 };
 
-class EthernetTester {
+class EthernetTester : fake_ddk::Bind {
  public:
-  EthernetTester() {
+  EthernetTester() : fake_ddk::Bind() {
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
     protocols[0] = {ZX_PROTOCOL_ETHERNET_IMPL,
                     *reinterpret_cast<const fake_ddk::Protocol*>(ethernet_.proto())};
-    ddk_.SetProtocols(std::move(protocols));
+    SetProtocols(std::move(protocols));
   }
 
-  fake_ddk::Bind& ddk() { return ddk_; }
+  fake_ddk::Bind& ddk() { return *this; }
   FakeEthernetImplProtocol& ethmac() { return ethernet_; }
+  eth::EthDev0* eth0() { return eth0_; }
+  const std::vector<eth::EthDev*>& instances() { return instances_; }
+
+ protected:
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override {
+    zx_status_t ret = Bind::DeviceAdd(drv, parent, args, out);
+    if (ret == ZX_OK) {
+      if (parent == fake_ddk::kFakeParent) {
+        eth0_ = static_cast<eth::EthDev0*>(args->ctx);
+      } else {
+        instances_.push_back(static_cast<eth::EthDev*>(args->ctx));
+      }
+    }
+    return ret;
+  }
 
  private:
-  fake_ddk::Bind ddk_;
   FakeEthernetImplProtocol ethernet_;
+  eth::EthDev0* eth0_;
+  std::vector<eth::EthDev*> instances_;
 };
 
 TEST(EthernetTest, BindTest) {
   EthernetTester tester;
   EXPECT_OK(eth::EthDev0::EthBind(nullptr, fake_ddk::kFakeParent), "Bind failed");
+  tester.eth0()->DdkRelease();
 }
 
 TEST(EthernetTest, DdkLifecycleTest) {
@@ -147,6 +165,7 @@ TEST(EthernetTest, OpenTest) {
   eth->DdkAsyncRemove();
   EXPECT_OK(tester.ddk().WaitUntilRemove());
   eth->DdkRelease();
+  tester.instances()[0]->DdkRelease();
 }
 
 class EthDev0ForTest : public eth::EthDev0 {
