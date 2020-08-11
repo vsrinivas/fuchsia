@@ -231,7 +231,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::CreateContext(
   const uint64_t bytes_per_second =
       input_format.frames_per_second * sizeof(uint16_t) * input_format.channel_map.size();
   context_ = {
-      {.input_format = std::move(input_format), .settings = std::move(settings), .params = params}};
+      {.settings = std::move(settings), .input_format = std::move(input_format), .params = params}};
   chunk_input_stream_.emplace(
       context_->pcm_batch_size(),
       format_details.has_timebase()

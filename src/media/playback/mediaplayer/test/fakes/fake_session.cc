@@ -154,7 +154,10 @@ void FakeSession::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callb
   // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning
   // we are providing no information.
   if (callback)
-    callback({.remaining_presents_in_flight_allowed = 1, .future_presentations = {}});
+    callback({
+        .future_presentations = {},
+        .remaining_presents_in_flight_allowed = 1,
+    });
 
   async::PostTask(dispatcher_, [this, weak_this = GetWeakThis()]() {
     if (!weak_this) {
@@ -172,7 +175,10 @@ void FakeSession::RequestPresentationTimes(zx_duration_t prediction_time_span,
                                            FakeSession::RequestPresentationTimesCallback callback) {
   // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning
   // we are providing no information.
-  callback({.remaining_presents_in_flight_allowed = 1, .future_presentations = {}});
+  callback({
+      .future_presentations = {},
+      .remaining_presents_in_flight_allowed = 1,
+  });
 }
 
 FakeSession::Resource* FakeSession::FindResource(uint32_t id) {

@@ -33,5 +33,4 @@ executable("codec_runner_sw_sbc") {
     "//third_party/android/platform/system/bt/embdrv/sbc:sbc_encoder",
     "//zircon/system/ulib/trace",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }

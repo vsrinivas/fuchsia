@@ -31,7 +31,6 @@ source_set("demux") {
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/util",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test("tests") {

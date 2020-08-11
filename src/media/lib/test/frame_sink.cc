@@ -126,12 +126,12 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(fit::closure on_fra
   // there's no harm in covering Scenic's ability to switch to a frame with
   // completely different format.
   fuchsia::media::VideoUncompressedFormat blank_frame_video_format{
+      .fourcc = kBlankFrameFourcc,
       .primary_width_pixels = kBlankFrameWidth,
       .primary_height_pixels = kBlankFrameHeight,
+      .primary_line_stride_bytes = kBlankFramePixelBytes * kBlankFrameWidth,
       .primary_display_width_pixels = kBlankFrameWidth,
       .primary_display_height_pixels = kBlankFrameHeight,
-      .primary_line_stride_bytes = kBlankFramePixelBytes * kBlankFrameWidth,
-      .fourcc = kBlankFrameFourcc,
       // None of the other fields matter for BGRA / BGRA_8.
   };
 

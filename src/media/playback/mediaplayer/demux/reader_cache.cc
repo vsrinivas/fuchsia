@@ -65,12 +65,14 @@ void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
           buffer_ = SlidingBuffer(capacity_);
         }
 
-        ServeReadAtRequest({.callback = std::move(callback),
-                            .original_position = position,
-                            .total_bytes = bytes_to_read,
-                            .position = position,
-                            .bytes_to_read = bytes_to_read,
-                            .buffer = buffer});
+        ServeReadAtRequest({
+            .callback = std::move(callback),
+            .original_position = position,
+            .total_bytes = bytes_to_read,
+            .position = position,
+            .buffer = buffer,
+            .bytes_to_read = bytes_to_read,
+        });
       });
 }
 
@@ -112,8 +114,8 @@ void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
             .original_position = request.original_position,
             .total_bytes = request.total_bytes,
             .position = request.position + bytes_read,
-            .bytes_to_read = request.bytes_to_read - bytes_read,
             .buffer = request.buffer + bytes_read,
+            .bytes_to_read = request.bytes_to_read - bytes_read,
         });
       });
 }

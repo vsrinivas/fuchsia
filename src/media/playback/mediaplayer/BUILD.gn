@@ -170,7 +170,6 @@ executable("mediaplayer_tests_bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("mediaplayer_tests") {
