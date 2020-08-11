@@ -99,6 +99,10 @@ table NodeDescription {
     1: OperatingSystem operating_system;
     /// A string saying something about the runtime environment of a node
     2: Implementation implementation;
+    /// The name of the binary containing Overnet
+    3: string:32 binary;
+    /// The hostname of the device running Overnet
+    4: string:32 hostname;
 };
 
 /// Composition of results from Diagnostic/Probe.

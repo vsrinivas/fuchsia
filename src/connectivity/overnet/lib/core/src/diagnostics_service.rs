@@ -72,6 +72,19 @@ async fn handle_diagnostic_service_requests(
     Ok(())
 }
 
+fn hostname() -> Option<String> {
+    let mut buf = [0u8; 256];
+    let r = unsafe { libc::gethostname(buf.as_mut_ptr() as *mut std::os::raw::c_char, buf.len()) };
+    if r != 0 {
+        return None;
+    }
+
+    buf.iter()
+        .position(|&c| c == 0)
+        .and_then(|p| std::ffi::CString::new(&buf[..p]).ok())
+        .and_then(|s| s.into_string().ok())
+}
+
 async fn handle_diagnostic_requests(
     router: &Weak<Router>,
     implementation: fidl_fuchsia_overnet_protocol::Implementation,
@@ -99,6 +112,11 @@ async fn handle_diagnostic_requests(
                                 fidl_fuchsia_overnet_protocol::OperatingSystem::Mac,
                             ),
                             implementation: Some(implementation),
+                            binary: std::env::current_exe()
+                                .ok()
+                                .and_then(|p| p.file_name().map(|s| s.to_owned()))
+                                .and_then(|p| p.to_str().map(str::to_string)),
+                            hostname: hostname(),
                         }),
                     )
                     .await,

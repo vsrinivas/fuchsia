@@ -45,10 +45,16 @@ async fn list_peers() -> Result<(), Error> {
             write!(&mut out, "{}", peer.id)?;
             if let Some(desc) = desc.node_description {
                 if let Some(operating_system) = desc.operating_system {
-                    write!(&mut out, " OS:{:?}", operating_system)?;
+                    write!(&mut out, " os:{:?}", operating_system)?;
                 }
                 if let Some(implementation) = desc.implementation {
-                    write!(&mut out, " IMPL:{:?}", implementation)?;
+                    write!(&mut out, " impl:{:?}", implementation)?;
+                }
+                if let Some(binary) = desc.binary {
+                    write!(&mut out, " bin:{}", binary)?;
+                }
+                if let Some(hostname) = desc.hostname {
+                    write!(&mut out, " hostname:{}", hostname)?;
                 }
             }
             println!("{}", out);

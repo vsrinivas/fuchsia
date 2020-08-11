@@ -397,6 +397,18 @@ mod tests {
             assert_eq!(output.matches("Linux").count(), 6);
             #[cfg(target_os = "macos")]
             assert_eq!(output.matches("Mac").count(), 6);
+            assert_eq!(output.matches("bin:onet").count(), 3);
+            assert_eq!(output.matches("bin:ascendd").count(), 2);
+            assert_eq!(output.matches("bin:overnet_echo").count(), 1);
+            assert_eq!(
+                output
+                    .matches(&format!(
+                        "hostname:{}",
+                        String::from_utf8(Command::new("hostname").output()?.stdout).unwrap()
+                    ))
+                    .count(),
+                6
+            );
             Ok(())
         })
     }

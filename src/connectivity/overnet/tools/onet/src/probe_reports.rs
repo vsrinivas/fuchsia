@@ -14,6 +14,7 @@ use {
     futures::{lock::Mutex, prelude::*},
     std::{
         collections::{HashMap, HashSet},
+        fmt::Write,
         time::Duration,
     },
 };
@@ -213,12 +214,20 @@ pub async fn full_map(args: FullMapArgs) -> Result<String, Error> {
         let mut attrs = AttrWriter::new();
         let mut label = String::new();
         if let Some(os) = description.operating_system {
-            label += &format!("{:?}", os);
-            label += " ";
+            write!(&mut label, "{:?} ", os)?;
         }
         if let Some(imp) = description.implementation {
-            label += &format!("{:?}", imp);
-            label += ":";
+            write!(&mut label, "{:?} ", imp)?;
+        }
+        if let Some(binary) = description.binary.as_ref() {
+            write!(&mut label, "{} ", binary)?;
+        }
+        if let Some(hostname) = description.hostname.as_ref() {
+            write!(&mut label, "{} ", hostname)?;
+        }
+        if label.len() > 0 {
+            label.pop();
+            write!(&mut label, ":")?;
         }
         label += &format!("{}", node_id.id);
         attrs.set("label", &label);
