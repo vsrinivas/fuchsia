@@ -28,10 +28,10 @@ class AppmgrLifecycleTest : public sys::testing::TestWithEnvironment,
  public:
   AppmgrLifecycleTest() = default;
   ~AppmgrLifecycleTest() = default;
+  zx_status_t stop_callback_status_ = ZX_ERR_BAD_STATE;
 
   void SetUp() override {
     FX_LOGS(INFO) << "Setting up AppmgrLifecycleTest";
-
     std::unordered_set<component::Moniker> lifecycle_allowlist;
     lifecycle_allowlist.insert(
         component::Moniker{.url = kLifecyleComponentUrl, .realm_path = {kRootRealm}});
@@ -62,7 +62,8 @@ class AppmgrLifecycleTest : public sys::testing::TestWithEnvironment,
         .sysmgr_args = {},
         .loader = std::optional<fuchsia::sys::LoaderPtr>(std::move(loader)),
         .run_virtual_console = false,
-        .trace_server_channel = std::move(trace_server)};
+        .trace_server_channel = std::move(trace_server),
+        .stop_callback = [this](zx_status_t status) { stop_callback_status_ = status; }};
     appmgr_ = std::make_unique<component::Appmgr>(dispatcher(), std::move(args));
 
     log_connector_.set_error_handler(
@@ -108,13 +109,8 @@ TEST_F(AppmgrLifecycleTest, LifecycleComponentGetsShutdownSignal) {
   controller.events().OnTerminated = [&](int64_t return_code,
                                          fuchsia::sys::TerminationReason reason) {
     FX_LOGS(INFO) << "TestLifecycleComponent termination complete.";
+
     lifecycle_component_terminated = true;
-
-    // Make sure that appmgr is waiting for this component to shut down before exiting.
-    ASSERT_FALSE(appmgr_terminated);
-
-    // Make sure that sysmgr is shutdown after all other components.
-    ASSERT_TRUE(appmgr_->is_sysmgr_running());
   };
 
   appmgr_->RootRealm()->CreateComponent(std::move(launch_info), controller.NewRequest());
@@ -122,10 +118,26 @@ TEST_F(AppmgrLifecycleTest, LifecycleComponentGetsShutdownSignal) {
 
   appmgr_lifecycle_.set_error_handler([&](zx_status_t status) {
     FX_PLOGS(INFO, status) << "Appmgr Lifecycle channel closed.";
-    ASSERT_EQ(status, ZX_ERR_PEER_CLOSED);
+    ASSERT_EQ(status, ZX_OK);
     appmgr_terminated = true;
   });
 
   appmgr_lifecycle_->Stop();
   RunLoopUntil([&] { return lifecycle_component_terminated && appmgr_terminated; });
+  ASSERT_EQ(ZX_OK, stop_callback_status_);
+}
+
+// Test that appmgr terminates if none of the components in the allowlist expose
+// the lifecycle protocol.
+TEST_F(AppmgrLifecycleTest, LifecycleNoShutdownComponents) {
+  bool appmgr_terminated = false;
+  appmgr_lifecycle_.set_error_handler([&](zx_status_t status) {
+    FX_PLOGS(INFO, status) << "Appmgr Lifecycle channel closed.";
+    ASSERT_EQ(status, ZX_OK);
+    appmgr_terminated = true;
+  });
+
+  appmgr_lifecycle_->Stop();
+  RunLoopUntil([&] { return appmgr_terminated; });
+  ASSERT_EQ(ZX_OK, stop_callback_status_);
 }
