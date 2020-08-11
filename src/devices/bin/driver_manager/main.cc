@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
   // Check if whatever launched devmgr gave a channel for component lifecycle events
   zx::channel component_lifecycle_request(zx_take_startup_handle(PA_LIFECYCLE));
   if (component_lifecycle_request.is_valid()) {
-    status = devmgr::ComponentLifecycleServer::Create(&loop, &coordinator,
+    status = devmgr::ComponentLifecycleServer::Create(loop.dispatcher(), &coordinator,
                                                       std::move(component_lifecycle_request));
     if (status != ZX_OK) {
       LOGF(ERROR, "driver_manager: Cannot create componentlifecycleserver: %s",
@@ -418,7 +418,7 @@ int main(int argc, char** argv) {
                               zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
 
   coordinator.set_running(true);
-  loop.Run();
-  LOGF(INFO, "Coordinator's main async loop exited");
-  return 0;
+  status = loop.Run();
+  LOGF(ERROR, "Coordinator exited unexpectedly: %s", zx_status_get_string(status));
+  return status;
 }

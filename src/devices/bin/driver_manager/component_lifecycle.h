@@ -16,16 +16,15 @@ namespace devmgr {
 class ComponentLifecycleServer final
     : public llcpp::fuchsia::process::lifecycle::Lifecycle::Interface {
  public:
-  explicit ComponentLifecycleServer(Coordinator* dev_coord, async::Loop* loop)
-      : dev_coord_(dev_coord), loop_(loop) {}
+  explicit ComponentLifecycleServer(Coordinator* dev_coord) : dev_coord_(dev_coord) {}
 
-  static zx_status_t Create(async::Loop* loop, Coordinator* dev_coord, zx::channel chan);
+  static zx_status_t Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
+                            zx::channel chan);
 
   void Stop(StopCompleter::Sync completer) override;
 
  private:
   Coordinator* dev_coord_;
-  async::Loop* loop_;
 };
 
 }  // namespace devmgr
