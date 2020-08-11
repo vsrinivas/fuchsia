@@ -3,6 +3,9 @@
         "binary": "bin/isolated_devmgr_tests"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.exception.Handler",
             "fuchsia.logger.LogSink",

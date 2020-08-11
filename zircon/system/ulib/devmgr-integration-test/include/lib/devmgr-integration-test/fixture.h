@@ -8,6 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fit/function.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/job.h>
 #include <lib/zx/time.h>
 
@@ -48,6 +49,10 @@ class IsolatedDevmgr {
   const zx::channel& fshost_outgoing_dir() const { return fshost_outgoing_dir_; }
 
   zx::channel TakeSvcRootDir() { return std::move(svc_root_dir_); }
+
+  // Expose devfs in component outgoing directory.
+  zx_status_t AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir,
+                                    async_dispatcher_t* dispatcher);
 
   // Notifies if driver manager job has an exception.
   void SetExceptionCallback(fit::closure exception_callback);

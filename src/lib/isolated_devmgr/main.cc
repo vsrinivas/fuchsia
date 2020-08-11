@@ -8,10 +8,13 @@
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <zircon/device/vfs.h>
 
 #include <iostream>
 #include <string_view>
+
+#include <fbl/ref_ptr.h>
 
 #include "isolated_devmgr.h"
 #include "src/lib/fxl/command_line.h"
@@ -186,6 +189,16 @@ int main(int argc, const char** argv) {
         devmgr->Connect(std::move(chan));
       });
   context->outgoing()->AddPublicService(std::move(service), std::move(svc_name));
+
+  // Add devfs to out directory
+  zx::channel client, server;
+  auto status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  devmgr->Connect(std::move(server));
+  auto devfs_out = std::make_unique<vfs::RemoteDir>(std::move(client));
+  context->outgoing()->root_dir()->AddEntry("dev", std::move(devfs_out));
 
   loop.Run();
 

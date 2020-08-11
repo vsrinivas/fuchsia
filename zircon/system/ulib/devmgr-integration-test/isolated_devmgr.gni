@@ -61,6 +61,11 @@ template("isolated_devmgr_unittest_component") {
     additional_services = invoker.services
   }
 
+  additional_features = []
+  if (defined(invoker.features)) {
+    additional_features = invoker.features
+  }
+
   generated_target = "${target_name}_generated_manifest"
   manifest = "$target_out_dir/${generated_target}.cmx"
   action(generated_target) {
@@ -76,6 +81,12 @@ template("isolated_devmgr_unittest_component") {
       args += [
         "--additional-services",
         service,
+      ]
+    }
+    foreach(feature, additional_features) {
+      args += [
+        "--additional-features",
+        feature,
       ]
     }
     visibility = [ ":*" ]
@@ -171,6 +182,7 @@ template("isolated_devmgr_unittest_package") {
                              "deps",
                              "executable_path",
                              "services",
+                             "features",
                            ])
     component_name = invoker.target_name
     visibility = [ ":*" ]

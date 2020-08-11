@@ -62,3 +62,21 @@ so:
 
 In either case you will want to make sure to list the isolated devmgr as a `dep`
 for your test component.
+
+
+## Using inspect with isolated devmgr
+
+The device tree and the diagnostics are hosted in the outgoing directory of the test component.
+In order to view the inspect files -
+1. Add a breakpoint to the test using [zxdb](https://fuchsia.dev/fuchsia-src/development/debugger/debugger_usage).
+2. When breakpoint is hit, open `fx shell` and find the hub path to the test component.
+  E.g:
+  ```
+  find /hub -name fs-management-devmgr.cmx
+  /hub/r/test_env_af569d6f/31969/c/fs-management-devmgr.cmx
+  ```
+3. You can view the inspect file using iquery.
+  E.g:
+  ```
+  fx iquery show-file /hub/r/test_env_af569d6f/31969/c/fs-management-devmgr.cmx/32468/out/dev/diagnostics/driver_manager/dm.inspect
+  ```

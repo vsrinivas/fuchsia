@@ -20,7 +20,10 @@ test("devmgr-integration") {
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/files",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
   ]
@@ -28,6 +31,7 @@ test("devmgr-integration") {
 
 isolated_devmgr_unittest_package("devmgr-integration-test") {
   executable_path = "test/devmgr-integration"
+  features = [ "hub" ]
   deps = [
     ":devmgr-integration",
     "//src/devices/misc/drivers/test",

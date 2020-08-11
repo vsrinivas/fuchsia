@@ -15,6 +15,7 @@
 #include <ddk/platform-defs.h>
 
 #include "isolated_devmgr.h"
+#include "src/lib/files/glob.h"
 
 namespace isolated_devmgr {
 namespace testing {
@@ -205,6 +206,30 @@ TEST_F(DevmgrTest, ExposeDriverFromComponentNamespace) {
   services->Connect("fuchsia.example.IsolatedDevmgr", std::move(devfs_req));
 
   EnableVirtualAudio(devfs);
+}
+
+TEST_F(DevmgrTest, ExposeDevfsToHub) {
+  auto ctx = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  fidl::InterfacePtr<fuchsia::sys::Launcher> launcher;
+  ctx->svc()->Connect(launcher.NewRequest());
+
+  fuchsia::sys::LaunchInfo info;
+  info.url =
+      "fuchsia-pkg://fuchsia.com/isolated-devmgr-tests-package#meta/virtual-audio-devmgr.cmx";
+  auto echo_svc = sys::ServiceDirectory::CreateWithRequest(&info.directory_request);
+  fidl::InterfacePtr<fuchsia::sys::ComponentController> ctlr;
+  launcher->CreateComponent(std::move(info), ctlr.NewRequest());
+
+  ctlr.set_error_handler([](zx_status_t err) { FAIL() << "Controller shouldn't exit"; });
+  bool ready = false;
+  ctlr.events().OnDirectoryReady = [&ready] { ready = true; };
+  RunLoopUntil([&ready] { return ready; });
+  ASSERT_TRUE(ready);
+
+  // Verify that devfs is indeed visible in outgoing directory
+  constexpr char kGlob[] = "/hub/c/virtual-audio-devmgr.cmx/*/out/dev";
+  files::Glob glob(kGlob);
+  EXPECT_EQ(glob.size(), 1u) << kGlob << " expected to match exactly once.";
 }
 
 TEST_F(DevmgrTest, DiagnosticsFiles) {

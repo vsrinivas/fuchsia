@@ -26,6 +26,8 @@ zx_library("devmgr-integration-test") {
     "launcher.cc",
   ]
   public_deps = [
+    # <lib/devmgr-integration-test/fixture.h> has #include <lib/vfs/cpp/pseudo_dir.h>
+    "//sdk/lib/vfs/cpp",
     "//zircon/public/lib/async",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.
@@ -48,6 +50,7 @@ zx_library("devmgr-integration-test") {
     "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

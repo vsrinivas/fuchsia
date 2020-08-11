@@ -12,11 +12,13 @@
 #include <lib/async/dispatcher.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <lib/zx/exception.h>
 #include <stdint.h>
 #include <zircon/processargs.h>
@@ -277,6 +279,23 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
                                       fs::Rights::ReadWrite());
 
   return svc_loop_state_->loop.StartThread("isolated-devmgr-svcloop");
+}
+
+__EXPORT
+zx_status_t IsolatedDevmgr::AddDevfsToOutgoingDir(vfs::PseudoDir* outgoing_root_dir,
+                                                  async_dispatcher_t* dispatcher) {
+  zx::channel client, server;
+  auto status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  fdio_cpp::UnownedFdioCaller fd(devfs_root_.get());
+  fdio_service_clone_to(fd.borrow_channel(), server.release());
+
+  // Add devfs to out directory.
+  auto devfs_out = std::make_unique<vfs::RemoteDir>(std::move(client), dispatcher);
+  outgoing_root_dir->AddEntry("dev", std::move(devfs_out));
+  return ZX_OK;
 }
 
 __EXPORT

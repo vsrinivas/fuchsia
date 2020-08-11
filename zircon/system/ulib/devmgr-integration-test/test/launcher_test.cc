@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/manager/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/vfs.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/lib/files/glob.h"
 
 namespace devmgr_integration_test {
 
@@ -50,8 +54,8 @@ TEST(LauncherTest, Namespace) {
 
   zx::channel bootfs_client, bootfs_server;
   ASSERT_OK(zx::channel::create(0, &bootfs_client, &bootfs_server));
-  ASSERT_OK(fdio_open("/pkg/driver", ZX_FS_RIGHT_READABLE |
-                      ZX_FS_RIGHT_EXECUTABLE, bootfs_server.release()));
+  ASSERT_OK(fdio_open("/pkg/driver", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+                      bootfs_server.release()));
 
   args.flat_namespace.push_back(std::make_pair("/test_drivers", std::move(bootfs_client)));
 
@@ -90,6 +94,33 @@ TEST(LauncherTest, OutgoingServices) {
   ASSERT_OK(fuchsia_device_manager_DebugDumperDumpTree(local.get(), vmo_dup, &call_status,
                                                        &data_written, &data_avail));
   ASSERT_OK(call_status);
+}
+
+TEST(LauncherTest, ExposeDevfsToHub) {
+  // Setup outgoing directory. This should be done only once in the test component.
+  // Ideally done during test setup, but since this is the only test case using outgoing directory
+  // it is done here.
+  async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
+  auto context = sys::ComponentContext::Create();
+  context->outgoing()->ServeFromStartupInfo(loop.dispatcher());
+  loop.StartThread();
+
+  // Create devmgr instance
+  devmgr_launcher::Args args;
+  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+  args.driver_search_paths.push_back("/boot/driver/test");
+  args.path_prefix = "/pkg/";
+  IsolatedDevmgr devmgr;
+  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
+
+  // Add devfs to out directory
+  devmgr.AddDevfsToOutgoingDir(context->outgoing()->root_dir(), loop.dispatcher());
+
+  // Verify that devfs is accessible in the outgoing directory
+  constexpr char kGlob[] = "/hub/c/devmgr-integration-test.cmx/*/out/dev";
+  files::Glob glob(kGlob);
+  EXPECT_EQ(glob.size(), 1u);
+  loop.Shutdown();
 }
 
 }  // namespace devmgr_integration_test
