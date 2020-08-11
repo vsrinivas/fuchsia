@@ -35,6 +35,7 @@ impl std::str::FromStr for InputReportMethod {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct InputDeviceMatchArgs {
     pub vendor_id: Option<u32>,
     pub product_id: Option<u32>,

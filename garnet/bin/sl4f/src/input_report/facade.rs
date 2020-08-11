@@ -17,12 +17,24 @@ use fidl_fuchsia_input_report::{
 use fuchsia_syslog::macros::*;
 use glob::glob;
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
+use std::collections::HashMap;
 use std::vec::Vec;
 
 #[derive(Debug)]
+struct InputDeviceConnection {
+    proxy: InputDeviceProxy,
+    reader: Option<InputReportsReaderProxy>,
+}
+
+impl InputDeviceConnection {
+    pub fn new(proxy: InputDeviceProxy) -> InputDeviceConnection {
+        Self { proxy: proxy, reader: None }
+    }
+}
+
+#[derive(Debug)]
 pub struct InputReportFacade {
-    proxy: RwLock<Option<InputDeviceProxy>>,
-    reader: RwLock<Option<InputReportsReaderProxy>>,
+    connections: RwLock<HashMap<InputDeviceMatchArgs, InputDeviceConnection>>,
 }
 
 fn connect_to_device(path: std::path::PathBuf) -> Option<InputDeviceProxy> {
@@ -67,63 +79,73 @@ async fn check_device_match(
 
 impl InputReportFacade {
     pub fn new() -> InputReportFacade {
-        Self { proxy: RwLock::new(None), reader: RwLock::new(None) }
+        Self { connections: RwLock::new(HashMap::new()) }
     }
 
     #[cfg(test)]
     fn new_with_proxy(proxy: InputDeviceProxy) -> Self {
-        Self { proxy: RwLock::new(Some(proxy)), reader: RwLock::new(None) }
+        let mut connections = HashMap::<InputDeviceMatchArgs, InputDeviceConnection>::new();
+        connections.insert(InputDeviceMatchArgs::default(), InputDeviceConnection::new(proxy));
+        Self { connections: RwLock::new(connections) }
     }
 
-    async fn get_proxy(&self, match_args: InputDeviceMatchArgs) -> Result<InputDeviceProxy, Error> {
-        let lock = self.proxy.upgradable_read();
-        if let Some(proxy) = lock.as_ref() {
-            Ok(proxy.clone())
+    async fn get_proxy(
+        &self,
+        match_args: &InputDeviceMatchArgs,
+    ) -> Result<InputDeviceProxy, Error> {
+        let lock = self.connections.upgradable_read();
+        if let Some(connection) = lock.get(&match_args) {
+            return Ok(connection.proxy.clone());
+        }
+
+        let tag = "InputReportFacade::get_proxy";
+
+        let mut devices = Vec::<InputDeviceProxy>::new();
+        for proxy in
+            glob("/dev/class/input-report/*")?.filter_map(Result::ok).filter_map(connect_to_device)
+        {
+            if let Some(p) = check_device_match(proxy, &match_args).await {
+                devices.push(p);
+            }
+        }
+
+        if devices.len() < 1 {
+            fx_err_and_bail!(&with_line!(tag), "Failed to find matching input report device")
+        } else if devices.len() > 1 {
+            fx_err_and_bail!(&with_line!(tag), "Found multiple matching input report devices")
         } else {
-            let tag = "InputReportFacade::get_proxy";
-
-            let mut devices = Vec::<InputDeviceProxy>::new();
-            for proxy in glob("/dev/class/input-report/*")?
-                .filter_map(Result::ok)
-                .filter_map(connect_to_device)
-            {
-                if let Some(p) = check_device_match(proxy, &match_args).await {
-                    devices.push(p);
-                }
-            }
-
-            if devices.len() < 1 {
-                fx_err_and_bail!(&with_line!(tag), "Failed to find matching input report device")
-            } else if devices.len() > 1 {
-                fx_err_and_bail!(&with_line!(tag), "Found multiple matching input report devices")
-            } else {
-                let proxy = devices.remove(0);
-                *RwLockUpgradableReadGuard::upgrade(lock) = Some(proxy.clone());
-                Ok(proxy)
-            }
+            let proxy = devices.remove(0);
+            RwLockUpgradableReadGuard::upgrade(lock)
+                .insert(*match_args, InputDeviceConnection::new(proxy.clone()));
+            Ok(proxy)
         }
     }
 
     async fn get_reader(
         &self,
-        match_args: InputDeviceMatchArgs,
+        match_args: &InputDeviceMatchArgs,
     ) -> Result<InputReportsReaderProxy, Error> {
-        let lock = self.reader.upgradable_read();
-        if let Some(reader) = lock.as_ref() {
-            Ok(reader.clone())
-        } else {
-            let (reader, server) = fidl::endpoints::create_proxy::<InputReportsReaderMarker>()?;
-            self.get_proxy(match_args).await?.get_input_reports_reader(server)?;
-            *RwLockUpgradableReadGuard::upgrade(lock) = Some(reader.clone());
-            Ok(reader)
+        let proxy = self.get_proxy(&match_args).await?;
+
+        let mut lock = self.connections.write();
+        // get_proxy should have created a corresponding connection for these match_args.
+        let connection =
+            lock.get_mut(&match_args).ok_or(format_err!("Failed to get input report proxy"))?;
+        if let Some(reader) = &connection.reader {
+            return Ok(reader.clone());
         }
+
+        let (reader, server) = fidl::endpoints::create_proxy::<InputReportsReaderMarker>()?;
+        proxy.get_input_reports_reader(server)?;
+        connection.reader = Some(reader.clone());
+        Ok(reader)
     }
 
     pub async fn get_reports(
         &self,
         match_args: InputDeviceMatchArgs,
     ) -> Result<Vec<SerializableInputReport>, Error> {
-        match self.get_reader(match_args).await?.read_input_reports().await? {
+        match self.get_reader(&match_args).await?.read_input_reports().await? {
             Ok(r) => {
                 let mut serializable_reports = Vec::<SerializableInputReport>::new();
                 for report in r {
@@ -142,7 +164,7 @@ impl InputReportFacade {
         &self,
         match_args: InputDeviceMatchArgs,
     ) -> Result<SerializableDeviceDescriptor, Error> {
-        let descriptor = self.get_proxy(match_args).await?.get_descriptor().await?;
+        let descriptor = self.get_proxy(&match_args).await?.get_descriptor().await?;
         Ok(SerializableDeviceDescriptor::new(&descriptor))
     }
 
@@ -150,7 +172,7 @@ impl InputReportFacade {
         &self,
         match_args: InputDeviceMatchArgs,
     ) -> Result<SerializableFeatureReport, Error> {
-        match self.get_proxy(match_args).await?.get_feature_report().await? {
+        match self.get_proxy(&match_args).await?.get_feature_report().await? {
             Ok(r) => Ok(SerializableFeatureReport::new(&r)),
             Err(e) => {
                 let tag = "InputReportFacade::get_feature_report";
@@ -167,7 +189,7 @@ impl InputReportFacade {
         match_args: InputDeviceMatchArgs,
         feature_report: FeatureReport,
     ) -> Result<(), Error> {
-        match self.get_proxy(match_args).await?.set_feature_report(feature_report).await? {
+        match self.get_proxy(&match_args).await?.set_feature_report(feature_report).await? {
             Ok(()) => Ok(()),
             Err(e) => {
                 let tag = "InputReportFacade::set_feature_report";
