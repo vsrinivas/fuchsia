@@ -136,18 +136,18 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                 if (!queue_.Add(Shorten(program_name), std::move(attachments), std::move(minidump),
                                 annotations)) {
                   FX_LOGS(ERROR) << "Error adding new report to the queue";
-                  info_.LogCrashState(cobalt::CrashState::kDropped);
                   return ::fit::error();
                 }
 
-                info_.LogCrashState(cobalt::CrashState::kFiled);
                 return ::fit::ok();
               })
-          .then([callback = std::move(callback)](::fit::result<void>& result) {
+          .then([this, callback = std::move(callback)](::fit::result<void>& result) {
             if (result.is_error()) {
               FX_LOGS(ERROR) << "Failed to file report. Won't retry.";
+              info_.LogCrashState(cobalt::CrashState::kDropped);
               callback(::fit::error(ZX_ERR_INTERNAL));
             } else {
+              info_.LogCrashState(cobalt::CrashState::kFiled);
               callback(::fit::ok());
             }
           });
