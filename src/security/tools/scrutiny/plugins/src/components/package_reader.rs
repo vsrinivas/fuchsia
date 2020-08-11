@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::components::{http::*, jsons::*, types::*, util},
+    crate::components::{jsons::*, package_getter::*, types::*, util},
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
     std::collections::HashMap,
@@ -44,13 +44,13 @@ impl PackageServerReader {
     }
 
     fn read_blob_raw(&self, merkle: &str) -> Result<Vec<u8>> {
-        Ok(self.pkg_getter.read_raw(&format!("/blobs/{}", merkle)[..])?)
+        Ok(self.pkg_getter.read_raw(&format!("blobs/{}", merkle)[..])?)
     }
 }
 
 impl PackageReader for PackageServerReader {
     fn read_targets(&self) -> Result<TargetsJson> {
-        let resp_b = self.pkg_getter.read_raw("/targets.json")?;
+        let resp_b = self.pkg_getter.read_raw("targets.json")?;
         let resp = str::from_utf8(&resp_b)?;
 
         Ok(serde_json::from_str(&resp)?)

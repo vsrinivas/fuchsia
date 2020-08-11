@@ -4,14 +4,10 @@
 
 use {
     crate::components::{
-        controllers::component_controllers::*,
-        controllers::package_controllers::*,
-        controllers::route_controllers::*,
-        controllers::zbi_controllers::*,
-        http::{HttpGetter, PackageGetter},
-        package_reader::*,
-        types::*,
-        util,
+        artifact::ArtifactGetter, controllers::component_controllers::*,
+        controllers::package_controllers::*, controllers::route_controllers::*,
+        controllers::zbi_controllers::*, package_getter::PackageGetter, package_reader::*,
+        types::*, util,
     },
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
@@ -29,6 +25,7 @@ use {
     scrutiny_utils::{bootfs::*, zbi::*},
     std::collections::HashMap,
     std::env,
+    std::path::Path,
     std::str,
     std::sync::Arc,
 };
@@ -38,6 +35,7 @@ lazy_static! {
     static ref SERVICE_CONFIG_RE: Regex = Regex::new(r"data/sysmgr/.+\.config").unwrap();
 }
 pub const CONFIG_DATA_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/config-data";
+pub const REPOSITORY_PATH: &str = "out/default/amber-files/repository";
 
 plugin!(
     ComponentGraphPlugin,
@@ -72,10 +70,12 @@ impl PackageDataCollector {
             return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
         }
 
+        let repository_path = Path::new(&fuchsia_dir).join(REPOSITORY_PATH);
+        info!("Repository Path: {:?}", repository_path);
         Ok(Self {
             package_reader: Box::new(PackageServerReader::new(
                 fuchsia_dir,
-                Box::new(HttpGetter::new(String::from("127.0.0.1:8083"))),
+                Box::new(ArtifactGetter::new(&repository_path)),
             )),
         })
     }
@@ -195,10 +195,14 @@ impl PackageDataCollector {
     /// model.
     fn extract_zbi(package: &PackageDefinition) -> Result<Zbi> {
         info!("Extracting the ZBI from {}", package.url);
-        let getter = HttpGetter::new("127.0.0.1:8083".to_string());
+        let fuchsia_dir = env::var("FUCHSIA_DIR")?;
+        if fuchsia_dir.len() == 0 {
+            return Err(anyhow!("Unable to retrieve $FUCHSIA_DIR, has it been set?"));
+        }
+        let getter = ArtifactGetter::new(&Path::new(&fuchsia_dir).join(REPOSITORY_PATH));
         for (path, merkle) in package.contents.iter() {
             if path == "zbi" {
-                let zbi_data = getter.read_raw(&format!("/blobs/{}", merkle))?;
+                let zbi_data = getter.read_raw(&format!("blobs/{}", merkle))?;
                 let mut reader = ZbiReader::new(zbi_data);
                 let sections = reader.parse()?;
                 let mut bootfs = HashMap::new();
@@ -300,12 +304,7 @@ impl PackageDataCollector {
                 idx += 1;
                 components.insert(
                     pkg_url.clone(),
-                    Component {
-                        id: idx,
-                        url: pkg_url.clone(),
-                        version: 1,
-                        inferred: true,
-                    },
+                    Component { id: idx, url: pkg_url.clone(), version: 1, inferred: true },
                 );
             }
         }
@@ -329,12 +328,7 @@ impl PackageDataCollector {
                         let url = format!("fuchsia-pkg://inferred#meta/{}.cmx", service_name);
                         components.insert(
                             url.clone(),
-                            Component {
-                                id: idx,
-                                url: url.clone(),
-                                version: 1,
-                                inferred: true,
-                            },
+                            Component { id: idx, url: url.clone(), version: 1, inferred: true },
                         );
                         // Add the inferred node to the service map to be found by future consumers of the service
                         service_map.insert(String::from(service_name), url);

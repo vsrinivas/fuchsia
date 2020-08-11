@@ -30,15 +30,16 @@ if (!is_fuchsia) {
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     sources = [
+      "src/components/artifact.rs",
       "src/components/controllers/component_controllers.rs",
       "src/components/controllers/mod.rs",
       "src/components/controllers/package_controllers.rs",
       "src/components/controllers/route_controllers.rs",
       "src/components/controllers/zbi_controllers.rs",
       "src/components/graph.rs",
-      "src/components/http.rs",
       "src/components/jsons.rs",
       "src/components/mod.rs",
+      "src/components/package_getter.rs",
       "src/components/package_reader.rs",
       "src/components/types.rs",
       "src/components/util.rs",
