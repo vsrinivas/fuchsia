@@ -23,7 +23,6 @@ group("scenic") {
 group("all") {
   testonly = true
   public_deps = [
-    ":bluetooth",
     ":scenic",
     "//garnet/go/src/fidlmerge:host",
     "//src/graphics/lib/magma:magma-tools",
@@ -34,13 +33,4 @@ group("all") {
 group("sl4f") {
   testonly = true
   public_deps = [ "//garnet/bin/sl4f" ]
-}
-
-group("bluetooth") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/bluetooth/hci/emulator",
-    "//src/connectivity/bluetooth/tools",
-    "//src/connectivity/bluetooth/tools/bt-snoop",
-  ]
 }
