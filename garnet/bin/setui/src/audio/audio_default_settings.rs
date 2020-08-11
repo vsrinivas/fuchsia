@@ -4,8 +4,8 @@
 
 use {
     crate::config::default_settings::DefaultSetting,
+    crate::handler::device_storage::DeviceStorageCompatible,
     crate::internal::common::default_time,
-    crate::registry::device_storage::DeviceStorageCompatible,
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
     },

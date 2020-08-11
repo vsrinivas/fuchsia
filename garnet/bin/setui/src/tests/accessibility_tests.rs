@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::fidl_clone::FIDLClone,
-    crate::registry::device_storage::testing::*,
+    crate::handler::device_storage::testing::*,
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
     crate::switchboard::base::SettingType,
     crate::tests::test_failure_utils::create_test_env_with_failures,

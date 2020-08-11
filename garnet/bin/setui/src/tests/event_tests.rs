@@ -4,10 +4,10 @@
 
 #[cfg(test)]
 use crate::agent::base::{AgentError, Context};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::internal::agent;
 use crate::internal::event;
 use crate::message::base::{MessageEvent, MessengerType};
-use crate::registry::device_storage::testing::InMemoryStorageFactory;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use fuchsia_async as fasync;

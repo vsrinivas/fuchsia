@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::registry::device_storage::testing::*,
+    crate::handler::device_storage::testing::*,
     crate::switchboard::base::{NightModeInfo, SettingType},
     crate::EnvironmentBuilder,
     fidl_fuchsia_settings::*,

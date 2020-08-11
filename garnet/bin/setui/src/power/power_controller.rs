@@ -4,8 +4,8 @@
 
 use {
     crate::call_async,
-    crate::registry::base::SettingHandlerResult,
-    crate::registry::setting_handler::{controller, ClientProxy, ControllerError},
+    crate::handler::base::SettingHandlerResult,
+    crate::handler::setting_handler::{controller, ClientProxy, ControllerError},
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::{SettingRequest, SettingType},
     async_trait::async_trait,

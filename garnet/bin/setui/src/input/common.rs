@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::call,
+    crate::handler::device_storage::DeviceStorageCompatible,
+    crate::handler::setting_handler::persist::ClientProxy,
     crate::internal::event::Publisher,
-    crate::registry::device_storage::DeviceStorageCompatible,
-    crate::registry::setting_handler::persist::ClientProxy,
     crate::service_context::{ExternalServiceProxy, ServiceContextHandle},
     anyhow::{format_err, Error},
     fidl::endpoints::create_request_stream,

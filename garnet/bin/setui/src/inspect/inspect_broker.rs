@@ -15,13 +15,13 @@ use futures::lock::Mutex;
 use futures::StreamExt;
 
 use crate::clock;
+use crate::handler::base::Command;
 use crate::internal::handler::message::{Client, Factory, Messenger, Signature};
 use crate::internal::handler::Payload;
 use crate::message::base::{Audience, MessageEvent, MessengerType};
-use crate::registry::base::Command;
 use crate::switchboard::base::{SettingRequest, SettingResponse};
 
-/// A broker that listens in on messages between the Registry and setting handlers to record the
+/// A broker that listens in on messages between the proxy and setting handlers to record the
 /// values of all settings to inspect.
 pub struct InspectBroker {
     messenger_client: Messenger,
@@ -49,7 +49,7 @@ impl InspectBroker {
         messenger_factory: Factory,
         inspect_node: inspect::Node,
     ) -> Result<(), Error> {
-        // Create broker to listen in on all messages between Registry and setting handlers.
+        // Create broker to listen in on all messages between Proxy and setting handlers.
         let (messenger_client, mut receptor) =
             messenger_factory.create(MessengerType::Broker).await.unwrap();
 
@@ -82,7 +82,7 @@ impl InspectBroker {
                                 }
                             }
                         }
-                        // Whenever we see a setting handler tell the registry it changed, we ask it
+                        // Whenever we see a setting handler tell the proxy it changed, we ask it
                         // for its value again.
                         Payload::Changed(setting_type) => {
                             broker
@@ -205,7 +205,7 @@ mod tests {
 
         let messenger_factory = create_hub();
 
-        let (registry, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
+        let (proxy, _) = messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         let setting_handler_address = Address::Handler(1);
         let (_, mut setting_handler_receptor) = messenger_factory
@@ -217,8 +217,8 @@ mod tests {
             .await
             .expect("could not create inspect");
 
-        // Registry sends restore request.
-        registry
+        // Proxy sends restore request.
+        proxy
             .message(
                 Payload::Command(Command::HandleRequest(SettingRequest::Restore)),
                 Audience::Address(setting_handler_address),
@@ -269,7 +269,7 @@ mod tests {
 
         let messenger_factory = create_hub();
 
-        let (registry_messenger_client, _) =
+        let (proxy_messenger_client, _) =
             messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         let setting_handler_address = Address::Handler(1);
@@ -282,11 +282,11 @@ mod tests {
             .await
             .expect("could not create inspect");
 
-        // Setting handler notifies registry of setting changed.
+        // Setting handler notifies proxy of setting changed.
         setting_handler
             .message(
                 Payload::Changed(SettingType::Intl),
-                Audience::Messenger(registry_messenger_client.get_signature()),
+                Audience::Messenger(proxy_messenger_client.get_signature()),
             )
             .send();
 

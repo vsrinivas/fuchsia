@@ -5,7 +5,7 @@
 #[cfg(test)]
 use {
     crate::config::default_settings::DefaultSetting,
-    crate::registry::device_storage::testing::*,
+    crate::handler::device_storage::testing::*,
     crate::switchboard::base::SettingType,
     crate::EnabledServicesConfiguration,
     crate::EnvironmentBuilder,

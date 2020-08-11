@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::audio::ModifiedTimestamps;
-use crate::registry::base::SettingHandlerResult;
-use crate::registry::setting_handler::ControllerError;
+use crate::handler::base::SettingHandlerResult;
+use crate::handler::setting_handler::ControllerError;
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
 use crate::switchboard::light_types::{LightInfo, LightState};

@@ -4,10 +4,10 @@ use {
     crate::agent::restore_agent,
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
+    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::DeviceStorage,
     crate::internal::event,
     crate::message::base::MessengerType,
-    crate::registry::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
-    crate::registry::device_storage::DeviceStorage,
     crate::switchboard::base::{
         AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
