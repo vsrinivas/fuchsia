@@ -161,7 +161,7 @@ impl Shell {
                 Builtin::History => {
                     let mut count = 1;
                     for entry in self.history.iter() {
-                        println!("{} {}", count, entry);
+                        print!("{} {}", count, entry);
                         count += 1;
                     }
                 }
