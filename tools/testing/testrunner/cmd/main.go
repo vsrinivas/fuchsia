@@ -72,7 +72,7 @@ SSH key corresponding to a authorized key to be set in the environment under
 `, nodenameEnvVar, sshKeyEnvVar)
 }
 
-func init() {
+func main() {
 	flag.BoolVar(&help, "help", false, "Whether to show Usage and exit.")
 	flag.StringVar(&outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
@@ -81,9 +81,6 @@ func init() {
 	// TODO(fxb/36480): Support different timeouts for different tests.
 	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Usage = usage
-}
-
-func main() {
 	flag.Parse()
 
 	if help || flag.NArg() != 1 {
