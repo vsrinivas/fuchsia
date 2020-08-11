@@ -23,6 +23,7 @@ group("hw_tests") {
     ":vulkan-tests",
     "benchmark",
     "vkvalidation:test-vk-validation",
+    "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]
 }
 

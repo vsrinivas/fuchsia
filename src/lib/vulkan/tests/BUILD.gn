@@ -40,6 +40,7 @@ executable("test_image_pipe_swapchain") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
     "//src/lib/vulkan/imagepipe_view",

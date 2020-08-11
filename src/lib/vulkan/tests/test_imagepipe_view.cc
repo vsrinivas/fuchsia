@@ -11,6 +11,8 @@
 #include <gtest/gtest.h>
 #include <src/lib/vulkan/imagepipe_view/imagepipe_view.h>
 
+#include "sdk/lib/ui/scenic/cpp/view_ref_pair.h"
+
 namespace {
 
 static constexpr fuchsia::ui::gfx::ViewProperties kViewProperties = {
@@ -112,9 +114,10 @@ TEST_F(ImagePipeViewTest, Initialize) {
   zx::eventpair view_token_0, view_token_1;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &view_token_0, &view_token_1));
 
-  auto view =
-      ImagePipeView::Create(provider_.context(), scenic::ToViewToken(std::move(view_token_0)),
-                            std::move(resize_callback));
+  auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
+  auto view = ImagePipeView::Create(
+      provider_.context(), scenic::ToViewToken(std::move(view_token_0)),
+      std::move(view_ref_control), std::move(view_ref), std::move(resize_callback));
   ASSERT_TRUE(view);
 
   EXPECT_EQ(0.0, width_);
