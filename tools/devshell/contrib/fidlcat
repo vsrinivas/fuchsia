@@ -179,7 +179,8 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug-agent.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/debug-agent.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/symbol-index.sh || exit $?
 
 launch_agent=1
 
@@ -339,14 +340,12 @@ if [[ -z "${port}" ]]; then
   port=2345
 fi
 
+ensure-symbol-index-registered || echo "Failed to register ${FUCHSIA_DIR} in symbol-index!"
+
 if [[ ${launch_agent} -eq 1 ]]; then
   if launch_debug_agent "${port}" "" "${agent_out}"; then
     arguments+=("--connect" "$(get-device-addr-resource):${port}")
     arguments+=("--fidl-ir-path" @"${FUCHSIA_BUILD_DIR}"/all_fidl_json.txt)
-    arguments+=("--build-id-dir" "${FUCHSIA_BUILD_DIR}/.build-id")
-    arguments+=("--build-id-dir" "${ZIRCON_BUILDROOT}/.build-id")
-    arguments+=("--build-id-dir" "${FUCHSIA_DIR}/prebuilt/.build-id")
-    arguments+=("--build-id-dir" "${PREBUILT_CLANG_DIR}/lib/debug/.build-id")
     arguments+=("$@")
 
     if [[ ${use_gdb} -eq 1 ]]; then

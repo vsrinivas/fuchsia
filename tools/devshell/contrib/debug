@@ -37,7 +37,8 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/debug-agent.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/debug-agent.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/symbol-index.sh || exit $?
 
 # Defaults.
 port=
@@ -180,15 +181,12 @@ else
   fi
 fi
 
+ensure-symbol-index-registered || fx-warn "Failed to register ${FUCHSIA_DIR} in symbol-index!"
+
 # We start the client with the flag that tells it to quit the agent when zxdb quits.
 "${FUCHSIA_BUILD_DIR}/host-tools/zxdb" \
   ${connect_ops[@]} \
   "--quit-agent-on-exit" \
-  "--build-dir" "${FUCHSIA_BUILD_DIR}" \
-  "--build-id-dir" "${FUCHSIA_BUILD_DIR}/.build-id" \
-  "--build-id-dir" "${ZIRCON_BUILDROOT}/.build-id" \
-  "--build-id-dir" "${FUCHSIA_DIR}/prebuilt/.build-id" \
-  "--build-id-dir" "${PREBUILT_CLANG_DIR}/lib/debug/.build-id" \
   "--symbol-server" "gs://fuchsia-artifacts-release/debug" \
   "$@"
 

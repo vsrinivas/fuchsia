@@ -1,3 +1,4 @@
 per-file debug-agent.sh=brettw@google.com,dangyi@google.com
+per-file symbol-index.sh=brettw@google.com,dangyi@google.com
 
 # COMPONENT: DeveloperExperience>fx
