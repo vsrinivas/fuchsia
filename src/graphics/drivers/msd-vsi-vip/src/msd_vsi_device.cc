@@ -581,34 +581,49 @@ bool MsdVsiDevice::CompleteInterruptEvent(uint32_t event_id) {
   return true;
 }
 
-void MsdVsiDevice::HardwareReset() {
+bool MsdVsiDevice::HardwareReset() {
   DLOG("HardwareReset start");
 
-  auto clock_control = registers::ClockControl::Get().FromValue(0);
-  clock_control.isolate_gpu().set(1);
-  clock_control.WriteTo(register_io());
+  constexpr uint32_t kResetTimeoutMs = 100;
 
-  {
-    auto reg = registers::SecureAhbControl::Get().FromValue(0);
-    reg.reset().set(1);
-    reg.WriteTo(register_io_.get());
+  auto start = std::chrono::steady_clock::now();
+
+  bool is_idle, is_idle_3d;
+
+  while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                               start)
+             .count() < kResetTimeoutMs) {
+    auto clock_control = registers::ClockControl::Get().FromValue(0);
+    clock_control.isolate_gpu().set(1);
+    clock_control.WriteTo(register_io());
+
+    {
+      auto reg = registers::SecureAhbControl::Get().FromValue(0);
+      reg.reset().set(1);
+      reg.WriteTo(register_io_.get());
+    }
+
+    std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+    clock_control.soft_reset().set(0);
+    clock_control.WriteTo(register_io());
+
+    clock_control.isolate_gpu().set(0);
+    clock_control.WriteTo(register_io());
+
+    clock_control = registers::ClockControl::Get().ReadFrom(register_io_.get());
+
+    is_idle = IsIdle();
+    is_idle_3d = clock_control.idle_3d().get();
+
+    if (is_idle && is_idle_3d) {
+      DLOG("HardwareReset complete");
+      return true;
+    }
   }
 
-  std::this_thread::sleep_for(std::chrono::microseconds(100));
-
-  clock_control.soft_reset().set(0);
-  clock_control.WriteTo(register_io());
-
-  clock_control.isolate_gpu().set(0);
-  clock_control.WriteTo(register_io());
-
-  clock_control = registers::ClockControl::Get().ReadFrom(register_io_.get());
-
-  if (!IsIdle() || !clock_control.idle_3d().get()) {
-    MAGMA_LOG(WARNING, "Gpu reset: failed to idle");
-  }
-
-  DLOG("HardwareReset complete");
+  MAGMA_LOG(WARNING, "Hardware reset failed: is_idle %d is_idle_3d %d", is_idle, is_idle_3d);
+  return false;
 }
 
 bool MsdVsiDevice::IsIdle() {

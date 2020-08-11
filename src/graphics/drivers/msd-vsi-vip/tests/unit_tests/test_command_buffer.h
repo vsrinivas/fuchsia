@@ -29,6 +29,12 @@ class TestCommandBuffer : public ::testing::Test {
     ASSERT_NO_FATAL_FAILURE(CreateClient(kAddressSpaceIndex, &client_));
   }
 
+  void Release() {
+    client_.reset();
+    address_space_owner_.reset();
+    device_.reset();
+  }
+
  protected:
   // This holds the buffer that can be passed as the context state buffer for a batch.
   class FakeContextStateBuffer {

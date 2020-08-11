@@ -24,6 +24,28 @@ TEST_F(TestExec, SubmitBatchWithOffset) {
   ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
 }
 
+// Verifies reset while GPU is busy.
+TEST_F(TestExec, ResetAfterSubmit) {
+  for (uint32_t i = 0; i < 100; i++) {
+    device_->StartDeviceThread();
+
+    BufferDesc buffer_desc = {
+        .buffer_size = 4096,
+        .map_page_count = 1,
+        .data_size = 4,
+        // The user data will start at a non-zero offset.
+        .batch_offset = 80,
+        .gpu_addr = 0x10000,
+    };
+    ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
+
+    EXPECT_TRUE(device_->HardwareReset());
+
+    Release();
+    ASSERT_NO_FATAL_FAILURE(SetUp());
+  }
+}
+
 // Tests submitting buffers from different contexts from the same connection.
 TEST_F(TestExec, SubmitBatchesMultipleContexts) {
   // Create an additional context on the default connection.

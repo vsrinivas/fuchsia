@@ -124,7 +124,7 @@ class MsdVsiDevice : public msd_device_t,
   void HangCheckTimeout();
   bool Init(void* device_handle);
   void HardwareInit();
-  void HardwareReset();
+  bool HardwareReset();
   // Kills the context of the batch currently being executed.
   void KillCurrentContext();
   // Moves pending batches to the backlog and resets the hardware and driver state.
@@ -292,6 +292,7 @@ class MsdVsiDevice : public msd_device_t,
   friend class TestExec_SubmitEventBeforeContextStateBuffer_Test;
   friend class TestExec_SwitchAddressSpace_Test;
   friend class TestExec_SwitchMultipleAddressSpaces_Test;
+  friend class TestExec_ResetAfterSubmit_Test;
   friend class TestEvents;
   friend class TestEvents_AllocAndFree_Test;
   friend class TestEvents_Submit_Test;
@@ -303,6 +304,7 @@ class MsdVsiDevice : public msd_device_t,
   friend class MsdVsiDeviceTest_LoadAddressSpace_Test;
   friend class MsdVsiDeviceTest_RingbufferCanHoldMaxEvents_Test;
   friend class MsdVsiDeviceTest_PulseEater_Test;
+  friend class MsdVsiDeviceTest_Reset_Test;
 };
 
 #endif  // MSD_VSI_DEVICE_H
