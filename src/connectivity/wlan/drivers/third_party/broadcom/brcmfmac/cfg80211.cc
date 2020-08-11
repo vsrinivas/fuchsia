@@ -913,10 +913,12 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
   params->action = WL_ESCAN_ACTION_START;
   params->sync_id = 0x1234;
 
-  if (params->params_le.scan_type == BRCMF_SCANTYPE_ACTIVE &&
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_SCAN_RANDOM_MAC) &&
+      (params->params_le.scan_type == BRCMF_SCANTYPE_ACTIVE) &&
       !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
-    if (brcmf_dev_escan_set_randmac(ifp) != ZX_OK) {
-      goto exit;
+    if ((err = brcmf_dev_escan_set_randmac(ifp)) != ZX_OK) {
+      BRCMF_ERR("Failed to set random mac for active scan (%s), using interface mac",
+                zx_status_get_string(err));
     }
   }
 

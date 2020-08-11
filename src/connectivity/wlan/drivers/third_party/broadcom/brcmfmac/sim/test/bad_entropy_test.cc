@@ -13,7 +13,7 @@ namespace wlan::brcmfmac {
 // Verify that initialization fails if we aren't able to generate a random MAC address
 TEST_F(SimTest, Initialization) { ASSERT_NE(Init(), ZX_OK); }
 
-// Verify that an active scan fails if we aren't able to generate a random MAC address
+// Verify that an active scan succeeds even if we aren't able to generate a random MAC address
 TEST_F(SimTest, ActiveScan) {
   constexpr uint64_t kScanId = 0x18c5f;
 
@@ -31,10 +31,10 @@ TEST_F(SimTest, ActiveScan) {
   SCHEDULE_CALL(zx::sec(1), &SimInterface::StartScan, &client_ifc, kScanId, true);
   env_->Run();
 
-  // Verify that scan returned a failure result
+  // Verify that scan completed successfully
   auto scan_result = client_ifc.ScanResultCode(kScanId);
   ASSERT_TRUE(scan_result);
-  EXPECT_NE(scan_result, ZX_OK);
+  EXPECT_EQ(*scan_result, ZX_OK);
 }
 
 }  // namespace wlan::brcmfmac
