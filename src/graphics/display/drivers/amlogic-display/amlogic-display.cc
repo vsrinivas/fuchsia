@@ -441,6 +441,7 @@ void AmlogicDisplay::DdkSuspend(ddk::SuspendTxn txn) {
   fbl::AutoLock lock(&display_lock_);
   if (txn.suspend_reason() != DEVICE_SUSPEND_REASON_MEXEC) {
     txn.Reply(ZX_ERR_NOT_SUPPORTED, txn.requested_state());
+    return;
   }
   if (osd_) {
     osd_->Disable();
