@@ -22,8 +22,11 @@ __BEGIN_CDECLS
 struct riscv64_percpu;
 
 struct arch_thread {
-  uintptr_t stack_guard;
-  vaddr_t unsafe_sp;
+  vaddr_t sp;
+
+  // Point to the current cpu pointer when the thread is running, used to
+  // restore the fixed register on exception entry. Swapped on context switch.
+  struct riscv64_percpu* current_percpu_ptr;
 };
 
 __END_CDECLS

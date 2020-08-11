@@ -139,8 +139,29 @@ __END_CDECLS
   __val; \
 })
 
+// Register state layout used by arm64_context_switch().
+struct riscv64_context_switch_frame {
+  unsigned long ra; // return address (x1)
+
+  unsigned long s0; // x8-x9
+  unsigned long s1;
+
+  unsigned long s2; // x18-x27
+  unsigned long s3;
+  unsigned long s4;
+  unsigned long s5;
+  unsigned long s6;
+  unsigned long s7;
+  unsigned long s8;
+  unsigned long s9;
+  unsigned long s10;
+  unsigned long s11;
+
+  unsigned long reserved; // stack alignment
+};
+
 extern "C" void riscv64_exception_entry(void);
-extern "C" void riscv64_context_switch(vaddr_t old_sp, vaddr_t new_sp);
+extern "C" void riscv64_context_switch(vaddr_t *old_sp, vaddr_t new_sp);
 
 extern void riscv64_timer_exception();
 extern void riscv64_software_exception();

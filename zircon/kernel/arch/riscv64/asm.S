@@ -9,6 +9,50 @@
 
 #define REGOFF(x) ((x) * 8)
 
+// void riscv64_context_switch(vaddr_t *old_sp, vaddr_t new_sp);
+FUNCTION(riscv64_context_switch)
+    /* save old frame */
+    /* This layout should match struct context_switch_frame */
+    addi  sp, sp, -REGOFF(13)
+    sd    ra, REGOFF(0)(sp)
+    sd    s0, REGOFF(1)(sp)
+    sd    s1, REGOFF(2)(sp)
+    sd    s2, REGOFF(3)(sp)
+    sd    s3, REGOFF(4)(sp)
+    sd    s4, REGOFF(5)(sp)
+    sd    s5, REGOFF(6)(sp)
+    sd    s6, REGOFF(7)(sp)
+    sd    s7, REGOFF(8)(sp)
+    sd    s8, REGOFF(9)(sp)
+    sd    s9, REGOFF(10)(sp)
+    sd    s10, REGOFF(11)(sp)
+    sd    s11, REGOFF(12)(sp)
+
+    /* save old sp */
+    sd    sp, (a0)
+
+    /* load new sp */
+    mv    sp, a1
+
+    /* restore new frame */
+    ld    ra, REGOFF(0)(sp)
+    ld    s0, REGOFF(1)(sp)
+    ld    s1, REGOFF(2)(sp)
+    ld    s2, REGOFF(3)(sp)
+    ld    s3, REGOFF(4)(sp)
+    ld    s4, REGOFF(5)(sp)
+    ld    s5, REGOFF(6)(sp)
+    ld    s6, REGOFF(7)(sp)
+    ld    s7, REGOFF(8)(sp)
+    ld    s8, REGOFF(9)(sp)
+    ld    s9, REGOFF(10)(sp)
+    ld    s10, REGOFF(11)(sp)
+    ld    s11, REGOFF(12)(sp)
+    addi  sp, sp, REGOFF(13)
+
+    ret
+END_FUNCTION(riscv64_context_switch)
+
 // top level exception handler for riscv64 in non vectored mode
 .balign 4
 FUNCTION(riscv64_exception_entry)
