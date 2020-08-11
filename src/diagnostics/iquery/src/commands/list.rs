@@ -2,23 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{
-        commands::types::*,
-        types::{Error, ToText},
-    },
-    anyhow::Context,
-    argh::FromArgs,
-    async_trait::async_trait,
-    diagnostics_data::{LifecycleData, LifecycleType},
-    fidl_fuchsia_diagnostics::{
-        ArchiveAccessorMarker, BatchIteratorMarker, ClientSelectorConfiguration, DataType, Format,
-        FormattedContent, StreamMode, StreamParameters,
-    },
-    fuchsia_component::client,
-    serde::{Serialize, Serializer},
-    std::{cmp::Ordering, collections::BTreeSet},
+use crate::{
+    commands::types::*,
+    types::{Error, ToText},
 };
+use argh::FromArgs;
+use async_trait::async_trait;
+use diagnostics_data::LifecycleType;
+use diagnostics_reader::{ArchiveReader, Lifecycle};
+use serde::{Serialize, Serializer};
+use std::{cmp::Ordering, collections::BTreeSet};
 
 #[derive(Debug, Eq, PartialEq, Ord)]
 pub enum ListResponseItem {
@@ -121,7 +114,8 @@ impl Command for ListCommand {
 }
 
 async fn get_ready_components() -> Result<Vec<MonikerWithUrl>, Error> {
-    let values = get_lifecycle_response().await.map_err(|e| Error::Fetch(e))?;
+    let reader = ArchiveReader::new();
+    let values = reader.snapshot::<Lifecycle>().await.map_err(|e| Error::Fetch(e))?;
     let mut result = vec![];
     for value in values {
         // TODO(fxbug.dev/55118): when we can filter on metadata on a StreamDiagnostics
@@ -133,43 +127,5 @@ async fn get_ready_components() -> Result<Vec<MonikerWithUrl>, Error> {
             });
         }
     }
-    Ok(result)
-}
-
-async fn get_lifecycle_response() -> Result<Vec<LifecycleData>, anyhow::Error> {
-    // TODO(fxbug.dev/55138): refactor into DiagnosticsDataFetcher
-    let archive =
-        client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?;
-    let mut stream_parameters = StreamParameters::empty();
-    stream_parameters.stream_mode = Some(StreamMode::Snapshot);
-    stream_parameters.data_type = Some(DataType::Lifecycle);
-    stream_parameters.format = Some(Format::Json);
-    stream_parameters.client_selector_configuration =
-        Some(ClientSelectorConfiguration::SelectAll(true));
-    let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
-        .context("failed to create iterator proxy")?;
-    archive.stream_diagnostics(stream_parameters, server_end).context("get BatchIterator").unwrap();
-
-    let mut result = Vec::new();
-    loop {
-        let next_batch = iterator.get_next().await.context("failed to get batch")?.unwrap();
-        if next_batch.is_empty() {
-            break;
-        }
-        for formatted_content in next_batch {
-            match formatted_content {
-                FormattedContent::Json(data) => {
-                    let mut buf = vec![0; data.size as usize];
-                    data.vmo.read(&mut buf, 0).context("reading vmo")?;
-                    let hierarchy_json = std::str::from_utf8(&buf).unwrap();
-                    let output: LifecycleData =
-                        serde_json::from_str(&hierarchy_json).context("valid json")?;
-                    result.push(output);
-                }
-                _ => unreachable!("JSON was requested, no other data type should be received"),
-            }
-        }
-    }
-
     Ok(result)
 }

@@ -8,7 +8,7 @@ use {
         types::Error,
     },
     diagnostics_data::InspectData,
-    fuchsia_inspect_contrib::reader::ArchiveReader,
+    diagnostics_reader::{ArchiveReader, Inspect},
 };
 
 /// Returns the selectors for a component whose url contains the `manifest` string.
@@ -48,7 +48,7 @@ pub async fn fetch_data(selectors: &[String]) -> Result<Vec<InspectData>, Error>
             fetcher = fetcher.add_selector(format!("{}:*", selector));
         }
     }
-    let mut results = fetcher.get().await.map_err(|e| Error::Fetch(e))?;
+    let mut results = fetcher.snapshot::<Inspect>().await.map_err(|e| Error::Fetch(e))?;
     for result in results.iter_mut() {
         if let Some(hierarchy) = &mut result.payload {
             hierarchy.sort();

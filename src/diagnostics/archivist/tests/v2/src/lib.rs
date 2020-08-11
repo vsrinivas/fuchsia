@@ -7,7 +7,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
-    fuchsia_inspect_contrib::reader::ArchiveReader,
+    fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect},
     log::info,
     selectors,
 };
@@ -23,7 +23,7 @@ async fn verify_component_attributed(url: &str, expected_info_count: u64) {
             selectors::sanitize_string_for_selectors(&url)
         ))
         .add_selector("archivist:root/event_stats/recent_events/*:*")
-        .get()
+        .snapshot::<Inspect>()
         .await
         .unwrap();
     let hierarchy = response.pop().and_then(|r| r.payload).unwrap();
@@ -42,7 +42,7 @@ async fn read_v2_components_inspect() {
 
     let data = ArchiveReader::new()
         .add_selector("driver/coll\\:auto-*:root")
-        .get()
+        .snapshot::<Inspect>()
         .await
         .expect("got inspect data");
 

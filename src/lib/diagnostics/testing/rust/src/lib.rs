@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use anyhow::Error;
-use diagnostics_data::InspectData;
-use diagnostics_reader::ArchiveReader;
+use diagnostics_data::Data;
+use diagnostics_reader::{ArchiveReader, BatchIteratorType};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
@@ -16,6 +16,8 @@ use fuchsia_component::{
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use futures::{channel::mpsc, StreamExt};
 use std::ops::Deref;
+
+pub use diagnostics_reader::{Inspect, Lifecycle};
 
 /// An instance of [`fuchsia_component::client::App`] which will have all its logs and inspect
 /// collected.
@@ -96,11 +98,14 @@ impl AppWithDiagnostics {
     ///
     /// This method should be called while the components of interest are still running, as
     /// Archivist does not yet preserve inspect from terminated components.
-    pub async fn snapshot_inspect(&self) -> Result<Vec<InspectData>, Error> {
+    pub async fn snapshot<T>(&self) -> Result<Vec<Data<String, T::Metadata>>, Error>
+    where
+        T: BatchIteratorType,
+    {
         let archive = self.observer.connect_to_service::<ArchiveAccessorMarker>()?;
 
-        let mut results = ArchiveReader::new().with_archive(archive).get().await?;
-        results.retain(|root| &root.metadata.component_url != ARCHIVIST_URL);
+        let mut results = ArchiveReader::new().with_archive(archive).snapshot::<T>().await?;
+        results.retain(|root| T::component_url(&root.metadata) != ARCHIVIST_URL);
 
         Ok(results)
     }
@@ -162,7 +167,7 @@ mod tests {
             None,
         );
 
-        let results = dbg!(test_app.snapshot_inspect().await.unwrap());
+        let results = test_app.snapshot::<Inspect>().await.unwrap();
         assert_eq!(results.len(), 1, "expecting only one component's inspect");
         assert_inspect_tree!(results[0].payload.as_ref().unwrap(), root: {
             int: 3u64,

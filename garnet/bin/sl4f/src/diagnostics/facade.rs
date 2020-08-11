@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::diagnostics::types::SnapshotInspectArgs, anyhow::Error,
-    fidl_fuchsia_diagnostics::ArchiveAccessorMarker, fuchsia_component::client,
-    fuchsia_inspect_contrib::reader::ArchiveReader, serde_json::Value,
-};
+use crate::diagnostics::types::SnapshotInspectArgs;
+use anyhow::Error;
+use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
+use fuchsia_component::client;
+use fuchsia_inspect_contrib::reader::{ArchiveReader, DataType};
+use serde_json::Value;
 
 /// Facade providing access to diagnostics interface.
 #[derive(Debug)]
@@ -25,7 +26,7 @@ impl DiagnosticsFacade {
             .retry_if_empty(false)
             .with_archive(proxy)
             .add_selectors(args.selectors.into_iter())
-            .get_raw_json()
+            .snapshot_raw(DataType::Inspect)
             .await
     }
 }

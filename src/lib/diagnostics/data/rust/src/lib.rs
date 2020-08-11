@@ -4,7 +4,6 @@
 
 use {
     fuchsia_inspect_node_hierarchy::NodeHierarchy,
-    lazy_static::lazy_static,
     serde::{self, de::Deserializer, Deserialize, Serialize, Serializer},
     std::{
         borrow::Borrow,
@@ -15,9 +14,7 @@ use {
     },
 };
 
-lazy_static! {
-    static ref SCHEMA_VERSION: u64 = 1;
-}
+const SCHEMA_VERSION: u64 = 1;
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum DataSource {
@@ -165,7 +162,7 @@ impl Data<String, LifecycleEventMetadata> {
 
         Data {
             moniker: moniker.into(),
-            version: *SCHEMA_VERSION,
+            version: SCHEMA_VERSION,
             data_source: DataSource::LifecycleEvent,
             payload,
             metadata: LifecycleEventMetadata {
@@ -192,7 +189,7 @@ impl Data<String, InspectMetadata> {
 
         Data {
             moniker: moniker.into(),
-            version: *SCHEMA_VERSION,
+            version: SCHEMA_VERSION,
             data_source: DataSource::Inspect,
             payload: inspect_hierarchy,
             metadata: InspectMetadata {

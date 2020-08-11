@@ -11,7 +11,7 @@ use {
     },
     anyhow::{bail, Error},
     fidl_test_inspect_validate::TestResult,
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, Inspect},
 };
 
 pub async fn run_all_trials(url: &str, results: &mut results::Results) {
@@ -263,7 +263,7 @@ async fn try_compare<ActionType: std::fmt::Debug>(
                     ])
                     .with_tree_selector("root:DUMMY"),
                 )
-                .get()
+                .snapshot::<Inspect>()
                 .await
             {
                 Ok(archive_data) => archive_data,

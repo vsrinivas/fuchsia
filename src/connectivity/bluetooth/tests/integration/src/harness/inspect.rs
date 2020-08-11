@@ -15,7 +15,7 @@ use {
         },
         hci_emulator::Emulator,
     },
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, NodeHierarchy},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, Inspect, NodeHierarchy},
     fuchsia_zircon::DurationNum,
     futures::{future::BoxFuture, FutureExt},
     std::path::PathBuf,
@@ -53,8 +53,12 @@ pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error
         if harness.read().moniker.len() > 0 {
             let fetcher = ArchiveReader::new()
                 .add_selector(ComponentSelector::new(harness.read().moniker.clone()));
-            harness.write_state().hierarchies =
-                fetcher.get().await?.into_iter().flat_map(|result| result.payload).collect();
+            harness.write_state().hierarchies = fetcher
+                .snapshot::<Inspect>()
+                .await?
+                .into_iter()
+                .flat_map(|result| result.payload)
+                .collect();
             harness.notify_state_changed();
         }
         fuchsia_async::Timer::new(RETRY_TIMEOUT_SECONDS.seconds().after_now()).await;

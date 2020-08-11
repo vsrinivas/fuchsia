@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 use {
     anyhow::{bail, Error},
-    fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
+    fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, DataType},
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launch, launcher},
@@ -161,7 +161,7 @@ async fn feedback_pipeline_is_filtered(archivist: &App, expected_results_count: 
     let feedback_results = ArchiveReader::new()
         .with_archive(feedback_archive_accessor)
         .with_minimum_schema_count(expected_results_count)
-        .get_raw_json()
+        .snapshot_raw(DataType::Inspect)
         .await
         .expect("got result");
 
@@ -172,7 +172,7 @@ async fn feedback_pipeline_is_filtered(archivist: &App, expected_results_count: 
     let all_results = ArchiveReader::new()
         .with_archive(all_archive_accessor)
         .with_minimum_schema_count(expected_results_count)
-        .get_raw_json()
+        .snapshot_raw(DataType::Inspect)
         .await
         .expect("got result");
 
@@ -198,7 +198,7 @@ async fn retrieve_and_validate_results(
         .with_archive(archive_accessor)
         .add_selectors(custom_selectors.clone().into_iter())
         .with_minimum_schema_count(expected_results_count)
-        .get_raw_json()
+        .snapshot_raw(DataType::Inspect)
         .await
         .expect("got result");
 

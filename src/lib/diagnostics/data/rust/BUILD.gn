@@ -20,7 +20,6 @@ rustc_library("lib") {
 
   deps = [
     "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",

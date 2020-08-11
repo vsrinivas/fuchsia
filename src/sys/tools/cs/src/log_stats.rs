@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fuchsia_inspect_contrib::reader::{ArchiveReader, NodeHierarchy, Property},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect, NodeHierarchy, Property},
     fuchsia_zircon as zx,
     std::{cmp::Reverse, collections::HashMap, fmt, str::FromStr},
 };
@@ -117,7 +117,7 @@ impl LogStats {
         let mut response = ArchiveReader::new()
             .add_selector("core/archivist:root/log_stats/by_component/*:*")
             .add_selector("core/archivist:root/event_stats/recent_events/*:*")
-            .get()
+            .snapshot::<Inspect>()
             .await?;
 
         if response.len() != 1 {

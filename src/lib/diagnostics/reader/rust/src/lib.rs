@@ -2,29 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Context, Error},
-    diagnostics_data::InspectData,
-    fidl,
-    fidl_fuchsia_diagnostics::{
-        ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker,
-        ClientSelectorConfiguration, DataType, Format, FormattedContent, SelectorArgument,
-        StreamMode, StreamParameters,
-    },
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_component::client,
-    fuchsia_zircon::{Duration, DurationNum},
-    lazy_static::lazy_static,
-    serde_json,
+// TODO(fxb/58038) use thiserror for library errors
+use anyhow::{Context as _, Error};
+use diagnostics_data::{Data, InspectData, InspectMetadata, LifecycleEventMetadata};
+use fidl;
+use fidl_fuchsia_diagnostics::{
+    ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, ClientSelectorConfiguration,
+    Format, FormattedContent, SelectorArgument, StreamMode, StreamParameters,
 };
+use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+use fuchsia_component::client;
+use fuchsia_zircon::{Duration, DurationNum};
+use serde::de::DeserializeOwned;
+use serde_json;
 
+pub use fidl_fuchsia_diagnostics::DataType;
 pub use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 
-lazy_static! {
-    static ref RETRY_DELAY_MS: i64 = 150;
-    static ref MAX_RETRIES: usize = std::usize::MAX;
-    static ref PAYLOAD_KEY: &'static str = "payload";
-}
+const RETRY_DELAY_MS: i64 = 150;
 
 /// An inspect tree selector for a component.
 pub struct ComponentSelector {
@@ -150,20 +145,26 @@ impl ArchiveReader {
         self
     }
 
-    /// Connects to the archivist observer.cmx and returns inspect data associated with the given
-    /// component under the relative realm path given.
-    pub async fn get(self) -> Result<Vec<InspectData>, Error> {
-        let raw_json = self.get_raw_json().await?;
-        let result: Vec<InspectData> = serde_json::from_value(raw_json)?;
-        Ok(result)
+    /// Connects to the ArchiveAccessor and returns data matching provided selectors.
+    pub async fn snapshot<T>(&self) -> Result<Vec<Data<String, T::Metadata>>, Error>
+    where
+        T: BatchIteratorType,
+    {
+        let raw_json = self.snapshot_raw(T::data_type()).await?;
+        Ok(serde_json::from_value(raw_json)?)
     }
 
-    /// Connects to the archivist observer.cmx and returns inspect data associated with the given
-    /// component under the relative realm path given. Returns the raw json for each hierarchy
-    /// fetched.
-    pub async fn get_raw_json(self) -> Result<serde_json::Value, Error> {
+    /// Use `snapshot::<Inspect>()` instead for identical functionality.
+    pub async fn get(self) -> Result<Vec<InspectData>, Error> {
+        // TODO delete after internal CL 238572 lands
+        self.snapshot::<Inspect>().await
+    }
+
+    /// Connects to the ArchiveAccessor and returns inspect data matching provided selectors.
+    /// Returns the raw json for each hierarchy fetched.
+    pub async fn snapshot_raw(&self, ty: DataType) -> Result<serde_json::Value, Error> {
         let timeout = self.timeout;
-        let data_future = self.get_inspect_data();
+        let data_future = self.snapshot_raw_inner(ty);
         let data = match timeout {
             Some(timeout) => data_future.on_timeout(timeout.after_now(), || Ok(Vec::new())).await?,
             None => data_future.await?,
@@ -171,24 +172,23 @@ impl ArchiveReader {
         Ok(serde_json::Value::Array(data))
     }
 
-    async fn get_inspect_data(self) -> Result<Vec<serde_json::Value>, Error> {
-        let archive = self.archive.unwrap_or(
-            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?,
-        );
-
-        let mut retry = 0;
+    async fn snapshot_raw_inner(
+        &self,
+        data_type: DataType,
+    ) -> Result<Vec<serde_json::Value>, Error> {
+        let archive = if let Some(archive) = &self.archive {
+            archive.clone()
+        } else {
+            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?
+        };
 
         loop {
-            if retry > *MAX_RETRIES {
-                return Err(format_err!("Maximum retries"));
-            }
-
             let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
                 .context("failed to create iterator proxy")?;
 
             let mut stream_parameters = StreamParameters::empty();
             stream_parameters.stream_mode = Some(StreamMode::Snapshot);
-            stream_parameters.data_type = Some(DataType::Inspect);
+            stream_parameters.data_type = Some(data_type);
             stream_parameters.format = Some(Format::Json);
             stream_parameters.client_selector_configuration = if self.selectors.is_empty() {
                 Some(ClientSelectorConfiguration::SelectAll(true))
@@ -236,9 +236,39 @@ impl ArchiveReader {
             } else {
                 return Ok(result);
             }
-
-            retry += 1;
         }
+    }
+}
+
+pub trait BatchIteratorType {
+    type Metadata: DeserializeOwned;
+    fn data_type() -> DataType;
+    fn component_url(metadata: &Self::Metadata) -> &str;
+}
+
+pub struct Inspect;
+impl BatchIteratorType for Inspect {
+    type Metadata = InspectMetadata;
+
+    fn data_type() -> DataType {
+        DataType::Inspect
+    }
+
+    fn component_url(metadata: &Self::Metadata) -> &str {
+        &metadata.component_url
+    }
+}
+
+pub struct Lifecycle;
+impl BatchIteratorType for Lifecycle {
+    type Metadata = LifecycleEventMetadata;
+
+    fn data_type() -> DataType {
+        DataType::Lifecycle
+    }
+
+    fn component_url(metadata: &Self::Metadata) -> &str {
+        &metadata.component_url
     }
 }
 
@@ -247,7 +277,7 @@ mod tests {
     use {
         super::*,
         anyhow::format_err,
-        diagnostics_data::Data,
+        diagnostics_data::{Data, LifecycleType},
         fidl_fuchsia_diagnostics as fdiagnostics,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_component::{
@@ -286,12 +316,33 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn lifecycle_events_for_component() {
+        let (_env, _app) = start_component("test-lifecycle").await.unwrap();
+
+        let results = ArchiveReader::new()
+            .snapshot::<Lifecycle>()
+            .await
+            .unwrap()
+            .into_iter()
+            // TODO(fxbug.dev/51165) use selectors for this filtering
+            .filter(|e| e.moniker.starts_with("test-lifecycle"))
+            .collect::<Vec<_>>();
+        assert!(results.len() >= 1, "should have at least a started event");
+
+        let started = &results[0];
+        assert_eq!(started.metadata.lifecycle_event_type, LifecycleType::Started);
+        assert_eq!(started.metadata.component_url, TEST_COMPONENT_URL);
+        assert_eq!(started.moniker, "test-lifecycle/inspect_test_component.cmx");
+        assert_eq!(started.payload, None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn inspect_data_for_component() -> Result<(), Error> {
         let (_env, _app) = start_component("test-ok").await?;
 
         let results = ArchiveReader::new()
             .add_selector("test-ok/inspect_test_component.cmx:root".to_string())
-            .get()
+            .snapshot::<Inspect>()
             .await?;
 
         assert_eq!(results.len(), 1);
@@ -314,7 +365,7 @@ mod tests {
                 .with_tree_selector("root:int")
                 .with_tree_selector("root/lazy-node:a"),
             )
-            .get()
+            .snapshot::<Inspect>()
             .await?;
 
         assert_eq!(response.len(), 1);
@@ -336,7 +387,7 @@ mod tests {
         let result = ArchiveReader::new()
             .add_selector("test-timeout/inspect_test_component.cmx:root")
             .with_timeout(0.nanos())
-            .get()
+            .snapshot::<Inspect>()
             .await;
         assert!(result.unwrap().is_empty());
         Ok(())
@@ -364,7 +415,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn custom_archive() {
         let proxy = spawn_fake_archive();
-        let result = ArchiveReader::new().with_archive(proxy).get().await.expect("got result");
+        let result = ArchiveReader::new()
+            .with_archive(proxy)
+            .snapshot::<Inspect>()
+            .await
+            .expect("got result");
         assert_eq!(result.len(), 1);
         assert_inspect_tree!(result[0].payload.as_ref().unwrap(), root: { x: 1u64 });
     }
