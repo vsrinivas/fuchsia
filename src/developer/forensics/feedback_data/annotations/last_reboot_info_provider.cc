@@ -99,6 +99,8 @@ std::string GetReason(const LastReboot& last_reboot) {
         return "device too hot";
       case RebootReason::SESSION_FAILURE:
         return "fatal session failure";
+      case RebootReason::SYSTEM_FAILURE:
+        return "fatal system failure";
       default:
         if (!last_reboot.has_graceful()) {
           return "unknown";
