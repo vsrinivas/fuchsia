@@ -221,13 +221,13 @@ class TestConnection {
 
     uint64_t size = page_size();
     uint64_t actual_size;
-    uint64_t id;
+    magma_buffer_t buffer = 0;
 
-    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &id));
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &buffer));
     EXPECT_GE(size, actual_size);
-    EXPECT_NE(id, 0u);
+    EXPECT_NE(buffer, 0u);
 
-    magma_release_buffer(connection_, id);
+    magma_release_buffer(connection_, buffer);
   }
 
   void BufferMap() {
@@ -235,18 +235,18 @@ class TestConnection {
 
     uint64_t size = page_size();
     uint64_t actual_size;
-    uint64_t id;
+    magma_buffer_t buffer = 0;
 
-    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &id));
-    EXPECT_NE(id, 0u);
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &buffer));
+    EXPECT_NE(buffer, 0u);
 
-    magma_map_buffer_gpu(connection_, id, 1024, 0, size / page_size(), MAGMA_GPU_MAP_FLAG_READ);
-    magma_unmap_buffer_gpu(connection_, id, 2048);
+    magma_map_buffer_gpu(connection_, buffer, 1024, 0, size / page_size(), MAGMA_GPU_MAP_FLAG_READ);
+    magma_unmap_buffer_gpu(connection_, buffer, 2048);
     EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection_));
-    EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR, magma_commit_buffer(connection_, id, 100, 100));
+    EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR, magma_commit_buffer(connection_, buffer, 100, 100));
     EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
 
-    magma_release_buffer(connection_, id);
+    magma_release_buffer(connection_, buffer);
   }
 
   void BufferExport(uint32_t* handle_out, uint64_t* id_out) {
@@ -260,6 +260,8 @@ class TestConnection {
     *id_out = magma_get_buffer_id(buffer);
 
     EXPECT_EQ(MAGMA_STATUS_OK, magma_export(connection_, buffer, handle_out));
+
+    magma_release_buffer(connection_, buffer);
   }
 
   void BufferReleaseHandle() {
@@ -509,6 +511,7 @@ class TestConnection {
     ASSERT_EQ(magma_create_semaphore(connection_, &semaphore), MAGMA_STATUS_OK);
     *id_out = magma_get_semaphore_id(semaphore);
     EXPECT_EQ(magma_export_semaphore(connection_, semaphore, handle_out), MAGMA_STATUS_OK);
+    magma_release_semaphore(connection_, semaphore);
   }
 
   void SemaphoreImport(uint32_t handle, uint64_t id) {
