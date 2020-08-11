@@ -16,6 +16,7 @@
 #include "msd_arm_buffer.h"
 #include "msd_arm_context.h"
 #include "msd_arm_device.h"
+#include "msd_arm_perf_count_pool.h"
 #include "msd_arm_semaphore.h"
 #include "platform_barriers.h"
 #include "platform_logger.h"
@@ -202,7 +203,19 @@ bool MsdArmConnection::Init() {
 MsdArmConnection::MsdArmConnection(msd_client_id_t client_id, Owner* owner)
     : client_id_(client_id), owner_(owner) {}
 
-MsdArmConnection::~MsdArmConnection() { owner_->DeregisterConnection(); }
+MsdArmConnection::~MsdArmConnection() {
+  if (perf_count_manager_) {
+    auto* perf_count = performance_counters();
+    owner_->RunTaskOnDeviceThread(
+        [perf_count_manager = perf_count_manager_, perf_count](MsdArmDevice* device) {
+          perf_count->RemoveManager(perf_count_manager.get());
+          perf_count->Update();
+          return MAGMA_STATUS_OK;
+        });
+  }
+
+  owner_->DeregisterConnection();
+}
 
 static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
                                     uint64_t* flags_out) {
@@ -497,6 +510,13 @@ void MsdArmConnection::MarkDestroyed() {
   token_ = 0;
 }
 
+void MsdArmConnection::SendPerfCounterNotification(msd_notification_t* notification) {
+  std::lock_guard<std::mutex> lock(callback_lock_);
+  if (!token_)
+    return;
+  callback_(token_, notification);
+}
+
 bool MsdArmConnection::GetVirtualAddressFromPhysical(uint64_t address,
                                                      uint64_t* virtual_address_out) {
   std::lock_guard<std::mutex> lock(address_lock_);
@@ -525,6 +545,81 @@ bool MsdArmConnection::GetVirtualAddressFromPhysical(uint64_t address,
     }
   }
   return false;
+}
+
+magma_status_t MsdArmConnection::EnablePerformanceCounters(std::vector<uint64_t> flags) {
+  bool start_managing = false;
+  if (!perf_count_manager_) {
+    perf_count_manager_ = std::make_shared<ConnectionPerfCountManager>();
+    start_managing = true;
+  }
+  auto* perf_count = performance_counters();
+  auto reply = owner_->RunTaskOnDeviceThread([perf_count_manager = perf_count_manager_, perf_count,
+                                              flags = std::move(flags),
+                                              start_managing](MsdArmDevice* device) {
+    perf_count_manager->enabled_performance_counters_ = std::move(flags);
+    if (start_managing) {
+      if (!perf_count->AddManager(perf_count_manager.get()))
+        return MAGMA_STATUS_INTERNAL_ERROR;
+    }
+    perf_count->Update();
+    return MAGMA_STATUS_OK;
+  });
+
+  if (!start_managing) {
+    // The call task can't fail, so return true immediately.
+    return MAGMA_STATUS_OK;
+  }
+  // Wait so we can return the status of whether it succeeded or not.
+  return reply->Wait().get();
+}
+
+magma_status_t MsdArmConnection::DumpPerformanceCounters(std::shared_ptr<MsdArmPerfCountPool> pool,
+                                                         uint32_t trigger_id) {
+  auto* perf_count = performance_counters();
+  owner_->RunTaskOnDeviceThread([pool, perf_count, trigger_id](MsdArmDevice* device) {
+    perf_count->AddClient(pool.get());
+    pool->AddTriggerId(trigger_id);
+    perf_count->TriggerRead();
+    return MAGMA_STATUS_OK;
+  });
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t MsdArmConnection::ReleasePerformanceCounterBufferPool(
+    std::shared_ptr<MsdArmPerfCountPool> pool) {
+  auto* perf_count = performance_counters();
+  auto reply = owner_->RunTaskOnDeviceThread([pool, perf_count](MsdArmDevice* device) {
+    pool->set_valid(false);
+    perf_count->RemoveClient(pool.get());
+    return MAGMA_STATUS_OK;
+  });
+
+  // Wait for the set_valid to be processed to ensure that no more notifications will be sent about
+  // the performance counter pool.
+  return reply->Wait().get();
+}
+
+magma_status_t MsdArmConnection::AddPerformanceCounterBufferOffsetToPool(
+    std::shared_ptr<MsdArmPerfCountPool> pool, std::shared_ptr<MsdArmBuffer> buffer,
+    uint64_t buffer_id, uint64_t buffer_offset, uint64_t buffer_size) {
+  owner_->RunTaskOnDeviceThread(
+      [pool, buffer, buffer_id, buffer_offset, buffer_size](MsdArmDevice* device) {
+        pool->AddBuffer(buffer, buffer_id, buffer_offset, buffer_size);
+        return MAGMA_STATUS_OK;
+      });
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t MsdArmConnection::RemovePerformanceCounterBufferFromPool(
+    std::shared_ptr<MsdArmPerfCountPool> pool, std::shared_ptr<MsdArmBuffer> buffer) {
+  auto reply = owner_->RunTaskOnDeviceThread([pool, buffer](MsdArmDevice* device) {
+    pool->RemoveBuffer(buffer);
+    return MAGMA_STATUS_OK;
+  });
+  // Wait for the buffer to be removed to ensure that in-flight operations won't continue to use the
+  // buffer.
+  return reply->Wait().get();
 }
 
 magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
@@ -567,3 +662,77 @@ void msd_connection_set_notification_callback(msd_connection_t* abi_connection,
 }
 
 void msd_connection_release_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer) {}
+
+magma_status_t msd_connection_enable_performance_counters(msd_connection_t* abi_connection,
+                                                          const uint64_t* counters,
+                                                          uint64_t counter_count) {
+  auto connection = MsdArmAbiConnection::cast(abi_connection)->ptr();
+  return connection->EnablePerformanceCounters(
+      std::vector<uint64_t>(counters, counters + counter_count));
+}
+
+magma_status_t msd_connection_create_performance_counter_buffer_pool(
+    struct msd_connection_t* connection, uint64_t pool_id, struct msd_perf_count_pool** pool_out) {
+  auto pool =
+      std::make_shared<MsdArmPerfCountPool>(MsdArmAbiConnection::cast(connection)->ptr(), pool_id);
+  auto abi_pool = std::make_unique<MsdArmAbiPerfCountPool>(std::move(pool));
+  *pool_out = abi_pool.release();
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_connection_release_performance_counter_buffer_pool(
+    struct msd_connection_t* abi_connection, struct msd_perf_count_pool* abi_pool) {
+  auto pool = MsdArmAbiPerfCountPool::cast(abi_pool)->ptr();
+  auto connection = MsdArmAbiConnection::cast(abi_connection)->ptr();
+  auto result = connection->ReleasePerformanceCounterBufferPool(pool);
+  delete MsdArmAbiPerfCountPool::cast(abi_pool);
+  return result;
+}
+
+magma_status_t msd_connection_dump_performance_counters(struct msd_connection_t* abi_connection,
+                                                        struct msd_perf_count_pool* abi_pool,
+                                                        uint32_t trigger_id) {
+  auto pool = MsdArmAbiPerfCountPool::cast(abi_pool);
+  return MsdArmAbiConnection::cast(abi_connection)
+      ->ptr()
+      ->DumpPerformanceCounters(pool->ptr(), trigger_id);
+}
+
+magma_status_t msd_connection_clear_performance_counters(struct msd_connection_t* connection,
+                                                         const uint64_t* counters,
+                                                         uint64_t counter_count) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t msd_connection_add_performance_counter_buffer_offset_to_pool(
+    struct msd_connection_t* abi_connection, struct msd_perf_count_pool* abi_pool,
+    struct msd_buffer_t* abi_buffer, uint64_t buffer_id, uint64_t buffer_offset,
+    uint64_t buffer_size) {
+  auto pool = MsdArmAbiPerfCountPool::cast(abi_pool);
+  auto buffer = MsdArmAbiBuffer::cast(abi_buffer);
+  uint64_t real_buffer_size = buffer->base_ptr()->platform_buffer()->size();
+
+  if (buffer_offset > real_buffer_size || (real_buffer_size - buffer_offset) < buffer_size) {
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                    "Invalid buffer size %lu offset %lu for buffer size %lu", buffer_size,
+                    buffer_offset, real_buffer_size);
+  }
+
+  return MsdArmAbiConnection::cast(abi_connection)
+      ->ptr()
+      ->AddPerformanceCounterBufferOffsetToPool(pool->ptr(), buffer->base_ptr(), buffer_id,
+                                                buffer_offset, buffer_size);
+
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_connection_remove_performance_counter_buffer_from_pool(
+    struct msd_connection_t* abi_connection, struct msd_perf_count_pool* abi_pool,
+    struct msd_buffer_t* abi_buffer) {
+  auto pool = MsdArmAbiPerfCountPool::cast(abi_pool);
+  auto buffer = MsdArmAbiBuffer::cast(abi_buffer);
+
+  return MsdArmAbiConnection::cast(abi_connection)
+      ->ptr()
+      ->RemovePerformanceCounterBufferFromPool(pool->ptr(), buffer->base_ptr());
+}

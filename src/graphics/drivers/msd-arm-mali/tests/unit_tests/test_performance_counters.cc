@@ -54,6 +54,18 @@ class TestCounterOwner : public PerformanceCounters::Owner {
   TestConnectionOwner connection_owner_;
 };
 
+class TestManager : public PerformanceCountersManager {
+ public:
+  std::vector<uint64_t> EnabledPerfCountFlags() override {
+    return enabled_ ? std::vector<uint64_t>{1} : std::vector<uint64_t>{};
+  }
+
+  void set_enabled(bool enabled) { enabled_ = enabled; }
+
+ private:
+  bool enabled_ = false;
+};
+
 }  // namespace
 
 class PerformanceCounterTest {
@@ -62,32 +74,37 @@ class PerformanceCounterTest {
     auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
-    uint64_t duration_ms;
+    TestManager manager;
 
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
               perf_counters.counter_state_);
-    EXPECT_FALSE(perf_counters.TriggerRead(false));
+    EXPECT_FALSE(perf_counters.TriggerRead());
 
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
               perf_counters.counter_state_);
-    perf_counters.ReadCompleted(&duration_ms);
+    perf_counters.ReadCompleted();
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
               perf_counters.counter_state_);
-    EXPECT_TRUE(perf_counters.Enable());
+    manager.set_enabled(true);
+    perf_counters.AddManager(&manager);
+
+    perf_counters.Update();
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kEnabled, perf_counters.counter_state_);
 
-    perf_counters.ReadCompleted(&duration_ms);
+    perf_counters.ReadCompleted();
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kEnabled, perf_counters.counter_state_);
 
-    EXPECT_TRUE(perf_counters.TriggerRead(false));
+    EXPECT_TRUE(perf_counters.TriggerRead());
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kTriggered,
               perf_counters.counter_state_);
 
-    EXPECT_FALSE(perf_counters.Enable());
-    EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kTriggered,
+    manager.set_enabled(false);
+    perf_counters.Update();
+
+    EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kTriggeredWillBeDisabled,
               perf_counters.counter_state_);
 
-    perf_counters.ReadCompleted(&duration_ms);
+    perf_counters.ReadCompleted();
     EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
               perf_counters.counter_state_);
   }
@@ -96,35 +113,72 @@ class PerformanceCounterTest {
     auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
-    uint64_t duration_ms;
+    TestManager manager;
+
+    perf_counters.AddManager(&manager);
 
     EXPECT_EQ(nullptr, owner.address_manager()->GetMappingForSlot(0).get());
-    EXPECT_TRUE(perf_counters.Enable());
+    manager.set_enabled(true);
+    perf_counters.Update();
     EXPECT_NE(nullptr, perf_counters.address_mapping_.get());
     EXPECT_EQ(perf_counters.address_mapping_, owner.address_manager()->GetMappingForSlot(0));
 
-    EXPECT_TRUE(perf_counters.TriggerRead(false));
+    EXPECT_TRUE(perf_counters.TriggerRead());
     registers::PerformanceCounterBase::Get().FromValue(4096 + 1024).WriteTo(mmio.get());
-    auto result = perf_counters.ReadCompleted(&duration_ms);
-    EXPECT_EQ(1024u / 4u, result.size());
-    EXPECT_EQ(0u, result[0]);
-    EXPECT_EQ(0u, registers::PerformanceCounterConfig::Get().ReadFrom(mmio.get()).reg_value());
+    struct TestClient : public PerformanceCounters::Client {
+      void OnPerfCountDump(const std::vector<uint32_t>& dumped) override { dump_ = dumped; }
+      void OnForceDisabled() override { EXPECT_TRUE(false); }
+
+      std::vector<uint32_t> dump_;
+    };
+    TestClient client;
+    perf_counters.AddClient(&client);
+    perf_counters.ReadCompleted();
+    EXPECT_EQ(1024u / 4u, client.dump_.size());
+    EXPECT_EQ(0u, client.dump_[0]);
+    EXPECT_EQ(1u, registers::PerformanceCounterConfig::Get().ReadFrom(mmio.get()).mode().get());
+    EXPECT_EQ(4096u, registers::PerformanceCounterBase::Get().ReadFrom(mmio.get()).reg_value());
   }
 
-  static void TestKeepEnabled() {
+  static void TestForceDisable() {
     auto mmio = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     TestCounterOwner owner(mmio.get());
     PerformanceCounters perf_counters(&owner);
-    uint64_t duration_ms;
+    TestManager manager;
 
-    EXPECT_TRUE(perf_counters.Enable());
+    perf_counters.AddManager(&manager);
 
-    EXPECT_TRUE(perf_counters.TriggerRead(true));
+    EXPECT_EQ(nullptr, owner.address_manager()->GetMappingForSlot(0).get());
+    manager.set_enabled(true);
+    perf_counters.Update();
+    EXPECT_NE(nullptr, perf_counters.address_mapping_.get());
+    EXPECT_EQ(perf_counters.address_mapping_, owner.address_manager()->GetMappingForSlot(0));
+
+    EXPECT_TRUE(perf_counters.TriggerRead());
     registers::PerformanceCounterBase::Get().FromValue(4096 + 1024).WriteTo(mmio.get());
-    auto result = perf_counters.ReadCompleted(&duration_ms);
-    EXPECT_EQ(1u, registers::PerformanceCounterConfig::Get().ReadFrom(mmio.get()).mode().get());
-    EXPECT_EQ(4096u, registers::PerformanceCounterBase::Get().ReadFrom(mmio.get()).reg_value());
-    EXPECT_TRUE(perf_counters.TriggerRead(true));
+    struct TestClient : public PerformanceCounters::Client {
+      void OnPerfCountDump(const std::vector<uint32_t>& dumped) override { dump_ = dumped; }
+      void OnForceDisabled() override { force_disable_count_++; }
+
+      std::vector<uint32_t> dump_;
+      uint32_t force_disable_count_ = 0;
+    };
+    TestClient client;
+    perf_counters.AddClient(&client);
+    perf_counters.ForceDisable();
+    EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
+              perf_counters.counter_state_);
+
+    EXPECT_EQ(1u, client.force_disable_count_);
+    // Could happen if the interrupt was delayed.
+    perf_counters.ReadCompleted();
+    perf_counters.Update();
+    EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kDisabled,
+              perf_counters.counter_state_);
+    perf_counters.RemoveForceDisable();
+    perf_counters.Update();
+
+    EXPECT_EQ(PerformanceCounters::PerformanceCounterState::kEnabled, perf_counters.counter_state_);
   }
 };
 
@@ -132,4 +186,4 @@ TEST(PerfCounters, StateChange) { PerformanceCounterTest::TestStateChange(); }
 
 TEST(PerfCounters, Enabled) { PerformanceCounterTest::TestEnabled(); }
 
-TEST(PerfCounters, KeepEnabled) { PerformanceCounterTest::TestKeepEnabled(); }
+TEST(PerfCounters, ForceDisable) { PerformanceCounterTest::TestForceDisable(); }

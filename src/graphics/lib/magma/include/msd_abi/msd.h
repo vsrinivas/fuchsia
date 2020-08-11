@@ -107,6 +107,32 @@ magma_status_t msd_semaphore_import(uint32_t handle, struct msd_semaphore_t** se
 // Releases the given semaphore.
 void msd_semaphore_release(struct msd_semaphore_t* semaphore);
 
+magma_status_t msd_connection_enable_performance_counters(struct msd_connection_t* connection,
+                                                          const uint64_t* counters,
+                                                          uint64_t counter_count);
+
+magma_status_t msd_connection_create_performance_counter_buffer_pool(
+    struct msd_connection_t* connection, uint64_t pool_id, struct msd_perf_count_pool** pool_out);
+
+// Releases the performance counter buffer pool. This driver must not send any notification with the
+// pool ID of this pool after it returns from this method.
+magma_status_t msd_connection_release_performance_counter_buffer_pool(
+    struct msd_connection_t* connection, struct msd_perf_count_pool* pool);
+
+magma_status_t msd_connection_add_performance_counter_buffer_offset_to_pool(
+    struct msd_connection_t*, struct msd_perf_count_pool* pool, struct msd_buffer_t* buffer,
+    uint64_t buffer_id, uint64_t buffer_offset, uint64_t buffer_size);
+magma_status_t msd_connection_remove_performance_counter_buffer_from_pool(
+    struct msd_connection_t*, struct msd_perf_count_pool* pool, struct msd_buffer_t* buffer);
+
+magma_status_t msd_connection_dump_performance_counters(struct msd_connection_t* connection,
+                                                        struct msd_perf_count_pool* pool,
+                                                        uint32_t trigger_id);
+
+magma_status_t msd_connection_clear_performance_counters(struct msd_connection_t* connection,
+                                                         const uint64_t* counters,
+                                                         uint64_t counter_count);
+
 #if defined(__cplusplus)
 }
 #endif

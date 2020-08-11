@@ -4,6 +4,7 @@
 
 #ifndef DEVICE_REQUEST_H
 #define DEVICE_REQUEST_H
+#include <lib/fit/function.h>
 
 #include <chrono>
 #include <memory>
@@ -65,5 +66,7 @@ class DeviceRequest {
   std::optional<std::chrono::steady_clock::time_point> enqueue_time_;
   std::shared_ptr<Reply> reply_;
 };
+
+using FitCallbackTask = fit::callback<magma::Status(MsdArmDevice*)>;
 
 #endif

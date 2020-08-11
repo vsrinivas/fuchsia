@@ -25,6 +25,7 @@ source_set("sys_driver") {
     "magma_system_device.h",
     "magma_system_semaphore.cc",
     "magma_system_semaphore.h",
+    "stub_entry_points.cc",
   ]
 
   deps = [

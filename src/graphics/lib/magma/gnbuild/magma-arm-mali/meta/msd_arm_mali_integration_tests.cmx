@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [
+            "class/gpu-performance-counters",
             "sys"
         ],
         "features": [

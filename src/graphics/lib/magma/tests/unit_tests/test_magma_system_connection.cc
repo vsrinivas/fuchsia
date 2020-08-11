@@ -9,6 +9,8 @@
 #include "sys_driver/magma_system_connection.h"
 #include "sys_driver/magma_system_device.h"
 
+namespace {
+
 class MsdMockConnection_ContextManagement : public MsdMockConnection {
  public:
   MsdMockConnection_ContextManagement() {}
@@ -27,6 +29,23 @@ class MsdMockConnection_ContextManagement : public MsdMockConnection {
 
  private:
   uint32_t active_context_count_ = 0;
+};
+
+class MockPerfCountPool : public magma::PlatformPerfCountPool {
+ public:
+  MockPerfCountPool(uint64_t pool_id) : pool_id_(pool_id) {}
+
+  ~MockPerfCountPool() override {}
+  uint64_t pool_id() override { return pool_id_; }
+
+  magma::Status SendPerformanceCounterCompletion(uint32_t trigger_id, uint64_t buffer_id,
+                                                 uint32_t buffer_offset, uint64_t time,
+                                                 uint32_t result_flags) override {
+    return MAGMA_STATUS_OK;
+  }
+
+ private:
+  uint64_t pool_id_;
 };
 
 TEST(MagmaSystemConnection, ContextManagement) {
@@ -176,3 +195,59 @@ TEST(MagmaSystemConnection, BufferSharing) {
 
   EXPECT_EQ(buf_0->id(), buf_1->id());
 }
+
+TEST(MagmaSystemConnection, PerformanceCounters) {
+  auto msd_dev = new MsdMockDevice();
+  auto dev =
+      std::shared_ptr<MagmaSystemDevice>(MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
+  auto msd_connection = msd_device_open(msd_dev, 0);
+  ASSERT_NE(msd_connection, nullptr);
+  MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection));
+  connection.set_can_access_performance_counters(true);
+
+  constexpr uint64_t kValidPoolId = 1;
+  constexpr uint64_t kInvalidPoolId = 2;
+
+  EXPECT_EQ(MAGMA_STATUS_OK, connection
+                                 .CreatePerformanceCounterBufferPool(
+                                     std::make_unique<MockPerfCountPool>(kValidPoolId))
+                                 .get());
+  EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, connection
+                                           .CreatePerformanceCounterBufferPool(
+                                               std::make_unique<MockPerfCountPool>(kValidPoolId))
+                                           .get());
+
+  EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
+            connection.DumpPerformanceCounters(kInvalidPoolId, 1u).get());
+  EXPECT_EQ(MAGMA_STATUS_OK, connection.DumpPerformanceCounters(kValidPoolId, 1u).get());
+
+  constexpr uint64_t kTestSize = 4096;
+  auto buf = magma::PlatformBuffer::Create(kTestSize, "test");
+
+  ASSERT_NE(buf, nullptr);
+  EXPECT_GE(buf->size(), kTestSize);
+
+  uint32_t duplicate_handle1;
+  ASSERT_TRUE(buf->duplicate_handle(&duplicate_handle1));
+
+  uint64_t id;
+  EXPECT_TRUE(connection.ImportBuffer(duplicate_handle1, &id));
+
+  EXPECT_EQ(
+      MAGMA_STATUS_INVALID_ARGS,
+      connection.AddPerformanceCounterBufferOffsetToPool(kValidPoolId, id + 1, 0, kTestSize).get());
+  EXPECT_EQ(
+      MAGMA_STATUS_INVALID_ARGS,
+      connection.AddPerformanceCounterBufferOffsetToPool(kInvalidPoolId, id, 0, kTestSize).get());
+  EXPECT_EQ(
+      MAGMA_STATUS_OK,
+      connection.AddPerformanceCounterBufferOffsetToPool(kValidPoolId, id, 0, kTestSize).get());
+
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            connection.RemovePerformanceCounterBufferFromPool(kValidPoolId, id).get());
+
+  // Don't explicitly delete pool to ensure the MagmaSystemConnection will prevent leaks by deleting
+  // it when closing.
+}
+
+}  // namespace

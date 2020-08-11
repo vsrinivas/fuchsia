@@ -46,10 +46,14 @@ struct msd_context_t {
 struct msd_semaphore_t {
   int32_t magic_;
 };
+struct msd_perf_count_pool {
+  int32_t magic_;
+};
 
 enum MSD_CONNECTION_NOTIFICATION_TYPE {
   MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND = 1,
   MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED = 2,
+  MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED = 3,
 };
 
 struct msd_notification_t {
@@ -59,6 +63,14 @@ struct msd_notification_t {
       uint8_t data[MSD_CHANNEL_SEND_MAX_SIZE];
       uint32_t size;
     } channel_send;
+    struct {
+      uint64_t pool_id;
+      uint32_t trigger_id;
+      uint64_t buffer_id;
+      uint32_t buffer_offset;
+      uint64_t timestamp;
+      uint32_t result_flags;
+    } perf_counter_result;
   } u;
 };
 

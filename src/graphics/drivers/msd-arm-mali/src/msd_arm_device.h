@@ -123,11 +123,11 @@ class MsdArmDevice : public msd_device_t,
   bool IsProtectedModeSupported() override;
   void DeregisterConnection() override;
   void SetCurrentThreadToDefaultPriority() override;
+  PerformanceCounters* performance_counters() override { return perf_counters_.get(); }
+  std::shared_ptr<DeviceRequest::Reply> RunTaskOnDeviceThread(FitCallbackTask task) override;
 
   magma_status_t QueryInfo(uint64_t id, uint64_t* value_out);
   magma_status_t QueryReturnsBuffer(uint64_t id, uint32_t* buffer_out);
-
-  void RequestPerfCounterOperation(uint32_t type);
 
   // PerformanceCounters::Owner implementation.
   AddressManager* address_manager() override { return address_manager_.get(); }
@@ -150,7 +150,7 @@ class MsdArmDevice : public msd_device_t,
   class MmuInterruptRequest;
   class ScheduleAtomRequest;
   class CancelAtomsRequest;
-  class PerfCounterRequest;
+  class TaskRequest;
 
   magma::RegisterIo* register_io() override {
     DASSERT(register_io_);
@@ -183,7 +183,6 @@ class MsdArmDevice : public msd_device_t,
   magma::Status ProcessMmuInterrupt();
   magma::Status ProcessScheduleAtoms();
   magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
-  magma::Status ProcessPerfCounterRequest(uint32_t type);
 
   void ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* registers);
 

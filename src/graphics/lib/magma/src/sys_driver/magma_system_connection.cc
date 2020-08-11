@@ -25,10 +25,22 @@ MagmaSystemConnection::~MagmaSystemConnection() {
     iter = buffer_map_.erase(iter);
   }
 
+  // Iterating over pool_map_ without the mutex held is safe because the map is only modified from
+  // this thread.
+  for (auto& pool_map_entry : pool_map_) {
+    msd_connection_release_performance_counter_buffer_pool(msd_connection(),
+                                                           pool_map_entry.second.msd_pool);
+  }
+  {
+    // We still need to lock the mutex before modifying the map.
+    std::lock_guard<std::mutex> lock(pool_map_mutex_);
+    pool_map_.clear();
+  }
   // Reset all MSD objects before calling ConnectionClosed() because the msd device might go away
   // any time after ConnectionClosed() and we don't want any dangling dependencies.
   semaphore_map_.clear();
   msd_connection_.reset();
+
   auto device = device_.lock();
   if (device) {
     device->ConnectionClosed(std::this_thread::get_id());
@@ -194,9 +206,38 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
   return true;
 }
 
+// static
+void MagmaSystemConnection::NotificationCallback(void* token,
+                                                 struct msd_notification_t* notification) {
+  auto connection = reinterpret_cast<MagmaSystemConnection*>(token);
+
+  if (notification->type == MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED) {
+    std::lock_guard<std::mutex> lock(connection->pool_map_mutex_);
+
+    auto& data = notification->u.perf_counter_result;
+
+    auto pool_it = connection->pool_map_.find(data.pool_id);
+    if (pool_it == connection->pool_map_.end()) {
+      DLOG("Driver attempted to lookup deleted pool id %ld\n", data.pool_id);
+      return;
+    }
+
+    pool_it->second.platform_pool->SendPerformanceCounterCompletion(
+        data.trigger_id, data.buffer_id, data.buffer_offset, data.timestamp, data.result_flags);
+  } else {
+    connection->platform_callback_(connection->platform_token_, notification);
+  }
+}
+
 void MagmaSystemConnection::SetNotificationCallback(msd_connection_notification_callback_t callback,
                                                     void* token) {
-  msd_connection_set_notification_callback(msd_connection(), callback, token);
+  if (!token) {
+    msd_connection_set_notification_callback(msd_connection(), nullptr, nullptr);
+  } else {
+    platform_callback_ = callback;
+    platform_token_ = token;
+    msd_connection_set_notification_callback(msd_connection(), &NotificationCallback, this);
+  }
 }
 
 bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) {
@@ -254,7 +295,7 @@ magma::Status MagmaSystemConnection::EnablePerformanceCounters(const uint64_t* c
   if (!can_access_performance_counters_)
     return DRET(MAGMA_STATUS_ACCESS_DENIED);
 
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  return msd_connection_enable_performance_counters(msd_connection(), counters, counter_count);
 }
 
 magma::Status MagmaSystemConnection::CreatePerformanceCounterBufferPool(
@@ -262,29 +303,61 @@ magma::Status MagmaSystemConnection::CreatePerformanceCounterBufferPool(
   if (!can_access_performance_counters_)
     return DRET(MAGMA_STATUS_ACCESS_DENIED);
 
-  // For now, throw out the pool.
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  uint64_t pool_id = pool->pool_id();
+  if (pool_map_.count(pool_id))
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+
+  {
+    std::lock_guard<std::mutex> lock(pool_map_mutex_);
+    pool_map_[pool_id].platform_pool = std::move(pool);
+  }
+  // |pool_map_mutex_| is unlocked before calling into the driver to prevent deadlocks if the driver
+  // synchronously does MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED.
+  magma_status_t status = msd_connection_create_performance_counter_buffer_pool(
+      msd_connection(), pool_id, &pool_map_[pool_id].msd_pool);
+  if (status != MAGMA_STATUS_OK) {
+    std::lock_guard<std::mutex> lock(pool_map_mutex_);
+    pool_map_.erase(pool_id);
+  }
+  return MAGMA_STATUS_OK;
 }
 
 magma::Status MagmaSystemConnection::ReleasePerformanceCounterBufferPool(uint64_t pool_id) {
   if (!can_access_performance_counters_)
     return DRET(MAGMA_STATUS_ACCESS_DENIED);
 
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  msd_perf_count_pool* msd_pool = LookupPerfCountPool(pool_id);
+  if (!msd_pool)
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+
+  // |pool_map_mutex_| is unlocked before calling into the driver to prevent deadlocks if the driver
+  // synchronously does MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED.
+  magma_status_t status =
+      msd_connection_release_performance_counter_buffer_pool(msd_connection(), msd_pool);
+  {
+    std::lock_guard<std::mutex> lock(pool_map_mutex_);
+    pool_map_.erase(pool_id);
+  }
+  return DRET(status);
 }
 
 magma::Status MagmaSystemConnection::AddPerformanceCounterBufferOffsetToPool(uint64_t pool_id,
                                                                              uint64_t buffer_id,
-                                                                             uint32_t buffer_offset,
-                                                                             uint32_t buffer_size) {
+                                                                             uint64_t buffer_offset,
+                                                                             uint64_t buffer_size) {
   if (!can_access_performance_counters_)
     return DRET(MAGMA_STATUS_ACCESS_DENIED);
   std::shared_ptr<MagmaSystemBuffer> buffer = LookupBuffer(buffer_id);
   if (!buffer) {
     return DRET(MAGMA_STATUS_INVALID_ARGS);
   }
-
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  msd_perf_count_pool* msd_pool = LookupPerfCountPool(pool_id);
+  if (!msd_pool) {
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  }
+  magma_status_t status = msd_connection_add_performance_counter_buffer_offset_to_pool(
+      msd_connection(), msd_pool, buffer->msd_buf(), buffer_id, buffer_offset, buffer_size);
+  return DRET(status);
 }
 
 magma::Status MagmaSystemConnection::RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
@@ -296,7 +369,13 @@ magma::Status MagmaSystemConnection::RemovePerformanceCounterBufferFromPool(uint
     return DRET(MAGMA_STATUS_INVALID_ARGS);
   }
 
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  msd_perf_count_pool* msd_pool = LookupPerfCountPool(pool_id);
+  if (!msd_pool)
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  magma_status_t status = msd_connection_remove_performance_counter_buffer_from_pool(
+      msd_connection(), msd_pool, buffer->msd_buf());
+
+  return DRET(status);
 }
 
 magma::Status MagmaSystemConnection::DumpPerformanceCounters(uint64_t pool_id,
@@ -304,15 +383,17 @@ magma::Status MagmaSystemConnection::DumpPerformanceCounters(uint64_t pool_id,
   if (!can_access_performance_counters_)
     return DRET(MAGMA_STATUS_ACCESS_DENIED);
 
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  msd_perf_count_pool* msd_pool = LookupPerfCountPool(pool_id);
+  if (!msd_pool)
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  return msd_connection_dump_performance_counters(msd_connection(), msd_pool, trigger_id);
 }
 
 magma::Status MagmaSystemConnection::ClearPerformanceCounters(const uint64_t* counters,
                                                               uint64_t counter_count) {
   if (!can_access_performance_counters_)
     return DRET(MAGMA_STATUS_ACCESS_DENIED);
-
-  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+  return msd_connection_clear_performance_counters(msd_connection(), counters, counter_count);
 }
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemConnection::LookupBuffer(uint64_t id) {
@@ -328,4 +409,11 @@ std::shared_ptr<MagmaSystemSemaphore> MagmaSystemConnection::LookupSemaphore(uin
   if (iter == semaphore_map_.end())
     return nullptr;
   return iter->second.semaphore;
+}
+
+msd_perf_count_pool* MagmaSystemConnection::LookupPerfCountPool(uint64_t id) {
+  auto it = pool_map_.find(id);
+  if (it == pool_map_.end())
+    return DRETP(nullptr, "Invalid pool id %ld", id);
+  return it->second.msd_pool;
 }

@@ -14,6 +14,21 @@ bool IsStringInDump(const std::vector<std::string>& dump, const std::string& str
     return input_str.find(str) != std::string::npos;
   });
 }
+
+namespace {
+class TestPerfCountManager : public PerformanceCountersManager {
+ public:
+  std::vector<uint64_t> EnabledPerfCountFlags() override {
+    return enabled_ ? std::vector<uint64_t>{1} : std::vector<uint64_t>{};
+  }
+
+  void set_enabled(bool enabled) { enabled_ = enabled; }
+
+ private:
+  bool enabled_ = false;
+};
+}  // namespace
+
 // These tests are unit testing the functionality of MsdArmDevice.
 // All of these tests instantiate the device in test mode, that is without the device thread active.
 class TestMsdArmDevice {
@@ -317,7 +332,10 @@ class TestMsdArmDevice {
     EXPECT_FALSE(device->IsInProtectedMode());
     EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
 
-    EXPECT_TRUE(device->perf_counters_->Enable());
+    TestPerfCountManager perf_count_manager;
+    perf_count_manager.set_enabled(true);
+    device->perf_counters_->AddManager(&perf_count_manager);
+    device->perf_counters_->Update();
 
     device->EnterProtectedMode();
     EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
@@ -327,8 +345,8 @@ class TestMsdArmDevice {
     EXPECT_TRUE(device->ExitProtectedMode());
     EXPECT_EQ(1u, device->power_manager_->l2_ready_status());
     EXPECT_FALSE(device->IsInProtectedMode());
-    // Exiting protected mode should disable performance counters.
-    EXPECT_FALSE(device->perf_counters_->running());
+    // Exiting protected mode should disable and then re-enable performance counters.
+    EXPECT_TRUE(device->perf_counters_->running());
   }
 
   void PowerDownL2() {

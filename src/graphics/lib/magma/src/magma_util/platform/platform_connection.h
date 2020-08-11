@@ -73,8 +73,8 @@ class PlatformConnection {
     virtual magma::Status ReleasePerformanceCounterBufferPool(uint64_t pool_id) = 0;
     virtual magma::Status AddPerformanceCounterBufferOffsetToPool(uint64_t pool_id,
                                                                   uint64_t buffer_id,
-                                                                  uint32_t buffer_offset,
-                                                                  uint32_t buffer_size) = 0;
+                                                                  uint64_t buffer_offset,
+                                                                  uint64_t buffer_size) = 0;
     virtual magma::Status RemovePerformanceCounterBufferFromPool(uint64_t pool_id,
                                                                  uint64_t buffer_id) = 0;
     virtual magma::Status DumpPerformanceCounters(uint64_t pool_id, uint32_t trigger_id) = 0;

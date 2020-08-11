@@ -584,8 +584,8 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   }
 
   magma::Status AddPerformanceCounterBufferOffsetToPool(uint64_t pool_id, uint64_t buffer_id,
-                                                        uint32_t buffer_offset,
-                                                        uint32_t buffer_size) override {
+                                                        uint64_t buffer_offset,
+                                                        uint64_t buffer_size) override {
     EXPECT_EQ(1u, pool_id);
     EXPECT_EQ(2u, buffer_id);
     EXPECT_EQ(3u, buffer_offset);

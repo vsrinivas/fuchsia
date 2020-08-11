@@ -16,6 +16,7 @@ executable("msd_arm_mali_integration_tests") {
   sources = [
     "run_unit_tests.cc",
     "test_fault_recovery.cc",
+    "test_perf_counters.cc",
     "test_shutdown.cc",
   ]
 

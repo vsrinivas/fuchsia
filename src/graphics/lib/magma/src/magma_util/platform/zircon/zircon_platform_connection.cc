@@ -109,6 +109,9 @@ bool ZirconPlatformConnection::AsyncTaskHandler(async_dispatcher_t* dispatcher, 
       // Kill the connection.
       ShutdownEvent()->Signal();
       return true;
+    case MSD_CONNECTION_NOTIFICATION_PERFORMANCE_COUNTERS_READ_COMPLETED:
+      // Should be handled in MagmaSystemConnection.
+      break;
   }
   return DRETF(false, "Unhandled notification type: %d", task->notification.type);
 }

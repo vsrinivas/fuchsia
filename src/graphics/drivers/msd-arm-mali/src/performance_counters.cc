@@ -16,12 +16,16 @@ constexpr uint32_t kPerfBufferStartOffset = PAGE_SIZE;
 }  // namespace
 
 bool PerformanceCounters::Enable() {
+  if (counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled) {
+    // Signal that the counters should be left enabled.
+    counter_state_ = PerformanceCounterState::kTriggered;
+    return true;
+  }
   if (counter_state_ != PerformanceCounterState::kDisabled) {
     MAGMA_LOG(WARNING, "Can't enable performance counters from state %d",
               static_cast<int>(counter_state_));
     return false;
   }
-  MAGMA_LOG(INFO, "Enabling performance counters");
   if (!connection_) {
     auto connection = MsdArmConnection::Create(0xffffffff, owner_->connection_owner());
     if (!connection) {
@@ -93,27 +97,34 @@ bool PerformanceCounters::Enable() {
   return true;
 }
 
-bool PerformanceCounters::TriggerRead(bool keep_enabled) {
+bool PerformanceCounters::TriggerRead() {
   if (counter_state_ != PerformanceCounterState::kEnabled) {
     MAGMA_LOG(WARNING, "Can't trigger performance counters from state %d",
               static_cast<int>(counter_state_));
     return false;
   }
-  MAGMA_LOG(INFO, "Triggering performance counter read");
   last_perf_base_ =
       registers::PerformanceCounterBase::Get().ReadFrom(owner_->register_io()).reg_value();
   owner_->register_io()->Write32(registers::GpuCommand::kOffset,
                                  registers::GpuCommand::kCmdSamplePerformanceCounters);
   counter_state_ = PerformanceCounterState::kTriggered;
-  enable_after_read_ = keep_enabled;
   return true;
 }
 
-std::vector<uint32_t> PerformanceCounters::ReadCompleted(uint64_t* duration_ms_out) {
+void PerformanceCounters::ReadCompleted() {
   std::vector<uint32_t> output;
+  if (counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled) {
+    auto config = registers::PerformanceCounterConfig::Get().FromValue(0);
+    config.address_space().set(address_mapping_->slot_number());
+    config.mode().set(registers::PerformanceCounterConfig::kModeDisabled);
+    config.WriteTo(owner_->register_io());
+    counter_state_ = PerformanceCounterState::kDisabled;
+    return;
+  }
+
   if (counter_state_ != PerformanceCounterState::kTriggered) {
     DLOG("Can't trigger performance counters from state %d", static_cast<int>(counter_state_));
-    return output;
+    return;
   }
   uint64_t new_base =
       registers::PerformanceCounterBase::Get().ReadFrom(owner_->register_io()).reg_value();
@@ -130,10 +141,6 @@ std::vector<uint32_t> PerformanceCounters::ReadCompleted(uint64_t* duration_ms_o
   DASSERT(success);
   auto perf_registers = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(mapped_data) + base);
 
-  auto now = std::chrono::steady_clock::now();
-  *duration_ms_out =
-      std::chrono::duration_cast<std::chrono::milliseconds>(now - enable_time_).count();
-
   for (uint32_t i = 0; i < (new_base - last_perf_base_) / sizeof(uint32_t); ++i) {
     output.push_back(perf_registers[i]);
   }
@@ -145,14 +152,64 @@ std::vector<uint32_t> PerformanceCounters::ReadCompleted(uint64_t* duration_ms_o
   config.WriteTo(owner_->register_io());
   counter_state_ = PerformanceCounterState::kDisabled;
 
-  if (enable_after_read_) {
-    // Reading from the performance counters clears them but leaves them
-    // enabled, so just setting the state to enabled would normally work. However,
-    // the base register address changes every time a read happens, so we
-    // need to temporarily disable them to reset that address so we don't
-    // overflow the buffer.
-    Enable();
-  }
+  // Reading from the performance counters clears them but leaves them
+  // enabled, so just setting the state to enabled would normally work. However,
+  // the base register address changes every time a read happens, so we
+  // need to temporarily disable them to reset that address so we don't
+  // overflow the buffer.
+  Enable();
 
-  return output;
+  for (Client* client : clients_)
+    client->OnPerfCountDump(output);
+}
+
+bool PerformanceCounters::Disable() {
+  switch (counter_state_) {
+    case PerformanceCounterState::kTriggered:
+    case PerformanceCounterState::kTriggeredWillBeDisabled:
+      counter_state_ = PerformanceCounterState::kTriggeredWillBeDisabled;
+      return true;
+    case PerformanceCounterState::kEnabled: {
+      auto config = registers::PerformanceCounterConfig::Get().FromValue(0);
+      config.address_space().set(address_mapping_->slot_number());
+      config.mode().set(registers::PerformanceCounterConfig::kModeDisabled);
+      config.WriteTo(owner_->register_io());
+      counter_state_ = PerformanceCounterState::kDisabled;
+      return true;
+    }
+    case PerformanceCounterState::kDisabled: {
+      return true;
+    }
+  }
+}
+
+void PerformanceCounters::AddClient(Client* client) { clients_.insert(client); }
+
+void PerformanceCounters::RemoveClient(Client* client) { clients_.erase(client); }
+
+bool PerformanceCounters::AddManager(PerformanceCountersManager* manager) {
+  if (manager_)
+    return false;
+  manager_ = manager;
+  return true;
+}
+
+void PerformanceCounters::RemoveManager(PerformanceCountersManager* manager) {
+  if (manager_ == manager)
+    manager_ = nullptr;
+}
+
+bool PerformanceCounters::ShouldBeEnabled() {
+  return !force_disabled_ && manager_ && manager_->EnabledPerfCountFlags().size() > 0;
+}
+
+void PerformanceCounters::Update() {
+  bool should_be_enabled = ShouldBeEnabled();
+  if (should_be_enabled && (counter_state_ == PerformanceCounterState::kDisabled ||
+                            counter_state_ == PerformanceCounterState::kTriggeredWillBeDisabled)) {
+    Enable();
+  } else if (!should_be_enabled && (counter_state_ == PerformanceCounterState::kEnabled ||
+                                    counter_state_ == PerformanceCounterState::kTriggered)) {
+    Disable();
+  }
 }

@@ -127,3 +127,46 @@ magma_status_t msd_connection_commit_buffer(struct msd_connection_t* connection,
 void msd_connection_set_notification_callback(struct msd_connection_t* connection,
                                               msd_connection_notification_callback_t callback,
                                               void* token) {}
+
+magma_status_t msd_connection_enable_performance_counters(msd_connection_t* abi_connection,
+                                                          const uint64_t* counters,
+                                                          uint64_t counter_count) {
+  return MAGMA_STATUS_OK;
+}
+
+struct MsdMockPool : public msd_perf_count_pool {};
+
+magma_status_t msd_connection_create_performance_counter_buffer_pool(
+    struct msd_connection_t* connection, uint64_t pool_id, struct msd_perf_count_pool** pool_out) {
+  *pool_out = new MsdMockPool;
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_connection_release_performance_counter_buffer_pool(
+    struct msd_connection_t* connection, struct msd_perf_count_pool* pool) {
+  delete static_cast<MsdMockPool*>(pool);
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_connection_dump_performance_counters(struct msd_connection_t* abi_connection,
+                                                        struct msd_perf_count_pool* pool,
+                                                        uint32_t trigger_id) {
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_connection_clear_performance_counters(struct msd_connection_t* connection,
+                                                         const uint64_t* counters,
+                                                         uint64_t counter_count) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t msd_connection_add_performance_counter_buffer_offset_to_pool(
+    struct msd_connection_t*, struct msd_perf_count_pool* abi_pool, struct msd_buffer_t* abi_buffer,
+    uint64_t buffer_id, uint64_t buffer_offset, uint64_t buffer_size) {
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_connection_remove_performance_counter_buffer_from_pool(
+    struct msd_connection_t*, struct msd_perf_count_pool* pool, struct msd_buffer_t* buffer) {
+  return MAGMA_STATUS_OK;
+}

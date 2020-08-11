@@ -48,6 +48,8 @@ source_set("src") {
     "msd_arm_device.h",
     "msd_arm_driver.cc",
     "msd_arm_driver.h",
+    "msd_arm_perf_count_pool.cc",
+    "msd_arm_perf_count_pool.h",
     "msd_arm_semaphore.cc",
     "msd_arm_semaphore.h",
     "performance_counters.cc",
@@ -87,5 +89,6 @@ source_set("src") {
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
     "//src/graphics/lib/magma/src/magma_util/platform:trace",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
   ]
 }
