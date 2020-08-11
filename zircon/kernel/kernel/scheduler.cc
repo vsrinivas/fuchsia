@@ -729,7 +729,13 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                           Round<uint64_t>(total_runtime_ns));
   }
 
-  const bool timeslice_expired = total_runtime_ns >= current_state->time_slice_ns_;
+  // A deadline can expire when there is still time left in the time slice if
+  // the task wakes up late. This is handled the same as the time slice
+  // expiring.
+  const bool deadline_expired =
+      IsDeadlineThread(current_thread) && now >= current_state->finish_time_;
+  const bool timeslice_expired =
+      deadline_expired || total_runtime_ns >= current_state->time_slice_ns_;
 
   // Select a thread to run.
   Thread* const next_thread =
@@ -1037,8 +1043,13 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
                      state->start_time_.raw_value(), state->finish_time_.raw_value(),
                      delta_norm.raw_value());
   } else {
-    if (placement == Placement::Insertion) {
-      LocalTraceDuration<KTRACE_DETAILED> insert_trace{"insert_deadline: r,c"_stringref};
+    // Both a new insertion into the run queue or a re-insertion due to
+    // preemption can happen after the time slice and/or deadline expires.
+    if (placement == Placement::Insertion || placement == Placement::Preemption) {
+      const auto string_ref = placement == Placement::Insertion
+                                  ? "insert_deadline: r,c"_stringref
+                                  : "preemption_deadline: r,c"_stringref;
+      LocalTraceDuration<KTRACE_DETAILED> deadline_trace{string_ref};
 
       // Determine how much time is left before the deadline. This might be less
       // than the remaining time slice or negative if the thread blocked.
@@ -1052,15 +1063,9 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
       } else if (state->time_slice_ns_ >= time_until_deadline_ns) {
         state->time_slice_ns_ = time_until_deadline_ns;
       }
-      DEBUG_ASSERT(state->time_slice_ns_ >= SchedDuration{0});
-
-      insert_trace.End(Round<uint64_t>(time_until_deadline_ns),
-                       Round<uint64_t>(state->time_slice_ns_));
-    } else if (placement == Placement::Preemption) {
-      LocalTraceDuration<KTRACE_DETAILED> preemption_trace{"preemption_deadline: r,c"_stringref};
-      const SchedDuration time_until_deadline_ns = state->finish_time_ - now;
-      preemption_trace.End(Round<uint64_t>(time_until_deadline_ns),
-                           Round<uint64_t>(state->time_slice_ns_));
+      DEBUG_ASSERT(state->time_slice_ns_ >= 0);
+      deadline_trace.End(Round<uint64_t>(time_until_deadline_ns),
+                         Round<uint64_t>(state->time_slice_ns_));
     }
 
     DEBUG_ASSERT_MSG(state->start_time_ < state->finish_time_,
