@@ -218,7 +218,7 @@ VmObjectPaged::~VmObjectPaged() {
     }
   } else {
     // Most of the hidden vmo's state should have already been cleaned up when it merged
-    // itself into its child in ::OnChildRemoved.
+    // itself into its child in ::RemoveChild.
     DEBUG_ASSERT(children_list_len_ == 0);
     DEBUG_ASSERT(page_list_.HasNoPages());
   }
@@ -2715,7 +2715,7 @@ void VmObjectPaged::ReleaseCowParentPagesLockedHelper(uint64_t start, uint64_t e
         }
         if (skip_split_bits) {
           // If we were able to update this vmo's parent limit, that made the pages
-          // uniaccessible. We clear the split bits to allow ::OnChildRemoved to efficiently
+          // uniaccessible. We clear the split bits to allow ::RemoveChild to efficiently
           // merge vmos without having to worry about pages above parent_limit_.
           page->object.cow_left_split = 0;
           page->object.cow_right_split = 0;
