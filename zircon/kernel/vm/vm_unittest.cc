@@ -15,7 +15,6 @@
 #include <arch/kernel_aspace.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <kernel/semaphore.h>
@@ -1601,7 +1600,8 @@ static bool vmo_read_write_smoke_test() {
 
   // create test buffer
   fbl::AllocChecker ac;
-  fbl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
+  fbl::Vector<uint8_t> a;
+  a.reserve(alloc_size, &ac);
   ASSERT_TRUE(ac.check());
   fill_region(99, a.data(), alloc_size);
 
@@ -1651,7 +1651,8 @@ static bool vmo_read_write_smoke_test() {
   ka->FreeRegion((vaddr_t)ptr);
 
   // test that we can read from it
-  fbl::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
+  fbl::Vector<uint8_t> b;
+  b.reserve(alloc_size, &ac);
   ASSERT_TRUE(ac.check(), "can't allocate buffer");
 
   err = vmo->Read(b.data(), 0, alloc_size);
