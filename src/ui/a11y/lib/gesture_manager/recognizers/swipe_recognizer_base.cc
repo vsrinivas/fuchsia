@@ -112,16 +112,6 @@ void SwipeRecognizerBase::HandleEvent(
           contest_->member->Reject();
           break;
         }
-
-      } else {
-        // Make sure that until all the Down events are detected finger movement is not more than
-        // that of a tap gesture. Also, If an up event is seen before, make sure all fingers come
-        // to a stop.
-        auto last_position_iterator = stopping_position_.find(pointer_id);
-        if (!PointerEventIsValidTap(last_position_iterator->second, pointer_event)) {
-          contest_->member->Reject();
-          break;
-        }
       }
 
       UpdateLastPointerPosition(pointer_id, pointer_event);

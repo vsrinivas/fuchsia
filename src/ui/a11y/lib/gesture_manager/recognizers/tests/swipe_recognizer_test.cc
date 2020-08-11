@@ -192,36 +192,6 @@ TEST_P(SwipeRecognizerBaseTest, RejectMoveEventBeforeDown) {
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
 }
 
-// Test Gesture detection failure when a long move event is detected for a finger after first UP
-// event is detected.
-// This test is applicable only when number of finger is more than 1.
-TEST_P(SwipeRecognizerBaseTest, RejectLongMoveEventAfterFirstUp) {
-  if (GetParam() == 1) {
-    return;
-  }
-
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
-
-  for (uint32_t finger = 0; finger < GetParam(); finger++) {
-    SendPointerEvents(DownEvents(finger, {}));
-  }
-
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
-
-  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-  // a swipe.
-  // Send first Up event.
-  SendPointerEvent({0, Phase::UP, {0, .7f}});
-
-  SendPointerEvent({1, Phase::MOVE, {0, 0}});
-  SendPointerEvent({1, Phase::MOVE, {0, 1}});
-
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
-}
-
 TEST_P(SwipeRecognizerBaseTest, Timeout) {
   MockContestMember member;
   recognizer()->OnContestStarted(member.TakeInterface());
@@ -337,6 +307,47 @@ TEST_P(UpSwipeRecognizerTest, GestureDetected) {
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
 }
 
+// Test Gesture detection case when a long move event is detected for a finger after first UP
+// event is detected.
+// This test is applicable only when number of finger is more than 1.
+TEST_P(UpSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
+  if (GetParam() == 1) {
+    return;
+  }
+
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  // Send all the down events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(DownEvents(finger, {}));
+  }
+
+  // Send all the move events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(MoveEvents(finger, {}, {0, -.7f}));
+  }
+
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+
+  // Send first Up event.
+  SendPointerEvent({0, Phase::UP, {0, -.7f}});
+
+  // Move finger over a larger distance.
+  SendPointerEvent({1, Phase::MOVE, {0, -.9f}});
+
+  // Send remaining Up events.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  for (uint32_t finger = 1; finger < GetParam(); finger++) {
+    SendPointerEvent({finger, Phase::UP, {0, -.9f}});
+  }
+
+  EXPECT_FALSE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+}
+
 TEST_P(DownSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
   MockContestMember member;
   recognizer()->OnContestStarted(member.TakeInterface());
@@ -363,6 +374,47 @@ TEST_P(DownSwipeRecognizerTest, GestureDetected) {
     SendPointerEvent({finger, Phase::UP, {0, .7f}});
   }
 
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+}
+
+// Test Gesture detection case when a long move event is detected for a finger after first UP
+// event is detected.
+// This test is applicable only when number of finger is more than 1.
+TEST_P(DownSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
+  if (GetParam() == 1) {
+    return;
+  }
+
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  // Send all the down events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(DownEvents(finger, {}));
+  }
+
+  // Send all the move events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(MoveEvents(finger, {}, {0, .7f}));
+  }
+
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+
+  // Send first Up event.
+  SendPointerEvent({0, Phase::UP, {0, .7f}});
+
+  // Move finger over a larger distance.
+  SendPointerEvent({1, Phase::MOVE, {0, .9f}});
+
+  // Send remaining Up events.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  for (uint32_t finger = 1; finger < GetParam(); finger++) {
+    SendPointerEvent({finger, Phase::UP, {0, .9f}});
+  }
+
+  EXPECT_FALSE(member.is_held());
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
 }
 
@@ -395,6 +447,47 @@ TEST_P(RightSwipeRecognizerTest, GestureDetected) {
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
 }
 
+// Test Gesture detection case when a long move event is detected for a finger after first UP
+// event is detected.
+// This test is applicable only when number of finger is more than 1.
+TEST_P(RightSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
+  if (GetParam() == 1) {
+    return;
+  }
+
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  // Send all the down events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(DownEvents(finger, {}));
+  }
+
+  // Send all the move events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(MoveEvents(finger, {}, {.7f, 0}));
+  }
+
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+
+  // Send first Up event.
+  SendPointerEvent({0, Phase::UP, {.7f, 0}});
+
+  // Move finger over a larger distance.
+  SendPointerEvent({1, Phase::MOVE, {.9f, 0}});
+
+  // Send remaining Up events.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  for (uint32_t finger = 1; finger < GetParam(); finger++) {
+    SendPointerEvent({finger, Phase::UP, {.9f, 0}});
+  }
+
+  EXPECT_FALSE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+}
+
 TEST_P(LeftSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
   MockContestMember member;
   recognizer()->OnContestStarted(member.TakeInterface());
@@ -421,6 +514,47 @@ TEST_P(LeftSwipeRecognizerTest, GestureDetected) {
     SendPointerEvent({finger, Phase::UP, {-.7f, 0}});
   }
 
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+}
+
+// Test Gesture detection case when a long move event is detected for a finger after first UP
+// event is detected.
+// This test is applicable only when number of finger is more than 1.
+TEST_P(LeftSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
+  if (GetParam() == 1) {
+    return;
+  }
+
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
+
+  // Send all the down events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(DownEvents(finger, {}));
+  }
+
+  // Send all the move events.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(MoveEvents(finger, {}, {-.7f, 0}));
+  }
+
+  ASSERT_TRUE(member.is_held());
+  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+
+  // Send first Up event.
+  SendPointerEvent({0, Phase::UP, {-.7f, 0}});
+
+  // Move finger over a larger distance.
+  SendPointerEvent({1, Phase::MOVE, {-.9f, 0}});
+
+  // Send remaining Up events.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  for (uint32_t finger = 1; finger < GetParam(); finger++) {
+    SendPointerEvent({finger, Phase::UP, {-.9f, 0}});
+  }
+
+  EXPECT_FALSE(member.is_held());
   EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
 }
 
