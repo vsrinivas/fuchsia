@@ -7,7 +7,7 @@ use {
         commands::{Command, ListCommand},
         types::Error,
     },
-    diagnostics_data::InspectSchema,
+    diagnostics_data::InspectData,
     fuchsia_inspect_contrib::reader::ArchiveReader,
 };
 
@@ -38,7 +38,7 @@ pub async fn get_selectors_for_manifest(
 
 /// Returns the component "moniker" and the hierarchy data for results of
 /// reading from the archive using the given selectors.
-pub async fn fetch_data(selectors: &[String]) -> Result<Vec<InspectSchema>, Error> {
+pub async fn fetch_data(selectors: &[String]) -> Result<Vec<InspectData>, Error> {
     let mut fetcher = ArchiveReader::new().retry_if_empty(false);
     // We support receiving the moniker or a tree selector
     for selector in selectors {

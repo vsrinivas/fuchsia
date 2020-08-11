@@ -17,7 +17,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     collector::Moniker,
-    diagnostics_data::{self as schema, Schema},
+    diagnostics_data::{self as schema, Data},
     fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_inspect::{reader::PartialNodeHierarchy, NumericProperty},
@@ -371,7 +371,7 @@ impl ReaderServer {
         format: &fidl_fuchsia_diagnostics::Format,
         batch_item: BatchResultItem,
     ) -> Result<fidl_fuchsia_diagnostics::FormattedContent, Error> {
-        let inspect_schema = Schema::for_inspect(
+        let inspect_data = Data::for_inspect(
             batch_item.moniker,
             batch_item.hierarchy_data.hierarchy,
             batch_item.hierarchy_data.timestamp.into_nanos(),
@@ -380,7 +380,7 @@ impl ReaderServer {
             batch_item.hierarchy_data.errors,
         );
 
-        formatter::write_schema_to_formatted_content(inspect_schema, format)
+        formatter::write_schema_to_formatted_content(inspect_data, format)
     }
 }
 #[async_trait]

@@ -11,7 +11,7 @@ use {
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
-    diagnostics_data::InspectSchema,
+    diagnostics_data::InspectData,
     serde::Serialize,
     std::{cmp::Ordering, ops::Deref},
 };
@@ -34,10 +34,10 @@ pub struct ShowCommand {
 
 #[derive(Derivative, Serialize, PartialEq)]
 #[derivative(Eq)]
-pub struct ShowCommandResultItem(InspectSchema);
+pub struct ShowCommandResultItem(InspectData);
 
 impl Deref for ShowCommandResultItem {
-    type Target = InspectSchema;
+    type Target = InspectData;
 
     fn deref(&self) -> &Self::Target {
         &self.0

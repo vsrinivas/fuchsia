@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use anyhow::Error;
-use diagnostics_data::InspectSchema;
+use diagnostics_data::InspectData;
 use diagnostics_reader::ArchiveReader;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
@@ -96,7 +96,7 @@ impl AppWithDiagnostics {
     ///
     /// This method should be called while the components of interest are still running, as
     /// Archivist does not yet preserve inspect from terminated components.
-    pub async fn snapshot_inspect(&self) -> Result<Vec<InspectSchema>, Error> {
+    pub async fn snapshot_inspect(&self) -> Result<Vec<InspectData>, Error> {
         let archive = self.observer.connect_to_service::<ArchiveAccessorMarker>()?;
 
         let mut results = ArchiveReader::new().with_archive(archive).get().await?;

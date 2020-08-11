@@ -8,7 +8,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    diagnostics_data::Schema,
+    diagnostics_data::Data,
     fidl_fuchsia_diagnostics::{self, BatchIteratorRequestStream},
     fuchsia_inspect::NumericProperty,
     futures::stream::FusedStream,
@@ -78,7 +78,7 @@ impl LifecycleServer {
                     .collect::<Vec<String>>()
                     .join("/");
 
-                let lifecycle_schema = Schema::for_lifecycle_event(
+                let lifecycle_data = Data::for_lifecycle_event(
                     sanitized_moniker,
                     lifecycle_container.lifecycle_type,
                     lifecycle_container.payload,
@@ -86,7 +86,7 @@ impl LifecycleServer {
                     lifecycle_container.event_timestamp.into_nanos(),
                     Vec::new(),
                 );
-                formatter::write_schema_to_formatted_content(lifecycle_schema, format)
+                formatter::write_schema_to_formatted_content(lifecycle_data, format)
             })
             .collect()
     }

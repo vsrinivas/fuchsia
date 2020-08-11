@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 use {
     anyhow::{format_err, Error},
-    diagnostics_data::Schema,
+    diagnostics_data::Data,
     fidl_fuchsia_diagnostics,
     fuchsia_zircon::{self as zx, HandleBased},
     serde::Serialize,
 };
 
 pub fn write_schema_to_formatted_content<Metadata>(
-    contents: Schema<String, Metadata>,
+    contents: Data<String, Metadata>,
     format: &fidl_fuchsia_diagnostics::Format,
 ) -> Result<fidl_fuchsia_diagnostics::FormattedContent, Error>
 where

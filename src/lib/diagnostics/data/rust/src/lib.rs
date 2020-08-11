@@ -100,7 +100,7 @@ pub struct LifecycleEventMetadata {
     /// Optional vector of errors encountered by platform.
     pub errors: Option<Vec<Error>>,
 
-    /// Type of lifecycle event being encoded in the schema.
+    /// Type of lifecycle event being encoded in the payload.
     pub lifecycle_event_type: LifecycleType,
 
     /// The url with which the component was launched.
@@ -122,11 +122,12 @@ pub struct InspectMetadata {
     pub timestamp: Timestamp,
 }
 
+/// An instance of diagnostics data with typed metadata and an optional nested payload.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-pub struct Schema<Key, Metadata> {
-    /// Enum specifying that this schema is encoding data.
+pub struct Data<Key, Metadata> {
+    /// The sourde of the data.
     #[serde(default)]
-    // TODO(fxb/NNNNN) remove this once the Metadata enum is gone everywhere
+    // TODO(fxb/58033) remove this once the Metadata enum is gone everywhere
     pub data_source: DataSource,
 
     /// The metadata for the diagnostics payload.
@@ -147,11 +148,11 @@ pub struct Schema<Key, Metadata> {
     pub version: u64,
 }
 
-pub type InspectSchema = Schema<String, InspectMetadata>;
-pub type LifecycleSchema = Schema<String, LifecycleEventMetadata>;
+pub type InspectData = Data<String, InspectMetadata>;
+pub type LifecycleData = Data<String, LifecycleEventMetadata>;
 
-impl Schema<String, LifecycleEventMetadata> {
-    /// Creates a new schema for a lifecycle event.
+impl Data<String, LifecycleEventMetadata> {
+    /// Creates a new data instance for a lifecycle event.
     pub fn for_lifecycle_event(
         moniker: impl Into<String>,
         lifecycle_event_type: LifecycleType,
@@ -159,10 +160,10 @@ impl Schema<String, LifecycleEventMetadata> {
         component_url: impl Into<String>,
         timestamp: impl Into<Timestamp>,
         errors: Vec<Error>,
-    ) -> LifecycleSchema {
+    ) -> LifecycleData {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
-        Schema {
+        Data {
             moniker: moniker.into(),
             version: *SCHEMA_VERSION,
             data_source: DataSource::LifecycleEvent,
@@ -177,8 +178,8 @@ impl Schema<String, LifecycleEventMetadata> {
     }
 }
 
-impl Schema<String, InspectMetadata> {
-    /// Creates a new schema for inspect data.
+impl Data<String, InspectMetadata> {
+    /// Creates a new data instance for inspect.
     pub fn for_inspect(
         moniker: impl Into<String>,
         inspect_hierarchy: Option<NodeHierarchy>,
@@ -186,10 +187,10 @@ impl Schema<String, InspectMetadata> {
         component_url: impl Into<String>,
         filename: impl Into<String>,
         errors: Vec<Error>,
-    ) -> InspectSchema {
+    ) -> InspectData {
         let errors_opt = if errors.is_empty() { None } else { Some(errors) };
 
-        Schema {
+        Data {
             moniker: moniker.into(),
             version: *SCHEMA_VERSION,
             data_source: DataSource::Inspect,
@@ -266,7 +267,7 @@ mod tests {
         );
 
         hierarchy.sort();
-        let json_schema = Schema::for_inspect(
+        let json_schema = Data::for_inspect(
             "a/b/c/d",
             Some(hierarchy),
             123456u64,
@@ -300,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_errorful_json_inspect_formatting() {
-        let json_schema = Schema::for_inspect(
+        let json_schema = Data::for_inspect(
             "a/b/c/d",
             None,
             123456u64,
@@ -330,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_canonical_json_lifecycle_event_formatting() {
-        let json_schema = Schema::for_lifecycle_event(
+        let json_schema = Data::for_lifecycle_event(
             "a/b/c/d",
             LifecycleType::DiagnosticsReady,
             None,
@@ -360,7 +361,7 @@ mod tests {
 
     #[test]
     fn test_errorful_json_lifecycle_event_formatting() {
-        let json_schema = Schema::for_lifecycle_event(
+        let json_schema = Data::for_lifecycle_event(
             "a/b/c/d",
             LifecycleType::DiagnosticsReady,
             None,

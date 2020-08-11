@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    diagnostics_data::InspectSchema,
+    diagnostics_data::InspectData,
     fidl,
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker,
@@ -152,9 +152,9 @@ impl ArchiveReader {
 
     /// Connects to the archivist observer.cmx and returns inspect data associated with the given
     /// component under the relative realm path given.
-    pub async fn get(self) -> Result<Vec<InspectSchema>, Error> {
+    pub async fn get(self) -> Result<Vec<InspectData>, Error> {
         let raw_json = self.get_raw_json().await?;
-        let result: Vec<InspectSchema> = serde_json::from_value(raw_json)?;
+        let result: Vec<InspectData> = serde_json::from_value(raw_json)?;
         Ok(result)
     }
 
@@ -247,7 +247,7 @@ mod tests {
     use {
         super::*,
         anyhow::format_err,
-        diagnostics_data::Schema,
+        diagnostics_data::Data,
         fidl_fuchsia_diagnostics as fdiagnostics,
         fidl_fuchsia_sys::ComponentControllerEvent,
         fuchsia_component::{
@@ -393,7 +393,7 @@ mod tests {
                                             continue;
                                         }
                                         called = true;
-                                        let result = Schema::for_inspect(
+                                        let result = Data::for_inspect(
                                             "moniker",
                                             Some(NodeHierarchy::new(
                                                 "root",

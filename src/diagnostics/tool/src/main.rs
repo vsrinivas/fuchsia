@@ -3,7 +3,7 @@
 // // found in the LICENSE file.
 use {
     anyhow::Error,
-    diagnostics_data::InspectSchema,
+    diagnostics_data::InspectData,
     difference::{
         self,
         Difference::{Add, Rem, Same},
@@ -180,9 +180,9 @@ impl Output {
 }
 
 fn filter_json_schema_by_selectors(
-    mut schema: InspectSchema,
+    mut schema: InspectData,
     selector_vec: &Vec<Arc<Selector>>,
-) -> Option<InspectSchema> {
+) -> Option<InspectData> {
     // A failure here implies a malformed bugreport. We want to panic.
     let moniker = selectors::parse_path_to_moniker(&schema.moniker)
         .expect("Bugreport contained an unparsable path.");
@@ -259,7 +259,7 @@ fn filter_json_schema_by_selectors(
 /// or an Error.
 fn filter_data_to_lines(
     selector_file: &str,
-    data: &[InspectSchema],
+    data: &[InspectData],
     requested_name_opt: &Option<String>,
 ) -> Result<Vec<Line>, Error> {
     let selector_vec: Vec<Arc<Selector>> =
@@ -270,7 +270,7 @@ fn filter_data_to_lines(
 
     // Filter the source data that we diff against to only contain the component
     // of interest.
-    let mut diffable_source: Vec<InspectSchema> = match requested_name_opt {
+    let mut diffable_source: Vec<InspectData> = match requested_name_opt {
         Some(requested_name) => data
             .into_iter()
             .cloned()
@@ -286,20 +286,20 @@ fn filter_data_to_lines(
         None => data.to_vec(),
     };
 
-    let mut filtered_node_hierarchies: Vec<InspectSchema> = diffable_source
+    let mut filtered_node_hierarchies: Vec<InspectData> = diffable_source
         .clone()
         .into_iter()
         .filter_map(|schema| filter_json_schema_by_selectors(schema, &selector_vec))
         .collect();
 
-    let moniker_cmp = |a: &InspectSchema, b: &InspectSchema| {
+    let moniker_cmp = |a: &InspectData, b: &InspectData| {
         a.moniker.partial_cmp(&b.moniker).expect("schema comparison")
     };
 
     diffable_source.sort_by(moniker_cmp);
     filtered_node_hierarchies.sort_by(moniker_cmp);
 
-    let sort_payload = |schema: &mut InspectSchema| match &mut schema.payload {
+    let sort_payload = |schema: &mut InspectData| match &mut schema.payload {
         Some(payload) => {
             payload.sort();
         }
@@ -348,7 +348,7 @@ fn filter_data_to_lines(
 }
 
 fn generate_selectors<'a>(
-    data: Vec<InspectSchema>,
+    data: Vec<InspectData>,
     component_name: Option<String>,
 ) -> Result<String, Error> {
     struct MatchedHierarchy {
@@ -420,7 +420,7 @@ fn generate_selectors<'a>(
 }
 
 fn interactive_apply(
-    data: Vec<InspectSchema>,
+    data: Vec<InspectData>,
     selector_file: &str,
     component_name: Option<String>,
 ) -> Result<(), Error> {
@@ -486,7 +486,7 @@ fn main() -> Result<(), Error> {
 
     let filename = &opts.bugreport;
 
-    let data: Vec<InspectSchema> = serde_json::from_str(
+    let data: Vec<InspectData> = serde_json::from_str(
         &read_to_string(filename).expect(&format!("Failed to read {} ", filename)),
     )
     .expect(&format!("Failed to parse {} as JSON", filename));
@@ -514,7 +514,7 @@ mod tests {
 
     #[test]
     fn generate_selectors_test() {
-        let schemas: Vec<InspectSchema> =
+        let schemas: Vec<InspectData> =
             serde_json::from_value(get_v1_json_dump()).expect("schemas");
 
         let named_selector_string =
@@ -557,7 +557,7 @@ mod tests {
             .write_all(selector_string.as_bytes())
             .expect("writing selectors to file should be fine...");
 
-        let schemas: Vec<InspectSchema> =
+        let schemas: Vec<InspectData> =
             serde_json::from_value(source_hierarchy).expect("load schemas");
         let filtered_data_string = filter_data_to_lines(
             &selector_path.path().to_string_lossy(),
@@ -613,7 +613,7 @@ mod tests {
         selector_path
             .write_all(selector.as_bytes())
             .expect("writing selectors to file should be fine...");
-        let mut schemas: Vec<InspectSchema> =
+        let mut schemas: Vec<InspectData> =
             serde_json::from_value(trailing_comma_hierarchy).expect("ok");
         for schema in schemas.iter_mut() {
             if let Some(hierarchy) = &mut schema.payload {

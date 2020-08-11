@@ -10,7 +10,7 @@ use {
     anyhow::Context,
     argh::FromArgs,
     async_trait::async_trait,
-    diagnostics_data::{LifecycleSchema, LifecycleType},
+    diagnostics_data::{LifecycleData, LifecycleType},
     fidl_fuchsia_diagnostics::{
         ArchiveAccessorMarker, BatchIteratorMarker, ClientSelectorConfiguration, DataType, Format,
         FormattedContent, StreamMode, StreamParameters,
@@ -136,7 +136,7 @@ async fn get_ready_components() -> Result<Vec<MonikerWithUrl>, Error> {
     Ok(result)
 }
 
-async fn get_lifecycle_response() -> Result<Vec<LifecycleSchema>, anyhow::Error> {
+async fn get_lifecycle_response() -> Result<Vec<LifecycleData>, anyhow::Error> {
     // TODO(fxbug.dev/55138): refactor into DiagnosticsDataFetcher
     let archive =
         client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?;
@@ -162,7 +162,7 @@ async fn get_lifecycle_response() -> Result<Vec<LifecycleSchema>, anyhow::Error>
                     let mut buf = vec![0; data.size as usize];
                     data.vmo.read(&mut buf, 0).context("reading vmo")?;
                     let hierarchy_json = std::str::from_utf8(&buf).unwrap();
-                    let output: LifecycleSchema =
+                    let output: LifecycleData =
                         serde_json::from_str(&hierarchy_json).context("valid json")?;
                     result.push(output);
                 }

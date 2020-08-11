@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    diagnostics_data::InspectSchema,
+    diagnostics_data::InspectData,
     fuchsia_inspect::reader::{ArrayContent, NodeHierarchy, Property},
     nom::HexDisplay,
     num_traits::Bounded,
@@ -21,7 +21,7 @@ pub fn format(path: &str, node_hierarchy: NodeHierarchy) -> String {
     format!("{}:\n{}", path, result)
 }
 
-pub fn format_schema(schema: InspectSchema) -> String {
+pub fn format_schema(schema: InspectData) -> String {
     let mut result = format!("{}:\n", schema.moniker);
 
     result.push_str("  metadata:\n");
