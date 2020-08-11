@@ -261,25 +261,9 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
 
 void TimerQueue::PreemptReset(zx_time_t deadline) {
   DEBUG_ASSERT(arch_ints_disabled());
-
-  cpu_num_t cpu = arch_curr_cpu_num();
-
-  LTRACEF("preempt timer cpu %u deadline %" PRIi64 "\n", cpu, deadline);
-
+  LTRACEF("preempt timer cpu %u deadline %" PRIi64 "\n", arch_curr_cpu_num(), deadline);
   preempt_timer_deadline_ = deadline;
-
   UpdatePlatformTimer(deadline);
-}
-
-void TimerQueue::PreemptCancel() {
-  DEBUG_ASSERT(arch_ints_disabled());
-
-  preempt_timer_deadline_ = ZX_TIME_INFINITE;
-
-  // Note, we're not updating the platform timer. It's entirely possible the timer queue is empty
-  // and the preemption timer is the only reason the platform timer is set. To know that, we'd
-  // need to acquire a lock and look at the queue. Rather than pay that cost, leave the platform
-  // timer as is and expect the recipient to handle spurious wakeups.
 }
 
 bool Timer::Cancel() {

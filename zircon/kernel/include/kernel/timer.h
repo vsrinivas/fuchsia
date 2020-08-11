@@ -110,13 +110,12 @@ class Timer : public fbl::DoublyLinkedListable<Timer*, fbl::NodeOptions::AllowRe
 // Note: A preemption timer may fire even after it has been canceled.
 class TimerQueue {
  public:
-  // Set/reset the preemption timer.
+  // Set/reset/cancel the preemption timer.
   //
-  // When the preemption timer fires, Scheduler::TimerTick is called.
+  // When the preemption timer fires, Scheduler::TimerTick is called. Set the
+  // deadline to ZX_TIME_INFINITE to cancel the preemption timer.
+  // Scheduler::TimerTick may be called spuriously after cancellation.
   void PreemptReset(zx_time_t deadline);
-
-  // Cancel the preemption timer.
-  void PreemptCancel();
 
   // Returns true if the preemption deadline is set and will definitely fire in
   // the future. A false value does not definitively mean the preempt timer will

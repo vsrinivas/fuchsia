@@ -816,13 +816,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
     // If there are no tasks to run in the future, disable the preemption timer.
     // Otherwise, set the preemption time to the earliest eligible time.
-    if (deadline_run_queue_.is_empty()) {
-      percpu::Get(current_cpu).timer_queue.PreemptCancel();
-    } else {
-      const auto& earliest_thread = deadline_run_queue_.front();
-      absolute_deadline_ns_ = earliest_thread.scheduler_state().start_time_;
-      percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
-    }
+    absolute_deadline_ns_ = GetNextEligibleTime();
+    percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
   } else if (timeslice_expired || next_thread != current_thread) {
     LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{"next_slice: now,abs"_stringref};
 
