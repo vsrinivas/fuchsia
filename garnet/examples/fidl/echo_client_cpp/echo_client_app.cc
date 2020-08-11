@@ -4,8 +4,6 @@
 
 #include "echo_client_app.h"
 
-#include <lib/sys/cpp/component_context.h>
-
 namespace echo {
 
 EchoClientApp::EchoClientApp()

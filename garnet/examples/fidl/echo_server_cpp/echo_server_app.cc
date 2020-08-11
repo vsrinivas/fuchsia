@@ -4,8 +4,6 @@
 
 #include "echo_server_app.h"
 
-#include <lib/sys/cpp/component_context.h>
-
 namespace echo {
 
 EchoServer::EchoServer(bool quiet) : quiet_(quiet) {}
