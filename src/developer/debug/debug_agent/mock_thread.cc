@@ -16,4 +16,15 @@ MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid)
 
 MockThread::~MockThread() {}
 
+void MockThread::SendException(uint64_t address, debug_ipc::ExceptionType type) {
+  GeneralRegisters regs;
+  regs.set_ip(address);
+  mock_thread_handle().SetGeneralRegisters(regs);
+
+  mock_thread_handle().set_state(
+      ThreadHandle::State(debug_ipc::ThreadRecord::BlockedReason::kException));
+
+  OnException(std::make_unique<MockExceptionHandle>(koid(), type));
+}
+
 }  // namespace debug_agent

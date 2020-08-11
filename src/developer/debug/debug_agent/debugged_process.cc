@@ -601,6 +601,11 @@ void DebuggedProcess::OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTable
   }
 }
 
+void DebuggedProcess::InjectThreadForTest(std::unique_ptr<DebuggedThread> thread) {
+  zx_koid_t koid = thread->koid();
+  threads_[koid] = std::move(thread);
+}
+
 void DebuggedProcess::ClientSuspendAllThreads() {
   // Issue the suspension order for all the threads.
   for (auto& [thread_koid, thread] : threads_) {

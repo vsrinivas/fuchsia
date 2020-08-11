@@ -236,6 +236,9 @@ class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
 // - In between 16 bits is the argument to the BRK instruction (in this case zero).
 const BreakInstructionType kBreakInstruction = 0xd4200000;
 
+// ARM reports the exception for the exception instruction itself.
+const int64_t kExceptionOffsetForSoftwareBreakpoint = 0;
+
 ::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kArm64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
@@ -426,11 +429,6 @@ debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in) 
   record.arch.arm64.far = in.context.arch.u.arm_64.far;
 
   return record;
-}
-
-uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
-  // ARM reports the exception for the exception instruction itself.
-  return exception_addr;
 }
 
 uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {

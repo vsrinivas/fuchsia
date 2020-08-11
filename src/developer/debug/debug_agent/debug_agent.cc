@@ -113,9 +113,14 @@ void DebugAgent::RemoveDebuggedJob(zx_koid_t job_koid) {
     jobs_.erase(found);
 }
 
+Breakpoint* DebugAgent::GetBreakpoint(uint32_t breakpoint_id) {
+  if (auto found = breakpoints_.find(breakpoint_id); found != breakpoints_.end())
+    return &found->second;
+  return nullptr;
+}
+
 void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
-  auto found = breakpoints_.find(breakpoint_id);
-  if (found != breakpoints_.end())
+  if (auto found = breakpoints_.find(breakpoint_id); found != breakpoints_.end())
     breakpoints_.erase(found);
 }
 

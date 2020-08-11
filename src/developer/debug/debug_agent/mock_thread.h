@@ -26,6 +26,10 @@ class MockThread : public DebuggedThread {
   }
 
   bool running() { return !mock_thread_handle().is_suspended() && !in_exception(); }
+
+  // Sets the thread to be in an exception state with the current IP being at the given address.
+  // All other registers will have their default (0) value.
+  void SendException(uint64_t address, debug_ipc::ExceptionType type);
 };
 
 }  // namespace debug_agent

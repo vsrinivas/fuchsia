@@ -16,23 +16,8 @@ MockProcess::~MockProcess() = default;
 MockThread* MockProcess::AddThread(zx_koid_t thread_koid) {
   auto mock_thread = std::make_unique<MockThread>(this, thread_koid);
   MockThread* thread_ptr = mock_thread.get();
-  threads_[thread_koid] = std::move(mock_thread);
+  InjectThreadForTest(std::move(mock_thread));
   return thread_ptr;
-}
-
-DebuggedThread* MockProcess::GetThread(zx_koid_t koid) const {
-  auto it = threads_.find(koid);
-  if (it == threads_.end())
-    return nullptr;
-  return it->second.get();
-}
-
-std::vector<DebuggedThread*> MockProcess::GetThreads() const {
-  std::vector<DebuggedThread*> threads;
-  threads.reserve(threads_.size());
-  for (auto& kv : threads_)
-    threads.emplace_back(kv.second.get());
-  return threads;
 }
 
 }  // namespace debug_agent

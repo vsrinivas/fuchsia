@@ -119,9 +119,7 @@ bool MockThreadHandle::SetDebugRegisters(const DebugRegisters& regs) {
   return true;
 }
 
-void MockThreadHandle::SetSingleStep(bool single_step) {
-  // Not implemented by this mock.
-}
+void MockThreadHandle::SetSingleStep(bool single_step) { single_step_ = single_step; }
 
 std::vector<debug_ipc::Register> MockThreadHandle::ReadRegisters(
     const std::vector<debug_ipc::RegisterCategory>& cats_to_get) const {

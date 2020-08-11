@@ -170,6 +170,7 @@ source_set("test_lib") {
   sources = [
     "local_stream_backend.cc",
     "local_stream_backend.h",
+    "mock_debug_agent_harness.cc",
     "mock_debug_agent_harness.h",
     "mock_exception_handle.h",
     "mock_job_handle.cc",

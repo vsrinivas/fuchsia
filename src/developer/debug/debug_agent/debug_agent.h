@@ -55,6 +55,7 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveDebuggedJob(zx_koid_t job_koid);
 
+  Breakpoint* GetBreakpoint(uint32_t breakpoint_id);
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
   // ProcessStartHandler implementation.
@@ -70,9 +71,6 @@ class DebugAgent : public RemoteAPI,
 
   // Returns the exception handling strategy for a given type.
   debug_ipc::ExceptionStrategy GetExceptionStrategy(debug_ipc::ExceptionType type);
-
- private:
-  FRIEND_TEST(DebugAgentTests, Kill);
 
   // RemoteAPI implementation.
   void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
@@ -118,6 +116,9 @@ class DebugAgent : public RemoteAPI,
                              debug_ipc::LoadInfoHandleTableReply* reply) override;
   void OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
                               debug_ipc::UpdateGlobalSettingsReply* reply) override;
+
+ private:
+  FRIEND_TEST(DebugAgentTests, Kill);
 
   // Breakpoint::ProcessDelegate implementation ----------------------------------------------------
 

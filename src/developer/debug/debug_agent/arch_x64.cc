@@ -192,6 +192,10 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
 
 const BreakInstructionType kBreakInstruction = 0xCC;
 
+// An X86 exception is 1 byte and a breakpoint exception is triggered with RIP pointing to the
+// following instruction.
+const int64_t kExceptionOffsetForSoftwareBreakpoint = 1;
+
 ::debug_ipc::Arch GetCurrentArch() { return ::debug_ipc::Arch::kX64; }
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
@@ -423,12 +427,6 @@ debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in) 
   record.arch.x64.cr2 = in.context.arch.u.x86_64.cr2;
 
   return record;
-}
-
-uint64_t BreakpointInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
-  // An X86 exception is 1 byte and a breakpoint exception is triggered with RIP pointing to the
-  // following instruction.
-  return exception_addr - 1;
 }
 
 uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {

@@ -57,6 +57,8 @@ class MockThreadHandle final : public ThreadHandle {
   int suspend_count() const { return *suspend_count_; }
   bool is_suspended() const { return suspend_count() > 0; }
 
+  bool single_step() const { return single_step_; }
+
   // ThreadHandle implementation.
   const zx::thread& GetNativeHandle() const override { return null_handle_; }
   zx::thread& GetNativeHandle() override { return null_handle_; }
@@ -94,6 +96,7 @@ class MockThreadHandle final : public ThreadHandle {
       registers_[static_cast<size_t>(debug_ipc::RegisterCategory::kLast)];
 
   State state_;
+  bool single_step_ = false;
   GeneralRegisters general_registers_;
   DebugRegisters debug_registers_;
 

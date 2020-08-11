@@ -83,13 +83,15 @@ class DebuggedProcess : public ProcessHandleObserver {
   void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
                              debug_ipc::LoadInfoHandleTableReply* reply);
 
+  void InjectThreadForTest(std::unique_ptr<DebuggedThread> thread);
+
   // Synchronously pauses all threads in the process from the perspective of the client. This issues
   // ClientSuspend() on all threads (see that for more on what "client" means).
   void ClientSuspendAllThreads();
 
   // Returns the thread or null if there is no known thread for this koid.
-  virtual DebuggedThread* GetThread(zx_koid_t thread_koid) const;
-  virtual std::vector<DebuggedThread*> GetThreads() const;
+  DebuggedThread* GetThread(zx_koid_t thread_koid) const;
+  std::vector<DebuggedThread*> GetThreads() const;
 
   // Populates the thread map with the current threads for this process.
   // This function does not notify the client of thread start, but rather updates the internal

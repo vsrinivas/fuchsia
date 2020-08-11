@@ -27,13 +27,6 @@ class MockProcess : public DebuggedProcess {
   }
 
   MockThread* AddThread(zx_koid_t koid);
-
-  DebuggedThread* GetThread(zx_koid_t koid) const override;
-
-  std::vector<DebuggedThread*> GetThreads() const override;
-
- private:
-  std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
 };
 
 }  // namespace debug_agent

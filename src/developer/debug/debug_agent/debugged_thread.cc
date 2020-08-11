@@ -143,9 +143,8 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
   FX_NOTREACHED() << "Invalid exception notification type: "
                   << debug_ipc::ExceptionTypeToString(type);
 
-  // The exception was unhandled, so we close it so that the system can run its
-  // course. The destructor would've done it anyway, but being explicit helps
-  // readability.
+  // The exception was unhandled, so we close it so that the system can run its course. The
+  // destructor would've done it anyway, but being explicit helps readability.
   exception_handle_ = nullptr;
 }
 
@@ -197,19 +196,17 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
   }
 
   if (!debug_ipc::ResumeRequest::MakesStep(run_mode_)) {
-    // This could be due to a race where the user was previously single
-    // stepping and then requested a continue or forward before the single
-    // stepping completed. It could also be a breakpoint that was deleted while
-    // in the process of single-stepping over it. In both cases, the
-    // least confusing thing is to resume automatically (since forwarding the
-    // single step exception to the debugged program makes no sense).
+    // This could be due to a race where the user was previously single stepping and then requested
+    // a continue or forward before the single stepping completed. It could also be a breakpoint
+    // that was deleted while in the process of single-stepping over it. In both cases, the least
+    // confusing thing is to resume automatically (since forwarding the single step exception to the
+    // debugged program makes no sense).
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Single step without breakpoint. Continuing.";
     ResumeFromException();
     return;
   }
 
-  // When stepping in a range, automatically continue as long as we're
-  // still in range.
+  // When stepping in a range, automatically continue as long as we're still in range.
   if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
       regs.ip() >= step_in_range_begin_ && regs.ip() < step_in_range_end_) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping in range. Continuing.";
@@ -233,9 +230,9 @@ void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exceptio
   debug_ipc::ExceptionStrategy applied = strategy.value();
   bool handle_now = true;
 
-  // If the strategy is first-chance, then this is the first that we've seen
-  // this exception. Further, if the applied strategy for this type is
-  // second-chance, update and handle it accordingly.
+  // If the strategy is first-chance, then this is the first that we've seen this exception.
+  // Further, if the applied strategy for this type is second-chance, update and handle it
+  // accordingly.
   auto applicable_strategy = debug_agent_->GetExceptionStrategy(exception->type);
   if (strategy.value() == debug_ipc::ExceptionStrategy::kFirstChance &&
       applicable_strategy == debug_ipc::ExceptionStrategy::kSecondChance) {
@@ -279,19 +276,15 @@ void DebuggedThread::HandleSoftwareBreakpoint(debug_ipc::NotifyException* except
 void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* exception,
                                               GeneralRegisters& regs) {
   uint64_t breakpoint_address = arch::BreakpointInstructionForHardwareExceptionAddress(regs.ip());
-  HardwareBreakpoint* found_bp = process_->FindHardwareBreakpoint(breakpoint_address);
-  if (found_bp) {
+  if (HardwareBreakpoint* found_bp = process_->FindHardwareBreakpoint(breakpoint_address)) {
     UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kHardware, found_bp,
                                   exception->hit_breakpoints);
+    // Note: may have deleted found_bp.
   } else {
     // Hit a hw debug exception that doesn't belong to any ProcessBreakpoint. This is probably a
     // race between the removal and the exception handler.
     regs.set_ip(breakpoint_address);
   }
-
-  // The ProcessBreakpoint could've been deleted if it was a one-shot, so must not be derefereced
-  // below this.
-  found_bp = nullptr;
   SendExceptionNotification(exception, regs);
 }
 
@@ -336,8 +329,7 @@ void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* excep
 
   // Keep the thread suspended for the client.
 
-  // TODO(brettw) suspend other threads in the process and other debugged
-  // processes as desired.
+  // TODO(brettw) suspend other threads in the process and other debugged processes as desired.
 
   LogExceptionNotification(FROM_HERE, this, *exception);
 
@@ -433,8 +425,8 @@ debug_ipc::ThreadRecord DebuggedThread::GetThreadRecord(
       regs = thread_handle_->GetGeneralRegisters();  // Note this could still fail.
 
     if (regs) {
-      // Minimal stacks are 2 (current frame and calling one). Full stacks max out at 256 to
-      // prevent edge cases, especially around corrupted stacks.
+      // Minimal stacks are 2 (current frame and calling one). Full stacks max out at 256 to prevent
+      // edge cases, especially around corrupted stacks.
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
@@ -495,18 +487,17 @@ void DebuggedThread::WillDeleteProcessBreakpoint(ProcessBreakpoint* bp) {
 
 DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     GeneralRegisters& regs, std::vector<debug_ipc::BreakpointStats>& hit_breakpoints) {
-  // Get the correct address where the CPU is after hitting a breakpoint
-  // (this is architecture specific).
-  uint64_t breakpoint_address = arch::BreakpointInstructionForSoftwareExceptionAddress(regs.ip());
+  // Get the correct address where the CPU is after hitting a breakpoint (this is
+  // architecture-specific).
+  uint64_t breakpoint_address = regs.ip() - arch::kExceptionOffsetForSoftwareBreakpoint;
 
-  SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address);
-  if (found_bp) {
+  if (SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address)) {
     LogHitBreakpoint(FROM_HERE, this, found_bp, breakpoint_address);
 
     FixSoftwareBreakpointAddress(found_bp, regs);
 
-    // When hitting a breakpoint, we need to check if indeed this exception
-    // should apply to this thread or not.
+    // When hitting a breakpoint, we need to check if indeed this exception should apply to this
+    // thread or not.
     if (!found_bp->ShouldHitThread(koid())) {
       DEBUG_LOG(Thread) << ThreadPreamble(this) << "SW Breakpoint not for me. Ignoring.";
       // The way to go over is to step over the breakpoint as one would over a resume.
@@ -515,10 +506,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     }
 
     UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kSoftware, found_bp, hit_breakpoints);
-
-    // The found_bp could have been deleted if it was a one-shot, so must
-    // not be dereferenced below this.
-    found_bp = nullptr;
+    // Note: may have deleted found_bp!
   } else {
     // Hit a software breakpoint that doesn't correspond to any current breakpoint.
     if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
@@ -575,10 +563,10 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
 
   process_breakpoint->OnHit(exception_type, &hit_breakpoints);
 
-  // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
-  // (some one-shot, some not) referring to the current ProcessBreakpoint,
-  // this operation could delete the ProcessBreakpoint or it could not. If it
-  // does, our observer will be told and current_breakpoint_ will be cleared.
+  // Delete any one-shot breakpoints. Since there can be multiple Breakpoints (some one-shot, some
+  // not) referring to the current ProcessBreakpoint, this operation could delete the
+  // ProcessBreakpoint or it could not. If it does, our observer will be told and
+  // current_breakpoint_ will be cleared.
   for (const auto& stats : hit_breakpoints) {
     if (stats.should_delete)
       process_->debug_agent()->RemoveBreakpoint(stats.id);
