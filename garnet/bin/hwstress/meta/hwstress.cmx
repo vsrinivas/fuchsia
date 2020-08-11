@@ -4,7 +4,10 @@
     },
     "sandbox": {
         "dev": [
-            "class",
+            "class/block",
+            "class/light",
+            "class/temperature",
+            "class/thermal",
             "sys"
         ],
         "services": [
