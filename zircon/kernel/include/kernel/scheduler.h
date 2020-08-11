@@ -258,6 +258,9 @@ class Scheduler {
   // shadow variable for cross-CPU readers.
   inline void UpdateTotalDeadlineUtilization(SchedUtilization delta) TA_REQ(thread_lock);
 
+  // Update trace counters which track the total number of runnable threads for a CPU
+  inline void TraceTotalRunnableThreads() const TA_REQ(thread_lock);
+
   // Traits type to adapt the WAVLTree to Thread with node state in the
   // scheduler_state member.
   struct TaskTraits {

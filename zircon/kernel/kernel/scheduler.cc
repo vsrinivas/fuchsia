@@ -182,6 +182,11 @@ inline void Scheduler::UpdateTotalExpectedRuntime(SchedDuration delta) {
                        this_cpu());
 }
 
+inline void Scheduler::TraceTotalRunnableThreads() const {
+  LOCAL_KTRACE_COUNTER(KTRACE_COMMON, "Run-Q Len",
+                       runnable_fair_task_count_ + runnable_deadline_task_count_, this_cpu());
+}
+
 inline void Scheduler::UpdateTotalDeadlineUtilization(SchedUtilization delta) {
   total_deadline_utilization_ += delta;
   exported_total_deadline_utilization_ = total_deadline_utilization_;
@@ -1167,6 +1172,7 @@ void Scheduler::Insert(SchedTime now, Thread* thread) {
       DEBUG_ASSERT(runnable_deadline_task_count_ != 0);
     }
 
+    TraceTotalRunnableThreads();
     QueueThread(thread, Placement::Insertion, now);
   }
 }
@@ -1204,6 +1210,7 @@ void Scheduler::Remove(Thread* thread) {
       DEBUG_ASSERT(runnable_deadline_task_count_ > 0);
       runnable_deadline_task_count_--;
     }
+    TraceTotalRunnableThreads();
   }
 }
 
