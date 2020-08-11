@@ -36,7 +36,9 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/diagnostics.rs",
+    "src/diagnostics/cobalt.rs",
+    "src/diagnostics/inspect.rs",
+    "src/diagnostics/mod.rs",
     "src/main.rs",
   ]
 

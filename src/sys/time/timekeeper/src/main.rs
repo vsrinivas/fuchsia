@@ -7,7 +7,7 @@
 //! `timekeeper` is responsible for external time synchronization in Fuchsia.
 
 use {
-    crate::diagnostics::CobaltMetrics,
+    crate::diagnostics::CobaltDiagnostics,
     anyhow::{Context as _, Error},
     chrono::prelude::*,
     fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet,
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Error> {
     diagnostics::INSPECTOR.serve(&mut fs)?;
 
     info!("initializing Cobalt");
-    let cobalt = diagnostics::CobaltMetrics::new();
+    let cobalt = CobaltDiagnostics::new();
     let source = initial_utc_source(&*utc_clock);
     let notifier = Notifier::new(source);
 
@@ -106,7 +106,7 @@ async fn maintain_utc(
     notifs: Notifier,
     time_service: ftz::TimeServiceProxy,
     netstack_service: fnetstack::NetstackProxy,
-    mut cobalt: CobaltMetrics,
+    mut cobalt: CobaltDiagnostics,
 ) {
     info!("record the state at initialization.");
     match initial_utc_source(&*utc_clock) {
@@ -297,7 +297,7 @@ mod tests {
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
 
         diagnostics::init(Arc::clone(&clock));
-        let (cobalt_metrics, mut cobalt_receiver) = CobaltMetrics::new_mock();
+        let (cobalt_metrics, mut cobalt_receiver) = CobaltDiagnostics::new_mock();
         info!("starting single notification test");
 
         let (utc, utc_requests) =
