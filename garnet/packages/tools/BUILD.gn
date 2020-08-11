@@ -24,8 +24,6 @@ group("all") {
   testonly = true
   public_deps = [
     ":scenic",
-    "//garnet/go/src/fidlmerge:host",
-    "//src/graphics/lib/magma:magma-tools",
   ]
 }
 
