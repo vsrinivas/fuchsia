@@ -91,6 +91,19 @@ constexpr wifi_config_t wifi_config = {
             {IOVAR_CMD_TYPE, {{BRCMF_C_SET_FAKEFRAG}}, 1},
             {IOVAR_LIST_END_TYPE, {{0}}, 0},
         },
+#if (IS_LUIS)
+    .cc_table =
+        {
+            {"WW", 2},   {"AU", 924}, {"CA", 902}, {"US", 844}, {"GB", 890}, {"BE", 890},
+            {"BG", 890}, {"CZ", 890}, {"DK", 890}, {"DE", 890}, {"EE", 890}, {"IE", 890},
+            {"GR", 890}, {"ES", 890}, {"FR", 890}, {"HR", 890}, {"IT", 890}, {"CY", 890},
+            {"LV", 890}, {"LT", 890}, {"LU", 890}, {"HU", 890}, {"MT", 890}, {"NL", 890},
+            {"AT", 890}, {"PL", 890}, {"PT", 890}, {"RO", 890}, {"SI", 890}, {"SK", 890},
+            {"FI", 890}, {"SE", 890}, {"EL", 890}, {"IS", 890}, {"LI", 890}, {"TR", 890},
+            {"CH", 890}, {"NO", 890}, {"JP", 3},   {"KR", 3},   {"TW", 3},   {"IN", 3},
+            {"SG", 3},   {"MX", 3},   {"NZ", 3},   {"", 0},
+        },
+#else
     .cc_table =
         {
             {"WW", 1},   {"AU", 923}, {"CA", 901}, {"US", 843}, {"GB", 889}, {"BE", 889},
@@ -102,6 +115,7 @@ constexpr wifi_config_t wifi_config = {
             {"CH", 889}, {"NO", 889}, {"JP", 2},   {"KR", 2},   {"TW", 2},   {"IN", 2},
             {"SG", 2},   {"MX", 2},   {"NZ", 2},   {"", 0},
         },
+#endif
 };
 
 constexpr pbus_metadata_t sd_emmc_metadata[] = {

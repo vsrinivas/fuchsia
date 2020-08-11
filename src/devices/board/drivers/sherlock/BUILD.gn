@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/config/fuchsia/rules.gni")
 
 config("factory") {
@@ -23,6 +24,12 @@ template("sherlock_driver") {
     }
     if (use_factory) {
       configs += [ ":factory" ]
+    }
+
+    # Sherlock board is used for both sherlock and luis. This define helps
+    # tweak necessary parameters.
+    if (board_name == "luis") {
+      defines = [ "IS_LUIS=1" ]
     }
 
     sources = [
