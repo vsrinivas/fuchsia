@@ -12,7 +12,11 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+  ]
 }
 
 source_set("lib") {

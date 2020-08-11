@@ -9,9 +9,6 @@
 #include <fuchsia/factory/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/fidl/cpp/binding.h>
-#include "lib/fidl/cpp/interface_request.h"
 
 namespace camera {
 
@@ -53,7 +50,8 @@ class FactoryServer : public fuchsia::factory::camera::Controller {
   void DisplayToScreen(uint32_t stream_index, DisplayToScreenCallback cb) override {}
   void BindIspChannel(fidl::InterfaceRequest<fuchsia::factory::camera::Isp> isp_req) override {}
 
-  fuchsia::factory::camera::IspSyncPtr isp_;
+  async::Loop loop_;
+  fuchsia::factory::camera::IspPtr isp_;
   bool streaming_ = false;
 };
 

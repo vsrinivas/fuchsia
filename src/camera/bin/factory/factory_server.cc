@@ -7,6 +7,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <iostream>
+
 #include <fbl/unique_fd.h>
 #include <src/lib/files/file.h>
 
@@ -16,12 +18,15 @@ namespace {
 const char* kDevicePath = "/dev/class/isp/000";
 }  // namespace
 
-FactoryServer::FactoryServer() {}
+FactoryServer::FactoryServer() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 FactoryServer::~FactoryServer() {
+  loop_.RunUntilIdle();
   if (isp_) {
     isp_.Unbind();
   }
+  loop_.Quit();
+  loop_.JoinThreads();
 }
 
 fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create() {
@@ -42,55 +47,51 @@ fit::result<std::unique_ptr<FactoryServer>, zx_status_t> FactoryServer::Create()
     return fit::error(ZX_ERR_UNAVAILABLE);
   }
 
-  server->isp_.Bind(std::move(channel));
+  server->isp_.Bind(std::move(channel), server->loop_.dispatcher());
 
   return fit::ok(std::move(server));
 }
 
 void FactoryServer::GetOtpData() {
-  zx_status_t status;
-  zx::vmo vmo;
-  isp_->GetOtpData(&status, &vmo);
-  if (status != ZX_OK) {
-    return;
-  }
-  size_t vmo_size;
-  vmo.get_size(&vmo_size);
-  std::vector<uint8_t> buf;
-  vmo.read(buf.data(), 0, vmo_size);
-  for (auto byte : buf) {
-    FX_LOGS(INFO) << byte;
-  }
+  isp_->GetOtpData([](zx_status_t get_otp_status, size_t byte_count, zx::vmo otp_data) {
+    if (get_otp_status != ZX_OK) {
+      return;
+    }
+    uint8_t buf[byte_count];
+    otp_data.read(buf, 0, byte_count);
+    for (auto byte : buf) {
+      std::cout << byte;
+    }
+  });
 }
 
 void FactoryServer::GetSensorTemperature() {
-  zx_status_t status;
-  int32_t temp;
-  isp_->GetSensorTemperature(&status, &temp);
-  if (status != ZX_OK) {
-    return;
-  }
-  FX_LOGS(INFO) << temp;
+  isp_->GetSensorTemperature([](zx_status_t get_sensor_temperature_status, int32_t temperature) {
+    if (get_sensor_temperature_status != ZX_OK) {
+      return;
+    }
+    FX_LOGS(INFO) << temperature;
+  });
 }
 
 void FactoryServer::SetAWBMode(fuchsia::factory::camera::WhiteBalanceMode mode, uint32_t temp) {
-  isp_->SetAWBMode(mode, temp);
+  isp_->SetAWBMode(mode, temp, []() { return; });
 }
 
 void FactoryServer::SetAEMode(fuchsia::factory::camera::ExposureMode mode) {
-  isp_->SetAEMode(mode);
+  isp_->SetAEMode(mode, []() { return; });
 }
 
 void FactoryServer::SetExposure(float integration_time, float analog_gain, float digital_gain) {
-  isp_->SetExposure(integration_time, analog_gain, digital_gain);
+  isp_->SetExposure(integration_time, analog_gain, digital_gain, []() { return; });
 }
 
 void FactoryServer::SetSensorMode(uint32_t mode) {
-  isp_->SetSensorMode(mode);
+  isp_->SetSensorMode(mode, []() { return; });
 }
 
 void FactoryServer::SetTestPatternMode(uint16_t mode) {
-  isp_->SetTestPatternMode(mode);
+  isp_->SetTestPatternMode(mode, []() { return; });
 }
 
 }  // namespace camera

@@ -73,7 +73,7 @@ protocol Isp {
     ///                             unavailable.
     ///                 `ZX_ERR_NOT_SUPPORTED` if the camera module does not have an OTP.
     /// - response `otp_data` A handle to a VMO containing the requested OTP data.
-    GetOtpData() -> (zx.status s, zx.handle:VMO otp_data);
+    GetOtpData() -> (zx.status s, uint64 byte_count, zx.handle:VMO otp_data);
 
     /// Retrieves the sensor's temperature.
     ///
