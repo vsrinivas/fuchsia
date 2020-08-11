@@ -90,9 +90,9 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .observation_store_directory = kObservationStorePath,
 
       .local_aggregate_proto_store_path = kLocalAggregateProtoStorePath,
+      .obs_history_proto_store_path = kObsHistoryProtoStorePath,
       .local_aggregate_store_dir = kLocalAggregationPath,
       .local_aggregate_store_strategy = StorageStrategy::Delayed,
-      .obs_history_proto_store_path = kObsHistoryProtoStorePath,
 
       .target_interval = target_interval,
       .min_interval = min_interval,

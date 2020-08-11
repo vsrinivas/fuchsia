@@ -47,7 +47,6 @@ source_set("test_main") {
   deps = [ "//third_party/googletest:gtest" ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("ap_mlme_tests") {
@@ -68,7 +67,6 @@ executable("ap_mlme_tests") {
     "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
   # TODO(46856): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
@@ -246,7 +244,6 @@ executable("common_tests") {
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 
   # TODO(46856): Fix the leaks and remove this.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]

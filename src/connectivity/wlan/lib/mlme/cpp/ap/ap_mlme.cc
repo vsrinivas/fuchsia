@@ -29,17 +29,17 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
       .get_sme_channel = [](void* mlme) -> zx_handle_t {
         return MLME(mlme)->device_->GetSmeChannelRef();
       },
-      .set_wlan_channel = [](void* mlme, wlan_channel_t chan) -> zx_status_t {
-        return MLME(mlme)->device_->SetChannel(chan);
-      },
       .get_wlan_channel = [](void* mlme) -> wlan_channel_t {
         return MLME(mlme)->device_->GetState()->channel();
       },
-      .get_wlan_info = [](void* mlme) -> wlanmac_info_t {
-        return MLME(mlme)->device_->GetWlanInfo();
+      .set_wlan_channel = [](void* mlme, wlan_channel_t chan) -> zx_status_t {
+        return MLME(mlme)->device_->SetChannel(chan);
       },
       .set_key = [](void* mlme, wlan_key_config_t* key) -> zx_status_t {
         return MLME(mlme)->device_->SetKey(key);
+      },
+      .get_wlan_info = [](void* mlme) -> wlanmac_info_t {
+        return MLME(mlme)->device_->GetWlanInfo();
       },
       .configure_bss = [](void* mlme, wlan_bss_config_t* cfg) -> zx_status_t {
         return MLME(mlme)->device_->ConfigureBss(cfg);

@@ -76,11 +76,11 @@ zx_status_t ClientMlme::Init() {
       .get_sme_channel = [](void* device) -> zx_handle_t {
         return DEVICE(device)->GetSmeChannelRef();
       },
-      .set_wlan_channel = [](void* device, wlan_channel_t chan) -> zx_status_t {
-        return DEVICE(device)->SetChannel(chan);
-      },
       .get_wlan_channel = [](void* device) -> wlan_channel_t {
         return DEVICE(device)->GetState()->channel();
+      },
+      .set_wlan_channel = [](void* device, wlan_channel_t chan) -> zx_status_t {
+        return DEVICE(device)->SetChannel(chan);
       },
       .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
         return DEVICE(device)->SetKey(key);

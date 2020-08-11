@@ -102,7 +102,10 @@ constexpr zx::duration kBeaconPeriod = zx::msec(100);
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
     .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
 
-constexpr wlan_ssid_t kDefaultSsid = {.ssid = "Fuchsia Fake AP", .len = 15};
+constexpr wlan_ssid_t kDefaultSsid = {
+    .len = 15,
+    .ssid = "Fuchsia Fake AP",
+};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 void BeaconTest::ScheduleCall(void (BeaconTest::*fn)(), zx::duration when) {
@@ -182,7 +185,10 @@ constexpr zx::duration kUpdateTime = zx::sec(1);
 constexpr zx::duration kNewBeaconPeriod = zx::msec(42);
 constexpr wlan_channel_t kNewChannel = {
     .primary = 136, .cbw = WLAN_CHANNEL_BANDWIDTH__80, .secondary80 = 0};
-constexpr wlan_ssid_t kNewSsid = {.ssid = "Dumbo", .len = 5};
+constexpr wlan_ssid_t kNewSsid = {
+    .len = 5,
+    .ssid = "Dumbo",
+};
 const common::MacAddr new_bssid({0xcb, 0xa9, 0x87, 0x65, 0x43, 0x21});
 
 void BeaconTest::UpdateBeaconCallback() {

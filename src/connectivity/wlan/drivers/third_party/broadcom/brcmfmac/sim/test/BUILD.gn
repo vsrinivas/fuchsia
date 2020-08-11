@@ -228,7 +228,6 @@ executable("passive_scan_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("active_scan_test") {
@@ -243,7 +242,6 @@ executable("active_scan_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("cc_test") {
@@ -257,7 +255,6 @@ executable("cc_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 executable("beacon_lost_test") {

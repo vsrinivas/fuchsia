@@ -62,18 +62,18 @@ TEST(GetRatesByChannel, SimpleTest) {
       .bands =
           {
               {
+                  .rates = {10, 20, 30},
                   .supported_channels =
                       {
                           .channels = {1, 2, 3},
                       },
-                  .rates = {10, 20, 30},
               },
               {
+                  .rates = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120},
                   .supported_channels =
                       {
                           .channels = {4, 5, 6, 7},
                       },
-                  .rates = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120},
               },
           },
       .bands_count = 2,

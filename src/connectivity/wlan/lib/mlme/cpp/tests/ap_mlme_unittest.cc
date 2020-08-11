@@ -748,7 +748,10 @@ TEST_F(ApInfraBssTest, PowerSaving_AfterControlledPortOpens) {
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
   auto pkt = std::move(*device.wlan_queue.begin());
   ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload,
-                                  {.more_data = 1, .protected_frame = 1});
+                                  {
+                                      .protected_frame = 1,
+                                      .more_data = 1,
+                                  });
   pkt = std::move(*(device.wlan_queue.begin() + 1));
   ctx.AssertDataFrameSentToClient(std::move(pkt), payload2, {.protected_frame = 1});
 }
@@ -775,9 +778,16 @@ TEST_F(ApInfraBssTest, PowerSaving_UnprotectedAp) {
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(2));
   auto pkt = std::move(*device.wlan_queue.begin());
   ctx.AssertDataFrameSentToClient(std::move(pkt), kTestPayload,
-                                  {.more_data = 1, .protected_frame = 0});
+                                  {
+                                      .protected_frame = 0,
+                                      .more_data = 1,
+                                  });
   pkt = std::move(*(device.wlan_queue.begin() + 1));
-  ctx.AssertDataFrameSentToClient(std::move(pkt), payload2, {.more_data = 0, .protected_frame = 0});
+  ctx.AssertDataFrameSentToClient(std::move(pkt), payload2,
+                                  {
+                                      .protected_frame = 0,
+                                      .more_data = 0,
+                                  });
 }
 
 TEST_F(ApInfraBssTest, OutboundFramesAreProtectedAfterControlledPortOpens) {

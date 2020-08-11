@@ -99,9 +99,6 @@ source_set("mlme") {
     ]
   }
 
-  public_configs = [
-    ":wlan_mlme_config",
-    "//build/config:Wno-reorder-init-list",
-  ]
+  public_configs = [ ":wlan_mlme_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }

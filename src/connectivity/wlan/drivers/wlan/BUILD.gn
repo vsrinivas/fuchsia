@@ -68,7 +68,6 @@ executable("wlan_minstrel_unittest") {
 
   configs +=
       [ "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_mlme_tests_config" ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 test_package("wlan_drivers_tests") {

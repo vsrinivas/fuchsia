@@ -134,7 +134,6 @@ TEST_F(MinstrelTest, UpdateStats) {
   // All entries except the last one indicates failed attempts.
   // The last entry can be successful or unsuccessful based on .success
   wlan_tx_status_t tx_status{
-      .success = true,
       .tx_status_entry =
           {
               // HT, CBW20, GI 800 ns,
@@ -143,6 +142,7 @@ TEST_F(MinstrelTest, UpdateStats) {
               {14, 1},  // MCS 5, fail
               {13, 1},  // MCS 4, succeed because |.success| is true
           },
+      .success = true,
   };
 
   clock.Set(zx::time(0));
@@ -182,21 +182,23 @@ TEST_F(MinstrelTest, UpdateStats) {
 }
 
 TEST_F(MinstrelTest, HtIsMyFavorite) {
-  wlan_tx_status_t failed_ht_tx_status{.success = false,
-                                       .tx_status_entry = {
-                                           // MCS 8-15 all fail
-                                           {kHtStartIdx + 15, 1},
-                                           {kHtStartIdx + 14, 1},
-                                           {kHtStartIdx + 13, 1},
-                                           {kHtStartIdx + 12, 1},
-                                           {kHtStartIdx + 11, 1},
-                                           {kHtStartIdx + 10, 1},
-                                           {kHtStartIdx + 9, 1},
-                                           {kHtStartIdx + 8, 1},
-                                       }};
+  wlan_tx_status_t failed_ht_tx_status{
+      .tx_status_entry =
+          {
+              // MCS 8-15 all fail
+              {kHtStartIdx + 15, 1},
+              {kHtStartIdx + 14, 1},
+              {kHtStartIdx + 13, 1},
+              {kHtStartIdx + 12, 1},
+              {kHtStartIdx + 11, 1},
+              {kHtStartIdx + 10, 1},
+              {kHtStartIdx + 9, 1},
+              {kHtStartIdx + 8, 1},
+          },
+      .success = false,
+  };
 
   wlan_tx_status_t ht_tx_status{
-      .success = true,
       .tx_status_entry =
           {
               // MCS 1-7 all fail, only MCS 0 succeeds.
@@ -211,15 +213,16 @@ TEST_F(MinstrelTest, HtIsMyFavorite) {
               // < 1 - 0.9f
               {kHtStartIdx + 0, 9},
           },
+      .success = true,
   };
 
   wlan_tx_status_t erp_tx_status{
-      .success = true,
       .tx_status_entry =
           {
               // Highest ERP rate with success probability 100% == (1/1)
               {kErpStartIdx + kErpNumTxVector - 1, 1},
           },
+      .success = true,
   };
 
   clock.Set(zx::time(0));
@@ -258,13 +261,13 @@ TEST_F(MinstrelTest, AddMissingTxVector) {
   minstrel_.AddPeer(assoc_ctx_ht_);
 
   wlan_tx_status_t tx_status{
-      .success = true,
       .tx_status_entry =
           {
               // ERP, CBW20, GI 800 ns,
               {kErpStartIdx + kErpNumTxVector - 1, 1},  // MCS 7, 108, non-present, fail
               {kErpStartIdx + kErpNumTxVector - 3, 1},  // MCS 5, 72,  present,     succeed
           },
+      .success = true,
   };
   kTestMacAddr.CopyTo(tx_status.peer_addr);
 

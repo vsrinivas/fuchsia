@@ -93,7 +93,10 @@ struct MockDevice : public DeviceInterface {
     info->bands_count = 2;
     info->bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
     info->bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_5GHZ);
-    state->set_channel(wlan_channel_t{.cbw = WLAN_CHANNEL_BANDWIDTH__20, .primary = 1});
+    state->set_channel({
+        .primary = 1,
+        .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+    });
   }
 
   // DeviceInterface implementation.

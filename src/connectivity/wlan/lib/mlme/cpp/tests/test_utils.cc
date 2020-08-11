@@ -64,12 +64,6 @@ wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
   // Construct a base
   wlan_info_band_info_t bi = {
       .band = static_cast<uint8_t>(band),
-      .rates = {12, 24, 48, 54, 96, 108},
-      .supported_channels =
-          {
-              .base_freq = 0,
-              .channels = {0},
-          },
       .ht_supported = true,
       .ht_caps =
           {
@@ -98,6 +92,12 @@ wlan_info_band_info_t FakeBandInfo(wlan_info_band_t band) {
           {
               .vht_capability_info = 0x0f805032,
               .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
+          },
+      .rates = {12, 24, 48, 54, 96, 108},
+      .supported_channels =
+          {
+              .base_freq = 0,
+              .channels = {0},
           },
   };
 

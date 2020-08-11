@@ -38,7 +38,6 @@ driver_module("wlantap_driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
   ]
-  public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
 driver_package("wlantap") {

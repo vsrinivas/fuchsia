@@ -104,10 +104,10 @@ wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, const wlan_tx_packet_t* pkt) {
                                           wlantap::WlanTxInfo{
                                               .tx_flags = pkt->info.tx_flags,
                                               .valid_fields = pkt->info.valid_fields,
+                                              .tx_vector_idx = pkt->info.tx_vector_idx,
                                               .phy = pkt->info.phy,
                                               .cbw = pkt->info.cbw,
                                               .mcs = pkt->info.mcs,
-                                              .tx_vector_idx = pkt->info.tx_vector_idx,
                                           }},
   };
   auto& data = tx_args.packet.data;
@@ -390,9 +390,11 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       return;
     }
     user_binding_.events().ConfigureBss({.wlanmac_id = wlanmac_id,
-                                         .config = {.bss_type = config->bss_type,
-                                                    .bssid = ToFidlArray(config->bssid),
-                                                    .remote = config->remote}});
+                                         .config = {
+                                             .bssid = ToFidlArray(config->bssid),
+                                             .bss_type = config->bss_type,
+                                             .remote = config->remote,
+                                         }});
     zxlogf(INFO, "%s: WlantapMacConfigureBss done", name_.c_str());
   }
 

@@ -219,8 +219,8 @@ TEST_P(ConvertNoiseFloorHistogramTest, ToFidlHistogram) {
               .freq = WLANIF_ANTENNA_FREQ_ANTENNA_5_G,
               .index = expected_antenna_index,
           },
-      .noise_floor_samples_count = samples_input.size(),
       .noise_floor_samples_list = samples_input.data(),
+      .noise_floor_samples_count = samples_input.size(),
       .invalid_samples = expected_invalid_samples,
   };
 
@@ -290,8 +290,8 @@ TEST_P(ConvertRssiHistogramTest, ToFidlHistogram) {
               .freq = WLANIF_ANTENNA_FREQ_ANTENNA_2_G,
               .index = expected_antenna_index,
           },
-      .rssi_samples_count = samples_input.size(),
       .rssi_samples_list = samples_input.data(),
+      .rssi_samples_count = samples_input.size(),
       .invalid_samples = expected_invalid_samples,
   };
 
@@ -360,8 +360,8 @@ TEST_P(ConvertRxRateIndexHistogramTest, ToFidlHistogram) {
               .freq = WLANIF_ANTENNA_FREQ_ANTENNA_2_G,
               .index = expected_antenna_index,
           },
-      .rx_rate_index_samples_count = samples_input.size(),
       .rx_rate_index_samples_list = samples_input.data(),
+      .rx_rate_index_samples_count = samples_input.size(),
       .invalid_samples = expected_invalid_samples,
   };
 
@@ -431,8 +431,8 @@ TEST_P(ConvertSnrHistogramTest, ToFidlHistogram) {
               .freq = WLANIF_ANTENNA_FREQ_ANTENNA_2_G,
               .index = expected_antenna_index,
           },
-      .snr_samples_count = samples_input.size(),
       .snr_samples_list = samples_input.data(),
+      .snr_samples_count = samples_input.size(),
       .invalid_samples = expected_invalid_samples,
   };
 

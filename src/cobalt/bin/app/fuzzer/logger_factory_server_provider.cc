@@ -50,10 +50,11 @@ cobalt::CobaltConfig cfg = {
     .initial_interval = std::chrono::seconds(10),
 
     .target_pipeline = std::make_unique<cobalt::LocalPipeline>(),
-    .global_registry = ToRegistry(cobalt::Base64Decode(cobalt::logger::kConfig)),
 
     .api_key = "",
     .client_secret = cobalt::encoder::ClientSecret::GenerateNewSecret(),
+
+    .global_registry = ToRegistry(cobalt::Base64Decode(cobalt::logger::kConfig)),
 
     .local_aggregation_backfill_days = 4,
 };
