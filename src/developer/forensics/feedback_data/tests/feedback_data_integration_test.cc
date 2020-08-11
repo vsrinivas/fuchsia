@@ -41,16 +41,16 @@ namespace feedback_data {
 namespace {
 
 using fuchsia::feedback::Attachment;
-using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::ComponentDataRegisterSyncPtr;
 using fuchsia::feedback::DataProviderSyncPtr;
 using fuchsia::feedback::DeviceIdProvider_GetId_Result;
 using fuchsia::feedback::DeviceIdProviderSyncPtr;
-using fuchsia::feedback::GetBugreportParameters;
+using fuchsia::feedback::GetSnapshotParameters;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::LastReboot;
 using fuchsia::feedback::LastRebootInfoProviderPtr;
 using fuchsia::feedback::Screenshot;
+using fuchsia::feedback::Snapshot;
 using fuchsia::hwinfo::BoardInfo;
 using fuchsia::hwinfo::BoardPtr;
 using fuchsia::hwinfo::ProductInfo;
@@ -264,8 +264,8 @@ constexpr char kInspectJsonSchema[] = R"({
   "uniqueItems": true
 })";
 
-TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
-  // We make sure the components serving the services GetBugreport() connects to are up and running.
+TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
+  // We make sure the components serving the services GetSnapshot() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
@@ -275,42 +275,42 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
 
-  Bugreport bugreport;
-  ASSERT_EQ(data_provider->GetBugreport(GetBugreportParameters(), &bugreport), ZX_OK);
+  Snapshot snapshot;
+  ASSERT_EQ(data_provider->GetSnapshot(GetSnapshotParameters(), &snapshot), ZX_OK);
 
   // We cannot expect a particular value for each annotation or attachment because values might
   // depend on which device the test runs (e.g., board name) or what happened prior to running this
   // test (e.g., logs). But we should expect the keys to be present.
-  ASSERT_TRUE(bugreport.has_annotations());
-  EXPECT_THAT(bugreport.annotations(), testing::ElementsAreArray({
-                                           MatchesKey(kAnnotationBuildBoard),
-                                           MatchesKey(kAnnotationBuildIsDebug),
-                                           MatchesKey(kAnnotationBuildLatestCommitDate),
-                                           MatchesKey(kAnnotationBuildProduct),
-                                           MatchesKey(kAnnotationBuildVersion),
-                                           MatchesKey(kAnnotationDeviceBoardName),
-                                           MatchesKey(kAnnotationDeviceFeedbackId),
-                                           MatchesKey(kAnnotationDeviceUptime),
-                                           MatchesKey(kAnnotationDeviceUTCTime),
-                                           MatchesKey(kAnnotationHardwareBoardName),
-                                           MatchesKey(kAnnotationHardwareBoardRevision),
-                                           MatchesKey(kAnnotationHardwareProductLanguage),
-                                           MatchesKey(kAnnotationHardwareProductLocaleList),
-                                           MatchesKey(kAnnotationHardwareProductManufacturer),
-                                           MatchesKey(kAnnotationHardwareProductModel),
-                                           MatchesKey(kAnnotationHardwareProductName),
-                                           MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
-                                           MatchesKey(kAnnotationHardwareProductSKU),
-                                           MatchesKey(kAnnotationSystemLastRebootReason),
-                                           MatchesKey(kAnnotationSystemLastRebootUptime),
-                                           MatchesKey(kAnnotationSystemUpdateChannelCurrent),
-                                           MatchesKey(kAnnotationDebugPoolSize),
-                                       }));
+  ASSERT_TRUE(snapshot.has_annotations());
+  EXPECT_THAT(snapshot.annotations(), testing::ElementsAreArray({
+                                          MatchesKey(kAnnotationBuildBoard),
+                                          MatchesKey(kAnnotationBuildIsDebug),
+                                          MatchesKey(kAnnotationBuildLatestCommitDate),
+                                          MatchesKey(kAnnotationBuildProduct),
+                                          MatchesKey(kAnnotationBuildVersion),
+                                          MatchesKey(kAnnotationDeviceBoardName),
+                                          MatchesKey(kAnnotationDeviceFeedbackId),
+                                          MatchesKey(kAnnotationDeviceUptime),
+                                          MatchesKey(kAnnotationDeviceUTCTime),
+                                          MatchesKey(kAnnotationHardwareBoardName),
+                                          MatchesKey(kAnnotationHardwareBoardRevision),
+                                          MatchesKey(kAnnotationHardwareProductLanguage),
+                                          MatchesKey(kAnnotationHardwareProductLocaleList),
+                                          MatchesKey(kAnnotationHardwareProductManufacturer),
+                                          MatchesKey(kAnnotationHardwareProductModel),
+                                          MatchesKey(kAnnotationHardwareProductName),
+                                          MatchesKey(kAnnotationHardwareProductRegulatoryDomain),
+                                          MatchesKey(kAnnotationHardwareProductSKU),
+                                          MatchesKey(kAnnotationSystemLastRebootReason),
+                                          MatchesKey(kAnnotationSystemLastRebootUptime),
+                                          MatchesKey(kAnnotationSystemUpdateChannelCurrent),
+                                          MatchesKey(kAnnotationDebugPoolSize),
+                                      }));
 
-  ASSERT_TRUE(bugreport.has_bugreport());
-  EXPECT_STREQ(bugreport.bugreport().key.c_str(), kBugreportFilename);
+  ASSERT_TRUE(snapshot.has_archive());
+  EXPECT_STREQ(snapshot.archive().key.c_str(), kSnapshotFilename);
   std::map<std::string, std::string> unpacked_attachments;
-  ASSERT_TRUE(Unpack(bugreport.bugreport().value, &unpacked_attachments));
+  ASSERT_TRUE(Unpack(snapshot.archive().value, &unpacked_attachments));
   ASSERT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
                                         Key(kAttachmentAnnotations),
                                         Key(kAttachmentBuildSnapshot),
@@ -360,8 +360,8 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckKeys) {
   EXPECT_TRUE(has_entry_for_test_app);
 }
 
-TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckCobalt) {
-  // We make sure the components serving the services GetBugreport() connects to are up and running.
+TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckCobalt) {
+  // We make sure the components serving the services GetSnapshot() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
@@ -372,20 +372,20 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_CheckCobalt) {
   DataProviderSyncPtr data_provider;
   environment_services_->Connect(data_provider.NewRequest());
 
-  Bugreport bugreport;
-  ASSERT_EQ(data_provider->GetBugreport(GetBugreportParameters(), &bugreport), ZX_OK);
+  Snapshot snapshot;
+  ASSERT_EQ(data_provider->GetSnapshot(GetSnapshotParameters(), &snapshot), ZX_OK);
 
-  ASSERT_FALSE(bugreport.IsEmpty());
-  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::BugreportGenerationFlow>(
+  ASSERT_FALSE(snapshot.IsEmpty());
+  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::SnapshotGenerationFlow>(
                   /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_ELAPSED_TIME),
               UnorderedElementsAreArray({
-                  cobalt::BugreportGenerationFlow::kSuccess,
+                  cobalt::SnapshotGenerationFlow::kSuccess,
               }));
 }
 
 TEST_F(FeedbackDataIntegrationTest,
-       DataProvider_GetBugreport_NonPlatformAnnotationsFromComponentDataRegister) {
-  // We make sure the components serving the services GetBugreport() connects to are up and running.
+       DataProvider_GetSnapshot_NonPlatformAnnotationsFromComponentDataRegister) {
+  // We make sure the components serving the services GetSnapshot() connects to are up and running.
   WaitForLogger();
   WaitForChannelProvider();
   WaitForInspect();
@@ -406,11 +406,31 @@ TEST_F(FeedbackDataIntegrationTest,
   });
   ASSERT_EQ(data_register->Upsert(std::move(extra_data)), ZX_OK);
 
-  Bugreport bugreport;
-  ASSERT_EQ(data_provider->GetBugreport(GetBugreportParameters(), &bugreport), ZX_OK);
+  Snapshot snapshot;
+  ASSERT_EQ(data_provider->GetSnapshot(GetSnapshotParameters(), &snapshot), ZX_OK);
 
-  ASSERT_TRUE(bugreport.has_annotations());
-  EXPECT_THAT(bugreport.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
+  ASSERT_TRUE(snapshot.has_annotations());
+  EXPECT_THAT(snapshot.annotations(), testing::Contains(MatchesAnnotation("namespace.k", "v")));
+}
+
+// TODO(50926): clean up once no clients calls it.
+TEST_F(FeedbackDataIntegrationTest, DataProvider_GetBugreport_SmokeTest) {
+  // We make sure the components serving the services GetBugreport() connects to are up and running.
+  WaitForLogger();
+  WaitForChannelProvider();
+  WaitForInspect();
+  WaitForBoardProvider();
+  WaitForProductProvider();
+  WaitForLastRebootInfoProvider();
+
+  DataProviderSyncPtr data_provider;
+  environment_services_->Connect(data_provider.NewRequest());
+
+  fuchsia::feedback::Bugreport bugreport;
+  ASSERT_EQ(data_provider->GetBugreport(fuchsia::feedback::GetBugreportParameters(), &bugreport),
+            ZX_OK);
+
+  ASSERT_FALSE(bugreport.IsEmpty());
 }
 
 TEST_F(FeedbackDataIntegrationTest, DeviceIdProvider_GetId_CheckValue) {

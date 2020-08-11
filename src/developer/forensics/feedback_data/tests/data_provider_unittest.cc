@@ -46,9 +46,9 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
-using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
+using fuchsia::feedback::Snapshot;
 using testing::UnorderedElementsAreArray;
 
 const AnnotationKeys kDefaultAnnotations = {
@@ -179,28 +179,28 @@ class DataProviderTest : public UnitTestFixture {
     return out_response;
   }
 
-  Bugreport GetBugreport(zx::duration bugreport_flow_duration = kDefaultBugReportFlowDuration) {
+  Snapshot GetSnapshot(zx::duration snapshot_flow_duration = kDefaultBugReportFlowDuration) {
     FX_CHECK(data_provider_ && clock_);
 
-    Bugreport bugreport;
+    Snapshot snapshot;
 
     // We can set |clock_|'s start and end times because the call to start the timer happens
     // independently of the loop while the call to end it happens in a task that is posted on the
     // loop. So, as long the end time is set before the loop is run, a non-zero duration will be
     // recorded.
     clock_->Set(zx::time(0));
-    data_provider_->GetBugreport(fuchsia::feedback::GetBugreportParameters(),
-                                 [&bugreport](Bugreport res) { bugreport = std::move(res); });
-    clock_->Set(zx::time(0) + bugreport_flow_duration);
+    data_provider_->GetSnapshot(fuchsia::feedback::GetSnapshotParameters(),
+                                [&snapshot](Snapshot res) { snapshot = std::move(res); });
+    clock_->Set(zx::time(0) + snapshot_flow_duration);
     RunLoopUntilIdle();
-    return bugreport;
+    return snapshot;
   }
 
-  std::map<std::string, std::string> UnpackBugreport(const Bugreport& bugreport) {
-    FX_CHECK(bugreport.has_bugreport());
-    FX_CHECK(bugreport.bugreport().key == kBugreportFilename);
+  std::map<std::string, std::string> UnpackSnapshot(const Snapshot& snapshot) {
+    FX_CHECK(snapshot.has_archive());
+    FX_CHECK(snapshot.archive().key == kSnapshotFilename);
     std::map<std::string, std::string> unpacked_attachments;
-    FX_CHECK(Unpack(bugreport.bugreport().value, &unpacked_attachments));
+    FX_CHECK(Unpack(snapshot.archive().value, &unpacked_attachments));
     return unpacked_attachments;
   }
 
@@ -327,32 +327,32 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
   }
 }
 
-TEST_F(DataProviderTest, GetBugreport_SmokeTest) {
+TEST_F(DataProviderTest, GetSnapshot_SmokeTest) {
   SetUpDataProvider();
 
-  Bugreport bugreport = GetBugreport();
+  Snapshot snapshot = GetSnapshot();
 
   // There is not much we can assert here as no missing annotation nor attachment is fatal and we
   // cannot expect annotations or attachments to be present.
 
-  // If there are annotations, there should also be the bugreport.
-  if (bugreport.has_annotations()) {
-    ASSERT_TRUE(bugreport.has_bugreport());
+  // If there are annotations, there should also be the snapshot.
+  if (snapshot.has_annotations()) {
+    ASSERT_TRUE(snapshot.has_archive());
   }
 
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          cobalt::Event(cobalt::BugreportGenerationFlow::kSuccess,
+                                          cobalt::Event(cobalt::SnapshotGenerationFlow::kSuccess,
                                                         kDefaultBugReportFlowDuration.to_usecs()),
                                       }));
 }
 
-TEST_F(DataProviderTest, GetBugreport_AnnotationsAsAttachment) {
+TEST_F(DataProviderTest, GetSnapshot_AnnotationsAsAttachment) {
   SetUpDataProvider();
 
-  Bugreport bugreport = GetBugreport();
-  auto unpacked_attachments = UnpackBugreport(bugreport);
+  Snapshot snapshot = GetSnapshot();
+  auto unpacked_attachments = UnpackSnapshot(snapshot);
 
-  // There should be an "annotations.json" attachment present in the bugreport.
+  // There should be an "annotations.json" attachment present in the snapshot.
   ASSERT_NE(unpacked_attachments.find(kAttachmentAnnotations), unpacked_attachments.end());
   const std::string annotations_json = unpacked_attachments[kAttachmentAnnotations];
   ASSERT_FALSE(annotations_json.empty());
@@ -404,33 +404,33 @@ TEST_F(DataProviderTest, GetBugreport_AnnotationsAsAttachment) {
   EXPECT_TRUE(json.Accept(validator));
 }
 
-TEST_F(DataProviderTest, GetBugreport_ManifestAsAttachment) {
+TEST_F(DataProviderTest, GetSnapshot_ManifestAsAttachment) {
   SetUpDataProvider();
 
-  Bugreport bugreport = GetBugreport();
-  auto unpacked_attachments = UnpackBugreport(bugreport);
+  Snapshot snapshot = GetSnapshot();
+  auto unpacked_attachments = UnpackSnapshot(snapshot);
 
-  // There should be a "manifest.json" attachment present in the bugreport.
+  // There should be a "manifest.json" attachment present in the snapshot.
   ASSERT_NE(unpacked_attachments.find(kAttachmentManifest), unpacked_attachments.end());
 }
 
-TEST_F(DataProviderTest, GetBugreport_SingleAttachmentOnEmptyAttachmentAllowlist) {
+TEST_F(DataProviderTest, GetSnapshot_SingleAttachmentOnEmptyAttachmentAllowlist) {
   SetUpDataProvider(kDefaultAnnotations, /*attachment_allowlist=*/{});
 
-  Bugreport bugreport = GetBugreport();
-  auto unpacked_attachments = UnpackBugreport(bugreport);
+  Snapshot snapshot = GetSnapshot();
+  auto unpacked_attachments = UnpackSnapshot(snapshot);
   ASSERT_NE(unpacked_attachments.find(kAttachmentAnnotations), unpacked_attachments.end());
 }
 
-TEST_F(DataProviderTest, GetBugreport_NoDataOnEmptyAllowlists) {
+TEST_F(DataProviderTest, GetSnapshot_NoDataOnEmptyAllowlists) {
   SetUpDataProvider(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  Bugreport bugreport = GetBugreport();
-  EXPECT_FALSE(bugreport.has_bugreport());
-  EXPECT_TRUE(bugreport.has_annotations());
-  EXPECT_THAT(bugreport.annotations(), UnorderedElementsAreArray({
-                                           MatchesAnnotation("debug.pool-size", "1"),
-                                       }));
+  Snapshot snapshot = GetSnapshot();
+  EXPECT_FALSE(snapshot.has_archive());
+  EXPECT_TRUE(snapshot.has_annotations());
+  EXPECT_THAT(snapshot.annotations(), UnorderedElementsAreArray({
+                                          MatchesAnnotation("debug.pool-size", "1"),
+                                      }));
 }
 
 }  // namespace

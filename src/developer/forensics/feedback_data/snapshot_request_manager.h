@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_BUGREPORT_REQUEST_MANAGER_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_BUGREPORT_REQUEST_MANAGER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SNAPSHOT_REQUEST_MANAGER_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SNAPSHOT_REQUEST_MANAGER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/zx/time.h>
@@ -17,23 +17,23 @@
 namespace forensics {
 namespace feedback_data {
 
-// Manages the lifetime of requests for bugreports by returning the same bugreport for
+// Manages the lifetime of requests for snapshots by returning the same snapshot for
 // requests that happen within |delta_| time of one another.
-class BugreportRequestManager {
+class SnapshotRequestManager {
  public:
-  BugreportRequestManager(zx::duration delta, std::unique_ptr<timekeeper::Clock> clock);
+  SnapshotRequestManager(zx::duration delta, std::unique_ptr<timekeeper::Clock> clock);
 
-  // Manages a bugreport request, defined by its timeout and callback.
+  // Manages a snapshot request, defined by its timeout and callback.
   //
   // Returns std::nullopt if there is a pending recent similar request for which the manager will
-  // respond with the same bugreport once generated. Otherwise returns a new ID for the client to
-  // use in Respond() once it has generated a bugreport.
+  // respond with the same snapshot once generated. Otherwise returns a new ID for the client to
+  // use in Respond() once it has generated a snapshot.
   std::optional<uint64_t> Manage(
       zx::duration request_timeout,
-      fuchsia::feedback::DataProvider::GetBugreportCallback request_callback);
+      fuchsia::feedback::DataProvider::GetSnapshotCallback request_callback);
 
-  // Returns the same |bugreport| for all callbacks pooled under the same |id|.
-  void Respond(uint64_t id, fuchsia::feedback::Bugreport bugreport);
+  // Returns the same |snapshot| for all callbacks pooled under the same |id|.
+  void Respond(uint64_t id, fuchsia::feedback::Snapshot snapshot);
 
  private:
   struct CallbackPool {
@@ -48,8 +48,8 @@ class BugreportRequestManager {
     // together requests with different timeouts.
     zx::duration request_timeout;
 
-    // All the requests' callbacks that will be called at once when the bugreport is generated.
-    std::vector<fuchsia::feedback::DataProvider::GetBugreportCallback> callbacks;
+    // All the requests' callbacks that will be called at once when the snapshot is generated.
+    std::vector<fuchsia::feedback::DataProvider::GetSnapshotCallback> callbacks;
   };
 
   zx::duration delta_;
@@ -62,4 +62,4 @@ class BugreportRequestManager {
 }  // namespace feedback_data
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_BUGREPORT_REQUEST_MANAGER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_SNAPSHOT_REQUEST_MANAGER_H_

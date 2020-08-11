@@ -31,19 +31,26 @@ namespace forensics {
 namespace feedback_data {
 namespace {
 
-using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
+using fuchsia::feedback::Snapshot;
 
-// Timeout for a single asynchronous piece of data, e.g., syslog collection if the client didn't
+// Timeout for a single asynchronous piece of data, e.g., syslog collection, if the client didn't
 // specify one.
+//
+// 30s seems reasonable to collect everything.
 const zx::duration kDefaultDataTimeout = zx::sec(30);
 
 // Timeout for requesting the screenshot from Scenic.
+//
+// 10 seconds seems reasonable to take a screenshot.
 const zx::duration kScreenshotTimeout = zx::sec(10);
 
-// Delta between bugreport requests that can be pooled together.
-const zx::duration kBugreportRequestPoolingDelta = zx::sec(5);
+// Delta between snapshot requests that can be pooled together.
+//
+// We don't want it to be too high as data would get stale, e.g., logs, and we don't want it to be
+// too low as we wouldn't benefit as much from pooling.
+const zx::duration kSnapshotRequestPoolingDelta = zx::sec(5);
 
 }  // namespace
 
@@ -57,11 +64,28 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
       cobalt_(cobalt),
       datastore_(datastore),
       executor_(dispatcher_),
-      request_manager_(kBugreportRequestPoolingDelta, std::make_unique<timekeeper::SystemClock>()) {
-}
+      request_manager_(kSnapshotRequestPoolingDelta, std::make_unique<timekeeper::SystemClock>()) {}
 
 void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
                                 GetBugreportCallback callback) {
+  fuchsia::feedback::GetSnapshotParameters new_params;
+  if (params.has_collection_timeout_per_data()) {
+    new_params.set_collection_timeout_per_data(params.collection_timeout_per_data());
+  }
+  GetSnapshot(std::move(new_params), [callback = std::move(callback)](Snapshot snapshot) {
+    fuchsia::feedback::Bugreport bugreport;
+    if (snapshot.has_annotations()) {
+      bugreport.set_annotations(snapshot.annotations());
+    }
+    if (snapshot.has_archive()) {
+      bugreport.set_bugreport(std::move(*snapshot.mutable_archive()));
+    }
+    callback(std::move(bugreport));
+  });
+}
+
+void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                               GetSnapshotCallback callback) {
   const zx::duration timeout = (params.has_collection_timeout_per_data())
                                    ? zx::duration(params.collection_timeout_per_data())
                                    : kDefaultDataTimeout;
@@ -78,12 +102,12 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
       ::fit::join_promises(datastore_->GetAnnotations(timeout), datastore_->GetAttachments(timeout))
           .and_then([this](std::tuple<::fit::result<Annotations>, ::fit::result<Attachments>>&
                                annotations_and_attachments) {
-            Bugreport bugreport;
+            Snapshot snapshot;
             std::map<std::string, std::string> attachments;
 
             const auto& annotations_result = std::get<0>(annotations_and_attachments);
             if (annotations_result.is_ok()) {
-              bugreport.set_annotations(ToFeedbackAnnotationVector(annotations_result.value()));
+              snapshot.set_annotations(ToFeedbackAnnotationVector(annotations_result.value()));
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any annotations";
             }
@@ -102,8 +126,8 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
             // We also add the annotations as a single extra attachment.
             // This is useful for clients that surface the annotations differently in the UI
             // but still want all the annotations to be easily downloadable in one file.
-            if (bugreport.has_annotations()) {
-              const auto annotations_json = ToJsonString(bugreport.annotations());
+            if (snapshot.has_annotations()) {
+              const auto annotations_json = ToJsonString(snapshot.annotations());
               if (annotations_json.has_value()) {
                 attachments[kAttachmentAnnotations] = annotations_json.value();
               }
@@ -119,21 +143,21 @@ void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params
             // We bundle the attachments into a single attachment.
             if (!attachments.empty()) {
               fuchsia::feedback::Attachment bundle;
-              bundle.key = kBugreportFilename;
+              bundle.key = kSnapshotFilename;
               if (Archive(attachments, &(bundle.value))) {
-                bugreport.set_bugreport(std::move(bundle));
+                snapshot.set_archive(std::move(bundle));
               }
             }
 
-            return ::fit::ok(std::move(bugreport));
+            return ::fit::ok(std::move(snapshot));
           })
           .then([this, request_reference = request_reference.value(),
-                 timer_id](::fit::result<Bugreport>& result) {
+                 timer_id](::fit::result<Snapshot>& result) {
             if (result.is_error()) {
-              cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kFailure, timer_id);
-              request_manager_.Respond(request_reference, Bugreport());
+              cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kFailure, timer_id);
+              request_manager_.Respond(request_reference, Snapshot());
             } else {
-              cobalt_->LogElapsedTime(cobalt::BugreportGenerationFlow::kSuccess, timer_id);
+              cobalt_->LogElapsedTime(cobalt::SnapshotGenerationFlow::kSuccess, timer_id);
               request_manager_.Respond(request_reference, result.take_value());
             }
           });

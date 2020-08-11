@@ -15,13 +15,13 @@ protocol DataProvider {
     /// provided separately.
     ///
     /// `bugreport` may be empty if there was an issue generating the bugreport.
-    [Transitional = "Soon to be replaced by GetSnapshot"]
+    [Transitional = "Please use GetSnapshot instead"]
     GetBugreport(GetBugreportParameters params) -> (Bugreport bugreport);
 
     /// Returns a snapshot of the device's state.
     ///
     /// `snpashot` may be empty if there was an issue generating the snpashot.
-    [Transitional = "Soon to replace GetBugreport. Not served yet."]
+    [Transitional = "Replacement for GetBugreport"]
     GetSnapshot(GetSnapshotParameters params) -> (Snapshot snapshot);
 
     /// Returns an image of the current view encoded in the provided `encoding`.

@@ -75,8 +75,9 @@ constexpr char kAttachmentLogSystem[] = "log.system.txt";
 constexpr char kAttachmentLogSystemPrevious[] = "log.system.previous_boot.txt";
 constexpr char kAttachmentManifest[] = "manifest.json";
 
-// Bugreport key.
-constexpr char kBugreportFilename[] = "bugreport.zip";
+// Snapshot key.
+// TODO(50926): change to "snapshot.zip".
+constexpr char kSnapshotFilename[] = "bugreport.zip";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Device ID

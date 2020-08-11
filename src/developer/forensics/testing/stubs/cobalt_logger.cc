@@ -17,7 +17,7 @@ cobalt::EventType DetermineCobaltEventType(uint32_t metric_id, uint32_t event_co
   switch (metric_id) {
     case MetricIDForEventCode(cobalt::RebootReasonWriteResult::kSuccess):
     case MetricIDForEventCode(cobalt::LastRebootReason::kUnknown):
-    case MetricIDForEventCode(cobalt::BugreportGenerationFlow::kUnknown):
+    case MetricIDForEventCode(cobalt::SnapshotGenerationFlow::kUnknown):
       return cobalt::EventType::kTimeElapsed;
     case MetricIDForEventCode(cobalt::UploadAttemptState::kUnknown):
     case MetricIDForEventCode(cobalt::PreviousBootEncodingVersion::kUnknown):

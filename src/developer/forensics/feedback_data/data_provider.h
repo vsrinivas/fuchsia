@@ -12,9 +12,9 @@
 
 #include <memory>
 
-#include "src/developer/forensics/feedback_data/bugreport_request_manager.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/feedback_data/integrity_reporter.h"
+#include "src/developer/forensics/feedback_data/snapshot_request_manager.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 
 namespace forensics {
@@ -27,8 +27,11 @@ class DataProvider : public fuchsia::feedback::DataProvider {
                IntegrityReporter integrity_reporter, cobalt::Logger* cobalt, Datastore* datastore);
 
   // |fuchsia::feedback::DataProvider|
+  // TODO(50926): remove GetBugreport once no clients calls it.
   void GetBugreport(fuchsia::feedback::GetBugreportParameters params,
                     GetBugreportCallback callback) override;
+  void GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                   GetSnapshotCallback callback) override;
   void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
                      GetScreenshotCallback callback) override;
 
@@ -39,7 +42,7 @@ class DataProvider : public fuchsia::feedback::DataProvider {
   cobalt::Logger* cobalt_;
   Datastore* datastore_;
   async::Executor executor_;
-  BugreportRequestManager request_manager_;
+  SnapshotRequestManager request_manager_;
 };
 
 }  // namespace feedback_data

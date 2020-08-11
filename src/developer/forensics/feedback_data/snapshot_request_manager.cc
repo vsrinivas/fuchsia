@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/bugreport_request_manager.h"
+#include "src/developer/forensics/feedback_data/snapshot_request_manager.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -11,15 +11,15 @@
 namespace forensics {
 namespace feedback_data {
 
-using fuchsia::feedback::Bugreport;
-using GetBugreportCallback = fuchsia::feedback::DataProvider::GetBugreportCallback;
+using fuchsia::feedback::Snapshot;
+using GetSnapshotCallback = fuchsia::feedback::DataProvider::GetSnapshotCallback;
 
-BugreportRequestManager::BugreportRequestManager(zx::duration delta,
-                                                 std::unique_ptr<timekeeper::Clock> clock)
+SnapshotRequestManager::SnapshotRequestManager(zx::duration delta,
+                                               std::unique_ptr<timekeeper::Clock> clock)
     : delta_(delta), clock_(std::move(clock)) {}
 
-std::optional<uint64_t> BugreportRequestManager::Manage(zx::duration request_timeout,
-                                                        GetBugreportCallback request_callback) {
+std::optional<uint64_t> SnapshotRequestManager::Manage(zx::duration request_timeout,
+                                                       GetSnapshotCallback request_callback) {
   const zx::time creation_time(clock_->Now());
 
   // Attempts to find an existing pool to add |callback| to.
@@ -42,13 +42,13 @@ std::optional<uint64_t> BugreportRequestManager::Manage(zx::duration request_tim
       .id = next_pool_id_,
       .creation_time = creation_time,
       .request_timeout = request_timeout,
-      .callbacks = std::vector<GetBugreportCallback>(),
+      .callbacks = std::vector<GetSnapshotCallback>(),
   });
   pools_.back().callbacks.emplace_back(std::move(request_callback));
   return next_pool_id_++;
 };
 
-void BugreportRequestManager::Respond(uint64_t id, Bugreport bugreport) {
+void SnapshotRequestManager::Respond(uint64_t id, Snapshot snapshot) {
   auto pool = std::find_if(pools_.begin(), pools_.end(),
                            [id](const CallbackPool& pool) { return pool.id == id; });
 
@@ -57,20 +57,20 @@ void BugreportRequestManager::Respond(uint64_t id, Bugreport bugreport) {
   }
 
   // We log the pool size as an extra annotation.
-  if (!bugreport.has_annotations() ||
-      (bugreport.has_annotations() &&
-       bugreport.annotations().size() < fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED)) {
-    bugreport.mutable_annotations()->push_back(fuchsia::feedback::Annotation{
+  if (!snapshot.has_annotations() ||
+      (snapshot.has_annotations() &&
+       snapshot.annotations().size() < fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED)) {
+    snapshot.mutable_annotations()->push_back(fuchsia::feedback::Annotation{
         .key = kAnnotationDebugPoolSize,
         .value = std::to_string(pool->callbacks.size()),
     });
   }
 
   for (const auto& callback : pool->callbacks) {
-    // The underlying bugreport.zip is shared across all requesters, only its handle is copied.
-    Bugreport clone;
-    if (const zx_status_t status = bugreport.Clone(&clone); status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to clone bugreport";
+    // The underlying snapshot.zip is shared across all requesters, only its handle is copied.
+    Snapshot clone;
+    if (const zx_status_t status = snapshot.Clone(&clone); status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to clone snapshot";
     }
     callback(std::move(clone));
   }

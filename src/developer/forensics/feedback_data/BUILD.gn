@@ -83,12 +83,12 @@ source_set("data_provider") {
   public = [ "data_provider.h" ]
 
   sources = [
-    "bugreport_request_manager.cc",
-    "bugreport_request_manager.h",
     "data_provider.cc",
     "data_provider.h",
     "image_conversion.cc",
     "image_conversion.h",
+    "snapshot_request_manager.cc",
+    "snapshot_request_manager.h",
   ]
 
   public_deps = [

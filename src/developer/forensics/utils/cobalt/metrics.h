@@ -68,7 +68,7 @@ enum class TimedOutData {
       cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::LastRebootInfo,
 };
 
-enum class BugreportGenerationFlow {
+enum class SnapshotGenerationFlow {
   kUnknown = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Unknown,
   kSuccess = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Success,
   kFailure = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Failure,
@@ -117,11 +117,11 @@ inline constexpr uint32_t MetricIDForEventCode(const RebootReasonWriteResult wri
   return cobalt_registry::kRebootReasonPersistDurationUsecsMetricId;
 }
 
-inline constexpr uint32_t MetricIDForEventCode(const LastRebootReason bug_report) {
+inline constexpr uint32_t MetricIDForEventCode(const LastRebootReason reason) {
   return cobalt_registry::kLastRebootUptimeMetricId;
 }
 
-inline constexpr uint32_t MetricIDForEventCode(const BugreportGenerationFlow bug_report) {
+inline constexpr uint32_t MetricIDForEventCode(const SnapshotGenerationFlow snapshot) {
   return cobalt_registry::kBugreportGenerationDurationUsecsMetricId;
 }
 
@@ -190,11 +190,11 @@ inline constexpr EventType EventTypeForEventCode(const RebootReasonWriteResult w
   return EventType::kTimeElapsed;
 }
 
-inline constexpr EventType EventTypeForEventCode(const LastRebootReason status) {
+inline constexpr EventType EventTypeForEventCode(const LastRebootReason reason) {
   return EventType::kTimeElapsed;
 }
 
-inline constexpr EventType EventTypeForEventCode(const BugreportGenerationFlow status) {
+inline constexpr EventType EventTypeForEventCode(const SnapshotGenerationFlow snapshot) {
   return EventType::kTimeElapsed;
 }
 

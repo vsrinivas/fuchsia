@@ -92,13 +92,13 @@ TEST_F(CobaltTest, Check_Timer) {
   const uint64_t timer_id = cobalt_->StartTimer();
 
   clock_->Set(kEndTime);
-  cobalt_->LogElapsedTime(BugreportGenerationFlow::kSuccess, timer_id);
+  cobalt_->LogElapsedTime(SnapshotGenerationFlow::kSuccess, timer_id);
 
   RunLoopUntilIdle();
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
-                  Event(BugreportGenerationFlow::kSuccess, (kEndTime - kStartTime).to_usecs()),
+                  Event(SnapshotGenerationFlow::kSuccess, (kEndTime - kStartTime).to_usecs()),
               }));
 }
 

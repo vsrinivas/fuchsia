@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/bugreport_request_manager_unittest_exe"
+        "binary": "bin/snapshot_request_manager_unittest_exe"
     },
     "sandbox": {
         "services": [
