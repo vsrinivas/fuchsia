@@ -64,9 +64,8 @@ AddressRanges GetCodeRanges(const llvm::DWARFDie& die) {
 // Extracts a FileLine if possible from the given input. If the optional values aren't present, or
 // are empty, returns an empty FileLine.
 FileLine MakeFileLine(llvm::DWARFUnit* unit, const llvm::Optional<std::string>& file,
-                      const llvm::Optional<uint64_t>& line) {
-  std::string compilation_dir;
-  if (unit->getCompilationDir())
+                      const llvm::Optional<uint64_t>& line, std::string compilation_dir) {
+  if (compilation_dir.empty() && unit->getCompilationDir())
     compilation_dir = unit->getCompilationDir();
   if (file && !file->empty() && line && *line > 0)
     return FileLine(*file, compilation_dir, static_cast<int>(*line));
@@ -281,9 +280,12 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
   if (linkage_name)
     function->set_linkage_name(*linkage_name);
   function->set_code_ranges(GetCodeRanges(die));
-  if (decl_file)
-    function->set_decl_line(MakeFileLine(die.getDwarfUnit(), decl_file, decl_line));
-  function->set_call_line(MakeFileLine(die.getDwarfUnit(), call_file, call_line));
+  if (decl_file) {
+    function->set_decl_line(
+        MakeFileLine(die.getDwarfUnit(), decl_file, decl_line, symbols_->GetBuildDir()));
+  }
+  function->set_call_line(
+      MakeFileLine(die.getDwarfUnit(), call_file, call_line, symbols_->GetBuildDir()));
   if (return_type)
     function->set_return_type(MakeLazy(return_type));
   function->set_frame_base(std::move(frame_base));

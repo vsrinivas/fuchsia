@@ -43,6 +43,11 @@ const char* const kRemoteHostHelp = R"(  --connect
       The host and port of the debug agent running on the target Fuchsia
       instance, of the form [<ipv6_addr>]:port.)";
 
+const char* const kSymbolIndexHelp = R"(  --symbol-index=<path>
+      Populates --ids-txt and --build-id-dir using the given symbol-index file,
+      which defaults to ~/.fuchsia/debug/symbol-index. The file should be
+      created and maintained by the "symbol-index" host tool.)";
+
 const char* const kBuildIdDirHelp = R"(  --build-id-dir=<path>
       Adds the given directory to the symbol search path. Multiple
       --build-id-dir switches can be passed to add multiple directories.
@@ -273,6 +278,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   // Debug agent options:
   parser.AddSwitch("connect", 'r', kRemoteHostHelp, &CommandLineOptions::connect);
+  parser.AddSwitch("symbol-index", 0, kSymbolIndexHelp, &CommandLineOptions::symbol_index_files);
   parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);

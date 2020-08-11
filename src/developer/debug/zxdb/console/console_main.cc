@@ -111,18 +111,27 @@ void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
 }
 
 void SetupCommandLineOptions(const CommandLineOptions& options, Session* session) {
+  const char* home = std::getenv("HOME");
   auto& system_settings = session->system().settings();
 
   if (options.symbol_cache) {
-    // Legacy usage assumes a .build-id subdirectory will be created.
-    system_settings.SetString(ClientSettings::System::kSymbolCache,
-                              *options.symbol_cache + "/.build-id");
+    system_settings.SetString(ClientSettings::System::kSymbolCache, *options.symbol_cache);
   } else {
     // Default value for symbol_cache.
-    const char* home = std::getenv("HOME");
-    if (home)
+    if (home) {
       system_settings.SetString(ClientSettings::System::kSymbolCache,
                                 std::string(home) + "/.fuchsia/debug/symbol-cache");
+    }
+  }
+
+  if (!options.symbol_index_files.empty()) {
+    system_settings.SetList(ClientSettings::System::kSymbolIndexFiles, options.symbol_index_files);
+  } else {
+    // Default value for symbol_index_files.
+    if (home) {
+      system_settings.SetList(ClientSettings::System::kSymbolIndexFiles,
+                              {std::string(home) + "/.fuchsia/debug/symbol-index"});
+    }
   }
 
   if (!options.symbol_servers.empty()) {

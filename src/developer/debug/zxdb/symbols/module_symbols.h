@@ -59,6 +59,9 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // known.
   virtual std::time_t GetModificationTime() const = 0;
 
+  // Returns the build directory associated with this module, useful for source file lookup.
+  virtual std::string GetBuildDir() const = 0;
+
   // Converts the given InputLocation into one or more locations. Called by LoadedModuleSymbols. See
   // there for more info.
   virtual std::vector<Location> ResolveInputLocation(

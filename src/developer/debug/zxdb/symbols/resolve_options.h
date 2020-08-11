@@ -48,7 +48,7 @@ struct ResolveOptions {
   //  * Alternatively, if you could think of being "at" that instruction (say as as the address of
   //    an exception), you will generally want to use "kInner" since this will be the symbol that
   //    actually generated the excepting instruction.
-  enum AmbiguousInline {
+  enum class AmbiguousInline {
     kOuter,
     kInner,
   };

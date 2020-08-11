@@ -81,12 +81,17 @@ const char* ClientSettings::System::kLanguage_Rust = "rust";
 const char* ClientSettings::System::kLanguage_Auto = "auto";
 
 // Symbol lookup.
+const char* ClientSettings::System::kSymbolIndexFiles = "symbol-index-files";
+static const char* kSymbolIndexFilesDescription =
+    R"(  List of symbol-index files for symbol lookup. The content will be used
+  to populate the "ids-txts" and "build-id-dirs" settings. Check the
+  "symbol-index" host tool for more information.)";
+
 const char* ClientSettings::System::kSymbolPaths = "symbol-paths";
 static const char* kSymbolPathsDescription =
-    R"(  List of mapping databases, ELF files or directories for symbol lookup.
-  When a directory path is passed, the directory will be enumerated
-  non-recursively to index all ELF files within. When a file is passed, it will
-  be loaded as an ELF file (if possible).)";
+    R"(  List of ELF files or directories for symbol lookup. When a directory
+  path is passed, the directory will be enumerated non-recursively to index all
+  ELF files within. When a file is passed, it will be loaded as an ELF file.)";
 
 const char* ClientSettings::System::kBuildIdDirs = "build-id-dirs";
 static const char* kBuildIdDirsDescription =
@@ -120,13 +125,14 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
-  schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, true);
+  schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, false);
   schema->AddBool(ClientSettings::System::kShowFilePaths, kShowFilePathsDescription, false);
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",
                     {"rust", "c++", "auto"});
 
   // Symbol lookup.
+  schema->AddList(ClientSettings::System::kSymbolIndexFiles, kSymbolIndexFilesDescription, {});
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription, {});
   schema->AddList(ClientSettings::System::kBuildIdDirs, kBuildIdDirsDescription, {});
   schema->AddList(ClientSettings::System::kIdsTxts, kIdsTxtsDescription, {});
@@ -296,6 +302,7 @@ System::System(Session* session)
   // don't use SystemSymbols because they live in the symbols library and we don't want it to have a
   // client dependency.
   settings_.AddObserver(ClientSettings::System::kDebugMode, this);
+  settings_.AddObserver(ClientSettings::System::kSymbolIndexFiles, this);
   settings_.AddObserver(ClientSettings::System::kSymbolCache, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
   settings_.AddObserver(ClientSettings::System::kBuildIdDirs, this);
@@ -419,11 +426,9 @@ std::shared_ptr<Download> System::GetDownload(std::string build_id, DebugSymbolF
 
         if (!path.empty()) {
           weak_this->download_success_count_++;
-          if (err.has_error()) {
-            // If we got a path but still had an error, something went wrong with the cache repo.
-            // Add the path manually.
-            weak_this->symbols_.build_id_index().AddOneFile(path);
-          }
+          // Adds the file manually since the build_id could already be marked as missing in the
+          // build_id_index.
+          weak_this->symbols_.build_id_index().AddOneFile(path);
 
           for (const auto& target : weak_this->targets_) {
             if (auto process = target->process()) {
@@ -764,29 +769,30 @@ void System::AddNewJob(std::unique_ptr<Job> job) {
 }
 
 void System::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
-  if (setting_name == ClientSettings::System::kSymbolPaths ||
+  // If any of them change, we have to reinitialize the build_id_index.
+  if (setting_name == ClientSettings::System::kSymbolIndexFiles ||
+      setting_name == ClientSettings::System::kSymbolPaths ||
       setting_name == ClientSettings::System::kBuildIdDirs ||
       setting_name == ClientSettings::System::kIdsTxts ||
       setting_name == ClientSettings::System::kSymbolCache) {
-    // If any of them change, we have to reinitialize the build_id_index.
-    auto symbol_paths = store.GetList(ClientSettings::System::kSymbolPaths);
-    auto build_id_dirs = store.GetList(ClientSettings::System::kBuildIdDirs);
-    auto ids_txts = store.GetList(ClientSettings::System::kIdsTxts);
-    auto symbol_cache = store.GetString(ClientSettings::System::kSymbolCache);
-
     // Clear the symbol sources and add them back to sync the index with the setting.
     BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
-    build_id_index.ClearSymbolSources();
+    build_id_index.ClearAll();
 
-    for (const std::string& path : symbol_paths) {
-      build_id_index.AddSymbolSource(path);
+    for (const std::string& path : store.GetList(ClientSettings::System::kSymbolIndexFiles)) {
+      build_id_index.AddSymbolIndexFile(path);
     }
-    for (const std::string& path : build_id_dirs) {
+    for (const std::string& path : store.GetList(ClientSettings::System::kSymbolPaths)) {
+      build_id_index.AddPlainFileOrDir(path);
+    }
+    for (const std::string& path : store.GetList(ClientSettings::System::kBuildIdDirs)) {
       build_id_index.AddBuildIdDir(path);
     }
-    for (const std::string& path : ids_txts) {
+    for (const std::string& path : store.GetList(ClientSettings::System::kIdsTxts)) {
       build_id_index.AddIdsTxt(path);
     }
+
+    auto symbol_cache = store.GetString(ClientSettings::System::kSymbolCache);
     if (!symbol_cache.empty()) {
       std::error_code ec;
       std::filesystem::create_directories(std::filesystem::path(symbol_cache), ec);

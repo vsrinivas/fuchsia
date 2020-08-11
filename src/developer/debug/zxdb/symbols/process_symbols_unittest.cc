@@ -88,8 +88,7 @@ TEST(ProcessSymbols, SetModules_Probe) {
   LoadedModuleSymbols* loaded_symbols = notifications.loaded()[0];
   EXPECT_EQ(base1, loaded_symbols->load_address());
   EXPECT_EQ(test_file_name, loaded_symbols->module_symbols()->GetStatus().symbol_file);
-  EXPECT_EQ(test_file_name, system.build_id_index().FileForBuildID(test_file_build_id,
-                                                                   DebugSymbolFileType::kBinary));
+  EXPECT_EQ(test_file_name, system.build_id_index().EntryForBuildID(test_file_build_id).binary);
   EXPECT_EQ(0, notifications.err_count());
 }
 
@@ -102,10 +101,8 @@ TEST(ProcessSymbols, SetModules) {
   std::string fake_build_id_2 = "67890";
   std::string test_file_name = TestSymbolModule::GetTestFileName();
   SystemSymbols system(nullptr);
-  system.build_id_index().AddBuildIDMappingForTest(fake_build_id_1, test_file_name,
-                                                   DebugSymbolFileType::kDebugInfo);
-  system.build_id_index().AddBuildIDMappingForTest(fake_build_id_2, test_file_name,
-                                                   DebugSymbolFileType::kDebugInfo);
+  system.build_id_index().AddBuildIDMappingForTest(fake_build_id_1, test_file_name);
+  system.build_id_index().AddBuildIDMappingForTest(fake_build_id_2, test_file_name);
 
   TargetSymbols target(&system);
 

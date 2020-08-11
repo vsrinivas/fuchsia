@@ -50,6 +50,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
   std::time_t GetModificationTime() const override;
+  std::string GetBuildDir() const override;
   std::vector<Location> ResolveInputLocation(
       const SymbolContext& symbol_context, const InputLocation& input_location,
       const ResolveOptions& options = ResolveOptions()) const override;
@@ -70,7 +71,11 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   //
   // Normal callers will always want to create the index. The only time this is unnecessary is
   // from certain tests that want to do it themselves (say to inject some stuff).
-  explicit ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary, bool create_index = true);
+  //
+  // The build_dir, if not empty, will be used to override the compilation_dir of FileLine objects,
+  // which is useful because in Fuchsia checkout, the compilation_dir will always be ".".
+  explicit ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary, const std::string& build_dir,
+                             bool create_index = true);
   ~ModuleSymbolsImpl() override;
 
   // Helpers for ResolveInputLocation() for the different types of inputs.
@@ -141,6 +146,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   void FillElfSymbols();
 
   std::unique_ptr<DwarfBinary> binary_;
+
+  std::string build_dir_;
 
   Index index_;
 

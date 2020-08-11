@@ -26,6 +26,7 @@
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/resolve_options.h"
 #include "src/developer/debug/zxdb/symbols/source_file_provider.h"
 #include "src/developer/debug/zxdb/symbols/source_util.h"
 #include "src/lib/files/file.h"
@@ -117,7 +118,7 @@ OutputBuffer DescribeAsmCallDest(Process* process, uint64_t call_dest) {
     // If there are multiple symbols starting at the given location (like nested inline calls), use
     // the outermost one since this is a jump *to* that location.
     ResolveOptions options;
-    options.ambiguous_inline = ResolveOptions::kOuter;
+    options.ambiguous_inline = ResolveOptions::AmbiguousInline::kOuter;
 
     resolved = process->GetSymbols()->ResolveInputLocation(InputLocation(call_dest), options);
     FX_DCHECK(resolved.size() == 1);  // Addresses should always match one location.

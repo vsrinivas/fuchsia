@@ -58,12 +58,12 @@ TEST(ModuleSymbols, BadFileType) {
 
   // The load should fail.
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName() + "_NONEXISTANT", "");
-  ASSERT_FALSE(setup.Init(false).ok());
+  ASSERT_FALSE(setup.Init("", false).ok());
 }
 
 TEST(ModuleSymbols, Basic) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
-  EXPECT_TRUE(setup.Init().ok());
+  EXPECT_TRUE(setup.Init("/build_dir").ok());
 
   // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
@@ -89,6 +89,7 @@ TEST(ModuleSymbols, Basic) {
   EXPECT_TRUE(locations[0].is_symbolized());
   EXPECT_TRUE(StringEndsWith(locations[0].file_line().file(), "/zxdb_symbol_test.cc"));
   EXPECT_EQ(109, locations[0].file_line().line());
+  EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
 
   // The function symbol should have a compilation unit with a C-style language defined and the name
   // should contain the file.
@@ -101,7 +102,7 @@ TEST(ModuleSymbols, Basic) {
 
 TEST(ModuleSymbols, LineDetailsForAddress) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
-  EXPECT_TRUE(setup.Init().ok());
+  EXPECT_TRUE(setup.Init("/build_dir").ok());
 
   // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
@@ -124,6 +125,7 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
   ASSERT_EQ(1u, locations.size());
   EXPECT_EQ(kLineToQuery, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
+  EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
 
   // Lookup the line info. Normally we expect one line table entry for this but don't want to assume
   // that since the compiler could emit multiple entries for it.
@@ -131,6 +133,7 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
       setup.symbols()->LineDetailsForAddress(symbol_context, addrs[0].address(), false);
   EXPECT_EQ(file_name, line_details.file_line().file());
   EXPECT_EQ(kLineToQuery, line_details.file_line().line());
+  EXPECT_EQ("/build_dir", line_details.file_line().comp_dir());
   ASSERT_FALSE(line_details.entries().empty());
   uint64_t begin_range = line_details.entries().front().range.begin();
   uint64_t end_range = line_details.entries().back().range.end();
@@ -141,6 +144,7 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
       setup.symbols()->LineDetailsForAddress(symbol_context, begin_range - 1, false);
   EXPECT_EQ(kLineToQuery - 1, prev_details.file_line().line());
   EXPECT_EQ(file_name, prev_details.file_line().file());
+  EXPECT_EQ("/build_dir", prev_details.file_line().comp_dir());
   ASSERT_FALSE(prev_details.entries().empty());
   EXPECT_EQ(begin_range, prev_details.entries().back().range.end());
 
@@ -149,13 +153,14 @@ TEST(ModuleSymbols, LineDetailsForAddress) {
       setup.symbols()->LineDetailsForAddress(symbol_context, end_range, false);
   EXPECT_EQ(kLineToQuery + 1, next_details.file_line().line());
   EXPECT_EQ(file_name, next_details.file_line().file());
+  EXPECT_EQ("/build_dir", next_details.file_line().comp_dir());
   ASSERT_FALSE(next_details.entries().empty());
   EXPECT_EQ(end_range, next_details.entries().front().range.begin());
 }
 
 TEST(ModuleSymbols, ResolveLineInputLocation) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
-  EXPECT_TRUE(setup.Init().ok());
+  EXPECT_TRUE(setup.Init("/build_dir").ok());
 
   // Make a symbol context with some load address to ensure that the addresses round-trip properly.
   SymbolContext symbol_context(0x18000);
@@ -177,6 +182,7 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   ASSERT_EQ(1u, locations.size());
   EXPECT_EQ(27, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
+  EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
 
   // Line 26 is a comment line, looking it up should get the following line.
   addrs = setup.symbols()->ResolveInputLocation(symbol_context,
@@ -187,6 +193,7 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   ASSERT_EQ(1u, locations.size());
   EXPECT_EQ(27, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
+  EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
 
   // Line 15 is the beginning of the templatized function. There should be two matches since its
   // instantiated twice.
@@ -198,11 +205,13 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   ASSERT_EQ(1u, locations.size());
   EXPECT_EQ(15, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
+  EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
   locations =
       setup.symbols()->ResolveInputLocation(symbol_context, InputLocation(addrs[1].address()));
   ASSERT_EQ(1u, locations.size());
   EXPECT_EQ(15, locations[0].file_line().line());
   EXPECT_EQ(file_name, locations[0].file_line().file());
+  EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
 
   // Line 17 is only present in one of the two template instantiations.  We should only find it once
   // (see note below about case #2).
@@ -213,6 +222,7 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
       setup.symbols()->ResolveInputLocation(symbol_context, InputLocation(addrs[0].address()));
   ASSERT_EQ(1u, locations.size());
   EXPECT_EQ(17, locations[0].file_line().line());
+  EXPECT_EQ("/build_dir", locations[0].file_line().comp_dir());
   if (addrs.size() == 2u) {
     // MSVC in debug mode will emit the full code in both instantiations of the template which is
     // valid. To be more robust this test allows that form even though Clang doesn't do this. The

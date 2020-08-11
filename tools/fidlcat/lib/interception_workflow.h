@@ -106,7 +106,8 @@ class InterceptionWorkflow {
   // Some initialization steps:
   // - Set the paths for the zxdb client to look for symbols.
   // - Make sure that the data are routed from the client to the session
-  void Initialize(const std::vector<std::string>& symbol_paths,
+  void Initialize(const std::vector<std::string>& symbol_index_files,
+                  const std::vector<std::string>& symbol_paths,
                   const std::vector<std::string>& build_id_dirs,
                   const std::vector<std::string>& ids_txts,
                   const std::optional<std::string>& symbol_cache,

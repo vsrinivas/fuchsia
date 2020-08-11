@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
 
+#include <memory>
+
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
@@ -33,31 +35,29 @@ Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymb
     return Err();
   }
 
-  std::string file_name = build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kDebugInfo);
-  std::string binary_file_name =
-      build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kBinary);
+  auto entry = build_id_index_.EntryForBuildID(build_id);
 
-  if (file_name.empty() && download_type == SystemSymbols::DownloadType::kSymbols &&
+  if (entry.debug_info.empty() && download_type == SystemSymbols::DownloadType::kSymbols &&
       download_handler_) {
     download_handler_->RequestDownload(build_id, DebugSymbolFileType::kDebugInfo, false);
   }
 
-  if (auto debug = elflib::ElfLib::Create(file_name)) {
-    if (!debug->ProbeHasProgramBits() && binary_file_name.empty() &&
+  if (auto debug = elflib::ElfLib::Create(entry.debug_info)) {
+    if (!debug->ProbeHasProgramBits() && entry.binary.empty() &&
         download_type == SystemSymbols::DownloadType::kBinary && download_handler_) {
       // File doesn't exist or has no symbols, schedule a download.
       download_handler_->RequestDownload(build_id, DebugSymbolFileType::kBinary, false);
     }
   }
 
-  if (file_name.empty())
+  if (entry.debug_info.empty())
     return Err();  // No symbols synchronously available.
 
-  auto binary = std::make_unique<DwarfBinaryImpl>(file_name, binary_file_name, build_id);
+  auto binary = std::make_unique<DwarfBinaryImpl>(entry.debug_info, entry.binary, build_id);
   if (Err err = binary->Load(); err.has_error())
     return err;  // Symbols corrupt.
 
-  *module = fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary));
+  *module = fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary), entry.build_dir);
 
   SaveModule(build_id, module->get());  // Save in cache for future use.
   return Err();

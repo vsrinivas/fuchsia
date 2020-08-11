@@ -26,7 +26,7 @@ namespace zxdb {
 // then add it.
 TEST(Index, IndexDump) {
   TestSymbolModule setup(TestSymbolModule::kCheckedIn);
-  ASSERT_TRUE(setup.Init(false).ok());
+  ASSERT_TRUE(setup.Init("", false).ok());
 
   Index index;
   index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
@@ -139,7 +139,7 @@ zxdb_symbol_test2.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_sy
 
 TEST(Index, FindExactFunction) {
   TestSymbolModule setup(TestSymbolModule::kCheckedIn);
-  ASSERT_TRUE(setup.Init(false).ok());
+  ASSERT_TRUE(setup.Init("", false).ok());
 
   Index index;
   index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
@@ -184,7 +184,7 @@ TEST(Index, FindExactFunction) {
 
 TEST(Index, FindFileMatches) {
   TestSymbolModule setup(TestSymbolModule::kCheckedIn);
-  ASSERT_TRUE(setup.Init(false).ok());
+  ASSERT_TRUE(setup.Init("", false).ok());
 
   Index index;
   index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
@@ -220,7 +220,7 @@ TEST(Index, FindFileMatches) {
 
 TEST(Index, FindFilePrefixes) {
   TestSymbolModule setup(TestSymbolModule::kCheckedIn);
-  ASSERT_TRUE(setup.Init(false).ok());
+  ASSERT_TRUE(setup.Init("", false).ok());
 
   Index index;
   index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());

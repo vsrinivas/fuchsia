@@ -23,6 +23,7 @@ struct CommandLineOptions {
   std::vector<std::string> filter;
   std::optional<std::string> script_file;
   std::optional<std::string> symbol_cache;
+  std::vector<std::string> symbol_index_files;
   std::vector<std::string> symbol_paths;
   std::vector<std::string> build_id_dirs;
   std::vector<std::string> ids_txts;

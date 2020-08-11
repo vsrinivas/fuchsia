@@ -79,18 +79,8 @@ class ErrOr {
     return T();
   }
 
-  // Adapts a callback that takes an ErrOr and returns an old-style callback that takes two
-  // parameters.
-  // TODO(brettw) remove this when callers are transitioned.
-  static fit::callback<void(const Err&, T)> ToPairCallback(fit::callback<void(ErrOr<T> val)> cb) {
-    return [cb = std::move(cb)](const Err& err, T value) mutable {
-      if (err.has_error())
-        cb(err);
-      else
-        cb(value);
-    };
-  }
-
+  // Adapts an old-style callback that takes two parameters and returns a newer one that takes an
+  // ErrOr.
   static fit::callback<void(ErrOr<T>)> FromPairCallback(fit::callback<void(const Err&, T)> cb) {
     return [cb = std::move(cb)](ErrOr<T> value) mutable {
       cb(value.err_or_empty(), value.take_value_or_empty());

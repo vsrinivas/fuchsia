@@ -17,6 +17,7 @@ namespace fidlcat {
 struct CommandLineOptions {
   // debug agent options:
   std::optional<std::string> connect;
+  std::vector<std::string> symbol_index_files;
   std::vector<std::string> build_id_dirs;
   std::vector<std::string> symbol_servers;
   std::vector<std::string> symbol_paths;

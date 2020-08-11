@@ -54,6 +54,7 @@ class MockModuleSymbols : public ModuleSymbols {
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
   std::time_t GetModificationTime() const override { return modification_time_; }
+  std::string GetBuildDir() const override { return ""; }
   std::vector<Location> ResolveInputLocation(const SymbolContext& symbol_context,
                                              const InputLocation& input_location,
                                              const ResolveOptions& options) const override;

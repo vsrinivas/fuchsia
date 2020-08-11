@@ -68,6 +68,11 @@ const char kScriptFileHelp[] = R"(  --script-file=<file>
       commands as they would be input from the command line. They will be
       executed sequentially.)";
 
+const char kSymbolIndexHelp[] = R"(  --symbol-index=<path>
+      Populates --ids-txt and --build-id-dir using the given symbol-index file,
+      which defaults to ~/.fuchsia/debug/symbol-index. The file should be
+      created and maintained by the "symbol-index" host tool.)";
+
 const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
   -s <path>
       Adds the given directory or file to the symbol search path. Multiple
@@ -91,10 +96,11 @@ const char kIdsTxtHelp[] = R"(  --ids-txt=<path>
       should contain multiple lines in the format of "<build ID> <file path>".)";
 
 const char kSymbolCacheHelp[] = R"(  --symbol-cache=<path>
-      Directory where we can keep a symbol cache. If a symbol server has been
-      specified, downloaded symbols will be stored in this directory. The
-      directory structure will be the same as a .build-id directory, and
-      symbols will be read from this location as though you had specified
+      Directory where we can keep a symbol cache, which defaults to
+      ~/.fuchsia/debug/symbol-cache. If a symbol server has been specified,
+      downloaded symbols will be stored in this directory. The directory
+      structure will be the same as a .build-id directory, and symbols will
+      be read from this location as though you had specified
       "--build-id-dir=<path>".)";
 
 const char kSymbolServerHelp[] = R"(  --symbol-server=<url>
@@ -117,6 +123,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);
   parser.AddSwitch("filter", 'f', kFilterHelp, &CommandLineOptions::filter);
   parser.AddSwitch("script-file", 'S', kScriptFileHelp, &CommandLineOptions::script_file);
+  parser.AddSwitch("symbol-index", 0, kSymbolIndexHelp, &CommandLineOptions::symbol_index_files);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
   parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("ids-txt", 0, kIdsTxtHelp, &CommandLineOptions::ids_txts);

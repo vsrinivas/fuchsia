@@ -65,7 +65,7 @@ fxl::RefPtr<Function> GetFunctionWithName(ModuleSymbolsImpl* module_symbols,
 
 TEST(DwarfSymbolFactory, Function) {
   TestSymbolModule setup(TestSymbolModule::kBuilt);
-  ASSERT_TRUE(setup.Init().ok());
+  ASSERT_TRUE(setup.Init("/build_dir").ok());
 
   // Find the GetIntPtr function.
   fxl::RefPtr<Function> function = GetFunctionWithName(setup.symbols(), {kGetIntPtrName});
@@ -85,6 +85,7 @@ TEST(DwarfSymbolFactory, Function) {
   EXPECT_TRUE(StringEndsWith(function->decl_line().file(), "/type_test.cc"))
       << function->decl_line().file();
   EXPECT_EQ(15, function->decl_line().line());
+  EXPECT_EQ("/build_dir", function->decl_line().comp_dir());
 
   // Note: return type tested by ModifiedBaseType.
 }

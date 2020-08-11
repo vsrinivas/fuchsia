@@ -219,7 +219,7 @@ if (is_host) {
     sources = [ "test_data/libsymbol_test_so.targetso" ]
 
     outputs = [
-      "$root_out_dir/test_data/zxdb/build_id/.build-id/be/807a2ad9b56020.debug",
+      "$root_out_dir/test_data/zxdb/build_id/.build-id/59/6f4c8afa5a0a43.debug",
     ]
   }
 
@@ -231,6 +231,11 @@ if (is_host) {
     #   gcc -O2 file.c
     sources = [ "test_data/small_test_file.elf" ]
     outputs = [ "$root_out_dir/test_data/zxdb/small_test_file.elf" ]
+  }
+
+  host_test_data("symbol_index_file") {
+    sources = [ "test_data/symbol-index" ]
+    outputs = [ "$root_out_dir/test_data/zxdb/symbol-index" ]
   }
 }
 
@@ -280,6 +285,7 @@ source_set("tests") {
   if (is_host) {
     data_deps = [
       ":dot_buildid",
+      ":symbol_index_file",
       ":test_elf_file",
       ":test_so",
     ]

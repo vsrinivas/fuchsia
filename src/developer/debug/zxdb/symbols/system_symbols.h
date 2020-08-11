@@ -11,6 +11,7 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/build_id_index.h"
+#include "src/developer/debug/zxdb/symbols/debug_symbol_file_type.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

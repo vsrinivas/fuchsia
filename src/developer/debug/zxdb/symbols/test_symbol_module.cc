@@ -109,11 +109,11 @@ TestSymbolModule::TestSymbolModule(const std::string& sym_name, const std::strin
 
 TestSymbolModule::~TestSymbolModule() = default;
 
-Err TestSymbolModule::Init(bool should_index) {
+Err TestSymbolModule::Init(const std::string& build_dir, bool should_index) {
   auto binary = std::make_unique<DwarfBinaryImpl>(sym_name_, binary_name_, std::string());
   if (Err err = binary->Load(); err.has_error())
     return err;
-  symbols_ = fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary), should_index);
+  symbols_ = fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary), build_dir, should_index);
   return Err();
 }
 

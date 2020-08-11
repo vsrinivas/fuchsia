@@ -5,6 +5,12 @@
 #include "src/developer/debug/zxdb/symbols/build_id_index.h"
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <memory>
+#include <system_error>
+#include <tuple>
+#include <utility>
 
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/elflib/elflib.h"
@@ -13,124 +19,90 @@
 
 namespace zxdb {
 
-namespace {
-
-std::optional<std::string> ProbeOneBuildIdFile(const std::filesystem::path& path,
-                                               DebugSymbolFileType file_type) {
-  if (auto elf = elflib::ElfLib::Create(path)) {
-    if (file_type == DebugSymbolFileType::kDebugInfo && elf->ProbeHasDebugInfo())
-      return path;
-    if (file_type == DebugSymbolFileType::kBinary && elf->ProbeHasProgramBits())
-      return path;
-  }
-  return std::nullopt;
-}
-
-std::optional<std::string> FindInRepoFolder(const std::string& build_id,
-                                            const std::filesystem::path& path,
-                                            DebugSymbolFileType file_type) {
-  if (build_id.size() <= 2) {
-    return std::nullopt;
-  }
-
-  auto prefix = build_id.substr(0, 2);
-  auto tail = build_id.substr(2);
-  auto name = tail;
-
-  // There are potentially two files, one with just the build ID, one with a ".debug" suffix. The
-  // ".debug" suffix one is supposed to contain either just the DWARF symbols, or the full
-  // unstripped binary. The plain one is supposed to be either a stripped or unstripped binary.
-  //
-  // Since we're looking for DWARF information, look in the ".debug" one first.
-  if (auto found = ProbeOneBuildIdFile(path / prefix / (name + ".debug"), file_type))
-    return found;
-  return ProbeOneBuildIdFile(path / prefix / name, file_type);
-}
-
-}  // namespace
-
-BuildIDIndex::BuildIDIndex() = default;
-BuildIDIndex::~BuildIDIndex() = default;
-
-std::string BuildIDIndex::FileForBuildID(const std::string& build_id,
-                                         DebugSymbolFileType file_type) {
+BuildIDIndex::Entry BuildIDIndex::EntryForBuildID(const std::string& build_id) {
   EnsureCacheClean();
 
-  const std::string* to_find = &build_id;
+  if (build_id_to_files_.find(build_id) == build_id_to_files_.end())
+    SearchBuildIdDirs(build_id);
 
-  auto found = build_id_to_files_.find(*to_find);
-  if (found == build_id_to_files_.end())
-    return SearchRepoSources(*to_find, file_type);
-
-  if (file_type == DebugSymbolFileType::kDebugInfo) {
-    return found->second.debug_info;
-  } else {
-    return found->second.binary;
-  }
+  // No matter whether SearchBuildIdDirs found the symbol or not, build_id_to_files_[build_id] will
+  // always create the entry so next time no search will be performed.
+  return build_id_to_files_[build_id];
 }
 
-std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
-                                            DebugSymbolFileType file_type) {
-  for (const auto& source : repo_sources_) {
-    auto got = FindInRepoFolder(build_id, source, file_type);
-    if (got) {
-      return *got;
-    }
+void BuildIDIndex::SearchBuildIdDirs(const std::string& build_id) {
+  if (build_id.size() <= 2) {
+    return;
   }
 
-  return std::string();
+  auto path = build_id.substr(0, 2) + "/" + build_id.substr(2);
+
+  for (const auto& [source, build_dir] : build_id_dirs_) {
+    // There are potentially two files, one with just the build ID, one with a ".debug" suffix. The
+    // ".debug" suffix one is supposed to contain either just the DWARF symbols, or the full
+    // unstripped binary. The plain one is supposed to be either a stripped or unstripped binary.
+    //
+    // Since we're looking for DWARF information, look in the ".debug" one first.
+    IndexSourceFile(source + "/" + path + ".debug", build_dir);
+    IndexSourceFile(source + "/" + path, build_dir);
+  }
 }
 
 void BuildIDIndex::AddBuildIDMappingForTest(const std::string& build_id,
-                                            const std::string& file_name,
-                                            DebugSymbolFileType file_type) {
-  if (file_type == DebugSymbolFileType::kDebugInfo) {
-    // This map saves the manual mapping across cache updates.
-    manual_mappings_[build_id].debug_info = file_name;
-    // Don't bother marking the cache dirty since we can just add it.
-    build_id_to_files_[build_id].debug_info = file_name;
-  } else {
-    manual_mappings_[build_id].binary = file_name;
-    build_id_to_files_[build_id].binary = file_name;
-  }
+                                            const std::string& file_name) {
+  // This map saves the manual mapping across cache updates.
+  manual_mappings_[build_id].debug_info = file_name;
+  manual_mappings_[build_id].binary = file_name;
+  // Don't bother marking the cache dirty since we can just add it.
+  build_id_to_files_[build_id].debug_info = file_name;
+  build_id_to_files_[build_id].binary = file_name;
 }
 
-void BuildIDIndex::ClearSymbolSources() {
-  build_id_files_.clear();
+void BuildIDIndex::ClearAll() {
+  ids_txts_.clear();
+  build_id_dirs_.clear();
+  symbol_index_files_.clear();
   sources_.clear();
-  always_repo_sources_.clear();
   ClearCache();
 }
 
 bool BuildIDIndex::AddOneFile(const std::string& file_name) {
-  return IndexOneSourceFile(file_name, true);
+  return IndexSourceFile(file_name, "", true);
 }
 
-void BuildIDIndex::AddIdsTxt(const std::string& id_file_name) {
+void BuildIDIndex::AddIdsTxt(const std::string& ids_txt, const std::string& build_dir) {
   // If the file is already loaded, ignore it.
-  if (std::find(build_id_files_.begin(), build_id_files_.end(), id_file_name) !=
-      build_id_files_.end())
+  if (std::find_if(ids_txts_.begin(), ids_txts_.end(),
+                   [&ids_txt](auto it) { return it.first == ids_txt; }) != ids_txts_.end())
     return;
 
-  build_id_files_.emplace_back(id_file_name);
+  ids_txts_.emplace_back(ids_txt, build_dir);
   ClearCache();
 }
 
-void BuildIDIndex::AddSymbolSource(const std::string& path) {
-  // If the file is already loaded, ignore it.
+void BuildIDIndex::AddBuildIdDir(const std::string& dir, const std::string& build_dir) {
+  if (std::find_if(build_id_dirs_.begin(), build_id_dirs_.end(),
+                   [&dir](auto it) { return it.first == dir; }) != build_id_dirs_.end())
+    return;
+
+  build_id_dirs_.emplace_back(dir, build_dir);
+  ClearCache();
+}
+
+void BuildIDIndex::AddSymbolIndexFile(const std::string& path) {
+  if (std::find(symbol_index_files_.begin(), symbol_index_files_.end(), path) !=
+      symbol_index_files_.end())
+    return;
+
+  symbol_index_files_.push_back(path);
+  ClearCache();
+}
+
+void BuildIDIndex::AddPlainFileOrDir(const std::string& path) {
   if (std::find(sources_.begin(), sources_.end(), path) != sources_.end())
     return;
 
-  sources_.emplace_back(path);
-  ClearCache();
-}
-
-void BuildIDIndex::AddBuildIdDir(const std::string& path) {
-  if (std::find(always_repo_sources_.begin(), always_repo_sources_.end(), path) !=
-      always_repo_sources_.end())
-    return;
-
-  always_repo_sources_.emplace_back(path);
+  sources_.push_back(path);
   ClearCache();
 }
 
@@ -139,15 +111,11 @@ BuildIDIndex::StatusList BuildIDIndex::GetStatus() {
   return status_;
 }
 
-void BuildIDIndex::ClearCache() {
-  build_id_to_files_.clear();
-  status_.clear();
-  cache_dirty_ = true;
-}
+void BuildIDIndex::ClearCache() { cache_dirty_ = true; }
 
 // static
 int BuildIDIndex::ParseIDs(const std::string& input, const std::filesystem::path& containing_dir,
-                           IDMap* output) {
+                           const std::string& build_dir, BuildIDMap* output) {
   int added = 0;
   for (size_t line_begin = 0; line_begin < input.size(); line_begin++) {
     size_t newline = input.find('\n', line_begin);
@@ -156,7 +124,7 @@ int BuildIDIndex::ParseIDs(const std::string& input, const std::filesystem::path
 
     std::string_view line(&input[line_begin], newline - line_begin);
     if (!line.empty()) {
-      // Format is <buildid> <space> <filename>
+      // Format is <buildid> <space> <filename>.
       size_t first_space = line.find(' ');
       if (first_space != std::string::npos && first_space > 0 && first_space + 1 < line.size()) {
         // There is a space and it separates two nonempty things.
@@ -171,8 +139,11 @@ int BuildIDIndex::ParseIDs(const std::string& input, const std::filesystem::path
           path = containing_dir / path;
         }
 
-        BuildIDIndex::MapEntry entry;
+        BuildIDIndex::Entry entry;
+        // Assume the file contains both debug info and program bits.
         entry.debug_info = path;
+        entry.binary = path;
+        entry.build_dir = build_dir;
 
         added++;
         output->emplace(std::piecewise_construct,
@@ -191,7 +162,7 @@ void BuildIDIndex::LogMessage(const std::string& msg) const {
     information_callback_(msg);
 }
 
-void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
+void BuildIDIndex::LoadIdsTxt(const std::string& file_name, const std::string& build_dir) {
   std::error_code err;
 
   auto path = std::filesystem::canonical(file_name, err);
@@ -231,24 +202,77 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 
   fclose(id_file);
 
-  int added = ParseIDs(contents, containing_dir, &build_id_to_files_);
+  int added = ParseIDs(contents, containing_dir, build_dir, &build_id_to_files_);
   status_.emplace_back(file_name, added);
   if (!added)
     LogMessage("No mappings found in build ID file: " + file_name);
 }
 
-void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
+void BuildIDIndex::LoadSymbolIndexFile(const std::string& file_name) {
+  std::ifstream file(file_name);
+  if (file.fail()) {
+    return LogMessage("Cannot read symbol-index file: " + file_name);
+  }
+
+  bool need_purge = false;
+
+  while (!file.eof()) {
+    std::string line;
+    std::string symbol_path;
+    std::string build_dir;
+
+    std::getline(file, line);
+    if (file.fail()) {
+      // If the file ends with \n, we will get failbit, eofbit and line == "".
+      if (file.eof())
+        break;
+      return LogMessage("Error reading " + file_name);
+    }
+
+    if (auto tab_index = line.find('\t'); tab_index != std::string::npos) {
+      symbol_path = line.substr(0, tab_index);
+      build_dir = line.substr(tab_index + 1);
+    } else {
+      symbol_path = line;
+      build_dir.clear();
+    }
+
+    // Both paths must be absolute.
+    if (symbol_path.empty() || symbol_path[0] != '/' ||
+        (!build_dir.empty() && build_dir[0] != '/')) {
+      LogMessage(fxl::StringPrintf("Invalid line in %s: %s", file_name.c_str(), line.c_str()));
+      continue;
+    }
+
+    std::error_code ec;
+    if (std::filesystem::is_directory(symbol_path, ec)) {
+      AddBuildIdDir(symbol_path, build_dir);
+    } else if (std::filesystem::exists(symbol_path, ec)) {
+      AddIdsTxt(symbol_path, build_dir);
+    } else {
+      need_purge = true;
+    }
+  }
+
+  if (need_purge) {
+    LogMessage(
+        "Your symbol-index file contains non-existent paths. Please consider running "
+        "\"fx symbol-index purge\" to remove them.");
+  }
+}
+
+void BuildIDIndex::IndexSourcePath(const std::string& path) {
   std::error_code ec;
   if (std::filesystem::is_directory(path, ec)) {
     // Iterate through all files in this directory, but don't recurse.
     int indexed = 0;
     for (const auto& child : std::filesystem::directory_iterator(path, ec)) {
-      if (IndexOneSourceFile(child.path()))
+      if (IndexSourceFile(child.path()))
         indexed++;
     }
 
     status_.emplace_back(path, indexed);
-  } else if (!ec && IndexOneSourceFile(path)) {
+  } else if (!ec && IndexSourceFile(path)) {
     status_.emplace_back(path, 1);
   } else {
     status_.emplace_back(path, 0);
@@ -256,24 +280,28 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
   }
 }
 
-bool BuildIDIndex::IndexOneSourceFile(const std::string& file_path, bool preserve) {
+bool BuildIDIndex::IndexSourceFile(const std::string& file_path, const std::string& build_dir,
+                                   bool preserve) {
   auto elf = elflib::ElfLib::Create(file_path);
   if (!elf)
     return false;
 
   std::string build_id = elf->GetGNUBuildID();
-  if (build_id.empty()) {
+  if (build_id.empty())
     return false;
-  }
 
   auto ret = false;
-  if (elf->ProbeHasDebugInfo()) {
+  if (elf->ProbeHasDebugInfo() && build_id_to_files_[build_id].debug_info.empty()) {
     build_id_to_files_[build_id].debug_info = file_path;
     ret = true;
   }
-  if (elf->ProbeHasProgramBits()) {
+  if (elf->ProbeHasProgramBits() && build_id_to_files_[build_id].binary.empty()) {
     build_id_to_files_[build_id].binary = file_path;
     ret = true;
+  }
+
+  if (ret && !build_dir.empty()) {
+    build_id_to_files_[build_id].build_dir = build_dir;
   }
 
   if (ret && preserve) {
@@ -287,25 +315,20 @@ void BuildIDIndex::EnsureCacheClean() {
   if (!cache_dirty_)
     return;
 
-  repo_sources_.clear();
+  status_.clear();
+  build_id_to_files_ = manual_mappings_;
 
-  for (const auto& build_id_file : build_id_files_)
-    LoadOneBuildIDFile(build_id_file);
+  for (const auto& symbol_index_file : symbol_index_files_)
+    LoadSymbolIndexFile(symbol_index_file);
 
   for (const auto& source : sources_)
-    IndexOneSourcePath(source);
+    IndexSourcePath(source);
 
-  for (const auto& mapping : manual_mappings_)
-    build_id_to_files_.insert(mapping);
+  for (const auto& [ids_txt, build_dir] : ids_txts_)
+    LoadIdsTxt(ids_txt, build_dir);
 
-  for (const auto& path : always_repo_sources_) {
-    std::error_code ec;
-
-    if (std::filesystem::is_directory(path, ec)) {
-      repo_sources_.push_back(path);
-      status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
-    }
-  }
+  for (const auto& [path, build_dir] : build_id_dirs_)
+    status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
 
   cache_dirty_ = false;
 }

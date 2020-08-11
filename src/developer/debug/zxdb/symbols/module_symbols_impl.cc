@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <memory>
 
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -129,8 +130,9 @@ bool HasOnlySupportedSpecialIdentifierTypes(const Identifier& ident) {
 
 }  // namespace
 
-ModuleSymbolsImpl::ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary, bool create_index)
-    : binary_(std::move(binary)), weak_factory_(this) {
+ModuleSymbolsImpl::ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary,
+                                     const std::string& build_dir, bool create_index)
+    : binary_(std::move(binary)), build_dir_(build_dir), weak_factory_(this) {
   symbol_factory_ = fxl::MakeRefCounted<DwarfSymbolFactory>(GetWeakPtr());
   FillElfSymbols();
 
@@ -166,6 +168,8 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 std::time_t ModuleSymbolsImpl::GetModificationTime() const {
   return binary_->GetModificationTime();
 }
+
+std::string ModuleSymbolsImpl::GetBuildDir() const { return build_dir_; }
 
 std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContext& symbol_context,
                                                               const InputLocation& input_location,
@@ -237,6 +241,10 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
                                    llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
                                    file_name);
     compilation_dir = unit->GetCompilationDir();
+  }
+
+  if (!build_dir_.empty()) {
+    compilation_dir = build_dir_;
   }
 
   LineDetails result(FileLine(file_name, compilation_dir, rows[first_row_index].Line));
@@ -509,8 +517,12 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
       std::optional<std::string> file_name;
       if (row.Line)
         file_name = line_table.GetFileNameForRow(row);  // Could still return nullopt.
-      if (file_name)
-        file_line = FileLine(std::move(*file_name), unit->GetCompilationDir(), row.Line);
+      if (file_name) {
+        if (build_dir_.empty())
+          file_line = FileLine(std::move(*file_name), unit->GetCompilationDir(), row.Line);
+        else
+          file_line = FileLine(std::move(*file_name), build_dir_, row.Line);
+      }
       column = row.Column;
     }
   }
