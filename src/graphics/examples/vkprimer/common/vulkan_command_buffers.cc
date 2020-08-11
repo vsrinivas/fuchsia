@@ -51,7 +51,7 @@ bool VulkanCommandBuffers::Init() {
   for (const auto &command_buffer : command_buffers_) {
     const auto &framebuffer = *(framebuffer_iter++);
 
-    vk::CommandBufferBeginInfo begin_info(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+    vk::CommandBufferBeginInfo begin_info;
 
     auto result = command_buffer->begin(&begin_info);
     if (vk::Result::eSuccess != result) {

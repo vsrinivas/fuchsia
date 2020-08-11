@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,10 +9,10 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
-test_package("vkprimer") {
+test_package("cmd-buf-benchmark") {
   tests = [
     {
-      name = "vkprimer"
+      name = "cmd-buf-benchmark"
       environments = magma_hardware_envs
     },
   ]
@@ -20,11 +20,11 @@ test_package("vkprimer") {
 
   resources = [
     {
-      path = "common/shaders/vert.spv"
+      path = "../common/shaders/vert.spv"
       dest = "shaders/vert.spv"
     },
     {
-      path = "common/shaders/frag.spv"
+      path = "../common/shaders/frag.spv"
       dest = "shaders/frag.spv"
     },
   ]
@@ -49,9 +49,10 @@ config("vulkan_sdk_linux_config") {
 }
 
 executable("bin") {
-  output_name = "vkprimer"
+  output_name = "cmd-buf-benchmark"
   sources = common_sources
-  sources += [ "example/main.cc" ]
+
+  sources += [ "main.cc" ]
 
   include_dirs = [ "//src/graphics/examples/vkprimer/common" ]
 
@@ -65,8 +66,8 @@ executable("bin") {
     deps += [ "//src/lib/vulkan" ]
 
     sources += [
-      "fuchsia/vulkan_surface.cc",
-      "fuchsia/vulkan_surface.h",
+      "../fuchsia/vulkan_surface.cc",
+      "../fuchsia/vulkan_surface.h",
     ]
   } else {
     defines += [ "USE_GLFW=1" ]
@@ -74,12 +75,12 @@ executable("bin") {
     include_dirs += [ "//src/graphics/examples/vkprimer/glfw" ]
 
     sources += [
-      "glfw/vulkan_surface.cc",
-      "glfw/vulkan_surface.h",
+      "../glfw/vulkan_surface.cc",
+      "../glfw/vulkan_surface.h",
     ]
 
     deps += [
-      ":spirv_copy",
+      "..:spirv_copy",
       "//third_party/glfw",
     ]
 
@@ -95,15 +96,15 @@ executable("bin") {
   }
 
   data = [
-    "common/shaders/frag.spv",
-    "common/shaders/vert.spv",
+    "../common/shaders/frag.spv",
+    "../common/shaders/vert.spv",
   ]
 }
 
 copy("spirv_copy") {
   sources = [
-    "common/shaders/frag.spv",
-    "common/shaders/vert.spv",
+    "../common/shaders/frag.spv",
+    "../common/shaders/vert.spv",
   ]
 
   outputs = [ "$target_out_dir/{{source_file_part}}" ]
@@ -112,6 +113,6 @@ copy("spirv_copy") {
 #
 # Linux / Mac Build
 #
-group("vkprimer_glfw") {
+group("cmd-buf-benchmark_glfw") {
   deps = [ ":bin($host_toolchain)" ]
 }

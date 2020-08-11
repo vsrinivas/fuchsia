@@ -1,0 +1,30 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
+            ]
+        }
+    },
+    "program": {
+        "args": [
+            "-offscreen"
+        ],
+        "binary": "test/cmd-buf-benchmark"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

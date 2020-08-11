@@ -15,6 +15,7 @@ group("tests") {
     "display:tests",
     "drivers:tests",
     "examples/vkprimer",
+    "examples/vkprimer/cmd-buf-benchmark",
     "lib/compute:tests",
     "lib/magma/tests",
     "tests:tests",

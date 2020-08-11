@@ -5,7 +5,6 @@
 common_path = "//src/graphics/examples/vkprimer/common/"
 
 common_files = [
-  "main.cc",
   "surface_phys_device_params.h",
   "utils.cc",
   "utils.h",
@@ -43,4 +42,8 @@ common_sources = []
 
 foreach(file, common_files) {
   common_sources += [ "${common_path}${file}" ]
+}
+
+declare_args() {
+  vulkan_sdk = ""
 }
