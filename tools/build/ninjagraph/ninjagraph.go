@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"go.fuchsia.dev/fuchsia/tools/build/ninjalog"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -117,6 +118,12 @@ type Edge struct {
 	Inputs  []int64
 	Outputs []int64
 	Rule    string
+
+	// Fields below are populated after `PopulateEdges`.
+
+	// Step is a build step associated with this edge. It can be derived from
+	// joining with ninja_log.
+	Step *ninjalog.Step
 }
 
 // Graph is a Ninja build graph.
@@ -330,4 +337,82 @@ func FromDOT(r io.Reader) (Graph, error) {
 		}
 	}
 	return g, nil
+}
+
+// PopulateEdges joins the build steps from ninjalog with the graph and
+// populates build time on edges.
+//
+// `steps` should be deduplicated, so they have a 1-to-1 mapping to edges.
+func (g *Graph) PopulateEdges(steps []ninjalog.Step) error {
+	stepByOut := make(map[string]ninjalog.Step)
+
+	for _, step := range steps {
+		// Index all outputs, otherwise the edges can miss steps due to missing
+		// nodes, which is something we need to fix. If steps are only indexed on
+		// their main output, and that output node is missing from the graph, we
+		// can't draw a link between the step and its corresponding edge.
+		//
+		// For example, if a step has its main output set to `foo`, and also
+		// produces `bar` and `baz`, we want to index this step on all three of the
+		// outputs. This way, if an edge missed `foo` in its output (cause by the
+		// Ninja graph bug), it can still be associated with the step since it can
+		// match on both other outputs.
+		//
+		// TODO(jayzhuang): figure out why there are missing nodes in Ninja graph.
+		for _, out := range append(step.Outs, step.Out) {
+			if _, ok := stepByOut[out]; ok {
+				return fmt.Errorf("multiple steps claim to produce the same output %s", out)
+			}
+			stepByOut[out] = step
+		}
+	}
+
+	for _, edge := range g.Edges {
+		// Skip "phony" builds, e.g. "build default: phony obj/default.stamp" can be
+		// included in the graph.
+		if edge.Rule == "phony" {
+			continue
+		}
+
+		// Look for the corresponding ninjalog step for this edge. We do this by
+		// matching outputs: for each output we look for the build step that
+		// produced it, and associate that with the edge. Along the way we also
+		// check all the outputs claimed by this edge is produced by the same step,
+		// so there is a 1-to-1 mapping between them.
+		var step *ninjalog.Step
+		for _, output := range edge.Outputs {
+			node, ok := g.Nodes[output]
+			if !ok {
+				// TODO(jayzhuang): figure out why there are missing nodes in Ninja graph.
+				continue
+			}
+
+			s, ok := stepByOut[node.Path]
+			if !ok {
+				return fmt.Errorf("no steps are producing output %s, yet an edge claims to produce it", node.Path)
+			}
+			if step != nil && step.CmdHash != s.CmdHash {
+				return fmt.Errorf("multiple steps match the same edge on outputs %v, previous step: %#v, this step: %#v", g.pathsOf(edge.Outputs), step, s)
+			}
+			step = &s
+		}
+		if step == nil {
+			return fmt.Errorf("no build steps found for build edge with output(s): %v", g.pathsOf(edge.Outputs))
+		}
+		edge.Step = step
+	}
+	return nil
+}
+
+func (g *Graph) pathsOf(outputs []int64) []string {
+	var paths []string
+	for _, o := range outputs {
+		node, ok := g.Nodes[o]
+		if !ok {
+			// TODO(jayzhuang): figure out why there are missing nodes in Ninja graph.
+			continue
+		}
+		paths = append(paths, node.Path)
+	}
+	return paths
 }
