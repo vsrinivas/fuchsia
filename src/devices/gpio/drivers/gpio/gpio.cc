@@ -59,6 +59,11 @@ zx_status_t GpioDevice::GpioSetPolarity(gpio_polarity_t polarity) {
   return gpio_.SetPolarity(pin_, polarity);
 }
 
+zx_status_t GpioDevice::GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua) {
+  fbl::AutoLock lock(&lock_);
+  return gpio_.SetDriveStrength(pin_, ds_ua, out_actual_ds_ua);
+}
+
 void GpioDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void GpioDevice::DdkRelease() { delete this; }

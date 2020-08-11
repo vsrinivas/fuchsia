@@ -517,6 +517,20 @@ zx_status_t FragmentProxy::GpioSetPolarity(uint32_t polarity) {
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
 }
 
+zx_status_t FragmentProxy::GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua) {
+  GpioProxyRequest req = {};
+  GpioProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_GPIO;
+  req.op = GpioOp::SET_DRIVE_STRENGTH;
+  req.ds_ua = ds_ua;
+
+  auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+  if ((status == ZX_OK) && out_actual_ds_ua) {
+    *out_actual_ds_ua = resp.out_actual_ds_ua;
+  }
+  return status;
+}
+
 zx_status_t FragmentProxy::GpioReleaseInterrupt() {
   GpioProxyRequest req = {};
   GpioProxyResponse resp = {};

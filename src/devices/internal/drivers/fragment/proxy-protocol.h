@@ -155,6 +155,7 @@ enum class GpioOp {
   GET_INTERRUPT,
   RELEASE_INTERRUPT,
   SET_POLARITY,
+  SET_DRIVE_STRENGTH,
 };
 
 struct GpioProxyRequest {
@@ -164,11 +165,13 @@ struct GpioProxyRequest {
   uint32_t polarity;
   uint64_t alt_function;
   uint8_t value;
+  uint64_t ds_ua;
 };
 
 struct GpioProxyResponse {
   ProxyResponse header;
   uint8_t value;
+  uint64_t out_actual_ds_ua;
 };
 
 // ZX_PROTOCOL_BUTTONS proxy support.

@@ -56,6 +56,7 @@ class GpioDevice : public GpioDeviceType,
   zx_status_t GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
   zx_status_t GpioReleaseInterrupt();
   zx_status_t GpioSetPolarity(gpio_polarity_t polarity);
+  zx_status_t GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua);
 
   // FIDL
   void ConfigIn(GpioFlags flags, ConfigInCompleter::Sync completer) {

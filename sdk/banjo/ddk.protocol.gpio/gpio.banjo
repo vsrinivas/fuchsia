@@ -37,4 +37,6 @@ protocol Gpio {
     ReleaseInterrupt()-> (zx.status s);
     /// Set GPIO polarity.
     SetPolarity(GpioPolarity polarity) -> (zx.status s);
+    /// Set GPIO drive strength.
+    SetDriveStrength(uint64 ds_ua) -> (zx.status s, uint64 actual_ds_ua);
 };

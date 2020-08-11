@@ -33,6 +33,9 @@ class MockGpio : public ddk::GpioProtocol<MockGpio> {
   }
   zx_status_t GpioReleaseInterrupt() { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t GpioSetPolarity(gpio_polarity_t polarity) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
  private:
   gpio_protocol_t proto_;

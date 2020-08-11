@@ -62,7 +62,7 @@ class GpioTest : public zxtest::Test {
   zx::channel client_;
 };
 
-TEST_F(GpioTest, TestAll) {
+TEST_F(GpioTest, TestFidlAll) {
   ::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient client(std::move(client_));
 
   gpio_impl_.ExpectRead(ZX_OK, 0, 20);
@@ -81,6 +81,13 @@ TEST_F(GpioTest, TestAll) {
   gpio_impl_.ExpectConfigOut(ZX_OK, 0, 5);
   auto result_out = client.ConfigOut(5);
   EXPECT_OK(result_out.status());
+}
+
+TEST_F(GpioTest, TestBanjoSetDriveStrength) {
+  uint64_t actual = 0;
+  gpio_impl_.ExpectSetDriveStrength(ZX_OK, 0, 3000, 3000);
+  EXPECT_OK(gpio_->GpioSetDriveStrength(3000, &actual));
+  EXPECT_EQ(actual, 3000);
 }
 
 }  // namespace gpio

@@ -227,6 +227,8 @@ zx_status_t Fragment::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_t
       return gpio_client_.proto_client().ReleaseInterrupt();
     case GpioOp::SET_POLARITY:
       return gpio_client_.proto_client().SetPolarity(req->polarity);
+    case GpioOp::SET_DRIVE_STRENGTH:
+      return gpio_client_.proto_client().SetDriveStrength(req->ds_ua, &resp->out_actual_ds_ua);
     default:
       zxlogf(ERROR, "%s: unknown GPIO op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
