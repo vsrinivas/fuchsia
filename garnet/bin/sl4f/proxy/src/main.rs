@@ -19,7 +19,7 @@ use futures::{
 use log::{error, info, warn};
 use std::{
     collections::HashMap,
-    net::{SocketAddr, SocketAddrV6},
+    net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6},
     sync::Arc,
 };
 
@@ -108,8 +108,8 @@ impl TcpProxyControl {
 struct TcpProxy {
     /// Listener that accepts connections on the open port.
     tcp_listener: fasync::net::TcpListener,
-    /// Address to forward requests to.
-    target_addr: SocketAddr,
+    /// Target port on the local device to forward requests to.
+    target_port: u16,
     /// Channel through which the `TcpProxy` is notified of new clients.
     stream_receiver: mpsc::UnboundedReceiver<TcpProxy_RequestStream>,
 }
@@ -140,14 +140,12 @@ impl TcpProxyHandle {
 impl TcpProxy {
     /// Creates a new `TcpProxy` and corresponding `TcpProxyHandle` with which to register clients.
     pub fn new(target_port: u16) -> Result<(Self, TcpProxyHandle), Error> {
-        let open_addr: std::net::SocketAddrV6 = "[::]:0".parse()?;
+        let open_addr: SocketAddrV6 = "[::]:0".parse()?;
         let tcp_listener = fasync::net::TcpListener::bind(&open_addr.into())?;
         let open_port = tcp_listener.local_addr()?.port();
-        let target_addr: SocketAddrV6 = format!("[::1]:{}", target_port).as_str().parse()?;
 
         let (sender, receiver) = mpsc::unbounded();
-        let proxy =
-            TcpProxy { tcp_listener, target_addr: target_addr.into(), stream_receiver: receiver };
+        let proxy = TcpProxy { tcp_listener, target_port, stream_receiver: receiver };
         let proxy_handle = TcpProxyHandle { open_port, stream_sender: sender };
         Ok((proxy, proxy_handle))
     }
@@ -155,22 +153,27 @@ impl TcpProxy {
     /// Proxies requests received on the open port to the target port, until all the clients
     /// registered via the corresponding `TcpProxyHandle` are closed or the proxy crashes.
     async fn serve_proxy_while_open_clients(self) {
-        let TcpProxy { tcp_listener, target_addr, mut stream_receiver } = self;
+        let TcpProxy { tcp_listener, target_port, mut stream_receiver } = self;
         let clients_complete_fut = async move {
             while let Some(Some(request_stream)) = stream_receiver.next().now_or_never() {
                 request_stream.collect::<Vec<_>>().await;
             }
         };
-        select(clients_complete_fut.boxed(), Self::serve_proxy(tcp_listener, target_addr).boxed())
+        select(clients_complete_fut.boxed(), Self::serve_proxy(tcp_listener, target_port).boxed())
             .await;
     }
 
-    /// Proxies any requests recieved on |tcp_listener| to |target_addr|.
-    async fn serve_proxy(tcp_listener: fasync::net::TcpListener, target_addr: SocketAddr) {
+    /// Proxies any requests recieved on |tcp_listener| to localhost:|target_port|.
+    async fn serve_proxy(tcp_listener: fasync::net::TcpListener, target_port: u16) {
         tcp_listener
             .accept_stream()
             .try_for_each_concurrent(None, |(client_conn, _addr)| async move {
-                let server_conn = fasync::net::TcpStream::connect(target_addr.clone())?.await?;
+                let v6_addr = SocketAddrV6::new(Ipv6Addr::LOCALHOST, target_port, 0, 0);
+                let v4_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, target_port);
+                let server_conn = match fasync::net::TcpStream::connect(v6_addr.into())?.await {
+                    Ok(v6_conn) => v6_conn,
+                    Err(_) => fasync::net::TcpStream::connect(v4_addr.into())?.await?,
+                };
                 Self::serve_single_connection(client_conn, server_conn)
                     .await
                     .unwrap_or_else(|e| warn!("Error serving tunnel: {:?}", e));
@@ -206,7 +209,7 @@ mod test {
     use futures::future::TryFutureExt;
     use hyper::server::{accept::from_stream, Server};
     use hyper::{Body, Response, Uri};
-    use std::convert::Infallible;
+    use std::{convert::Infallible, net::SocketAddr};
 
     fn launch_data_proxy_control() -> TcpProxyControlProxy {
         let control = TcpProxyControl::new();
@@ -224,9 +227,8 @@ mod test {
 
     /// Launches an http server that always responds with success. Returns the port the
     /// server is listening on.
-    fn launch_test_server() -> u16 {
-        let open_addr: std::net::SocketAddrV6 = "[::1]:0".parse().unwrap();
-        let tcp_listener = fasync::net::TcpListener::bind(&open_addr.into()).unwrap();
+    fn launch_test_server(addr: SocketAddr) -> u16 {
+        let tcp_listener = fasync::net::TcpListener::bind(&addr).unwrap();
         let port = tcp_listener.local_addr().unwrap().port();
         let connections = tcp_listener
             .accept_stream()
@@ -245,6 +247,16 @@ mod test {
         fasync::Task::spawn(server).detach();
 
         port
+    }
+
+    fn launch_test_server_v6() -> u16 {
+        let addr: SocketAddrV6 = "[::1]:0".parse().unwrap();
+        launch_test_server(addr.into())
+    }
+
+    fn launch_test_server_v4() -> u16 {
+        let addr: SocketAddrV4 = "127.0.0.1:0".parse().unwrap();
+        launch_test_server(addr.into())
     }
 
     /// Asserts that an HTTP request to [::1]:port succeeds.
@@ -283,7 +295,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_tcp_proxy_lifetime() {
-        let test_port = launch_test_server();
+        let test_port = launch_test_server_v6();
         assert_request(test_port).await;
 
         let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port).unwrap();
@@ -308,8 +320,31 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_tcp_proxy_ipv4() {
+        let test_port = launch_test_server_v4();
+
+        let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port).unwrap();
+        let (tcp_proxy_token, tcp_proxy_server_end) =
+            create_proxy_and_stream::<TcpProxy_Marker>().unwrap();
+        let proxy_port = tcp_proxy_handle
+            .register_client(tcp_proxy_server_end)
+            .map_err(|_| anyhow!("Error on register client"))
+            .unwrap();
+        let tcp_proxy_fut = tcp_proxy.serve_proxy_while_open_clients().shared();
+        fasync::Task::spawn(tcp_proxy_fut.clone()).detach();
+
+        // test server reachable while proxy is served
+        assert_request(proxy_port).await;
+
+        // after dropping the TcpProxy, serving proxy should complete
+        drop(tcp_proxy_token);
+        tcp_proxy_fut.await;
+        assert_unreachable(proxy_port).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_tcp_proxy_multiple_clients_lifetime() {
-        let test_port = launch_test_server();
+        let test_port = launch_test_server_v6();
         assert_request(test_port).await;
 
         let (tcp_proxy, tcp_proxy_handle) = TcpProxy::new(test_port).unwrap();
@@ -361,7 +396,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_proxy_control_recreate_proxy() {
-        let test_port = launch_test_server();
+        let test_port = launch_test_server_v6();
         assert_request(test_port).await;
         let control_proxy = launch_data_proxy_control();
 
