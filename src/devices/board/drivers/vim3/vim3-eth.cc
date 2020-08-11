@@ -178,21 +178,21 @@ zx_status_t Vim3::EthInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOZ(12), A311D_GPIOZ_12_ETH_TXD2_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOZ(13), A311D_GPIOZ_13_ETH_TXD3_FN);
 
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(0), 1, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(1), 1, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(2), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(3), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(4), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(5), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(6), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(7), 2, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(0), 2500, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(1), 2500, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(2), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(3), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(4), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(5), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(6), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(7), 3000, nullptr);
 
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(8), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(9), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(10), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(11), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(12), 2, nullptr);
-  gpio_impl_.SetDriveStrength(A311D_GPIOZ(13), 2, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(8), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(9), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(10), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(11), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(12), 3000, nullptr);
+  gpio_impl_.SetDriveStrength(A311D_GPIOZ(13), 3000, nullptr);
 
   // Add a composite device for ethernet board in a new devhost.
   auto status =

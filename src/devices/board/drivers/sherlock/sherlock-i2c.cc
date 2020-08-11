@@ -141,8 +141,8 @@ zx_status_t Sherlock::I2cInit() {
   gpio_impl_.SetAltFunction(T931_GPIOAO(2), 1);
   gpio_impl_.SetAltFunction(T931_GPIOAO(3), 1);
   if (info.pid == PDEV_PID_LUIS) {
-    gpio_impl_.SetDriveStrength(T931_GPIOAO(2), 2, nullptr);
-    gpio_impl_.SetDriveStrength(T931_GPIOAO(3), 2, nullptr);
+    gpio_impl_.SetDriveStrength(T931_GPIOAO(2), 3000, nullptr);
+    gpio_impl_.SetDriveStrength(T931_GPIOAO(3), 3000, nullptr);
   }
   // i2c2
   gpio_impl_.SetAltFunction(T931_GPIOZ(14), 3);

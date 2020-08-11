@@ -21,7 +21,7 @@ namespace sherlock {
 namespace {
 
 constexpr uint32_t kClk24MAltFunc = 7;
-constexpr uint32_t kClkGpioDriveStrength = 3;
+constexpr uint32_t kClkGpioDriveStrengthUa = 4000;
 
 constexpr pbus_mmio_t ge2d_mmios[] = {
     // GE2D Base
@@ -378,7 +378,7 @@ const pbus_dev_t sensor_dev = []() {
 zx_status_t Sherlock::CameraInit() {
   // Set GPIO alternate functions.
   gpio_impl_.SetAltFunction(T931_GPIOAO(10), kClk24MAltFunc);
-  gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrength, nullptr);
+  gpio_impl_.SetDriveStrength(T931_GPIOAO(10), kClkGpioDriveStrengthUa, nullptr);
 
   zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
   if (status != ZX_OK) {

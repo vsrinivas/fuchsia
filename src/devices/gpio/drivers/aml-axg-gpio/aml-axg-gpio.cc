@@ -20,7 +20,6 @@
 namespace {
 
 constexpr int kAltFnMax = 15;
-constexpr int kDriveStrengthMax = 3;
 constexpr int kMaxPinsInDSReg = 16;
 constexpr int kGpioInterruptPolarityShift = 16;
 constexpr int kMaxGpioIndex = 255;
@@ -33,6 +32,14 @@ uint32_t GetUnusedIrqIndex(uint8_t status) {
   // Count no. of leading zeros
   return __builtin_ctz(zero_bit_set);
 }
+
+// Supported Drive Strengths
+enum DriveStrength {
+  DRV_500UA,
+  DRV_2500UA,
+  DRV_3000UA,
+  DRV_4000UA,
+};
 
 }  // namespace
 
@@ -454,9 +461,6 @@ zx_status_t AmlAxgGpio::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
   return ZX_OK;
 }
 
-// TODO(braval): Currently accepted values for drive strength are [0..3]
-// We do not know the units for these, update here after checking with Amlogic
-// so we have a uniform interface for drive strengths.
 zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint64_t ua,
                                                  uint64_t* out_actual_ua) {
   zx_status_t status;
@@ -465,15 +469,32 @@ zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint64_t ua,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (ua > kDriveStrengthMax) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   const AmlGpioBlock* block;
   uint32_t pinindex;
   if ((status = AmlPinToBlock(pin, &block, &pinindex)) != ZX_OK) {
     zxlogf(ERROR, "AmlAxgGpio::GpioImplSetDriveStrength: pin not found %u", pin);
     return status;
+  }
+
+  DriveStrength ds_val = DRV_4000UA;
+  if (ua <= 500) {
+    ds_val = DRV_500UA;
+    ua = 500;
+  } else if (ua <= 2500) {
+    ds_val = DRV_2500UA;
+    ua = 2500;
+  } else if (ua <= 3000) {
+    ds_val = DRV_3000UA;
+    ua = 3000;
+  } else if (ua <= 4000) {
+    ds_val = DRV_4000UA;
+    ua = 4000;
+  } else {
+    zxlogf(ERROR,
+           "AmlAxgGpio::GpioImplSetDriveStrength: invalid drive strength %lu, default to 4000 uA\n",
+           ua);
+    ds_val = DRV_4000UA;
+    ua = 4000;
   }
 
   pinindex = pin - block->pin_block;
@@ -487,7 +508,7 @@ zx_status_t AmlAxgGpio::GpioImplSetDriveStrength(uint32_t pin, uint64_t ua,
   {
     fbl::AutoLock al(&mmio_lock_);
     uint32_t regval = mmios_[block->mmio_index].Read32(block->ds_offset * sizeof(uint32_t));
-    regval = (regval & mask) | (static_cast<uint8_t>(ua) << shift);
+    regval = (regval & mask) | (ds_val << shift);
     mmios_[block->mmio_index].Write32(regval, block->ds_offset * sizeof(uint32_t));
   }
   if (out_actual_ua) {
