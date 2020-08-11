@@ -13,7 +13,7 @@
 namespace cobalt {
 
 namespace {
-constexpr const char kAllSelector[] = "core/archivist:root/all_archive_accessor_node:*";
+constexpr const char kAllSelector[] = "core/archivist:root/all_archive_accessor:*";
 }
 
 ArchivistStatsFetcherImpl::ArchivistStatsFetcherImpl(async_dispatcher_t* dispatcher,
@@ -45,9 +45,9 @@ void ArchivistStatsFetcherImpl::FetchMetrics(MetricsCallback metrics_callback) {
         }
 
         const rapidjson::Value& node =
-            results.value()[0].GetByPath({"root", "all_archive_accessor_node"});
+            results.value()[0].GetByPath({"root", "all_archive_accessor"});
         if (node.IsNull() || !node.IsObject()) {
-          FX_LOGS(ERROR) << "Could not find object at root/all_archive_accessor_node";
+          FX_LOGS(ERROR) << "Could not find object at root/all_archive_accessor";
           return;
         }
 
