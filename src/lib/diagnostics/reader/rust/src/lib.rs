@@ -7,19 +7,21 @@ use anyhow::{Context as _, Error};
 use diagnostics_data::{Data, InspectData, InspectMetadata, LifecycleEventMetadata};
 use fidl;
 use fidl_fuchsia_diagnostics::{
-    ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, ClientSelectorConfiguration,
-    Format, FormattedContent, SelectorArgument, StreamMode, StreamParameters,
+    ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
+    ClientSelectorConfiguration, Format, FormattedContent, SelectorArgument, StreamMode,
+    StreamParameters,
 };
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component::client;
 use fuchsia_zircon::{Duration, DurationNum};
+use futures::sink::{Sink, SinkExt};
 use serde::de::DeserializeOwned;
 use serde_json;
 
 pub use fidl_fuchsia_diagnostics::DataType;
 pub use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 
-const RETRY_DELAY_MS: i64 = 150;
+const RETRY_DELAY_MS: i64 = 300;
 
 /// An inspect tree selector for a component.
 pub struct ComponentSelector {
@@ -176,65 +178,78 @@ impl ArchiveReader {
         &self,
         data_type: DataType,
     ) -> Result<Vec<serde_json::Value>, Error> {
-        let archive = if let Some(archive) = &self.archive {
-            archive.clone()
-        } else {
-            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?
-        };
-
         loop {
-            let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
-                .context("failed to create iterator proxy")?;
-
-            let mut stream_parameters = StreamParameters::empty();
-            stream_parameters.stream_mode = Some(StreamMode::Snapshot);
-            stream_parameters.data_type = Some(data_type);
-            stream_parameters.format = Some(Format::Json);
-            stream_parameters.client_selector_configuration = if self.selectors.is_empty() {
-                Some(ClientSelectorConfiguration::SelectAll(true))
-            } else {
-                Some(ClientSelectorConfiguration::Selectors(
-                    self.selectors
-                        .iter()
-                        .map(|selector| SelectorArgument::RawSelector(selector.clone()))
-                        .collect(),
-                ))
-            };
-
-            archive
-                .stream_diagnostics(stream_parameters, server_end)
-                .context("get BatchIterator")
-                .unwrap();
-
             let mut result = Vec::new();
-            loop {
-                let next_batch = iterator.get_next().await.context("failed to get batch")?.unwrap();
-                if next_batch.is_empty() {
-                    break;
-                }
-                for formatted_content in next_batch {
-                    match formatted_content {
-                        FormattedContent::Json(data) => {
-                            let mut buf = vec![0; data.size as usize];
-                            data.vmo.read(&mut buf, 0).context("reading vmo")?;
-                            let hierarchy_json = std::str::from_utf8(&buf).unwrap();
-                            let output: serde_json::Value =
-                                serde_json::from_str(&hierarchy_json).context("valid json")?;
-                            result.push(output);
-                        }
-                        _ => unreachable!(
-                            "JSON was requested, no other data type should be received"
-                        ),
-                    }
-                }
-            }
+            let iterator = self.batch_iterator(data_type, StreamMode::Snapshot)?;
+            drain_batch_iterator(iterator, &mut result).await?;
 
             if result.len() < self.minimum_schema_count && self.should_retry {
-                // Retry with delay to ensure data appears if the reader is called right after the
-                // component started, before the archivist knows about it.
                 fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
             } else {
                 return Ok(result);
+            }
+        }
+    }
+
+    fn batch_iterator(
+        &self,
+        data_type: DataType,
+        mode: StreamMode,
+    ) -> Result<BatchIteratorProxy, Error> {
+        let archive = if let Some(archive) = &self.archive {
+            archive.clone()
+        } else {
+            // TODO(fxb/58051) this should be done in an ArchiveReaderBuilder -> Reader init
+            client::connect_to_service::<ArchiveAccessorMarker>().context("connect to archive")?
+        };
+
+        let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
+            .context("failed to create iterator proxy")?;
+
+        let mut stream_parameters = StreamParameters::empty();
+        stream_parameters.stream_mode = Some(mode);
+        stream_parameters.data_type = Some(data_type);
+        stream_parameters.format = Some(Format::Json);
+        stream_parameters.client_selector_configuration = if self.selectors.is_empty() {
+            Some(ClientSelectorConfiguration::SelectAll(true))
+        } else {
+            Some(ClientSelectorConfiguration::Selectors(
+                self.selectors
+                    .iter()
+                    .map(|selector| SelectorArgument::RawSelector(selector.clone()))
+                    .collect(),
+            ))
+        };
+
+        archive.stream_diagnostics(stream_parameters, server_end).context("get BatchIterator")?;
+        Ok(iterator)
+    }
+}
+
+async fn drain_batch_iterator<S, E>(
+    iterator: BatchIteratorProxy,
+    mut results: S,
+) -> Result<(), Error>
+where
+    S: Sink<serde_json::Value, Error = E> + Unpin,
+    E: std::error::Error + Send + Sync + 'static,
+{
+    loop {
+        let next_batch = iterator.get_next().await.context("getting batch")?.unwrap();
+        if next_batch.is_empty() {
+            return Ok(());
+        }
+        for formatted_content in next_batch {
+            match formatted_content {
+                FormattedContent::Json(data) => {
+                    let mut buf = vec![0; data.size as usize];
+                    data.vmo.read(&mut buf, 0).context("reading vmo")?;
+                    let hierarchy_json = std::str::from_utf8(&buf).unwrap();
+                    let output: serde_json::Value =
+                        serde_json::from_str(&hierarchy_json).context("valid json")?;
+                    results.send(output).await.context("sending result")?;
+                }
+                _ => unreachable!("JSON was requested, no other data type should be received"),
             }
         }
     }
