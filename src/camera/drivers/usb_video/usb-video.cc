@@ -157,8 +157,8 @@ zx_status_t usb_video_parse_descriptors(void* ctx, zx_device_t* device) {
             break;
           }
         }
-        zxlogf(DEBUG, "USB_DT_INTERFACE %d %d %d", intf->bInterfaceClass,
-               intf->bInterfaceSubClass, intf->bInterfaceProtocol);
+        zxlogf(DEBUG, "USB_DT_INTERFACE %d %d %d", intf->bInterfaceClass, intf->bInterfaceSubClass,
+               intf->bInterfaceProtocol);
         break;
       }
       case USB_VIDEO_CS_INTERFACE: {

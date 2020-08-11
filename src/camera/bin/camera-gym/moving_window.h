@@ -67,18 +67,10 @@ class MovingWindow {
   fuchsia::math::RectF WindowToRectF(Window window);
 
   // Test to see if width/height is shrinking/expanding.
-  inline bool IsShrinkingWidth() {
-    return left_inc_ > right_inc_;
-  }
-  inline bool IsShrinkingHeight() {
-    return top_inc_ > bottom_inc_;
-  }
-  inline bool IsExpandingWidth() {
-    return left_inc_ < right_inc_;
-  }
-  inline bool IsExpandingHeight() {
-    return top_inc_ < bottom_inc_;
-  }
+  inline bool IsShrinkingWidth() { return left_inc_ > right_inc_; }
+  inline bool IsShrinkingHeight() { return top_inc_ > bottom_inc_; }
+  inline bool IsExpandingWidth() { return left_inc_ < right_inc_; }
+  inline bool IsExpandingHeight() { return top_inc_ < bottom_inc_; }
 
   float AddToMagnitude(float a, float b);
   void SwapMagnitudes(float* a, float* b);

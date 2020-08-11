@@ -1,7 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_TEST_CONSTANTS_H_
+#define SRC_CAMERA_DRIVERS_CONTROLLER_TEST_CONSTANTS_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
@@ -26,3 +27,5 @@ constexpr auto kStreamTypeMonitoring = fuchsia::camera2::CameraStreamType::MONIT
 constexpr auto kNumBuffers = 5;
 
 }  // namespace camera
+
+#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_TEST_CONSTANTS_H_
