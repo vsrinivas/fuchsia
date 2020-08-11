@@ -219,6 +219,10 @@ disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) 
     return DISK_FORMAT_ZXCRYPT;
   }
 
+  if (!memcmp(data, block_verity_magic, sizeof(block_verity_magic))) {
+    return DISK_FORMAT_BLOCK_VERITY;
+  }
+
   if (!memcmp(data + resp->info->block_size, gpt_magic, sizeof(gpt_magic))) {
     return DISK_FORMAT_GPT;
   }

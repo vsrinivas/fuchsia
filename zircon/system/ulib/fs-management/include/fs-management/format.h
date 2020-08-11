@@ -18,6 +18,7 @@ typedef enum disk_format_type {
   DISK_FORMAT_BLOBFS,
   DISK_FORMAT_FVM,
   DISK_FORMAT_ZXCRYPT,
+  DISK_FORMAT_BLOCK_VERITY,
   DISK_FORMAT_COUNT_,
 } disk_format_t;
 
@@ -53,9 +54,12 @@ static const uint8_t zxcrypt_magic[16] = {
     0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7, 0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74,
 };
 
+static const uint8_t block_verity_magic[16] = {0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2d, 0x76, 0x65,
+                                               0x72, 0x69, 0x74, 0x79, 0x2d, 0x76, 0x31, 0x00};
+
 disk_format_t detect_disk_format(int fd);
 disk_format_t detect_disk_format_log_unknown(int fd);
 
 __END_CDECLS
 
-#endif // FS_MANAGEMENT_FORMAT_H_
+#endif  // FS_MANAGEMENT_FORMAT_H_

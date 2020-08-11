@@ -168,16 +168,13 @@ zx_status_t BlockDevice::UnsealZxcrypt() {
   return ZX_OK;
 }
 
-zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
+zx_status_t BlockDevice::IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                                 bool* is_path) {
   zx_status_t call_status;
   fbl::StringBuffer<PATH_MAX> path;
   path.Resize(path.capacity());
   size_t path_len;
   fdio_cpp::UnownedFdioCaller disk_connection(fd_.get());
-  // Both the zxcrypt and minfs partitions have the same gpt guid, so here we
-  // determine which it actually is. We do this by looking up the topological
-  // path.
-
   auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(disk_connection.borrow_channel()));
   zx_status_t status = resp.status();
@@ -200,15 +197,21 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
   if (call_status != ZX_OK) {
     return call_status;
   }
-  const std::string_view kZxcryptPath("/zxcrypt/unsealed/block");
-  if (path_len < kZxcryptPath.length()) {
-    *is_unsealed_zxcrypt = false;
+  if (path_len < expected_path.length()) {
+    *is_path = false;
   } else {
-    *is_unsealed_zxcrypt =
-        std::string_view(path.begin() + path_len - kZxcryptPath.length()).compare(kZxcryptPath) ==
+    *is_path =
+        std::string_view(path.begin() + path_len - expected_path.length()).compare(expected_path) ==
         0;
   }
   return ZX_OK;
+}
+
+zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
+  // Both the zxcrypt and minfs partitions have the same gpt guid, so here we
+  // determine which it actually is. We do this by looking up the topological
+  // path.
+  return IsTopologicalPathSuffix(std::string_view("/zxcrypt/unsealed/block"), is_unsealed_zxcrypt);
 }
 
 zx_status_t BlockDevice::FormatZxcrypt() {
@@ -397,6 +400,11 @@ zx_status_t BlockDeviceInterface::Add() {
     case DISK_FORMAT_MBR: {
       return AttachDriver(kMBRDriverPath);
     }
+    case DISK_FORMAT_BLOCK_VERITY: {
+      // TODO(fxb/55936): this should launch a thread to call OpenForVerifiedRead when the verity
+      // device is available. It should only launch that thread if we are not in FCT mode.
+      return AttachDriver(kBlockVerityDriverPath);
+    }
     case DISK_FORMAT_ZXCRYPT: {
       if (!Netbooting()) {
         return UnsealZxcrypt();
@@ -480,6 +488,23 @@ zx_status_t BlockDeviceInterface::Add() {
         }
         return Add();
       }
+
+      // if we know it's supposed to be a factoryfs partition, bind the block-verity driver.
+      if (gpt_is_factory_guid(guid.value, GPT_GUID_LEN)) {
+        bool is_already_bound;
+        if (IsTopologicalPathSuffix(std::string_view("/mutable/block"), &is_already_bound) !=
+            ZX_OK) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+        if (is_already_bound) {
+          // the factory service takes care of this block device
+          return ZX_OK;
+        }
+
+        printf("fshost: binding block-verity driver\n");
+        return AttachDriver(kBlockVerityDriverPath);
+      }
+
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

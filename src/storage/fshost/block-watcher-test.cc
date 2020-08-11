@@ -48,6 +48,10 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
   zx_status_t UnsealZxcrypt() override {
     ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
+  zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                      bool* is_path) override {
+    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
+  }
   zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) override {
     ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
   }
@@ -164,6 +168,77 @@ TEST(AddDeviceTestCase, AddMBRDevice) {
     bool attached = false;
   };
   MbrDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
+}
+
+// Tests adding a device with a factory GUID but an unknown disk format.
+TEST(AddDeviceTestCase, AddUnformattedBlockVerityDevice) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    // in FCT mode we need to be able to bind the block-verity driver to devices that don't yet
+    // have detectable magic, so Add relies on the gpt guid.
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ("/mutable/block", expected_path.data());
+      *is_path = false;
+      return ZX_OK;
+    }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GPT_FACTORY_TYPE_GUID;
+      return ZX_OK;
+    }
+    bool attached = false;
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+  EXPECT_TRUE(device.attached);
+}
+
+// Tests adding a device with a factory GUID but an unknown disk format with the topological path
+// suffix /mutable/block
+TEST(AddDeviceTestCase, AddUnformattedMutableBlockVerityDevice) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_UNKNOWN; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      ADD_FATAL_FAILURE("Should not attach a driver");
+      return ZX_OK;
+    }
+    zx_status_t IsTopologicalPathSuffix(const std::string_view& expected_path,
+                                        bool* is_path) final {
+      EXPECT_STR_EQ("/mutable/block", expected_path.data());
+      *is_path = true;
+      return ZX_OK;
+    }
+    zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final {
+      *out_guid = GPT_FACTORY_TYPE_GUID;
+      return ZX_OK;
+    }
+  };
+  BlockVerityDevice device;
+  EXPECT_OK(device.Add());
+}
+
+// Tests adding a device with the block-verity disk format.
+TEST(AddDeviceTestCase, AddFormattedBlockVerityDevice) {
+  class BlockVerityDevice : public MockBlockDevice {
+   public:
+    disk_format_t GetFormat() final { return DISK_FORMAT_BLOCK_VERITY; }
+    zx_status_t AttachDriver(const std::string_view& driver) final {
+      EXPECT_STR_EQ(devmgr::kBlockVerityDriverPath, driver.data());
+      attached = true;
+      return ZX_OK;
+    }
+    bool attached = false;
+  };
+  BlockVerityDevice device;
   EXPECT_OK(device.Add());
   EXPECT_TRUE(device.attached);
 }

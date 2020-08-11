@@ -41,6 +41,9 @@ bool gpt_is_install_guid(uint8_t* guid, ssize_t len);
 // determines whether guid is efi guid
 bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);
 
+// determines whether guid is factory guid
+bool gpt_is_factory_guid(uint8_t* guid, ssize_t len);
+
 void gpt_set_debug_output_enabled(bool enabled);
 
 // Return the human-readable version of the type GUID.

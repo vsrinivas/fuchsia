@@ -23,6 +23,7 @@ constexpr char kGPTDriverPath[] = "/boot/driver/gpt.so";
 constexpr char kMBRDriverPath[] = "/boot/driver/mbr.so";
 constexpr char kZxcryptDriverPath[] = "/boot/driver/zxcrypt.so";
 constexpr char kBootpartDriverPath[] = "/boot/driver/bootpart.so";
+constexpr char kBlockVerityDriverPath[] = "/boot/driver/block-verity.so";
 
 // An abstract class representing the operations which may be performed
 // on a block device, from the perspective of fshost.
@@ -65,6 +66,9 @@ class BlockDeviceInterface {
 
   // Creates the zxcrypt partition.
   virtual zx_status_t FormatZxcrypt() = 0;
+
+  // Determines if the underlying volumes topological path ends with a particular string.
+  virtual zx_status_t IsTopologicalPathSuffix(const std::string_view& path, bool* is_path) = 0;
 
   // Determines if the underlying volume is unsealed zxcrypt. Assumes the device
   // has the data GUID.

@@ -182,6 +182,11 @@ bool gpt_is_efi_guid(uint8_t* guid, ssize_t len) {
   return len == GPT_GUID_LEN && !memcmp(guid, efi_guid, GPT_GUID_LEN);
 }
 
+bool gpt_is_factory_guid(uint8_t* guid, ssize_t len) {
+  static const uint8_t factory_guid[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
+  return len == GPT_GUID_LEN && !memcmp(guid, factory_guid, GPT_GUID_LEN);
+}
+
 void uint8_to_guid_string(char* dst, const uint8_t* src) {
   // memcpy'd rather than casting src in-place for alignment (for ubsan).
   guid_t guid;

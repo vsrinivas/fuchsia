@@ -35,6 +35,7 @@ class BlockDevice final : public BlockDeviceInterface {
   zx_status_t GetTypeGUID(fuchsia_hardware_block_partition_GUID* out_guid) final;
   zx_status_t AttachDriver(const std::string_view& driver) final;
   zx_status_t UnsealZxcrypt() final;
+  zx_status_t IsTopologicalPathSuffix(const std::string_view& path, bool* is_path) final;
   zx_status_t IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) final;
   zx_status_t FormatZxcrypt() final;
   bool ShouldCheckFilesystems() final;
