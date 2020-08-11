@@ -3,7 +3,7 @@
 The tutorials in this section gradually walk you through how to use FIDL
 and run code on Fuchsia. There are no prerequisites other than completing the
 [Getting Started][getting-started] section and being comfortable writing code in
-your chosen language, but the tutorials build on eachother. The progression of
+your chosen language, but the tutorials build on each other. The progression of
 tutorials is as follows:
 
 1. [Compiling FIDL][compiling-fidl], which is a basic introduction to writing
@@ -19,7 +19,7 @@ tutorials is as follows:
    of tutorials based on the specific features of each binding. These do not
    have any pre-specified order.
 
-Each tutorial is accompanied by example code in the [FIDL examples][src]
+Each tutorial is accompanied by example code in the [FIDL examples][examples]
 directory. Feel free to follow along by reading the code, or by deleting the
 example code and rewriting it yourself based on the tutorials.
 
@@ -29,6 +29,7 @@ at the [HLCPP and LLCPP comparison doc][c-family].
   * [High Level C++ (HLCPP) Tutorial][hlcpp]
 
 <!-- xrefs -->
+[getting-started]: /docs/getting_started.md
 [fidl-concepts]: /docs/concepts/fidl/overview.md
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [hlcpp]: hlcpp/README.md
@@ -38,3 +39,4 @@ at the [HLCPP and LLCPP comparison doc][c-family].
 [go]: /docs/development/languages/fidl/tutorials/tutorial-go.md
 [c]: /docs/development/languages/fidl/tutorials/tutorial-c.md -->
 [c-family]: /docs/development/languages/fidl/guides/c-family-comparison.md
+[examples]: /examples/fidl
