@@ -139,7 +139,7 @@ encode_failure("StrictEnumInt8StructUnknownValue") {
 
 encode_failure("StrictEnumInt16StructUnknownValue") {
     // TODO(fxb/8008): Validate enums in Dart bindings
-    // Rust: cannot construct invalid enum.
+    // Dart, Rust: cannot construct invalid enum.
     bindings_denylist = [dart,rust],
     value = StrictEnumInt16Struct {
         e: 3,
@@ -148,8 +148,7 @@ encode_failure("StrictEnumInt16StructUnknownValue") {
 }
 
 encode_failure("StrictEnumInt32StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    // Rust: cannot construct invalid enum.
+    // Dart, Rust: cannot construct invalid enum.
     bindings_denylist = [dart,rust],
     value = StrictEnumInt32Struct {
         e: 3,
@@ -158,8 +157,7 @@ encode_failure("StrictEnumInt32StructUnknownValue") {
 }
 
 encode_failure("StrictEnumInt64StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    // Rust: cannot construct invalid enum.
+    // Dart, Rust: cannot construct invalid enum.
     bindings_denylist = [dart,rust],
     value = StrictEnumInt64Struct {
         e: 3,
@@ -168,8 +166,7 @@ encode_failure("StrictEnumInt64StructUnknownValue") {
 }
 
 encode_failure("StrictEnumUint8StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    // Rust: cannot construct invalid enum.
+    // Dart, Rust: cannot construct invalid enum.
     bindings_denylist = [dart,rust],
     value = StrictEnumUint8Struct {
         e: 3,
@@ -178,8 +175,7 @@ encode_failure("StrictEnumUint8StructUnknownValue") {
 }
 
 encode_failure("StrictEnumUint16StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    // Rust: cannot construct invalid enum.
+    // Dart, Rust: cannot construct invalid enum.
     bindings_denylist = [dart,rust],
     value = StrictEnumUint16Struct {
         e: 3,
@@ -188,8 +184,7 @@ encode_failure("StrictEnumUint16StructUnknownValue") {
 }
 
 encode_failure("StrictEnumUint32StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    // Rust: cannot construct invalid enum.
+    // Dart, Rust: cannot construct invalid enum.
     bindings_denylist = [dart,rust],
     value = StrictEnumUint32Struct {
         e: 3,
@@ -198,8 +193,7 @@ encode_failure("StrictEnumUint32StructUnknownValue") {
 }
 
 encode_failure("StrictEnumUint64StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    // Rust: cannot construct invalid enum.
+    // Dart, Rust: cannot construct invalid enum.
     bindings_denylist = [dart,rust],
     value = StrictEnumUint64Struct {
         e: 3,
@@ -208,8 +202,6 @@ encode_failure("StrictEnumUint64StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt8StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumInt8Struct,
     bytes = {
         v1 = [
@@ -220,8 +212,6 @@ decode_failure("StrictEnumInt8StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt16StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumInt16Struct,
     bytes = {
         v1 = [
@@ -232,8 +222,6 @@ decode_failure("StrictEnumInt16StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt32StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumInt32Struct,
     bytes = {
         v1 = [
@@ -244,8 +232,6 @@ decode_failure("StrictEnumInt32StructUnknownValue") {
 }
 
 decode_failure("StrictEnumInt64StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumInt64Struct,
     bytes = {
         v1 = [
@@ -256,8 +242,6 @@ decode_failure("StrictEnumInt64StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint8StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumUint8Struct,
     bytes = {
         v1 = [
@@ -268,8 +252,6 @@ decode_failure("StrictEnumUint8StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint16StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumUint16Struct,
     bytes = {
         v1 = [
@@ -280,8 +262,6 @@ decode_failure("StrictEnumUint16StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint32StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumUint32Struct,
     bytes = {
         v1 = [
@@ -292,8 +272,6 @@ decode_failure("StrictEnumUint32StructUnknownValue") {
 }
 
 decode_failure("StrictEnumUint64StructUnknownValue") {
-    // TODO(fxb/8008): Validate enums in Dart bindings
-    bindings_denylist = [dart],
     type = StrictEnumUint64Struct,
     bytes = {
         v1 = [
