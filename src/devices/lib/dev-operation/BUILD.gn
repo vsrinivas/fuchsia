@@ -37,9 +37,6 @@ test("operation-test") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
   ]
-
-  # TODO(47419): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("operation-test-package") {

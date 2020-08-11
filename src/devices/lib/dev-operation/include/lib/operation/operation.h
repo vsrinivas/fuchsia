@@ -203,6 +203,9 @@ class Operation : public OperationBase<D, OperationTraits, void, Storage> {
   }
 
   Operation& operator=(Operation&& other) {
+    if (BaseClass::allow_destruct_) {
+      Release();
+    }
     BaseClass::operator=(std::move(other));
     return *this;
   }
