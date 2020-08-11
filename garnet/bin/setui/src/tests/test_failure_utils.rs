@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::setting_handler::ControllerError;
+use crate::registry::device_storage::testing::InMemoryStorageFactory;
+use crate::registry::setting_handler::ControllerError;
 use crate::switchboard::base::{SettingRequest, SettingType};
 use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;

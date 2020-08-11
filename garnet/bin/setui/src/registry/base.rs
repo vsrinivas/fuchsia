@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::device_storage::DeviceStorageFactory;
-use crate::handler::setting_handler::ControllerError;
 use crate::internal::handler::message;
+use crate::registry::device_storage::DeviceStorageFactory;
+use crate::registry::setting_handler::ControllerError;
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingRequest, SettingResponse, SettingType};
 use anyhow::Error;
@@ -26,7 +26,7 @@ pub type ControllerGenerateResult = Result<(), Error>;
 pub type GenerateHandler<T> =
     Box<dyn Fn(Context<T>) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
 
-/// An command represents messaging from the proxy to take a
+/// An command represents messaging from the registry to take a
 /// particular action.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::base::SettingHandlerResult;
-use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
+use crate::registry::base::SettingHandlerResult;
+use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
 use crate::switchboard::base::{DeviceInfo, SettingRequest, SettingResponse};
 use async_trait::async_trait;
 use std::fs;

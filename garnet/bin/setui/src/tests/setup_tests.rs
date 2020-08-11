@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::handler::device_storage::testing::*,
+    crate::registry::device_storage::testing::*,
     crate::switchboard::base::{ConfigurationInterfaceFlags, SettingType, SetupInfo},
     crate::tests::fakes::hardware_power_statecontrol_service::{
         Action, HardwarePowerStatecontrolService,

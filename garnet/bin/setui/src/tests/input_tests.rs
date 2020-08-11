@@ -5,9 +5,9 @@
 use {
     crate::agent::restore_agent,
     crate::fidl_clone::FIDLClone,
-    crate::handler::device_storage::testing::*,
-    crate::handler::device_storage::DeviceStorage,
     crate::input::monitor_media_buttons,
+    crate::registry::device_storage::testing::*,
+    crate::registry::device_storage::DeviceStorage,
     crate::service_context::ServiceContext,
     crate::switchboard::base::{InputInfo, Microphone, SettingType},
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,

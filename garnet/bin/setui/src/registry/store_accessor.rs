@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::handler::device_storage::DeviceStorageCompatible,
+    crate::registry::device_storage::DeviceStorageCompatible,
     anyhow::{format_err, Error},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     serde::de::DeserializeOwned,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #[cfg(test)]
-use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
+use crate::registry::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
 use crate::switchboard::base::{ConfigurationInterfaceFlags, SettingType, SetupInfo};
 use crate::tests::fakes::hardware_power_statecontrol_service::HardwarePowerStatecontrolService;
 use crate::tests::fakes::service_registry::ServiceRegistry;

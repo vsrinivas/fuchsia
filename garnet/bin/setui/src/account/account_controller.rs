@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::call_async;
-use crate::handler::base::SettingHandlerResult;
-use crate::handler::setting_handler::{controller, ClientProxy, ControllerError};
+use crate::registry::base::SettingHandlerResult;
+use crate::registry::setting_handler::{controller, ClientProxy, ControllerError};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingRequest, SettingType};
 use async_trait::async_trait;

@@ -100,7 +100,7 @@ impl RequestInfo {
 }
 
 pub struct SwitchboardBuilder {
-    core_messenger_factory: Option<core::message::Factory>,
+    registry_messenger_factory: Option<core::message::Factory>,
     switchboard_messenger_factory: Option<switchboard::message::Factory>,
     setting_proxies: HashMap<SettingType, core::message::Signature>,
     inspect_node: Option<inspect::Node>,
@@ -109,7 +109,7 @@ pub struct SwitchboardBuilder {
 impl SwitchboardBuilder {
     pub fn create() -> Self {
         SwitchboardBuilder {
-            core_messenger_factory: None,
+            registry_messenger_factory: None,
             switchboard_messenger_factory: None,
             setting_proxies: HashMap::new(),
             inspect_node: None,
@@ -121,8 +121,8 @@ impl SwitchboardBuilder {
         self
     }
 
-    pub fn core_messenger_factory(mut self, factory: core::message::Factory) -> Self {
-        self.core_messenger_factory = Some(factory);
+    pub fn registry_messenger_factory(mut self, factory: core::message::Factory) -> Self {
+        self.registry_messenger_factory = Some(factory);
         self
     }
 
@@ -150,7 +150,7 @@ impl SwitchboardBuilder {
 
     pub async fn build(self) -> Result<(), Error> {
         SwitchboardImpl::create(
-            self.core_messenger_factory.unwrap_or(core::message::create_hub()),
+            self.registry_messenger_factory.unwrap_or(core::message::create_hub()),
             self.switchboard_messenger_factory.unwrap_or(switchboard::message::create_hub()),
             self.setting_proxies,
             self.inspect_node.unwrap_or(component::inspector().root().create_child("switchboard")),
@@ -167,8 +167,8 @@ pub struct SwitchboardImpl {
     listen_cancellation_sender: UnboundedSender<(SettingType, switchboard::message::Client)>,
     /// mapping of listeners for changes
     listeners: SwitchboardListenerMap,
-    /// core messenger
-    core_messenger: core::message::Messenger,
+    /// registry messenger
+    registry_messenger: core::message::Messenger,
     /// Active setting proxies
     setting_proxies: HashMap<SettingType, core::message::Signature>,
     /// Last requests for inspect to save.
@@ -183,7 +183,7 @@ impl SwitchboardImpl {
     ///
     /// Requests will be recorded to the given inspect node.
     async fn create(
-        core_messenger_factory: core::message::Factory,
+        registry_messenger_factory: core::message::Factory,
         switchboard_messenger_factory: switchboard::message::Factory,
         setting_proxies: HashMap<SettingType, core::message::Signature>,
         inspect_node: inspect::Node,
@@ -191,7 +191,7 @@ impl SwitchboardImpl {
         let (cancel_listen_tx, mut cancel_listen_rx) =
             futures::channel::mpsc::unbounded::<(SettingType, switchboard::message::Client)>();
 
-        let (core_messenger, mut core_receptor) = core_messenger_factory
+        let (registry_messenger, mut registry_receptor) = registry_messenger_factory
             .create(MessengerType::Addressable(core::Address::Switchboard))
             .await
             .map_err(Error::new)?;
@@ -205,7 +205,7 @@ impl SwitchboardImpl {
             next_action_id: 0,
             listen_cancellation_sender: cancel_listen_tx,
             listeners: HashMap::new(),
-            core_messenger,
+            registry_messenger,
             setting_proxies,
             last_requests: HashMap::new(),
             inspect_node,
@@ -215,15 +215,15 @@ impl SwitchboardImpl {
 
         fasync::Task::spawn(async move {
             loop {
-                let core_receptor = core_receptor.next().fuse();
+                let registry_receptor = registry_receptor.next().fuse();
                 let switchboard_receptor = switchboard_receptor.next().fuse();
                 let cancel_receptor = cancel_listen_rx.next().fuse();
-                futures::pin_mut!(core_receptor, switchboard_receptor, cancel_receptor);
+                futures::pin_mut!(registry_receptor, switchboard_receptor, cancel_receptor);
 
                 futures::select! {
-                    // Invoked when there is a new message from the proxies.
-                    core_event = core_receptor => {
-                        if let Some(MessageEvent::Message(core::Payload::Event(event), _)) = core_event {
+                    // Invoked when there is a new message from the registry.
+                    registry_event = registry_receptor => {
+                        if let Some(MessageEvent::Message(core::Payload::Event(event), _)) = registry_event {
                             switchboard_clone.lock().await.process_event(event);
                         }
                     }
@@ -299,7 +299,7 @@ impl SwitchboardImpl {
 
         self.listeners.entry(setting_type).or_insert(vec![]).push(reply_client.clone());
 
-        if let Err(error) = self.notify_proxy_listen(setting_type).await {
+        if let Err(error) = self.notify_registry_listen(setting_type).await {
             reply_client
                 .reply(switchboard::Payload::Action(switchboard::Action::Response(Err(error))))
                 .send();
@@ -316,7 +316,7 @@ impl SwitchboardImpl {
         if let Some(listeners) = self.listeners.get_mut(&setting_type) {
             if let Some(index) = listeners.iter().position(|x| *x == client) {
                 listeners.remove(index);
-                if let Err(error) = self.notify_proxy_listen(setting_type).await {
+                if let Err(error) = self.notify_registry_listen(setting_type).await {
                     client
                         .reply(switchboard::Payload::Action(switchboard::Action::Response(Err(
                             error,
@@ -334,7 +334,7 @@ impl SwitchboardImpl {
         request: SettingRequest,
         reply_client: switchboard::message::Client,
     ) -> Result<(), SwitchboardError> {
-        let messenger = self.core_messenger.clone();
+        let messenger = self.registry_messenger.clone();
         let action_id = self.get_next_action_id();
 
         self.record_request(setting_type.clone(), request.clone());
@@ -384,7 +384,7 @@ impl SwitchboardImpl {
         Ok(())
     }
 
-    async fn notify_proxy_listen(
+    async fn notify_registry_listen(
         &mut self,
         setting_type: SettingType,
     ) -> Result<(), SwitchboardError> {
@@ -400,7 +400,7 @@ impl SwitchboardImpl {
             Entry::Occupied(occupied) => occupied.get().clone(),
         };
 
-        self.core_messenger
+        self.registry_messenger
             .message(
                 core::Payload::Action(SettingAction {
                     id: action_id,
@@ -513,14 +513,14 @@ mod tests {
         let messenger_factory = core::message::create_hub();
         let switchboard_factory = switchboard::message::create_hub();
 
-        // Create proxy endpoint.
-        let (proxy_messenger, mut proxy_receptor) =
+        // Create registry endpoint.
+        let (registry_messenger, mut registry_receptor) =
             messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         assert!(SwitchboardBuilder::create()
-            .core_messenger_factory(messenger_factory.clone())
+            .registry_messenger_factory(messenger_factory.clone())
             .switchboard_messenger_factory(switchboard_factory.clone())
-            .add_setting_proxy(SettingType::Unknown, proxy_messenger.get_signature())
+            .add_setting_proxy(SettingType::Unknown, registry_messenger.get_signature())
             .build()
             .await
             .is_ok());
@@ -541,7 +541,7 @@ mod tests {
 
         // Ensure request is received.
         let (client, action) = retrieve_and_verify_action(
-            &mut proxy_receptor,
+            &mut registry_receptor,
             SettingType::Unknown,
             SettingActionData::Request(SettingRequest::Get),
         )
@@ -565,7 +565,7 @@ mod tests {
         let switchboard_factory = switchboard::message::create_hub();
 
         assert!(SwitchboardBuilder::create()
-            .core_messenger_factory(messenger_factory.clone())
+            .registry_messenger_factory(messenger_factory.clone())
             .switchboard_messenger_factory(switchboard_factory.clone())
             .build()
             .await
@@ -599,13 +599,13 @@ mod tests {
         let messenger_factory = core::message::create_hub();
         let switchboard_factory = switchboard::message::create_hub();
 
-        // Create proxy endpoint.
-        let (proxy_messenger, mut receptor) =
+        // Create registry endpoint.
+        let (registry_messenger, mut receptor) =
             messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         assert!(SwitchboardBuilder::create()
-            .core_messenger_factory(messenger_factory.clone())
-            .add_setting_proxy(SettingType::Unknown, proxy_messenger.get_signature())
+            .registry_messenger_factory(messenger_factory.clone())
+            .add_setting_proxy(SettingType::Unknown, registry_messenger.get_signature())
             .switchboard_messenger_factory(switchboard_factory.clone())
             .build()
             .await
@@ -644,13 +644,13 @@ mod tests {
         let messenger_factory = core::message::create_hub();
         let switchboard_factory = switchboard::message::create_hub();
 
-        // Create proxy endpoint.
-        let (proxy_messenger, mut proxy_receptor) =
+        // Create registry endpoint.
+        let (registry_messenger, mut registry_receptor) =
             messenger_factory.create(MessengerType::Unbound).await.unwrap();
 
         assert!(SwitchboardBuilder::create()
-            .core_messenger_factory(messenger_factory.clone())
-            .add_setting_proxy(SettingType::Unknown, proxy_messenger.get_signature())
+            .registry_messenger_factory(messenger_factory.clone())
+            .add_setting_proxy(SettingType::Unknown, registry_messenger.get_signature())
             .switchboard_messenger_factory(switchboard_factory.clone())
             .build()
             .await
@@ -668,7 +668,7 @@ mod tests {
             .send();
 
         let _ = retrieve_and_verify_action(
-            &mut proxy_receptor,
+            &mut registry_receptor,
             setting_type,
             SettingActionData::Listen(1),
         )
@@ -685,13 +685,13 @@ mod tests {
             .send();
 
         let _ = retrieve_and_verify_action(
-            &mut proxy_receptor,
+            &mut registry_receptor,
             setting_type,
             SettingActionData::Listen(2),
         )
         .await;
 
-        proxy_messenger
+        registry_messenger
             .message(
                 core::Payload::Event(SettingEvent::Changed(setting_type)),
                 Audience::Address(core::Address::Switchboard),

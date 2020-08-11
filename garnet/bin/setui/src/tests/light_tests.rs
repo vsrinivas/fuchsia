@@ -11,8 +11,8 @@ use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
 use futures::lock::Mutex;
 
 use crate::agent::restore_agent;
-use crate::handler::device_storage::testing::*;
-use crate::handler::device_storage::DeviceStorage;
+use crate::registry::device_storage::testing::*;
+use crate::registry::device_storage::DeviceStorage;
 use crate::switchboard::base::SettingType;
 use crate::switchboard::light_types::{
     ColorRgb, LightGroup, LightInfo, LightState, LightType, LightValue,

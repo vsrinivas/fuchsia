@@ -16,12 +16,6 @@ use {
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
     crate::display::light_sensor_controller::LightSensorController,
     crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController,
-    crate::handler::base::GenerateHandler,
-    crate::handler::device_storage::DeviceStorageFactory,
-    crate::handler::setting_handler::persist::Handler as DataHandler,
-    crate::handler::setting_handler::Handler,
-    crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl,
-    crate::handler::setting_proxy::SettingProxy,
     crate::input::input_controller::InputController,
     crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
@@ -29,6 +23,12 @@ use {
     crate::night_mode::night_mode_controller::NightModeController,
     crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
+    crate::registry::base::GenerateHandler,
+    crate::registry::device_storage::DeviceStorageFactory,
+    crate::registry::registry_impl::RegistryImpl,
+    crate::registry::setting_handler::persist::Handler as DataHandler,
+    crate::registry::setting_handler::Handler,
+    crate::registry::setting_handler_factory_impl::SettingHandlerFactoryImpl,
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
@@ -79,8 +79,8 @@ pub use light::light_hardware_configuration::LightHardwareConfiguration;
 pub mod agent;
 pub mod config;
 pub mod fidl_common;
-pub mod handler;
 pub mod message;
+pub mod registry;
 pub mod service_context;
 pub mod switchboard;
 
@@ -429,7 +429,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// Brings up the settings service environment.
 ///
 /// This method generates the necessary infrastructure to support the settings
-/// service (switchboard, proxies, etc.) and brings up the components necessary
+/// service (switchboard, registry, etc.) and brings up the components necessary
 /// to support the components specified in the components HashSet.
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
@@ -440,7 +440,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     event_messenger_factory: internal::event::message::Factory,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Result<(), Error> {
-    let core_messenger_factory = internal::core::message::create_hub();
+    let registry_messenger_factory = internal::core::message::create_hub();
     let switchboard_messenger_factory = internal::switchboard::message::create_hub();
     let setting_handler_messenger_factory = internal::handler::message::create_hub();
 
@@ -448,7 +448,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         blueprint.create(event_messenger_factory.clone()).await;
     }
 
-    // Attach inspect broker, which watches messages between proxies and setting handlers to
+    // Attach inspect broker, which watches messages between registry and setting handlers to
     // record settings values to inspect.
     let inspect_broker_node = component::inspector().root().create_child("setting_values");
     InspectBroker::create(setting_handler_messenger_factory.clone(), inspect_broker_node)
@@ -460,10 +460,10 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     for setting_type in &components {
         proxies.insert(
             *setting_type,
-            SettingProxy::create(
+            RegistryImpl::create(
                 *setting_type,
                 handler_factory.clone(),
-                core_messenger_factory.clone(),
+                registry_messenger_factory.clone(),
                 setting_handler_messenger_factory.clone(),
             )
             .await?
@@ -474,7 +474,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
     SwitchboardBuilder::create()
-        .core_messenger_factory(core_messenger_factory)
+        .registry_messenger_factory(registry_messenger_factory)
         .switchboard_messenger_factory(switchboard_messenger_factory.clone())
         .add_setting_proxies(proxies)
         .build()

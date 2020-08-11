@@ -4,7 +4,7 @@
 
 use {
     crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME},
-    crate::handler::device_storage::testing::*,
+    crate::registry::device_storage::testing::*,
     crate::switchboard::base::SettingType,
     crate::EnvironmentBuilder,
     anyhow::format_err,

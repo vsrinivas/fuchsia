@@ -1,12 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::handler::base::{SettingHandlerResult, State};
-use crate::handler::setting_handler::persist::{
+use crate::input::{InputMonitor, InputMonitorHandle, InputType};
+use crate::registry::base::{SettingHandlerResult, State};
+use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
-use crate::input::{InputMonitor, InputMonitorHandle, InputType};
+use crate::registry::setting_handler::{controller, ControllerError};
 use async_trait::async_trait;
 use {
     crate::audio::{

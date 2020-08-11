@@ -7,8 +7,8 @@ use {
     crate::agent::restore_agent,
     crate::audio::{create_default_modified_timestamps, default_audio_info},
     crate::fidl_clone::FIDLClone,
-    crate::handler::device_storage::testing::*,
-    crate::handler::device_storage::DeviceStorage,
+    crate::registry::device_storage::testing::*,
+    crate::registry::device_storage::DeviceStorage,
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },

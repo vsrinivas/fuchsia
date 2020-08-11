@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::call_async;
-use crate::handler::base::SettingHandlerResult;
-use crate::handler::device_storage::DeviceStorageCompatible;
-use crate::handler::setting_handler::persist::{
+use crate::registry::base::SettingHandlerResult;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::base::{Merge, SettingRequest, SettingResponse, SettingType};
 use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;

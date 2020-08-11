@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::call;
-use crate::handler::base::SettingHandlerResult;
-use crate::handler::device_storage::DeviceStorageCompatible;
-use crate::handler::setting_handler::persist::{
+use crate::registry::base::SettingHandlerResult;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::registry::setting_handler::{controller, ControllerError};
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
     DisplayInfo, LowLightMode, SettingRequest, SettingResponse, SettingType,

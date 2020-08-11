@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::handler::device_storage::testing::*, crate::switchboard::base::SettingType,
+    crate::registry::device_storage::testing::*, crate::switchboard::base::SettingType,
     crate::EnvironmentBuilder, fidl_fuchsia_settings::DeviceMarker,
 };
 

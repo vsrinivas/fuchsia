@@ -6,7 +6,7 @@
 use {
     crate::agent::restore_agent,
     crate::config::base::ControllerFlag,
-    crate::handler::device_storage::testing::*,
+    crate::registry::device_storage::testing::*,
     crate::switchboard::base::{DisplayInfo, LowLightMode, SettingType},
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::base::{Command, SettingHandlerResult};
 use crate::message_hub_definition;
+use crate::registry::base::{Command, SettingHandlerResult};
 use crate::switchboard::base::SettingType;
 use std::fmt::Debug;
 
-// Proxy addresses senders by the type they service.
+// Registry addresses senders by the type they service.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     Handler(usize),

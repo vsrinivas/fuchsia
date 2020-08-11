@@ -1,12 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::handler::base::SettingHandlerResult;
-use crate::handler::device_storage::DeviceStorageCompatible;
-use crate::handler::setting_handler::persist::{
+
+use crate::registry::base::SettingHandlerResult;
+use crate::registry::device_storage::DeviceStorageCompatible;
+use crate::registry::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError};
+use crate::registry::setting_handler::{controller, ControllerError};
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::base::{Merge, SettingRequest, SettingResponse};
 

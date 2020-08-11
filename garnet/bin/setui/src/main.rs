@@ -11,7 +11,7 @@ use {
     settings::agent::earcons,
     settings::agent::restore_agent,
     settings::config::default_settings::DefaultSetting,
-    settings::handler::device_storage::StashDeviceStorageFactory,
+    settings::registry::device_storage::StashDeviceStorageFactory,
     settings::switchboard::base::get_default_setting_types,
     settings::EnabledServicesConfiguration,
     settings::EnvironmentBuilder,

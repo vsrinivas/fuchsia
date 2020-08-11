@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::handler::device_storage::{testing::*, DeviceStorage},
+    crate::registry::device_storage::{testing::*, DeviceStorage},
     crate::switchboard::base::{PrivacyInfo, SettingType},
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,

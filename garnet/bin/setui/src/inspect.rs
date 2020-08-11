@@ -3,5 +3,5 @@
 // found in the LICENSE file.
 
 // This mod contains the inspect broker, a broker which registers with a message hub to watch
-// messages between proxies and setting handlers in order to record settings values to inspect.
+// messages between registry and setting handlers in order to record settings values to inspect.
 pub mod inspect_broker;

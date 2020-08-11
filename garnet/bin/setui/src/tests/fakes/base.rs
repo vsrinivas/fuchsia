@@ -1,11 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::handler::base::Command;
-use crate::handler::base::{GenerateHandler, SettingHandlerResult, State};
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::internal::handler::{reply, Payload};
 use crate::message::base::MessageEvent;
+use crate::registry::base::{Command, GenerateHandler, SettingHandlerResult, State};
+use crate::registry::device_storage::DeviceStorageFactory;
 use crate::switchboard::base::SettingRequest;
 use anyhow::Error;
 use fuchsia_async as fasync;
