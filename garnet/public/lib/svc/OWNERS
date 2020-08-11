@@ -1,6 +1,3 @@
-abarth@google.com
-shayba@google.com
-anmittal@google.com
-geb@google.com
+include /src/sys/component_manager/OWNERS
 
 # COMPONENT: ComponentFramework>Runtime

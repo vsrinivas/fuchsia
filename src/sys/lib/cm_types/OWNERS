@@ -1,8 +1,3 @@
-adamlesinski@google.com
-bryanhenry@google.com
-dgonyeo@google.com
-fsamuel@google.com
-geb@google.com
-shayba@google.com
+include /src/sys/component_manager/OWNERS
 
 # COMPONENT: ComponentFramework>Runtime
