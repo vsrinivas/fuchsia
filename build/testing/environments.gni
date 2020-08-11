@@ -59,6 +59,18 @@ _all_named_envs += [
   },
 ]
 
+luis_env = {
+  dimensions = {
+    device_type = "Luis"
+  }
+}
+_all_named_envs += [
+  {
+    name = "luis"
+    env = luis_env
+  },
+]
+
 mac_env = {
   dimensions = {
     os = "Mac"
