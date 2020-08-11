@@ -87,10 +87,20 @@ impl Timer {
 impl Future for Timer {
     type Output = ();
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        // See https://docs.rs/futures/0.3.5/futures/task/struct.AtomicWaker.html
+        // for more information.
+        // quick check to avoid registration if already done.
+        if self.did_fire() {
+            return Poll::Ready(());
+        }
+
+        self.register_task(cx);
+
+        // Need to check condition **after** `register` to avoid a race
+        // condition that would result in lost notifications.
         if self.did_fire() {
             Poll::Ready(())
         } else {
-            self.register_task(cx);
             Poll::Pending
         }
     }
