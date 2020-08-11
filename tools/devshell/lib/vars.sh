@@ -256,6 +256,23 @@ function _looks_like_ipv6 {
   [[ "${#colons}" -le 7 ]] || return 1
 }
 
+function is_macos {
+  [[ "$(uname -s)" == "Darwin" ]]
+}
+
+function firewall_cmd_macos {
+  /usr/libexec/ApplicationFirewall/socketfilterfw "$@"
+}
+
+function firewall_check {
+  if is_macos; then
+    if ! firewall_cmd_macos --getappblocked "$1" | grep "permitted" > /dev/null; then
+      fx-warn "Firewall rules are not configured, you may need to run \"fx setup-macos\""
+      return 1
+    fi
+  fi
+}
+
 function fx-device-finder {
   local -r finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
   if [[ ! -f "${finder}" ]]; then
@@ -263,6 +280,9 @@ function fx-device-finder {
     fx-error "Run \"fx build\" to build host tools."
     exit 1
   fi
+
+  # This cmd only has side effects (printing a warning).
+  firewall_check "${finder}"
   "${finder}" "$@"
 }
 

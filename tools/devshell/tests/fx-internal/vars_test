@@ -156,6 +156,33 @@ TEST_fx-get-device-addr-url() {
   BT_EXPECT_EQ "$(FUCHSIA_DEVICE_NAME="[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%enx44070ba0044e]" get-device-addr-url)" "[2001:db8:aaaa:bbbb:cccc:dddd:0:44f%25enx44070ba0044e]"
 }
 
+TEST_fx-firewall-check() {
+  unset is_macos
+  unset firewall_cmd_macos
+  is_macos() {
+    return 0
+  }
+  flag_check() {
+    BT_EXPECT_EQ "$1" "--getappblocked"
+    BT_EXPECT_EQ "$2" "firewall_cmd"
+  }
+
+  # Failure case.
+  firewall_cmd_macos() {
+    flag_check "$@"
+    echo "who knows"
+  }
+  BT_EXPECT_FAIL firewall_check "firewall_cmd"
+
+  # Success case.
+  unset firewall_cmd_macos
+  firewall_cmd_macos() {
+    flag_check "$@"
+    echo "firewall_cmd permitted"
+  }
+  BT_EXPECT firewall_check "firewall_cmd"
+}
+
 TEST_fx-export-device-address() {
   unset FUCHSIA_DEVICE_NAME
   unset FX_DEVICE_NAME
