@@ -118,6 +118,11 @@ class TimerQueue {
   // Cancel the preemption timer.
   void PreemptCancel();
 
+  // Returns true if the preemption deadline is set and will definitely fire in
+  // the future. A false value does not definitively mean the preempt timer will
+  // not fire, as a spurious expiration is allowed.
+  bool PreemptArmed() const { return preempt_timer_deadline_ != ZX_TIME_INFINITE; }
+
   // Internal routines used when bringing cpus online/offline
 
   // Moves |source|'s timers (except its preemption timer) to this TimerQueue.

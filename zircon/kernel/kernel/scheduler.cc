@@ -671,7 +671,7 @@ void Scheduler::UpdateTimeline(SchedTime now) {
 }
 
 void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace) {
-  LocalTraceDuration<KTRACE_DETAILED> trace{"reschedule_common"_stringref};
+  LocalTraceDuration<KTRACE_DETAILED> trace{"reschedule_common"_stringref, Round<uint64_t>(now), 0};
 
   const cpu_num_t current_cpu = arch_curr_cpu_num();
   Thread* const current_thread = Thread::Current::Get();
@@ -824,8 +824,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
       percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
     }
   } else if (timeslice_expired || next_thread != current_thread) {
-    LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{
-        "next_slice: now,deadline"_stringref};
+    LocalTraceDuration<KTRACE_DETAILED> trace_start_preemption{"next_slice: now,abs"_stringref};
 
     // Re-compute the time slice and deadline for the new thread based on the
     // latest state.
@@ -861,9 +860,51 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                           next_thread->user_tid());
   } else if (const SchedTime eligible_time_ns = GetNextEligibleTime();
              eligible_time_ns < absolute_deadline_ns_) {
-    absolute_deadline_ns_ = eligible_time_ns;
+    LocalTraceDuration<KTRACE_DETAILED> trace_next_preempt{"next_preempt: early,abs"_stringref};
+
+    // The current thread should continue to run and a throttled deadline thread
+    // will become eligible before its time slice expires. Figure out whether to
+    // set the preemption time to this earlier event.
+    //
+    // The preemption time should be set earlier when either:
+    //   * Current is a fair thread. It should be preempted as soon as the
+    //     deadline thread is eligible.
+    //   * Current is a deadline thread and a thread with an earlier deadline will
+    //     become eligible before its deadline expires.
+    SchedTime preemption_time_ns = absolute_deadline_ns_;
+    if (IsFairThread(next_thread)) {
+      preemption_time_ns = eligible_time_ns;
+    } else {
+      Thread* const future_preempting_thread =
+          FindEarlierDeadlineThread(absolute_deadline_ns_, absolute_deadline_ns_);
+      if (future_preempting_thread != nullptr) {
+        preemption_time_ns = future_preempting_thread->scheduler_state().start_time_;
+      }
+    }
+
+    DEBUG_ASSERT(preemption_time_ns <= absolute_deadline_ns_);
+    percpu::Get(current_cpu).timer_queue.PreemptReset(preemption_time_ns.raw_value());
+    trace_next_preempt.End(Round<uint64_t>(preemption_time_ns),
+                           Round<uint64_t>(absolute_deadline_ns_));
+  } else {
+    LocalTraceDuration<KTRACE_DETAILED> trace_continue{"continue: elig,abs"_stringref,
+                                                       Round<uint64_t>(eligible_time_ns),
+                                                       Round<uint64_t>(absolute_deadline_ns_)};
+    // The current thread should continue to run and there are no throttled
+    // deadline threads that will become eligible before the current time slice
+    // expires. Make sure the correct preemption time is set, in case an earlier
+    // time was set previously.
+    // TODO(eieio): Note that this path is also necessary when work stealing is
+    // implemented, as the task might be stolen before servicing the preemption.
     percpu::Get(current_cpu).timer_queue.PreemptReset(absolute_deadline_ns_.raw_value());
   }
+
+  // Assert that there is no path beside running the idle thread can leave the
+  // preemption timer unarmed. However, the preemption timer may or may not be
+  // armed when running the idle thread.
+  // TODO(eieio): In the future, the preemption timer may be canceled when there
+  // is only one task available to run. Revisit this assertion at that time.
+  DEBUG_ASSERT(next_thread->IsIdle() || percpu::Get(current_cpu).timer_queue.PreemptArmed());
 
   if (next_thread != current_thread) {
     LOCAL_KTRACE(KTRACE_DETAILED, "reschedule current: count,slice",
