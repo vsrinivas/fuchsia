@@ -1,5 +1,6 @@
 pub type dev_t = u32;
 pub type c_char = i8;
+pub type wchar_t = i32;
 pub type clock_t = u64;
 pub type ino_t = u64;
 pub type lwpid_t = i32;
@@ -1050,6 +1051,10 @@ f! {
     pub fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
         (_CMSG_ALIGN(::mem::size_of::<::cmsghdr>()) +
             _CMSG_ALIGN(length as usize)) as ::c_uint
+    }
+
+    pub fn WIFSIGNALED(status: ::c_int) -> bool {
+        (status & 0o177) != 0o177 && (status & 0o177) != 0
     }
 }
 

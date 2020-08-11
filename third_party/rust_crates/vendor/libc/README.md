@@ -1,7 +1,6 @@
-[![Azure Status]][Azure] [![Cirrus CI Status]][Cirrus CI] [![Latest Version]][crates.io] [![Documentation]][docs.rs] ![License]
+# libc - Raw FFI bindings to platforms' system libraries
 
-libc - Raw FFI bindings to platforms' system libraries
-====
+[![Azure Status]][Azure] [![Cirrus CI Status]][Cirrus CI] [![Latest Version]][crates.io] [![Documentation]][docs.rs] ![License]
 
 `libc` provides all of the definitions necessary to easily interoperate with C
 code (or "C-like" code) on each of the platforms that Rust supports. This
@@ -71,10 +70,10 @@ platforms in which `libc` tests are run.
 This project is licensed under either of
 
 * [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-  ([LICENSE-APACHE](LICENSE-APACHE))
+  ([LICENSE-APACHE](https://github.com/rust-lang/libc/blob/master/LICENSE-APACHE))
 
 * [MIT License](https://opensource.org/licenses/MIT)
-  ([LICENSE-MIT](LICENSE-MIT))
+  ([LICENSE-MIT](https://github.com/rust-lang/libc/blob/master/LICENSE-MIT))
 
 at your option.
 
@@ -83,7 +82,7 @@ at your option.
 We welcome all people who want to contribute. Please see the [contributing
 instructions] for more information.
 
-[contributing instructions]: CONTRIBUTING.md
+[contributing instructions]: https://github.com/rust-lang/libc/blob/master/CONTRIBUTING.md
 
 Contributions in any form (issues, pull requests, etc.) to this project
 must adhere to Rust's [Code of Conduct].

@@ -950,6 +950,8 @@ pub const EOF: ::c_int = -1;
 pub const SEEK_SET: ::c_int = 0;
 pub const SEEK_CUR: ::c_int = 1;
 pub const SEEK_END: ::c_int = 2;
+pub const SEEK_DATA: ::c_int = 3;
+pub const SEEK_HOLE: ::c_int = 4;
 pub const _IOFBF: ::c_int = 0;
 pub const _IONBF: ::c_int = 4;
 pub const _IOLBF: ::c_int = 64;
@@ -1102,7 +1104,6 @@ pub const MCL_FUTURE: ::c_int = 0x0002;
 pub const MS_SYNC: ::c_int = 0x0004;
 pub const MS_ASYNC: ::c_int = 0x0001;
 pub const MS_INVALIDATE: ::c_int = 0x0002;
-pub const MS_INVALCURPROC: ::c_int = 0x0008;
 
 pub const EPERM: ::c_int = 1;
 pub const ENOENT: ::c_int = 2;
@@ -1357,7 +1358,6 @@ pub const AF_POLICY: ::c_int = 29;
 pub const AF_INET_OFFLOAD: ::c_int = 30;
 pub const AF_TRILL: ::c_int = 31;
 pub const AF_PACKET: ::c_int = 32;
-pub const AF_LX_NETLINK: ::c_int = 33;
 
 pub const SOCK_DGRAM: ::c_int = 1;
 pub const SOCK_STREAM: ::c_int = 2;
@@ -1782,8 +1782,6 @@ pub const TIOCGWINSZ: ::c_int = _TIOC | 104;
 pub const TIOCSWINSZ: ::c_int = _TIOC | 103;
 pub const TIOCGSOFTCAR: ::c_int = _TIOC | 105;
 pub const TIOCSSOFTCAR: ::c_int = _TIOC | 106;
-pub const TIOCSETLD: ::c_int = _TIOC | 123;
-pub const TIOCGETLD: ::c_int = _TIOC | 124;
 pub const TIOCGPPS: ::c_int = _TIOC | 125;
 pub const TIOCSPPS: ::c_int = _TIOC | 126;
 pub const TIOCGPPSEV: ::c_int = _TIOC | 127;
@@ -1839,6 +1837,8 @@ pub const EPOLLHUP: ::c_int = 0x10;
 pub const EPOLLET: ::c_int = 0x80000000;
 pub const EPOLLRDHUP: ::c_int = 0x2000;
 pub const EPOLLONESHOT: ::c_int = 0x40000000;
+pub const EPOLLWAKEUP: ::c_int = 0x20000000;
+pub const EPOLLEXCLUSIVE: ::c_int = 0x10000000;
 pub const EPOLL_CLOEXEC: ::c_int = 0x80000;
 pub const EPOLL_CTL_ADD: ::c_int = 1;
 pub const EPOLL_CTL_MOD: ::c_int = 3;
@@ -1999,7 +1999,63 @@ pub const PRIO_PROCESS: ::c_int = 0;
 pub const PRIO_PGRP: ::c_int = 1;
 pub const PRIO_USER: ::c_int = 2;
 
+// As per sys/socket.h, header alignment must be 8 bytes on SPARC
+// and 4 bytes everywhere else:
+#[cfg(target_arch = "sparc64")]
+const _CMSG_HDR_ALIGNMENT: usize = 8;
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+const _CMSG_HDR_ALIGNMENT: usize = 4;
+
+const _CMSG_DATA_ALIGNMENT: usize = ::mem::size_of::<::c_int>();
+
+fn _CMSG_HDR_ALIGN(p: usize) -> usize {
+    (p + _CMSG_HDR_ALIGNMENT - 1) & !(_CMSG_HDR_ALIGNMENT - 1)
+}
+
+fn _CMSG_DATA_ALIGN(p: usize) -> usize {
+    (p + _CMSG_DATA_ALIGNMENT - 1) & !(_CMSG_DATA_ALIGNMENT - 1)
+}
+
 f! {
+    pub fn CMSG_DATA(cmsg: *const ::cmsghdr) -> *mut ::c_uchar {
+        _CMSG_DATA_ALIGN(cmsg.offset(1) as usize) as *mut ::c_uchar
+    }
+
+    pub fn CMSG_LEN(length: ::c_uint) -> ::c_uint {
+        _CMSG_DATA_ALIGN(::mem::size_of::<::cmsghdr>()) as ::c_uint + length
+    }
+
+    pub fn CMSG_FIRSTHDR(mhdr: *const ::msghdr) -> *mut ::cmsghdr {
+        if ((*mhdr).msg_controllen as usize) < ::mem::size_of::<::cmsghdr>() {
+            0 as *mut ::cmsghdr
+        } else {
+            (*mhdr).msg_control as *mut ::cmsghdr
+        }
+    }
+
+    pub fn CMSG_NXTHDR(mhdr: *const ::msghdr, cmsg: *const ::cmsghdr)
+        -> *mut ::cmsghdr
+    {
+        if cmsg.is_null() {
+            return ::CMSG_FIRSTHDR(mhdr);
+        };
+        let next = _CMSG_HDR_ALIGN(cmsg as usize + (*cmsg).cmsg_len as usize
+            + ::mem::size_of::<::cmsghdr>());
+        let max = (*mhdr).msg_control as usize
+            + (*mhdr).msg_controllen as usize;
+        if next > max {
+            0 as *mut ::cmsghdr
+        } else {
+            _CMSG_HDR_ALIGN(cmsg as usize + (*cmsg).cmsg_len as usize)
+                as *mut ::cmsghdr
+        }
+    }
+
+    pub fn CMSG_SPACE(length: ::c_uint) -> ::c_uint {
+        _CMSG_HDR_ALIGN(::mem::size_of::<::cmsghdr>() as usize
+            + length as usize) as ::c_uint
+    }
+
     pub fn FD_CLR(fd: ::c_int, set: *mut fd_set) -> () {
         let bits = ::mem::size_of_val(&(*set).fds_bits[0]) * 8;
         let fd = fd as usize;

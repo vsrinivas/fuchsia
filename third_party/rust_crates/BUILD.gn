@@ -223,7 +223,7 @@ group("lazy_static") {
 }
 
 group("libc") {
-  deps = [ ":libc-v0_2_71" ]
+  deps = [ ":libc-v0_2_74" ]
 }
 
 group("libm") {
@@ -253,6 +253,10 @@ group("maybe-owned") {
 
 group("memchr") {
   deps = [ ":memchr-v2_3_3" ]
+}
+
+group("nix") {
+  deps = [ ":nix-v0_18_0" ]
 }
 
 group("nom") {
@@ -1182,7 +1186,7 @@ rust_library("atty-v0_2_11") {
     deps += [ ":termion-v1_5_3" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -1213,7 +1217,7 @@ rust_library("backtrace-v0_3_42") {
   deps = []
   deps += [ ":backtrace-sys-v0_1_32" ]
   deps += [ ":cfg-if-v0_1_10" ]
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":rustc-demangle-v0_1_16" ]
 
   rustenv = []
@@ -1243,7 +1247,7 @@ rust_library("backtrace-sys-v0_1_32") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
@@ -1424,7 +1428,7 @@ rust_library("brotli-sys-v0_3_2") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ "//third_party/rust_crates/compat/brotli" ]
   rustenv = []
 
@@ -1447,7 +1451,7 @@ rust_library("brotli2-v0_3_2") {
 
   deps = []
   deps += [ ":brotli-sys-v0_3_2" ]
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
@@ -1874,7 +1878,7 @@ rust_library("criterion-v0_2_11") {
   deps += [ ":csv-v1_1_3" ]
   deps += [ ":itertools-v0_8_0" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":num-traits-v0_2_11" ]
   deps += [ ":rand_core-v0_3_1" ]
   deps += [ ":rand_os-v0_1_2" ]
@@ -2456,7 +2460,7 @@ rust_library("filetime-v0_2_4") {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
 
   rustenv = []
@@ -2506,7 +2510,7 @@ rust_library("flate2-v1_0_14") {
   deps = []
   deps += [ ":cfg-if-v0_1_10" ]
   deps += [ ":crc32fast-v1_2_0" ]
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":miniz_oxide-v0_3_6" ]
   if (false && !false) {
     deps += [ ":miniz_oxide-v0_3_6" ]
@@ -2555,7 +2559,7 @@ static_library("freetype-v0_4_1") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":servo-freetype-sys-v4_0_5" ]
 
   rustenv = []
@@ -2943,7 +2947,7 @@ rust_library("getrandom-v0_1_13") {
     deps += [ ":wasi-v0_7_0" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
 
   rustenv = []
@@ -3146,7 +3150,7 @@ rust_library("hermit-abi-v0_1_8") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
@@ -3640,10 +3644,10 @@ rust_library("lazy_static-v1_4_0") {
   ]
 }
 
-rust_library("libc-v0_2_71") {
+rust_library("libc-v0_2_74") {
   crate_name = "libc"
   crate_root = "//third_party/rust_crates/vendor/libc/src/lib.rs"
-  output_name = "libc-e2f24a59e07bcf92"
+  output_name = "libc-c3a355881e585027"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -3656,9 +3660,10 @@ rust_library("libc-v0_2_71") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=e2f24a59e07bcf92",
-    "-Cextra-filename=-e2f24a59e07bcf92",
+    "-Cmetadata=c3a355881e585027",
+    "-Cextra-filename=-c3a355881e585027",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"extra_traits\"",
     "--cfg=feature=\"std\"",
     "--cfg=freebsd11",
     "--cfg=libc_priv_mod_use",
@@ -4068,6 +4073,30 @@ rust_library("multipart-v0_15_4") {
   ]
 }
 
+rust_library("nix-v0_18_0") {
+  crate_name = "nix"
+  crate_root = "//third_party/rust_crates/vendor/nix/src/lib.rs"
+  output_name = "nix-97c5d4ce3cdf961b"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":cfg-if-v0_1_10" ]
+  deps += [ ":libc-v0_2_74" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=97c5d4ce3cdf961b",
+    "-Cextra-filename=-97c5d4ce3cdf961b",
+  ]
+}
+
 rust_library("nodrop-v0_1_13") {
   crate_name = "nodrop"
   crate_root = "//third_party/rust_crates/vendor/nodrop/src/lib.rs"
@@ -4365,7 +4394,7 @@ rust_library("num_cpus-v1_12_0") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   if ((current_cpu == "x64" || current_cpu == "arm64") && false) {
     deps += [ ":hermit-abi-v0_1_8" ]
   }
@@ -4437,7 +4466,7 @@ rust_library("openat-v0_1_17") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
@@ -4562,7 +4591,7 @@ rust_library("parking_lot_core-v0_6_2") {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -4601,7 +4630,7 @@ rust_library("parking_lot_core-v0_7_2") {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -5459,7 +5488,7 @@ rust_library("rand-v0_3_23") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":rand-v0_4_6" ]
 
   rustenv = []
@@ -5490,7 +5519,7 @@ rust_library("rand-v0_4_6") {
     deps += [ ":fuchsia-cprng-v0_1_1" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -5527,7 +5556,7 @@ rust_library("rand-v0_5_6") {
     deps += [ ":fuchsia-cprng-v0_1_1" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -5569,7 +5598,7 @@ rust_library("rand-v0_6_5") {
   deps += [ ":rand_pcg-v0_1_1" ]
   deps += [ ":rand_xorshift-v0_1_1" ]
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -5612,7 +5641,7 @@ rust_library("rand-v0_7_2") {
     deps += [ ":rand_hc-v0_2_0" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
 
   rustenv = []
@@ -5831,7 +5860,7 @@ rust_library("rand_jitter-v0_1_3") {
   deps = []
   deps += [ ":rand_core-v0_4_0" ]
   if (is_mac || false) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -5869,7 +5898,7 @@ rust_library("rand_os-v0_1_2") {
     deps += [ ":fuchsia-cprng-v0_1_1" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -6265,7 +6294,7 @@ rust_library("ring-v0_16_12") {
     deps += [ ":lazy_static-v1_4_0" ]
   }
   if (false || is_linux) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -6338,7 +6367,7 @@ rust_library("rust-crypto-v0_2_36") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":rand-v0_3_23" ]
   deps += [ ":rustc-serialize-v0_3_24" ]
   deps += [ ":time-v0_1_42" ]
@@ -6392,7 +6421,7 @@ rust_library("rust_icu_sys-v0_3_0") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":paste-v0_1_5" ]
 
   rustenv = []
@@ -7245,7 +7274,7 @@ rust_library("signal-hook-v0_1_13") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   deps += [ ":signal-hook-registry-v1_2_0" ]
 
   rustenv = []
@@ -7270,7 +7299,7 @@ rust_library("signal-hook-registry-v1_2_0") {
 
   deps = []
   deps += [ ":arc-swap-v0_4_4" ]
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
@@ -7417,7 +7446,7 @@ rust_library("smol-v0_1_11") {
   deps += [ ":slab-v0_4_2" ]
   deps += [ ":socket2-v0_3_12" ]
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":wepoll-binding-v2_0_2" ]
@@ -7467,7 +7496,7 @@ rust_library("socket2-v0_3_12") {
   deps = []
   if (true || false) {
     deps += [ ":cfg-if-v0_1_10" ]
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":redox_syscall-v0_1_51" ]
@@ -7783,7 +7812,7 @@ rust_library("tar-v0_4_25") {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
     deps += [ ":xattr-v0_2_2" ]
   }
 
@@ -7843,7 +7872,7 @@ rust_library("tempfile-v3_1_0") {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
   if (true) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":winapi-v0_3_8" ]
@@ -7901,7 +7930,7 @@ rust_library("termion-v1_5_3") {
   deps = []
   deps += [ ":numtoa-v0_1_0" ]
   if (!false) {
-    deps += [ ":libc-v0_2_71" ]
+    deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
     deps += [ ":redox_syscall-v0_1_51" ]
@@ -7932,7 +7961,7 @@ rust_library("termios-v0_3_2") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
@@ -8090,7 +8119,7 @@ rust_library("time-v0_1_42") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
   if (false) {
     deps += [ ":redox_syscall-v0_1_51" ]
   }
@@ -9188,7 +9217,7 @@ rust_library("wait-timeout-v0_1_5") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
@@ -9569,7 +9598,7 @@ rust_library("xattr-v0_2_2") {
   ]
 
   deps = []
-  deps += [ ":libc-v0_2_71" ]
+  deps += [ ":libc-v0_2_74" ]
 
   rustenv = []
 
