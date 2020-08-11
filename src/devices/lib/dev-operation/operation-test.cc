@@ -91,9 +91,7 @@ TEST(OperationTest, MultipleSection) {
   operation = Operation(operation3.take(), kSecondLayerOpSize);
 }
 
-// TODO(51401): Test is disabled because it treats uninitialized memory as an
-// fbl::DoublyLinkedListNode.  See fxb/51401 for details.
-TEST(OperationTest, DISABLED_Callback) {
+TEST(OperationTest, Callback) {
   constexpr size_t kBaseOpSize = sizeof(TestOp);
   constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
 
@@ -101,7 +99,7 @@ TEST(OperationTest, DISABLED_Callback) {
   auto callback = [](void* ctx, zx_status_t st, TestOp* operation) -> void {
     *static_cast<bool*>(ctx) = true;
     // We take ownership.
-    Operation unused(operation, kFirstLayerOpSize);
+    Operation unused(operation, kBaseOpSize);
   };
   TestOpCallback cb = callback;
   std::optional<Operation> operation = Operation::Alloc(kFirstLayerOpSize);
