@@ -198,8 +198,8 @@ struct Enum final : public TypeDecl {
   const PrimitiveType* type = nullptr;
   // Set only for flexible enums, and either is set depending on signedness of
   // underlying enum type.
-  int64_t unknown_value_signed = 0;
-  uint64_t unknown_value_unsigned = 0;
+  std::optional<int64_t> unknown_value_signed;
+  std::optional<uint64_t> unknown_value_unsigned;
 };
 
 struct Bits final : public TypeDecl {

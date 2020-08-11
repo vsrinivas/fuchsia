@@ -24,3 +24,26 @@ func (x MyStrictEnum) String() string {
 	}
 	return "Unknown"
 }
+
+type MyFlexibleEnum uint32
+
+const (
+	MyFlexibleEnumFoo MyFlexibleEnum = 1
+	MyFlexibleEnumBar MyFlexibleEnum = 2
+)
+
+func (_ MyFlexibleEnum) I_EnumValues() []MyFlexibleEnum {
+	return []MyFlexibleEnum{
+		MyFlexibleEnumFoo,
+		MyFlexibleEnumBar,
+	}
+}
+func (x MyFlexibleEnum) String() string {
+	switch x {
+	case 1:
+		return "Foo"
+	case 2:
+		return "Bar"
+	}
+	return "Unknown"
+}

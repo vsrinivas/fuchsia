@@ -23,3 +23,10 @@ fidl_enum! {
     Bar = 2,
   }
 }
+
+fidl_enum! {
+  MyFlexibleEnum(u32) {
+    Foo = 1,
+    Bar = 2,
+  }
+}

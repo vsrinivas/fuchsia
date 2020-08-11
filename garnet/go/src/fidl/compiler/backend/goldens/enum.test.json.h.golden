@@ -20,6 +20,19 @@ inline zx_status_t Clone(::test::name::MyStrictEnum value,
   return ZX_OK;
 }
 
+enum class MyFlexibleEnum : uint32_t {
+
+  FOO = 1u,
+
+  BAR = 2u,
+};
+
+inline zx_status_t Clone(::test::name::MyFlexibleEnum value,
+                         ::test::name::MyFlexibleEnum* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 }  // namespace name
 }  // namespace test
 namespace fidl {
@@ -50,6 +63,37 @@ template <>
 struct Equality<::test::name::MyStrictEnum> {
   bool operator()(const ::test::name::MyStrictEnum& _lhs,
                   const ::test::name::MyStrictEnum& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
+
+template <>
+struct CodingTraits<::test::name::MyFlexibleEnum> {
+  static constexpr size_t inline_size_old =
+      sizeof(::test::name::MyFlexibleEnum);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::test::name::MyFlexibleEnum);
+  static void Encode(Encoder* encoder, ::test::name::MyFlexibleEnum* value,
+                     size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::test::name::MyFlexibleEnum* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::name::MyFlexibleEnum>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::name::MyFlexibleEnum value,
+                         ::test::name::MyFlexibleEnum* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct Equality<::test::name::MyFlexibleEnum> {
+  bool operator()(const ::test::name::MyFlexibleEnum& _lhs,
+                  const ::test::name::MyFlexibleEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };

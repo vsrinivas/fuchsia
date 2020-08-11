@@ -23,7 +23,6 @@ bool ExperimentalFlags::IsFlagEnabled(Flag flag) const {
 
 std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlags::FLAG_STRINGS = {
     {"enable_handle_rights", Flag::kEnableHandleRights},
-    {"flexible_bits_and_enums", Flag::kFlexibleBitsAndEnums},
     {"disallow_old_handle_syntax", Flag::kDisallowOldHandleSyntax},
     {"default_no_handles", Flag::kDefaultNoHandles},
 };

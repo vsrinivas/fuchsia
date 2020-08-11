@@ -5,7 +5,12 @@ bits MyBits : uint32 {
     MY_OTHER_BIT = 2;
 };
 
-bits StrictBits : uint64 {
+strict bits StrictBits : uint64 {
+    SMALLEST = 1;
+    BIGGEST = 0x8000000000000000;
+};
+
+flexible bits FlexibleBits : uint64 {
     SMALLEST = 1;
     BIGGEST = 0x8000000000000000;
 };

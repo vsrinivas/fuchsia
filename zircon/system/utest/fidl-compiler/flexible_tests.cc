@@ -10,26 +10,6 @@
 
 namespace {
 
-TEST(FlexibleEnum, ParseErrorWithoutExperimentalFlags) {
-  std::string fidl_library = R"FIDL(
-library example;
-
-flexible enum Foo : uint8 {
-  ZERO = 0;
-  ONE = 1;
-};
-)FIDL";
-
-  TestLibrary library(fidl_library);
-  ASSERT_FALSE(library.Compile());
-
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-
-  ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyFlexible);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "enum");
-}
-
 TEST(FlexibleEnum, MultipleUnknown) {
   std::string fidl_library = R"FIDL(
 library example;
@@ -40,8 +20,7 @@ flexible enum Foo : uint8 {
 };
 )FIDL";
 
-  TestLibrary library(
-      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  TestLibrary library(fidl_library);
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -61,8 +40,7 @@ flexible enum Foo : uint8 {
 };
 )FIDL";
 
-  TestLibrary library(
-      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  TestLibrary library(fidl_library);
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -82,8 +60,7 @@ flexible enum Foo : int8 {
 };
 )FIDL";
 
-  TestLibrary library(
-      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  TestLibrary library(fidl_library);
   ASSERT_FALSE(library.Compile());
 
   const auto& errors = library.errors();
@@ -103,14 +80,14 @@ flexible enum Foo : uint8 {
 };
 )FIDL";
 
-  TestLibrary library(
-      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  TestLibrary library(fidl_library);
   ASSERT_TRUE(library.Compile());
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
-  EXPECT_EQ(foo_enum->unknown_value_signed, 0);
-  EXPECT_EQ(foo_enum->unknown_value_unsigned, 1u);
+  EXPECT_FALSE(foo_enum->unknown_value_signed.has_value());
+  EXPECT_TRUE(foo_enum->unknown_value_unsigned.has_value());
+  EXPECT_EQ(foo_enum->unknown_value_unsigned.value(), 1);
 }
 
 TEST(FlexibleEnum, CanUseMaxValueIfOtherIsUnknownSigned) {
@@ -124,14 +101,35 @@ flexible enum Foo : int8 {
 };
 )FIDL";
 
-  TestLibrary library(
-      fidl_library, fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  TestLibrary library(fidl_library);
   ASSERT_TRUE(library.Compile());
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
-  EXPECT_EQ(foo_enum->unknown_value_signed, 1);
-  EXPECT_EQ(foo_enum->unknown_value_unsigned, 0);
+  EXPECT_TRUE(foo_enum->unknown_value_signed.has_value());
+  EXPECT_EQ(foo_enum->unknown_value_signed.value(), 1);
+  EXPECT_FALSE(foo_enum->unknown_value_unsigned.has_value());
+}
+
+TEST(FlexibleEnum, CanUseZeroAsUnknownValue) {
+  std::string fidl_library = R"FIDL(
+library example;
+
+flexible enum Foo : int8 {
+  [Unknown] ZERO = 0;
+  ONE = 1;
+  MAX = 127;
+};
+)FIDL";
+
+  TestLibrary library(fidl_library);
+  ASSERT_TRUE(library.Compile());
+
+  auto foo_enum = library.LookupEnum("Foo");
+  ASSERT_NOT_NULL(foo_enum);
+  EXPECT_TRUE(foo_enum->unknown_value_signed.has_value());
+  EXPECT_EQ(foo_enum->unknown_value_signed.value(), 0);
+  EXPECT_FALSE(foo_enum->unknown_value_unsigned.has_value());
 }
 
 TEST(FlexibleUnion, MultipleUnknown) {

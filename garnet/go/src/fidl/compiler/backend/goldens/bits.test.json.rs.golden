@@ -30,3 +30,10 @@ fidl_bits! {
     Biggest = 9223372036854775808,
   }
 }
+
+fidl_bits! {
+  FlexibleBits(u64) {
+    Smallest = 1,
+    Biggest = 9223372036854775808,
+  }
+}

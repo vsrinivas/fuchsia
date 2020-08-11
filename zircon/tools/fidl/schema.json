@@ -251,6 +251,10 @@
                 "strict": {
                     "description": "Strictness of the enum",
                     "type": "boolean"
+                },
+                "maybe_unknown_value": {
+                    "description": "Unknown member value (present for flexible enums only)",
+                    "type": "integer"
                 }
             }
         },

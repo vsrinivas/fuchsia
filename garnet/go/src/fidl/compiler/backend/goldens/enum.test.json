@@ -10,7 +10,7 @@
       "location": {
         "filename": "enum.test.fidl",
         "line": 3,
-        "column": 6,
+        "column": 13,
         "length": 12
       },
       "type": "uint32",
@@ -55,6 +55,58 @@
         }
       ],
       "strict": true
+    },
+    {
+      "name": "test.name/MyFlexibleEnum",
+      "location": {
+        "filename": "enum.test.fidl",
+        "line": 8,
+        "column": 15,
+        "length": 14
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 9,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 10,
+            "column": 5,
+            "length": 3
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        }
+      ],
+      "strict": false,
+      "maybe_unknown_value": 4294967295
     }
   ],
   "experimental_resource_declarations": [],
@@ -65,9 +117,11 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/MyStrictEnum"
+    "test.name/MyStrictEnum",
+    "test.name/MyFlexibleEnum"
   ],
   "declarations": {
-    "test.name/MyStrictEnum": "enum"
+    "test.name/MyStrictEnum": "enum",
+    "test.name/MyFlexibleEnum": "enum"
   }
 }

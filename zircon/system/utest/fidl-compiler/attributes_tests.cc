@@ -373,9 +373,7 @@ TEST(AttributesTests, unknown_invalid_placement_on_union) {
 }
 
 TEST(AttributesTests, unknown_invalid_placement_on_bits_member) {
-  TestLibrary library(
-      "library fidl.test; flexible bits B : uint32 { [Unknown] A = 0x1; };",
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+  TestLibrary library("library fidl.test; flexible bits B : uint32 { [Unknown] A = 0x1; };");
 
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
@@ -417,9 +415,7 @@ TEST(AttributesTests, unknown_ok_on_flexible_or_transitional_enums_union_members
   }
 
   {
-    TestLibrary library(
-        "library fidl.test; flexible enum E : uint32 { [Unknown] A = 1; };",
-        fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+    TestLibrary library("library fidl.test; flexible enum E : uint32 { [Unknown] A = 1; };");
     EXPECT_TRUE(library.Compile());
   }
 

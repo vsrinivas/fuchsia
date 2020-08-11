@@ -63,7 +63,7 @@
       "location": {
         "filename": "bits.test.fidl",
         "line": 8,
-        "column": 6,
+        "column": 13,
         "length": 10
       },
       "type": {
@@ -112,6 +112,61 @@
         }
       ],
       "strict": true
+    },
+    {
+      "name": "fidl.test.json/FlexibleBits",
+      "location": {
+        "filename": "bits.test.fidl",
+        "line": 13,
+        "column": 15,
+        "length": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "mask": "9223372036854775809",
+      "members": [
+        {
+          "name": "SMALLEST",
+          "location": {
+            "filename": "bits.test.fidl",
+            "line": 14,
+            "column": 5,
+            "length": 8
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BIGGEST",
+          "location": {
+            "filename": "bits.test.fidl",
+            "line": 15,
+            "column": 5,
+            "length": 7
+          },
+          "value": {
+            "kind": "literal",
+            "value": "9223372036854775808",
+            "expression": "0x8000000000000000",
+            "literal": {
+              "kind": "numeric",
+              "value": "9223372036854775808",
+              "expression": "0x8000000000000000"
+            }
+          }
+        }
+      ],
+      "strict": false
     }
   ],
   "const_declarations": [],
@@ -125,10 +180,12 @@
   "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/StrictBits",
-    "fidl.test.json/MyBits"
+    "fidl.test.json/MyBits",
+    "fidl.test.json/FlexibleBits"
   ],
   "declarations": {
     "fidl.test.json/MyBits": "bits",
-    "fidl.test.json/StrictBits": "bits"
+    "fidl.test.json/StrictBits": "bits",
+    "fidl.test.json/FlexibleBits": "bits"
   }
 }

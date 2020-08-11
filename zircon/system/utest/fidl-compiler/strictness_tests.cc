@@ -48,8 +48,7 @@ flexible bits FlexibleFoo {
     BAR = 0x1;
 };
 
-)FIDL",
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+)FIDL");
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupBits("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupBits("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
@@ -68,8 +67,7 @@ flexible enum FlexibleFoo {
     BAR = 1;
 };
 
-)FIDL",
-      fidl::ExperimentalFlags(fidl::ExperimentalFlags::Flag::kFlexibleBitsAndEnums));
+)FIDL");
   ASSERT_TRUE(library.Compile());
   EXPECT_EQ(library.LookupEnum("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
   EXPECT_EQ(library.LookupEnum("StrictFoo")->strictness, fidl::types::Strictness::kStrict);

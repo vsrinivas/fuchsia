@@ -4,6 +4,7 @@
 
 
 extern const struct FidlCodedEnum test_name_MyStrictEnumTable;
+extern const struct FidlCodedEnum test_name_MyFlexibleEnumTable;
 
 
 
@@ -18,4 +19,16 @@ static bool EnumValidatorFor_test_name_MyStrictEnum(uint64_t v) {
 }
 
 const struct FidlCodedEnum test_name_MyStrictEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyStrictEnum, .name="test.name/MyStrictEnum"};
+
+static bool EnumValidatorFor_test_name_MyFlexibleEnum(uint64_t v) {
+  switch (v) {
+    case 1ul:
+    case 2ul:
+      return true;
+    default:
+      return false;
+  }
+}
+
+const struct FidlCodedEnum test_name_MyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .validate=&EnumValidatorFor_test_name_MyFlexibleEnum, .name="test.name/MyFlexibleEnum"};
 

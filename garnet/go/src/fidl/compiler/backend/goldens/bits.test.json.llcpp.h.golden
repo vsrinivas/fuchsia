@@ -186,6 +186,84 @@ constexpr inline void MyBits::operator^=(
   this->value_ ^= other.value_;
 }
 
+class FlexibleBits final {
+ public:
+  constexpr FlexibleBits() : value_(0u) {}
+  explicit constexpr FlexibleBits(uint64_t value) : value_(value) {}
+  const static FlexibleBits SMALLEST;
+  const static FlexibleBits BIGGEST;
+  const static FlexibleBits mask;
+
+  explicit constexpr inline operator uint64_t() const { return value_; }
+  explicit constexpr inline operator bool() const {
+    return static_cast<bool>(value_);
+  }
+  constexpr inline bool operator==(const FlexibleBits& other) const {
+    return value_ == other.value_;
+  }
+  constexpr inline bool operator!=(const FlexibleBits& other) const {
+    return value_ != other.value_;
+  }
+  constexpr inline FlexibleBits operator~() const;
+  constexpr inline FlexibleBits operator|(const FlexibleBits& other) const;
+  constexpr inline FlexibleBits operator&(const FlexibleBits& other) const;
+  constexpr inline FlexibleBits operator^(const FlexibleBits& other) const;
+  constexpr inline void operator|=(const FlexibleBits& other);
+  constexpr inline void operator&=(const FlexibleBits& other);
+  constexpr inline void operator^=(const FlexibleBits& other);
+
+ private:
+  uint64_t value_;
+};
+constexpr const ::llcpp::fidl::test::json::FlexibleBits FlexibleBits::SMALLEST =
+    ::llcpp::fidl::test::json::FlexibleBits(1u);
+constexpr const ::llcpp::fidl::test::json::FlexibleBits FlexibleBits::BIGGEST =
+    ::llcpp::fidl::test::json::FlexibleBits(9223372036854775808u);
+constexpr const ::llcpp::fidl::test::json::FlexibleBits FlexibleBits::mask =
+    ::llcpp::fidl::test::json::FlexibleBits(9223372036854775809u);
+
+constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+FlexibleBits::operator~() const {
+  return ::llcpp::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(~this->value_ & mask.value_));
+}
+
+constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+FlexibleBits::operator|(
+    const ::llcpp::fidl::test::json::FlexibleBits& other) const {
+  return ::llcpp::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+FlexibleBits::operator&(
+    const ::llcpp::fidl::test::json::FlexibleBits& other) const {
+  return ::llcpp::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::llcpp::fidl::test::json::FlexibleBits
+FlexibleBits::operator^(
+    const ::llcpp::fidl::test::json::FlexibleBits& other) const {
+  return ::llcpp::fidl::test::json::FlexibleBits(
+      static_cast<uint64_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void FlexibleBits::operator|=(
+    const ::llcpp::fidl::test::json::FlexibleBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void FlexibleBits::operator&=(
+    const ::llcpp::fidl::test::json::FlexibleBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void FlexibleBits::operator^=(
+    const ::llcpp::fidl::test::json::FlexibleBits& other) {
+  this->value_ ^= other.value_;
+}
+
 }  // namespace json
 }  // namespace test
 }  // namespace fidl
@@ -204,6 +282,14 @@ template <>
 struct IsFidlType<::llcpp::fidl::test::json::MyBits> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fidl::test::json::MyBits>);
 static_assert(sizeof(::llcpp::fidl::test::json::MyBits) == sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::json::FlexibleBits>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::llcpp::fidl::test::json::FlexibleBits>);
+static_assert(sizeof(::llcpp::fidl::test::json::FlexibleBits) ==
+              sizeof(uint64_t));
 
 }  // namespace fidl
 

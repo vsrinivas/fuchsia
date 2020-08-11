@@ -275,6 +275,13 @@ void JSONGenerator::Generate(const flat::Enum& value) {
                            value.subtype_ctor->from_type_alias.value());
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    if (value.strictness == types::Strictness::kFlexible) {
+      if (value.unknown_value_signed) {
+        GenerateObjectMember("maybe_unknown_value", value.unknown_value_signed.value());
+      } else {
+        GenerateObjectMember("maybe_unknown_value", value.unknown_value_unsigned.value());
+      }
+    }
   });
 }
 

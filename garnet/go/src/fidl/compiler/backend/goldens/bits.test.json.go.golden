@@ -35,3 +35,20 @@ func (x StrictBits) String() string {
 	}
 	return "Unknown"
 }
+
+type FlexibleBits uint64
+
+const (
+	FlexibleBitsSmallest FlexibleBits = 1
+	FlexibleBitsBiggest  FlexibleBits = 9223372036854775808
+)
+
+func (x FlexibleBits) String() string {
+	switch x {
+	case 1:
+		return "Smallest"
+	case 9223372036854775808:
+		return "Biggest"
+	}
+	return "Unknown"
+}

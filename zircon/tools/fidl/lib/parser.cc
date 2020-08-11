@@ -1456,12 +1456,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       switch (Peek().combined()) {
         case CASE_IDENTIFIER(Token::Subkind::kBits):
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
-          if (*maybe_strictness == types::Strictness::kFlexible &&
-              !experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kFlexibleBitsAndEnums)) {
-            Fail(ErrCannotSpecifyFlexible, Peek());
-            return More;
-          }
-          break;
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
           break;

@@ -74,6 +74,8 @@ class JsonWriter {
   void Generate(std::string value) { EmitString(value); }
 
   void Generate(uint32_t value) { EmitNumeric(value); }
+  void Generate(int64_t value) { EmitNumeric(value); }
+  void Generate(uint64_t value) { EmitNumeric(value); }
 
   void ResetIndentLevel() { indent_level_ = 0; }
 
