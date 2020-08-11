@@ -58,44 +58,29 @@ void InspectDevfs::Unpublish(Device* dev) {
   auto [dir, seqcount] = GetProtoDir(dev->protocol_id());
   if (dir != nullptr) {
     dir->RemoveEntry(dev->link_name(), dev->inspect_file().get());
+    // Keep only those protocol directories which are not empty to avoid clutter
+    RemoveEmptyProtoDir(dev->protocol_id());
   }
 
   dev->inspect_file() = nullptr;
 }
 
-InspectDevfs::InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir) : root_dir_(root_dir) {
+InspectDevfs::InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir,
+                           fbl::RefPtr<fs::PseudoDir> class_dir)
+    : root_dir_(root_dir), class_dir_(class_dir) {
   std::copy(std::begin(kProtoInfos), std::end(kProtoInfos), proto_infos_.begin());
 }
 
 zx::status<InspectDevfs> InspectDevfs::Create(const fbl::RefPtr<fs::PseudoDir>& root_dir) {
-  InspectDevfs devfs(root_dir);
-
-  zx::status<> status = devfs.PrepopulateProtocolDirs();
+  auto class_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  zx::status<> status = zx::make_status(root_dir->AddEntry("class", class_dir));
   if (status.is_error()) {
     return status.take_error();
   }
+
+  InspectDevfs devfs(root_dir, class_dir);
 
   return zx::ok(std::move(devfs));
-}
-
-zx::status<> InspectDevfs::PrepopulateProtocolDirs() {
-  auto class_devnode = fbl::MakeRefCounted<fs::PseudoDir>();
-  zx::status<> status = zx::make_status(root_dir_->AddEntry("class", class_devnode));
-  if (status.is_error()) {
-    return status.take_error();
-  }
-
-  for (auto& info : proto_infos_) {
-    if (!(info.flags & PF_NOPUB)) {
-      auto node = fbl::MakeRefCounted<fs::PseudoDir>();
-      auto status = zx::make_status(class_devnode->AddEntry(info.name, node));
-      if (status.is_error()) {
-        return status.take_error();
-      }
-      info.devnode = std::move(node);
-    }
-  }
-  return zx::ok();
 }
 
 std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> InspectDevfs::GetProtoDir(uint32_t id) {
@@ -107,9 +92,35 @@ std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> InspectDevfs::GetProtoDir(uint
   return {nullptr, nullptr};
 }
 
+std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> InspectDevfs::GetOrCreateProtoDir(uint32_t id) {
+  for (auto& info : proto_infos_) {
+    if (info.id == id) {
+      // Create protocol directory if one doesn't exist
+      if (!info.devnode) {
+        auto node = fbl::MakeRefCounted<fs::PseudoDir>();
+        if (class_dir_->AddEntry(info.name, node) != ZX_OK) {
+          return {nullptr, nullptr};
+        }
+        info.devnode = std::move(node);
+      }
+      return {info.devnode, &info.seqcount};
+    }
+  }
+  return {nullptr, nullptr};
+}
+
+void InspectDevfs::RemoveEmptyProtoDir(uint32_t id) {
+  for (auto& info : proto_infos_) {
+    if (info.id == id && info.devnode && info.devnode->IsEmpty()) {
+      class_dir_->RemoveEntry(info.name, info.devnode.get());
+      info.devnode = nullptr;
+    }
+  }
+}
+
 zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
   // Create link in /dev/class/... if this id has a published class
-  auto [dir, seqcount] = GetProtoDir(dev->protocol_id());
+  auto [dir, seqcount] = GetOrCreateProtoDir(dev->protocol_id());
   if (dir == nullptr) {
     // No class dir for this type, so ignore it
     return zx::ok();

@@ -33,11 +33,17 @@ static const inline ProtocolInfo kProtoInfos[] = {
 class InspectDevfs {
  public:
   // Use Create instead.
-  explicit InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir);
+  explicit InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir,
+                        fbl::RefPtr<fs::PseudoDir> class_dir);
 
   static zx::status<InspectDevfs> Create(const fbl::RefPtr<fs::PseudoDir>& root_dir);
 
   std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> GetProtoDir(uint32_t id);
+  // Get protocol |id| directory if it exists, else create one.
+  std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> GetOrCreateProtoDir(uint32_t id);
+  // Delete protocol |id| directory if no files are present.
+  void RemoveEmptyProtoDir(uint32_t id);
+
   zx::status<> AddClassDirEntry(const fbl::RefPtr<Device>& dev);
 
   // Initialize |dev|'s devfs state
@@ -51,11 +57,8 @@ class InspectDevfs {
   void Unpublish(Device* dev);
 
  private:
-  // Fill out the "class" subdirectory.
-  zx::status<> PrepopulateProtocolDirs();
-
   fbl::RefPtr<fs::PseudoDir> root_dir_;
-
+  fbl::RefPtr<fs::PseudoDir> class_dir_;
   std::array<ProtocolInfo, std::size(kProtoInfos)> proto_infos_;
 };
 
