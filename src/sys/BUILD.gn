@@ -10,7 +10,7 @@ group("sys") {
     "component_test_runner",
     "core",
     "pkg",
-    "timekeeper",
+    "time/timekeeper",
   ]
 }
 
@@ -34,7 +34,6 @@ group("tests") {
     "test_manager:tests",
     "test_runners:tests",
     "time:tests",
-    "timekeeper:tests",
     "tools/cs:tests",
   ]
 }

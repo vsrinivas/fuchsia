@@ -459,6 +459,6 @@ group("tests") {
     "//src/developer/forensics/testing/fakes:fake-device-id-provider",
     "//src/diagnostics/archivist",
     "//src/sys/pkg/bin/system-update-checker",
-    "//src/sys/timekeeper",
+    "//src/sys/time/timekeeper",
   ]
 }

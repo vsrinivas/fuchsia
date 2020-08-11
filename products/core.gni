@@ -71,8 +71,8 @@ base_package_labels += [
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
   "//src/sys/stash:pkg",
-  "//src/sys/timekeeper",
   "//src/sys/time/network_time_service:network-time-service",
+  "//src/sys/time/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]
 

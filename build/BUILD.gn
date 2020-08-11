@@ -622,7 +622,6 @@ group("deprecated_package_underscore") {
     "//src/sys/test_manager:test_manager_pkg",
     "//src/sys/test_runners/gtest:gtest_runner",
     "//src/sys/test_runners/gtest:gtest_runner_tests",
-    "//src/sys/timekeeper:timekeeper_bin_test",
     "//src/sys/tools/chrealm/integration_tests:chrealm_integrationtests",
     "//src/sys/tools/chrealm/integration_tests:chrealm_test_get_message",
     "//src/sys/tools/cs2/tests:cs2_test",

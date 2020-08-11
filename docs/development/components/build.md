@@ -771,7 +771,7 @@ The example below demonstrates a migration from the legacy
 [`package()`](/build/package.gni) template to the new
 [`fuchsia_package()`](/src/sys/build/fuchsia_package.gni) & friends.
 The example is adapted from
-[`//src/sys/timekeeper/BUILD.gn`](/src/sys/timekeeper/BUILD.gn).
+[`//src/sys/time/timekeeper/BUILD.gn`](/src/sys/time/timekeeper/BUILD.gn).
 
 ### Pre-migration {#pre-migration}
 

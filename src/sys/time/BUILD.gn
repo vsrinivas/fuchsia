@@ -6,11 +6,14 @@
 group("recovery") {
   deps = [
     "network_time_service:network-time-service",
-    "//src/sys/timekeeper",
+    "timekeeper",
   ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "lib/network_time:tests" ]
+  deps = [
+    "lib/network_time:tests",
+    "timekeeper:tests",
+  ]
 }
