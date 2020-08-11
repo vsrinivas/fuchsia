@@ -29,9 +29,6 @@ protocol Discovery {
     compose Group;
     compose Selector;
 
-    [Deprecated, Transitional = "Deprecated in favor of WatchSessionBindings"]
-    GetNextSessionBinding() -> (SessionBindingWatchEvent event);
-
     /// Watches for bindings of media sessions to targets.
     ///
     /// A media session is rendered on the target to which it is bound.
@@ -50,19 +47,6 @@ protocol Discovery {
 struct SessionBinding {
     fuchsia.media.sessions2.SessionId session_id;
     Id target_id;
-};
-
-// Deprecated data type
-union SessionBindingWatchEvent {
-    /// An already existing binding at the time of connection.
-    1: SessionBinding existing;
-    /// Indicates the full set of bindings from the time of connection have
-    /// been enumerated. No more `existing` events will be received.
-    2: Void idle;
-    /// A new binding added since connection.
-    3: SessionBinding added;
-    /// A binding removed.
-    4: SessionBinding removed;
 };
 
 table SessionBindingsWatchEvent {
@@ -105,33 +89,12 @@ protocol GroupEditor {
 
 /// A protocol for watching the members of a group.
 protocol Group {
-    [Deprecated, Transitional = "Deprecated in favor of WatchTargets API"]
-    GetNextTarget() -> (TargetWatchEvent target_watch_event);
-
     /// Watches for changes to the set of registered targets. Leave a request
     /// hanging to get replies when changes occur. New clients will be caught
     /// up with the state of the world.
     ///
     /// Targets are returned as deltas between the watch calls.
     WatchTargets() -> (TargetsWatchEvent targets_watch_event);
-};
-
-struct Void {
-};
-
-// Deprecated data type
-union TargetWatchEvent {
-    /// An already existing target at the time of connection.
-    1: Description existing;
-    /// Indicates the full set of targets from the time of connection have
-    /// been enumerated. No more `existing` events will be received.
-    2: Void idle;
-    /// A new target added since connection.
-    3: Description added;
-    /// A target’s description was updated.
-    4: Description updated;
-    /// A target removed.
-    5: Id removed;
 };
 
 table TargetsWatchEvent {
