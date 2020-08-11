@@ -391,7 +391,7 @@ useful for debugging issues that prevent boot of the device.
 | hlcpp unittests          | `fx test --host fidl_cpp_host_unittests`        |  //sdk/lib/fidl
 | hlcpp conformance tests  | `fx test --host fidl_cpp_host_conformance_test`         |  //sdk/lib/fidl
 | llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_test`            |  //zircon/system/ulib/fidl/include/lib/fidl/llcpp
-| rust conformance tests   | `fx test --host fx test fidl_rust_conformance_tests` | //src/lib/fidl/rust
+| rust conformance tests   | `fx test --host fidl_rust_conformance_tests` | //src/lib/fidl/rust
 | rust fidl lib tests      | `fx test --host fidl_rust_lib_tests`     | //src/lib/fidl/rust
 
 #### Fidlgen Tests
