@@ -19,7 +19,8 @@ declare_args() {
 
 _all_named_envs = []
 
-### Individual test environments ###
+### Individual test environments
+# Please keep alphabetized.
 
 aemu_env = {
   dimensions = {
@@ -33,18 +34,6 @@ _all_named_envs += [
   },
 ]
 
-qemu_env = {
-  dimensions = {
-    device_type = "QEMU"
-  }
-}
-_all_named_envs += [
-  {
-    name = "qemu"
-    env = qemu_env
-  },
-]
-
 astro_env = {
   dimensions = {
     device_type = "Astro"
@@ -54,42 +43,6 @@ _all_named_envs += [
   {
     name = "astro"
     env = astro_env
-  },
-]
-
-sherlock_env = {
-  dimensions = {
-    device_type = "Sherlock"
-  }
-}
-_all_named_envs += [
-  {
-    name = "sherlock"
-    env = sherlock_env
-  },
-]
-
-nelson_env = {
-  dimensions = {
-    device_type = "Nelson"
-  }
-}
-_all_named_envs += [
-  {
-    name = "nelson"
-    env = nelson_env
-  },
-]
-
-nuc_env = {
-  dimensions = {
-    device_type = "Intel NUC Kit NUC7i5DNHE"
-  }
-}
-_all_named_envs += [
-  {
-    name = "nuc"
-    env = nuc_env
   },
 ]
 
@@ -123,13 +76,63 @@ _all_named_envs += [
   },
 ]
 
+nelson_env = {
+  dimensions = {
+    device_type = "Nelson"
+  }
+}
+_all_named_envs += [
+  {
+    name = "nelson"
+    env = nelson_env
+  },
+]
+
+nuc_env = {
+  dimensions = {
+    device_type = "Intel NUC Kit NUC7i5DNHE"
+  }
+}
+_all_named_envs += [
+  {
+    name = "nuc"
+    env = nuc_env
+  },
+]
+
+qemu_env = {
+  dimensions = {
+    device_type = "QEMU"
+  }
+}
+_all_named_envs += [
+  {
+    name = "qemu"
+    env = qemu_env
+  },
+]
+
+sherlock_env = {
+  dimensions = {
+    device_type = "Sherlock"
+  }
+}
+_all_named_envs += [
+  {
+    name = "sherlock"
+    env = sherlock_env
+  },
+]
+
+### END Individual test environments
+
+### Aliases ###
+
 if (host_os == "linux") {
   host_env = linux_env
 } else if (host_os == "mac") {
   host_env = mac_env
 }
-
-### Select environment lists ###
 
 # Allow selection of AEMU as the default EMU.
 emu_env = qemu_env
@@ -144,6 +147,8 @@ _all_named_envs += [
     env = emu_env
   },
 ]
+
+### Select environment lists ###
 
 # Tests that fail on a NUC in ASan but otherwise want to run on a NUC should
 # use this.
