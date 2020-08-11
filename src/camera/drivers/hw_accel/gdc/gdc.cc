@@ -127,6 +127,7 @@ void GdcDevice::Stop() const {
 void GdcDevice::ProcessFrame(TaskInfo& info) {
   TRACE_DURATION("camera", "GdcDevice::ProcessFrame", "task_index", info.task_index,
                  "input_buffer_index", info.index);
+  TRACE_FLOW_END("camera", "process_frame", info.index);
   auto task = info.task;
   // The way we have our SW instrumented, GDC should never be busy
   // proccessing at this point. Doing a sanity check here to ensure
@@ -379,6 +380,7 @@ zx_status_t GdcDevice::GdcSetOutputResolution(uint32_t task_index,
 
 zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
   TRACE_DURATION("camera", "GdcDevice::GdcProcessFrame");
+  TRACE_FLOW_BEGIN("camera", "process_frame", input_buffer_index);
   fbl::AutoLock al(&interface_lock_);
 
   // Find the entry in hashmap.

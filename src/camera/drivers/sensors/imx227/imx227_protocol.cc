@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/trace/event.h>
+
 #include <ddk/debug.h>
 
 #include "imx227.h"
@@ -205,6 +207,7 @@ zx_status_t Imx227Device::CameraSensor2SetIntegrationTime(float int_time, float*
 }
 
 zx_status_t Imx227Device::CameraSensor2Update() {
+  TRACE_DURATION("camera", "Imx227Device::CameraSensor2Update");
   std::lock_guard guard(lock_);
 
   auto status = SetGroupedParameterHold(true);

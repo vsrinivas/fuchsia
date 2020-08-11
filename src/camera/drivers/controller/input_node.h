@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <lib/trace/event.h>
 #include <zircon/assert.h>
 
 #include <ddktl/protocol/isp.h>
@@ -78,12 +79,18 @@ class InputNode : public ProcessNode {
  private:
   // Notifies when a new frame is available from the ISP.
   static void OnIspFrameAvailable(void* ctx, const frame_available_info_t* info) {
+    auto nonce = TRACE_NONCE();
+    TRACE_DURATION("camera", "OnIspFrameAvailable");
+    TRACE_FLOW_BEGIN("camera", "post_ready_to_process", nonce);
     // This method is invoked by the ISP in its own thread,
     // so the event must be marshalled to the
     // controller's thread.
     auto* input_node = static_cast<InputNode*>(ctx);
-    input_node->RunOnMainThread(
-        [input_node, info = *info]() { input_node->OnReadyToProcess(&info); });
+    input_node->RunOnMainThread([input_node, nonce, info = *info]() {
+      TRACE_DURATION("camera", "OnIspFrameAvailable.task");
+      TRACE_FLOW_END("camera", "post_ready_to_process", nonce);
+      input_node->OnReadyToProcess(&info);
+    });
   }
 
   // ISP stream type.

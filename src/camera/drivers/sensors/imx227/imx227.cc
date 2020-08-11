@@ -8,6 +8,7 @@
 #include <lib/device-protocol/i2c.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fit/result.h>
+#include <lib/trace/event.h>
 #include <threads.h>
 #include <zircon/types.h>
 
@@ -32,6 +33,7 @@ namespace camera {
 // |address| : Address of the register.
 fit::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(uint8_t index,
                                                                              uint16_t address) {
+  TRACE_DURATION("camera", "Imx227Device::GetRegisterValueFromSequence");
   if (index >= kSEQUENCE_TABLE.size()) {
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
@@ -97,6 +99,7 @@ zx_status_t Imx227Device::InitPdev() {
 }
 
 fit::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
+  TRACE_DURATION("camera", "Imx227Device::Read16", "addr", addr);
   auto result = Read8(addr);
   if (result.is_error()) {
     return result.take_error_result();
@@ -112,6 +115,7 @@ fit::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
 }
 
 fit::result<uint8_t, zx_status_t> Imx227Device::Read8(uint16_t addr) {
+  TRACE_DURATION("camera", "Imx227Device::Read8", "addr", addr);
   // Convert the address to Big Endian format.
   // The camera sensor expects in this format.
   uint16_t buf = htobe16(addr);
@@ -126,6 +130,7 @@ fit::result<uint8_t, zx_status_t> Imx227Device::Read8(uint16_t addr) {
 }
 
 zx_status_t Imx227Device::Write16(uint16_t addr, uint16_t val) {
+  TRACE_DURATION("camera", "Imx227Device::Write16", "addr", addr, "val", val);
   // Convert the arguments to big endian to match the register spec.
   // First two bytes are the address, third and fourth are the value to be written.
   addr = htobe16(addr);
@@ -146,6 +151,7 @@ zx_status_t Imx227Device::Write16(uint16_t addr, uint16_t val) {
 }
 
 zx_status_t Imx227Device::Write8(uint16_t addr, uint8_t val) {
+  TRACE_DURATION("camera", "Imx227Device::Write8", "addr", addr, "val", val);
   // Convert the arguments to big endian to match the register spec.
   // First two bytes are the address, third one is the value to be written.
   addr = htobe16(addr);
@@ -173,6 +179,7 @@ bool Imx227Device::ValidateSensorID() {
 }
 
 zx_status_t Imx227Device::InitSensor(uint8_t idx) {
+  TRACE_DURATION("camera", "Imx227Device::InitSensor");
   if (idx >= kSEQUENCE_TABLE.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -203,6 +210,7 @@ zx_status_t Imx227Device::InitSensor(uint8_t idx) {
 }
 
 void Imx227Device::HwInit() {
+  TRACE_DURATION("camera", "Imx227Device::HwInit");
   // Power up sequence. Reference: Page 51- IMX227-0AQH5-C datasheet.
   gpio_vana_enable_.Write(1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
@@ -219,6 +227,7 @@ void Imx227Device::HwInit() {
 }
 
 void Imx227Device::HwDeInit() {
+  TRACE_DURATION("camera", "Imx227Device::HwDeInit");
   gpio_cam_rst_.Write(1);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 

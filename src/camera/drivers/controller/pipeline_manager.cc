@@ -112,7 +112,12 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
 
 void PipelineManager::ConfigureStreamPipeline(
     StreamCreationData info, fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  PostTask([this, info = std::move(info), stream = std::move(stream)]() mutable {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "PipelineManager::ConfigureStreamPipeline");
+  TRACE_FLOW_BEGIN("camera", "post_configure_stream_pipeline_task", nonce);
+  PostTask([this, nonce, info = std::move(info), stream = std::move(stream)]() mutable {
+    TRACE_DURATION("camera", "PipelineManager::ConfigureStreamPipeline.task");
+    TRACE_FLOW_END("camera", "post_configure_stream_pipeline_task", nonce);
     zx_status_t status = ZX_OK;
     auto cleanup = fbl::MakeAutoCall([this, &stream, &status]() {
       TaskComplete();

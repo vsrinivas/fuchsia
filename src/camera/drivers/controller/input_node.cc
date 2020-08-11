@@ -81,12 +81,15 @@ void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
   ZX_ASSERT(thread_checker_.IsCreationThreadCurrent());
   TRACE_DURATION("camera", "InputNode::OnFrameAvailable", "buffer_index", info->buffer_id);
   if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {
+    TRACE_INSTANT("camera", "bad_status", TRACE_SCOPE_THREAD, "frame_status",
+                  static_cast<uint32_t>(info->frame_status));
     return;
   }
 
   UpdateFrameCounterForAllChildren();
 
   if (NeedToDropFrame()) {
+    TRACE_INSTANT("camera", "drop_frame", TRACE_SCOPE_THREAD);
     isp_stream_protocol_->ReleaseFrame(info->buffer_id);
     return;
   }

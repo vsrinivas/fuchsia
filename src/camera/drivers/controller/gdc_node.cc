@@ -59,11 +59,18 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
 }
 
 void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "OnGdcFrameAvailable");
+  TRACE_FLOW_BEGIN("camera", "post_gdc_frame_available", nonce);
   // This method is invoked by the GDC in its own thread,
   // so the event must be marshalled to the
   // controller's thread.
   auto* gdc_node = static_cast<GdcNode*>(ctx);
-  gdc_node->RunOnMainThread([gdc_node, info = *info]() { gdc_node->OnFrameAvailable(&info); });
+  gdc_node->RunOnMainThread([gdc_node, nonce, info = *info]() {
+    TRACE_DURATION("camera", "OnGdcFrameAvailable.task");
+    TRACE_FLOW_END("camera", "post_gdc_frame_available", nonce);
+    gdc_node->OnFrameAvailable(&info);
+  });
 }
 
 void OnGdcResChange(void* ctx, const frame_available_info_t* info) {
@@ -180,8 +187,12 @@ void GdcNode::OnReleaseFrame(uint32_t buffer_index) {
 }
 
 void GdcNode::OnReadyToProcess(const frame_available_info_t* info) {
-  async::PostTask(dispatcher_, [this, buffer_index = info->buffer_id]() {
-    TRACE_DURATION("camera", "GdcNode::OnReadyToProcess", "buffer_index", buffer_index);
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("camera", "GdcNode::OnReadyToProcess");
+  TRACE_FLOW_BEGIN("camera", "post_process_frame", nonce);
+  async::PostTask(dispatcher_, [this, nonce, buffer_index = info->buffer_id]() {
+    TRACE_DURATION("camera", "GdcNode::OnReadyToProcess.task", "buffer_index", buffer_index);
+    TRACE_FLOW_END("camera", "post_process_frame", nonce);
     if (enabled_) {
       ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
     } else {

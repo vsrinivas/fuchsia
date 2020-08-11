@@ -33,6 +33,7 @@ source_set("source") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-unit-test",
+    "//zircon/system/ulib/trace:trace-driver",
   ]
 }
 
