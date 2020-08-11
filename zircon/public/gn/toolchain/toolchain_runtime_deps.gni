@@ -273,7 +273,7 @@ template("toolchain_runtime_deps") {
                   toolchain.tags) {
                 name += toolchain.variant_suffix
               }
-              name = string_replace(name, "+", "p")
+              name = string_replace(name, "+", "x")
               toolchain = toolchain_label
               path = rebase_path(zx_manifest_name, root_build_dir)
               cpu = current_cpu

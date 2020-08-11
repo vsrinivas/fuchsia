@@ -9,11 +9,11 @@ import("//build/unification/lib/zircon_runtime_library.gni")
 cpp_libs = [
   {
     name = "libcxx"
-    fallback = "libcpp.so.2"
+    fallback = "libcxx.so.2"
   },
   {
     name = "libcxxabi"
-    fallback = "libcppabi.so.1"
+    fallback = "libcxxabi.so.1"
   },
   {
     name = "libunwind"
