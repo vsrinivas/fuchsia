@@ -16,10 +16,7 @@ class Appmgr;
 
 class LifecycleServer final : public llcpp::fuchsia::process::lifecycle::Lifecycle::Interface {
  public:
-  LifecycleServer(Appmgr* appmgr, fit::function<void(zx_status_t)> stop_callback)
-      : appmgr_(appmgr) {
-    stop_callback_ = std::move(stop_callback);
-  }
+  LifecycleServer(Appmgr* appmgr) : appmgr_(appmgr) {}
 
   zx_status_t Create(async_dispatcher_t* dispatcher, zx::channel chan);
   void Close(zx_status_t status);
@@ -30,7 +27,6 @@ class LifecycleServer final : public llcpp::fuchsia::process::lifecycle::Lifecyc
 
  private:
   Appmgr* appmgr_;
-  fit::function<void(zx_status_t)> stop_callback_;
   std::optional<fidl::ServerBindingRef<llcpp::fuchsia::process::lifecycle::Lifecycle>> lifecycle_;
 };
 

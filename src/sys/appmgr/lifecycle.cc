@@ -36,7 +36,7 @@ void LifecycleServer::Stop(StopCompleter::Sync completer) {
   appmgr_->Shutdown([this](zx_status_t status) mutable {
     FX_LOGS(INFO) << "Lifecycle Server complete callback";
     Close(status);
-    stop_callback_(status);
+    exit(status);
   });
 }
 

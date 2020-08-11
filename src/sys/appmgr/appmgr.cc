@@ -43,7 +43,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
       storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)),
-      lifecycle_server_(this, std::move(args.stop_callback)),
+      lifecycle_server_(this),
       lifecycle_executor_(dispatcher),
       lifecycle_allowlist_(std::move(args.lifecycle_allowlist)) {
   RecordSelfCpuStats();
@@ -233,14 +233,8 @@ void Appmgr::Shutdown(fit::function<void(zx_status_t)> callback) {
   std::vector<LifecycleComponent> lifecycle_components;
   FindLifecycleComponentsInRealm(root_realm_.get(), &lifecycle_components);
 
-  auto components_remaining =
-      std::make_shared<ShutdownCountdown>(lifecycle_components.size(), std::move(callback));
-
-  if (components_remaining.get()->component_count == 0) {
-    FX_LOGS(INFO) << "No components expose lifecycle, continuing appmgr shutdown.";
-    components_remaining.get()->complete_callback(ZX_OK);
-    return;
-  }
+  auto components_remaining = std::make_shared<ShutdownCountdown>(
+      lifecycle_components.size(), std::move(callback));
 
   // Schedule tasks to shutdown the running lifecycle components. These tasks will be performed
   // concurrently.
