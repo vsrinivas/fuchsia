@@ -230,34 +230,46 @@ void NdmData::ParseNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
 #endif
   }
 
-  const BadBlockData& bad_data = *reinterpret_cast<const BadBlockData*>(data);
-  data += sizeof(bad_data);
+  const BadBlockData* bad_data = reinterpret_cast<const BadBlockData*>(data);
+  data += sizeof(*bad_data);
 
-  for (int i = 0; bad_data.initial_bbt[i] != h.num_blocks; i++) {
-    Log("Bad block at %d\n", bad_data.initial_bbt[i]);
-    bad_blocks->push_back(bad_data.initial_bbt[i]);
-    data += sizeof(bad_data.initial_bbt[i]);
+  for (int i = 0;; i++) {
+    int32_t bad_block;
+    memcpy(&bad_block, reinterpret_cast<const int32_t*>(bad_data) + i + 1, sizeof(bad_block));
+    if(bad_block == h.num_blocks) {
+      break;
+    }
+    Log("Bad block at %d\n", bad_block);
+    bad_blocks->push_back(bad_block);
+    data += sizeof(bad_data->initial_bbt[i]);
     if (i == 100) {
       printf("Unreasonable number of bad blocks. Out of sync\n");
       return;
     }
   }
 
-  const RunningBadBlock* running = reinterpret_cast<const RunningBadBlock*>(data);
-  data += sizeof(*running);
+  const RunningBadBlock* running_ptr = reinterpret_cast<const RunningBadBlock*>(data);
+  data += sizeof(*running_ptr);
 
-  for (int i = 0; running->bad_block != -1; i++, running++) {
-    Log("Bad block at %d, translated to %d\n", running->bad_block, running->replacement_block);
-    bad_blocks->push_back(running->bad_block);
-    replacements->push_back(running->replacement_block);
-    data += sizeof(*running);
+  for (int i = 0; ;i++, running_ptr++) {
+    RunningBadBlock running;
+    memcpy(&running, running_ptr, sizeof(running));
+    if (running.bad_block == -1) {
+      break;
+    }
+    Log("Bad block at %d, translated to %d\n", running.bad_block, running.replacement_block);
+    bad_blocks->push_back(running.bad_block);
+    replacements->push_back(running.replacement_block);
+    data += sizeof(running);
     if (i == 100) {
       printf("Unreasonable number of bad blocks. Out of sync\n");
       return;
     }
   }
 
-  DumpPartitions(h, data, bad_data.num_partitions);
+  BadBlockData bad_block_data;
+  memcpy(&bad_block_data, bad_data, sizeof(bad_block_data));
+  DumpPartitions(h, data, bad_block_data.num_partitions);
   Log("Total bad blocks %lu\n\n", bad_blocks->size());
 }
 
@@ -282,21 +294,23 @@ void NdmData::DumpNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
 
 void NdmData::DumpPartitions(const NdmHeader& header, const char* data, int num_partitions) const {
   for (int32_t i = 0; i < num_partitions; i++) {
-    auto partition = reinterpret_cast<const NdmPartition*>(data);
-    data += sizeof(*partition);
-    char name[sizeof(partition->name) + 1];
-    memcpy(name, partition->name, sizeof(partition->name));
-    name[sizeof(partition->name)] = '\0';
+    NdmPartition partition;
+    memcpy(&partition, data, sizeof(partition));
+    data += sizeof(partition);
+    char name[sizeof(partition.name) + 1];
+    memcpy(name, partition.name, sizeof(partition.name));
+    name[sizeof(partition.name)] = '\0';
     Log("Partition %d:\n", i);
-    Log("first_block %d, num_blocks %d, name %s, type %d\n", partition->first_block,
-        partition->num_blocks, name, partition->type);
+    Log("first_block %d, num_blocks %d, name %s, type %d\n", partition.first_block,
+        partition.num_blocks, name, partition.type);
 
     if (header.major_version >= 2) {
-      auto partition_data = reinterpret_cast<const NdmPartitionData*>(data);
-      data += sizeof(*partition_data);
+      NdmPartitionData partition_data;
+      memcpy(&partition_data, data, sizeof(partition_data));
+      data += sizeof(partition_data);
 
       // TODO(40208): Dump the partition parameters.
-      data += partition_data->data_size;
+      data += partition_data.data_size;
     }
   }
 }
