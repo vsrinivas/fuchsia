@@ -7,11 +7,12 @@
 use crate::install_plan::FuchsiaInstallPlan;
 use anyhow::Context;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
-use fidl_fuchsia_pkg::PackageUrl;
 use fidl_fuchsia_update_installer::{
-    Initiator, InstallerMarker, InstallerProxy, MonitorMarker, MonitorRequest, Options,
-    RebootControllerMarker, RebootControllerProxy, State, UpdateNotStartedReason,
+    InstallerMarker, RebootControllerMarker, RebootControllerProxy, State,
 };
+use fuchsia_url::pkg_url::PkgUrl;
+
+use fidl_fuchsia_update_installer_ext::*;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
@@ -31,16 +32,17 @@ pub enum FuchsiaInstallError {
     #[error("FIDL error: {0}")]
     FIDL(#[from] fidl::Error),
 
-    #[error("an installation was already in progress")]
-    InstallInProgress,
-
+    /// System update installer error.
     #[error("system update installer failed")]
     Installer,
+
+    /// URL parse error.
+    #[error("Parse error")]
+    Parse(#[source] fuchsia_url::boot_url::ParseError),
 }
 
 #[derive(Debug)]
 pub struct FuchsiaInstaller {
-    proxy: InstallerProxy,
     reboot_controller: Option<RebootControllerProxy>,
 }
 
@@ -48,15 +50,7 @@ impl FuchsiaInstaller {
     // Unused until temp_installer.rs is removed.
     #[allow(dead_code)]
     pub fn new() -> Result<Self, anyhow::Error> {
-        let proxy = fuchsia_component::client::connect_to_service::<InstallerMarker>()?;
-        Ok(FuchsiaInstaller { proxy, reboot_controller: None })
-    }
-
-    #[cfg(test)]
-    fn new_mock() -> (Self, fidl_fuchsia_update_installer::InstallerRequestStream) {
-        let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<InstallerMarker>().unwrap();
-        (FuchsiaInstaller { proxy, reboot_controller: None }, stream)
+        Ok(FuchsiaInstaller { reboot_controller: None })
     }
 }
 
@@ -69,42 +63,34 @@ impl Installer for FuchsiaInstaller {
         install_plan: &FuchsiaInstallPlan,
         _observer: Option<&dyn ProgressObserver>,
     ) -> BoxFuture<'_, Result<(), FuchsiaInstallError>> {
-        let mut url = PackageUrl { url: install_plan.url.to_string() };
+        let url = install_plan.url.to_string();
+
         let options = Options {
-            initiator: Some(match install_plan.install_source {
+            initiator: match install_plan.install_source {
                 InstallSource::ScheduledTask => Initiator::Service,
                 InstallSource::OnDemand => Initiator::User,
-            }),
-            should_write_recovery: None,
-            allow_attach_to_existing_attempt: None,
+            },
+            should_write_recovery: true,
+            allow_attach_to_existing_attempt: true,
         };
 
         async move {
-            let (monitor_client_end, mut monitor) =
-                fidl::endpoints::create_request_stream::<MonitorMarker>()?;
+            let pkgurl = PkgUrl::parse(&url).map_err(FuchsiaInstallError::Parse)?;
+            let proxy = fuchsia_component::client::connect_to_service::<InstallerMarker>()
+                .map_err(|_| FuchsiaInstallError::Installer)?;
+
             let (reboot_controller, reboot_controller_server_end) =
-                fidl::endpoints::create_proxy::<RebootControllerMarker>()?;
+                fidl::endpoints::create_proxy::<RebootControllerMarker>()
+                    .map_err(FuchsiaInstallError::FIDL)?;
+
             self.reboot_controller = Some(reboot_controller);
-            let attempt_id = self
-                .proxy
-                .start_update(
-                    &mut url,
-                    options,
-                    monitor_client_end,
-                    Some(reboot_controller_server_end),
-                )
-                .await?
-                .map_err(|reason| match reason {
-                    UpdateNotStartedReason::AlreadyInProgress => {
-                        FuchsiaInstallError::InstallInProgress
-                    }
-                })?;
-            info!("Update started with attempt id: {}", attempt_id);
 
-            while let Some(request) = monitor.try_next().await? {
-                let MonitorRequest::OnState { state, responder } = request;
-                let _ = responder.send();
+            let mut update_attempt =
+                start_update(&pkgurl, options, proxy, Some(reboot_controller_server_end))
+                    .await
+                    .map_err(|_| FuchsiaInstallError::Installer)?;
 
+            while let Ok(Some(state)) = update_attempt.try_next().await {
                 // TODO: report progress to ProgressObserver
                 info!("Installer entered state: {}", state_to_string(&state));
                 match state {
@@ -156,163 +142,5 @@ fn state_to_string(state: &State) -> &'static str {
         State::FailPrepare(_) => "FailPrepare",
         State::FailFetch(_) => "FailFetch",
         State::FailStage(_) => "FailStage",
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use fidl_fuchsia_update_installer::{InstallationProgress, InstallerRequest, UpdateInfo};
-    use fuchsia_async as fasync;
-    use matches::assert_matches;
-
-    const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_start_update() {
-        let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
-        let plan = FuchsiaInstallPlan {
-            url: TEST_URL.parse().unwrap(),
-            install_source: InstallSource::OnDemand,
-        };
-        let installer_fut = async move {
-            let () = installer.perform_install(&plan, None).await.unwrap();
-        };
-        let stream_fut = async move {
-            match stream.next().await.unwrap() {
-                Ok(InstallerRequest::StartUpdate {
-                    url,
-                    options:
-                        Options { initiator, should_write_recovery, allow_attach_to_existing_attempt },
-                    monitor,
-                    reboot_controller,
-                    responder,
-                }) => {
-                    assert_eq!(url.url, TEST_URL);
-                    assert_eq!(initiator, Some(Initiator::User));
-                    assert_matches!(reboot_controller, Some(_));
-                    assert_eq!(should_write_recovery, None);
-                    assert_eq!(allow_attach_to_existing_attempt, None);
-                    responder
-                        .send(&mut Ok("00000000-0000-0000-0000-000000000001".to_owned()))
-                        .unwrap();
-                    let monitor = monitor.into_proxy().unwrap();
-                    let () = monitor
-                        .on_state(&mut State::Reboot(fidl_fuchsia_update_installer::RebootData {
-                            info: Some(UpdateInfo { download_size: None }),
-                            progress: Some(InstallationProgress {
-                                fraction_completed: Some(1.0),
-                                bytes_downloaded: None,
-                            }),
-                        }))
-                        .await
-                        .unwrap();
-                }
-                request => panic!("Unexpected request: {:?}", request),
-            }
-        };
-        future::join(installer_fut, stream_fut).await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_install_error() {
-        let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
-        let plan = FuchsiaInstallPlan {
-            url: TEST_URL.parse().unwrap(),
-            install_source: InstallSource::OnDemand,
-        };
-        let installer_fut = async move {
-            match installer.perform_install(&plan, None).await {
-                Err(FuchsiaInstallError::Installer) => {} // expected
-                result => panic!("Unexpected result: {:?}", result),
-            }
-        };
-        let stream_fut = async move {
-            match stream.next().await.unwrap() {
-                Ok(InstallerRequest::StartUpdate { monitor, responder, .. }) => {
-                    responder
-                        .send(&mut Ok("00000000-0000-0000-0000-000000000002".to_owned()))
-                        .unwrap();
-
-                    let monitor = monitor.into_proxy().unwrap();
-                    let () = monitor
-                        .on_state(&mut State::FailPrepare(
-                            fidl_fuchsia_update_installer::FailPrepareData {},
-                        ))
-                        .await
-                        .unwrap();
-                }
-                request => panic!("Unexpected request: {:?}", request),
-            }
-        };
-        future::join(installer_fut, stream_fut).await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_fidl_error() {
-        let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
-        let plan = FuchsiaInstallPlan {
-            url: TEST_URL.parse().unwrap(),
-            install_source: InstallSource::OnDemand,
-        };
-        let installer_fut = async move {
-            match installer.perform_install(&plan, None).await {
-                Err(FuchsiaInstallError::FIDL(_)) => {} // expected
-                result => panic!("Unexpected result: {:?}", result),
-            }
-        };
-        let stream_fut = async move {
-            match stream.next().await.unwrap() {
-                Ok(InstallerRequest::StartUpdate { .. }) => {
-                    // Don't send attempt id.
-                }
-                request => panic!("Unexpected request: {:?}", request),
-            }
-        };
-        future::join(installer_fut, stream_fut).await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_server_close_unexpectedly() {
-        let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
-        let plan = FuchsiaInstallPlan {
-            url: TEST_URL.parse().unwrap(),
-            install_source: InstallSource::OnDemand,
-        };
-        let installer_fut = async move {
-            match installer.perform_install(&plan, None).await {
-                Err(FuchsiaInstallError::Installer) => {} // expected
-                result => panic!("Unexpected result: {:?}", result),
-            }
-        };
-        let stream_fut = async move {
-            match stream.next().await.unwrap() {
-                Ok(InstallerRequest::StartUpdate { monitor, responder, .. }) => {
-                    responder
-                        .send(&mut Ok("00000000-0000-0000-0000-000000000003".to_owned()))
-                        .unwrap();
-
-                    let monitor = monitor.into_proxy().unwrap();
-                    let () = monitor
-                        .on_state(&mut State::Prepare(
-                            fidl_fuchsia_update_installer::PrepareData {},
-                        ))
-                        .await
-                        .unwrap();
-                    let () = monitor
-                        .on_state(&mut State::Fetch(fidl_fuchsia_update_installer::FetchData {
-                            info: Some(UpdateInfo { download_size: None }),
-                            progress: Some(InstallationProgress {
-                                fraction_completed: Some(0.0),
-                                bytes_downloaded: None,
-                            }),
-                        }))
-                        .await
-                        .unwrap();
-                }
-                request => panic!("Unexpected request: {:?}", request),
-            }
-        };
-        future::join(installer_fut, stream_fut).await;
     }
 }

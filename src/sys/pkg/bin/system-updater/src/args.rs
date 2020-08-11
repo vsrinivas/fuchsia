@@ -56,6 +56,16 @@ pub enum Initiator {
     Automatic,
     Manual,
 }
+
+impl From<Initiator> for fidl_fuchsia_update_installer_ext::Initiator {
+    fn from(args_initiator: Initiator) -> Self {
+        match args_initiator {
+            Initiator::Manual => fidl_fuchsia_update_installer_ext::Initiator::User,
+            Initiator::Automatic => fidl_fuchsia_update_installer_ext::Initiator::Service,
+        }
+    }
+}
+
 impl std::str::FromStr for Initiator {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {

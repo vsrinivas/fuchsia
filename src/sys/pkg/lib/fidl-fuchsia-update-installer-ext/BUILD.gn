@@ -12,9 +12,14 @@ rustc_library("fidl-fuchsia-update-installer-ext") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-url",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
-    "//src/sys/pkg/lib/event-queue",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:serde",
@@ -22,12 +27,14 @@ rustc_library("fidl-fuchsia-update-installer-ext") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde_json",
   ]
 
   sources = [
     "src/lib.rs",
+    "src/options.rs",
     "src/state.rs",
   ]
 }

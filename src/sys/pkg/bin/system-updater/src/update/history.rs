@@ -7,7 +7,7 @@ use {
     anyhow::{anyhow, Error},
     bounded_node::BoundedNode,
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
-    fidl_fuchsia_update_installer_ext::State,
+    fidl_fuchsia_update_installer_ext::{Options, State},
     fuchsia_inspect as inspect,
     fuchsia_syslog::fx_log_warn,
     fuchsia_url::pkg_url::PkgUrl,
@@ -43,7 +43,7 @@ pub struct UpdateAttempt {
     #[serde(rename = "target")]
     target_version: Version,
 
-    options: UpdateOptions,
+    options: Options,
 
     #[serde(rename = "url")]
     update_url: PkgUrl,
@@ -61,7 +61,7 @@ impl UpdateAttempt {
     fn update_url(&self) -> &PkgUrl {
         &self.update_url
     }
-    fn options(&self) -> &UpdateOptions {
+    fn options(&self) -> &Options {
         &self.options
     }
     fn state(&self) -> &State {
@@ -123,7 +123,7 @@ impl From<&UpdateAttempt> for fidl_fuchsia_update_installer::UpdateResult {
 pub struct PendingAttempt {
     attempt_id: String,
     source_version: Version,
-    options: UpdateOptions,
+    options: Options,
     update_url: PkgUrl,
     start_time: SystemTime,
 }
@@ -142,28 +142,6 @@ impl PendingAttempt {
             update_url: self.update_url,
             start_time: self.start_time,
             state,
-        }
-    }
-}
-
-// TODO(fxb/55401): replace this struct with the one in fidl-fuchsia-update-installer-ext.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct UpdateOptions;
-
-impl UpdateOptions {
-    fn write_to_inspect(&self, _node: &inspect::Node) {
-        let UpdateOptions {} = self;
-        // TODO(55401): update this when we have fields in this struct.
-    }
-}
-
-// TODO(fxb/55401): move this to fidl-fuchsia-update-installer-ext.
-impl From<&UpdateOptions> for fidl_fuchsia_update_installer::Options {
-    fn from(_options: &UpdateOptions) -> Self {
-        Self {
-            initiator: None,
-            allow_attach_to_existing_attempt: None,
-            should_write_recovery: None,
         }
     }
 }
@@ -201,7 +179,7 @@ impl UpdateHistory {
     #[must_use]
     pub fn start_update_attempt<'a>(
         &self,
-        options: UpdateOptions,
+        options: Options,
         update_url: PkgUrl,
         start_time: SystemTime,
         data_sink: &'a DataSinkProxy,
@@ -399,7 +377,7 @@ mod tests {
         super::{version::mock_pkgfs_system, *},
         crate::update::environment::NamespaceBuildInfo,
         anyhow::anyhow,
-        fidl_fuchsia_update_installer_ext::{Progress, UpdateInfo},
+        fidl_fuchsia_update_installer_ext::{Initiator, Progress, UpdateInfo},
         fuchsia_inspect::{assert_inspect_tree, Inspector},
         mock_paver::MockPaverServiceBuilder,
         pretty_assertions::assert_eq,
@@ -436,9 +414,14 @@ mod tests {
         let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
         let (pkgfs_system, _pkgfs_dir) = mock_pkgfs_system("").await;
+        let opts = Options {
+            initiator: Initiator::User,
+            allow_attach_to_existing_attempt: false,
+            should_write_recovery: true,
+        };
         let update_attempt = history
             .start_update_attempt(
-                UpdateOptions,
+                opts,
                 "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                 SystemTime::UNIX_EPOCH + Duration::from_nanos(i as u64),
                 &data_sink,
@@ -517,7 +500,11 @@ mod tests {
                 ..Version::default()
             },
             target_version: Version::for_hash("new".to_owned()),
-            options: UpdateOptions,
+            options: Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: false,
+                should_write_recovery: true,
+            },
             update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
             state: State::FailPrepare,
@@ -551,7 +538,11 @@ mod tests {
                             "zbi_hash": "",
                             "build_version": ""
                         },
-                        "options": null,
+                        "options": {
+                            "initiator":  "User",
+                            "allow_attach_to_existing_attempt": false,
+                            "should_write_recovery": true,
+                        },
                         "url": "fuchsia-pkg://fuchsia.com/update",
                         "start": 42,
                         "state": {
@@ -583,7 +574,11 @@ mod tests {
                             "zbi_hash": "",
                             "build_version": ""
                         },
-                        "options": null,
+                        "options": {
+                            "initiator":  "User",
+                            "allow_attach_to_existing_attempt": false,
+                            "should_write_recovery": true,
+                        },
                         "url": "fuchsia-pkg://fuchsia.com/update",
                         "start": 123,
                         "state": {
@@ -604,13 +599,18 @@ mod tests {
         )
         .await;
         assert_eq!(
+            // failing here
             history.update_attempts,
             vec![
                 UpdateAttempt {
                     attempt_id: "1234".to_owned(),
                     source_version: Version::for_hash("new".to_owned()),
                     target_version: Version::for_hash("newer".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -619,7 +619,11 @@ mod tests {
                     attempt_id: "4567".to_owned(),
                     source_version: Version::for_hash("old".to_owned()),
                     target_version: Version::for_hash("new".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(123),
                     state: make_reboot_state(),
@@ -651,7 +655,11 @@ mod tests {
                                 "zbi_hash": "",
                                 "build_version": ""
                             },
-                            "options": {},
+                            "options": {
+                                "initiator": "User",
+                                "allow_attach_to_existing_attempt": false,
+                                "should_write_recovery": true,
+                            },
                             "update_url": "fuchsia-pkg://fuchsia.com/update",
                             "start_time": "1970-01-01T00:00:00.000000123+00:00",
                             "state": {
@@ -681,7 +689,11 @@ mod tests {
                                 "zbi_hash": "",
                                 "build_version": ""
                             },
-                            "options": {},
+                            "options": {
+                                "initiator": "User",
+                                "allow_attach_to_existing_attempt": false,
+                                "should_write_recovery": true,
+                            },
                             "update_url": "fuchsia-pkg://fuchsia.com/update",
                             "start_time": "1970-01-01T00:00:00.000000042+00:00",
                             "state": {
@@ -729,7 +741,11 @@ mod tests {
                                 "zbi_hash": "",
                                 "build_version": ""
                             },
-                            "options": {},
+                            "options": {
+                                "initiator": "User",
+                                "allow_attach_to_existing_attempt": false,
+                                "should_write_recovery": true,
+                            },
                             "update_url": "fuchsia-pkg://fuchsia.com/update",
                             "start_time": "1970-01-01T00:00:00.000000123+00:00",
                             "state": {
@@ -759,7 +775,11 @@ mod tests {
                                 "zbi_hash": "",
                                 "build_version": ""
                             },
-                            "options": {},
+                            "options": {
+                                "initiator": "User",
+                                "allow_attach_to_existing_attempt": false,
+                                "should_write_recovery": true,
+                            },
                             "update_url": "fuchsia-pkg://fuchsia.com/update",
                             "start_time": "1970-01-01T00:00:00.000000042+00:00",
                             "state": {
@@ -789,7 +809,11 @@ mod tests {
                                 "zbi_hash": "",
                                 "build_version": ""
                             },
-                            "options": {},
+                            "options": {
+                                "initiator": "User",
+                                "allow_attach_to_existing_attempt": false,
+                                "should_write_recovery": true,
+                            },
                             "update_url": "fuchsia-pkg://fuchsia.com/update",
                             "start_time": "1970-01-01T00:00:00.000000042+00:00",
                             "state": {
@@ -812,13 +836,18 @@ mod tests {
                 .to_string(),
             ..Version::default()
         };
+
         let history = UpdateHistory {
             update_attempts: VecDeque::from(vec![
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old".to_owned()),
                     target_version: Version::for_hash("failed target version".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: State::FailPrepare,
@@ -827,7 +856,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old".to_owned()),
                     target_version: completed_target_version.clone(),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -839,10 +872,15 @@ mod tests {
         let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
         let (pkgfs_system, _pkgfs_dir) = mock_pkgfs_system("").await;
+
         assert_eq!(
             history
                 .start_update_attempt(
-                    UpdateOptions,
+                    Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     &data_sink,
@@ -860,6 +898,12 @@ mod tests {
     async fn record_update_attempt_and_then_save() {
         let (send, recv) = futures::channel::oneshot::channel();
 
+        let opts = Options {
+            initiator: Initiator::User,
+            allow_attach_to_existing_attempt: false,
+            should_write_recovery: true,
+        };
+
         let mut history = UpdateHistory::default();
         record_fake_update_attempt(&mut history, 42).await;
         let update_attempt = UpdateAttempt {
@@ -872,7 +916,7 @@ mod tests {
                 ..Version::default()
             },
             target_version: Version::for_hash("new".to_owned()),
-            options: UpdateOptions,
+            options: opts,
             update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
             state: State::FailPrepare,
@@ -905,7 +949,11 @@ mod tests {
                         "zbi_hash": "",
                         "build_version": ""
                     },
-                    "options": null,
+                    "options": {
+                        "allow_attach_to_existing_attempt": false,
+                        "initiator": "User",
+                        "should_write_recovery": true,
+                    },
                     "url": "fuchsia-pkg://fuchsia.com/update",
                     "start": 42,
                     "state": {
@@ -939,7 +987,11 @@ mod tests {
                         ..Version::default()
                     },
                     target_version: Version::for_hash("new".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(i as u64),
                     state: State::FailPrepare,
@@ -1002,7 +1054,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old"),
                     target_version: Version::for_hash("new"),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -1011,7 +1067,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old2"),
                     target_version: Version::for_hash("new2"),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -1020,7 +1080,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old"),
                     target_version: Version::for_hash("new"),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -1041,7 +1105,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old".to_owned()),
                     target_version: Version::for_hash("new".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -1050,7 +1118,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old2".to_owned()),
                     target_version: Version::for_hash("new".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -1070,7 +1142,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old".to_owned()),
                     target_version: Version::for_hash("new".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -1079,7 +1155,11 @@ mod tests {
                     attempt_id: "id".to_owned(),
                     source_version: Version::for_hash("old".to_owned()),
                     target_version: Version::for_hash("new2".to_owned()),
-                    options: UpdateOptions,
+                    options: Options {
+                        initiator: Initiator::User,
+                        allow_attach_to_existing_attempt: false,
+                        should_write_recovery: true,
+                    },
                     update_url: "fuchsia-pkg://fuchsia.com/update".parse().unwrap(),
                     start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
                     state: make_reboot_state(),
@@ -1097,7 +1177,11 @@ mod tests {
             attempt_id: "0".to_owned(),
             source_version: Version::for_hash("old".to_owned()),
             target_version: Version::for_hash("new".to_owned()),
-            options: UpdateOptions,
+            options: Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: false,
+                should_write_recovery: true,
+            },
             update_url: "fuchsia-pkg://fuchsia.com/first-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
             state: make_reboot_state(),
@@ -1106,7 +1190,11 @@ mod tests {
             attempt_id: "1".to_owned(),
             source_version: Version::for_hash("old".to_owned()),
             target_version: Version::for_hash("new2".to_owned()),
-            options: UpdateOptions,
+            options: Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: false,
+                should_write_recovery: true,
+            },
             update_url: "fuchsia-pkg://fuchsia.com/second-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
             state: make_reboot_state(),
@@ -1125,7 +1213,11 @@ mod tests {
             attempt_id: "foo".to_owned(),
             source_version: Version::for_hash("old".to_owned()),
             target_version: Version::for_hash("new".to_owned()),
-            options: UpdateOptions,
+            options: Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: false,
+                should_write_recovery: true,
+            },
             update_url: "fuchsia-pkg://fuchsia.com/first-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
             state: make_reboot_state(),
@@ -1134,7 +1226,11 @@ mod tests {
             attempt_id: "bar".to_owned(),
             source_version: Version::for_hash("old".to_owned()),
             target_version: Version::for_hash("new2".to_owned()),
-            options: UpdateOptions,
+            options: Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: false,
+                should_write_recovery: true,
+            },
             update_url: "fuchsia-pkg://fuchsia.com/second-attempt".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
             state: make_reboot_state(),

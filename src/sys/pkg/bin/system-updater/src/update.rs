@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_paver::DataSinkProxy,
     fidl_fuchsia_pkg::PackageCacheProxy,
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
-    fidl_fuchsia_update_installer_ext::{State, UpdateInfo},
+    fidl_fuchsia_update_installer_ext::{Options, State, UpdateInfo},
     fuchsia_async::Task,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
@@ -64,7 +64,11 @@ pub async fn update(
 ) -> impl Stream<Item = State> {
     let attempt_fut = history.lock().start_update_attempt(
         // TODO(fxb/55408): replace with the real options
-        history::UpdateOptions,
+        Options {
+            initiator: config.initiator.into(),
+            allow_attach_to_existing_attempt: false,
+            should_write_recovery: config.should_write_recovery,
+        },
         config.update_url.clone(),
         config.start_time,
         &env.data_sink,

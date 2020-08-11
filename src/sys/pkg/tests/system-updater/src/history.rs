@@ -154,7 +154,11 @@ async fn writes_history() {
                     "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
                     "build_version": "0.2"
                 },
-                "options": null,
+                "options": {
+                    "allow_attach_to_existing_attempt": false,
+                    "initiator": "User",
+                    "should_write_recovery": true,
+                },
                 "url": "fuchsia-pkg://fuchsia.com/update",
                 "start": 1234567890,
                 "state": {
@@ -208,7 +212,11 @@ async fn replaces_bogus_history() {
                     "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
                     "build_version": ""
                 },
-                "options": null,
+                "options": {
+                    "allow_attach_to_existing_attempt": false,
+                    "initiator": "Service",
+                    "should_write_recovery": true,
+                },
                 "url": "fuchsia-pkg://fuchsia.com/update",
                 "start": 42,
                 "state": {
@@ -279,7 +287,11 @@ async fn increments_attempts_counter_on_retry() {
                     "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
                     "build_version": ""
                 },
-                "options": null,
+                "options": {
+                    "allow_attach_to_existing_attempt": false,
+                    "initiator": "Service",
+                    "should_write_recovery": true,
+                },
                 "url": "fuchsia-pkg://fuchsia.com/update",
                 "start": 20,
                 "state": {
@@ -308,7 +320,11 @@ async fn increments_attempts_counter_on_retry() {
                     "zbi_hash": "",
                     "build_version": ""
                 },
-                "options": null,
+                "options": {
+                    "allow_attach_to_existing_attempt": false,
+                    "initiator": "Service",
+                    "should_write_recovery": true,
+                },
                 "url": "fuchsia-pkg://fuchsia.com/not-found",
                 "start": 10,
                 "state": {
@@ -343,7 +359,11 @@ async fn serves_fidl_with_history_present() {
                     "zbi_hash": "",
                     "build_version": ""
                 },
-                "options": null,
+                "options": {
+                    "allow_attach_to_existing_attempt": false,
+                    "initiator": "User",
+                    "should_write_recovery": true,
+                },
                 "url": "fuchsia-pkg://fuchsia.com/second-attempt",
                 "start": 20,
                 "state": {
@@ -373,7 +393,11 @@ async fn serves_fidl_with_history_present() {
                     "zbi_hash": "",
                     "build_version": ""
                 },
-                "options": null,
+                "options": {
+                    "allow_attach_to_existing_attempt": false,
+                    "initiator": "User",
+                    "should_write_recovery": true,
+                },
                 "url": "fuchsia-pkg://fuchsia.com/first-attempt",
                 "start": 10,
                 "state": {
@@ -400,9 +424,9 @@ async fn serves_fidl_with_history_present() {
             attempt_id: Some("1".to_string()),
             url: Some(PackageUrl { url: "fuchsia-pkg://fuchsia.com/second-attempt".to_string() }),
             options: Some(Options {
-                initiator: None,
-                allow_attach_to_existing_attempt: None,
-                should_write_recovery: None,
+                initiator: Some(fidl_fuchsia_update_installer::Initiator::User,),
+                allow_attach_to_existing_attempt: Some(false),
+                should_write_recovery: Some(true),
             }),
             state: Some(State::Complete(CompleteData {
                 info: Some(UpdateInfo { download_size: None }),
@@ -419,9 +443,9 @@ async fn serves_fidl_with_history_present() {
             attempt_id: Some("0".to_string()),
             url: Some(PackageUrl { url: "fuchsia-pkg://fuchsia.com/first-attempt".to_string() }),
             options: Some(Options {
-                initiator: None,
-                allow_attach_to_existing_attempt: None,
-                should_write_recovery: None,
+                initiator: Some(fidl_fuchsia_update_installer::Initiator::User),
+                allow_attach_to_existing_attempt: Some(false),
+                should_write_recovery: Some(true),
             }),
             state: Some(State::Fetch(FetchData {
                 info: Some(UpdateInfo { download_size: Some(42) }),
@@ -438,9 +462,9 @@ async fn serves_fidl_with_history_present() {
             attempt_id: Some("1".to_string()),
             url: Some(PackageUrl { url: "fuchsia-pkg://fuchsia.com/second-attempt".to_string() }),
             options: Some(Options {
-                initiator: None,
-                allow_attach_to_existing_attempt: None,
-                should_write_recovery: None,
+                initiator: Some(fidl_fuchsia_update_installer::Initiator::User),
+                allow_attach_to_existing_attempt: Some(false),
+                should_write_recovery: Some(true),
             }),
             state: Some(State::Complete(CompleteData {
                 info: Some(UpdateInfo { download_size: None }),
