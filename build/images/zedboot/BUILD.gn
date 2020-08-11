@@ -5,7 +5,6 @@
 import("//build/board.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
-import("//build/images/bootfs_manifest_additions.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
@@ -13,6 +12,7 @@ import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/images/zxcrypt.gni")
+import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/future/images/zedboot.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
@@ -103,7 +103,7 @@ migrated_zbi("zbi") {
     "//src/sys/installer:bin",
   ]
   deps += zedboot_deps
-  deps += bootfs_manifest_additions
+  deps += product_zedboot_bootfs_labels + board_zedboot_bootfs_labels
 
   if (!include_devmgr_config_in_vbmeta) {
     deps += [ ":devmgr_config" ]

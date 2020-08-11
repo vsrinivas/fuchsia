@@ -22,6 +22,8 @@ kernel_cmdline_args = [
 product_bootfs_labels =
     [ "//src/security/policy:component_manager_policy_bootfs" ]
 
+product_zedboot_bootfs_labels = product_bootfs_labels
+
 meta_package_labels = []
 
 base_package_labels = []

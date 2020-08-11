@@ -3,6 +3,10 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # A list of bootfs_manifest labels to include in ZBIs built for this product.
+  # A list of binary labels to include in ZBIs built for this product.
   product_bootfs_labels = []
+
+  # A list of binary labels to include in the zedboot ZBI built for this
+  # product.
+  product_zedboot_bootfs_labels = []
 }

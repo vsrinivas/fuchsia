@@ -5,9 +5,9 @@
 import("//build/board.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
-import("//build/images/bootfs_manifest_additions.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
+import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/images/common_image_contents.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
@@ -68,7 +68,7 @@ migrated_zbi("bringup") {
     "//build/unification/future/images:ta",
     "//build/unification/zbi:kernel",
   ]
-  deps += bootfs_manifest_additions
+  deps += product_bootfs_labels + board_bootfs_labels
   deps += common_image_contents
 
   metadata = {

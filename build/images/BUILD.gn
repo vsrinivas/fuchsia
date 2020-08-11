@@ -11,7 +11,6 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
 import("//build/images/args.gni")
 import("//build/images/boot.gni")
-import("//build/images/bootfs_manifest_additions.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/filesystem_limits.gni")
@@ -25,6 +24,7 @@ import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
+import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/images/common_image_contents.gni")
 import("//build/unification/zbi/migrated_zbi.gni")
@@ -574,7 +574,7 @@ group("fuchsia_contents") {
     "//build/unification/future/images:zxcrypt",
     "//build/unification/zbi:kernel",
   ]
-  deps += bootfs_manifest_additions
+  deps += product_bootfs_labels + board_bootfs_labels
   deps += common_image_contents
 }
 

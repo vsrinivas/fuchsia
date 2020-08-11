@@ -32,6 +32,21 @@ zedboot_deps += [
   "//src/storage/fshost",
 ]
 
+# Migrated from //build/images/bootfs_manifest_additions.gni.
+zedboot_deps += [
+  "//build/info:bootfs",
+  "//src/bringup/bin/console:bootfs",
+  "//src/bringup/bin/ptysvc:bootfs",
+  "//src/bringup/bin/pwrbtn-monitor:bootfs",
+  "//src/bringup/bin/sysinfo:bootfs",
+  "//src/devices:bootfs",
+  "//src/devices/bin/driver_manager:bootfs",
+  "//src/power/shutdown-shim:bootfs",
+  "//src/storage/fshost:bootfs",
+  "//src/sys/bootstrap:root_manifests",
+  "//src/sys/component_manager:bootfs",
+]
+
 # Needed for installer runs.
 zedboot_deps += [
   "//src/storage/bin/blobfs",

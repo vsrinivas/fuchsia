@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/board.gni")
 import("//build/compiled_action.gni")
 import("//build/config.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/config/fuchsia/zircon_images.gni")
-import("//build/images/bootfs_manifest_additions.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/pkgfs.gni")
@@ -15,6 +15,7 @@ import("//build/images/ta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package_metadata.gni")
+import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/images/common_image_contents.gni")
 import("//build/unification/zbi/generated_resource.gni")
@@ -427,14 +428,15 @@ template("assemble_system") {
                            ])
 
     testonly = true
-    deps = [
-             ":${image_name}_cmdline",
-             ":${image_name}_devmgr_config",
-             ":${image_name}_system_image.manifest",
-             ":${image_name}_zxcrypt_config",
-             ":${image_name}_ta",
-             "//build/unification/zbi:kernel",
-           ] + bootfs_manifest_additions + common_image_contents
+    deps =
+        [
+          ":${image_name}_cmdline",
+          ":${image_name}_devmgr_config",
+          ":${image_name}_system_image.manifest",
+          ":${image_name}_zxcrypt_config",
+          ":${image_name}_ta",
+          "//build/unification/zbi:kernel",
+        ] + product_bootfs_labels + board_bootfs_labels + common_image_contents
 
     if (netboot) {
       deps += [ ":${image_name}_fvm.blk_ramdisk" ]
