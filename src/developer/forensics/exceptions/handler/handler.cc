@@ -15,10 +15,37 @@
 namespace forensics {
 namespace exceptions {
 namespace handler {
+namespace {
 
 using FileCrashReportResult = fuchsia::feedback::CrashReporter_File_Result;
 using fuchsia::feedback::CrashReport;
 using fuchsia::sys::internal::SourceIdentity;
+
+::fit::promise<> Handle(CrashReportBuilder builder, const zx_koid_t process_koid,
+                        async_dispatcher_t* dispatcher,
+                        std::shared_ptr<sys::ServiceDirectory> services,
+                        const zx::duration component_lookup_timeout,
+                        const zx::duration crash_reporter_timeout) {
+  return GetComponentSourceIdentity(dispatcher, services, fit::Timeout(component_lookup_timeout),
+                                    process_koid)
+      .then([builder = std::move(builder)](::fit::result<SourceIdentity>& result) mutable {
+        SourceIdentity component_info;
+        if (result.is_ok()) {
+          component_info = result.take_value();
+        }
+
+        builder.SetComponentInfo(component_info);
+
+        return ::fit::ok(builder.Consume());
+      })
+      .then(
+          [dispatcher, services, crash_reporter_timeout](::fit::result<CrashReport>& crash_report) {
+            return FileCrashReport(dispatcher, services, fit::Timeout(crash_reporter_timeout),
+                                   crash_report.take_value());
+          });
+}
+
+}  // namespace
 
 ::fit::promise<> Handle(zx::exception exception, async_dispatcher_t* dispatcher,
                         std::shared_ptr<sys::ServiceDirectory> services,
@@ -35,65 +62,30 @@ using fuchsia::sys::internal::SourceIdentity;
     FX_LOGS(ERROR) << "Failed to get process koid";
   }
 
-  return ::fit::join_promises(
-             GetComponentSourceIdentity(dispatcher, services,
-                                        fit::Timeout(component_lookup_timeout), process_koid),
-             // We only need the exception to generate the minidump – after that we can release it.
-             GenerateMinidumpVMO(std::move(exception)))
-      .and_then([process_name](
-                    std::tuple<::fit::result<SourceIdentity>, ::fit::result<zx::vmo>>& results) {
-        SourceIdentity component_info;
-        if (std::get<0>(results).is_ok()) {
-          component_info = std::get<0>(results).take_value();
-        }
+  CrashReportBuilder builder;
+  builder.SetProcessName(process_name);
 
-        zx::vmo minidump_vmo;
-        if (std::get<1>(results).is_ok()) {
-          minidump_vmo = std::get<1>(results).take_value();
-        }
+  // We only need the exception to generate the minidump – after that we can release it.
+  zx::vmo minidump = GenerateMinidump(std::move(exception));
+  if (minidump.is_valid()) {
+    builder.SetMinidump(std::move(minidump));
+  }
 
-        CrashReportBuilder builder;
-
-        builder.SetProcessName(process_name).SetComponentInfo(component_info);
-        if (minidump_vmo.is_valid()) {
-          builder.SetMinidump(std::move(minidump_vmo));
-        }
-
-        return ::fit::ok(builder.Consume());
-      })
-      .then(
-          [dispatcher, services, crash_reporter_timeout](::fit::result<CrashReport>& crash_report) {
-            return FileCrashReport(dispatcher, services, fit::Timeout(crash_reporter_timeout),
-                                   crash_report.take_value());
-          });
+  return Handle(std::move(builder), process_koid, dispatcher, services, component_lookup_timeout,
+                crash_reporter_timeout);
 }
 
 // Handles asynchronously filing a crash report for a given program.
-::fit::promise<> Handle(const std::string& process_name, zx_koid_t process_koid,
+::fit::promise<> Handle(const std::string& process_name, const zx_koid_t process_koid,
                         async_dispatcher_t* dispatcher,
                         std::shared_ptr<sys::ServiceDirectory> services,
                         zx::duration component_lookup_timeout,
                         zx::duration crash_reporter_timeout) {
-  return GetComponentSourceIdentity(dispatcher, services, fit::Timeout(component_lookup_timeout),
-                                    process_koid)
-      .then([process_name](::fit::result<SourceIdentity>& result) {
-        SourceIdentity component_info;
-        if (result.is_ok()) {
-          component_info = result.take_value();
-        }
-
-        CrashReportBuilder builder;
-
-        builder.SetProcessName(process_name).SetComponentInfo(component_info);
-        builder.SetExceptionExpired();
-
-        return ::fit::ok(builder.Consume());
-      })
-      .then(
-          [dispatcher, services, crash_reporter_timeout](::fit::result<CrashReport>& crash_report) {
-            return FileCrashReport(dispatcher, services, fit::Timeout(crash_reporter_timeout),
-                                   crash_report.take_value());
-          });
+  CrashReportBuilder builder;
+  builder.SetProcessName(process_name);
+  builder.SetExceptionExpired();
+  return Handle(std::move(builder), process_koid, dispatcher, services, component_lookup_timeout,
+                crash_reporter_timeout);
 }
 
 }  // namespace handler

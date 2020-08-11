@@ -3,12 +3,9 @@
 
 #include "src/developer/forensics/exceptions/handler/minidump.h"
 
-#include <lib/async/cpp/executor.h>
-
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
-#include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 
 namespace forensics {
@@ -18,27 +15,7 @@ namespace {
 
 constexpr char kData[] = "1234567489";
 
-class MinidumpTest : public UnitTestFixture {
- public:
-  MinidumpTest() : executor_(dispatcher()) {}
-
-  zx::vmo GenerateMinidump(zx::exception exception) {
-    zx::vmo minidump;
-    executor_.schedule_task(
-        GenerateMinidumpVMO(std::move(exception)).then([&minidump](::fit::result<zx::vmo>& result) {
-          if (result.is_ok()) {
-            minidump = result.take_value();
-          }
-        }));
-    RunLoopUntilIdle();
-    return minidump;
-  }
-
- private:
-  async::Executor executor_;
-};
-
-TEST_F(MinidumpTest, EmptyStringFileShouldFail) {
+TEST(MinidumpTest, EmptyStringFileShouldFail) {
   crashpad::StringFile string_file;
   zx::vmo vmo;
 
@@ -47,7 +24,7 @@ TEST_F(MinidumpTest, EmptyStringFileShouldFail) {
   ASSERT_FALSE(vmo.is_valid());
 }
 
-TEST_F(MinidumpTest, GenerateVMOFromStringFile) {
+TEST(MinidumpTest, GenerateVMOFromStringFile) {
   crashpad::StringFile string_file;
   zx::vmo vmo;
 
@@ -61,7 +38,7 @@ TEST_F(MinidumpTest, GenerateVMOFromStringFile) {
   EXPECT_LT(sizeof(kData), size);
 }
 
-TEST_F(MinidumpTest, GenerateMinidump) {
+TEST(MinidumpTest, GenerateMinidump) {
   ExceptionContext ec;
   if (!SpawnCrasher(&ec)) {
     FAIL() << "Could not initialize exception.";

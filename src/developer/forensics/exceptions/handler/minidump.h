@@ -4,7 +4,6 @@
 #ifndef SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_MINIDUMP_H_
 #define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_HANDLER_MINIDUMP_H_
 
-#include <lib/fit/promise.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/vmo.h>
 
@@ -19,7 +18,7 @@ namespace handler {
 // Mostly exposed for testing purposes, but valid as a standalone function.
 zx::vmo GenerateVMOFromStringFile(const crashpad::StringFile& string_file);
 
-::fit::promise<zx::vmo> GenerateMinidumpVMO(zx::exception exception);
+zx::vmo GenerateMinidump(zx::exception exception);
 
 }  // namespace handler
 }  // namespace exceptions
