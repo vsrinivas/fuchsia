@@ -394,7 +394,8 @@ TEST_F(DeviceTest, RequestStreamFromController) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DeviceTest, DeviceClientDisconnect) {
+// TODO(fxbug.dev/58063): Restore camera default exclusivity policy.
+TEST_F(DeviceTest, DISABLED_DeviceClientDisconnect) {
   // Create the first client.
   fuchsia::camera3::DevicePtr device;
   SetFailOnError(device, "Device");

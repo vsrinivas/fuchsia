@@ -5,6 +5,11 @@
 import("//build/package.gni")
 import("//src/camera/debug.gni")
 
+declare_args() {
+  # TODO(fxbug.dev/58063): Restore camera default exclusivity policy.
+  camera_policy_allow_replacement_connections = true
+}
+
 source_set("lib") {
   sources = [
     "device_impl.cc",
@@ -36,6 +41,12 @@ source_set("lib") {
   ]
 
   defines = [ camera_debug_define ]
+
+  if (camera_policy_allow_replacement_connections) {
+    defines += [ "CAMERA_POLICY_ALLOW_REPLACEMENT_CONNECTIONS=(true)" ]
+  } else {
+    defines += [ "CAMERA_POLICY_ALLOW_REPLACEMENT_CONNECTIONS=(false)" ]
+  }
 }
 
 executable("bin") {
