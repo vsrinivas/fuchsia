@@ -97,6 +97,14 @@ std::map<std::string, std::string> MakeAnnotations() {
   return {{kAnnotationKey, kAnnotationValue}};
 }
 
+Report MakeReport(const std::size_t program_id) {
+  std::optional<Report> report =
+      Report::MakeReport(fxl::StringPrintf("program_%ld", program_id), MakeAnnotations(),
+                         MakeAttachments(), BuildAttachment(kMinidumpValue));
+  FX_CHECK(report.has_value());
+  return std::move(report.value());
+}
+
 class QueueTest : public UnitTestFixture {
  public:
   void SetUp() override {
@@ -142,12 +150,8 @@ class QueueTest : public UnitTestFixture {
     for (auto const& op : ops) {
       switch (op) {
         case QueueOps::AddNewReport:
-
-          ASSERT_TRUE(queue_->Add(fxl::StringPrintf("program_%ld", program_id_),
-                                  /*attachments=*/MakeAttachments(),
-                                  /*minidump=*/BuildAttachment(kMinidumpValue),
-                                  /*annotations=*/MakeAnnotations()));
-          ASSERT_TRUE(RunLoopUntilIdle());
+          FX_CHECK(queue_->Add(MakeReport(program_id_)));
+          FX_CHECK(RunLoopUntilIdle());
           ++program_id_;
           if (!queue_->IsEmpty()) {
             AddExpectedReport(queue_->LatestReport());

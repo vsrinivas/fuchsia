@@ -300,13 +300,14 @@ source_set("report_util") {
 
   public_deps = [
     ":product",
+    ":report",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.mem",
     "//src/developer/forensics/utils:errors",
   ]
 
   deps = [
     ":errors",
+    "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/lib/files",

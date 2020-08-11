@@ -15,6 +15,7 @@
 #include "src/developer/forensics/crash_reports/crash_server.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/info/queue_info.h"
+#include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/settings.h"
 #include "src/developer/forensics/crash_reports/store.h"
 #include "src/lib/backoff/exponential_backoff.h"
@@ -35,10 +36,7 @@ class Queue {
   void WatchSettings(Settings* settings);
 
   // Add a report to the queue.
-  bool Add(const std::string& program_name,
-           std::map<std::string, fuchsia::mem::Buffer> atttachments,
-           std::optional<fuchsia::mem::Buffer> minidump,
-           std::map<std::string, std::string> annotations);
+  bool Add(Report report);
 
   // Processes the pending reports based on the queue's internal state. Returns the number of
   // reports successfully processed.

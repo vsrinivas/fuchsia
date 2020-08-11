@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/crash_reports/report_util.h"
 
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -11,6 +12,7 @@
 #include <string>
 
 #include "src/developer/forensics/crash_reports/errors.h"
+#include "src/developer/forensics/crash_reports/report.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -245,28 +247,31 @@ void AddBugreport(::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
 
 }  // namespace
 
-void BuildAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
-                                    ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
-                                    const std::optional<zx::time_utc>& current_time,
-                                    const ::fit::result<std::string, Error>& device_id,
-                                    const ErrorOr<std::string>& os_version, const Product& product,
-                                    std::map<std::string, std::string>* annotations,
-                                    std::map<std::string, fuchsia::mem::Buffer>* attachments,
-                                    std::optional<fuchsia::mem::Buffer>* minidump) {
+std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report,
+                                 ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
+                                 const std::optional<zx::time_utc>& current_time,
+                                 const ::fit::result<std::string, Error>& device_id,
+                                 const ErrorOr<std::string>& os_version, const Product& product) {
   const std::string program_name = report.program_name();
+  const std::string shortname = Shorten(program_name);
 
+  std::map<std::string, std::string> annotations;
+  std::map<std::string, fuchsia::mem::Buffer> attachments;
+  std::optional<fuchsia::mem::Buffer> minidump;
   bool should_process = false;
 
   // Optional annotations and attachments filled by the client.
-  ExtractAnnotationsAndAttachments(std::move(report), annotations, attachments, minidump,
+  ExtractAnnotationsAndAttachments(std::move(report), &annotations, &attachments, &minidump,
                                    &should_process);
 
   // Crash server annotations common to all crash reports.
   AddCrashServerAnnotations(program_name, current_time, device_id, os_version, product,
-                            should_process, annotations);
+                            should_process, &annotations);
 
   // Bugreport annotations and attachment common to all crash reports.
-  AddBugreport(std::move(bugreport), annotations, attachments);
+  AddBugreport(std::move(bugreport), &annotations, &attachments);
+
+  return Report::MakeReport(shortname, annotations, std::move(attachments), std::move(minidump));
 }
 
 }  // namespace crash_reports

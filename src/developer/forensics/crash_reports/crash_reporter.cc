@@ -21,6 +21,7 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
 #include "src/developer/forensics/crash_reports/product.h"
+#include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
@@ -125,16 +126,15 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                   return ::fit::error();
                 }
 
-                std::map<std::string, std::string> annotations;
-                std::map<std::string, fuchsia::mem::Buffer> attachments;
-                std::optional<fuchsia::mem::Buffer> minidump;
-                BuildAnnotationsAndAttachments(
-                    std::move(report), std::move(bugreport), utc_provider_.CurrentTime(), device_id,
-                    build_version_, product.value(), &annotations, &attachments, &minidump);
+                std::optional<Report> final_report =
+                    MakeReport(std::move(report), std::move(bugreport), utc_provider_.CurrentTime(),
+                               device_id, build_version_, product.value());
+                if (!final_report.has_value()) {
+                  FX_LOGS(ERROR) << "Error generating report";
+                  return ::fit::error();
+                }
 
-                // TODO(57293): Change queue to take a Report as input.
-                if (!queue_.Add(Shorten(program_name), std::move(attachments), std::move(minidump),
-                                annotations)) {
+                if (!queue_.Add(std::move(final_report.value()))) {
                   FX_LOGS(ERROR) << "Error adding new report to the queue";
                   return ::fit::error();
                 }

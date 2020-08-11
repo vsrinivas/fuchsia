@@ -50,22 +50,13 @@ bool Queue::Contains(const Store::Uid& uuid) const {
          pending_reports_.end();
 }
 
-bool Queue::Add(const std::string& program_name,
-                std::map<std::string, fuchsia::mem::Buffer> attachments,
-                std::optional<fuchsia::mem::Buffer> minidump,
-                std::map<std::string, std::string> annotations) {
-  std::optional<Report> report =
-      Report::MakeReport(program_name, annotations, std::move(attachments), std::move(minidump));
-  if (!report.has_value()) {
-    return false;
-  }
-
+bool Queue::Add(Report report) {
   // TODO(57293): Attempt up upload the report before putting it in the store. InspectManager will
   // need to be altered to support recording metrics on reports without an id.
 
   std::vector<Store::Uid> garbage_collected_reports;
   std::optional<Store::Uid> local_report_id =
-      store_.Add(std::move(report.value()), &garbage_collected_reports);
+      store_.Add(std::move(report), &garbage_collected_reports);
 
   for (const auto& id : garbage_collected_reports) {
     GarbageCollect(id);
