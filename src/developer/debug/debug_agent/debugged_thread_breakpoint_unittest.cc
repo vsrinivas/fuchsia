@@ -155,4 +155,40 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   EXPECT_EQ(1u, breakpoint->stats().hit_count);
 }
 
+TEST(DebuggedThreadBreakpoint, BreakpointStepSuspendResume) {
+  MockDebugAgentHarness harness;
+
+  constexpr zx_koid_t kProcKoid = 1234;
+  MockProcess* process = harness.AddProcess(kProcKoid);
+  constexpr zx_koid_t kThreadKoid = 1235;
+  MockThread* thread = process->AddThread(kThreadKoid);
+
+  // Provide backing memory for the breakpoint. This is needed for the software breakpoint to be
+  // installed. It doesn't matter what the contents is, only that a read will succeed.
+  uint64_t kBreakpointAddress = 0x5000;
+  process->mock_process_handle().mock_memory().AddMemory(kBreakpointAddress, {0, 0, 0, 0});
+
+  // Create the breakpoint we'll hit.
+  EXPECT_EQ(ZX_OK, harness.AddOrChangeBreakpoint(1, kProcKoid, kBreakpointAddress));
+
+  // Set up a hit of the breakpoint.
+  const uint64_t kBreakpointExceptionAddr =
+      kBreakpointAddress + arch::kExceptionOffsetForSoftwareBreakpoint;
+  thread->SendException(kBreakpointExceptionAddr, debug_ipc::ExceptionType::kSoftwareBreakpoint);
+
+  // Resume from the breakpoint which should clear the exception and try to single-step. But before
+  // that does anything, pause the thread.
+  harness.Resume();
+  EXPECT_TRUE(thread->mock_thread_handle().single_step());
+  EXPECT_FALSE(thread->in_exception());
+  harness.Pause();
+  EXPECT_EQ(1, thread->mock_thread_handle().suspend_count());
+
+  // Now resume from the pause. This should resume from the exception and leave the thread in
+  // single-step mode. This is tricky because the resume should not have cleared the single-step
+  // flag even though the resume requested "continue".
+  harness.Resume();
+  EXPECT_TRUE(thread->mock_thread_handle().single_step());
+}
+
 }  // namespace debug_agent

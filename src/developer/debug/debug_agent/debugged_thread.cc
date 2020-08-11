@@ -149,21 +149,18 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
 }
 
 void DebuggedThread::ResumeFromException() {
-  // We check if we're set to currently step over a breakpoint. If so we need to do some special
-  // handling, as going over a breakpoint is always a single-step operation.
-  // After that we can continue according to the set run-mode.
   if (in_exception() && current_breakpoint_) {
+    // Resuming from a breakpoint hit. Going over a breakpoint requires removing the breakpoint,
+    // single-stepping the thread, and putting the breakpoint back.
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over breakpoint: 0x" << std::hex
                       << current_breakpoint_->address();
-    thread_handle_->SetSingleStep(true);
+
+    // BeginStepOver() will takes responsibility for resuming the exception at the proper time.
     current_breakpoint_->BeginStepOver(this);
-
-    // In this case, the breakpoint takes control of resuming theexception at the proper time.
-    return;
+  } else {
+    // Normal exception resumption.
+    InternalResumeException();
   }
-
-  thread_handle_->SetSingleStep(debug_ipc::ResumeRequest::MakesStep(run_mode_));
-  InternalResumeException();
 }
 
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
@@ -188,9 +185,9 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     //       keeping the exception until *after* the breakpoint has been told to step over, we
     //       ensure that any installs have already occured and thus the thread won't miss any
     //       breakpoints.
-    thread_handle_->SetSingleStep(debug_ipc::ResumeRequest::MakesStep(run_mode_));
     current_breakpoint_->EndStepOver(this);
     current_breakpoint_ = nullptr;
+
     InternalResumeException();
     return;
   }
@@ -349,8 +346,12 @@ void DebuggedThread::ClientResume(const debug_ipc::ResumeRequest& request) {
   step_in_range_end_ = request.range_end;
 
   ResumeFromException();
-  if (client_suspend_handle_)
+  if (client_suspend_handle_) {
+    // Normally the single-step flat is set by the exception resumption code, but if we're resuming
+    // from a pause that will do nothing so set here.
+    SetSingleStepForRunMode();
     client_suspend_handle_.reset();
+  }
 }
 
 void DebuggedThread::InternalResumeException() {
@@ -359,6 +360,8 @@ void DebuggedThread::InternalResumeException() {
                       << "Resuming from exception but there is no exception, skipping.";
     return;
   }
+
+  SetSingleStepForRunMode();
 
   if (run_mode_ == debug_ipc::ResumeRequest::How::kForwardAndContinue) {
     DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming from exception (second chance).";
@@ -581,6 +584,12 @@ bool DebuggedThread::IsBreakpointInstructionAtAddress(uint64_t address) const {
       bytes_read != sizeof(instruction))
     return false;
   return arch::IsBreakpointInstruction(instruction);
+}
+
+void DebuggedThread::SetSingleStepForRunMode() {
+  // When we're single-stepping over a breakpoint, that overrides the user run mode.
+  thread_handle_->SetSingleStep(stepping_over_breakpoint_ ||
+                                debug_ipc::ResumeRequest::MakesStep(run_mode_));
 }
 
 }  // namespace debug_agent

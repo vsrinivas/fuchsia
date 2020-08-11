@@ -171,13 +171,15 @@ class DebuggedThread {
   // Returns true if there is a software breakpoint instruction at the given address.
   bool IsBreakpointInstructionAtAddress(uint64_t address) const;
 
+  // Sets the current single step flag for the current run mode.
+  void SetSingleStepForRunMode();
+
   std::unique_ptr<ThreadHandle> thread_handle_;
 
   DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
 
-  // The main thing we're doing. When automatically resuming, this will be
-  // what happens.
+  // The main thing we're doing. Possibly overridden by stepping_over_breakpoint_.
   debug_ipc::ResumeRequest::How run_mode_ = debug_ipc::ResumeRequest::How::kResolveAndContinue;
 
   // When run_mode_ == kStepInRange, this defines the range (end non-inclusive).
@@ -192,7 +194,8 @@ class DebuggedThread {
   // Active if the thread is currently on an exception.
   std::unique_ptr<ExceptionHandle> exception_handle_;
 
-  // Whether this thread is currently stepping over.
+  // Indicates when we're single-stepping over a breakpoint. This is required because it's
+  // internally generated and needs to override the run_mode_.
   bool stepping_over_breakpoint_ = false;
 
   // This can be set in two cases:
