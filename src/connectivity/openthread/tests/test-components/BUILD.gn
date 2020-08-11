@@ -42,6 +42,7 @@ rustc_test("ot-radio-ncp-ver-query") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+  sources = [ "real-device/ot_radio_ncp_ver_query.rs" ]
 }
 
 rustc_test("ot-stack-ncp-ver-query") {
@@ -55,6 +56,7 @@ rustc_test("ot-stack-ncp-ver-query") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+  sources = [ "real-device/ot_stack_ncp_ver_query.rs" ]
 }
 
 rustc_test("ot-stack-soft-reset") {
@@ -69,6 +71,7 @@ rustc_test("ot-stack-soft-reset") {
     "//src/lib/syslog/rust:syslog",
   ]
   non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+  sources = [ "real-device/ot_stack_soft_reset.rs" ]
 }
 
 rustc_test("ot-stack-ncp-ver-query-mock") {

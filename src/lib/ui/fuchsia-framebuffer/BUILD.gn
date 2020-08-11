@@ -58,6 +58,8 @@ rustc_binary("box") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "examples/box.rs" ]
 }
 
 package("fb_box_rs") {
@@ -89,6 +91,8 @@ rustc_binary("fb_integration_test_bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "tests/fb_integration_test.rs" ]
 }
 
 test_package("fb_integration_test") {

@@ -19,8 +19,6 @@ rustc_library("bounded-node") {
 
   test_deps = [ "//third_party/rust_crates:matches" ]
 
-  enforce_source_listing = true
-
   sources = [ "src/lib.rs" ]
 }
 

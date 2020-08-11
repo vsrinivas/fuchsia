@@ -34,6 +34,8 @@ rustc_library("driver") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "src/lib.rs" ]
 }
 
 test_package("shortcut-e2e") {

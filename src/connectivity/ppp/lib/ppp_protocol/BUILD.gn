@@ -18,6 +18,14 @@ rustc_library("ppp_protocol") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [
+    "src/ipv4.rs",
+    "src/ipv6.rs",
+    "src/lib.rs",
+    "src/link.rs",
+    "src/ppp.rs",
+  ]
 }
 
 rustc_test("ppp_protocol_test_bin") {

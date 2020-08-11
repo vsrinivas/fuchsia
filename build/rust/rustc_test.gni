@@ -25,13 +25,8 @@ import("//build/testing/test_spec.gni")
 #   configs (optional)
 #     A list of config labels applying to this target.
 #
-#   enforce_source_listing (optional)
-#     When true, enforces that any source files used by the Rust compiler are
-#     listed in `sources`. Defaults to false.
-#
-#   sources (optional)
-#     List of source files which this crate is allowed to compile. Only
-#     allowed when `enforce_source_listing = true`.
+#   sources (required)
+#     List of source files which this crate is allowed to compile.
 #     The Rust compiler discovers source files by following `mod` declarations
 #     starting at the `source_root`. The discovered source files must match this
 #     list.
@@ -39,7 +34,7 @@ import("//build/testing/test_spec.gni")
 #   inputs (optional)
 #     List of additional non-source files read by the compiler. These are typically
 #     configuration or test-data files included in the build with the `include_str!`
-#     macro. Only allowed when `enforce_source_listing = true`.
+#     macro.
 #
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
@@ -149,22 +144,8 @@ template("rustc_test") {
     }
   }
 
-  _sources = []
-  if (!defined(invoker.enforce_source_listing) ||
-      invoker.enforce_source_listing == true) {
-    if (defined(invoker.sources)) {
-      _sources = invoker.sources
-    }
-  } else {
-    assert(!defined(invoker.sources),
-           "sources are only enforced when `enforce_source_listing = true`")
-    assert(!defined(invoker.inputs),
-           "inputs are only enforced when `enforce_source_listing = true`")
-
-    # This is a hack to workaround the fact that a GN `tool` invocation can't receive arbitrary input.
-    # Add a sentinel value so that enforcement is skipped.
-    _sources = [ "//build/rust/__SKIP_ENFORCEMENT__.rs" ]
-  }
+  # fail early when the user forgets to list sources
+  assert(defined(invoker.sources), "sources must be listed")
 
   executable(target_name) {
     # anything defined with rustc_test MUST be a test target
@@ -206,8 +187,6 @@ template("rustc_test") {
       }
     }
 
-    sources = _sources
-
     if (is_linux || is_mac) {
       # if this test is being built on host, depend on the test_spec
       deps += [ ":$test_spec_target_name" ]
@@ -229,6 +208,7 @@ template("rustc_test") {
                            [
                              "visibility",
                              "inputs",
+                             "sources",
                            ])
   }
 }

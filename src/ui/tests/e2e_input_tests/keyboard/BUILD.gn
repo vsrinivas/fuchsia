@@ -32,6 +32,8 @@ rustc_library("driver") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "src/lib.rs" ]
 }
 
 rustc_library("ui-test-tools") {
@@ -52,6 +54,8 @@ rustc_library("ui-test-tools") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
+
+  sources = [ "ui-test-tools/lib.rs" ]
 }
 
 test_package("keyboard-e2e") {

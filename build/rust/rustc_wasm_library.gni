@@ -21,13 +21,8 @@ import("//build/rust/rustc_test.gni")
 #   configs (optional)
 #     A list of config labels applying to this target.
 #
-#   enforce_source_listing (optional)
-#     When true, enforces that any source files used by the Rust compiler are
-#     listed in `sources`. Defaults to false.
-#
-#   sources (optional)
-#     List of source files which this crate is allowed to compile. Only
-#     allowed when `enforce_source_listing = true`.
+#   sources (required)
+#     List of source files which this crate is allowed to compile.
 #     The Rust compiler discovers source files by following `mod` declarations
 #     starting at the `source_root`. The discovered source files must match this
 #     list.
@@ -35,7 +30,7 @@ import("//build/rust/rustc_test.gni")
 #   inputs (optional)
 #     List of additional non-source files read by the compiler. These are typically
 #     configuration or test-data files included in the build with the `include_str!`
-#     macro. Only allowed when `enforce_source_listing = true`.
+#     macro.
 #
 #   deps (optional)
 #     List of rust_library GN targets on which this crate depends.
