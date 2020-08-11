@@ -4,11 +4,11 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_bredr::{
-        self as fidl_profile, Attribute, DataElement, ProfileDescriptor, ProtocolDescriptor,
-        ProtocolIdentifier, ServiceClassProfileIdentifier,
+    fidl_fuchsia_bluetooth_bredr as bredr,
+    fuchsia_bluetooth::{
+        profile::Attribute,
+        types::{PeerId, Uuid},
     },
-    fuchsia_bluetooth::types::{PeerId, Uuid},
     std::collections::HashSet,
 };
 
@@ -21,8 +21,8 @@ pub struct Psm(pub u16);
 /// Convenience type for storing the fields of a Profile.ServiceFound response.
 pub struct ServiceFoundResponse {
     pub id: PeerId,
-    pub protocol: Option<Vec<ProtocolDescriptor>>,
-    pub attributes: Vec<Attribute>,
+    pub protocol: Option<Vec<bredr::ProtocolDescriptor>>,
+    pub attributes: Vec<bredr::Attribute>,
 }
 
 /// The unique identifier associated with a registered service.
@@ -48,7 +48,7 @@ impl RegisteredServiceId {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ServiceRecord {
     /// The Service Class IDs specified by this record. There must be at least one.
-    svc_ids: HashSet<ServiceClassProfileIdentifier>,
+    svc_ids: HashSet<bredr::ServiceClassProfileIdentifier>,
 
     /// The PSM specified by this record. It is valid to not specify a primary PSM.
     primary_psm: Option<Psm>,
@@ -57,7 +57,10 @@ pub struct ServiceRecord {
     additional_psms: HashSet<Psm>,
 
     /// The ProfileDescriptors specified by this record.
-    profile_descriptors: Vec<ProfileDescriptor>,
+    profile_descriptors: Vec<bredr::ProfileDescriptor>,
+
+    /// The additional attributes specified by this record.
+    additional_attributes: Vec<Attribute>,
 
     /// Metadata about this service. This information will be set when the service
     /// is registered. Use `ServiceRecord::register_service_record()` to mark the
@@ -67,12 +70,20 @@ pub struct ServiceRecord {
 
 impl ServiceRecord {
     pub fn new(
-        svc_ids: HashSet<ServiceClassProfileIdentifier>,
+        svc_ids: HashSet<bredr::ServiceClassProfileIdentifier>,
         primary_psm: Option<Psm>,
         additional_psms: HashSet<Psm>,
-        profile_descriptors: Vec<ProfileDescriptor>,
+        profile_descriptors: Vec<bredr::ProfileDescriptor>,
+        additional_attributes: Vec<Attribute>,
     ) -> Self {
-        Self { svc_ids, primary_psm, additional_psms, profile_descriptors, reg_id: None }
+        Self {
+            svc_ids,
+            primary_psm,
+            additional_psms,
+            profile_descriptors,
+            additional_attributes,
+            reg_id: None,
+        }
     }
 
     /// Returns the ServiceHandle associated with this ServiceRecord, if set.
@@ -80,7 +91,7 @@ impl ServiceRecord {
         self.reg_id.map(|id| id.1)
     }
 
-    pub fn service_ids(&self) -> &HashSet<ServiceClassProfileIdentifier> {
+    pub fn service_ids(&self) -> &HashSet<bredr::ServiceClassProfileIdentifier> {
         &self.svc_ids
     }
 
@@ -118,7 +129,10 @@ impl ServiceRecord {
     }
 
     /// Returns true if the provided `id` is specified by this record.
-    pub fn contains_service_class_identifier(&self, id: &ServiceClassProfileIdentifier) -> bool {
+    pub fn contains_service_class_identifier(
+        &self,
+        id: &bredr::ServiceClassProfileIdentifier,
+    ) -> bool {
         self.svc_ids.contains(id)
     }
 
@@ -151,32 +165,32 @@ impl ServiceRecord {
         //    in `attributes`.
         let prot_list = if let Some(Psm(psm)) = self.primary_psm {
             let prot_list = vec![
-                Some(Box::new(Uuid::new16(ProtocolIdentifier::L2Cap as u16).into())),
-                Some(Box::new(DataElement::Uint16(psm))),
+                Some(Box::new(Uuid::new16(bredr::ProtocolIdentifier::L2Cap as u16).into())),
+                Some(Box::new(bredr::DataElement::Uint16(psm))),
             ];
-            attributes.push(Attribute {
-                id: fidl_profile::ATTR_PROTOCOL_DESCRIPTOR_LIST,
-                element: DataElement::Sequence(vec![Some(Box::new(DataElement::Sequence(
-                    prot_list,
-                )))]),
+            attributes.push(bredr::Attribute {
+                id: bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
+                element: bredr::DataElement::Sequence(vec![Some(Box::new(
+                    bredr::DataElement::Sequence(prot_list),
+                ))]),
             });
 
-            Some(vec![ProtocolDescriptor {
-                protocol: ProtocolIdentifier::L2Cap,
-                params: vec![DataElement::Uint16(psm)],
+            Some(vec![bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::L2Cap,
+                params: vec![bredr::DataElement::Uint16(psm)],
             }])
         } else {
             None
         };
 
         // 2. Add the Service Class ID List Attribute. There should always be at least one.
-        let svc_ids_list: Vec<ServiceClassProfileIdentifier> =
+        let svc_ids_list: Vec<bredr::ServiceClassProfileIdentifier> =
             self.svc_ids.iter().cloned().collect();
         let svc_ids_sequence =
             svc_ids_list.into_iter().map(|id| Some(Box::new(Uuid::from(id).into()))).collect();
-        attributes.push(Attribute {
-            id: fidl_profile::ATTR_SERVICE_CLASS_ID_LIST,
-            element: DataElement::Sequence(svc_ids_sequence),
+        attributes.push(bredr::Attribute {
+            id: bredr::ATTR_SERVICE_CLASS_ID_LIST,
+            element: bredr::DataElement::Sequence(svc_ids_sequence),
         });
 
         // 3. Add the potential Profile Descriptors.
@@ -185,18 +199,23 @@ impl ServiceRecord {
             for descriptor in &self.profile_descriptors {
                 let desc_list = vec![
                     Some(Box::new(Uuid::from(descriptor.profile_id).into())),
-                    Some(Box::new(DataElement::Uint16(u16::from_be_bytes([
+                    Some(Box::new(bredr::DataElement::Uint16(u16::from_be_bytes([
                         descriptor.major_version,
                         descriptor.minor_version,
                     ])))),
                 ];
-                prof_desc_sequence.push(Some(Box::new(DataElement::Sequence(desc_list))));
+                prof_desc_sequence.push(Some(Box::new(bredr::DataElement::Sequence(desc_list))));
             }
-            attributes.push(Attribute {
-                id: fidl_profile::ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
-                element: DataElement::Sequence(prof_desc_sequence),
+            attributes.push(bredr::Attribute {
+                id: bredr::ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+                element: bredr::DataElement::Sequence(prof_desc_sequence),
             });
         }
+
+        // Add the additional attributes to the response.
+        let mut additional_attributes =
+            self.additional_attributes.iter().map(|attr| bredr::Attribute::from(attr)).collect();
+        attributes.append(&mut additional_attributes);
 
         Ok(ServiceFoundResponse { id: peer_id, protocol: prot_list, attributes })
     }
@@ -206,42 +225,96 @@ impl ServiceRecord {
 mod tests {
     use super::*;
 
+    use fidl_fuchsia_bluetooth as fidl_bt;
+    use fuchsia_bluetooth::profile::DataElement;
+
+    /// Returns the expected attributes in raw form.
+    fn expected_attributes() -> Vec<bredr::Attribute> {
+        vec![
+            bredr::Attribute {
+                id: 4,
+                element: bredr::DataElement::Sequence(vec![Some(Box::new(
+                    bredr::DataElement::Sequence(vec![
+                        Some(Box::new(bredr::DataElement::Uuid(fidl_bt::Uuid {
+                            value: [251, 52, 155, 95, 128, 0, 0, 128, 0, 16, 0, 0, 0, 1, 0, 0],
+                        }))),
+                        Some(Box::new(bredr::DataElement::Uint16(20))),
+                    ]),
+                ))]),
+            },
+            bredr::Attribute {
+                id: 1,
+                element: bredr::DataElement::Sequence(vec![Some(Box::new(
+                    bredr::DataElement::Uuid(fidl_bt::Uuid {
+                        value: [251, 52, 155, 95, 128, 0, 0, 128, 0, 16, 0, 0, 10, 17, 0, 0],
+                    }),
+                ))]),
+            },
+            bredr::Attribute {
+                id: 9,
+                element: bredr::DataElement::Sequence(vec![Some(Box::new(
+                    bredr::DataElement::Sequence(vec![
+                        Some(Box::new(bredr::DataElement::Uuid(fidl_bt::Uuid {
+                            value: [251, 52, 155, 95, 128, 0, 0, 128, 0, 16, 0, 0, 10, 17, 0, 0],
+                        }))),
+                        Some(Box::new(bredr::DataElement::Uint16(258))),
+                    ]),
+                ))]),
+            },
+            bredr::Attribute { id: 9216, element: bredr::DataElement::Uint8(10) },
+        ]
+    }
+
     /// Tests operations on a ServiceRecord.
     #[test]
     fn test_service_record() {
+        let primary_psm = Psm(20);
+        let additional_psm = Psm(10);
         let mut additional = HashSet::new();
-        additional.insert(Psm(10));
+        additional.insert(additional_psm);
         let mut ids = HashSet::new();
-        ids.insert(ServiceClassProfileIdentifier::AudioSource);
-        let descs = vec![ProfileDescriptor {
-            profile_id: ServiceClassProfileIdentifier::AudioSource,
+        ids.insert(bredr::ServiceClassProfileIdentifier::AudioSource);
+        let descs = vec![bredr::ProfileDescriptor {
+            profile_id: bredr::ServiceClassProfileIdentifier::AudioSource,
             major_version: 1,
             minor_version: 2,
         }];
-        let mut service_record = ServiceRecord::new(ids, Some(Psm(20)), additional, descs);
+        let additional_attrs = vec![Attribute { id: 0x2400, element: DataElement::Uint8(10) }];
+        let mut service_record =
+            ServiceRecord::new(ids, Some(primary_psm), additional, descs, additional_attrs);
 
         // Creating the initial ServiceRecord should not be registered.
-        assert!(service_record.contains_psm(&Psm(20)));
+        assert!(service_record.contains_psm(&primary_psm));
         assert_eq!(false, service_record.is_registered());
         assert!(service_record
-            .contains_service_class_identifier(&ServiceClassProfileIdentifier::AudioSource));
+            .contains_service_class_identifier(&bredr::ServiceClassProfileIdentifier::AudioSource));
         let mut expected_psms = HashSet::new();
-        expected_psms.insert(Psm(10));
-        expected_psms.insert(Psm(20));
+        expected_psms.insert(additional_psm);
+        expected_psms.insert(primary_psm);
         assert_eq!(expected_psms, service_record.psms());
 
         let mut random_psms = HashSet::new();
         random_psms.insert(Psm(14));
         random_psms.insert(Psm(19));
         assert!(service_record.is_disjoint(&random_psms));
-        random_psms.insert(Psm(20));
+        random_psms.insert(primary_psm);
         assert!(!service_record.is_disjoint(&random_psms));
 
         // Register the record, as ServiceManager would, by updating the unique handles.
-        let handle: RegisteredServiceId = RegisteredServiceId(PeerId(123), 99);
+        let peer_id = PeerId(123);
+        let handle: RegisteredServiceId = RegisteredServiceId(peer_id, 99);
         service_record.register_service_record(handle);
         assert_eq!(true, service_record.is_registered());
 
-        // TODO(55461): Validate the results of ServiceRecord::to_service_found().
+        let response = service_record.to_service_found_response().expect("conversion should work");
+        assert_eq!(response.id, peer_id);
+        assert_eq!(
+            response.protocol,
+            Some(vec![bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::L2Cap,
+                params: vec![bredr::DataElement::Uint16(primary_psm.0)]
+            }])
+        );
+        assert_eq!(response.attributes, expected_attributes());
     }
 }

@@ -189,7 +189,7 @@ pub(crate) mod tests {
         service_ids.insert(ServiceClassProfileIdentifier::AudioSink);
         service_ids.insert(ServiceClassProfileIdentifier::AudioSource);
 
-        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![])
+        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![], vec![])
     }
 
     fn build_avrcp_service_record(psm: Psm) -> ServiceRecord {
@@ -197,7 +197,7 @@ pub(crate) mod tests {
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControl);
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControlController);
 
-        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![])
+        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![], vec![])
     }
 
     #[test]
