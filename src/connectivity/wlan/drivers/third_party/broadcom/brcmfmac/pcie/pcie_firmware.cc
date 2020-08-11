@@ -12,9 +12,9 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_regs.h"
 
@@ -85,9 +85,9 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
   zx_status_t status = ZX_OK;
 
   std::string firmware_binary;
-  if ((status =
-           GetFirmwareBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE, buscore->chip()->chip,
-                             buscore->chip()->chiprev, &firmware_binary)) != ZX_OK) {
+  if ((status = GetFirmwareBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE,
+                                  static_cast<CommonCoreId>(buscore->chip()->chip),
+                                  buscore->chip()->chiprev, &firmware_binary)) != ZX_OK) {
     return status;
   }
   // For devices with shared device memory, the memory size of the device may be defined in the
@@ -95,7 +95,8 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
   AdjustBuscoreRamsize(firmware_binary, buscore);
 
   std::string nvram_binary;
-  if ((status = GetNvramBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE, buscore->chip()->chip,
+  if ((status = GetNvramBinary(device, brcmf_bus_type::BRCMF_BUS_TYPE_PCIE,
+                               static_cast<CommonCoreId>(buscore->chip()->chip),
                                buscore->chip()->chiprev, &nvram_binary)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
       return status;

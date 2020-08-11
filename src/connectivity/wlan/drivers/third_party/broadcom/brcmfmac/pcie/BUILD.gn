@@ -29,6 +29,7 @@ source_set("pcie") {
     "//sdk/banjo/ddk.protocol.pci",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
     "//src/devices/lib/mmio",
     "//zircon/public/lib/sync",

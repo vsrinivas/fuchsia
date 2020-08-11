@@ -11,7 +11,7 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -19,7 +19,6 @@
 
 #include <cctype>
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
@@ -28,8 +27,8 @@ namespace brcmfmac {
 namespace {
 
 struct FirmwareMapping {
-  uint32_t chipid;
-  uint32_t chiprev_mask;
+  CommonCoreId chip_id;
+  uint32_t chip_rev_mask;
   const char* firmware_filename;
   const char* nvram_filename;
 };
@@ -37,37 +36,37 @@ struct FirmwareMapping {
 constexpr char kDefaultFirmwarePath[] = "brcmfmac/";
 
 constexpr FirmwareMapping kSdioFirmwareMappings[] = {
-    {BRCM_CC_43143_CHIP_ID, 0xFFFFFFFF, "brcmfmac43143-sdio.bin", "brcmfmac43143-sdio.txt"},
-    {BRCM_CC_43241_CHIP_ID, 0x0000001F, "brcmfmac43241b0-sdio.bin", "brcmfmac43241b0-sdio.txt"},
-    {BRCM_CC_43241_CHIP_ID, 0x00000020, "brcmfmac43241b4-sdio.bin", "brcmfmac43241b4-sdio.txt"},
-    {BRCM_CC_43241_CHIP_ID, 0xFFFFFFC0, "brcmfmac43241b5-sdio.bin", "brcmfmac43241b5-sdio.txt"},
-    {BRCM_CC_4329_CHIP_ID, 0xFFFFFFFF, "brcmfmac4329-sdio.bin", "brcmfmac4329-sdio.txt"},
-    {BRCM_CC_4330_CHIP_ID, 0xFFFFFFFF, "brcmfmac4330-sdio.bin", "brcmfmac4330-sdio.txt"},
-    {BRCM_CC_4334_CHIP_ID, 0xFFFFFFFF, "brcmfmac4334-sdio.bin", "brcmfmac4334-sdio.txt"},
-    {BRCM_CC_43340_CHIP_ID, 0xFFFFFFFF, "brcmfmac43340-sdio.bin", "brcmfmac43340-sdio.txt"},
-    {BRCM_CC_43341_CHIP_ID, 0xFFFFFFFF, "brcmfmac43340-sdio.bin", "brcmfmac43340-sdio.txt"},
-    {BRCM_CC_4335_CHIP_ID, 0xFFFFFFFF, "brcmfmac4335-sdio.bin", "brcmfmac4335-sdio.txt"},
-    {BRCM_CC_43362_CHIP_ID, 0xFFFFFFFE, "brcmfmac43362-sdio.bin", "brcmfmac43362-sdio.txt"},
-    {BRCM_CC_4339_CHIP_ID, 0xFFFFFFFF, "brcmfmac4339-sdio.bin", "brcmfmac4339-sdio.txt"},
-    {BRCM_CC_43430_CHIP_ID, 0x00000001, "brcmfmac43430a0-sdio.bin", "brcmfmac43430a0-sdio.txt"},
-    {BRCM_CC_43430_CHIP_ID, 0xFFFFFFFE, "brcmfmac43430-sdio.bin", "brcmfmac43430-sdio.txt"},
-    {BRCM_CC_4345_CHIP_ID, 0xFFFFFFC0, "brcmfmac43455-sdio.bin", "brcmfmac43455-sdio.txt"},
-    {BRCM_CC_4354_CHIP_ID, 0xFFFFFFFF, "brcmfmac4354-sdio.bin", "brcmfmac4354-sdio.txt"},
-    {BRCM_CC_4356_CHIP_ID, 0xFFFFFFFF, "brcmfmac4356-sdio.bin", "brcmfmac4356-sdio.txt"},
-    {BRCM_CC_4359_CHIP_ID, 0xFFFFFFFF, "brcmfmac4359-sdio.bin", "brcmfmac4359-sdio.txt"},
-    {CY_CC_4373_CHIP_ID, 0xFFFFFFFF, "brcmfmac4373-sdio.bin", "brcmfmac4373-sdio.txt"},
+    {CommonCoreId::kBrcm43143, 0xFFFFFFFF, "brcmfmac43143-sdio.bin", "brcmfmac43143-sdio.txt"},
+    {CommonCoreId::kBrcm43241, 0x0000001F, "brcmfmac43241b0-sdio.bin", "brcmfmac43241b0-sdio.txt"},
+    {CommonCoreId::kBrcm43241, 0x00000020, "brcmfmac43241b4-sdio.bin", "brcmfmac43241b4-sdio.txt"},
+    {CommonCoreId::kBrcm43241, 0xFFFFFFC0, "brcmfmac43241b5-sdio.bin", "brcmfmac43241b5-sdio.txt"},
+    {CommonCoreId::kBrcm4329, 0xFFFFFFFF, "brcmfmac4329-sdio.bin", "brcmfmac4329-sdio.txt"},
+    {CommonCoreId::kBrcm4330, 0xFFFFFFFF, "brcmfmac4330-sdio.bin", "brcmfmac4330-sdio.txt"},
+    {CommonCoreId::kBrcm4334, 0xFFFFFFFF, "brcmfmac4334-sdio.bin", "brcmfmac4334-sdio.txt"},
+    {CommonCoreId::kBrcm43340, 0xFFFFFFFF, "brcmfmac43340-sdio.bin", "brcmfmac43340-sdio.txt"},
+    {CommonCoreId::kBrcm43341, 0xFFFFFFFF, "brcmfmac43340-sdio.bin", "brcmfmac43340-sdio.txt"},
+    {CommonCoreId::kBrcm4335, 0xFFFFFFFF, "brcmfmac4335-sdio.bin", "brcmfmac4335-sdio.txt"},
+    {CommonCoreId::kBrcm43362, 0xFFFFFFFE, "brcmfmac43362-sdio.bin", "brcmfmac43362-sdio.txt"},
+    {CommonCoreId::kBrcm4339, 0xFFFFFFFF, "brcmfmac4339-sdio.bin", "brcmfmac4339-sdio.txt"},
+    {CommonCoreId::kBrcm43430, 0x00000001, "brcmfmac43430a0-sdio.bin", "brcmfmac43430a0-sdio.txt"},
+    {CommonCoreId::kBrcm43430, 0xFFFFFFFE, "brcmfmac43430-sdio.bin", "brcmfmac43430-sdio.txt"},
+    {CommonCoreId::kBrcm4345, 0xFFFFFFC0, "brcmfmac43455-sdio.bin", "brcmfmac43455-sdio.txt"},
+    {CommonCoreId::kBrcm4354, 0xFFFFFFFF, "brcmfmac4354-sdio.bin", "brcmfmac4354-sdio.txt"},
+    {CommonCoreId::kBrcm4356, 0xFFFFFFFF, "brcmfmac4356-sdio.bin", "brcmfmac4356-sdio.txt"},
+    {CommonCoreId::kBrcm4359, 0xFFFFFFFF, "brcmfmac4359-sdio.bin", "brcmfmac4359-sdio.txt"},
+    {CommonCoreId::kCypress4373, 0xFFFFFFFF, "brcmfmac4373-sdio.bin", "brcmfmac4373-sdio.txt"},
 };
 
 constexpr FirmwareMapping kPcieFirmwareMappings[] = {
-    {BRCM_CC_4356_CHIP_ID, 0xFFFFFFFF, "brcmfmac4356-pcie.bin", "brcmfmac4356-pcie.txt"},
+    {CommonCoreId::kBrcm4356, 0xFFFFFFFF, "brcmfmac4356-pcie.bin", "brcmfmac4356-pcie.txt"},
 };
 
-const FirmwareMapping* GetFirmwareMapping(brcmf_bus_type bus_type, uint32_t chipid,
-                                          uint32_t chiprev) {
+const FirmwareMapping* GetFirmwareMapping(brcmf_bus_type bus_type, CommonCoreId chip_id,
+                                          uint32_t chip_rev) {
   switch (bus_type) {
     case brcmf_bus_type::BRCMF_BUS_TYPE_SDIO: {
       for (const auto& mapping : kSdioFirmwareMappings) {
-        if (chipid == mapping.chipid && ((1 << chiprev) & mapping.chiprev_mask)) {
+        if (chip_id == mapping.chip_id && ((1 << chip_rev) & mapping.chip_rev_mask)) {
           return &mapping;
         }
       }
@@ -75,7 +74,7 @@ const FirmwareMapping* GetFirmwareMapping(brcmf_bus_type bus_type, uint32_t chip
     }
     case brcmf_bus_type::BRCMF_BUS_TYPE_PCIE: {
       for (const auto& mapping : kPcieFirmwareMappings) {
-        if (chipid == mapping.chipid && ((1 << chiprev) & mapping.chiprev_mask)) {
+        if (chip_id == mapping.chip_id && ((1 << chip_rev) & mapping.chip_rev_mask)) {
           return &mapping;
         }
       }
@@ -85,8 +84,8 @@ const FirmwareMapping* GetFirmwareMapping(brcmf_bus_type bus_type, uint32_t chip
       break;
   }
 
-  BRCMF_ERR("No firmware/NVRAM mapping found for bus_type=%d, chipid=0x%x, chiprev=%d",
-            static_cast<int>(bus_type), chipid, chiprev);
+  BRCMF_ERR("No firmware/NVRAM mapping found for bus_type=%d, chip_id=0x%x, chip_rev=%d",
+            static_cast<int>(bus_type), static_cast<int>(chip_id), static_cast<int>(chip_rev));
   return nullptr;
 }
 
@@ -112,7 +111,7 @@ zx_status_t LoadBinaryFromFile(Device* device, std::string_view filename, std::s
 
 }  // namespace
 
-zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
+zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, CommonCoreId chipid,
                               uint32_t chiprev, std::string* binary_out) {
   const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chipid, chiprev);
   if (firmware_mapping == nullptr) {
@@ -121,9 +120,9 @@ zx_status_t GetFirmwareBinary(Device* device, brcmf_bus_type bus_type, uint32_t 
   return LoadBinaryFromFile(device, firmware_mapping->firmware_filename, binary_out);
 }
 
-zx_status_t GetClmBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid, uint32_t chiprev,
-                         std::string* binary_out) {
-  const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chipid, chiprev);
+zx_status_t GetClmBinary(Device* device, brcmf_bus_type bus_type, CommonCoreId chip_id,
+                         uint32_t chip_rev, std::string* binary_out) {
+  const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chip_id, chip_rev);
   if (firmware_mapping == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -135,11 +134,11 @@ zx_status_t GetClmBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipi
 }
 
 // Get the NVRAM binary for the given bus and chip.
-zx_status_t GetNvramBinary(Device* device, brcmf_bus_type bus_type, uint32_t chipid,
-                           uint32_t chiprev, std::string* binary_out) {
+zx_status_t GetNvramBinary(Device* device, brcmf_bus_type bus_type, CommonCoreId chip_id,
+                           uint32_t chip_rev, std::string* binary_out) {
   zx_status_t status = ZX_OK;
 
-  const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chipid, chiprev);
+  const FirmwareMapping* firmware_mapping = GetFirmwareMapping(bus_type, chip_id, chip_rev);
   if (firmware_mapping == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }

@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+source_set("chipset") {
+  sources = [
+    "backplane.cc",
+    "chipset.cc",
+    "chipset_interfaces.cc",
+    "firmware.cc",
+  ]
+  public = [
+    "backplane.h",
+    "chipset.h",
+    "chipset_interfaces.h",
+    "chipset_regs.h",
+    "firmware.h",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//zircon/public/lib/zx",
+  ]
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//zircon/system/public",
+  ]
+  friend = [ "test/*" ]
+}

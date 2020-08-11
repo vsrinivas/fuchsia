@@ -135,7 +135,6 @@ source_set("core") {
     "device.cc",
     "feature.cc",
     "feature.h",
-    "firmware.cc",
     "fweh.cc",
     "fwil.cc",
     "pno.cc",
@@ -161,7 +160,6 @@ source_set("core") {
     "debug.h",
     "defs.h",
     "device.h",
-    "firmware.h",
     "fweh.h",
     "fwil.h",
     "fwil_types.h",
@@ -418,6 +416,7 @@ brcmfmac_copy("brcmfmac-luis-mfg") {
 # The test package, including tests in subdirs.
 group("brcmfmac_tests") {
   deps = [
+    "chipset/test:brcmfmac_chipset_test",
     "msgbuf/test:brcmfmac_msgbuf_test",
     "sdio/test:brcmfmac_sdio_test",
     "sim/test:brcmfmac_sim_test",

@@ -11,7 +11,7 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -19,7 +19,7 @@
 
 #include <string>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace wlan {
 namespace brcmfmac {
@@ -66,8 +66,8 @@ TEST(FirmwareTest, ParseNvram) {
     const std::string& expected_result = input_and_result.expected_result;
     std::string result;
     zx_status_t status = ParseNvramBinary(input, &result);
-    EXPECT_EQ(ZX_OK, status) << "status=" << zx_status_get_string(status);
-    EXPECT_EQ(expected_result, result) << "input=\n" << input;
+    EXPECT_EQ(ZX_OK, status, "status=%s", zx_status_get_string(status));
+    EXPECT_EQ(expected_result, result, "input=\"%s\"", input.c_str());
   }
 }
 

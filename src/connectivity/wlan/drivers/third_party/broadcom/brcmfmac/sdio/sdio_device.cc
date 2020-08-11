@@ -17,9 +17,10 @@
 
 #include <string>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/chipset_regs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio.h"
 
 namespace wlan {
@@ -47,8 +48,9 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   }
 
   std::string firmware_binary;
-  if ((status = GetFirmwareBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->chip,
-                                  bus->chiprev, &firmware_binary)) != ZX_OK) {
+  if ((status = GetFirmwareBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
+                                  static_cast<CommonCoreId>(bus->chip), bus->chiprev,
+                                  &firmware_binary)) != ZX_OK) {
     return status;
   }
 
@@ -56,8 +58,9 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   firmware_binary.resize(padded_size_firmware, '\0');
 
   std::string nvram_binary;
-  if ((status = GetNvramBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->chip,
-                               bus->chiprev, &nvram_binary)) != ZX_OK) {
+  if ((status = GetNvramBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
+                               static_cast<CommonCoreId>(bus->chip), bus->chiprev,
+                               &nvram_binary)) != ZX_OK) {
     return status;
   }
 
@@ -72,8 +75,9 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
 
   // CLM blob loading is optional, and only performed if the blob binary exists.
   std::string clm_binary;
-  if ((status = GetClmBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO, bus->chip,
-                             bus->chiprev, &clm_binary)) == ZX_OK) {
+  if ((status = GetClmBinary(device.get(), brcmf_bus_type::BRCMF_BUS_TYPE_SDIO,
+                             static_cast<CommonCoreId>(bus->chip), bus->chiprev, &clm_binary)) ==
+      ZX_OK) {
     // The firmware IOVAR accesses to upload the CLM blob are always on ifidx 0, so we stub out an
     // appropriate brcmf_if instance here.
     brcmf_if ifp = {};

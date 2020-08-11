@@ -1,0 +1,31 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("firmware_test") {
+  output_name = "firmware_test"
+  testonly = true
+  sources = [ "firmware_test.cc" ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
+    "//src/devices/testing/fake_ddk",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+unittest_package("brcmfmac_chipset_test") {
+  package_name = "brcmfmac-chipset-test"
+  deps = []
+  tests = []
+  foreach(test_name, [ "firmware_test" ]) {
+    deps += [ ":$test_name" ]
+    tests += [
+      {
+        name = "$test_name"
+        environments = basic_envs
+      },
+    ]
+  }
+}
