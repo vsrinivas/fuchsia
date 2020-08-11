@@ -439,6 +439,13 @@ class VmObjectPaged final : public VmObject {
   // parent_limit_, this value does not directly impact page lookup. See partial_cow_release_ flag
   // for more details on usage of this limit.
   uint64_t parent_start_limit_ TA_GUARDED(lock_) = 0;
+  // Offset in our root parent where this object would start if projected onto it. This value is
+  // used as an efficient summation of accumulated offsets to ensure that an offset projected all
+  // the way to the root would not overflow a 64-bit integer. Although actual page resolution
+  // would never reach the root in such a case, a childs full range projected onto its parent is
+  // used to simplify some operations and so this invariant of not overflowing accumulated offsets
+  // needs to be maintained.
+  uint64_t root_parent_offset_ TA_GUARDED(lock_) = 0;
   const uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
   uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
 

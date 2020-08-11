@@ -596,6 +596,9 @@ void VmObjectPaged::InsertHiddenParentLocked(fbl::RefPtr<VmObjectPaged>&& hidden
   // its parent, and this vmo has a full view into the hidden vmo
   hidden_parent->parent_offset_ = parent_offset_;
   hidden_parent->parent_limit_ = parent_limit_;
+  // Although we are inserting the hidden parent between this and parent_ they share the same
+  // root_parent_offset_.
+  hidden_parent->root_parent_offset_ = root_parent_offset_;
   parent_offset_ = 0;
   parent_limit_ = size_;
 
@@ -701,6 +704,10 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     vmo->cache_policy_ = cache_policy_;
     vmo->parent_offset_ = offset;
     vmo->parent_limit_ = size;
+    // As our slice must be in range of the parent it is impossible to have the accumulated parent
+    // offset overflow.
+    vmo->root_parent_offset_ = CheckedAdd(offset, root_parent_offset_);
+    CheckedAdd(vmo->root_parent_offset_, size);
 
     vmo->InitializeOriginalParentLocked(fbl::RefPtr(this), offset);
 
@@ -809,8 +816,19 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
       return ZX_ERR_BAD_STATE;
     }
 
-    // TODO: ZX-692 make sure that the accumulated parent offset of the entire
-    // parent chain doesn't wrap 64bit space.
+    // Check that the full range of this VMO does not overflow if projected back onto the root
+    // parent. Record our accumulated offset up to this point in the process.
+    bool overflow;
+    overflow = add_overflow(offset, root_parent_offset_, &vmo->root_parent_offset_);
+    if (overflow) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    uint64_t temp;
+    overflow = add_overflow(vmo->root_parent_offset_, size, &temp);
+    if (overflow) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
     vmo->parent_offset_ = offset;
     if (offset > size_) {
       vmo->parent_limit_ = 0;
@@ -2920,6 +2938,12 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 
     page_list_.RemovePages(page_remover.RemovePagesCallback(), start, end);
   } else if (s > size_) {
+    uint64_t temp;
+    // Check that this VMOs new size would not cause it to overflow if projected onto the root.
+    bool overflow = add_overflow(root_parent_offset_, s, &temp);
+    if (overflow) {
+      return ZX_ERR_INVALID_ARGS;
+    }
     // expanding
     // figure the starting and ending page offset that is affected
     uint64_t start = size_;

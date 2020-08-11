@@ -1633,4 +1633,21 @@ TEST_F(VmoClone2TestCase, DropChildrenInParallel) {
   }
 }
 
+TEST_F(VmoClone2TestCase, NoAccumulatedOverflow) {
+  zx::vmo vmo;
+
+  ASSERT_OK(zx::vmo::create(0, 0, &vmo));
+
+  zx::vmo child1;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0xffffffffffff8000, 0x0, &child1));
+
+  zx::vmo child2;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            child1.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0x8000, 0, &child2));
+
+  ASSERT_OK(
+      child1.create_child(ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE, 0x4000, 0, &child2));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, child2.set_size(0x8000));
+}
+
 }  // namespace vmo_test
