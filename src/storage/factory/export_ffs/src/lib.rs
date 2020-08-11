@@ -17,15 +17,22 @@ use {
     std::io::Write,
 };
 
-const FACTORYFS_MAGIC: u64 = 0xa55d3ff9;
-const FACTORYFS_DIRENT_MAGIC: u32 = 0xa5653fa9;
+const FACTORYFS_MAGIC: u64 = 0xa55d3ff91e694d21;
 const BLOCK_SIZE: u32 = 4096;
+const DIRENT_START_BLOCK: u32 = 1;
 /// Size of the actual data in the superblock in bytes. We are only writing, and only care about the
 /// latest version, so as long as this is updated whenever the superblock is changed we don't have
 /// to worry about backwards-compatibility.
 const SUPERBLOCK_DATA_SIZE: u32 = 36;
 const FACTORYFS_MAJOR_VERSION: u32 = 1;
 const FACTORYFS_MINOR_VERSION: u32 = 0;
+
+/// Rounds the given num up to the next multiple of multiple.
+fn round_up_to_align(x: u32, align: u32) -> u32 {
+    debug_assert_ne!(align, 0);
+    debug_assert_eq!(align & (align - 1), 0);
+    (x + align - 1) & !(align - 1)
+}
 
 /// Return the number of blocks needed to store the provided number of bytes. This function will
 /// overflow for values of [`bytes`] within about BLOCK_SIZE of u32::MAX, but it shouldn't be a
@@ -85,6 +92,8 @@ impl FactoryFS {
         //     major_version: u32,
         //     minor_version: u32,
         //     flags: u32,
+        //     /// Total number of data blocks.
+        //     data_blocks: u32,
         //     /// Size in bytes of all the directory entries.
         //     directory_size: u32,
         //     /// Number of directory entries.
@@ -93,6 +102,10 @@ impl FactoryFS {
         //     block_size: u32,
         //     /// Number of blocks for directory entries.
         //     directory_ent_blocks: u32,
+        //     /// Start block for directory entries.
+        //     directory_ent_start_block: u32,
+        //     /// Time of creation of all files. We aren't going to write anything here though.
+        //     create_time: u64,
         //     /// Reserved for future use. Written to disk as all zeros.
         //     reserved: [u32; rest_of_the_block],
         // }
@@ -102,13 +115,26 @@ impl FactoryFS {
         writer.write_u32::<LittleEndian>(self.minor_version)?;
         writer.write_u32::<LittleEndian>(self.flags)?;
 
+        // calculate the number of blocks all the data will take
+        let data_blocks = self
+            .entries
+            .iter()
+            .fold(0, |blocks, entry| blocks + num_blocks(entry.data.len() as u32));
+        writer.write_u32::<LittleEndian>(data_blocks)?;
+
         // calculate the size of all the directory entries
         let entries_bytes = self.entries.iter().fold(0, |size, entry| size + entry.metadata_size());
         let entries_blocks = num_blocks(entries_bytes);
         writer.write_u32::<LittleEndian>(entries_bytes)?;
+
         writer.write_u32::<LittleEndian>(self.entries.len() as u32)?;
         writer.write_u32::<LittleEndian>(self.block_size)?;
+
         writer.write_u32::<LittleEndian>(entries_blocks)?;
+        writer.write_u32::<LittleEndian>(DIRENT_START_BLOCK)?;
+
+        // filesystem was created at the beginning of time
+        writer.write_u64::<LittleEndian>(0)?;
 
         // write out zeros for the rest of the first block
         block_align(writer, SUPERBLOCK_DATA_SIZE)?;
@@ -143,16 +169,19 @@ struct DirectoryEntry {
 impl DirectoryEntry {
     /// Get the size of the serialized metadata for this directory entry in bytes.
     fn metadata_size(&self) -> u32 {
-        // size of magic...
+        let name_len = self.name.len() as u32;
+        let padding = round_up_to_align(name_len, 4) - name_len;
+
+        // size of name_len...
         4
         // ...plus the size of data_len...
         + 4
         // ...plus the size of data_offset...
         + 4
-        // ...plus the size of name_len...
-        + 4
-        // ...plus the number of bytes in the name
-        + self.name.len() as u32
+        // ...plus the number of bytes in the name...
+        + name_len
+        // ...plus some padding to align to name to a 4-byte boundary
+        + padding
     }
 
     /// Write the directory entry metadata to the provided byte writer. We assume that the calling
@@ -165,8 +194,8 @@ impl DirectoryEntry {
         // on-disk format of a directory entry, in rust-ish notation
         // #[repr(C, packed)]
         // struct DirectoryEntry {
-        //     /// Must be FACTORYFS_DIRENT_MAGIC.
-        //     magic: u32,
+        //     /// Length of the name[] field at the end.
+        //     name_len: u32,
 
         //     /// Length of the file in bytes. This is an exact size that is not rounded, though
         //     /// the file is always padded with zeros up to a multiple of block size (aka
@@ -176,20 +205,23 @@ impl DirectoryEntry {
         //     /// Block offset where file data starts for this entry.
         //     data_off: u32,
 
-        //     /// Length of the name[] field at the end.
-        //     name_len: u32,
-
         //     /// Pathname of the file, a UTF-8 string. It must not begin with a '/', but it may
-        //     /// contain '/' separators. Name does not have trailing \0.
+        //     /// contain '/' separators. Name has a trailing \0 and is 4-byte aligned.
         //     name: [u8; self.name_len]
         // }
 
-        writer.write_u32::<LittleEndian>(FACTORYFS_DIRENT_MAGIC)?;
+        let name_len = self.name.len() as u32;
+        writer.write_u32::<LittleEndian>(name_len)?;
+        writer.write_all(&self.name)?;
+
         writer.write_u32::<LittleEndian>(self.data.len() as u32)?;
         writer.write_u32::<LittleEndian>(data_offset)?;
 
-        writer.write_u32::<LittleEndian>(self.name.len() as u32)?;
-        writer.write_all(&self.name)?;
+        // align the directory entry to a 4-byte boundary
+        let padding = round_up_to_align(name_len, 4) - name_len;
+        for _ in 0..padding {
+            writer.write_u8(0)?;
+        }
 
         Ok(())
     }
@@ -248,7 +280,11 @@ async fn get_entries(dir: &fio::DirectoryProxy) -> Result<Vec<DirectoryEntry>, E
             bail!("failed to get attributes of file {}", ent.name);
         }
 
-        entries.push(DirectoryEntry { name: ent.name.as_bytes().to_vec(), data });
+        // the name of the entry needs to be null-terminated
+        let mut name = ent.name.as_bytes().to_vec();
+        name.push(0);
+
+        entries.push(DirectoryEntry { name, data });
     }
 
     Ok(entries)
@@ -349,6 +385,21 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_dirent_metadata() {
+        let data_offset = 12;
+        let data = vec![1, 2, 3, 4, 5];
+
+        let mut out: Vec<u8> = vec![];
+        let name = "test_name".as_bytes();
+        let dirent = DirectoryEntry { name: name.to_owned(), data };
+
+        assert_matches!(dirent.serialize_metadata(&mut out, data_offset), Ok(()));
+        assert_eq!(dirent.metadata_size(), out.len() as u32);
+
+        // TODO(sdemos): check more of the output
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_export() {
         let dir = pseudo_directory! {
@@ -401,8 +452,8 @@ mod tests {
         assert_eq!(
             entries,
             vec![
-                DirectoryEntry { name: b"a".to_vec(), data: b"a content".to_vec() },
-                DirectoryEntry { name: b"b/c".to_vec(), data: b"c content".to_vec() },
+                DirectoryEntry { name: b"a\0".to_vec(), data: b"a content".to_vec() },
+                DirectoryEntry { name: b"b/c\0".to_vec(), data: b"c content".to_vec() },
             ],
         );
     }
