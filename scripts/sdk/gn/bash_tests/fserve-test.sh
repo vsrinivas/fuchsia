@@ -222,12 +222,53 @@ TEST_fserve_device_addr(){
   gn-test-check-mock-args "${expected_args[@]}"
   }
 
-TEST_fserve_with_props() {
+TEST_fserve_with_ip_prop() {
    set_up_ssh
   set_up_device_finder
   set_up_gsutil
 
   BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+
+  BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2 "echo" _ANY_ )
+  gn-test-check-mock-args "${expected_args[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2  amber_ctl _ANY_ _ANY_ _ANY_)
+  gn-test-check-mock-args "${expected_args[@]}"
+}
+
+TEST_fserve_with_name_prop() {
+   set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+
+  BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
+
+  BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.1"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" "echo" _ANY_ )
+  gn-test-check-mock-args "${expected_args[@]}"
+
+  # shellcheck disable=SC1090
+  source "${SSH_MOCK_PATH}/ssh.mock_state.2"
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee"  amber_ctl _ANY_ _ANY_ _ANY_)
+  gn-test-check-mock-args "${expected_args[@]}"
+}
+
+TEST_fserve_with_all_props() {
+   set_up_ssh
+  set_up_device_finder
+  set_up_gsutil
+
+  BT_EXPECT "${FCONFIG_CMD}" set device-ip "192.1.1.2"
+  BT_EXPECT "${FCONFIG_CMD}" set device-name "coffee-coffee-coffee-coffee"
 
   BT_EXPECT "${FSERVE_CMD}" > "${BT_TEMP_DIR}/fserve_with_props_log.txt" 2>&1
 

@@ -43,8 +43,10 @@ usage () {
   echo "    Port number to use when serving the packages.  Defaults to ${FUCHSIA_SERVER_PORT}."
   echo "  [--device-name <device hostname>]"
   echo "    Only serves packages to a device with the given device hostname. Cannot be used with --device-ip."
+  echo "    If neither --device-name nor --device-ip are specified, the device-name configured using fconfig.sh is used."
   echo "  [--device-ip <device ip>]"
   echo "    Only serves packages to a device with the given device ip address. Cannot be used with --device-name."
+ echo "     If neither --device-name nor --device-ip are specified, the device-ip configured using fconfig.sh is used."
   echo "  [--kill]"
   echo "    Kills any existing package manager server"
   echo "  [--prepare]"
@@ -54,8 +56,8 @@ usage () {
 
 PRIVATE_KEY_FILE=""
 PREPARE_ONLY=""
-DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
-DEVICE_IP_ADDR="$(get-fuchsia-property device-ip)"
+DEVICE_NAME_FILTER=""
+DEVICE_IP_ADDR=""
 
 # Parse command line
 while (( "$#" )); do
@@ -107,7 +109,19 @@ esac
 shift
 done
 
-if [[ "${DEVICE_IP_ADDR}" != "" && "${DEVICE_NAME_FILTER}" != "" ]]; then
+if [[ "${DEVICE_IP_ADDR}" == "" && "${DEVICE_NAME_FILTER}" == "" ]]; then
+  # No device specified on the command line, so use the default IP, then the
+  # default name if configured.
+  DEVICE_IP_ADDR="$(get-fuchsia-property device-ip)"
+  if [[ -z "${DEVICE_IP_ADDR}" ]]; then
+    DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
+    if [[ -n "${DEVICE_NAME_FILTER}" ]]; then
+      echo "Using device name ${DEVICE_NAME_FILTER}. Use --device-name or fconfig.sh to use another device."
+    fi
+  else
+    echo "Using device address ${DEVICE_IP_ADDR}. Use --device-ip or fconfig.sh to use another device."
+  fi
+elif [[ "${DEVICE_IP_ADDR}" != "" && "${DEVICE_NAME_FILTER}" != "" ]]; then
   fx-error "Cannot use both --device-name and --device-ip".
   exit 1
 fi
