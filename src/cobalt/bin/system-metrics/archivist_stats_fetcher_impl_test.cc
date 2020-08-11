@@ -17,7 +17,7 @@
 
 namespace {
 
-const uint64_t kExpectedMetricCount = 11;
+const uint64_t kExpectedMetricCount = 22;
 
 const char kExpectedArchiveOutput[] = R"(
 {
@@ -25,6 +25,31 @@ const char kExpectedArchiveOutput[] = R"(
   "payload": {
     "root": {
       "all_archive_accessor": {
+        "archive_accessor_connections_closed": 1,
+        "archive_accessor_connections_opened": 2,
+        "inspect_batch_iterator_connections_closed": 3,
+        "inspect_batch_iterator_connections_opened": 4,
+        "inspect_batch_iterator_get_next_errors": 5,
+        "inspect_batch_iterator_get_next_requests": 6,
+        "inspect_batch_iterator_get_next_responses": 7,
+        "inspect_batch_iterator_get_next_result_count": 8,
+        "inspect_batch_iterator_get_next_result_errors": 9,
+        "inspect_component_timeouts_count": 10,
+        "inspect_reader_servers_constructed": 11,
+        "inspect_reader_servers_destroyed": 12,
+        "lifecycle_batch_iterator_connections_closed": 13,
+        "lifecycle_batch_iterator_connections_opened": 14,
+        "lifecycle_batch_iterator_get_next_errors": 15,
+        "lifecycle_batch_iterator_get_next_requests": 16,
+        "lifecycle_batch_iterator_get_next_responses": 17,
+        "lifecycle_batch_iterator_get_next_result_count": 18,
+        "lifecycle_batch_iterator_get_next_result_errors": 19,
+        "lifecycle_component_timeouts_count": 20,
+        "lifecycle_reader_servers_constructed": 21,
+        "lifecycle_reader_servers_destroyed": 22,
+        "stream_diagnostics_requests": 23
+      },
+      "feedback_archive_accessor": {
         "archive_accessor_connections_closed": 1,
         "archive_accessor_connections_opened": 2,
         "inspect_batch_iterator_connections_closed": 3,
@@ -124,10 +149,17 @@ TEST_F(ArchivistStatsFetcherImplTest, MeasurementsRepeatFailed) {
 TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   std::vector<uint64_t> values;
   fake_archive_ = cobalt::FakeArchive(R"(
-    {"moniker": "core/archivist",
-     "payload": {"root": {"all_archive_accessor": {
-       "archive_accessor_connections_opened": 5
-     }}}})");
+    {
+      "moniker": "core/archivist",
+      "payload": {
+        "root": {
+          "all_archive_accessor": {
+            "archive_accessor_connections_opened": 5
+          },
+          "feedback_archive_accessor": {}
+        }
+      }
+    })");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);
     return true;
@@ -138,10 +170,17 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
-    {"moniker": "core/archivist",
-     "payload": {"root": {"all_archive_accessor": {
-       "archive_accessor_connections_opened": 7
-     }}}})");
+    {
+      "moniker": "core/archivist",
+      "payload": {
+        "root": {
+          "all_archive_accessor": {
+            "archive_accessor_connections_opened": 7
+          },
+          "feedback_archive_accessor": {}
+        }
+      }
+    })");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);
     return true;
@@ -152,10 +191,17 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
-    {"moniker": "core/archivist",
-     "payload": {"root": {"all_archive_accessor": {
-       "inspect_batch_iterator_get_next_errors": 10
-     }}}})");
+    {
+      "moniker": "core/archivist",
+      "payload": {
+        "root": {
+          "all_archive_accessor": {
+            "inspect_batch_iterator_get_next_errors": 10
+          },
+          "feedback_archive_accessor": {}
+        }
+      }
+    })");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);
     return true;
@@ -166,11 +212,18 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
-    {"moniker": "core/archivist",
-     "payload": {"root": {"all_archive_accessor": {
-       "archive_accessor_connections_opened": 8,
-       "inspect_batch_iterator_get_next_errors": 10
-     }}}})");
+    {
+      "moniker": "core/archivist",
+      "payload": {
+        "root": {
+          "all_archive_accessor": {
+            "archive_accessor_connections_opened": 8,
+            "inspect_batch_iterator_get_next_errors": 10
+          },
+          "feedback_archive_accessor": {}
+        }
+      }
+    })");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);
     return true;
@@ -181,11 +234,18 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
 
   values.clear();
   fake_archive_ = cobalt::FakeArchive(R"(
-    {"moniker": "core/archivist",
-     "payload": {"root": {"all_archive_accessor": {
-       "archive_accessor_connections_opened": 9,
-       "inspect_batch_iterator_get_next_errors": 11
-     }}}})");
+    {
+      "moniker": "core/archivist",
+      "payload": {
+        "root": {
+          "all_archive_accessor": {
+            "archive_accessor_connections_opened": 9,
+            "inspect_batch_iterator_get_next_errors": 11
+          },
+          "feedback_archive_accessor": {}
+        }
+      }
+    })");
   test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
     values.push_back(measurement.second);
     return true;
@@ -194,5 +254,27 @@ TEST_F(ArchivistStatsFetcherImplTest, MetricsUpdatedOverTime) {
   ASSERT_EQ(2u, values.size());
   EXPECT_EQ(1u, values[0]);
   EXPECT_EQ(1u, values[1]);
+
+  // New measurement, but for a different accessor.
+  values.clear();
+  fake_archive_ = cobalt::FakeArchive(R"(
+    {
+      "moniker": "core/archivist",
+      "payload": {
+        "root": {
+          "feedback_archive_accessor": {
+            "archive_accessor_connections_opened": 9
+          },
+          "all_archive_accessor": {}
+        }
+      }
+    })");
+  test_fetcher_.FetchMetrics([&](cobalt::ArchivistStatsFetcher::Measurement measurement) {
+    values.push_back(measurement.second);
+    return true;
+  });
+  RunLoopUntilIdle();
+  ASSERT_EQ(1u, values.size());
+  EXPECT_EQ(9u, values[0]);
 }
 }  // namespace

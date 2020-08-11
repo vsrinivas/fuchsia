@@ -14,7 +14,10 @@ namespace cobalt {
 
 namespace {
 constexpr const char kAllSelector[] = "core/archivist:root/all_archive_accessor:*";
-}
+constexpr const char kFeedbackSelector[] = "core/archivist:root/feedback_archive_accessor:*";
+}  // namespace
+
+using Pipeline = fuchsia_component_diagnostics::ComponentDiagnosticsMetricDimensionPipeline;
 
 ArchivistStatsFetcherImpl::ArchivistStatsFetcherImpl(async_dispatcher_t* dispatcher,
                                                      sys::ComponentContext* context)
@@ -28,7 +31,7 @@ ArchivistStatsFetcherImpl::ArchivistStatsFetcherImpl(
     : executor_(dispatcher), connector_(std::move(connector)) {}
 
 void ArchivistStatsFetcherImpl::FetchMetrics(MetricsCallback metrics_callback) {
-  std::vector<std::string> selectors = {kAllSelector};
+  std::vector<std::string> selectors = {kAllSelector, kFeedbackSelector};
   auto reader =
       std::make_shared<inspect::contrib::ArchiveReader>(connector_(), std::move(selectors));
   executor_.schedule_task(reader->GetInspectSnapshot().then([this, reader,
@@ -49,129 +52,143 @@ void ArchivistStatsFetcherImpl::FetchMetrics(MetricsCallback metrics_callback) {
       return;
     }
 
-    const rapidjson::Value& node = results.value()[0].GetByPath({"root", "all_archive_accessor"});
-    if (node.IsNull() || !node.IsObject()) {
-      FX_LOGS(ERROR) << "Could not find object at root/all_archive_accessor";
-      return;
+    struct WorkEntry {
+      const rapidjson::Value& node;
+      Pipeline pipeline;
+    };
+    std::vector<WorkEntry> work_queue;
+
+    {
+      const rapidjson::Value& node = results.value()[0].GetByPath({"root", "all_archive_accessor"});
+      if (node.IsNull() || !node.IsObject()) {
+        FX_LOGS(ERROR) << "Could not find object at root/all_archive_accessor";
+      } else {
+        work_queue.emplace_back(WorkEntry{.node = node, .pipeline = Pipeline::All});
+      }
+    }
+    {
+      const rapidjson::Value& node =
+          results.value()[0].GetByPath({"root", "feedback_archive_accessor"});
+      if (node.IsNull() || !node.IsObject()) {
+        FX_LOGS(ERROR) << "Could not find object at root/feedback_archive_accessor";
+      } else {
+        work_queue.emplace_back(WorkEntry{.node = node, .pipeline = Pipeline::Feedback});
+      }
     }
 
-    for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
-      if (!it->value.IsUint64()) {
-        continue;
-      }
-      if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_requests") == 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextRequestsMetricId,
-                           fuchsia_component_diagnostics::BatchIteratorGetNextRequestsEventCodes{
-                               .pipeline = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextRequestsMetricDimensionPipeline::All,
-                               .data_type = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextRequestsMetricDimensionDataType::Inspect}
-                               .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_errors") == 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextErrorsMetricId,
-                           fuchsia_component_diagnostics::BatchIteratorGetNextErrorsEventCodes{
-                               .pipeline = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextErrorsMetricDimensionPipeline::All,
-                               .data_type = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextErrorsMetricDimensionDataType::Inspect}
-                               .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_result_count") ==
-                 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextResultCountMetricId,
-                           fuchsia_component_diagnostics::BatchIteratorGetNextResultCountEventCodes{
-                               .pipeline = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextResultCountMetricDimensionPipeline::All,
-                               .data_type = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextResultCountMetricDimensionDataType::Inspect}
-                               .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_result_errors") ==
-                 0) {
-        ProcessNewValue(
-            MeasurementKey(
-                fuchsia_component_diagnostics::kBatchIteratorGetNextResultErrorsMetricId,
-                fuchsia_component_diagnostics::BatchIteratorGetNextResultErrorsEventCodes{
-                    .pipeline = fuchsia_component_diagnostics::
-                        BatchIteratorGetNextResultErrorsMetricDimensionPipeline::All,
-                    .data_type = fuchsia_component_diagnostics::
-                        BatchIteratorGetNextResultErrorsMetricDimensionDataType::Inspect}
-                    .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "inspect_component_timeouts_count") == 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kComponentTimeoutsCountMetricId,
-                           fuchsia_component_diagnostics::ComponentTimeoutsCountEventCodes{
-                               .pipeline = fuchsia_component_diagnostics::
-                                   ComponentTimeoutsCountMetricDimensionPipeline::All,
-                               .data_type = fuchsia_component_diagnostics::
-                                   ComponentTimeoutsCountMetricDimensionDataType::Inspect}
-                               .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "archive_accessor_connections_opened") == 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kArchiveAccessorConnectionsOpenedMetricId,
-                           {fuchsia_component_diagnostics::
-                                ArchiveAccessorConnectionsOpenedMetricDimensionPipeline::All}),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "lifecycle_batch_iterator_get_next_requests") == 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextRequestsMetricId,
-                           fuchsia_component_diagnostics::BatchIteratorGetNextRequestsEventCodes{
-                               .pipeline = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextRequestsMetricDimensionPipeline::All,
-                               .data_type = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextRequestsMetricDimensionDataType::Lifecycle}
-                               .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "lifecycle_batch_iterator_get_next_errors") == 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextErrorsMetricId,
-                           fuchsia_component_diagnostics::BatchIteratorGetNextErrorsEventCodes{
-                               .pipeline = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextErrorsMetricDimensionPipeline::All,
-                               .data_type = fuchsia_component_diagnostics::
-                                   BatchIteratorGetNextErrorsMetricDimensionDataType::Lifecycle}
-                               .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "lifecycle_batch_iterator_get_next_result_count") ==
-                 0) {
-        ProcessNewValue(
-            MeasurementKey(
-                fuchsia_component_diagnostics::kBatchIteratorGetNextResultCountMetricId,
-                fuchsia_component_diagnostics::BatchIteratorGetNextResultCountEventCodes{
-                    .pipeline = fuchsia_component_diagnostics::
-                        BatchIteratorGetNextResultCountMetricDimensionPipeline::All,
-                    .data_type = fuchsia_component_diagnostics::
-                        BatchIteratorGetNextResultCountMetricDimensionDataType::Lifecycle}
-                    .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "lifecycle_batch_iterator_get_next_result_errors") ==
-                 0) {
-        ProcessNewValue(
-            MeasurementKey(
-                fuchsia_component_diagnostics::kBatchIteratorGetNextResultErrorsMetricId,
-                fuchsia_component_diagnostics::BatchIteratorGetNextResultErrorsEventCodes{
-                    .pipeline = fuchsia_component_diagnostics::
-                        BatchIteratorGetNextResultErrorsMetricDimensionPipeline::All,
-                    .data_type = fuchsia_component_diagnostics::
-                        BatchIteratorGetNextResultErrorsMetricDimensionDataType::Lifecycle}
-                    .ToVector()),
-            it->value.GetUint64(), metrics_callback);
-      } else if (strcmp(it->name.GetString(), "lifecycle_component_timeouts_count") == 0) {
-        ProcessNewValue(
-            MeasurementKey(fuchsia_component_diagnostics::kComponentTimeoutsCountMetricId,
-                           fuchsia_component_diagnostics::ComponentTimeoutsCountEventCodes{
-                               .pipeline = fuchsia_component_diagnostics::
-                                   ComponentTimeoutsCountMetricDimensionPipeline::All,
-                               .data_type = fuchsia_component_diagnostics::
-                                   ComponentTimeoutsCountMetricDimensionDataType::Lifecycle}
-                               .ToVector()),
-            it->value.GetUint64(), metrics_callback);
+    for (const WorkEntry& work : work_queue) {
+      const rapidjson::Value& node = work.node;
+      Pipeline pipeline = work.pipeline;
+      for (auto it = node.MemberBegin(); it != node.MemberEnd(); ++it) {
+        if (!it->value.IsUint64()) {
+          continue;
+        }
+        if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_requests") == 0) {
+          ProcessNewValue(
+              MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextRequestsMetricId,
+                             fuchsia_component_diagnostics::BatchIteratorGetNextRequestsEventCodes{
+                                 .pipeline = pipeline,
+                                 .data_type = fuchsia_component_diagnostics::
+                                     BatchIteratorGetNextRequestsMetricDimensionDataType::Inspect}
+                                 .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_errors") == 0) {
+          ProcessNewValue(
+              MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextErrorsMetricId,
+                             fuchsia_component_diagnostics::BatchIteratorGetNextErrorsEventCodes{
+                                 .pipeline = pipeline,
+                                 .data_type = fuchsia_component_diagnostics::
+                                     BatchIteratorGetNextErrorsMetricDimensionDataType::Inspect}
+                                 .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_result_count") ==
+                   0) {
+          ProcessNewValue(
+              MeasurementKey(
+                  fuchsia_component_diagnostics::kBatchIteratorGetNextResultCountMetricId,
+                  fuchsia_component_diagnostics::BatchIteratorGetNextResultCountEventCodes{
+                      .pipeline = pipeline,
+                      .data_type = fuchsia_component_diagnostics::
+                          BatchIteratorGetNextResultCountMetricDimensionDataType::Inspect}
+                      .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "inspect_batch_iterator_get_next_result_errors") ==
+                   0) {
+          ProcessNewValue(
+              MeasurementKey(
+                  fuchsia_component_diagnostics::kBatchIteratorGetNextResultErrorsMetricId,
+                  fuchsia_component_diagnostics::BatchIteratorGetNextResultErrorsEventCodes{
+                      .pipeline = pipeline,
+                      .data_type = fuchsia_component_diagnostics::
+                          BatchIteratorGetNextResultErrorsMetricDimensionDataType::Inspect}
+                      .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "inspect_component_timeouts_count") == 0) {
+          ProcessNewValue(
+              MeasurementKey(fuchsia_component_diagnostics::kComponentTimeoutsCountMetricId,
+                             fuchsia_component_diagnostics::ComponentTimeoutsCountEventCodes{
+                                 .pipeline = pipeline,
+                                 .data_type = fuchsia_component_diagnostics::
+                                     ComponentTimeoutsCountMetricDimensionDataType::Inspect}
+                                 .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "archive_accessor_connections_opened") == 0) {
+          ProcessNewValue(
+              MeasurementKey(
+                  fuchsia_component_diagnostics::kArchiveAccessorConnectionsOpenedMetricId,
+                  {pipeline}),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "lifecycle_batch_iterator_get_next_requests") ==
+                   0) {
+          ProcessNewValue(
+              MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextRequestsMetricId,
+                             fuchsia_component_diagnostics::BatchIteratorGetNextRequestsEventCodes{
+                                 .pipeline = pipeline,
+                                 .data_type = fuchsia_component_diagnostics::
+                                     BatchIteratorGetNextRequestsMetricDimensionDataType::Lifecycle}
+                                 .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "lifecycle_batch_iterator_get_next_errors") == 0) {
+          ProcessNewValue(
+              MeasurementKey(fuchsia_component_diagnostics::kBatchIteratorGetNextErrorsMetricId,
+                             fuchsia_component_diagnostics::BatchIteratorGetNextErrorsEventCodes{
+                                 .pipeline = pipeline,
+                                 .data_type = fuchsia_component_diagnostics::
+                                     BatchIteratorGetNextErrorsMetricDimensionDataType::Lifecycle}
+                                 .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "lifecycle_batch_iterator_get_next_result_count") ==
+                   0) {
+          ProcessNewValue(
+              MeasurementKey(
+                  fuchsia_component_diagnostics::kBatchIteratorGetNextResultCountMetricId,
+                  fuchsia_component_diagnostics::BatchIteratorGetNextResultCountEventCodes{
+                      .pipeline = pipeline,
+                      .data_type = fuchsia_component_diagnostics::
+                          BatchIteratorGetNextResultCountMetricDimensionDataType::Lifecycle}
+                      .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(),
+                          "lifecycle_batch_iterator_get_next_result_errors") == 0) {
+          ProcessNewValue(
+              MeasurementKey(
+                  fuchsia_component_diagnostics::kBatchIteratorGetNextResultErrorsMetricId,
+                  fuchsia_component_diagnostics::BatchIteratorGetNextResultErrorsEventCodes{
+                      .pipeline = pipeline,
+                      .data_type = fuchsia_component_diagnostics::
+                          BatchIteratorGetNextResultErrorsMetricDimensionDataType::Lifecycle}
+                      .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        } else if (strcmp(it->name.GetString(), "lifecycle_component_timeouts_count") == 0) {
+          ProcessNewValue(
+              MeasurementKey(fuchsia_component_diagnostics::kComponentTimeoutsCountMetricId,
+                             fuchsia_component_diagnostics::ComponentTimeoutsCountEventCodes{
+                                 .pipeline = pipeline,
+                                 .data_type = fuchsia_component_diagnostics::
+                                     ComponentTimeoutsCountMetricDimensionDataType::Lifecycle}
+                                 .ToVector()),
+              it->value.GetUint64(), metrics_callback);
+        }
       }
     }
   }));
