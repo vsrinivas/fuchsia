@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -74,10 +75,19 @@ zx_status_t WriteBlockOffset(int fd, const void* data, uint64_t block_count, off
       safemath::CheckAdd(offset, safemath::CheckMul(block_number, kBlobfsBlockSize).ValueOrDie())
           .ValueOrDie());
   size_t size = safemath::CheckMul(block_count, kBlobfsBlockSize).ValueOrDie();
-  if (static_cast<ssize_t>(size) != pwrite(fd, data, size, off)) {
-    FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 " (size:%lu off:%lld)\n", block_number,
-                   size,  static_cast<long long>(off));
-    return ZX_ERR_IO;
+  ssize_t ret;
+  auto udata = static_cast<const uint8_t*>(data);
+  while (size > 0) {
+    ret = pwrite(fd, udata, size, off);
+    if (ret < 0) {
+      perror("failed write");
+      FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 " (size:%lu off:%lld)\n", block_number,
+                     size, static_cast<long long>(off));
+      return ZX_ERR_IO;
+    }
+    size -= ret;
+    off += ret;
+    udata += ret;
   }
   return ZX_OK;
 }
@@ -274,13 +284,17 @@ zx_status_t ReadBlock(int fd, uint64_t bno, void* data) {
   return ZX_OK;
 }
 
-zx_status_t WriteBlock(int fd, uint64_t bno, const void* data) {
-  off_t off = bno * kBlobfsBlockSize;
-  if (pwrite(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
-    FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 "\n", bno);
+zx_status_t WriteBlocks(int fd, uint64_t block_offset, uint64_t block_count, const void* data) {
+  if (WriteBlockOffset(fd, data, block_count, 0, block_offset) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: cannot write blocks: %" PRIu64 " at block offset: %" PRIu64 "\n",
+                   block_count, block_offset);
     return ZX_ERR_IO;
   }
   return ZX_OK;
+}
+
+zx_status_t WriteBlock(int fd, uint64_t bno, const void* data) {
+  return WriteBlocks(fd, bno, 1, data);
 }
 
 zx_status_t GetBlockCount(int fd, uint64_t* out) {
@@ -317,8 +331,6 @@ int Mkfs(int fd, uint64_t block_count) {
   block_bitmap.Set(0, kStartBlockMinimum);
 
   // All in-memory structures have been created successfully. Dump everything to disk.
-  uint8_t block[kBlobfsBlockSize];
-
   // Initialize on-disk journal.
   fs::WriteBlockFn write_block_fn = [fd, info](fbl::Span<const uint8_t> buffer,
                                                uint64_t block_offset) {
@@ -333,29 +345,34 @@ int Mkfs(int fd, uint64_t block_count) {
   }
 
   // Write the root block to disk.
-  memset(block, 0, sizeof(block));
-  memcpy(block, &info, sizeof(info));
-  if ((status = WriteBlock(fd, 0, block)) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to write root block\n");
+  static_assert(kBlobfsBlockSize == sizeof(info));
+  if ((status = WriteBlock(fd, 0, &info)) != ZX_OK) {
+    FS_TRACE_ERROR("Failed to write Superblock\n");
     return -1;
   }
 
   // Write allocation bitmap to disk.
-  for (uint64_t n = 0; n < block_bitmap_blocks; n++) {
-    void* bmdata = GetRawBitmapData(block_bitmap, n);
-    if ((status = WriteBlock(fd, BlockMapStartBlock(info) + n, bmdata)) != ZX_OK) {
-      FS_TRACE_ERROR("Failed to write blockmap block %" PRIu64 "\n", n);
-      return -1;
-    }
+  if (WriteBlocks(fd, BlockMapStartBlock(info), block_bitmap_blocks,
+                  block_bitmap.StorageUnsafe()->GetData()) != ZX_OK) {
+    FS_TRACE_ERROR("Failed to write blockmap block %" PRIu64 "\n", block_bitmap_blocks);
+    return -1;
   }
 
   // Write node map to disk.
-  memset(block, 0, sizeof(block));
-  for (uint64_t n = 0; n < node_map_blocks; n++) {
-    if (WriteBlock(fd, NodeMapStartBlock(info) + n, block)) {
-      FS_TRACE_ERROR("blobfs: failed writing inode map\n");
-      return -1;
-    }
+  size_t map_length = node_map_blocks * kBlobfsBlockSize;
+  void* blocks = mmap(nullptr, map_length, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+  if (blocks == MAP_FAILED) {
+    FS_TRACE_ERROR("blobfs: failed to map zeroes for inode map of size %lu\n", map_length);
+    return -1;
+  }
+  if (WriteBlocks(fd, NodeMapStartBlock(info), node_map_blocks, blocks) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: failed writing inode map\n");
+    munmap(blocks, map_length);
+    return -1;
+  }
+  if (munmap(blocks, map_length) != 0) {
+    FS_TRACE_ERROR("blobfs: failed unmap inode map\n");
+    return -1;
   }
 
   FS_TRACE_DEBUG("BLOBFS: mkfs success\n");
