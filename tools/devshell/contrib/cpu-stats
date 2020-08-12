@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Run, inspect and debug
-### generate a report of CPU stats from a bugreport
+### generate a report of CPU stats from a snapshot
 
 import argparse
 from collections import defaultdict
@@ -26,30 +26,30 @@ except ModuleNotFoundError:
 MIN_MEASUREMENTS_FOR_CROSS_CORRELATION = 5
 
 
-# Try to process the input file as a bugreport.zip file.
+# Try to process the input file as a snapshot.zip file.
 def try_unzip(zip_file):
   with zipfile.ZipFile(zip_file) as f:
     with f.open('inspect.json') as json_file:
       return json_file.read()
 
 
-# Calculate CPU stats for a bugreport.
+# Calculate CPU stats for a snapshot.
 #
 # Example: fx cpu-stats -f html -o output.html
 #          (Loads the latest data from an attached Fuchsia device and creates HTML output)
 #
-# Example: fx cpu-stats -f html -o output.html /tmp/bugreport.zip
-#          (Loads the given bugreport and creates HTML output)
+# Example: fx cpu-stats -f html -o output.html /tmp/snapshot.zip
+#          (Loads the given snapshot and creates HTML output)
 #
-# Example: fx cpu-stats -f json  /tmp/bugreport.zip
-#          (Prints the stats for the given bugreport as JSON to stdout)
+# Example: fx cpu-stats -f json  /tmp/snapshot.zip
+#          (Prints the stats for the given snapshot as JSON to stdout)
 def main():
-  parser = argparse.ArgumentParser('Process CPU stats from bugreports')
+  parser = argparse.ArgumentParser('Process CPU stats from snapshots')
   parser.add_argument(
       'input',
       nargs='*',
       type=argparse.FileType('rb'),
-      help='One or more bugreport.zip or inspect.json files. If not set, attempt to use `fx bugreport` to get a fresh report.'
+      help='One or more snapshot.zip or inspect.json files. If not set, attempt to use `fx snapshot` to get a fresh report.'
   )
   parser.add_argument(
       '--format',
@@ -68,13 +68,13 @@ def main():
 
   tempdir = None
   if not args.input:
-    print('No input specified, reading a new bugreport', file=sys.stderr)
+    print('No input specified, reading a new snapshot', file=sys.stderr)
     tempdir = TemporaryDirectory()
     report = subprocess.check_call(
-        ['fx', 'bugreport', '--output-directory', tempdir.name],
+        ['fx', 'snapshot', '--output-directory', tempdir.name],
         stdout=sys.stderr,
         stderr=sys.stderr)
-    args.input = [open(os.path.join(tempdir.name, 'bugreport.zip'), 'rb')]
+    args.input = [open(os.path.join(tempdir.name, 'snapshot.zip'), 'rb')]
 
   json_contents = []
   for input_file in args.input:

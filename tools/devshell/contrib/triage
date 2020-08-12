@@ -8,17 +8,17 @@
 
 ## usage: fx triage [--config <config-file>]
 ##                  [--select <select-string>]
-##                  [--data <path-to-bugreport>]
+##                  [--data <path-to-snapshot>]
 ## Without 'select':
 ## Processes "fx snapshot" output looking for problems specified in config
-## files. If no bugreport output is specified (no '--data') it runs a new
+## files. If no snapshot output is specified (no '--data') it runs a new
 ## "fx snapshot" and uses its "inspect.json" file.
 ## With 'select':
-## Generates selectors from the bugreport, filtered by select-string.
+## Generates selectors from the snapshot, filtered by select-string.
 ## --config, --tag, --exclude-tag options are ignored.
 ##
 ##    --config <config-file-or-dir>      Path to config file or dir
-##    --data <bugreport-or-dir>          Path to bugreport.zip or uncompressed dir
+##    --data <snapshot-or-dir>          Path to snapshot.zip or uncompressed dir
 ##    --tag <tag>                        Adds an action tag to include
 ##    --exclude-tag <tag>                Adds an action tag to exclude
 ##    --select <string>                  Generates selectors filtered by <string>
@@ -40,7 +40,7 @@
 ##   actions will be included.
 ##
 ## 0 or 1 --data paths may be given.
-##   Path must point to a bugreport.zip or a directory containing an unpacked bugreport.zip.
+##   Path must point to a snapshot.zip or a directory containing an unpacked snapshot.zip.
 ##   For this path, 'fx triage' will analyze all supported filetypes.
 ##   Currently, the only supported filetype is inspect.json.
 ##   Future versions will add support for different files.
@@ -48,7 +48,7 @@
 ##
 ## 0 or more --select strings may be given. --select changes the
 ## operation of the program: it generates all selectors for all
-## data in the bugreport and then filters them (via grep) through
+## data in the snapshot and then filters them (via grep) through
 ## all the --select strings.
 
 set -e
@@ -118,7 +118,7 @@ if [ -z "${data_paths}" ]; then
   temp_dir=$(mktemp -d)
   trap 'rm -rf "${temp_dir}"' EXIT
   fx-command-run snapshot --output-directory "${temp_dir}" > /dev/null
-  unzip "${temp_dir}/bugreport.zip" -d "${temp_dir}" > /dev/null
+  unzip "${temp_dir}/snapshot.zip" -d "${temp_dir}" > /dev/null
   data_paths+="${temp_dir}"
 fi
 
@@ -127,9 +127,9 @@ unzipped_data_dirs=( )
 for data_path in "${data_paths[@]}"
   do
   if [[ -d "${data_path}" ]] ; then
-    # This should be an unzipped bugreport.zip; pass it to the Triage
+    # This should be an unzipped snapshot.zip; pass it to the Triage
     # executable.
-    # Triage will complain if bugreport.zip files aren't in the directory.
+    # Triage will complain if snapshot.zip files aren't in the directory.
     unzipped_data_dirs+=( $data_path )
   else
     # This should be a .zip file. unzip will complain if not. Unzip it and
