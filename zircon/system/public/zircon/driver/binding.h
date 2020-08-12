@@ -56,7 +56,7 @@ __BEGIN_CDECLS
 #define BI_ABORT_IF_AUTOBIND BI_ABORT_IF(NE, BIND_AUTOBIND, 0)
 
 // global binding variables at 0x00XX
-#define BIND_FLAGS 0x0000     // value of the flags register
+#define BIND_FLAGS    0x0000  // value of the flags register
 #define BIND_PROTOCOL 0x0001  // primary protocol of the device
 #define BIND_AUTOBIND 0x0002  // if this is an automated bind/load
 
@@ -147,6 +147,9 @@ __BEGIN_CDECLS
 
 // Init Step binding variables at 0x0A6X
 #define BIND_INIT_STEP 0x0A60
+
+// Codec binding variables at 0x0A7X
+#define BIND_CODEC_INSTANCE 0x0A70
 
 // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
 // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.

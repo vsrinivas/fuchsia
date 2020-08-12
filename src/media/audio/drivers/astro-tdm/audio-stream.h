@@ -47,8 +47,10 @@ class AstroTdmStream : public SimpleAudioStream {
   // Protected for unit test.
   zx_status_t InitCodec();
   zx_status_t InitHW();
+  zx_status_t InitPDev();
+  void InitDaiFormats();
 
-  SimpleCodecClient codec_;
+  std::vector<SimpleCodecClient> codecs_;
   std::unique_ptr<AmlTdmDevice> aml_audio_;
   metadata::AmlConfig metadata_ = {};
 
@@ -59,11 +61,11 @@ class AstroTdmStream : public SimpleAudioStream {
 
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size);
-  virtual zx_status_t InitPDev();  // virtual for unit testing.
   void ProcessRingNotification();
+  zx_status_t SetCodecsGainState(GainState state);
 
   uint32_t us_per_notification_ = 0;
-  DaiFormat dai_format_ = {};
+  DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};
 
   async::TaskClosureMethod<AstroTdmStream, &AstroTdmStream::ProcessRingNotification> notify_timer_
       __TA_GUARDED(domain_token()){this};
@@ -75,6 +77,7 @@ class AstroTdmStream : public SimpleAudioStream {
 
   zx::bti bti_;
   const ddk::GpioProtocolClient enable_gpio_;
+  uint64_t channels_to_use_;
 };
 
 }  // namespace astro

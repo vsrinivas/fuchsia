@@ -448,7 +448,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "aml-hevc-enc",
       "sys/platform/05:04:17/aml-gpu",
       "sys/platform/05:04:16/sherlock-audio-in",
-      "SherlockAudio",
+      "sherlock-i2s-audio-out",
       "ft5726-touch",
       "tee/optee",
       "sys/platform/00:00:f/fallback-rtc",

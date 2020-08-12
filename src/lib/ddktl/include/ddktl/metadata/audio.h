@@ -7,22 +7,34 @@
 
 namespace metadata {
 
+static constexpr uint32_t kMaxNumberOfCodecs = 8;
+static constexpr uint32_t kMaxNumberOfExternalDelays = 8;
+
 enum class Codec : uint32_t {
-  None,
   Tas27xx,
   Tas5782,
   Tas5805,
-  Tas5720x3,
+  Tas5720,
 };
 
 enum class TdmType : uint32_t {
   I2s,
+  LeftJustified,
   Pcm,
+};
+
+struct ExternalDelay {
+  uint32_t frequency;
+  int64_t nsecs;
 };
 
 struct Tdm {
   TdmType type;
-  Codec codec;
+  uint32_t number_of_codecs;
+  Codec codecs[kMaxNumberOfCodecs];
+  float codecs_delta_gains[kMaxNumberOfCodecs];
+  uint32_t number_of_external_delays;
+  ExternalDelay external_delays[kMaxNumberOfExternalDelays];
 };
 
 }  // namespace metadata

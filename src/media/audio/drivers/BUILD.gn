@@ -15,7 +15,6 @@ group("tests") {
     "codecs:tests",
     "intel-hda:tests",
     "sherlock-pdm-input:tests",
-    "sherlock-tdm-output:tests",
     "test",
   ]
 }

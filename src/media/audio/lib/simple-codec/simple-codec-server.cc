@@ -21,6 +21,14 @@ zx_status_t SimpleCodecServer::CreateInternal() {
   }
   driver_ids_ = res.value();
   Info info = GetInfo();
+  if (driver_ids_.instance_count != 0) {
+    zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, driver_ids_.vendor_id},
+        {BIND_PLATFORM_DEV_DID, 0, driver_ids_.device_id},
+        {BIND_CODEC_INSTANCE, 0, driver_ids_.instance_count},
+    };
+    return DdkAdd(ddk::DeviceAddArgs(info.product_name.c_str()).set_props(props));
+  }
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, driver_ids_.vendor_id},
       {BIND_PLATFORM_DEV_DID, 0, driver_ids_.device_id},

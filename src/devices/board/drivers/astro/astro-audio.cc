@@ -182,12 +182,17 @@ zx_status_t Astro::AudioInit() {
         },
     };
     metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "astro");
     metadata.is_input = false;
-    metadata.number_of_channels = 1;
+    // Compatible clocks with other TDM drivers.
+    metadata.mClockDivFactor = 10;
+    metadata.sClockDivFactor = 25;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;
-    metadata.tdm.codec = metadata::Codec::None;
+    metadata.number_of_channels = 1;
+    metadata.lanes_enable_mask[0] = 1;
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
@@ -233,12 +238,32 @@ zx_status_t Astro::AudioInit() {
     }
 
     metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "astro");
     metadata.is_input = false;
-    metadata.number_of_channels = 1;
+    // Compatible clocks with other TDM drivers.
+    metadata.mClockDivFactor = 10;
+    metadata.sClockDivFactor = 25;
     metadata.bus = metadata::AmlBus::TDM_B;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::I2s;
-    metadata.tdm.codec = metadata::Codec::Tas27xx;
+    metadata.number_of_channels = 1;
+    metadata.lanes_enable_mask[0] = 2;
+    metadata.tdm.number_of_codecs = 1;
+    metadata.tdm.codecs[0] = metadata::Codec::Tas27xx;
+    // Report our external delay based on the chosen frame rate.  Note that these
+    // delays were measured on Astro hardware, and should be pretty good, but they
+    // will not be perfect.  One reason for this is that we are not taking any
+    // steps to align our start time with start of a TDM frame, which will cause
+    // up to 1 frame worth of startup error ever time that the output starts.
+    // Also note that this is really nothing to worry about.  Hitting our target
+    // to within 20.8uSec (for 48k) is pretty good.
+    metadata.tdm.number_of_external_delays = 2;
+    metadata.tdm.external_delays[0].frequency = 48'000;
+    metadata.tdm.external_delays[0].nsecs = ZX_USEC(125);
+    metadata.tdm.external_delays[1].frequency = 96'000;
+    metadata.tdm.external_delays[1].nsecs = ZX_NSEC(83333);
+    metadata.codecs_channels_mask[0] = (1 << 0);
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
@@ -277,12 +302,18 @@ zx_status_t Astro::AudioInit() {
         },
     };
     metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "astro");
     metadata.is_input = true;
-    metadata.number_of_channels = 1;
+    // Compatible clocks with other TDM drivers.
+    metadata.mClockDivFactor = 10;
+    metadata.sClockDivFactor = 25;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;
-    metadata.tdm.codec = metadata::Codec::None;
+    metadata.number_of_channels = 1;
+    metadata.swaps = 0x0200;
+    metadata.lanes_enable_mask[1] = 1;
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,

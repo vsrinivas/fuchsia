@@ -17,6 +17,8 @@ struct DriverIds {
   uint32_t vendor_id;
   // Driver device id, for instance PDEV_DID_TI_TAS2770.
   uint32_t device_id;
+  // If there is more than one of the same codec in the system set to count starting from 1.
+  uint32_t instance_count;
 };
 
 struct Info {

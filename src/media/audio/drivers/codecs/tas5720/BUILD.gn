@@ -1,0 +1,74 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+
+driver_module("tas5720") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "tas5720.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.codec",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test("tas5720-test-bin") {
+  defines = [ "_ALL_SOURCE" ]
+  output_name = "tas5720-test"
+  sources = [
+    "tas5720-test.cc",
+    "tas5720.cc",
+  ]
+  deps = [
+    ":tas5720",
+    "//sdk/banjo/ddk.protocol.codec",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
+    "//sdk/banjo/ddk.protocol.i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/i2c/testing/mock-i2c",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/mock-function",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("tas5720-test-package") {
+  package_name = "tas5720-test"
+  executable_path = "test/tas5720-test"
+  deps = [ ":tas5720-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":tas5720-test-package" ]
+}
