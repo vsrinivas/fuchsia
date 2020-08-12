@@ -12,11 +12,12 @@ class PackageView {
 
   async init() {
     console.log('[Packages] - Loading all packages');
-    this.packages = await post_request(location.origin + '/api/packages', null);
   }
 
   async searchPackages() {
     let query = this.search.value;
+    this.packages = await post_request(
+        location.origin + '/api/search/packages', JSON.stringify({'files': query}));
     // Clear out all the current search tiles.
     while (this.searchResults.firstChild) {
       this.searchResults.removeChild(this.searchResults.firstChild);
@@ -63,11 +64,14 @@ class PackageView {
       body.className = 'tile-body';
 
       let text = document.createElement('pre');
-      let files = [];
       for (const [key, value] of Object.entries(pkg.contents)) {
-        files.push(key);
+        let a = document.createElement('a');
+        let link = document.createTextNode(key + '\n');
+        a.appendChild(link);
+        a.title = key;
+        a.href = window.location.origin + '/api/blob?merkle=' + value;
+        text.appendChild(a);
       }
-      text.appendChild(document.createTextNode(files.join('\n')));
       body.appendChild(text);
 
       tile.appendChild(header);

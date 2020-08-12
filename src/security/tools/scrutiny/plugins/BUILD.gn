@@ -17,6 +17,7 @@ if (!is_fuchsia) {
       "//src/sys/pkg/lib/fuchsia-archive",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
+      "//third_party/rust_crates:base64",
       "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:futures-executor",
       "//third_party/rust_crates:lazy_static",
@@ -31,6 +32,7 @@ if (!is_fuchsia) {
 
     sources = [
       "src/components/artifact.rs",
+      "src/components/controllers/blob_controllers.rs",
       "src/components/controllers/component_controllers.rs",
       "src/components/controllers/mod.rs",
       "src/components/controllers/package_controllers.rs",

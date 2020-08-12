@@ -4,10 +4,15 @@
 
 use {
     crate::components::{
-        artifact::ArtifactGetter, controllers::component_controllers::*,
-        controllers::package_controllers::*, controllers::route_controllers::*,
-        controllers::zbi_controllers::*, package_getter::PackageGetter, package_reader::*,
-        types::*, util,
+        artifact::ArtifactGetter,
+        controllers::component_controllers::*,
+        controllers::{
+            blob_controllers::*, package_controllers::*, route_controllers::*, zbi_controllers::*,
+        },
+        package_getter::PackageGetter,
+        package_reader::*,
+        types::*,
+        util,
     },
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
@@ -54,6 +59,7 @@ plugin!(
             "/packages" => PackagesGraphController::default(),
             "/routes" => RoutesGraphController::default(),
             "/bootfs" => BootfsPathsController::default(),
+            "/blob" => BlobController::new(),
         }
     ),
     vec![]
