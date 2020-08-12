@@ -5,6 +5,7 @@
 use {
     crate::model::resolver::{Resolver, ResolverError, ResolverFut},
     anyhow::format_err,
+    cm_fidl_validator,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fidl_fuchsia_sys::LoaderProxy,
@@ -73,6 +74,10 @@ impl FuchsiaPkgResolver {
                 None => ResolverError::manifest_invalid(component_url, e),
             }
         })?;
+        // Validate the component manifest
+        cm_fidl_validator::validate(&component_decl)
+            .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+
         let package_dir = ClientEnd::new(
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
         );
@@ -96,12 +101,17 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
+        fidl::encoding::encode_persistent,
         fidl::endpoints::{self, ServerEnd},
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_sys::{LoaderMarker, LoaderRequest, Package},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::TryStreamExt,
         std::path::Path,
+        vfs::{
+            self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::pcb::asynchronous::read_only_static, pseudo_directory,
+        },
     };
 
     struct MockLoader {}
@@ -130,22 +140,66 @@ mod tests {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();
             let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
             // Simulate a package server that only contains the "hello-world" package.
-            if parsed_url.name() != "hello-world" {
-                return None;
+            match parsed_url.name() {
+                "hello-world" => {
+                    let path = Path::new("/pkg");
+                    io_util::connect_in_namespace(
+                        path.to_str().unwrap(),
+                        dir_s,
+                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                    )
+                    .expect("could not connect to /pkg");
+                    return Some(Package {
+                        data: None,
+                        directory: Some(dir_c),
+                        resolved_url: package_url.to_string(),
+                    });
+                }
+                "invalid-cm" => {
+                    // Provide a cm that will fail due to multiple runners being configured.
+                    let sub_dir = pseudo_directory! {
+                        "meta" => pseudo_directory! {
+                            "invalid.cm" => read_only_static(
+                                encode_persistent(&mut fsys::ComponentDecl {
+                                    program: None,
+                                    uses: Some(vec![
+                                        fsys::UseDecl::Runner(
+                                            fsys::UseRunnerDecl {
+                                                source_name: Some("elf".to_string()),
+                                            }
+                                        ),
+                                        fsys::UseDecl::Runner (
+                                            fsys::UseRunnerDecl {
+                                                source_name: Some("web".to_string())
+                                            }
+                                        )
+                                    ]),
+                                    exposes: None,
+                                    offers: None,
+                                    capabilities: None,
+                                    children: None,
+                                    collections: None,
+                                    environments: None,
+                                    facets: None
+                                }).unwrap()
+                            ),
+                        }
+                    };
+                    sub_dir.open(
+                        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+                        fio::OPEN_RIGHT_READABLE,
+                        fio::MODE_TYPE_DIRECTORY,
+                        vfs::path::Path::empty(),
+                        ServerEnd::new(dir_s),
+                    );
+                    return Some(Package {
+                        data: None,
+                        directory: Some(dir_c),
+                        resolved_url: package_url.to_string(),
+                    });
+                }
+                _ => return None,
             }
-
-            let path = Path::new("/pkg");
-            io_util::connect_in_namespace(
-                path.to_str().unwrap(),
-                dir_s,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-            )
-            .expect("could not connect to /pkg");
-            Some(Package {
-                data: None,
-                directory: Some(dir_c),
-                resolved_url: package_url.to_string(),
-            })
         }
     }
 
@@ -249,6 +303,11 @@ mod tests {
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/hello-world#meta/component_manager_tests_invalid.cm",
+            ManifestInvalid
+        );
+        test_resolve_error!(
+            resolver,
+            "fuchsia-pkg://fuchsia.com/invalid-cm#meta/invalid.cm",
             ManifestInvalid
         );
     }

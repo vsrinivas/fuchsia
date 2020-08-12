@@ -10,6 +10,7 @@ use {
         routing,
     },
     anyhow::format_err,
+    cm_fidl_validator,
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys,
@@ -142,6 +143,10 @@ impl FuchsiaPkgResolver {
                 None => ResolverError::manifest_invalid(component_url, e),
             }
         })?;
+        // Validate the component manifest
+        cm_fidl_validator::validate(&component_decl)
+            .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+
         let package_dir = ClientEnd::new(
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
         );
@@ -173,12 +178,17 @@ mod tests {
         },
         cm_rust::*,
         directory_broker::DirectoryBroker,
+        fidl::encoding::encode_persistent,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::{DirectoryRequest, NodeMarker},
         fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
         futures::prelude::*,
         std::{path::Path, sync::Arc},
+        vfs::{
+            self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::pcb::asynchronous::read_only_static, pseudo_directory,
+        },
     };
 
     // Simulate a fake pkgfs Directory service that only contains a single package ("hello_world"),
@@ -215,41 +225,77 @@ mod tests {
             .detach();
         }
 
-        fn handle_open(path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
+        fn handle_open(path_str: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
             // Support opening a new connection to the fake
-            if path == "." {
+            if path_str == "." {
                 Self::host_dir(ServerEnd::new(server_end.into_channel()));
                 return;
             }
 
-            let path = Path::new(path);
+            let path = Path::new(path_str);
             let mut path_iter = path.iter();
 
             // "packages/" should always be the first path component used by the resolver.
             assert_eq!("packages", path_iter.next().unwrap().to_str().unwrap());
 
-            // We're simulating a package server that only contains the "hello-world"
-            // package. This returns rather than asserts so that we can attempt to resolve
-            // other packages.
-            if path_iter.next().unwrap().to_str().unwrap() != "hello-world" {
-                return;
+            match path_iter.next().unwrap().to_str().unwrap() {
+                "hello-world" => {
+                    // The next item is 0, as per pkgfs semantics. Check it and skip it.
+                    assert_eq!("0", path_iter.next().unwrap().to_str().unwrap());
+
+                    // Connect the server_end by forwarding to our real package directory, which can handle
+                    // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we
+                    // don't artificially pass the test (i.e. the resolver needs to ask for the appropriate
+                    // rights).
+                    let mut open_path = PathBuf::from("/pkg");
+                    open_path.extend(path_iter);
+                    io_util::connect_in_namespace(
+                        open_path.to_str().unwrap(),
+                        server_end.into_channel(),
+                        flags,
+                    )
+                    .expect("failed to open path in namespace");
+                }
+                "invalid-cm" => {
+                    // Provide a cm that will fail due to multiple runners being configured.
+                    let sub_dir = pseudo_directory! {
+                        "meta" => pseudo_directory! {
+                            "invalid.cm" => read_only_static(
+                                encode_persistent(&mut fsys::ComponentDecl {
+                                    program: None,
+                                    uses: Some(vec![
+                                        fsys::UseDecl::Runner(
+                                            fsys::UseRunnerDecl {
+                                                source_name: Some("elf".to_string()),
+                                            }
+                                        ),
+                                        fsys::UseDecl::Runner (
+                                            fsys::UseRunnerDecl {
+                                                source_name: Some("web".to_string())
+                                            }
+                                        )
+                                    ]),
+                                    exposes: None,
+                                    offers: None,
+                                    capabilities: None,
+                                    children: None,
+                                    collections: None,
+                                    environments: None,
+                                    facets: None
+                                }).unwrap()
+                            ),
+                        }
+                    };
+                    sub_dir.open(
+                        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+                        fio::OPEN_RIGHT_READABLE,
+                        fio::MODE_TYPE_DIRECTORY,
+                        vfs::path::Path::empty(),
+                        server_end,
+                    );
+                }
+                _ => return,
             }
-
-            // The next item is 0, as per pkgfs semantics. Check it and skip it.
-            assert_eq!("0", path_iter.next().unwrap().to_str().unwrap());
-
-            // Connect the server_end by forwarding to our real package directory, which can handle
-            // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we
-            // don't artificially pass the test (i.e. the resolver needs to ask for the appropriate
-            // rights).
-            let mut open_path = PathBuf::from("/pkg");
-            open_path.extend(path_iter);
-            io_util::connect_in_namespace(
-                open_path.to_str().unwrap(),
-                server_end.into_channel(),
-                flags,
-            )
-            .expect("failed to open path in namespace");
         }
     }
 
@@ -414,6 +460,11 @@ mod tests {
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/hello-world#meta/component_manager_tests_invalid.cm",
+            ManifestInvalid
+        );
+        test_resolve_error!(
+            resolver,
+            "fuchsia-pkg://fuchsia.com/invalid-cm#meta/invalid.cm",
             ManifestInvalid
         );
     }

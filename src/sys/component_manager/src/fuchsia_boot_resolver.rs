@@ -5,11 +5,12 @@
 use {
     crate::model::resolver::{Resolver, ResolverError, ResolverFut},
     anyhow::Error,
+    cm_fidl_validator,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::boot_url::BootUrl,
-    std::path::Path,
+    std::path::{Path, PathBuf},
 };
 
 pub static SCHEME: &str = "fuchsia-boot";
@@ -62,7 +63,10 @@ impl FuchsiaBootResolver {
         // be (inconsistently) rejected by fuchsia.io methods.
         let package_path = Path::new(io_util::canonicalize_path(url.path()));
         let res = url.resource().ok_or(ResolverError::url_missing_resource_error(component_url))?;
-        let res_path = package_path.join(res);
+        let res_path = match package_path.to_str() {
+            Some(".") => PathBuf::from(res),
+            _ => package_path.join(res),
+        };
 
         // Read component manifest from resource into a component decl.
         let cm_file = io_util::open_file(&self.boot_proxy, &res_path, fio::OPEN_RIGHT_READABLE)
@@ -70,6 +74,9 @@ impl FuchsiaBootResolver {
         let component_decl = io_util::read_file_fidl(&cm_file)
             .await
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
+        // Validate the component manifest
+        cm_fidl_validator::validate(&component_decl)
+            .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
         let path_proxy = io_util::open_directory(
@@ -106,6 +113,7 @@ impl Resolver for FuchsiaBootResolver {
 mod tests {
     use {
         super::*,
+        fidl::encoding::encode_persistent,
         fidl::endpoints::{create_proxy_and_stream, ServerEnd},
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest, NodeMarker},
@@ -113,6 +121,10 @@ mod tests {
         fuchsia_async as fasync,
         futures::prelude::*,
         std::path::PathBuf,
+        vfs::{
+            self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::pcb::asynchronous::read_only_static, pseudo_directory,
+        },
     };
 
     // Simulate a fake bootfs Directory service that only contains a single directory
@@ -146,36 +158,76 @@ mod tests {
             proxy
         }
 
-        fn handle_open(path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
-            if path.is_empty() {
+        fn handle_open(path_str: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
+            if path_str.is_empty() {
                 // We don't support this in this fake, drop the server_end
                 return;
             }
-            let path = Path::new(path);
+            let path = Path::new(path_str);
             let mut path_iter = path.iter();
 
-            // The test URLs used below have "packages/" as the first path component
-            assert_eq!("packages", path_iter.next().unwrap().to_str().unwrap());
-
-            // We're simulating a package server that only contains the "hello-world"
-            // package. This returns rather than asserts so that we can attempt to resolve
-            // other packages.
-            if path_iter.next().unwrap().to_str().unwrap() != "hello-world" {
-                return;
+            match path_iter.next().unwrap().to_str().unwrap() {
+                "packages" => {
+                    // The test URLs used below have "packages/" as the first path component
+                    match path_iter.next().unwrap().to_str().unwrap() {
+                        "hello-world" => {
+                            // Connect the server_end by forwarding to our real package directory, which can handle
+                            // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we
+                            // don't artificially pass the test (i.e. the resolver needs to ask for the appropriate
+                            // rights).
+                            let mut open_path = PathBuf::from("/pkg");
+                            open_path.extend(path_iter);
+                            io_util::connect_in_namespace(
+                                open_path.to_str().unwrap(),
+                                server_end.into_channel(),
+                                flags,
+                            )
+                            .expect("failed to open path in namespace");
+                        }
+                        _ => return,
+                    }
+                }
+                "meta" => {
+                    // Provide a cm that will fail due to multiple runners being configured.
+                    let out_dir = pseudo_directory! {
+                        "meta" => pseudo_directory! {
+                            "invalid.cm" => read_only_static(
+                                encode_persistent(&mut fsys::ComponentDecl {
+                                    program: None,
+                                    uses: Some(vec![
+                                        fsys::UseDecl::Runner(
+                                            fsys::UseRunnerDecl {
+                                                source_name: Some("elf".to_string()),
+                                            }
+                                        ),
+                                        fsys::UseDecl::Runner (
+                                            fsys::UseRunnerDecl {
+                                                source_name: Some("web".to_string())
+                                            }
+                                        )
+                                    ]),
+                                    exposes: None,
+                                    offers: None,
+                                    capabilities: None,
+                                    children: None,
+                                    collections: None,
+                                    environments: None,
+                                    facets: None
+                                }).unwrap()
+                            ),
+                        }
+                    };
+                    out_dir.open(
+                        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+                        flags,
+                        fio::MODE_TYPE_FILE,
+                        vfs::path::Path::validate_and_split(path_str)
+                            .expect("received invalid path"),
+                        server_end,
+                    );
+                }
+                _ => return,
             }
-
-            // Connect the server_end by forwarding to our real package directory, which can handle
-            // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we
-            // don't artificially pass the test (i.e. the resolver needs to ask for the appropriate
-            // rights).
-            let mut open_path = PathBuf::from("/pkg");
-            open_path.extend(path_iter);
-            io_util::connect_in_namespace(
-                open_path.to_str().unwrap(),
-                server_end.into_channel(),
-                flags,
-            )
-            .expect("failed to open path in namespace");
         }
     }
 
@@ -236,5 +288,24 @@ mod tests {
             .expect("failed to open executable file");
 
         Ok(())
+    }
+
+    macro_rules! test_resolve_error {
+        ($resolver:ident, $url:expr, $resolver_error_expected:ident) => {
+            let url = $url;
+            let res = $resolver.resolve_async(url).await;
+            match res.err().expect("unexpected success") {
+                ResolverError::$resolver_error_expected { url: u, .. } => {
+                    assert_eq!(u, url);
+                }
+                e => panic!("unexpected error {:?}", e),
+            }
+        };
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn resolve_errors_test() {
+        let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
+        test_resolve_error!(resolver, "fuchsia-boot:///#meta/invalid.cm", ManifestInvalid);
     }
 }
