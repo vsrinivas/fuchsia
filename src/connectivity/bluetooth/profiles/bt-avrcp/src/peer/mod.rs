@@ -469,6 +469,7 @@ mod tests {
     use fuchsia_bluetooth::types::Channel;
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::{pin_mut, task::Poll};
+    use std::convert::TryInto;
 
     fn setup_remote_peer(
         id: PeerId,
@@ -512,7 +513,8 @@ mod tests {
         let (_remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel.into())).expect("FIDL response should work");
+                let channel = channel.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -556,7 +558,8 @@ mod tests {
         let (remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel.into())).expect("FIDL response should work");
+                let channel = channel.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -631,7 +634,8 @@ mod tests {
         let (remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel.into())).expect("FIDL response should work");
+                let channel = channel.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -679,7 +683,8 @@ mod tests {
         let (remote3, channel3) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
-                responder.send(&mut Ok(channel3.into())).expect("FIDL response should work");
+                let channel = channel3.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("FIDL response should work");
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };

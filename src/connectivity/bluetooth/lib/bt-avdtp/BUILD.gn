@@ -31,6 +31,9 @@ rustc_library("bt-avdtp") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps =
+      [ "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc" ]
+
   sources = [
     "src/lib.rs",
     "src/rtp.rs",

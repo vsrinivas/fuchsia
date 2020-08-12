@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl::encoding::Decodable,
-    fidl_fuchsia_bluetooth_bredr, fuchsia_async as fasync, fuchsia_zircon as zx,
+    anyhow::{format_err, Error},
+    fidl::{encoding::Decodable, endpoints::ClientEnd},
+    fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     futures::{io, stream::Stream, Future, TryFutureExt},
     std::convert::TryFrom,
     std::{
@@ -21,24 +23,36 @@ pub enum ChannelMode {
     EnhancedRetransmissionMode,
 }
 
-impl From<fidl_fuchsia_bluetooth_bredr::ChannelMode> for ChannelMode {
-    fn from(fidl: fidl_fuchsia_bluetooth_bredr::ChannelMode) -> Self {
-        match fidl {
-            fidl_fuchsia_bluetooth_bredr::ChannelMode::Basic => ChannelMode::Basic,
-            fidl_fuchsia_bluetooth_bredr::ChannelMode::EnhancedRetransmission => {
-                ChannelMode::EnhancedRetransmissionMode
-            }
+pub enum A2dpDirection {
+    Normal,
+    Source,
+    Sink,
+}
+
+impl From<A2dpDirection> for bredr::A2dpDirectionPriority {
+    fn from(pri: A2dpDirection) -> Self {
+        match pri {
+            A2dpDirection::Normal => bredr::A2dpDirectionPriority::Normal,
+            A2dpDirection::Source => bredr::A2dpDirectionPriority::Source,
+            A2dpDirection::Sink => bredr::A2dpDirectionPriority::Sink,
         }
     }
 }
 
-impl From<ChannelMode> for fidl_fuchsia_bluetooth_bredr::ChannelMode {
+impl From<fidl_fuchsia_bluetooth_bredr::ChannelMode> for ChannelMode {
+    fn from(fidl: bredr::ChannelMode) -> Self {
+        match fidl {
+            bredr::ChannelMode::Basic => ChannelMode::Basic,
+            bredr::ChannelMode::EnhancedRetransmission => ChannelMode::EnhancedRetransmissionMode,
+        }
+    }
+}
+
+impl From<ChannelMode> for bredr::ChannelMode {
     fn from(x: ChannelMode) -> Self {
         match x {
-            ChannelMode::Basic => fidl_fuchsia_bluetooth_bredr::ChannelMode::Basic,
-            ChannelMode::EnhancedRetransmissionMode => {
-                fidl_fuchsia_bluetooth_bredr::ChannelMode::EnhancedRetransmission
-            }
+            ChannelMode::Basic => bredr::ChannelMode::Basic,
+            ChannelMode::EnhancedRetransmissionMode => bredr::ChannelMode::EnhancedRetransmission,
         }
     }
 }
@@ -52,6 +66,7 @@ pub struct Channel {
     socket: fasync::Socket,
     mode: ChannelMode,
     max_tx_size: usize,
+    audio_direction_ext: Option<bredr::AudioDirectionExtProxy>,
 }
 
 // The default max tx size is the default MTU size for L2CAP minus the channel header content.
@@ -64,6 +79,7 @@ impl Channel {
             socket: fasync::Socket::from_socket(socket)?,
             mode: ChannelMode::Basic,
             max_tx_size,
+            audio_direction_ext: None,
         })
     }
 
@@ -93,6 +109,24 @@ impl Channel {
         &self.mode
     }
 
+    /// Returns a future which will set the audio priority of the channel.
+    /// The future will return Err if setting the priority is not supported.
+    pub fn set_audio_priority(
+        &self,
+        dir: A2dpDirection,
+    ) -> impl Future<Output = Result<(), Error>> {
+        let proxy = self.audio_direction_ext.clone();
+        async move {
+            match proxy {
+                None => return Err(format_err!("Audio Priority not supported")),
+                Some(proxy) => proxy
+                    .set_priority(dir.into())
+                    .await?
+                    .map_err(|e| format_err!("Setting priority failed: {:?}", e)),
+            }
+        }
+    }
+
     pub fn closed<'a>(&'a self) -> impl Future<Output = Result<(), zx::Status>> + 'a {
         let close_signals = zx::Signals::SOCKET_PEER_CLOSED;
         let close_wait = fasync::OnSignals::new(&self.socket, close_signals);
@@ -103,26 +137,37 @@ impl Channel {
 impl TryFrom<fidl_fuchsia_bluetooth_bredr::Channel> for Channel {
     type Error = zx::Status;
 
-    fn try_from(fidl: fidl_fuchsia_bluetooth_bredr::Channel) -> Result<Self, Self::Error> {
+    fn try_from(fidl: bredr::Channel) -> Result<Self, Self::Error> {
         Ok(Self {
             socket: fasync::Socket::from_socket(fidl.socket.ok_or(zx::Status::INVALID_ARGS)?)?,
-            mode: fidl
-                .channel_mode
-                .unwrap_or(fidl_fuchsia_bluetooth_bredr::ChannelMode::Basic)
-                .into(),
+            mode: fidl.channel_mode.unwrap_or(bredr::ChannelMode::Basic).into(),
             max_tx_size: fidl.max_tx_sdu_size.ok_or(zx::Status::INVALID_ARGS)? as usize,
+            audio_direction_ext: fidl.ext_direction.and_then(|e| e.into_proxy().ok()),
         })
     }
 }
 
-impl From<Channel> for fidl_fuchsia_bluetooth_bredr::Channel {
-    fn from(channel: Channel) -> Self {
-        fidl_fuchsia_bluetooth_bredr::Channel {
-            socket: Some(channel.socket.into_zx_socket().expect("only owner of this socket")),
+impl TryFrom<Channel> for bredr::Channel {
+    type Error = anyhow::Error;
+
+    fn try_from(channel: Channel) -> Result<Self, Self::Error> {
+        let socket = channel.socket.into_zx_socket().map_err(|_| format_err!("socket in use"))?;
+        let ext_direction = match channel.audio_direction_ext {
+            None => None,
+            Some(proxy) => {
+                let chan = proxy
+                    .into_channel()
+                    .map_err(|_| format_err!("Audio Direction proxy in use"))?;
+                Some(ClientEnd::new(chan.into()))
+            }
+        };
+        Ok(bredr::Channel {
+            socket: Some(socket),
             channel_mode: Some(channel.mode.into()),
             max_tx_sdu_size: Some(channel.max_tx_size as u16),
+            ext_direction,
             ..Decodable::new_empty()
-        }
+        })
     }
 }
 
@@ -169,7 +214,8 @@ impl io::AsyncWrite for Channel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::{pin_mut, FutureExt};
+    use fidl::endpoints::create_request_stream;
+    use futures::{pin_mut, FutureExt, StreamExt};
 
     #[test]
     fn test_channel_create_and_write() {
@@ -189,14 +235,14 @@ mod tests {
     #[test]
     fn test_channel_from_fidl() {
         let _exec = fasync::Executor::new().unwrap();
-        let empty = fidl_fuchsia_bluetooth_bredr::Channel::new_empty();
+        let empty = bredr::Channel::new_empty();
         assert!(Channel::try_from(empty).is_err());
 
         let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-        let okay = fidl_fuchsia_bluetooth_bredr::Channel {
+        let okay = bredr::Channel {
             socket: Some(remote),
-            channel_mode: Some(fidl_fuchsia_bluetooth_bredr::ChannelMode::Basic),
+            channel_mode: Some(bredr::ChannelMode::Basic),
             max_tx_sdu_size: Some(1004),
             ..Decodable::new_empty()
         };
@@ -221,5 +267,81 @@ mod tests {
         drop(send);
 
         assert!(exec.run_until_stalled(&mut closed_fut).is_ready());
+    }
+
+    #[test]
+    fn test_direction_ext() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let no_ext = bredr::Channel {
+            socket: Some(remote),
+            channel_mode: Some(bredr::ChannelMode::Basic),
+            max_tx_sdu_size: Some(1004),
+            ..Decodable::new_empty()
+        };
+        let channel = Channel::try_from(no_ext).unwrap();
+
+        assert!(exec
+            .run_singlethreaded(channel.set_audio_priority(A2dpDirection::Normal))
+            .is_err());
+        assert!(exec.run_singlethreaded(channel.set_audio_priority(A2dpDirection::Sink)).is_err());
+
+        let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (client_end, mut direction_request_stream) =
+            create_request_stream::<bredr::AudioDirectionExtMarker>().unwrap();
+        let ext = bredr::Channel {
+            socket: Some(remote),
+            channel_mode: Some(bredr::ChannelMode::Basic),
+            max_tx_sdu_size: Some(1004),
+            ext_direction: Some(client_end),
+            ..Decodable::new_empty()
+        };
+
+        let channel = Channel::try_from(ext).unwrap();
+
+        let audio_direction_fut = channel.set_audio_priority(A2dpDirection::Normal);
+        pin_mut!(audio_direction_fut);
+
+        assert!(exec.run_until_stalled(&mut audio_direction_fut).is_pending());
+
+        match exec.run_until_stalled(&mut direction_request_stream.next()) {
+            Poll::Ready(Some(Ok(bredr::AudioDirectionExtRequest::SetPriority {
+                priority,
+                responder,
+            }))) => {
+                assert_eq!(bredr::A2dpDirectionPriority::Normal, priority);
+                responder.send(&mut Ok(())).expect("response to send cleanly");
+            }
+            x => panic!("Expected a item to be ready on the request stream, got {:?}", x),
+        };
+
+        match exec.run_until_stalled(&mut audio_direction_fut) {
+            Poll::Ready(Ok(())) => {}
+            x => panic!("Expected ok result from audio direction response"),
+        };
+
+        let audio_direction_fut = channel.set_audio_priority(A2dpDirection::Sink);
+        pin_mut!(audio_direction_fut);
+
+        assert!(exec.run_until_stalled(&mut audio_direction_fut).is_pending());
+
+        match exec.run_until_stalled(&mut direction_request_stream.next()) {
+            Poll::Ready(Some(Ok(bredr::AudioDirectionExtRequest::SetPriority {
+                priority,
+                responder,
+            }))) => {
+                assert_eq!(bredr::A2dpDirectionPriority::Sink, priority);
+                responder
+                    .send(&mut Err(fidl_fuchsia_bluetooth::ErrorCode::Failed))
+                    .expect("response to send cleanly");
+            }
+            x => panic!("Expected a item to be ready on the request stream, got {:?}", x),
+        };
+
+        match exec.run_until_stalled(&mut audio_direction_fut) {
+            Poll::Ready(Err(_)) => {}
+            x => panic!("Expected error result from audio direction response"),
+        };
     }
 }

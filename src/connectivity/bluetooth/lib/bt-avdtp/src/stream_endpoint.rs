@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_bluetooth::types::Channel,
+    fuchsia_async::{DurationExt, Task, TimeoutExt},
+    fuchsia_bluetooth::types::{A2dpDirection, Channel},
     fuchsia_zircon::{Duration, DurationNum, Status},
-    futures::{io, stream::Stream},
+    futures::{io, stream::Stream, FutureExt},
     parking_lot::Mutex,
     std::{
         convert::TryFrom,
@@ -258,6 +258,8 @@ impl StreamEndpoint {
         Ok(())
     }
 
+    /// Waits for the MediaTransport Channel to be closed up to Duration.
+    /// Returns Err(Status::TIMED_OUT) if the channel didn't close.
     pub async fn wait_for_channel_close(&self, timeout: Duration) -> Result<(), Status> {
         if self.transport.is_none() {
             return Ok(());
@@ -266,6 +268,22 @@ impl StreamEndpoint {
             self.transport.as_ref().unwrap().try_read().map_err(|_e| Status::BAD_STATE)?;
         let closed_fut = channel.closed();
         closed_fut.on_timeout(timeout.after_now(), || Err(Status::TIMED_OUT)).await
+    }
+
+    /// Attempts to set audio direction priority of the MediaTransport channel based on
+    /// whether the stream is a source or sink endpoint if `active` is true.  If `active` is
+    /// false, set the priority to Normal instead.  Does nothing on failure.
+    pub fn try_priority(&self, active: bool) {
+        let priority = match (active, &self.endpoint_type) {
+            (false, _) => A2dpDirection::Normal,
+            (true, EndpointType::Source) => A2dpDirection::Source,
+            (true, EndpointType::Sink) => A2dpDirection::Sink,
+        };
+        let fut = match self.transport.as_ref().unwrap().try_read() {
+            Err(_) => return,
+            Ok(channel) => channel.set_audio_priority(priority).map(|_| ()),
+        };
+        Task::spawn(fut).detach();
     }
 
     /// Close this stream.  This procedure checks that the media channels are closed.
@@ -298,6 +316,7 @@ impl StreamEndpoint {
         if self.state != StreamState::Open {
             return Err(ErrorCode::BadState);
         }
+        self.try_priority(true);
         self.set_state(StreamState::Streaming);
         Ok(())
     }
@@ -309,6 +328,7 @@ impl StreamEndpoint {
             return Err(ErrorCode::BadState);
         }
         self.set_state(StreamState::Open);
+        self.try_priority(false);
         Ok(())
     }
 
@@ -483,6 +503,9 @@ mod tests {
         Request,
     };
 
+    use fidl::encoding::Decodable;
+    use fidl::endpoints::create_request_stream;
+    use fidl_fuchsia_bluetooth_bredr as bredr;
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::io::AsyncWriteExt;
@@ -869,16 +892,48 @@ mod tests {
         assert_matches!(s.start(), Err(ErrorCode::BadState));
         assert_matches!(s.suspend(), Err(ErrorCode::BadState));
 
-        let (remote, transport) = Channel::create();
+        let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let (client_end, mut direction_request_stream) =
+            create_request_stream::<bredr::AudioDirectionExtMarker>().unwrap();
+        let ext = bredr::Channel {
+            socket: Some(local),
+            channel_mode: Some(bredr::ChannelMode::Basic),
+            max_tx_sdu_size: Some(1004),
+            ext_direction: Some(client_end),
+            ..Decodable::new_empty()
+        };
+        let transport = Channel::try_from(ext).unwrap();
         assert_matches!(s.receive_channel(transport), Ok(false));
 
         // Should be able to start but not suspend now.
         assert_matches!(s.suspend(), Err(ErrorCode::BadState));
         assert_matches!(s.start(), Ok(()));
 
+        match exec.run_until_stalled(&mut direction_request_stream.next()) {
+            Poll::Ready(Some(Ok(bredr::AudioDirectionExtRequest::SetPriority {
+                priority,
+                responder,
+            }))) => {
+                assert_eq!(bredr::A2dpDirectionPriority::Sink, priority);
+                responder.send(&mut Ok(())).expect("response to send cleanly");
+            }
+            x => panic!("Expected a item to be ready on the request stream, got {:?}", x),
+        };
+
         // Are started, so we should be able to suspend but not start again here.
         assert_matches!(s.start(), Err(ErrorCode::BadState));
         assert_matches!(s.suspend(), Ok(()));
+
+        match exec.run_until_stalled(&mut direction_request_stream.next()) {
+            Poll::Ready(Some(Ok(bredr::AudioDirectionExtRequest::SetPriority {
+                priority,
+                responder,
+            }))) => {
+                assert_eq!(bredr::A2dpDirectionPriority::Normal, priority);
+                responder.send(&mut Ok(())).expect("response to send cleanly");
+            }
+            x => panic!("Expected a item to be ready on the request stream, got {:?}", x),
+        };
 
         // Now we're suspended, so we can start it again.
         assert_matches!(s.start(), Ok(()));

@@ -1095,7 +1095,8 @@ mod tests {
         match request {
             Poll::Ready(Some(Ok(ProfileRequest::Connect { peer_id, responder, .. }))) => {
                 assert_eq!(PeerId(1), peer_id.into());
-                responder.send(&mut Ok(transport.into())).expect("responder sends");
+                let channel = transport.try_into().unwrap();
+                responder.send(&mut Ok(channel)).expect("responder sends");
             }
             x => panic!("Should have sent a open l2cap request, but got {:?}", x),
         };
