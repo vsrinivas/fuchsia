@@ -163,6 +163,8 @@ use crate::wlan_phy::facade::WlanPhyFacade;
 use crate::wlan_policy::ap_facade::WlanApPolicyFacade;
 use crate::wlan_policy::facade::WlanPolicyFacade;
 
+// Wpan related includes
+use crate::wpan::facade::WpanFacade;
 /// Sl4f stores state for all facades and has access to information for all connected clients.
 ///
 /// To add support for a new Facade implementation, see the hashmap in `Sl4f::new`.
@@ -246,6 +248,7 @@ impl Sl4f {
                 "wlan_deprecated" => WlanDeprecatedConfigurationFacade::new()?,
                 "wlan_phy" => WlanPhyFacade::new()?,
                 "wlan_policy" => WlanPolicyFacade::new()?,
+                "wpan_facade" => WpanFacade::new(),
             )
         );
 

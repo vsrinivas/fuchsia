@@ -311,7 +311,7 @@ impl Driver for DummyDevice {
         use futures::future::ready;
         use futures::stream::pending;
         let initial = Ok(Identity {
-            raw_name: None,
+            raw_name: Some(b"ABC1234".to_vec()),
             xpanid: None,
             net_type: None,
             channel: None,

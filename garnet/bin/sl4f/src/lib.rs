@@ -52,3 +52,4 @@ pub mod wlan;
 pub mod wlan_deprecated;
 pub mod wlan_phy;
 pub mod wlan_policy;
+pub mod wpan;

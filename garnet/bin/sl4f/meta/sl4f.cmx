@@ -55,6 +55,7 @@
             "fuchsia.location.position.EmergencyProvider",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
+            "fuchsia.lowpan.device.Lookup",
             "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",
             "fuchsia.net.stack.Stack",

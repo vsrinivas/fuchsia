@@ -4,4 +4,5 @@
 
 pub mod common;
 pub mod error;
+pub mod lowpan_context;
 pub mod test;
