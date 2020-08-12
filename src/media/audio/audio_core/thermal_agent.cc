@@ -6,41 +6,84 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <set>
+#include <unordered_set>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 
 namespace media::audio {
 namespace {
 
-std::vector<std::string> ConfigsByState(const std::vector<ThermalConfig::State>& config_states,
-                                        const std::string& nominal_config,
-                                        const std::vector<uint32_t>& trip_points) {
-  std::vector<std::string> result;
-  // The number of states is one greater than the number of trip points.
-  result.reserve(trip_points.size() + 1);
+// Finds the nominal config string for the specified target. Returns no value if the specified
+// target could not be found.
+std::optional<std::string> FindNominalConfigForTarget(const std::string& target_name,
+                                                      const DeviceConfig& device_config) {
+  // For 'special' target names (not effect names), this method must return a string. An empty
+  // string is fine. The remainder of this method assumes the |target_name| references an effect.
 
-  // Push the nominal config as the config for state 0.
-  result.push_back(nominal_config);
+  const PipelineConfig::Effect* effect = device_config.FindEffect(target_name);
+  return effect ? std::optional(effect->effect_config) : std::nullopt;
+}
 
-  // Push the rest of the state configs. Configured states correspond to one or more merged states.
-  auto config_state_iter = config_states.begin();
-  for (auto trip_point : trip_points) {
-    // If there are no more config states, just copy the previous config.
-    if (config_state_iter != config_states.end()) {
-      auto& config_state = *config_state_iter;
+// Constructs a map {target_name: configs_by_thermal_state}, where configs_by_thermal_state
+// is a vector of configurations for the target indexed by thermal state.
+std::unordered_map<std::string, std::vector<std::string>> PopulateTargetConfigurations(
+    const ThermalConfig& thermal_config, const DeviceConfig& device_config) {
+  const auto& entries = thermal_config.entries();
+  const size_t num_thermal_states = entries.size() + 1;
+  std::unordered_map<std::string, std::vector<std::string>> result;
 
-      // If we haven't hit the trip point of the current config state, just copy the previous
-      // config.
-      if (config_state.trip_point() == trip_point) {
-        // We've reached the trip point of the current config state. Use its config.
-        result.push_back(config_state.config());
-        ++config_state_iter;
+  // "Bad" targets have no nominal configuration. We record them so the name of every such target
+  // can be logged only once.
+  std::unordered_set<std::string> bad_targets;
+
+  for (size_t i = 0; i < entries.size(); i++) {
+    const auto& entry = entries[i];
+
+    for (const auto& transition : entry.state_transitions()) {
+      const auto& target_name = transition.target_name();
+      if (bad_targets.find(target_name) != bad_targets.end()) {
         continue;
       }
-    }
 
-    result.push_back(result.back());
+      auto configs_it = result.find(target_name);
+
+      // This target isn't in target_configurations. If there's no corresponding nominal config,
+      // record it as a bad target and continue. Otherwise, initialize this target's entry in
+      // `result`.
+      if (configs_it == result.end()) {
+        auto nominal_config = FindNominalConfigForTarget(target_name, device_config);
+        if (!nominal_config.has_value()) {
+          bad_targets.insert(target_name);
+          FX_LOGS(ERROR) << "Thermal config references unknown target '" << target_name << "'.";
+          continue;
+        }
+
+        configs_it = result.insert({target_name, {}}).first;
+        auto& configs = configs_it->second;
+        configs.reserve(num_thermal_states);
+        configs.push_back(nominal_config.value());
+      }
+
+      // `transition` specifies that this target should change from its previous configuration at
+      // state `i` to `transition.config()` at state `i+1`. Copy the last element until entry `i`
+      // is populated, and then copy the new config into position `i+1`.
+      std::vector<std::string>& configs = configs_it->second;
+      for (size_t j = configs.size(); j < i + 1; j++) {
+        configs.push_back(configs.back());
+      }
+      configs.push_back(transition.config());
+    }
+  }
+
+  // Extend the configs for each target to the appropriate length -- any target not present in the
+  // final state transition will have missing elements.
+  for (auto& entry : result) {
+    auto& configs = entry.second;
+    if (configs.size() < num_thermal_states) {
+      for (size_t j = configs.size(); j < num_thermal_states + 1; j++) {
+        configs.push_back(configs.back());
+      }
+    }
   }
 
   return result;
@@ -91,24 +134,7 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
     return;
   }
 
-  std::set<uint32_t> trip_points_set;
-  for (auto& entry : thermal_config.entries()) {
-    for (auto& state : entry.states()) {
-      trip_points_set.insert(state.trip_point());
-    }
-  }
-
-  std::vector<uint32_t> trip_points(trip_points_set.begin(), trip_points_set.end());
-
-  for (auto& entry : thermal_config.entries()) {
-    auto nominal_config = FindNominalConfigForTarget(entry.target_name(), device_config);
-    if (nominal_config.has_value()) {
-      targets_.emplace_back(entry.target_name(),
-                            ConfigsByState(entry.states(), nominal_config.value(), trip_points));
-    } else {
-      FX_LOGS(ERROR) << "Thermal config references unknown target '" << entry.target_name() << "'.";
-    }
-  }
+  targets_ = PopulateTargetConfigurations(thermal_config, device_config);
 
   thermal_controller_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Connection to fuchsia.thermal.Controller failed: ";
@@ -116,12 +142,18 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
     thermal_controller_.Unbind();
   });
 
-  thermal_controller_->Subscribe(
+  std::vector<fuchsia::thermal::TripPoint> trip_points;
+  trip_points.reserve(thermal_config.entries().size());
+  for (const auto& entry : thermal_config.entries()) {
+    trip_points.push_back(entry.trip_point());
+  }
+
+  thermal_controller_->Subscribe2(
       binding_.NewBinding(), fuchsia::thermal::ActorType::AUDIO, std::move(trip_points),
-      [this](fuchsia::thermal::Controller_Subscribe_Result result) {
+      [this](fuchsia::thermal::Controller_Subscribe2_Result result) {
         if (result.is_err()) {
           FX_CHECK(result.err() != fuchsia::thermal::Error::INVALID_ARGUMENTS);
-          FX_LOGS(ERROR) << "fuchsia.thermal.Controller/Subscribe failed";
+          FX_LOGS(ERROR) << "fuchsia.thermal.Controller/Subscribe2 failed";
         }
 
         thermal_controller_.set_error_handler(nullptr);
@@ -131,11 +163,11 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
 
 void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callback) {
   if (current_state_ != state) {
-    for (auto& target : targets_) {
-      FX_CHECK(state < target.configs_by_state().size());
-      FX_CHECK(current_state_ < target.configs_by_state().size());
-      if (target.configs_by_state()[state] != target.configs_by_state()[current_state_]) {
-        set_config_callback_(target.name(), target.configs_by_state()[state]);
+    for (auto& [target_name, configs_by_state] : targets_) {
+      FX_CHECK(state < configs_by_state.size());
+      FX_CHECK(current_state_ < configs_by_state.size());
+      if (configs_by_state[state] != configs_by_state[current_state_]) {
+        set_config_callback_(target_name, configs_by_state[state]);
       }
     }
 
@@ -143,15 +175,6 @@ void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callb
   }
 
   callback();
-}
-
-std::optional<std::string> ThermalAgent::FindNominalConfigForTarget(
-    const std::string& target_name, const DeviceConfig& device_config) {
-  // For 'special' target names (not effect names), this method must return a string. An empty
-  // string is fine. The remainder of this method assumes the |target_name| references an effect.
-
-  const PipelineConfig::Effect* effect = device_config.FindEffect(target_name);
-  return effect ? std::optional(effect->effect_config) : std::nullopt;
 }
 
 }  // namespace media::audio

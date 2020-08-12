@@ -5,40 +5,48 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_THERMAL_CONFIG_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_THERMAL_CONFIG_H_
 
+#include <fuchsia/thermal/cpp/fidl.h>
+
 #include <vector>
 
 namespace media::audio {
 
+// Represents the thermal policy configuration found in an audio_core configuration file.
+//
+// ThermalConfig is conceptually of the form [Entry(TripPoint, [StateTransition])]. When the
+// outer list contains N entries, it specifies N+1 thermal states. Each Entry specifies
+// the transitions in effect states that occur when its TripPoint is activated.
 class ThermalConfig {
  public:
-  // A state in a thermal policy for one target.
-  class State {
-   public:
-    State(uint32_t trip_point, const char* config) : trip_point_(trip_point), config_(config) {}
+  using TripPoint = fuchsia::thermal::TripPoint;
 
-    uint32_t trip_point() const { return trip_point_; }
+  class StateTransition {
+   public:
+    StateTransition(const char* target_name, const char* config)
+        : target_name_(target_name), config_(config) {}
+
+    const std::string& target_name() const { return target_name_; }
     const std::string& config() const { return config_; }
 
    private:
-    uint32_t trip_point_;
+    std::string target_name_;
     std::string config_;
   };
 
-  // A thermal policy for one target.
   class Entry {
    public:
-    Entry(const char* target_name, std::vector<State> states)
-        : target_name_(target_name), states_(states) {}
+    Entry(const TripPoint& trip_point, std::vector<StateTransition> state_transitions)
+        : trip_point_(trip_point), state_transitions_(std::move(state_transitions)) {}
 
-    const std::string& target_name() const { return target_name_; }
-    const std::vector<State>& states() const { return states_; }
+    const TripPoint& trip_point() const { return trip_point_; }
+    const std::vector<StateTransition>& state_transitions() const { return state_transitions_; }
 
    private:
-    std::string target_name_;
-    std::vector<State> states_;
+    TripPoint trip_point_;
+    std::vector<StateTransition> state_transitions_;
   };
 
-  ThermalConfig(std::vector<Entry> entries) : entries_(std::move(entries)) {}
+  explicit ThermalConfig(std::vector<Entry> entries) : entries_(std::move(entries)) {}
 
   const std::vector<Entry>& entries() const { return entries_; }
 

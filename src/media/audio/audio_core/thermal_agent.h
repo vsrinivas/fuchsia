@@ -8,6 +8,7 @@
 #include <fuchsia/thermal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include <unordered_map>
 #include <vector>
 
 #include "src/media/audio/audio_core/context.h"
@@ -20,20 +21,6 @@ class ThermalAgent : public fuchsia::thermal::Actor {
  public:
   static std::unique_ptr<ThermalAgent> CreateAndServe(Context* context);
 
-  // Merged thermal policy for one target.
-  class Target {
-   public:
-    Target(const std::string& name, std::vector<std::string> configs_by_state)
-        : name_(name), configs_by_state_(configs_by_state) {}
-
-    const std::string& name() const { return name_; }
-    const std::vector<std::string>& configs_by_state() const { return configs_by_state_; }
-
-   private:
-    std::string name_;
-    std::vector<std::string> configs_by_state_;
-  };
-
   using SetConfigCallback =
       fit::function<void(const std::string& target_name, const std::string& config)>;
 
@@ -45,14 +32,13 @@ class ThermalAgent : public fuchsia::thermal::Actor {
   // fuchsia::thermal::Agent implementation.
   void SetThermalState(uint32_t state, SetThermalStateCallback callback) override;
 
-  // Finds the nominal config string for the specified target. Returns no value if the specified
-  // target could not be found.
-  std::optional<std::string> FindNominalConfigForTarget(const std::string& target_name,
-                                                        const DeviceConfig& device_config);
-
   fuchsia::thermal::ControllerPtr thermal_controller_;
   fidl::Binding<fuchsia::thermal::Actor> binding_;
-  std::vector<Target> targets_;
+
+  // A map from target name to vector of effect configurations, where the vector maps each thermal
+  // state index to the configuration the targeted effect should be in for that state.
+  std::unordered_map<std::string, std::vector<std::string>> targets_;
+
   uint32_t current_state_ = 0;
   SetConfigCallback set_config_callback_;
 };
