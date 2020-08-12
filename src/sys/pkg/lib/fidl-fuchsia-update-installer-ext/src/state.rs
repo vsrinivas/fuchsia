@@ -14,61 +14,20 @@ use {
 };
 
 /// The state of an update installation attempt.
-#[derive(Arbitrary, Clone, Debug, Serialize, PartialEq)]
+#[derive(Arbitrary, Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "id", rename_all = "snake_case")]
 #[allow(missing_docs)]
 pub enum State {
     Prepare,
-
-    #[proptest(strategy = "arb_state_fetch()")]
-    Fetch {
-        info: UpdateInfo,
-        progress: Progress,
-    },
-
-    #[proptest(strategy = "arb_state_stage()")]
-    Stage {
-        info: UpdateInfo,
-        progress: Progress,
-    },
-
-    #[proptest(strategy = "arb_state_wait_to_reboot()")]
-    WaitToReboot {
-        info: UpdateInfo,
-        progress: Progress,
-    },
-
-    #[proptest(strategy = "arb_state_reboot()")]
-    Reboot {
-        info: UpdateInfo,
-        progress: Progress,
-    },
-
-    #[proptest(strategy = "arb_state_defer_reboot()")]
-    DeferReboot {
-        info: UpdateInfo,
-        progress: Progress,
-    },
-
-    #[proptest(strategy = "arb_state_complete()")]
-    Complete {
-        info: UpdateInfo,
-        progress: Progress,
-    },
-
+    Fetch(UpdateInfoAndProgress),
+    Stage(UpdateInfoAndProgress),
+    WaitToReboot(UpdateInfoAndProgress),
+    Reboot(UpdateInfoAndProgress),
+    DeferReboot(UpdateInfoAndProgress),
+    Complete(UpdateInfoAndProgress),
     FailPrepare,
-
-    #[proptest(strategy = "arb_state_fail_fetch()")]
-    FailFetch {
-        info: UpdateInfo,
-        progress: Progress,
-    },
-
-    #[proptest(strategy = "arb_state_fail_stage()")]
-    FailStage {
-        info: UpdateInfo,
-        progress: Progress,
-    },
+    FailFetch(UpdateInfoAndProgress),
+    FailStage(UpdateInfoAndProgress),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -91,13 +50,6 @@ pub struct UpdateInfo {
     download_size: u64,
 }
 
-impl UpdateInfo {
-    fn write_to_inspect(&self, node: &inspect::Node) {
-        let UpdateInfo { download_size } = self;
-        node.record_uint("download_size", *download_size)
-    }
-}
-
 /// Builder of UpdateInfo
 #[derive(Clone, Debug)]
 pub struct UpdateInfoBuilder;
@@ -118,14 +70,6 @@ pub struct Progress {
     bytes_downloaded: u64,
 }
 
-impl Progress {
-    fn write_to_inspect(&self, node: &inspect::Node) {
-        let Progress { fraction_completed, bytes_downloaded } = self;
-        node.record_double("fraction_completed", *fraction_completed as f64);
-        node.record_uint("bytes_downloaded", *bytes_downloaded);
-    }
-}
-
 /// Builder of Progress.
 #[derive(Clone, Debug)]
 pub struct ProgressBuilder;
@@ -143,19 +87,45 @@ pub struct ProgressBuilderWithFractionAndBytes {
     bytes_downloaded: u64,
 }
 
+/// An UpdateInfo and Progress that are guaranteed to be consistent with each other.
+///
+/// Specifically, `progress.bytes_downloaded <= info.download_size`.
+#[derive(Clone, Debug, Serialize, PartialEq, PartialOrd)]
+pub struct UpdateInfoAndProgress {
+    info: UpdateInfo,
+    progress: Progress,
+}
+
+/// Builder of UpdateInfoAndProgress.
+#[derive(Clone, Debug)]
+pub struct UpdateInfoAndProgressBuilder;
+
+/// Builder of UpdateInfoAndProgress, with a known UpdateInfo field.
+#[derive(Clone, Debug)]
+pub struct UpdateInfoAndProgressBuilderWithInfo {
+    info: UpdateInfo,
+}
+
+/// Builder of UpdateInfoAndProgress, with a known UpdateInfo and Progress field.
+#[derive(Clone, Debug)]
+pub struct UpdateInfoAndProgressBuilderWithInfoAndProgress {
+    info: UpdateInfo,
+    progress: Progress,
+}
+
 impl State {
     fn id(&self) -> StateId {
         match self {
             State::Prepare => StateId::Prepare,
-            State::Fetch { .. } => StateId::Fetch,
-            State::Stage { .. } => StateId::Stage,
-            State::WaitToReboot { .. } => StateId::WaitToReboot,
-            State::Reboot { .. } => StateId::Reboot,
-            State::DeferReboot { .. } => StateId::DeferReboot,
-            State::Complete { .. } => StateId::Complete,
+            State::Fetch(_) => StateId::Fetch,
+            State::Stage(_) => StateId::Stage,
+            State::WaitToReboot(_) => StateId::WaitToReboot,
+            State::Reboot(_) => StateId::Reboot,
+            State::DeferReboot(_) => StateId::DeferReboot,
+            State::Complete(_) => StateId::Complete,
             State::FailPrepare => StateId::FailPrepare,
-            State::FailFetch { .. } => StateId::FailFetch,
-            State::FailStage { .. } => StateId::FailStage,
+            State::FailFetch(_) => StateId::FailFetch,
+            State::FailStage(_) => StateId::FailStage,
         }
     }
 
@@ -181,31 +151,18 @@ impl State {
         self.is_success() || self.is_failure()
     }
 
-    fn write_info_and_progress_to_inspect(
-        info: &UpdateInfo,
-        progress: &Progress,
-        node: &inspect::Node,
-    ) {
-        node.record_child("info", |n| {
-            info.write_to_inspect(n);
-        });
-        node.record_child("progress", |n| {
-            progress.write_to_inspect(n);
-        });
-    }
-
     fn name(&self) -> &'static str {
         match self {
             State::Prepare => "prepare",
-            State::Fetch { .. } => "fetch",
-            State::Stage { .. } => "stage",
-            State::WaitToReboot { .. } => "wait_to_reboot",
-            State::Reboot { .. } => "reboot",
-            State::DeferReboot { .. } => "defer_reboot",
-            State::Complete { .. } => "complete",
+            State::Fetch(_) => "fetch",
+            State::Stage(_) => "stage",
+            State::WaitToReboot(_) => "wait_to_reboot",
+            State::Reboot(_) => "reboot",
+            State::DeferReboot(_) => "defer_reboot",
+            State::Complete(_) => "complete",
             State::FailPrepare => "fail_prepare",
-            State::FailFetch { .. } => "fail_fetch",
-            State::FailStage { .. } => "fail_stage",
+            State::FailFetch(_) => "fail_fetch",
+            State::FailStage(_) => "fail_stage",
         }
     }
 
@@ -216,15 +173,15 @@ impl State {
 
         match self {
             Prepare | FailPrepare => {}
-            Fetch { info, progress }
-            | Stage { info, progress }
-            | WaitToReboot { info, progress }
-            | Reboot { info, progress }
-            | DeferReboot { info, progress }
-            | Complete { info, progress }
-            | FailFetch { info, progress }
-            | FailStage { info, progress } => {
-                State::write_info_and_progress_to_inspect(info, progress, node);
+            Fetch(info_progress)
+            | Stage(info_progress)
+            | WaitToReboot(info_progress)
+            | Reboot(info_progress)
+            | DeferReboot(info_progress)
+            | Complete(info_progress)
+            | FailFetch(info_progress)
+            | FailStage(info_progress) => {
+                info_progress.write_to_inspect(node);
             }
         }
     }
@@ -239,6 +196,11 @@ impl UpdateInfo {
     /// Gets the download_size field.
     pub fn download_size(&self) -> u64 {
         self.download_size
+    }
+
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        let UpdateInfo { download_size } = self;
+        node.record_uint("download_size", *download_size)
     }
 }
 
@@ -283,6 +245,12 @@ impl Progress {
     pub fn bytes_downloaded(&self) -> u64 {
         self.bytes_downloaded
     }
+
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        let Progress { fraction_completed, bytes_downloaded } = self;
+        node.record_double("fraction_completed", *fraction_completed as f64);
+        node.record_uint("bytes_downloaded", *bytes_downloaded);
+    }
 }
 
 impl ProgressBuilder {
@@ -311,7 +279,83 @@ impl ProgressBuilderWithFractionAndBytes {
     }
 }
 
-impl<'de> Deserialize<'de> for State {
+impl UpdateInfoAndProgress {
+    /// Starts building an instance of UpdateInfoAndProgress.
+    pub fn builder() -> UpdateInfoAndProgressBuilder {
+        UpdateInfoAndProgressBuilder
+    }
+
+    /// Constructs an UpdateInfoAndProgress from the 2 fields, ensuring that the 2 structs are
+    /// consistent with each other, returning an error if they are not.
+    pub fn new(
+        info: UpdateInfo,
+        progress: Progress,
+    ) -> Result<Self, BytesFetchedExceedsDownloadSize> {
+        if progress.bytes_downloaded > info.download_size {
+            return Err(BytesFetchedExceedsDownloadSize);
+        }
+
+        Ok(Self { info, progress })
+    }
+
+    /// Constructs an UpdateInfoAndProgress from an UpdateInfo, setting the progress fields to be
+    /// 100% done with all bytes downloaded.
+    pub fn done(info: UpdateInfo) -> Self {
+        Self { progress: Progress::done(&info), info }
+    }
+
+    /// Returns the info field.
+    pub fn info(&self) -> UpdateInfo {
+        self.info
+    }
+
+    /// Returns the progress field.
+    pub fn progress(&self) -> &Progress {
+        &self.progress
+    }
+
+    fn write_to_inspect(&self, node: &inspect::Node) {
+        node.record_child("info", |n| {
+            self.info.write_to_inspect(n);
+        });
+        node.record_child("progress", |n| {
+            self.progress.write_to_inspect(n);
+        });
+    }
+}
+
+impl UpdateInfoAndProgressBuilder {
+    /// Sets the UpdateInfo field.
+    pub fn info(self, info: UpdateInfo) -> UpdateInfoAndProgressBuilderWithInfo {
+        UpdateInfoAndProgressBuilderWithInfo { info }
+    }
+}
+
+impl UpdateInfoAndProgressBuilderWithInfo {
+    /// Sets the Progress field, clamping `progress.bytes_downloaded` to be `<=
+    /// info.download_size`. Users of this API should independently ensure that this invariant is
+    /// not violated.
+    pub fn progress(
+        self,
+        mut progress: Progress,
+    ) -> UpdateInfoAndProgressBuilderWithInfoAndProgress {
+        if progress.bytes_downloaded > self.info.download_size {
+            progress.bytes_downloaded = self.info.download_size;
+        }
+
+        UpdateInfoAndProgressBuilderWithInfoAndProgress { info: self.info, progress }
+    }
+}
+
+impl UpdateInfoAndProgressBuilderWithInfoAndProgress {
+    /// Builds the UpdateInfoAndProgress instance.
+    pub fn build(self) -> UpdateInfoAndProgress {
+        let Self { info, progress } = self;
+        UpdateInfoAndProgress { info, progress }
+    }
+}
+
+impl<'de> Deserialize<'de> for UpdateInfoAndProgress {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -319,62 +363,15 @@ impl<'de> Deserialize<'de> for State {
         use serde::de::Error;
 
         #[derive(Debug, Deserialize)]
-        #[serde(tag = "id", rename_all = "snake_case")]
-        enum DeState {
-            Prepare,
-            Fetch { info: UpdateInfo, progress: Progress },
-            Stage { info: UpdateInfo, progress: Progress },
-            WaitToReboot { info: UpdateInfo, progress: Progress },
-            Reboot { info: UpdateInfo, progress: Progress },
-            DeferReboot { info: UpdateInfo, progress: Progress },
-            Complete { info: UpdateInfo, progress: Progress },
-            FailPrepare,
-            FailFetch { info: UpdateInfo, progress: Progress },
-            FailStage { info: UpdateInfo, progress: Progress },
+        pub struct DeUpdateInfoAndProgress {
+            info: UpdateInfo,
+            progress: Progress,
         }
 
-        let state = DeState::deserialize(deserializer)?;
+        let info_progress = DeUpdateInfoAndProgress::deserialize(deserializer)?;
 
-        let check_fields = |info, progress| {
-            check_info_progress(info, progress).map_err(|e| D::Error::custom(e.to_string()))
-        };
-
-        Ok(match state {
-            DeState::Prepare => State::Prepare,
-            DeState::Fetch { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::Fetch { info, progress }
-            }
-            DeState::Stage { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::Stage { info, progress }
-            }
-            DeState::WaitToReboot { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::WaitToReboot { info, progress }
-            }
-            DeState::Reboot { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::Reboot { info, progress }
-            }
-            DeState::DeferReboot { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::DeferReboot { info, progress }
-            }
-            DeState::Complete { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::Complete { info, progress }
-            }
-            DeState::FailPrepare => State::FailPrepare,
-            DeState::FailFetch { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::FailFetch { info, progress }
-            }
-            DeState::FailStage { info, progress } => {
-                let () = check_fields(&info, &progress)?;
-                State::FailStage { info, progress }
-            }
-        })
+        UpdateInfoAndProgress::new(info_progress.info, info_progress.progress)
+            .map_err(|e| D::Error::custom(e.to_string()))
     }
 }
 
@@ -402,17 +399,6 @@ impl<'de> Deserialize<'de> for Progress {
 #[derive(Debug, Error, PartialEq, Eq)]
 #[error("more bytes were fetched than should have been fetched")]
 pub struct BytesFetchedExceedsDownloadSize;
-
-fn check_info_progress(
-    info: &UpdateInfo,
-    progress: &Progress,
-) -> Result<(), BytesFetchedExceedsDownloadSize> {
-    if progress.bytes_downloaded > info.download_size {
-        return Err(BytesFetchedExceedsDownloadSize);
-    }
-
-    Ok(())
-}
 
 /// An error encountered while decoding a [fidl_fuchsia_update_installer::State]
 /// into a [State].
@@ -444,43 +430,55 @@ impl From<State> for fidl::State {
     fn from(state: State) -> Self {
         match state {
             State::Prepare => fidl::State::Prepare(fidl::PrepareData {}),
-            State::Fetch { info, progress } => fidl::State::Fetch(fidl::FetchData {
-                info: Some(info.into()),
-                progress: Some(progress.into()),
-            }),
-            State::Stage { info, progress } => fidl::State::Stage(fidl::StageData {
-                info: Some(info.into()),
-                progress: Some(progress.into()),
-            }),
-            State::WaitToReboot { info, progress } => {
+            State::Fetch(UpdateInfoAndProgress { info, progress }) => {
+                fidl::State::Fetch(fidl::FetchData {
+                    info: Some(info.into()),
+                    progress: Some(progress.into()),
+                })
+            }
+            State::Stage(UpdateInfoAndProgress { info, progress }) => {
+                fidl::State::Stage(fidl::StageData {
+                    info: Some(info.into()),
+                    progress: Some(progress.into()),
+                })
+            }
+            State::WaitToReboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::WaitToReboot(fidl::WaitToRebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
                 })
             }
-            State::Reboot { info, progress } => fidl::State::Reboot(fidl::RebootData {
-                info: Some(info.into()),
-                progress: Some(progress.into()),
-            }),
-            State::DeferReboot { info, progress } => {
+            State::Reboot(UpdateInfoAndProgress { info, progress }) => {
+                fidl::State::Reboot(fidl::RebootData {
+                    info: Some(info.into()),
+                    progress: Some(progress.into()),
+                })
+            }
+            State::DeferReboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::DeferReboot(fidl::DeferRebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
                 })
             }
-            State::Complete { info, progress } => fidl::State::Complete(fidl::CompleteData {
-                info: Some(info.into()),
-                progress: Some(progress.into()),
-            }),
+            State::Complete(UpdateInfoAndProgress { info, progress }) => {
+                fidl::State::Complete(fidl::CompleteData {
+                    info: Some(info.into()),
+                    progress: Some(progress.into()),
+                })
+            }
             State::FailPrepare => fidl::State::FailPrepare(fidl::FailPrepareData {}),
-            State::FailFetch { info, progress } => fidl::State::FailFetch(fidl::FailFetchData {
-                info: Some(info.into()),
-                progress: Some(progress.into()),
-            }),
-            State::FailStage { info, progress } => fidl::State::FailStage(fidl::FailStageData {
-                info: Some(info.into()),
-                progress: Some(progress.into()),
-            }),
+            State::FailFetch(UpdateInfoAndProgress { info, progress }) => {
+                fidl::State::FailFetch(fidl::FailFetchData {
+                    info: Some(info.into()),
+                    progress: Some(progress.into()),
+                })
+            }
+            State::FailStage(UpdateInfoAndProgress { info, progress }) => {
+                fidl::State::FailStage(fidl::FailStageData {
+                    info: Some(info.into()),
+                    progress: Some(progress.into()),
+                })
+            }
         }
     }
 }
@@ -492,7 +490,7 @@ impl TryFrom<fidl::State> for State {
         fn decode_info_progress(
             info: Option<fidl::UpdateInfo>,
             progress: Option<fidl::InstallationProgress>,
-        ) -> Result<(UpdateInfo, Progress), DecodeStateError> {
+        ) -> Result<UpdateInfoAndProgress, DecodeStateError> {
             let info: UpdateInfo = info
                 .ok_or(DecodeStateError::MissingField(RequiredStateField::Info))?
                 .try_into()
@@ -502,46 +500,36 @@ impl TryFrom<fidl::State> for State {
                 .try_into()
                 .map_err(DecodeStateError::DecodeProgress)?;
 
-            let () = check_info_progress(&info, &progress)
-                .map_err(DecodeStateError::InconsistentUpdateInfoAndProgress)?;
-
-            Ok((info, progress))
+            UpdateInfoAndProgress::new(info, progress)
+                .map_err(DecodeStateError::InconsistentUpdateInfoAndProgress)
         }
 
         Ok(match state {
             fidl::State::Prepare(fidl::PrepareData {}) => State::Prepare,
             fidl::State::Fetch(fidl::FetchData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::Fetch { info, progress }
+                State::Fetch(decode_info_progress(info, progress)?)
             }
             fidl::State::Stage(fidl::StageData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::Stage { info, progress }
+                State::Stage(decode_info_progress(info, progress)?)
             }
             fidl::State::WaitToReboot(fidl::WaitToRebootData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::WaitToReboot { info, progress }
+                State::WaitToReboot(decode_info_progress(info, progress)?)
             }
             fidl::State::Reboot(fidl::RebootData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::Reboot { info, progress }
+                State::Reboot(decode_info_progress(info, progress)?)
             }
             fidl::State::DeferReboot(fidl::DeferRebootData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::DeferReboot { info, progress }
+                State::DeferReboot(decode_info_progress(info, progress)?)
             }
             fidl::State::Complete(fidl::CompleteData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::Complete { info, progress }
+                State::Complete(decode_info_progress(info, progress)?)
             }
             fidl::State::FailPrepare(fidl::FailPrepareData {}) => State::FailPrepare,
             fidl::State::FailFetch(fidl::FailFetchData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::FailFetch { info, progress }
+                State::FailFetch(decode_info_progress(info, progress)?)
             }
             fidl::State::FailStage(fidl::FailStageData { info, progress }) => {
-                let (info, progress) = decode_info_progress(info, progress)?;
-                State::FailStage { info, progress }
+                State::FailStage(decode_info_progress(info, progress)?)
             }
         })
     }
@@ -624,6 +612,15 @@ impl TryFrom<fidl::InstallationProgress> for Progress {
     }
 }
 
+impl Arbitrary for UpdateInfoAndProgress {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
+        arb_info_and_progress().prop_map(|(info, progress)| Self { info, progress }).boxed()
+    }
+}
+
 /// Returns a strategy generating and UpdateInfo and Progress such that the Progress does not
 /// exceed the bounds of the UpdateInfo.
 fn arb_info_and_progress() -> impl Strategy<Value = (UpdateInfo, Progress)> {
@@ -642,31 +639,6 @@ fn arb_info_and_progress() -> impl Strategy<Value = (UpdateInfo, Progress)> {
     }
 
     any::<UpdateInfo>().prop_flat_map(|info| (Just(info), arb_progress_for_info(info)))
-}
-
-fn arb_state_fetch() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::Fetch { info, progress })
-}
-fn arb_state_stage() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::Stage { info, progress })
-}
-fn arb_state_wait_to_reboot() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::WaitToReboot { info, progress })
-}
-fn arb_state_reboot() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::Reboot { info, progress })
-}
-fn arb_state_defer_reboot() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::DeferReboot { info, progress })
-}
-fn arb_state_complete() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::Complete { info, progress })
-}
-fn arb_state_fail_fetch() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::FailFetch { info, progress })
-}
-fn arb_state_fail_stage() -> impl Strategy<Value = State> {
-    arb_info_and_progress().prop_map(|(info, progress)| State::Stage { info, progress })
 }
 
 #[cfg(test)]
@@ -721,6 +693,17 @@ mod tests {
         }
 
         #[test]
+        fn update_info_and_progress_builder_roundtrips(info_progress: UpdateInfoAndProgress) {
+            prop_assert_eq!(
+                UpdateInfoAndProgress::builder()
+                    .info(info_progress.info)
+                    .progress(info_progress.progress.clone())
+                    .build(),
+                info_progress
+            );
+        }
+
+        #[test]
         fn update_info_roundtrips_through_fidl(info: UpdateInfo) {
             let as_fidl: fidl::UpdateInfo = info.clone().into();
             prop_assert_eq!(as_fidl.try_into(), Ok(info));
@@ -730,6 +713,37 @@ mod tests {
         fn progress_roundtrips_through_fidl(progress: Progress) {
             let as_fidl: fidl::InstallationProgress = progress.clone().into();
             prop_assert_eq!(as_fidl.try_into(), Ok(progress));
+        }
+
+        #[test]
+        fn update_info_and_progress_builder_produces_valid_instances(
+            info: UpdateInfo,
+            progress: Progress
+        ) {
+            let info_progress = UpdateInfoAndProgress::builder()
+                .info(info)
+                .progress(progress)
+                .build();
+
+            prop_assert_eq!(
+                UpdateInfoAndProgress::new(info_progress.info.clone(), info_progress.progress.clone()),
+                Ok(info_progress)
+            );
+        }
+
+        #[test]
+        fn update_info_and_progress_new_rejects_too_many_bytes(
+            (a, b) in a_lt_b(),
+            mut info: UpdateInfo,
+            mut progress: Progress
+        ) {
+            info.download_size = a;
+            progress.bytes_downloaded = b;
+
+            prop_assert_eq!(
+                UpdateInfoAndProgress::new(info, progress),
+                Err(BytesFetchedExceedsDownloadSize)
+            );
         }
 
         #[test]
@@ -807,10 +821,10 @@ mod tests {
 
     #[test]
     fn state_populates_inspect() {
-        let state = State::Reboot {
+        let state = State::Reboot(UpdateInfoAndProgress {
             info: UpdateInfo { download_size: 4096 },
             progress: Progress { bytes_downloaded: 2048, fraction_completed: 0.5 },
-        };
+        });
         let inspector = Inspector::new();
         state.write_to_inspect(&inspector.root());
         assert_inspect_tree! {
@@ -850,10 +864,10 @@ mod tests {
                 },
             }))
             .unwrap(),
-            State::Reboot {
+            State::Reboot(UpdateInfoAndProgress {
                 info: UpdateInfo { download_size: 100 },
                 progress: Progress { bytes_downloaded: 100, fraction_completed: 1.0 },
-            }
+            })
         );
     }
 
@@ -891,6 +905,20 @@ mod tests {
         assert_eq!(
             serde_json::from_value::<Progress>(negative_progress).unwrap(),
             Progress { bytes_downloaded: 0, fraction_completed: 0.0 }
+        );
+    }
+
+    #[test]
+    fn update_info_and_progress_builder_clamps_bytes_downloaded_to_download_size() {
+        assert_eq!(
+            UpdateInfoAndProgress::builder()
+                .info(UpdateInfo { download_size: 100 })
+                .progress(Progress { bytes_downloaded: 200, fraction_completed: 1.0 })
+                .build(),
+            UpdateInfoAndProgress {
+                info: UpdateInfo { download_size: 100 },
+                progress: Progress { bytes_downloaded: 100, fraction_completed: 1.0 },
+            }
         );
     }
 }

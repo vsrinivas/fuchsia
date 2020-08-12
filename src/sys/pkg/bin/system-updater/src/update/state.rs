@@ -7,7 +7,7 @@
 
 use {
     async_generator::Yield,
-    fidl_fuchsia_update_installer_ext::{Progress, State, UpdateInfo},
+    fidl_fuchsia_update_installer_ext::{Progress, State, UpdateInfo, UpdateInfoAndProgress},
 };
 
 /// Tracks a numeric goal and the current progress towards that goal, ensuring progress can only go
@@ -64,7 +64,10 @@ impl Prepare {
         info: UpdateInfo,
         progress_goal: u64,
     ) -> Fetch {
-        co.yield_(State::Fetch { info, progress: Progress::none() }).await;
+        co.yield_(State::Fetch(
+            UpdateInfoAndProgress::builder().info(info).progress(Progress::none()).build(),
+        ))
+        .await;
 
         Fetch {
             bytes: ProgressTracker::new(info.download_size()),
@@ -97,24 +100,28 @@ impl Fetch {
             .build()
     }
 
+    fn info_progress(&self) -> UpdateInfoAndProgress {
+        UpdateInfoAndProgress::builder().info(self.info()).progress(self.progress()).build()
+    }
+
     /// Increment the progress by `n` and emit a status update.
     pub async fn add_progress(&mut self, co: &mut Yield<State>, n: u64) {
         self.progress.add(n);
-        co.yield_(State::Fetch { info: self.info(), progress: self.progress() }).await;
+        co.yield_(State::Fetch(self.info_progress())).await;
     }
 
     /// Transition to the Stage state.
     pub async fn enter_stage(self, co: &mut Yield<State>) -> Stage {
         debug_assert!(self.bytes.done());
 
-        co.yield_(State::Stage { info: self.info(), progress: self.progress() }).await;
+        co.yield_(State::Stage(self.info_progress())).await;
 
         Stage { info: self.info(), progress: self.progress }
     }
 
     /// Transition to the FailFetch terminal state.
     pub async fn fail(self, co: &mut Yield<State>) {
-        co.yield_(State::FailFetch { info: self.info(), progress: self.progress() }).await;
+        co.yield_(State::FailFetch(self.info_progress())).await;
     }
 }
 
@@ -133,25 +140,28 @@ impl Stage {
             .build()
     }
 
+    fn info_progress(&self) -> UpdateInfoAndProgress {
+        UpdateInfoAndProgress::builder().info(self.info).progress(self.progress()).build()
+    }
+
     /// Increment the progress by `n` and emit a status update.
     pub async fn add_progress(&mut self, co: &mut Yield<State>, n: u64) {
         self.progress.add(n);
-        co.yield_(State::Stage { info: self.info, progress: self.progress() }).await;
+        co.yield_(State::Stage(self.info_progress())).await;
     }
 
     /// Transition to the WaitToReboot state.
     pub async fn enter_wait_to_reboot(self, co: &mut Yield<State>) -> WaitToReboot {
         debug_assert!(self.progress.done());
 
-        co.yield_(State::WaitToReboot { info: self.info, progress: Progress::done(&self.info) })
-            .await;
+        co.yield_(State::WaitToReboot(UpdateInfoAndProgress::done(self.info))).await;
 
         WaitToReboot { info: self.info }
     }
 
     /// Transition to the FailStage terminal state.
     pub async fn fail(self, co: &mut Yield<State>) {
-        co.yield_(State::FailStage { info: self.info, progress: self.progress() }).await;
+        co.yield_(State::FailStage(self.info_progress())).await;
     }
 }
 
@@ -164,13 +174,13 @@ pub struct WaitToReboot {
 impl WaitToReboot {
     /// Transition to the Reboot terminal state.
     pub async fn enter_reboot(self, co: &mut Yield<State>) {
-        let state = State::Reboot { info: self.info, progress: Progress::done(&self.info) };
+        let state = State::Reboot(UpdateInfoAndProgress::done(self.info));
         co.yield_(state).await;
     }
 
     /// Transition to the DeferReboot terminal state.
     pub async fn enter_defer_reboot(self, co: &mut Yield<State>) {
-        let state = State::DeferReboot { info: self.info, progress: Progress::done(&self.info) };
+        let state = State::DeferReboot(UpdateInfoAndProgress::done(self.info));
         co.yield_(state).await;
     }
 }
@@ -244,55 +254,55 @@ mod tests {
             .await,
             vec![
                 State::Prepare,
-                State::Fetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.0)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Fetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.25)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Fetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.5)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Stage {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.5)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Stage {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(1.0)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::WaitToReboot {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(1.0)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Reboot {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(1.0)
-                        .bytes_downloaded(0)
-                        .build()
-                },
+                State::Fetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Fetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Fetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Stage(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Stage(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::WaitToReboot(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Reboot(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
             ]
         );
 
@@ -301,10 +311,13 @@ mod tests {
                 WaitToReboot { info }.enter_defer_reboot(&mut co).await;
             })
             .await,
-            vec![State::DeferReboot {
-                info,
-                progress: Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build()
-            },]
+            vec![State::DeferReboot(
+                UpdateInfoAndProgress::new(
+                    info,
+                    Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build()
+                )
+                .unwrap()
+            ),]
         );
     }
 
@@ -336,27 +349,27 @@ mod tests {
             .await,
             vec![
                 State::Prepare,
-                State::Fetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.0)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Fetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.25)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::FailFetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.25)
-                        .bytes_downloaded(0)
-                        .build()
-                },
+                State::Fetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Fetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::FailFetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
             ]
         );
     }
@@ -379,41 +392,41 @@ mod tests {
             .await,
             vec![
                 State::Prepare,
-                State::Fetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.0)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Fetch {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.5)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Stage {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.5)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::Stage {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.75)
-                        .bytes_downloaded(0)
-                        .build()
-                },
-                State::FailStage {
-                    info,
-                    progress: Progress::builder()
-                        .fraction_completed(0.75)
-                        .bytes_downloaded(0)
-                        .build()
-                },
+                State::Fetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Fetch(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Stage(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::Stage(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
+                State::FailStage(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
             ]
         );
     }

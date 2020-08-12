@@ -8,7 +8,7 @@
 //! `fidl_fuchsia_update_installer` bindings.
 
 pub mod state;
-pub use state::{Progress, State, UpdateInfo};
+pub use state::{Progress, State, UpdateInfo, UpdateInfoAndProgress};
 
 pub mod options;
 pub use options::{Initiator, Options};

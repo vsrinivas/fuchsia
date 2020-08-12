@@ -377,7 +377,7 @@ mod tests {
         super::{version::mock_pkgfs_system, *},
         crate::update::environment::NamespaceBuildInfo,
         anyhow::anyhow,
-        fidl_fuchsia_update_installer_ext::{Initiator, Progress, UpdateInfo},
+        fidl_fuchsia_update_installer_ext::{Initiator, UpdateInfo, UpdateInfoAndProgress},
         fuchsia_inspect::{assert_inspect_tree, Inspector},
         mock_paver::MockPaverServiceBuilder,
         pretty_assertions::assert_eq,
@@ -400,9 +400,8 @@ mod tests {
 
     fn make_reboot_state() -> State {
         let info = UpdateInfo::builder().download_size(42).build();
-        let progress = Progress::done(&info);
 
-        State::Reboot { info, progress }
+        State::Reboot(UpdateInfoAndProgress::done(info))
     }
 
     fn make_reader(res: &str) -> impl Future<Output = Result<Vec<u8>, Error>> {
