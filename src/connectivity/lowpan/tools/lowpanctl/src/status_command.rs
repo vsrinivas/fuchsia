@@ -63,8 +63,6 @@ async fn print_device_status(
 ) -> Result<(), Error> {
     println!("{}", name);
 
-    // TODO: Add support for state, etc., once the observer support is working.
-
     if let Some(net_types) = device.get_supported_network_types().await.ok() {
         for (i, net_type) in net_types.iter().enumerate() {
             if i == 0 {
@@ -85,17 +83,28 @@ async fn print_device_status(
         println!("\tstate: {:?}", x);
     }
 
-    if let Some(x) = device_state.role.as_ref() {
-        println!("\trole: {:?}", x);
-    }
-
     match device_state.connectivity_state {
         Some(ConnectivityState::Ready)
         | Some(ConnectivityState::Attaching)
         | Some(ConnectivityState::Attached)
         | Some(ConnectivityState::Isolated) => {
             let identity = device_extra.watch_identity().await?;
-            println!("\tidentity: {:?}", identity);
+            if let Some(x) = identity.raw_name {
+                match std::str::from_utf8(&x) {
+                    Ok(x) => println!("\tnetwork_name: {:?}", x),
+                    Err(e) => println!("\tnetwork_name: {} ({:?})", hex::encode(&x), e),
+                }
+            }
+            if let Some(x) = identity.xpanid {
+                println!("\txpanid: {:?}", x);
+            }
+            if let Some(x) = identity.panid {
+                println!("\tpanid: {:?}", x);
+            }
+
+            if let Some(x) = device_state.role.as_ref() {
+                println!("\trole: {:?}", x);
+            }
         }
 
         _ => (),
