@@ -83,7 +83,10 @@ impl IntlController {
     }
 
     async fn set(&self, info: IntlInfo) -> SettingHandlerResult {
-        self.validate_intl_info(info.clone())?;
+        if let Err(err) = self.validate_intl_info(info.clone()) {
+            fx_log_err!("Invalid IntlInfo provided: {:?}", err);
+            return Err(err);
+        }
 
         self.write_intl_info_to_service(info.clone()).await;
 
