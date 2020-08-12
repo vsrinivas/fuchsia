@@ -55,7 +55,9 @@ class MsdVsiDevice::DumpRequest : public DeviceRequest {
   magma::Status Process(MsdVsiDevice* device) override { return device->ProcessDumpStatusToLog(); }
 };
 
-MsdVsiDevice::~MsdVsiDevice() {
+MsdVsiDevice::~MsdVsiDevice() { Shutdown(); }
+
+bool MsdVsiDevice::Shutdown() {
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
   DisableInterrupts();
@@ -80,6 +82,13 @@ MsdVsiDevice::~MsdVsiDevice() {
     device_thread_.join();
     DLOG("joined");
   }
+
+  // Ensure hardware is idle.
+  if (register_io_) {
+    return HardwareReset();
+  }
+
+  return true;
 }
 
 std::unique_ptr<MsdVsiDevice> MsdVsiDevice::Create(void* device_handle, bool start_device_thread) {

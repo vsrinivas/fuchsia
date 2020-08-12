@@ -24,10 +24,15 @@ class MsdVsiDeviceTest : public ::testing::Test {
   }
 
  protected:
-  std::unique_ptr<MsdVsiDevice> device_;
+  std::unique_ptr<MsdVsiDevice> device_;  // Device should be destroyed last.
 };
 
 TEST_F(MsdVsiDeviceTest, CreateAndDestroy) {}
+
+TEST_F(MsdVsiDeviceTest, Shutdown) {
+  device_->StartDeviceThread();
+  EXPECT_TRUE(device_->Shutdown());
+}
 
 TEST_F(MsdVsiDeviceTest, DeviceId) {
   EXPECT_TRUE((device_->device_id() == 0x7000u) || (device_->device_id() == 0x8000u));

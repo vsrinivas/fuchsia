@@ -171,7 +171,7 @@ class TestMsdVsiDevice : public drm_test_info {
     magma::PlatformBusMapper* bus_mapper_;
   };
 
-  EtnaDevice device_;
+  EtnaDevice device_;  // Device should be destroyed last.
   EtnaCommandStream command_stream_;
 
   std::shared_ptr<MsdVsiContext> context_;

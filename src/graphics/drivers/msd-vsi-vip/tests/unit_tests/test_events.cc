@@ -53,10 +53,10 @@ class TestEvents : public ::testing::Test {
     EXPECT_EQ(0x7FFFFFFFu, reg.reg_value());
   }
 
-  std::shared_ptr<MsdVsiContext> context_;
+  std::unique_ptr<MsdVsiDevice> device_;  // Device should be destroyed last.
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
-  std::unique_ptr<MsdVsiDevice> device_;
+  std::shared_ptr<MsdVsiContext> context_;
 };
 
 TEST_F(TestEvents, AllocAndFree) {

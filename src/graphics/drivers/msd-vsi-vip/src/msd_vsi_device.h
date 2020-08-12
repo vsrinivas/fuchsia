@@ -46,6 +46,7 @@ class MsdVsiDevice : public msd_device_t,
   uint32_t device_id() const { return device_id_; }
   uint32_t revision() const { return revision_; }
 
+  bool Shutdown();
   bool IsIdle();
   bool StopRingbuffer();
 
@@ -305,6 +306,7 @@ class MsdVsiDevice : public msd_device_t,
   friend class MsdVsiDeviceTest_RingbufferCanHoldMaxEvents_Test;
   friend class MsdVsiDeviceTest_PulseEater_Test;
   friend class MsdVsiDeviceTest_Reset_Test;
+  friend class MsdVsiDeviceTest_Shutdown_Test;
 };
 
 #endif  // MSD_VSI_DEVICE_H
