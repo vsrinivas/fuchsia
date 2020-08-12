@@ -28,6 +28,7 @@ if (host_toolchain == current_toolchain) {
       "//src/developer/ffx/plugins/docs:ffx_docs",
       "//src/developer/ffx/plugins/doctor:ffx_doctor",
       "//src/developer/ffx/plugins/emulator:ffx_emulator",
+      "//src/developer/ffx/plugins/overnet:ffx_overnet_plugin",
       "//src/developer/ffx/plugins/packaging:ffx_packaging",
       "//src/developer/ffx/plugins/sdk:ffx_sdk",
       "//src/developer/ffx/plugins/target:ffx_target",

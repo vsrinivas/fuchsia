@@ -187,7 +187,7 @@ impl LabelAttrWriter {
     }
 }
 
-#[derive(FromArgs)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "full-map")]
 /// Construct a detailed graphviz map of the Overnet mesh - experts only!
 pub struct FullMapArgs {

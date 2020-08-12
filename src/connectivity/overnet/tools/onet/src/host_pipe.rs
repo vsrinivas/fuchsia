@@ -12,7 +12,7 @@ use {
     std::sync::Arc,
 };
 
-#[derive(FromArgs)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "host-pipe")]
 /// Use stdin/stdout as a link to another overnet instance
 pub struct HostPipe {}

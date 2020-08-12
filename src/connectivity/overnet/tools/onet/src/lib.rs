@@ -16,26 +16,26 @@ mod list_peers;
 mod probe_node;
 mod probe_reports;
 
-#[derive(FromArgs)]
+#[derive(FromArgs, PartialEq, Debug)]
 /// Overnet debug tool
 pub struct Opts {
     #[argh(subcommand)]
-    command: Command,
+    pub command: Command,
 }
 
-#[derive(FromArgs)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
-enum Command {
+pub enum Command {
     ListPeers(ListPeers),
     ListLinks(ListLinks),
     HostPipe(host_pipe::HostPipe),
     FullMap(probe_reports::FullMapArgs),
 }
 
-#[derive(FromArgs)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "list-peers")]
 /// List known peer nodes
-struct ListPeers {}
+pub struct ListPeers {}
 
 async fn list_peers() -> Result<(), Error> {
     list_peers::list_peers()
@@ -63,10 +63,10 @@ async fn list_peers() -> Result<(), Error> {
         .await
 }
 
-#[derive(FromArgs, Debug)]
+#[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "list-links")]
 /// List links on a particular peer
-struct ListLinks {
+pub struct ListLinks {
     #[argh(positional)]
     node: u64,
 }
@@ -88,11 +88,12 @@ async fn list_links(args: ListLinks) -> Result<(), Error> {
     {
         return Err(format_err!("Could not find node {}", args.node));
     }
-    for link in probe_node::probe_node(NodeId { id: args.node }, probe_node::Selector::Links)
+    let mut links = probe_node::probe_node(NodeId { id: args.node }, probe_node::Selector::Links)
         .await?
         .links
-        .ok_or_else(|| format_err!("No links in probe result"))?
-    {
+        .ok_or_else(|| format_err!("No links in probe result"))?;
+    links.sort_by(|a, b| a.source_local_id.cmp(&b.source_local_id));
+    for link in links {
         println!(
             "LINK {} is {} -> {}",
             fmtq(link.source_local_id),
