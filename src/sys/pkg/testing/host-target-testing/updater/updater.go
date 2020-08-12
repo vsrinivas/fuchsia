@@ -25,8 +25,13 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	updateErrorSleepTime = 30 * time.Second
+)
+
 type client interface {
 	ExpectReboot(ctx context.Context, f func() error) error
+	RegisterDisconnectListener(ch chan struct{})
 	ServePackageRepository(
 		ctx context.Context,
 		repo *packages.Repository,
@@ -53,11 +58,33 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 
 	startTime := time.Now()
 	err := c.ExpectReboot(ctx, func() error {
+		// Since an update can trigger a reboot, we can run into all
+		// sorts of races. The two main ones are:
+		//
+		//  * the network connection is torn down before we see the
+		//    `update` command exited cleanly.
+		//  * the system updater service was torn down before the
+		//    `update` process, which would show up as the channel to
+		//    be closed.
+		//
+		// In order to avoid this races, we need to:
+		//
+		//  * assume the ssh connection was closed means the OTA was
+		//    probably installed and the device rebooted as normal.
+		//  * `update` exiting with a error could be we just lost the
+		//    shutdown race. So if we get an `update` error, wait a few
+		//    seconds to see if the device disconnects. If so, treat it
+		//    like the OTA was successful.
+
 		server, err := c.ServePackageRepository(ctx, u.repo, "trigger-ota", true)
 		if err != nil {
 			return fmt.Errorf("error setting up server: %w", err)
 		}
 		defer server.Shutdown(ctx)
+
+		ch := make(chan struct{})
+		c.RegisterDisconnectListener(ch)
+
 		cmd := []string{
 			"/bin/update",
 			"check-now",
@@ -69,7 +96,21 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 			// exited without passing along an exit code. So,
 			// ignore that specific error.
 			var errExitMissing *ssh.ExitMissingError
-			if !errors.As(err, &errExitMissing) {
+			if errors.As(err, &errExitMissing) {
+				logger.Warningf(ctx, "disconnected, assuming this was because OTA triggered reboot")
+				return nil
+			}
+
+			logger.Warningf(ctx, "update errored out, but maybe it lost the race, waiting a moment to see if the device reboots: %v", err)
+
+			// We got an error, but maybe we lost the reboot race.
+			// So wait a few moments to see if the device reboots
+			// anyway.
+			select {
+			case <-ch:
+				logger.Warningf(ctx, "disconnected, assuming this was because OTA triggered reboot")
+				return nil
+			case <-time.After(updateErrorSleepTime):
 				return fmt.Errorf("failed to trigger OTA: %w", err)
 			}
 		}
