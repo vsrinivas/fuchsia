@@ -11,6 +11,7 @@ group("examples") {
     ":direct_input",
     ":direct_input_child",
     ":embedder",
+    ":frame-compression",
     ":pose_buffer_presenter",
     ":scenic_dev_app",
     ":shadertoy_client",
@@ -65,6 +66,26 @@ package("embedder") {
       dest = "subview.cmx"
     },
   ]
+}
+
+package("frame-compression") {
+  deps = [ "frame-compression" ]
+
+  binaries = [
+    {
+      name = "frame-compression"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("frame-compression/meta/frame-compression.cmx")
+      dest = "frame-compression.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 package("direct_input") {
