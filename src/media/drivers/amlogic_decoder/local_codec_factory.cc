@@ -46,9 +46,8 @@ const CodecAdapterFactory kCodecFactories[] = {
             // codec_common.fidl.
             .mime_type = "video/h264",
 
-            // TODO(dustingreen): Determine which of these can safely indicate
-            // more capability.
-            .can_stream_bytes_input = false,
+            // TODO(fxb/13483): Make more of these true by implementing in CodecAdapterH264Multi.
+            .can_stream_bytes_input = true,
             .can_find_start = false,
             .can_re_sync = false,
             .will_report_all_detected_errors = false,
@@ -59,9 +58,9 @@ const CodecAdapterFactory kCodecFactories[] = {
             // the case.
             .split_header_handling = true,
         },
-        false,  // multi_instance
+        true,  // multi_instance
         [](std::mutex& lock, CodecAdapterEvents* events, DeviceCtx* device) {
-          return std::make_unique<CodecAdapterH264>(lock, events, device);
+          return std::make_unique<CodecAdapterH264Multi>(lock, events, device);
         },
     },
     {
