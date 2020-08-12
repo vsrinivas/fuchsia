@@ -16,6 +16,9 @@
 #include "sherlock-gpios.h"
 #include "sherlock.h"
 
+// TODO(52506): Re-enable when 54011 is resolved.
+//#define ENABLE_BT
+
 namespace sherlock {
 
 zx_status_t Sherlock::AudioInit() {
@@ -197,6 +200,14 @@ zx_status_t Sherlock::AudioInit() {
   }
   gpio_impl_.SetAltFunction(T931_GPIOAO(9), T931_GPIOAO_9_MCLK_FN);
 
+#ifdef ENABLE_BT
+  // PCM pin assignments.
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(8), S905D2_GPIOX_8_TDMA_DIN1_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_8_TDMA_D0_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(10), S905D2_GPIOX_10_TDMA_FS_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(11), S905D2_GPIOX_11_TDMA_SCLK_FN);
+#endif
+
   // PDM pin assignments.
   gpio_impl_.SetAltFunction(T931_GPIOA(7), T931_GPIOA_7_PDM_DCLK_FN);
   gpio_impl_.SetAltFunction(T931_GPIOA(8), T931_GPIOA_8_PDM_DIN0_FN);
@@ -356,6 +367,55 @@ zx_status_t Sherlock::AudioInit() {
     return status;
   }
 
+#ifdef ENABLE_BT
+  // Add TDM OUT for BT.
+  {
+    const pbus_bti_t pcm_out_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_BT_OUT,
+        },
+    };
+    metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    metadata.is_input = false;
+    // Compatible clocks with other TDM drivers.
+    metadata.mClockDivFactor = 125;
+    metadata.sClockDivFactor = 4;
+    metadata.bus = metadata::AmlBus::TDM_A;
+    metadata.version = metadata::AmlVersion::kS905D2G;
+    metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.number_of_channels = 1;
+    metadata.lanes_enable_mask[0] = 1;
+    pbus_metadata_t tdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &metadata,
+            .data_size = sizeof(metadata),
+        },
+    };
+
+    pbus_dev_t tdm_dev = {};
+    tdm_dev.name = "sherlock-pcm-audio-out";
+    tdm_dev.vid = PDEV_VID_AMLOGIC;
+    tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
+    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.mmio_list = audio_mmios;
+    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.bti_list = pcm_out_btis;
+    tdm_dev.bti_count = countof(pcm_out_btis);
+    tdm_dev.metadata_list = tdm_metadata;
+    tdm_dev.metadata_count = countof(tdm_metadata);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
+                                      UINT32_MAX);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
+      return status;
+    }
+  }
+#endif
+
   // Add PDM IN.
   static constexpr pbus_mmio_t pdm_mmios[] = {
       {.base = T931_EE_PDM_BASE, .length = T931_EE_PDM_LENGTH},
@@ -400,6 +460,55 @@ zx_status_t Sherlock::AudioInit() {
     zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d", __FUNCTION__, status);
     return status;
   }
+
+#ifdef ENABLE_BT
+  // Add TDM IN for BT.
+  {
+    const pbus_bti_t pcm_in_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_BT_IN,
+        },
+    };
+    metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    metadata.is_input = true;
+    // Compatible clocks with other TDM drivers.
+    metadata.mClockDivFactor = 125;
+    metadata.sClockDivFactor = 4;
+    metadata.bus = metadata::AmlBus::TDM_A;
+    metadata.version = metadata::AmlVersion::kS905D2G;
+    metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.number_of_channels = 1;
+    metadata.swaps_mask = 0x0200;
+    metadata.lanes_enable_mask[1] = 1;
+    pbus_metadata_t tdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &metadata,
+            .data_size = sizeof(metadata),
+        },
+    };
+    pbus_dev_t tdm_dev = {};
+    tdm_dev.name = "sherlock-pcm-audio-in";
+    tdm_dev.vid = PDEV_VID_AMLOGIC;
+    tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
+    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.mmio_list = audio_mmios;
+    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.bti_list = pcm_in_btis;
+    tdm_dev.bti_count = countof(pcm_in_btis);
+    tdm_dev.metadata_list = tdm_metadata;
+    tdm_dev.metadata_count = countof(tdm_metadata);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
+                                      UINT32_MAX);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
+      return status;
+    }
+  }
+#endif
   return ZX_OK;
 }
 
