@@ -246,12 +246,30 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args
       affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
       affine::Ratio mono_to_synthetic_rate;
       affine::Ratio ticks_to_synthetic_rate;
+      bool skip_update = false;
 
       if (do_rate) {
         // We want to explicitly update the rate.  Encode the PPM adjustment
         // as a ratio, then compute the ticks_to_synthetic_rate.
-        mono_to_synthetic_rate = {static_cast<uint32_t>(1000000 + args.rate_adjust), 1000000};
-        ticks_to_synthetic_rate = ticks_to_mono_ratio * mono_to_synthetic_rate;
+        //
+        // If the PPM adjustment being applied is identical to the last
+        // adjustment being applied, then don't bother to recompute these.  Just
+        // use the rates we already have.
+        if (args.rate_adjust != cur_ppm_adj_) {
+          mono_to_synthetic_rate = {static_cast<uint32_t>(1000000 + args.rate_adjust), 1000000};
+          ticks_to_synthetic_rate = ticks_to_mono_ratio * mono_to_synthetic_rate;
+          cur_ppm_adj_ = args.rate_adjust;
+        } else {
+          mono_to_synthetic_rate = mono_to_synthetic_.ratio();
+          ticks_to_synthetic_rate = ticks_to_synthetic_.ratio();
+
+          // If our rate is being "adjusted" to the same thing that it already
+          // was, and we are not updating the position at all, then we can just
+          // go ahead and skip the update of the transformation equations (even
+          // though we will record the time of this update as the last rate
+          // adjustment time).  See fxb/57593
+          skip_update = !do_set;
+        }
         last_rate_adjust_update_ticks_ = now_ticks;
       } else if (!is_started()) {
         // The clock has never been started, then the default rate is 1:1
@@ -267,9 +285,11 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const zx_clock_update_args
 
       // Now, simply update the transformations with the proper offsets and
       // the calculated rates.
-      zx_time_t now_mono = ticks_to_mono_ratio.Scale(now_ticks);
-      mono_to_synthetic_ = {now_mono, now_synthetic, mono_to_synthetic_rate};
-      ticks_to_synthetic_ = {now_ticks, now_synthetic, ticks_to_synthetic_rate};
+      if (!skip_update) {
+        zx_time_t now_mono = ticks_to_mono_ratio.Scale(now_ticks);
+        mono_to_synthetic_ = {now_mono, now_synthetic, mono_to_synthetic_rate};
+        ticks_to_synthetic_ = {now_ticks, now_synthetic, ticks_to_synthetic_rate};
+      }
     }
 
     // If we are supposed to update the error bound, do so.

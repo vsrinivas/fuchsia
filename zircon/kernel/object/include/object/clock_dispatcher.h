@@ -50,6 +50,7 @@ class ClockDispatcher final
   zx_ticks_t last_value_update_ticks_ = 0;
   zx_ticks_t last_rate_adjust_update_ticks_ = 0;
   zx_ticks_t last_error_bounds_update_ticks_ = 0;
+  int32_t cur_ppm_adj_ = 0;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_CLOCK_DISPATCHER_H_

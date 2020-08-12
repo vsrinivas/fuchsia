@@ -773,4 +773,92 @@ TEST(KernelClocksTestCase, AutoStarted) {
                 zx::clock::create(ZX_CLOCK_OPT_AUTO_START, &create_args, &clock));
 }
 
+TEST(KernelClocksTestCase, TrivialRateUpdates) {
+  // Perform this test a number of times for different combinations of clock
+  // creation arguments.
+  constexpr std::array BASE_CREATE_OPTIONS = {
+      static_cast<uint64_t>(0),
+      ZX_CLOCK_OPT_MONOTONIC,
+      ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS,
+      ZX_CLOCK_OPT_AUTO_START,
+      ZX_CLOCK_OPT_AUTO_START | ZX_CLOCK_OPT_MONOTONIC,
+      ZX_CLOCK_OPT_AUTO_START | ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS,
+  };
+
+  for (const auto base_create_option : BASE_CREATE_OPTIONS) {
+    zx::clock clock;
+
+    // Create a simple clock, and if it was not configure to auto start, start
+    // it now at an arbitrary time.
+    ASSERT_OK(zx::clock::create(base_create_option, nullptr, &clock));
+    if (!(base_create_option & ZX_CLOCK_OPT_AUTO_START)) {
+      ASSERT_OK(clock.update(zx::clock::update_args().set_value(zx::time(12345678))));
+    }
+
+    // Test trivial rate updates over a range of different adjustments.
+    constexpr std::array TEST_RATES = {0, 1, -1, 20, -20};
+    for (int32_t rate_adj : TEST_RATES) {
+      zx_clock_details_v1_t last_details, curr_details;
+      zx_ticks_t before_update_ticks, after_update_ticks;
+
+      zx::clock::update_args args;
+      args.set_rate_adjust(rate_adj);
+
+      // Set the rate to the rate we are going to test.  We can skip this for
+      // the initial test rate adjustment of 0 ppm since newly created clocks
+      // should always start with an initial rate adjustment of 0.
+      if (rate_adj != 0) {
+        ASSERT_OK(clock.update(args));
+      }
+
+      // Snapshot the clock's current details before our trivial update.
+      ASSERT_OK(clock.get_details(&last_details));
+
+      // Perform the update, paying attention to the tick time before and after
+      // the update request.
+      before_update_ticks = zx_ticks_get();
+      ASSERT_OK(clock.update(args));
+      after_update_ticks = zx_ticks_get();
+
+      // Get the details after the update and compare them to before.  We expect
+      // to see that only two things have changed:
+      //
+      // 1) The last_rate_adjustment ticks
+      // 2) The generation counter
+      ASSERT_OK(clock.get_details(&curr_details));
+
+      // These should all be unchanged
+      ASSERT_EQ(last_details.options, curr_details.options);
+      ASSERT_EQ(last_details.backstop_time, curr_details.backstop_time);
+      ASSERT_EQ(last_details.ticks_to_synthetic.reference_offset,
+                curr_details.ticks_to_synthetic.reference_offset);
+      ASSERT_EQ(last_details.ticks_to_synthetic.synthetic_offset,
+                curr_details.ticks_to_synthetic.synthetic_offset);
+      ASSERT_EQ(last_details.ticks_to_synthetic.rate.reference_ticks,
+                curr_details.ticks_to_synthetic.rate.reference_ticks);
+      ASSERT_EQ(last_details.ticks_to_synthetic.rate.synthetic_ticks,
+                curr_details.ticks_to_synthetic.rate.synthetic_ticks);
+      ASSERT_EQ(last_details.mono_to_synthetic.reference_offset,
+                curr_details.mono_to_synthetic.reference_offset);
+      ASSERT_EQ(last_details.mono_to_synthetic.synthetic_offset,
+                curr_details.mono_to_synthetic.synthetic_offset);
+      ASSERT_EQ(last_details.mono_to_synthetic.rate.reference_ticks,
+                curr_details.mono_to_synthetic.rate.reference_ticks);
+      ASSERT_EQ(last_details.mono_to_synthetic.rate.synthetic_ticks,
+                curr_details.mono_to_synthetic.rate.synthetic_ticks);
+      ASSERT_EQ(last_details.error_bound, curr_details.error_bound);
+      ASSERT_EQ(last_details.last_value_update_ticks, curr_details.last_value_update_ticks);
+      ASSERT_EQ(last_details.last_error_bounds_update_ticks,
+                curr_details.last_error_bounds_update_ticks);
+
+      // The last rate adjustment time should indicate a time between before/after_update_ticks
+      ASSERT_LE(before_update_ticks, curr_details.last_rate_adjust_update_ticks);
+      ASSERT_GE(after_update_ticks, curr_details.last_rate_adjust_update_ticks);
+
+      // The generation counter should have incremented by exactly 2.
+      ASSERT_EQ(last_details.generation_counter + 2, curr_details.generation_counter);
+    }
+  }
+}
+
 }  // namespace
