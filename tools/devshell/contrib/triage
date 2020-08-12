@@ -10,9 +10,9 @@
 ##                  [--select <select-string>]
 ##                  [--data <path-to-bugreport>]
 ## Without 'select':
-## Processes "fx bugreport" output looking for problems specified in config
+## Processes "fx snapshot" output looking for problems specified in config
 ## files. If no bugreport output is specified (no '--data') it runs a new
-## "fx bugreport" and uses its "inspect.json" file.
+## "fx snapshot" and uses its "inspect.json" file.
 ## With 'select':
 ## Generates selectors from the bugreport, filtered by select-string.
 ## --config, --tag, --exclude-tag options are ignored.
@@ -44,7 +44,7 @@
 ##   For this path, 'fx triage' will analyze all supported filetypes.
 ##   Currently, the only supported filetype is inspect.json.
 ##   Future versions will add support for different files.
-##   If no --data is given,`fx bugreport` will be invoked and analyzed.
+##   If no --data is given,`fx snapshot` will be invoked and analyzed.
 ##
 ## 0 or more --select strings may be given. --select changes the
 ## operation of the program: it generates all selectors for all
@@ -117,7 +117,7 @@ fi
 if [ -z "${data_paths}" ]; then
   temp_dir=$(mktemp -d)
   trap 'rm -rf "${temp_dir}"' EXIT
-  fx-command-run bugreport --output-directory "${temp_dir}" > /dev/null
+  fx-command-run snapshot --output-directory "${temp_dir}" > /dev/null
   unzip "${temp_dir}/bugreport.zip" -d "${temp_dir}" > /dev/null
   data_paths+="${temp_dir}"
 fi
