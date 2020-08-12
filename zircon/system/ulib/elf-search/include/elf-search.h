@@ -9,9 +9,10 @@
 #include <lib/zx/process.h>
 #include <stdint.h>
 
+#include <string_view>
+
 #include <fbl/function.h>
 #include <fbl/span.h>
-#include <fbl/string_piece.h>
 
 namespace elf_search {
 
@@ -22,7 +23,7 @@ constexpr Elf64_Half kNativeElfMachine = EM_X86_64;
 #endif
 
 struct ModuleInfo {
-  fbl::StringPiece name;
+  std::string_view name;
   uintptr_t vaddr;
   fbl::Span<const uint8_t> build_id;
   const Elf64_Ehdr& ehdr;

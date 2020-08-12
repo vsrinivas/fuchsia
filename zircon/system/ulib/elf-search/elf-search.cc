@@ -319,7 +319,7 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
 
     // All checks have passed so we can give the user a module.
     action(ModuleInfo{
-        .name = fbl::StringPiece(name),
+        .name = name,
         .vaddr = map.base,
         .build_id = build_id,
         .ehdr = ehdr,

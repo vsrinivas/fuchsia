@@ -78,7 +78,7 @@ void WriteBuildID(fbl::Span<const uint8_t> build_id, const zx::vmo& vmo, uint64_
 }
 
 struct Module {
-  fbl::StringPiece name;
+  std::string_view name;
   fbl::Span<const Elf64_Phdr> phdrs;
   fbl::Span<const uint8_t> build_id;
   zx::vmo vmo;
