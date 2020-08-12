@@ -282,7 +282,13 @@ impl SystemShutdownHandler {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
+            .unwrap_or_else(|e| match e {
+                // TODO(pshickel): The shutdown-shim component sends us a garbage FIDL call to check
+                // if we're alive before forwarding shutdown commands. We should avoid error logging
+                // for this specific error type to avoid potential confusion.
+                fidl::Error::OutOfRange => {}
+                e => error!("{:?}", e),
+            }),
         )
         .detach();
     }
