@@ -5,9 +5,10 @@
 import("//build/host.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_binary("bin") {
-  name = "onet"
+rustc_library("lib") {
+  name = "onet-lib"
   edition = "2018"
 
   deps = [
@@ -34,11 +35,27 @@ rustc_binary("bin") {
   sources = [
     "src/generator.rs",
     "src/host_pipe.rs",
+    "src/lib.rs",
     "src/list_peers.rs",
-    "src/main.rs",
     "src/probe_node.rs",
     "src/probe_reports.rs",
   ]
+}
+
+rustc_binary("bin") {
+  name = "onet"
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
+
+  non_rust_deps = [ "//third_party/boringssl" ]
+
+  sources = [ "src/main.rs" ]
 }
 
 package("onet") {
