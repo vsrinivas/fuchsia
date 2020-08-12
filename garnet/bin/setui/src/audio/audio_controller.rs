@@ -15,6 +15,8 @@ use {
     },
     crate::internal::common::now,
     crate::switchboard::base::*,
+    anyhow::Error,
+    fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     std::collections::HashMap,
     std::sync::Arc,
@@ -59,18 +61,17 @@ impl VolumeController {
     }
 
     /// Restores the necessary dependencies' state on boot.
-    async fn restore(&mut self) -> ControllerStateResult {
-        self.restore_volume_state(true).await
+    async fn restore(&mut self) {
+        self.restore_volume_state(true).await;
     }
 
     /// Extracts the audio state from persistent storage and restores it on
     /// the local state. Also pushes the changes to the audio core if
     /// [push_to_audio_core] is true.
-    async fn restore_volume_state(&mut self, push_to_audio_core: bool) -> ControllerStateResult {
+    async fn restore_volume_state(&mut self, push_to_audio_core: bool) {
         let audio_info = self.client.read().await;
         let stored_streams = audio_info.streams.iter().cloned().collect();
-        self.update_volume_streams(&stored_streams, push_to_audio_core).await?;
-        Ok(())
+        self.update_volume_streams(&stored_streams, push_to_audio_core).await;
     }
 
     async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
@@ -84,14 +85,18 @@ impl VolumeController {
     }
 
     async fn set_volume(&mut self, volume: Vec<AudioStream>) -> SettingHandlerResult {
-        self.get_info().await?;
+        let get_result = self.get_info().await;
+
+        if let Err(e) = get_result {
+            return Err(e);
+        }
 
         // Update timestamps for changed streams.
         for stream in volume.iter() {
             self.modified_timestamps.insert(stream.stream_type, now().to_string());
         }
 
-        if !(self.update_volume_streams(&volume, true).await?) {
+        if !self.update_volume_streams(&volume, true).await {
             self.client.notify().await;
         }
 
@@ -108,31 +113,31 @@ impl VolumeController {
         &mut self,
         new_streams: &Vec<AudioStream>,
         push_to_audio_core: bool,
-    ) -> Result<bool, ControllerError> {
+    ) -> bool {
         if push_to_audio_core {
-            self.check_and_bind_volume_controls(&default_audio_info().streams.to_vec()).await?;
+            self.check_and_bind_volume_controls(&default_audio_info().streams.to_vec()).await.ok();
             for stream in new_streams {
                 if let Some(volume_control) =
                     self.stream_volume_controls.get_mut(&stream.stream_type)
                 {
-                    volume_control.set_volume(stream.clone()).await?;
+                    volume_control.set_volume(stream.clone()).await;
                 }
             }
         } else {
-            self.check_and_bind_volume_controls(new_streams).await?;
+            self.check_and_bind_volume_controls(new_streams).await.ok();
         }
 
         let mut stored_value = self.client.read().await;
         stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
 
-        Ok(write(&self.client, stored_value, false).await.notified())
+        write(&self.client, stored_value, false).await.notified()
     }
 
     /// Populates the local state with the given [streams] and binds it to the audio core service.
     async fn check_and_bind_volume_controls(
         &mut self,
         streams: &Vec<AudioStream>,
-    ) -> ControllerStateResult {
+    ) -> Result<(), Error> {
         if self.audio_service_connected {
             return Ok(());
         }
@@ -146,19 +151,22 @@ impl VolumeController {
             .connect::<fidl_fuchsia_media::AudioCoreMarker>()
             .await;
 
-        let audio_service = service_result.map_err(|_| {
-            ControllerError::ExternalFailure(
-                SettingType::Audio,
-                "fuchsia.media.audio".into(),
-                "connect for audio_core".into(),
-            )
-        })?;
-        self.audio_service_connected = true;
+        let audio_service = match service_result {
+            Ok(service) => {
+                self.audio_service_connected = true;
+                service
+            }
+            Err(err) => {
+                fx_log_err!("failed to connect to audio core, {}", err);
+                return Err(err);
+            }
+        };
 
         for stream in streams.iter() {
-            let stream_volume_control =
-                StreamVolumeControl::create(&audio_service, stream.clone())?;
-            self.stream_volume_controls.insert(stream.stream_type.clone(), stream_volume_control);
+            self.stream_volume_controls.insert(
+                stream.stream_type.clone(),
+                StreamVolumeControl::create(&audio_service, stream.clone()),
+            );
         }
 
         Ok(())
@@ -182,7 +190,11 @@ impl controller::Handle for AudioController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         #[allow(unreachable_patterns)]
         match request {
-            SettingRequest::Restore => Some(self.volume.lock().await.restore().await.map(|_| None)),
+            SettingRequest::Restore => {
+                self.volume.lock().await.restore().await;
+
+                Some(Ok(None))
+            }
             SettingRequest::SetVolume(volume) => {
                 Some(self.volume.lock().await.set_volume(volume).await)
             }
@@ -198,7 +210,8 @@ impl controller::Handle for AudioController {
         match state {
             State::Startup => {
                 // Restore the volume state locally but do not push to the audio core.
-                Some(self.volume.lock().await.restore_volume_state(false).await)
+                self.volume.lock().await.restore_volume_state(false).await;
+                Some(Ok(()))
             }
             _ => None,
         }

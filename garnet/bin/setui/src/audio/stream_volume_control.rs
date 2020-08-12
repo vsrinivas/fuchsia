@@ -4,9 +4,8 @@
 
 use {
     crate::call,
-    crate::registry::setting_handler::ControllerError,
     crate::service_context::ExternalServiceProxy,
-    crate::switchboard::base::{AudioStream, AudioStreamType, SettingType},
+    crate::switchboard::base::{AudioStream, AudioStreamType},
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
     fidl_fuchsia_media_audio::VolumeControlProxy,
@@ -14,8 +13,6 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::{FutureExt, TryFutureExt, TryStreamExt},
 };
-
-const CONTROLLER_ERROR_DEPENDENCY: &str = "fuchsia.media.audio";
 
 // Stores an AudioStream and a VolumeControl proxy bound to the AudioCore
 // service for |stored_stream|'s stream type. |proxy| is set to None if it
@@ -31,53 +28,46 @@ impl StreamVolumeControl {
     pub fn create(
         audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
         stream: AudioStream,
-    ) -> Result<Self, ControllerError> {
-        Ok(StreamVolumeControl {
+    ) -> Self {
+        StreamVolumeControl {
             stored_stream: stream,
-            proxy: Some(bind_volume_control(&audio_service, stream.stream_type, stream)?),
+            proxy: bind_volume_control(&audio_service, stream.stream_type, stream),
             audio_service: audio_service.clone(),
-        })
+        }
     }
 
-    pub async fn set_volume(&mut self, stream: AudioStream) -> Result<(), ControllerError> {
+    pub async fn set_volume(&mut self, stream: AudioStream) {
         assert_eq!(self.stored_stream.stream_type, stream.stream_type);
 
-        // Try to create and bind a new VolumeControl.
+        // If |proxy| is set to None, then try to create and bind a new VolumeControl. If it
+        // fails, log an error and don't set the volume.
         if self.proxy.is_none() {
-            self.proxy = Some(bind_volume_control(
-                &self.audio_service,
-                stream.stream_type,
-                self.stored_stream,
-            )?);
+            self.proxy =
+                bind_volume_control(&self.audio_service, stream.stream_type, self.stored_stream);
+            if self.proxy.is_none() {
+                return;
+            }
         }
+
+        let proxy = self.proxy.as_ref().unwrap();
 
         // Round to 1%.
         let mut new_stream_value = stream.clone();
         new_stream_value.user_volume_level = (stream.user_volume_level * 100.0).floor() / 100.0;
-        self.stored_stream = new_stream_value;
 
-        let proxy = self.proxy.as_ref().unwrap();
         if self.stored_stream.user_volume_level != new_stream_value.user_volume_level {
-            if proxy.set_volume(new_stream_value.user_volume_level).is_err() {
-                return Err(ControllerError::ExternalFailure(
-                    SettingType::Audio,
-                    CONTROLLER_ERROR_DEPENDENCY.into(),
-                    "set volume".into(),
-                ));
-            }
+            proxy.set_volume(new_stream_value.user_volume_level).unwrap_or_else(move |e| {
+                fx_log_err!("failed to set the volume level, {}", e);
+            });
         }
 
         if self.stored_stream.user_volume_muted != new_stream_value.user_volume_muted {
-            if proxy.set_mute(stream.user_volume_muted).is_err() {
-                return Err(ControllerError::ExternalFailure(
-                    SettingType::Audio,
-                    CONTROLLER_ERROR_DEPENDENCY.into(),
-                    "set mute".into(),
-                ));
-            }
+            proxy.set_mute(stream.user_volume_muted).unwrap_or_else(move |e| {
+                fx_log_err!("failed to mute the volume, {}", e);
+            });
         }
 
-        Ok(())
+        self.stored_stream = new_stream_value;
     }
 }
 
@@ -85,34 +75,23 @@ fn bind_volume_control(
     audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
     stream_type: AudioStreamType,
     stored_stream: AudioStream,
-) -> Result<VolumeControlProxy, ControllerError> {
+) -> Option<VolumeControlProxy> {
     let (vol_control_proxy, server_end) = create_proxy().unwrap();
     let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
 
-    if call!(audio_service => bind_usage_volume_control(&mut usage, server_end)).is_err() {
-        return Err(ControllerError::ExternalFailure(
-            SettingType::Audio,
-            CONTROLLER_ERROR_DEPENDENCY.into(),
-            format!("bind_usage_volume_control for audio_core {:?}", usage).into(),
-        ));
+    if let Err(err) = call!(audio_service => bind_usage_volume_control(&mut usage, server_end)) {
+        fx_log_err!("failed to bind volume control for usage, {}", err);
+        return None;
     }
 
     // Once the volume control is bound, apply the persisted audio settings to it.
-    if vol_control_proxy.set_volume(stored_stream.user_volume_level).is_err() {
-        return Err(ControllerError::ExternalFailure(
-            SettingType::Audio,
-            CONTROLLER_ERROR_DEPENDENCY.into(),
-            format!("set_volume for vol_control {:?}", stream_type).into(),
-        ));
-    }
+    vol_control_proxy.set_volume(stored_stream.user_volume_level).unwrap_or_else(move |e| {
+        fx_log_err!("failed to set the volume level, {}", e);
+    });
 
-    if vol_control_proxy.set_mute(stored_stream.user_volume_muted).is_err() {
-        return Err(ControllerError::ExternalFailure(
-            SettingType::Audio,
-            CONTROLLER_ERROR_DEPENDENCY.into(),
-            "set_mute for vol_control".into(),
-        ));
-    }
+    vol_control_proxy.set_mute(stored_stream.user_volume_muted).unwrap_or_else(move |e| {
+        fx_log_err!("failed to mute the volume, {}", e);
+    });
 
     // TODO(fxb/37777): Update |stored_stream| in StreamVolumeControl and send a notification
     // when we receive an update.
@@ -130,5 +109,5 @@ fn bind_volume_control(
     )
     .detach();
 
-    Ok(vol_control_proxy)
+    Some(vol_control_proxy)
 }
