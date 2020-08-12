@@ -122,6 +122,8 @@ fbl::String GetTestFilter() {
     return "*Nelson*";
   } else if (!strcmp(board_name, "vs680-evk")) {
     return "*Vs680Evk*";
+  } else if (!strcmp(board_name, "luis")) {
+    return "*Luis*";
   }
 
   return "Unknown";
@@ -459,6 +461,12 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "pwm-init",
       "sys/platform/05:04:24/ram",
   };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, LuisTest) {
+  static const char* kDevicePaths[] = {"dwc2/dwc2/usb-peripheral/function-000/rndis-function"};
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
