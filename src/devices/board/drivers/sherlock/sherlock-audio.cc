@@ -200,6 +200,9 @@ zx_status_t Sherlock::AudioInit() {
   // PDM pin assignments.
   gpio_impl_.SetAltFunction(T931_GPIOA(7), T931_GPIOA_7_PDM_DCLK_FN);
   gpio_impl_.SetAltFunction(T931_GPIOA(8), T931_GPIOA_8_PDM_DIN0_FN);
+  if (!is_sherlock) {
+    gpio_impl_.SetAltFunction(T931_GPIOA(9), T931_GPIOA_9_PDM_DIN1_FN);
+  }
 
   // Add TDM OUT to the codecs.
   if (is_sherlock) {
@@ -366,6 +369,17 @@ zx_status_t Sherlock::AudioInit() {
       },
   };
 
+  uint8_t channel_count = 2;
+  if (!is_sherlock) {
+    channel_count = 3;
+  }
+  pbus_metadata_t pdm_metadata[] = {
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data_buffer = &channel_count,
+          .data_size = sizeof(channel_count),
+      },
+  };
   pbus_dev_t pdm_dev = {};
   if (is_sherlock) {
     pdm_dev.name = "sherlock-pdm-audio-in";
@@ -379,6 +393,8 @@ zx_status_t Sherlock::AudioInit() {
   pdm_dev.mmio_count = countof(pdm_mmios);
   pdm_dev.bti_list = pdm_btis;
   pdm_dev.bti_count = countof(pdm_btis);
+  pdm_dev.metadata_list = pdm_metadata;
+  pdm_dev.metadata_count = countof(pdm_metadata);
   status = pbus_.DeviceAdd(&pdm_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d", __FUNCTION__, status);

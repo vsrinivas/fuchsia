@@ -12,13 +12,13 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 
 namespace audio {
 namespace sherlock {
 
-constexpr size_t kMinNumberOfChannels = 2;
-constexpr size_t kMaxNumberOfChannels = 2;
+constexpr size_t kMaxNumberOfChannels = 3;
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
 constexpr size_t kBytesPerSample = 2;
@@ -75,8 +75,16 @@ zx_status_t SherlockAudioStreamIn::Init() {
 }
 
 zx_status_t SherlockAudioStreamIn::InitPDev() {
+  size_t actual = 0;
+  auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &number_of_channels_,
+                                    sizeof(number_of_channels_), &actual);
+  if (status != ZX_OK || sizeof(number_of_channels_) != actual) {
+    zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
+    return status;
+  }
+
   pdev_protocol_t pdev;
-  zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
+  status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
   if (status) {
     return status;
   }
@@ -131,14 +139,13 @@ zx_status_t SherlockAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtR
   fifo_depth_ = pdm_->fifo_depth();
   external_delay_nsec_ = 0;
 
-  if (req.channels < kMinNumberOfChannels || req.channels > kMaxNumberOfChannels) {
+  if (req.channels != number_of_channels_) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (req.frames_per_second != 48000 && req.frames_per_second != 96000) {
     return ZX_ERR_INVALID_ARGS;
   }
   frames_per_second_ = req.frames_per_second;
-  number_of_channels_ = static_cast<uint8_t>(req.channels);
   channels_to_use_bitmask_ = req.channels_to_use_bitmask;
 
   InitHw();
@@ -217,8 +224,8 @@ zx_status_t SherlockAudioStreamIn::AddFormats() {
   }
 
   audio_stream_format_range_t range;
-  range.min_channels = kMinNumberOfChannels;
-  range.max_channels = kMaxNumberOfChannels;
+  range.min_channels = number_of_channels_;
+  range.max_channels = number_of_channels_;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   range.min_frames_per_second = kMinSampleRate;
   range.max_frames_per_second = kMaxSampleRate;
