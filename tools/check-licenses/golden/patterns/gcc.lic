@@ -1,0 +1,21 @@
+(?i)\s*Copyright \(C\) [\d]{4}-[\d]{4} Free Software Foundation, Inc\.
+
+\s*This file is part of GCC\.
+
+\s*GCC is free software; you can redistribute it and\/or modify it under
+\s*the terms of the GNU General Public License as published by the Free
+\s*Software Foundation; either version 3, or \(at your option\) any later
+\s*version\.
+
+\s*GCC is distributed in the hope that it will be useful, but WITHOUT ANY
+\s*WARRANTY; without even the implied warranty of MERCHANTABILITY or
+\s*FITNESS FOR A PARTICULAR PURPOSE\.  See the GNU General Public License
+\s*for more details\.
+
+\s*Under Section 7 of GPL version 3, you are granted additional
+\s*permissions described in the GCC Runtime Library Exception, version
+\s*3\.1, as published by the Free Software Foundation\.
+
+\s*You should have received a copy of the GNU General Public License and
+\s*a copy of the GCC Runtime Library Exception along with this program;
+\s*see the files COPYING3 and COPYING\.RUNTIME respectively\.  If not, see
