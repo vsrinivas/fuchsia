@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
 
+#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/tee/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
@@ -177,6 +178,14 @@ class OpteeClient : public OpteeClientBase,
   zx_status_t GetStorageDirectory(std::filesystem::path path, bool create,
                                   zx::channel* out_storage_channel);
 
+  // Inits the Rpmb client from `OpteeController` and caches it in `rpmb_client_`.
+  //
+  // Returns:
+  //  * ZX_OK:                The operation was successful.
+  //  * ZX_ERR_UNAVAILABLE:   `OpteeController` does not have access to a Rpmb.
+  //  * `zx_status_t` codes from `zx::channel::create`
+  zx_status_t InitRpmbClient(void);
+
   // Tracks a new file system object associated with the current client.
   //
   // This occurs when the trusted world creates or opens a file system object.
@@ -244,6 +253,7 @@ class OpteeClient : public OpteeClientBase,
   zx_status_t HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& args,
                                RpcFunctionExecuteCommandsResult* out_result);
   zx_status_t HandleRpcCommandLoadTa(LoadTaRpcMessage* message);
+  zx_status_t HandleRpcCommandAccessRpmb(RpmbRpcMessage* message);
   zx_status_t HandleRpcCommandGetTime(GetTimeRpcMessage* message);
   zx_status_t HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message);
   zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);
@@ -259,6 +269,17 @@ class OpteeClient : public OpteeClientBase,
   zx_status_t HandleRpcCommandFileSystemRemoveFile(RemoveFileFileSystemRpcMessage* message);
   zx_status_t HandleRpcCommandFileSystemRenameFile(RenameFileFileSystemRpcMessage* message);
 
+  zx_status_t RpmbGetDevInfo(std::optional<SharedMemoryView> tx_frames,
+                             std::optional<SharedMemoryView> rx_frames);
+  zx_status_t RpmbRouteFrames(std::optional<SharedMemoryView> tx_frames,
+                              std::optional<SharedMemoryView> rx_frames);
+  zx_status_t RpmbReadRequest(std::optional<SharedMemoryView> tx_frames,
+                              std::optional<SharedMemoryView> rx_frames);
+  zx_status_t RpmbWriteRequest(std::optional<SharedMemoryView> tx_frames,
+                               std::optional<SharedMemoryView> rx_frames);
+  zx_status_t RpmbSendRequest(std::optional<SharedMemoryView>& req,
+                              std::optional<SharedMemoryView>& resp);
+
   OpteeControllerBase* controller_;
   SharedMemoryList allocated_shared_memory_;
   std::atomic<uint64_t> next_file_system_object_id_{1};
@@ -273,6 +294,9 @@ class OpteeClient : public OpteeClientBase,
   // A lazily-initialized, cached channel to the root storage channel.
   // This may be an invalid channel, which indicates it has not been initialized yet.
   zx::channel root_storage_channel_;
+
+  // A lazily-initialized, cached the Rpmb client.
+  std::optional<::llcpp::fuchsia::hardware::rpmb::Rpmb::SyncClient> rpmb_client_;
 
   // The (only) trusted application UUID this client is allowed to use.
   //

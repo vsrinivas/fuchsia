@@ -18,6 +18,7 @@ source_set("optee_lib") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.rpmb",
     "//sdk/fidl/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_llcpp",
     "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
     "//src/devices/bus/lib/device-protocol-platform-device",
@@ -89,8 +90,25 @@ test("optee-controller-test") {
   ]
 }
 
+test("optee-client-test") {
+  sources = [ "test/optee-client-test.cc" ]
+  include_dirs = [ "." ]
+  deps = [
+    ":optee_lib",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.sysmem",
+    "//sdk/lib/fidl/cpp",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-resource",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
 unittest_package("optee-unittest") {
   deps = [
+    ":optee-client-test",
     ":optee-controller-test",
     ":optee-message-test",
   ]
@@ -100,6 +118,9 @@ unittest_package("optee-unittest") {
     },
     {
       name = "optee-controller-test"
+    },
+    {
+      name = "optee-client-test"
     },
   ]
 }

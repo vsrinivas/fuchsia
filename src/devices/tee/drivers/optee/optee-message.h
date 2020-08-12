@@ -408,6 +408,54 @@ class LoadTaRpcMessage : public RpcMessage {
   uint64_t* out_ta_size_;
 };
 
+// RpmbRpcMessage
+//
+// A `RpcMessage` that should be interpreted with the command of accessing RPMB memory block
+class RpmbRpcMessage : public RpcMessage {
+ public:
+  enum RpmbCommand : uint64_t {
+    kDataRequest = 0,
+    kGetDevInfo = 1,
+  };
+
+  // RpmbRpcMessage
+  //
+  // Move constructor for `RpmbRpcMessage`. Uses the default implicit implementation.
+  RpmbRpcMessage(RpmbRpcMessage&&) = default;
+
+  // RpmbRpcMessage
+  //
+  // Attempts to create a `RpmbRpcMessage` from a moved-in `RpcMessage`.
+  static fit::result<RpmbRpcMessage, zx_status_t> CreateFromRpcMessage(RpcMessage&& rpc_message);
+
+  uint64_t tx_memory_reference_id() const { return tx_frame_mem_id_; }
+
+  size_t tx_memory_reference_size() const { return tx_frame_mem_size_; }
+
+  zx_paddr_t tx_memory_reference_paddr() const { return tx_frame_mem_paddr_; }
+
+  uint64_t rx_memory_reference_id() const { return rx_frame_mem_id_; }
+
+  size_t rx_memory_reference_size() const { return rx_frame_mem_size_; }
+
+  zx_paddr_t rx_memory_reference_paddr() const { return rx_frame_mem_paddr_; }
+
+ protected:
+  explicit RpmbRpcMessage(RpcMessage&& rpc_message) : RpcMessage(std::move(rpc_message)) {}
+
+  static constexpr size_t kNumParams = 2;
+  static constexpr size_t kTxMemoryReferenceParamIndex = 0;
+  static constexpr size_t kRxMemoryReferenceParamIndex = 1;
+
+  uint64_t tx_frame_mem_id_;
+  size_t tx_frame_mem_size_;
+  zx_paddr_t tx_frame_mem_paddr_;
+
+  uint64_t rx_frame_mem_id_;
+  size_t rx_frame_mem_size_;
+  zx_paddr_t rx_frame_mem_paddr_;
+};
+
 // GetTimeRpcMessage
 //
 // A `RpcMessage` that should be interpreted with the command of getting the current time.

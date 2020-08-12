@@ -532,6 +532,68 @@ fit::result<LoadTaRpcMessage, zx_status_t> LoadTaRpcMessage::CreateFromRpcMessag
   return fit::ok(std::move(result_message));
 }
 
+fit::result<RpmbRpcMessage, zx_status_t> RpmbRpcMessage::CreateFromRpcMessage(
+    RpcMessage&& rpc_message) {
+  ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kAccessReplayProtectedMemoryBlock);
+
+  RpmbRpcMessage result_message(std::move(rpc_message));
+  if (result_message.header()->num_params != kNumParams) {
+    LOG(ERROR, "RPC command to access RPMB storage received unexpected number of parameters! (%u)",
+        result_message.header()->num_params);
+    result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+    result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  MessageParam& tx_frame_memory_reference_param =
+      result_message.params()[kTxMemoryReferenceParamIndex];
+  switch (tx_frame_memory_reference_param.attribute) {
+    case MessageParam::kAttributeTypeTempMemInput: {
+      MessageParam::TemporaryMemory& temp_mem =
+          tx_frame_memory_reference_param.payload.temporary_memory;
+      result_message.tx_frame_mem_id_ = temp_mem.shared_memory_reference;
+      result_message.tx_frame_mem_size_ = static_cast<size_t>(temp_mem.size);
+      result_message.tx_frame_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+      break;
+    }
+    case MessageParam::kAttributeTypeRegMemInput:
+      LOG(ERROR, "received unsupported registered memory parameter!");
+      result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+      result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
+    default:
+      LOG(ERROR, "RPC command to load trusted app received unexpected first parameter!");
+      result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+      result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+      return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  MessageParam& rx_frame_memory_reference_param =
+      result_message.params()[kRxMemoryReferenceParamIndex];
+  switch (rx_frame_memory_reference_param.attribute) {
+    case MessageParam::kAttributeTypeTempMemOutput: {
+      MessageParam::TemporaryMemory& temp_mem =
+          rx_frame_memory_reference_param.payload.temporary_memory;
+      result_message.rx_frame_mem_id_ = temp_mem.shared_memory_reference;
+      result_message.rx_frame_mem_size_ = static_cast<size_t>(temp_mem.size);
+      result_message.rx_frame_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+      break;
+    }
+    case MessageParam::kAttributeTypeRegMemOutput:
+      LOG(ERROR, "received unsupported registered memory parameter!");
+      result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+      result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
+    default:
+      LOG(ERROR, "RPC command to load trusted app received unexpected second parameter!");
+      result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+      result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+      return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  return fit::ok(std::move(result_message));
+}
+
 fit::result<GetTimeRpcMessage, zx_status_t> GetTimeRpcMessage::CreateFromRpcMessage(
     RpcMessage&& rpc_message) {
   ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kGetTime);

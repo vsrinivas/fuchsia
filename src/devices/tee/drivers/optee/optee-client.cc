@@ -4,6 +4,8 @@
 
 #include "optee-client.h"
 
+#include <endian.h>
+#include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/tee/manager/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -16,6 +18,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 #include <libgen.h>
+#include <stdlib.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
@@ -27,10 +30,12 @@
 
 #include <ddk/debug.h>
 #include <ddktl/fidl.h>
+#include <ddktl/protocol/rpmb.h>
 #include <fbl/string_buffer.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "optee-llcpp.h"
+#include "optee-rpmb.h"
 #include "optee-smc.h"
 #include "optee-util.h"
 
@@ -593,6 +598,29 @@ zx_status_t OpteeClient::GetRootStorageChannel(zx::unowned_channel* out_root_cha
   return ZX_OK;
 }
 
+zx_status_t OpteeClient::InitRpmbClient(void) {
+  if (rpmb_client_.has_value()) {
+    return ZX_OK;
+  }
+
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    LOG(ERROR, "failed to create channel pair (status: %d)", status);
+    return status;
+  }
+
+  status = controller_->RpmbConnectServer(std::move(server));
+  if (status != ZX_OK) {
+    LOG(ERROR, "failed to connect to RPMB server (status: %d)", status);
+    return status;
+  }
+
+  rpmb_client_ = ::llcpp::fuchsia::hardware::rpmb::Rpmb::SyncClient(std::move(client));
+
+  return ZX_OK;
+}
+
 zx_status_t OpteeClient::GetStorageDirectory(std::filesystem::path path, bool create,
                                              zx::channel* out_storage_channel) {
   ZX_DEBUG_ASSERT(out_storage_channel != nullptr);
@@ -769,10 +797,14 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       LOG(DEBUG, "RPC command to perform socket IO recognized but not implemented");
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_OK;
-    case RpcMessage::Command::kAccessReplayProtectedMemoryBlock:
-      LOG(DEBUG, "RPMB is not yet supported.");
-      message.set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
-      return ZX_OK;
+    case RpcMessage::Command::kAccessReplayProtectedMemoryBlock: {
+      LOG(DEBUG, "RPC command to access RPMB");
+      auto rpmb_access_result = RpmbRpcMessage::CreateFromRpcMessage(std::move(message));
+      if (!rpmb_access_result.is_ok()) {
+        return rpmb_access_result.error();
+      }
+      return HandleRpcCommandAccessRpmb(&rpmb_access_result.value());
+    }
     case RpcMessage::Command::kAccessSqlFileSystem:
     case RpcMessage::Command::kLoadGprof:
       LOG(DEBUG, "optee: received unsupported RPC command");
@@ -857,6 +889,282 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
 
   message->set_return_code(TEEC_SUCCESS);
   return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandAccessRpmb(RpmbRpcMessage* message) {
+  ZX_DEBUG_ASSERT(message != nullptr);
+  RpmbReq* req;
+  zx_status_t status;
+
+  // Try to find the SharedMemory based on the memory id
+  std::optional<SharedMemoryView> tx_frame_mem;
+  std::optional<SharedMemoryView> rx_frame_mem;
+
+  if (message->tx_memory_reference_id() != 0) {
+    tx_frame_mem = GetMemoryReference(FindSharedMemory(message->tx_memory_reference_id()),
+                                      message->tx_memory_reference_paddr(),
+                                      message->tx_memory_reference_size());
+    if (!tx_frame_mem.has_value()) {
+      message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else {
+    ZX_DEBUG_ASSERT(message->tx_memory_reference_size() == 0);
+  }
+
+  if (message->rx_memory_reference_id() != 0) {
+    rx_frame_mem = GetMemoryReference(FindSharedMemory(message->rx_memory_reference_id()),
+                                      message->rx_memory_reference_paddr(),
+                                      message->rx_memory_reference_size());
+    if (!rx_frame_mem.has_value()) {
+      message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+      return ZX_ERR_INVALID_ARGS;
+    }
+  } else {
+    ZX_DEBUG_ASSERT(message->rx_memory_reference_size() == 0);
+  }
+
+  if (!tx_frame_mem || !rx_frame_mem) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  req = reinterpret_cast<RpmbReq*>(tx_frame_mem->vaddr());
+
+  switch (req->cmd) {
+    case RpmbReq::kCmdGetDevInfo:
+      status = RpmbGetDevInfo(tx_frame_mem, rx_frame_mem);
+      break;
+    case RpmbReq::kCmdDataRequest: {
+      std::optional<SharedMemoryView> new_tx_frame_mem = tx_frame_mem->SliceByVaddr(
+          tx_frame_mem->vaddr() + sizeof(RpmbReq), tx_frame_mem->vaddr() + tx_frame_mem->size());
+      status = RpmbRouteFrames(std::move(new_tx_frame_mem), std::move(rx_frame_mem));
+      break;
+    }
+    default:
+      LOG(ERROR, "Unknown RPMB request command: %d", req->cmd);
+      status = ZX_ERR_INVALID_ARGS;
+  }
+
+  int ret;
+  switch (status) {
+    case ZX_OK:
+      ret = TEEC_SUCCESS;
+      break;
+    case ZX_ERR_INVALID_ARGS:
+      ret = TEEC_ERROR_BAD_PARAMETERS;
+      break;
+    case ZX_ERR_UNAVAILABLE:
+      ret = TEEC_ERROR_ITEM_NOT_FOUND;
+      break;
+    case ZX_ERR_NOT_SUPPORTED:
+      ret = TEEC_ERROR_NOT_SUPPORTED;
+      break;
+    case ZX_ERR_PEER_CLOSED:
+      ret = TEEC_ERROR_COMMUNICATION;
+      break;
+    default:
+      ret = TEEC_ERROR_GENERIC;
+  }
+
+  message->set_return_code(ret);
+  return status;
+}
+
+zx_status_t OpteeClient::RpmbGetDevInfo(std::optional<SharedMemoryView> tx_frames,
+                                        std::optional<SharedMemoryView> rx_frames) {
+  zx::unowned_channel rpmb_channel;
+
+  ZX_DEBUG_ASSERT(tx_frames.has_value());
+  ZX_DEBUG_ASSERT(rx_frames.has_value());
+
+  if ((tx_frames->size() != sizeof(RpmbReq)) || (rx_frames->size() != sizeof(RpmbDevInfo))) {
+    LOG(ERROR, "Wrong TX or RX frames size");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_status_t status = InitRpmbClient();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto result = rpmb_client_->GetDeviceInfo();
+  status = result.status();
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to get RPMB Device Info (status: %d)", status);
+    return status;
+  }
+
+  RpmbDevInfo* info = reinterpret_cast<RpmbDevInfo*>(rx_frames->vaddr());
+
+  if (result->info.is_emmc_info()) {
+    memcpy(info->cid, result->info.emmc_info().cid.data(), RpmbDevInfo::kRpmbCidSize);
+    info->rpmb_size = result->info.emmc_info().rpmb_size;
+    info->rel_write_sector_count = result->info.emmc_info().reliable_write_sector_count;
+    info->ret_code = RpmbDevInfo::kRpmbCmdRetOK;
+  } else {
+    info->ret_code = RpmbDevInfo::kRpmbCmdRetError;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t OpteeClient::RpmbRouteFrames(std::optional<SharedMemoryView> tx_frames,
+                                         std::optional<SharedMemoryView> rx_frames) {
+  ZX_DEBUG_ASSERT(tx_frames.has_value());
+  ZX_DEBUG_ASSERT(rx_frames.has_value());
+
+  using ::llcpp::fuchsia::hardware::rpmb::FRAME_SIZE;
+
+  zx_status_t status;
+  RpmbFrame* frame = reinterpret_cast<RpmbFrame*>(tx_frames->vaddr());
+
+  if ((tx_frames->size() % FRAME_SIZE) || (rx_frames->size() % FRAME_SIZE)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint64_t tx_frame_cnt = tx_frames->size() / FRAME_SIZE;
+  uint64_t rx_frame_cnt = rx_frames->size() / FRAME_SIZE;
+
+  switch (betoh16(frame->request)) {
+    case RpmbFrame::kRpmbRequestKey:
+      LOG(DEBUG, "Receive RPMB::kRpmbRequestKey frame\n");
+      if ((tx_frame_cnt != 1) || (rx_frame_cnt != 1)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      status = RpmbWriteRequest(std::move(tx_frames), std::move(rx_frames));
+      break;
+    case RpmbFrame::kRpmbRequestWCounter:
+      LOG(DEBUG, "Receive RPMB::kRpmbRequestWCounter frame\n");
+      if (tx_frame_cnt != 1 || (rx_frame_cnt != 1)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      status = RpmbReadRequest(std::move(tx_frames), std::move(rx_frames));
+      break;
+    case RpmbFrame::kRpmbRequestWriteData:
+      LOG(DEBUG, "Receive RPMB::kRpmbRequestWriteData frame\n");
+      if ((tx_frame_cnt != 1) || (rx_frame_cnt != 1)) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      status = RpmbWriteRequest(std::move(tx_frames), std::move(rx_frames));
+      break;
+    case RpmbFrame::kRpmbRequestReadData:
+      LOG(DEBUG, "Receive RPMB::kRpmbRequestReadData frame\n");
+      if ((tx_frame_cnt != 1) || !rx_frame_cnt) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      status = RpmbReadRequest(std::move(tx_frames), std::move(rx_frames));
+      break;
+    default:
+      LOG(ERROR, "Unknown RPMB frame: %d", betoh16(frame->request));
+      status = ZX_ERR_INVALID_ARGS;
+  }
+
+  return status;
+}
+
+zx_status_t OpteeClient::RpmbReadRequest(std::optional<SharedMemoryView> tx_frames,
+                                         std::optional<SharedMemoryView> rx_frames) {
+  return RpmbSendRequest(tx_frames, rx_frames);
+}
+
+zx_status_t OpteeClient::RpmbWriteRequest(std::optional<SharedMemoryView> tx_frames,
+                                          std::optional<SharedMemoryView> rx_frames) {
+  ZX_DEBUG_ASSERT(tx_frames.has_value());
+  ZX_DEBUG_ASSERT(rx_frames.has_value());
+
+  zx_status_t status;
+  std::optional<SharedMemoryView> empty = {};
+  status = RpmbSendRequest(tx_frames, empty);
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to send RPMB write request (status: %d)", status);
+    return status;
+  }
+
+  RpmbFrame* frame = reinterpret_cast<RpmbFrame*>(rx_frames->vaddr());
+  memset(reinterpret_cast<void*>(rx_frames->vaddr()), 0, rx_frames->size());
+  frame->request = htobe16(RpmbFrame::kRpmbRequestStatus);
+  status = RpmbSendRequest(rx_frames, rx_frames);
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to send RPMB response request (status: %d)", status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
+                                         std::optional<SharedMemoryView>& resp) {
+  ZX_DEBUG_ASSERT(req.has_value());
+  // One VMO contains both TX and RX frames:
+  // Offset: 0           TX size        TX size alligned           RX size
+  //                                      by PAGE SIZE
+  //         |   TX FRAMES  |     padding      |        RX FRAMES     |
+  zx::vmo rpmb_vmo;
+  uint64_t size = fbl::round_up(req->size(), ZX_PAGE_SIZE);
+  bool has_rx_frames = resp && resp->size();
+  uint64_t rx_offset = size;
+
+  zx_status_t status = InitRpmbClient();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (has_rx_frames) {
+    size += fbl::round_up(resp->size(), ZX_PAGE_SIZE);
+  }
+
+  ::llcpp::fuchsia::hardware::rpmb::Request rpmb_request = {};
+
+  status = zx::vmo::create(size, 0, &rpmb_vmo);
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to create VMO for RPMB frames (status: %d)", status);
+    return status;
+  }
+
+  status = rpmb_vmo.write(reinterpret_cast<void*>(req->vaddr()), 0, req->size());
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to write request into RPMP TX VMO (status: %d)", status);
+    return status;
+  }
+  rpmb_request.tx_frames.offset = 0;
+  rpmb_request.tx_frames.size = req->size();
+  status = rpmb_vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
+                              &rpmb_request.tx_frames.vmo);
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to duplicate the RPMB TX VMO to RPMB Request (status: %d)", status);
+    return status;
+  }
+
+  ::llcpp::fuchsia::mem::Range rx_frames_range = {};
+
+  if (has_rx_frames) {
+    status = rpmb_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &rx_frames_range.vmo);
+    if (status != ZX_OK) {
+      LOG(ERROR, "Failed to duplicate the RPMB RX VMO to RPMB Request (status: %d)", status);
+      return status;
+    }
+
+    rx_frames_range.offset = rx_offset;
+    rx_frames_range.size = resp->size();
+    rpmb_request.rx_frames = fidl::unowned_ptr_t<::llcpp::fuchsia::mem::Range>(&rx_frames_range);
+  }
+
+  auto res = rpmb_client_->Request(std::move(rpmb_request));
+  status = res.status();
+  if ((status == ZX_OK) && (res->result.is_err())) {
+    status = res->result.err();
+  }
+
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to call RPMB exec Request (status: %d)", status);
+    return status;
+  }
+
+  if (has_rx_frames) {
+    status = rpmb_vmo.read(reinterpret_cast<void*>(resp->vaddr()), rx_offset, resp->size());
+  }
+
+  return status;
 }
 
 zx_status_t OpteeClient::HandleRpcCommandGetTime(GetTimeRpcMessage* message) {
