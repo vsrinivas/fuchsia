@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_SHERLOCK_TDM_OUTPUT_TAS5720_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_SHERLOCK_TDM_OUTPUT_TAS5720_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5720_TAS5720_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5720_TAS5720_H_
 
 #include <lib/device-protocol/i2c-channel.h>
 
@@ -50,4 +50,4 @@ class Tas5720 {  // Not final for unit testing.
 };
 }  // namespace audio
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_SHERLOCK_TDM_OUTPUT_TAS5720_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5720_TAS5720_H_

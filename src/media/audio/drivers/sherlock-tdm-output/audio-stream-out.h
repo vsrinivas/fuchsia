@@ -27,7 +27,7 @@
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-tdm-audio.h>
 
-#include "tas5720.h"
+#include "../codecs/tas5720/tas5720.h"
 
 namespace audio {
 namespace sherlock {

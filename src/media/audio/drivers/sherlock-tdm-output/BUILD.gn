@@ -15,8 +15,8 @@ driver_module("sherlock-tdm-output") {
     "//build/unification/config:zircon-migrated",
   ]
   sources = [
+    "../codecs/tas5720/tas5720.cc",
     "audio-stream-out.cc",
-    "tas5720.cc",
   ]
 
   deps = [

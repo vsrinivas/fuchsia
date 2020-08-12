@@ -9,8 +9,8 @@ import("//build/test/test_package.gni")
 test("sherlock-audio-out-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
+    "../../codecs/tas5720/tas5720.cc",
     "../audio-stream-out.cc",
-    "../tas5720.cc",
     "test.cc",
   ]
   deps = [
