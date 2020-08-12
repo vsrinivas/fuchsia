@@ -29,6 +29,4 @@ void Decoder::DecodeHandle(zx::object_base* value, size_t offset) {
 }
 #endif
 
-uint8_t* Decoder::InternalGetPtr(size_t offset) { return message_.bytes().data() + offset; }
-
 }  // namespace fidl

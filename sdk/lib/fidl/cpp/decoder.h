@@ -21,7 +21,7 @@ class Decoder final {
 
   template <typename T>
   T* GetPtr(size_t offset) {
-    return reinterpret_cast<T*>(InternalGetPtr(offset));
+    return reinterpret_cast<T*>(message_.bytes().data() + offset);
   }
 
   size_t GetOffset(void* ptr);
@@ -32,8 +32,6 @@ class Decoder final {
 #endif
 
  private:
-  uint8_t* InternalGetPtr(size_t offset);
-
   Message message_;
 };
 
