@@ -343,6 +343,13 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 		}
 	}
 	for {
+		// Sleep until the next poll cycle or until the client is closed.
+		select {
+		case <-ticks:
+		case <-c.shuttingDown:
+			return
+		}
+
 		c.mu.Lock()
 		client := c.Client
 		c.mu.Unlock()
@@ -398,13 +405,6 @@ func (c *Conn) keepalive(ctx context.Context, ticks <-chan time.Time, timeout fu
 			timeoutDuration := time.Since(sendTime)
 			logger.Debugf(ctx, "ssh keepalive timed out after %.3fs, disconnecting", timeoutDuration.Seconds())
 			c.disconnect()
-			return
-		}
-
-		// Otherwise, sleep until the next poll cycle.
-		select {
-		case <-ticks:
-		case <-c.shuttingDown:
 			return
 		}
 	}

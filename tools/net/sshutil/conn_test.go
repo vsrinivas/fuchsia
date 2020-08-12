@@ -71,16 +71,9 @@ func TestKeepalive(t *testing.T) {
 		})
 		defer cleanup()
 
-		// Sending on this channel triggers a keepalive ping. keepalive() also
-		// sends an initial ping immediately when it's called.
+		// Sending on this channel triggers a keepalive ping.
 		keepaliveTicks := make(chan time.Time)
 		go conn.keepalive(ctx, keepaliveTicks, nil)
-
-		select {
-		case <-requestsReceived:
-		case <-time.After(testTimeout):
-			t.Errorf("didn't receive keepalive ping on startup")
-		}
 
 		keepaliveTicks <- time.Now()
 
@@ -105,9 +98,12 @@ func TestKeepalive(t *testing.T) {
 		keepaliveTimeouts := make(chan time.Time, 1)
 		keepaliveTimeouts <- time.Now()
 
-		go conn.keepalive(ctx, nil, func() <-chan time.Time {
+		keepaliveTicks := make(chan time.Time)
+		go conn.keepalive(ctx, keepaliveTicks, func() <-chan time.Time {
 			return keepaliveTimeouts
 		})
+
+		keepaliveTicks <- time.Now()
 
 		assertChannelClosed(t, disconnects, "keepalive failure should have disconnected the conn")
 	})
@@ -125,11 +121,14 @@ func TestKeepalive(t *testing.T) {
 		// stopped.
 		server.stop()
 
+		keepaliveTicks := make(chan time.Time)
 		keepaliveComplete := make(chan struct{})
 		go func() {
-			conn.keepalive(ctx, nil, nil)
+			conn.keepalive(ctx, keepaliveTicks, nil)
 			close(keepaliveComplete)
 		}()
+
+		keepaliveTicks <- time.Now()
 
 		assertChannelClosed(t, disconnects, "a keepalive failure didn't disconnect the conn")
 		assertChannelClosed(t, keepaliveComplete, "a keepalive failure didn't terminate the keepalive goroutine")
