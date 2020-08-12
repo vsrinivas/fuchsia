@@ -54,7 +54,7 @@ pub struct RealBssResolver<L: LoaderProxyInterface> {
     api_key: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ResolverError {
     NoBsses,
     Internal,

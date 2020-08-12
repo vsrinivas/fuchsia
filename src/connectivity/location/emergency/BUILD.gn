@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//third_party/cobalt/metrics_registry.gni")
 
 group("emergency") {
   testonly = true
@@ -29,20 +30,26 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":emergency_metrics_registry_rustlib",
     ":lib",
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.location:fuchsia.location-rustc",
     "//sdk/fidl/fuchsia.location.position:fuchsia.location.position-rustc",
     "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor-rustc",
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http-rustc",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
+    "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:test-case",
   ]
 
   sources = [ "src/main.rs" ]
@@ -123,4 +130,11 @@ unittest_package("emergency-tests") {
       environments = basic_envs
     },
   ]
+}
+
+metrics_registry("emergency_metrics_registry") {
+  # This must match the ID of our Cobalt project as specified in:
+  # //third_party/cobalt_config/projects.yaml
+  project_id = 4
+  generate_rust = true
 }
