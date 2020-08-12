@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <zircon/assert.h>
 
+#include "extend_bits.h"
 #include "macros.h"
 
 #ifndef AMLOGIC_PTS_DLOG_ENABLE
@@ -30,7 +31,7 @@ void PtsManager::SetLookupBitWidth(uint32_t lookup_bit_width) {
 }
 
 void PtsManager::InsertPts(uint64_t offset, bool has_pts, uint64_t pts) {
-  PTS_DLOG("InsertPts() offset: %" PRIx64 " has_pts: %d pts: %" PRIx64, offset, has_pts, pts);
+  PTS_DLOG("InsertPts() offset: 0x%" PRIx64 " has_pts: %d pts: %" PRIx64, offset, has_pts, pts);
   std::lock_guard<std::mutex> lock(lock_);
 
   ZX_DEBUG_ASSERT(has_pts || !pts);
@@ -80,34 +81,12 @@ const PtsManager::LookupResult PtsManager::Lookup(uint64_t offset) {
 
   // Basically we're determining whether offset is logically above or logically below
   // last_inserted_offset.
-  //
-  // Shift up to the top bits of the uint64_t, so we can exploit subtraction that underflows to
-  // compute distance regardless of recent overflow of a and/or b.  We could probably also do this
-  // by chopping off some top order bits after subtraction, but somehow this makes more sense to me.
-  // This way, we're sorta just creating a and b which are each 64 bit counters with 64 bit natural
-  // overflow, so we can figure out the logical above/below relationship between offset and
-  // last_inserted_offset.
-  uint64_t a = last_inserted_offset << (64 - lookup_bit_width_);
-  uint64_t b = offset << (64 - lookup_bit_width_);
-  // Is the distance between a and b smaller if we assume b is logically above a, or if we assume
-  // a is logically above b.  We want to assume the option which has a and b closer together in
-  // distance on a mod ring, as we don't generally know whether offset will be logically above or
-  // logically below last_inserted_offset.
-  //
-  // One of these will be relatively small, and the other will be huge (or both 0).  Another way to
-  // do this is to check if b - a is < 0x8000000000000000.
-  if (b - a <= a - b) {
-    // offset is logically above (or equal to) last_inserted_offset
-    offset = last_inserted_offset + ((b - a) >> (64 - lookup_bit_width_));
-  } else {
-    // offset is logically below last_inserted_offset
-    offset = last_inserted_offset - ((a - b) >> (64 - lookup_bit_width_));
-  }
+  offset = ExtendBits(last_inserted_offset, offset, lookup_bit_width_);
 
   auto it = offset_to_result_.upper_bound(offset);
   // Check if this offset is < any element in the list.
   if (it == offset_to_result_.begin()) {
-    PTS_DLOG("it == offset_to_result_.begin() -- offset: %" PRIx64, offset);
+    PTS_DLOG("it == offset_to_result_.begin() -- offset: 0x%" PRIx64, offset);
     return PtsManager::LookupResult(false, false, 0);
   }
   // Decrement to find the pts corresponding to the last offset <= |offset|.
@@ -116,10 +95,12 @@ const PtsManager::LookupResult PtsManager::Lookup(uint64_t offset) {
   if (AMLOGIC_PTS_DLOG_ENABLE) {
     const PtsManager::LookupResult& result = it->second;
     if (result.is_end_of_stream()) {
-      PTS_DLOG("Lookup() offset: %" PRIx64 " EOS", offset);
+      PTS_DLOG("Lookup() offset: 0x%" PRIx64 " EOS", offset);
     } else {
-      PTS_DLOG("Lookup() offset: %" PRIx64 " has_pts: %d pts: %" PRIx64, offset, result.has_pts(),
-               result.pts());
+      PTS_DLOG("Lookup() offset: 0x%" PRIx64 " has_pts: %d pts: 0x%" PRIx64
+               " offset - found: 0x%" PRIx64 " entries beyond found: %u",
+               offset, result.has_pts(), result.pts(), offset - it->first,
+               CountEntriesBeyondLocked(it->first));
     }
   }
 
@@ -128,6 +109,10 @@ const PtsManager::LookupResult PtsManager::Lookup(uint64_t offset) {
 
 uint32_t PtsManager::CountEntriesBeyond(uint64_t threshold_offset) const {
   std::lock_guard<std::mutex> lock(lock_);
+  return CountEntriesBeyondLocked(threshold_offset);
+}
+
+uint32_t PtsManager::CountEntriesBeyondLocked(uint64_t threshold_offset) const {
   // Shorter bit width not implemented for this method yet.
   ZX_DEBUG_ASSERT(lookup_bit_width_ == 64);
   auto it = offset_to_result_.upper_bound(threshold_offset);

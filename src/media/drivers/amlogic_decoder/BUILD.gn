@@ -90,6 +90,8 @@ if (target_cpu == "arm64") {
       "amlogic-video.cc",
       "amlogic-video.h",
       "decoder_core.h",
+      "extend_bits.cc",
+      "extend_bits.h",
       "firmware_blob.cc",
       "firmware_blob.h",
       "h264_decoder.cc",

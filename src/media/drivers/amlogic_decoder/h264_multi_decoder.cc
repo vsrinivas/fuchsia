@@ -15,6 +15,7 @@
 #include <fbl/algorithm.h>
 
 #include "decoder_instance.h"
+#include "extend_bits.h"
 #include "h264_utils.h"
 #include "media/base/decoder_buffer.h"
 #include "media/gpu/h264_decoder.h"
@@ -45,8 +46,6 @@ const uint8_t kPadding[kPaddingSize] = {};
 // interrupt (which the FW does if it sees a new NALU after the last byte of a frame).
 const std::vector<uint8_t> kEOS = {0, 0, 0, 1, 0x0a};
 
-constexpr uint32_t kVdecFifoAlign = 8;
-
 // ISO 14496 part 10
 // VUI parameters: Table E-1 "Meaning of sample aspect ratio indicator"
 static const int kTableSarWidth[] = {0,  1,  12, 10, 16,  40, 24, 20, 32,
@@ -66,8 +65,7 @@ enum class ChromaFormatIdc : uint32_t {
 
 static constexpr uint32_t kMacroblockDimension = 16;
 
-// We just set ViffBitCnt to a very large value that can still safely be multiplied by 8, so that
-// GetConsumedBytes() can work for very large frames and/or lots of prefix padding zeroes.  The HW
+// We just set ViffBitCnt to a very large value that can still safely be multiplied by 8.  The HW
 // doesn't seem to actually stop decoding if this hits zero, nor does the HW seem to care if this
 // doesn't reach zero at the end of a frame.
 constexpr uint32_t kBytesToDecode = 0x10000000;
@@ -612,18 +610,19 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
 void H264MultiDecoder::StartFrameDecode() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kWaitingForInputOrOutput);
 
-  if (unwrapped_consumed_bytes_decode_tried_ == unwrapped_consumed_bytes_ &&
-      unwrapped_write_offset_decode_tried_ == unwrapped_write_offset_) {
-    // If we see this print multiple times, we may need to mitigate this by doing OnFatalError() or
-    // by skipping some data of the stream (hopefully skipping past whatever is causing trouble).
-    //
-    // TODO(fxb/13483): For now this could potentially occur if there is pathological queueing of
-    // more PTS values than frames.  Probably do OnFatalError() here rather than keeping
-    // unreasonable # of PTS values or dumping PTS values.
-    LOG(WARNING, "no progress being made?");
+  if (unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_ ==
+          unwrapped_first_slice_header_of_frame_decoded_stream_offset_ &&
+      unwrapped_write_stream_offset_decode_tried_ == unwrapped_write_stream_offset_) {
+    // This is the second time we're trying the exact same decode, despite having not decoded
+    // anything on the first try.  This can happen if the input data is broken or a client is
+    // queueing more PTS values than frames.  In these cases we fail the stream.
+    LOG(ERROR, "no progress being made");
+    OnFatalError();
+    return;
   }
-  unwrapped_consumed_bytes_decode_tried_ = unwrapped_consumed_bytes_;
-  unwrapped_write_offset_decode_tried_ = unwrapped_write_offset_;
+  unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_ =
+      unwrapped_first_slice_header_of_frame_decoded_stream_offset_;
+  unwrapped_write_stream_offset_decode_tried_ = unwrapped_write_stream_offset_;
 
   per_frame_attempt_seen_first_mb_in_slice_ = -1;
 
@@ -1546,20 +1545,13 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   if (!current_frame_) {
     current_frame_ = current_metadata_frame_;
 
-    // GetConsumedBytes() is observed to be 8 bytes into the frame.  The "kVdecFifoAlign" naming of
-    // that 8 bytes is only a guess however.
-    //
-    // TODO(fxb/13483): Try to find a more robust/official way to get the offset of byte 0 of the
-    // start code before the first slice of the picture, or at least verify that this 8 byte fixup
-    // works across all the streams we can throw at it.  jbauman@ suggests kOffsetDelimiterLo/Hi
-    // might be better.  In frame mode the PTS manager's ability to deal with lookup locations
-    // within a frame means the subtraction here wouldn't really be necessary, but for stream mode
-    // we could end up slipping a frame's PTS to the wrong frame if we don't have a precise frame
-    // start offset.
-    uint64_t unwrapped_start_of_frame_offset =
-        unwrapped_consumed_bytes_ + GetConsumedBytes() - kVdecFifoAlign;
-    DLOG("unwrapped_start_of_frame_offset: 0x%" PRIx64, unwrapped_start_of_frame_offset);
-    PtsManager::LookupResult lookup_result = pts_manager_->Lookup(unwrapped_start_of_frame_offset);
+    uint64_t offset_delimiter = params_.data[HardwareRenderParams::kOffsetDelimiterHi] << 16 |
+                                params_.data[HardwareRenderParams::kOffsetDelimiterLo];
+    unwrapped_first_slice_header_of_frame_detected_stream_offset_ =
+        ExtendBits(unwrapped_write_stream_offset_, offset_delimiter, 32);
+
+    PtsManager::LookupResult lookup_result =
+        pts_manager_->Lookup(unwrapped_first_slice_header_of_frame_detected_stream_offset_);
 
     if (lookup_result.has_pts()) {
       current_frame_->frame->has_pts = true;
@@ -1717,29 +1709,37 @@ void H264MultiDecoder::FlushFrames() {
   DLOG("Got media decoder res %d", res);
 }
 
-uint32_t H264MultiDecoder::GetConsumedBytes() {
+uint32_t H264MultiDecoder::GetApproximateConsumedBytes() {
   return kBytesToDecode - (ViffBitCnt::Get().ReadFrom(owner_->dosbus()).reg_value() + 7) / 8;
 }
 
 void H264MultiDecoder::DumpStatus() {
   auto viff_bit_cnt = ViffBitCnt::Get().ReadFrom(owner_->dosbus());
   DLOG("ViffBitCnt: %x", viff_bit_cnt.reg_value());
-  DLOG("kBytesToDecode - (ViffBitCnt + 7) / 8: 0x%x",
-       kBytesToDecode - (viff_bit_cnt.reg_value() + 7) / 8);
-  DLOG("GetConsumedBytes(): 0x%x", GetConsumedBytes());
+  DLOG("GetApproximateConsumedBytes(): 0x%x", GetApproximateConsumedBytes());
   // Number of bytes that are in the fifo that RP has already moved past.
   DLOG("Viifolevel: 0x%x", VldMemVififoLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
   DLOG("VldMemVififoBytesAvail: 0x%x",
        VldMemVififoBytesAvail::Get().ReadFrom(owner_->dosbus()).reg_value());
-  uint32_t stream_input_offset = owner_->core()->GetStreamInputOffset();
-  uint32_t read_offset = owner_->core()->GetReadOffset();
-  DLOG("input offset: %d (0x%x) read offset: %d (0x%x)", stream_input_offset, stream_input_offset,
-       read_offset, read_offset);
   DLOG("Error status reg %d mbymbx reg %d",
        ErrorStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value(),
        MbyMbx::Get().ReadFrom(owner_->dosbus()).reg_value());
   DLOG("DpbStatusReg 0x%x", DpbStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value());
-  DLOG("saved_state_starting_read_offset_: 0x%x", saved_state_starting_read_offset_);
+
+  uint32_t stream_input_offset = owner_->core()->GetStreamInputOffset();
+  uint32_t read_offset = owner_->core()->GetReadOffset();
+  DLOG("input offset: %d (0x%x) read offset: %d (0x%x)", stream_input_offset, stream_input_offset,
+       read_offset, read_offset);
+  DLOG("unwrapped_write_stream_offset_: 0x%" PRIx64, unwrapped_write_stream_offset_);
+  DLOG("unwrapped_saved_read_stream_offset_: 0x%" PRIx64, unwrapped_saved_read_stream_offset_);
+  DLOG("unwrapped_first_slice_header_of_frame_detected_stream_offset_: 0x%" PRIx64,
+       unwrapped_first_slice_header_of_frame_detected_stream_offset_);
+  DLOG("unwrapped_first_slice_header_of_frame_decoded_stream_offset_: 0x%" PRIx64,
+       unwrapped_first_slice_header_of_frame_decoded_stream_offset_);
+  DLOG("unwrapped_write_stream_offset_decode_tried_: 0x%" PRIx64,
+       unwrapped_write_stream_offset_decode_tried_);
+  DLOG("unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_: 0x%" PRIx64,
+       unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_);
 }
 
 void H264MultiDecoder::HandlePicDataDone() {
@@ -1749,7 +1749,8 @@ void H264MultiDecoder::HandlePicDataDone() {
   owner_->watchdog()->Cancel();
   is_hw_active_ = false;
 
-  unwrapped_consumed_bytes_ += GetConsumedBytes();
+  unwrapped_first_slice_header_of_frame_decoded_stream_offset_ =
+      unwrapped_first_slice_header_of_frame_detected_stream_offset_;
 
   current_frame_ = nullptr;
   current_metadata_frame_ = nullptr;
@@ -2124,7 +2125,8 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
     }
     uint32_t stream_buffer_empty_space =
         owner_->GetStreamBufferEmptySpaceAfterWriteOffsetBeforeReadOffset(
-            owner_->core()->GetStreamInputOffset(), saved_state_starting_read_offset_);
+            owner_->core()->GetStreamInputOffset(),
+            unwrapped_saved_read_stream_offset_ % GetStreamBufferSize());
     if (length > stream_buffer_empty_space) {
       // We don't want the parser to hang waiting for output buffer space, since new space will
       // never be released to it since we need to manually update the read pointer.
@@ -2178,7 +2180,7 @@ void H264MultiDecoder::SubmitDataToHardware(const uint8_t* data, size_t length,
       OnFatalError();
     }
   }
-  unwrapped_write_offset_ += length;
+  unwrapped_write_stream_offset_ += length;
 }
 
 bool H264MultiDecoder::CanBeSwappedIn() {
@@ -2223,14 +2225,34 @@ void H264MultiDecoder::SwappedIn() {
     stream_buffer_size_ = owner_->current_instance()->stream_buffer()->buffer().size();
     ZX_DEBUG_ASSERT(stream_buffer_size_ > kStreamBufferReadAlignment);
     ZX_DEBUG_ASSERT(stream_buffer_size_ % kStreamBufferReadAlignment == 0);
+    // IsPow2
+    ZX_DEBUG_ASSERT(((stream_buffer_size_ - 1) & stream_buffer_size_) == 0);
+    // No need for anything fancy here - not that performance-sensitive.
+    uint32_t tmp = stream_buffer_size_;
+    uint32_t stream_buffer_size_bit_count = 0;
+    while (tmp != 1) {
+      ++stream_buffer_size_bit_count;
+      tmp = tmp >> 1;
+    }
+    stream_buffer_size_bit_count_ = stream_buffer_size_bit_count;
   }
-  saved_state_starting_read_offset_ = owner_->core()->GetReadOffset();
+
+  // ExtendBits() doesn't know to only let the unwrapped read offset be less than the unwrapped
+  // write offset, but rather than teaching ExtendBits() how to do that, just subtract as necessary
+  // here instead.
+  unwrapped_saved_read_stream_offset_ =
+      ExtendBits(unwrapped_write_stream_offset_, owner_->core()->GetReadOffset(),
+                 stream_buffer_size_bit_count_);
+  if (unwrapped_saved_read_stream_offset_ > unwrapped_write_stream_offset_) {
+    unwrapped_saved_read_stream_offset_ -= GetStreamBufferSize();
+  }
+  ZX_DEBUG_ASSERT(unwrapped_saved_read_stream_offset_ <= unwrapped_write_stream_offset_);
 
   // Restore the most up-to-date write offset, even if we just restored an old save state, since we
   // want to add more data to decode, not overwrite data we previously wrote.  This also immediately
   // starts allowing the FIFO to fill using the data written previously, which is fine.  But reading
   // from the FIFO won't happen until we tell the decoder to kH264ActionSearchHead.
-  owner_->core()->UpdateWriteOffset(unwrapped_write_offset_ % GetStreamBufferSize());
+  owner_->core()->UpdateWriteOffset(unwrapped_write_stream_offset_ % GetStreamBufferSize());
 
   // Ensure at least one PumpDecoder() before swapping out again.
   //
@@ -2315,10 +2337,11 @@ void H264MultiDecoder::PumpDecoder() {
     return;
   }
 
-  // If PtsManager is already holding many offsets after the consumed offset, consume more without
-  // adding more offsets to PtsManager.
-  if (pts_manager_->CountEntriesBeyond(unwrapped_consumed_bytes_) >=
-      PtsManager::kMaxEntriesDueToExtraDecoderDelay) {
+  // If PtsManager is already holding many offsets after the last decoded frame's first slice
+  // header offset, decode more without adding more offsets to PtsManager.
+  if (pts_manager_->CountEntriesBeyond(
+          unwrapped_first_slice_header_of_frame_decoded_stream_offset_) >=
+      PtsManager::kH264MultiQueuedEntryCountThreshold) {
     StartFrameDecode();
     return;
   }
@@ -2337,9 +2360,12 @@ void H264MultiDecoder::PumpDecoder() {
   // Now we try to get some input data.
   std::optional<DataInput> current_data_input = frame_data_provider_->ReadMoreInputData();
   if (!current_data_input) {
-    // Don't necessarily need more input to make progress.
-    if (unwrapped_write_offset_ != unwrapped_write_offset_decode_tried_ ||
-        unwrapped_consumed_bytes_ != unwrapped_consumed_bytes_decode_tried_) {
+    // Don't necessarily need more input to make progress, but avoid triggering detection of no
+    // progress being made in StartFrameDecode() if we've already tried decoding with the input
+    // data we have so far without any complete frame decode happening last time.
+    if (unwrapped_write_stream_offset_ != unwrapped_write_stream_offset_decode_tried_ ||
+        unwrapped_first_slice_header_of_frame_decoded_stream_offset_ !=
+            unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_) {
       StartFrameDecode();
       return;
     }
@@ -2361,9 +2387,10 @@ void H264MultiDecoder::PumpDecoder() {
   ZX_DEBUG_ASSERT(current_input.length != 0);
 
   if (current_input.pts) {
-    pts_manager_->InsertPts(unwrapped_write_offset_, /*has_pts=*/true, current_input.pts.value());
+    pts_manager_->InsertPts(unwrapped_write_stream_offset_, /*has_pts=*/true,
+                            current_input.pts.value());
   } else {
-    pts_manager_->InsertPts(unwrapped_write_offset_, /*has_pts=*/false, /*pts=*/0);
+    pts_manager_->InsertPts(unwrapped_write_stream_offset_, /*has_pts=*/false, /*pts=*/0);
   }
 
   // Now we can submit all the data of this AU/packet plus padding to the HW decoder and start it
@@ -2378,6 +2405,13 @@ void H264MultiDecoder::PumpDecoder() {
   // of an AU that splits across multiple packets.  At the moment none of these are supported.
   SubmitDataToHardware(current_input.data.data(), current_input.length, current_input.codec_buffer,
                        current_input.buffer_start_offset);
+  // TODO(fxb/13483): We'd like to add padding here (and potentially overwrite that padding later
+  // depending) so that the decoder would decode all the input data so far without requiring more
+  // input data (roughly 512-1024 bytes more), but first we'll need a reliable way to detect when we
+  // get a pic data done interrupt only because of a frame being interrupted by padding, vs. getting
+  // a pic data done for an actual complete frame decode.  One way would be to delay moving on to
+  // the next frame until we get both the pic data done _and_ <a slice header for the next frame
+  // _or_ a config DPB>.
 
   // After this, we'll see an interrupt from the HW, either slice header or one of the out-of-data
   // interrupts.

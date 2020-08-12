@@ -112,7 +112,7 @@ class H264MultiDecoder : public VideoDecoder {
   void ReceivedNewInput();
   // not currently used:
   void FlushFrames();
-  uint32_t GetConsumedBytes();
+  uint32_t GetApproximateConsumedBytes();
   void DumpStatus();
   // Try to pump the decoder, rescheduling it if it isn't currently scheduled in.
   void PumpOrReschedule();
@@ -396,6 +396,7 @@ class H264MultiDecoder : public VideoDecoder {
   int per_frame_attempt_seen_first_mb_in_slice_ = -1;
 
   uint32_t stream_buffer_size_ = 0;
+  uint32_t stream_buffer_size_bit_count_ = 0;
 
   // If we fail to fully decode a frame, we'll force "swap out" but with should_save_input_context_
   // false to achieve a re-load of the old state when swapping back in.  If we succeed at fully
@@ -411,22 +412,35 @@ class H264MultiDecoder : public VideoDecoder {
   // When we restore from a saved state we've previously started from, we want to restore everything
   // except the write pointer, since we want to keep the data written to the stream buffer last time
   // so we can re-decode all that data.
-  uint64_t unwrapped_write_offset_ = 0;
+  uint64_t unwrapped_write_stream_offset_ = 0;
 
-  // This allows us to find the start offset of each decoded frame, to find which timestamp_ish goes
-  // with each decoded frame (if any).
-  uint64_t unwrapped_consumed_bytes_ = 0;
+  // When we're adding data to the stream buffer we want to know what to avoid overwriting.  We only
+  // move this forward based on the HW read pointer when we're restoring from a saved state, else
+  // we may need to restore from the current saved state again which can cause the HW read offset
+  // to be restored to a logically lower value.  Immediately after restoring from a saved state is
+  // also when the read pointer won't reflect bytes consumed into the FIFO yet - those bytes may or
+  // may not be saved along with the saved state, so we assume they aren't.  Similar to the HW read
+  // pointer, this will be 512 byte aligned, only moving forward when it's safe for the parser to
+  // write into bytes before this offset again.
+  uint64_t unwrapped_saved_read_stream_offset_ = 0;
 
-  uint64_t unwrapped_consumed_bytes_decode_tried_ = 0;
-  uint64_t unwrapped_write_offset_decode_tried_ = 0;
+  // This is used to determine how many PTS values we have stored beyond the last detected slice
+  // header.  We don't want to put so many packets into the stream buffer that it causes PtsManager
+  // to lose track of PTS offsets within the stream buffer.
+  uint64_t unwrapped_first_slice_header_of_frame_detected_stream_offset_ = 0;
+
+  // These are used to determine if we're making progress when we're about to tell the HW to attempt
+  // searching for a frame and decoding it.  If we're not making progress either adding more input
+  // data or decoding a frame from input data provided so far, then we've gotten caught in a
+  // pathological case involving broken input data or more PTS values from the client than makes any
+  // sense.  In such cases we fail the stream (at least for now).
+  uint64_t unwrapped_first_slice_header_of_frame_decoded_stream_offset_ = 0;
+  uint64_t unwrapped_write_stream_offset_decode_tried_ = 0;
+  uint64_t unwrapped_first_slice_header_of_frame_decoded_stream_offset_decode_tried_ = 0;
 
   // This points direction to a value within slice_data_map_.
   SliceData* current_slice_data_ = nullptr;
   media::H264SliceHeader stashed_latest_slice_header_;
-
-  // We don't want to overwrite data we may read again later if we need to re-decode from the same
-  // saved state again.
-  uint32_t saved_state_starting_read_offset_ = 0;
 
   // Stashed during ConfigureDpb(), since not robustly available during HandleSliceHeader().
   uint32_t chroma_format_idc_ = 0;
