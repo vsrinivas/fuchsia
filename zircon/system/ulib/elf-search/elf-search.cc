@@ -17,9 +17,8 @@
 #include <zircon/syscalls/object.h>
 
 #include <algorithm>
+#include <memory>
 #include <optional>
-
-#include <fbl/array.h>
 
 namespace elf_search {
 namespace {
@@ -69,10 +68,7 @@ class ProcessMemReader {
   [[nodiscard]] zx_status_t Read(uintptr_t vaddr, T* x) {
     return ReadBytes(vaddr, reinterpret_cast<uint8_t*>(x), sizeof(T));
   }
-  template <typename T>
-  [[nodiscard]] zx_status_t ReadArray(uintptr_t vaddr, fbl::Array<T>* arr) {
-    return ReadBytes(vaddr, arr->data(), arr->size());
-  }
+
   template <typename T>
   [[nodiscard]] zx_status_t ReadArray(uintptr_t vaddr, T* arr, size_t sz) {
     return ReadBytes(vaddr, reinterpret_cast<uint8_t*>(arr), sz * sizeof(T));
@@ -195,12 +191,12 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
     return status;
   }
   fbl::AllocChecker ac;
-  fbl::Array<zx_info_maps> maps(new (&ac) zx_info_maps[avail], avail);
+  std::unique_ptr<zx_info_maps[]> maps(new (&ac) zx_info_maps[avail]);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = process.get_info(ZX_INFO_PROCESS_MAPS, maps.data(), avail * sizeof(zx_info_maps),
-                            &actual, &avail);
+  status = process.get_info(ZX_INFO_PROCESS_MAPS, maps.get(), avail * sizeof(zx_info_maps), &actual,
+                            &avail);
   if (status != ZX_OK) {
     return status;
   }
@@ -208,7 +204,9 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
   // 'maps' should be sorted in ascending order of base address so we should be able to use that to
   // quickly find the mapping associated with any given PT_LOAD.
 
-  for (const auto& map : maps) {
+  for (size_t i = 0; i < actual; ++i) {
+    const auto& map = maps[i];
+
     // Skip any writable maps since the RODATA segment containing the
     // headers will not be writable.
     if (map.type != ZX_INFO_MAPS_TYPE_MAPPING) {
