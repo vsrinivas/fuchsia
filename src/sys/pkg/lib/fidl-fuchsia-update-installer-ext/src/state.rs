@@ -151,7 +151,8 @@ impl State {
         self.is_success() || self.is_failure()
     }
 
-    fn name(&self) -> &'static str {
+    /// Returns the name of the state, intended for use in log/diagnostics output.
+    pub fn name(&self) -> &'static str {
         match self {
             State::Prepare => "prepare",
             State::Fetch(_) => "fetch",

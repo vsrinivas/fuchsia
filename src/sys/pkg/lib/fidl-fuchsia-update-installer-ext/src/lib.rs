@@ -20,11 +20,13 @@ use {
         RebootControllerMarker, UpdateNotStartedReason,
     },
     fuchsia_url::pkg_url::PkgUrl,
-    futures::prelude::*,
-    futures::task::{Context, Poll},
+    futures::{
+        prelude::*,
+        task::{Context, Poll},
+    },
     log::info,
     pin_project::pin_project,
-    std::pin::Pin,
+    std::{convert::TryInto, pin::Pin},
     thiserror::Error,
 };
 
@@ -46,6 +48,10 @@ pub enum MonitorUpdateAttemptError {
     /// Fidl error.
     #[error("FIDL error")]
     FIDL(#[source] fidl::Error),
+
+    /// Error while decoding a [`fidl_fuchsia_update_installer::State`].
+    #[error("unable to decode State")]
+    DecodeState(#[source] state::DecodeStateError),
 }
 
 /// An update attempt.
@@ -89,7 +95,7 @@ pub async fn start_update(
 }
 
 impl Stream for UpdateAttempt {
-    type Item = Result<fidl_fuchsia_update_installer::State, MonitorUpdateAttemptError>;
+    type Item = Result<State, MonitorUpdateAttemptError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let UpdateAttemptProj { attempt_id: _, stream } = self.project();
@@ -100,19 +106,20 @@ impl Stream for UpdateAttempt {
         };
         let MonitorRequest::OnState { state, responder } = poll_res;
         let _ = responder.send();
+        let state = state.try_into().map_err(MonitorUpdateAttemptError::DecodeState)?;
         Poll::Ready(Some(Ok(state)))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fidl_fuchsia_update_installer::{
-        InstallationProgress, InstallerMarker, InstallerRequest, State, UpdateInfo,
+    use {
+        super::*,
+        fidl_fuchsia_update_installer::{InstallationProgress, InstallerMarker, InstallerRequest},
+        fuchsia_async as fasync,
+        futures::stream::StreamExt,
+        matches::assert_matches,
     };
-    use fuchsia_async as fasync;
-    use futures::stream::StreamExt;
-    use matches::assert_matches;
 
     const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
@@ -190,7 +197,7 @@ mod tests {
         let (_reboot_controller, reboot_controller_server_end) =
             fidl::endpoints::create_proxy::<RebootControllerMarker>().unwrap();
 
-        let expected_state = State::FailPrepare(fidl_fuchsia_update_installer::FailPrepareData {});
+        let expected_state = State::FailPrepare;
         let installer_fut = async move {
             let mut returned_update_attempt =
                 start_update(&pkgurl, opts, proxy, Some(reboot_controller_server_end))
@@ -209,12 +216,7 @@ mod tests {
                         .unwrap();
 
                     let monitor = monitor.into_proxy().unwrap();
-                    let () = monitor
-                        .on_state(&mut fidl_fuchsia_update_installer::State::FailPrepare(
-                            fidl_fuchsia_update_installer::FailPrepareData {},
-                        ))
-                        .await
-                        .unwrap();
+                    let () = monitor.on_state(&mut State::FailPrepare.into()).await.unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -254,6 +256,67 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_state_decode_error() {
+        let pkgurl =
+            PkgUrl::new_package("fuchsia.com".to_string(), "/update/0".to_string(), None).unwrap();
+
+        let opts = Options {
+            initiator: Initiator::User,
+            allow_attach_to_existing_attempt: false,
+            should_write_recovery: true,
+        };
+
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<InstallerMarker>().unwrap();
+
+        let (_reboot_controller, reboot_controller_server_end) =
+            fidl::endpoints::create_proxy::<RebootControllerMarker>().unwrap();
+
+        let installer_fut = async move {
+            let mut returned_update_attempt =
+                start_update(&pkgurl, opts, proxy, Some(reboot_controller_server_end))
+                    .await
+                    .unwrap();
+            assert_matches!(
+                returned_update_attempt.next().await,
+                Some(Err(MonitorUpdateAttemptError::DecodeState(
+                    state::DecodeStateError::DecodeProgress(
+                        state::DecodeProgressError::FractionCompletedOutOfRange
+                    )
+                )))
+            );
+        };
+
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(InstallerRequest::StartUpdate { monitor, responder, .. }) => {
+                    responder
+                        .send(&mut Ok("00000000-0000-0000-0000-000000000002".to_owned()))
+                        .unwrap();
+
+                    let monitor = monitor.into_proxy().unwrap();
+                    let () = monitor
+                        .on_state(&mut fidl_fuchsia_update_installer::State::Fetch(
+                            fidl_fuchsia_update_installer::FetchData {
+                                info: Some(fidl_fuchsia_update_installer::UpdateInfo {
+                                    download_size: None,
+                                }),
+                                progress: Some(InstallationProgress {
+                                    fraction_completed: Some(2.0),
+                                    bytes_downloaded: None,
+                                }),
+                            },
+                        ))
+                        .await
+                        .unwrap();
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        future::join(installer_fut, stream_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_server_close_unexpectedly() {
         let pkgurl =
             PkgUrl::new_package("fuchsia.com".to_string(), "/update/0".to_string(), None).unwrap();
@@ -268,14 +331,15 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<InstallerMarker>().unwrap();
 
         let expected_states = vec![
-            State::Prepare(fidl_fuchsia_update_installer::PrepareData {}),
-            State::Fetch(fidl_fuchsia_update_installer::FetchData {
-                info: Some(UpdateInfo { download_size: None }),
-                progress: Some(InstallationProgress {
-                    fraction_completed: Some(0.0),
-                    bytes_downloaded: None,
-                }),
-            }),
+            State::Prepare,
+            State::Fetch(
+                UpdateInfoAndProgress::builder()
+                    .info(UpdateInfo::builder().download_size(0).build())
+                    .progress(
+                        Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build(),
+                    )
+                    .build(),
+            ),
         ];
 
         let (_reboot_controller, reboot_controller_server_end) =
@@ -310,7 +374,9 @@ mod tests {
                     let () = monitor
                         .on_state(&mut fidl_fuchsia_update_installer::State::Fetch(
                             fidl_fuchsia_update_installer::FetchData {
-                                info: Some(UpdateInfo { download_size: None }),
+                                info: Some(fidl_fuchsia_update_installer::UpdateInfo {
+                                    download_size: None,
+                                }),
                                 progress: Some(InstallationProgress {
                                     fraction_completed: Some(0.0),
                                     bytes_downloaded: None,

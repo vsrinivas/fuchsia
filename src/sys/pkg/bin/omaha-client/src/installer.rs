@@ -8,11 +8,11 @@ use crate::install_plan::FuchsiaInstallPlan;
 use anyhow::Context;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
 use fidl_fuchsia_update_installer::{
-    InstallerMarker, RebootControllerMarker, RebootControllerProxy, State,
+    InstallerMarker, RebootControllerMarker, RebootControllerProxy,
 };
 use fuchsia_url::pkg_url::PkgUrl;
 
-use fidl_fuchsia_update_installer_ext::*;
+use fidl_fuchsia_update_installer_ext::{start_update, Initiator, Options};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
@@ -92,15 +92,11 @@ impl Installer for FuchsiaInstaller {
 
             while let Ok(Some(state)) = update_attempt.try_next().await {
                 // TODO: report progress to ProgressObserver
-                info!("Installer entered state: {}", state_to_string(&state));
-                match state {
-                    State::Complete(_) | State::Reboot(_) | State::DeferReboot(_) => {
-                        return Ok(());
-                    }
-                    State::FailPrepare(_) | State::FailFetch(_) | State::FailStage(_) => {
-                        return Err(FuchsiaInstallError::Installer);
-                    }
-                    _ => {}
+                info!("Installer entered state: {}", state.name());
+                if state.is_success() {
+                    return Ok(());
+                } else if state.is_failure() {
+                    return Err(FuchsiaInstallError::Installer);
                 }
             }
 
@@ -126,21 +122,5 @@ impl Installer for FuchsiaInstaller {
             }
         }
         .boxed()
-    }
-}
-
-/// Convert fuchsia.update.installer/State to string for ProgressObserver.
-fn state_to_string(state: &State) -> &'static str {
-    match state {
-        State::Prepare(_) => "Prepare",
-        State::Fetch(_) => "Fetch",
-        State::Stage(_) => "Stage",
-        State::Reboot(_) => "Reboot",
-        State::DeferReboot(_) => "DeferReboot",
-        State::WaitToReboot(_) => "WaitToReboot",
-        State::Complete(_) => "Complete",
-        State::FailPrepare(_) => "FailPrepare",
-        State::FailFetch(_) => "FailFetch",
-        State::FailStage(_) => "FailStage",
     }
 }
