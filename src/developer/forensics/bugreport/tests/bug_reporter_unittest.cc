@@ -41,9 +41,8 @@ class BugReporterTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  void SetUpDataProviderServer(fuchsia::feedback::Attachment bugreport) {
-    data_provider_server_ =
-        std::make_unique<stubs::DataProviderBugreportOnly>(std::move(bugreport));
+  void SetUpDataProviderServer(fuchsia::feedback::Attachment snapshot) {
+    data_provider_server_ = std::make_unique<stubs::DataProviderSnapshotOnly>(std::move(snapshot));
     FX_CHECK(service_directory_provider_.AddService(data_provider_server_->GetHandler()) == ZX_OK);
   }
 
@@ -62,10 +61,10 @@ class BugReporterTest : public gtest::TestLoopFixture {
 TEST_F(BugReporterTest, Basic) {
   const std::string payload = "technically a ZIP archive, but it doesn't matter for the unit test";
 
-  fuchsia::feedback::Attachment bugreport;
-  bugreport.key = "unused";
-  ASSERT_TRUE(fsl::VmoFromString(payload, &bugreport.value));
-  SetUpDataProviderServer(std::move(bugreport));
+  fuchsia::feedback::Attachment snapshot;
+  snapshot.key = "unused";
+  ASSERT_TRUE(fsl::VmoFromString(payload, &snapshot.value));
+  SetUpDataProviderServer(std::move(snapshot));
 
   ASSERT_TRUE(
       MakeBugReport(service_directory_provider_.service_directory(), bugreport_path_.data()));

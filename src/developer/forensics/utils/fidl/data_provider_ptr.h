@@ -23,12 +23,12 @@ namespace fidl {
 // Wraps around fuchsia::feedback::DataProviderPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
 //
-// Supports multiple calls to GetBugreport(). Only one connection exists at a time.
+// Supports multiple calls to GetSnapshot(). Only one connection exists at a time.
 class DataProviderPtr {
  public:
   DataProviderPtr(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  ::fit::promise<fuchsia::feedback::Bugreport, Error> GetBugreport(zx::duration timeout);
+  ::fit::promise<fuchsia::feedback::Snapshot, Error> GetSnapshot(zx::duration timeout);
 
  private:
   void Connect();
@@ -36,7 +36,7 @@ class DataProviderPtr {
   const std::shared_ptr<sys::ServiceDirectory> services_;
 
   fuchsia::feedback::DataProviderPtr connection_;
-  fit::BridgeMap<fuchsia::feedback::Bugreport> pending_calls_;
+  fit::BridgeMap<fuchsia::feedback::Snapshot> pending_calls_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DataProviderPtr);
 };

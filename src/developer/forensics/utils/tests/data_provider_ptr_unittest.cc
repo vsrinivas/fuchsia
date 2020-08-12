@@ -21,7 +21,7 @@
 namespace forensics {
 namespace {
 
-using fuchsia::feedback::Bugreport;
+using fuchsia::feedback::Snapshot;
 
 constexpr zx::duration kDefaultTimeout = zx::sec(35);
 
@@ -42,12 +42,12 @@ class DataProviderPtrTest : public UnitTestFixture {
 
   bool is_server_bound() { return data_provider_server_->IsBound(); }
 
-  std::vector<::fit::result<Bugreport, Error>> GetBugreport(const size_t num_parallel_calls) {
-    std::vector<::fit::result<Bugreport, Error>> results(num_parallel_calls);
+  std::vector<::fit::result<Snapshot, Error>> GetSnapshot(const size_t num_parallel_calls) {
+    std::vector<::fit::result<Snapshot, Error>> results(num_parallel_calls);
     for (auto& result : results) {
-      executor_.schedule_task(data_provider_ptr_.GetBugreport(kDefaultTimeout)
-                                  .then([&](::fit::result<Bugreport, Error>& bugreport) {
-                                    result = std::move(bugreport);
+      executor_.schedule_task(data_provider_ptr_.GetSnapshot(kDefaultTimeout)
+                                  .then([&](::fit::result<Snapshot, Error>& snapshot) {
+                                    result = std::move(snapshot);
                                   }));
     }
     RunLoopUntilIdle();
@@ -66,7 +66,7 @@ TEST_F(DataProviderPtrTest, Check_ConnectionIsReused) {
   const size_t num_calls = 5u;
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderTracksNumConnections>(1u));
 
-  const std::vector<::fit::result<Bugreport, Error>> results = GetBugreport(num_calls);
+  const std::vector<::fit::result<Snapshot, Error>> results = GetSnapshot(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
@@ -80,7 +80,7 @@ TEST_F(DataProviderPtrTest, Check_ReconnectsCorrectly) {
   const size_t num_calls = 5u;
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderTracksNumConnections>(2u));
 
-  std::vector<::fit::result<Bugreport, Error>> results = GetBugreport(num_calls);
+  std::vector<::fit::result<Snapshot, Error>> results = GetSnapshot(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
@@ -90,7 +90,7 @@ TEST_F(DataProviderPtrTest, Check_ReconnectsCorrectly) {
   EXPECT_FALSE(is_server_bound());
 
   results.clear();
-  results = GetBugreport(num_calls);
+  results = GetSnapshot(num_calls);
 
   ASSERT_EQ(results.size(), num_calls);
   for (const auto& result : results) {
@@ -106,7 +106,7 @@ TEST_F(DataProviderPtrTest, Fail_OnNoServer) {
   // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
   SetUpDataProviderServer(nullptr);
 
-  std::vector<::fit::result<Bugreport, Error>> results = GetBugreport(num_calls);
+  std::vector<::fit::result<Snapshot, Error>> results = GetSnapshot(num_calls);
   ASSERT_EQ(results.size(), num_calls);
   EXPECT_TRUE(results[0].is_error());
   EXPECT_EQ(results[0].error(), Error::kConnectionError);
@@ -117,7 +117,7 @@ TEST_F(DataProviderPtrTest, Fail_OnServerTakingTooLong) {
 
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderNeverReturning>());
 
-  std::vector<::fit::result<Bugreport, Error>> results = GetBugreport(num_calls);
+  std::vector<::fit::result<Snapshot, Error>> results = GetSnapshot(num_calls);
   RunLoopFor(kDefaultTimeout);
 
   ASSERT_EQ(results.size(), num_calls);

@@ -19,7 +19,7 @@ namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
-using fuchsia::feedback::Bugreport;
+using fuchsia::feedback::Snapshot;
 
 std::vector<Annotation> BuildAnnotations(const std::map<std::string, std::string>& annotations) {
   std::vector<Annotation> ret_annotations;
@@ -38,27 +38,27 @@ Attachment BuildAttachment(const std::string& key) {
 
 }  // namespace
 
-void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
-                                GetBugreportCallback callback) {
-  Bugreport bugreport;
-  bugreport.set_annotations(BuildAnnotations(annotations_));
-  bugreport.set_bugreport(BuildAttachment(bugreport_key_));
-  callback(std::move(bugreport));
+void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                               GetSnapshotCallback callback) {
+  Snapshot snapshot;
+  snapshot.set_annotations(BuildAnnotations(annotations_));
+  snapshot.set_archive(BuildAttachment(snapshot_key_));
+  callback(std::move(snapshot));
 }
 
-void DataProviderReturnsNoAnnotation::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
-                                                   GetBugreportCallback callback) {
-  callback(std::move(Bugreport().set_bugreport(BuildAttachment(bugreport_key_))));
+void DataProviderReturnsNoAnnotation::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                                                  GetSnapshotCallback callback) {
+  callback(std::move(Snapshot().set_archive(BuildAttachment(snapshot_key_))));
 }
 
-void DataProviderReturnsNoAttachment::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
-                                                   GetBugreportCallback callback) {
-  callback(std::move(Bugreport().set_annotations(BuildAnnotations(annotations_))));
+void DataProviderReturnsNoAttachment::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                                                  GetSnapshotCallback callback) {
+  callback(std::move(Snapshot().set_annotations(BuildAnnotations(annotations_))));
 }
 
-void DataProviderReturnsEmptyBugreport::GetBugreport(
-    fuchsia::feedback::GetBugreportParameters params, GetBugreportCallback callback) {
-  callback(Bugreport());
+void DataProviderReturnsEmptySnapshot::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                                                   GetSnapshotCallback callback) {
+  callback(Snapshot());
 }
 
 DataProviderTracksNumConnections::~DataProviderTracksNumConnections() {
@@ -67,14 +67,14 @@ DataProviderTracksNumConnections::~DataProviderTracksNumConnections() {
       << "Made " << num_connections_ << " connections";
 }
 
-void DataProviderTracksNumConnections::GetBugreport(
-    fuchsia::feedback::GetBugreportParameters params, GetBugreportCallback callback) {
-  callback(Bugreport());
+void DataProviderTracksNumConnections::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                                                   GetSnapshotCallback callback) {
+  callback(Snapshot());
 }
 
-void DataProviderBugreportOnly::GetBugreport(fuchsia::feedback::GetBugreportParameters params,
-                                             GetBugreportCallback callback) {
-  callback(std::move(Bugreport().set_bugreport(std::move(bugreport_))));
+void DataProviderSnapshotOnly::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
+                                           GetSnapshotCallback callback) {
+  callback(std::move(Snapshot().set_archive(std::move(snapshot_))));
 }
 
 }  // namespace stubs

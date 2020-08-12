@@ -18,27 +18,27 @@ bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* 
   fuchsia::feedback::DataProviderSyncPtr feedback_data_provider;
   services->Connect(feedback_data_provider.NewRequest());
 
-  fuchsia::feedback::Bugreport bugreport;
-  const zx_status_t get_data_status = feedback_data_provider->GetBugreport(
-      std::move(fuchsia::feedback::GetBugreportParameters().set_collection_timeout_per_data(
-          zx::min(5).get())),
-      &bugreport);
-  if (get_data_status != ZX_OK) {
-    fprintf(stderr, "Failed to get data from fuchsia.feedback.DataProvider: %d (%s)\n",
-            get_data_status, zx_status_get_string(get_data_status));
-    return false;
-  }
-
-  if (!bugreport.has_bugreport()) {
-    fprintf(stderr, "Failed to get bugreport from fuchsia.feedback.DataProvider");
-    return false;
-  }
-
-  const auto size = bugreport.bugreport().value.size;
-  auto data = std::make_unique<uint8_t[]>(bugreport.bugreport().value.size);
-  if (const zx_status_t status = bugreport.bugreport().value.vmo.read(data.get(), 0u, size);
+  fuchsia::feedback::Snapshot snapshot;
+  if (const zx_status_t status = feedback_data_provider->GetSnapshot(
+          std::move(fuchsia::feedback::GetSnapshotParameters().set_collection_timeout_per_data(
+              zx::min(5).get())),
+          &snapshot);
       status != ZX_OK) {
-    fprintf(stderr, "Failed to read VMO bugreport from fuchsia.feedback.DataProvider");
+    fprintf(stderr, "Failed to get data from fuchsia.feedback.DataProvider: %d (%s)\n", status,
+            zx_status_get_string(status));
+    return false;
+  }
+
+  if (!snapshot.has_archive()) {
+    fprintf(stderr, "Failed to get snapshot from fuchsia.feedback.DataProvider");
+    return false;
+  }
+
+  const auto size = snapshot.archive().value.size;
+  auto data = std::make_unique<uint8_t[]>(snapshot.archive().value.size);
+  if (const zx_status_t status = snapshot.archive().value.vmo.read(data.get(), 0u, size);
+      status != ZX_OK) {
+    fprintf(stderr, "Failed to read VMO archive from fuchsia.feedback.DataProvider");
     return false;
   }
 

@@ -40,17 +40,17 @@ std::vector<Annotation> CreateAnnotations() {
   };
 }
 
-Attachment CreateBugreport() {
+Attachment CreateSnapshot() {
   std::map<std::string, std::string> attachments;
 
   attachments["annotations.json"] = AnnotationsToJSON(CreateAnnotations());
   attachments["attachment_key"] = "attachment_value";
 
-  Attachment bugreport;
-  bugreport.key = "bugreport.zip";
-  Archive(attachments, &bugreport.value);
+  Attachment snapshot;
+  snapshot.key = "snapshot.zip";
+  Archive(attachments, &snapshot.value);
 
-  return bugreport;
+  return snapshot;
 }
 
 std::unique_ptr<Screenshot> LoadPngScreenshot() {
@@ -72,10 +72,10 @@ std::unique_ptr<Screenshot> LoadPngScreenshot() {
 
 }  // namespace
 
-void DataProvider::GetBugreport(fuchsia::feedback::GetBugreportParameters parms,
-                                GetBugreportCallback callback) {
+void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters parms,
+                               GetSnapshotCallback callback) {
   callback(
-      std::move(Bugreport().set_annotations(CreateAnnotations()).set_bugreport(CreateBugreport())));
+      std::move(Snapshot().set_annotations(CreateAnnotations()).set_archive(CreateSnapshot())));
 }
 
 void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) {

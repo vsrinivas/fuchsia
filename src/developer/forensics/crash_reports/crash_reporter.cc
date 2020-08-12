@@ -31,11 +31,11 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-using fuchsia::feedback::Bugreport;
 using fuchsia::feedback::CrashReport;
+using fuchsia::feedback::Snapshot;
 
 constexpr zx::duration kChannelOrDeviceIdTimeout = zx::sec(30);
-constexpr zx::duration kBugreportTimeout = zx::min(2);
+constexpr zx::duration kSnapshotTimeout = zx::min(2);
 
 }  // namespace
 
@@ -101,24 +101,24 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
   const std::string program_name = report.program_name();
   FX_LOGS(INFO) << "Generating report for '" << program_name << "'";
 
-  auto bugreport_promise = data_provider_ptr_.GetBugreport(kBugreportTimeout);
+  auto snapshot_promise = data_provider_ptr_.GetSnapshot(kSnapshotTimeout);
   auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
   auto product_promise =
       crash_register_->GetProduct(program_name, fit::Timeout(kChannelOrDeviceIdTimeout));
 
   auto promise =
-      ::fit::join_promises(std::move(bugreport_promise), std::move(device_id_promise),
+      ::fit::join_promises(std::move(snapshot_promise), std::move(device_id_promise),
                            std::move(product_promise))
           .then(
               [this, report = std::move(report), program_name](
                   ::fit::result<
-                      std::tuple<::fit::result<Bugreport, Error>, ::fit::result<std::string, Error>,
+                      std::tuple<::fit::result<Snapshot, Error>, ::fit::result<std::string, Error>,
                                  ::fit::result<Product>>>& results) mutable -> ::fit::result<void> {
                 if (results.is_error()) {
                   return ::fit::error();
                 }
 
-                auto bugreport = std::move(std::get<0>(results.value()));
+                auto snapshot = std::move(std::get<0>(results.value()));
                 auto device_id = std::move(std::get<1>(results.value()));
                 auto product = std::move(std::get<2>(results.value()));
 
@@ -127,7 +127,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
                 }
 
                 std::optional<Report> final_report =
-                    MakeReport(std::move(report), std::move(bugreport), utc_provider_.CurrentTime(),
+                    MakeReport(std::move(report), std::move(snapshot), utc_provider_.CurrentTime(),
                                device_id, build_version_, product.value());
                 if (!final_report.has_value()) {
                   FX_LOGS(ERROR) << "Error generating report";

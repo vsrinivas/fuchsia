@@ -28,15 +28,15 @@ std::string Shorten(std::string program_name);
 
 // Builds the final report to add to the queue.
 //
-// * Most annotations are shared across all crash reports, e.g., |bugreport|.annotations().
+// * Most annotations are shared across all crash reports, e.g., |snapshot|.annotations().
 // * Some annotations are report-specific, e.g., Dart exception type.
 // * Adds any annotations from |report|.
 //
-// * Most attachments are shared across all crash reports, e.g., |bugreport|.bugreport().
+// * Most attachments are shared across all crash reports, e.g., |snapshot|.archive().
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report,
-                                 ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
+                                 ::fit::result<fuchsia::feedback::Snapshot, Error> snapshot,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
                                  const ErrorOr<std::string>& os_version, const Product& product);

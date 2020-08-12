@@ -806,13 +806,13 @@ TEST_F(CrashReporterTest, Succeed_OnNoFeedbackAnnotations) {
 TEST_F(CrashReporterTest, Succeed_OnNoFeedbackData) {
   SetUpCrashReporterDefaultConfig({kUploadSuccessful});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
-  SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptyBugreport>());
+  SetUpDataProviderServer(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>());
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAnnotationsOnServer({
-      {"debug.bugreport.empty", "true"},
+      {"debug.snapshot.empty", "true"},
   });
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }
@@ -826,7 +826,7 @@ TEST_F(CrashReporterTest, Succeed_OnDataProviderNotServing) {
 
   EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
   CheckAnnotationsOnServer({
-      {"debug.bugreport.error", "FIDL connection error"},
+      {"debug.snapshot.error", "FIDL connection error"},
   });
   CheckAttachmentsOnServer({kSingleAttachmentKey});
 }

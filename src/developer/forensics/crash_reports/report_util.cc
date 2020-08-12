@@ -208,47 +208,47 @@ void AddCrashServerAnnotations(const std::string& program_name,
   (*annotations)["should_process"] = should_process ? "true" : "false";
 }
 
-void AddBugreportAnnotations(const fuchsia::feedback::Bugreport& bugreport,
-                             std::map<std::string, std::string>* annotations) {
-  if (!bugreport.has_annotations()) {
+void AddSnapshotAnnotations(const fuchsia::feedback::Snapshot& snapshot,
+                            std::map<std::string, std::string>* annotations) {
+  if (!snapshot.has_annotations()) {
     return;
   }
-  for (const auto& annotation : bugreport.annotations()) {
+  for (const auto& annotation : snapshot.annotations()) {
     (*annotations)[annotation.key] = annotation.value;
   }
 }
 
-void AddBugreportAsAttachment(fuchsia::feedback::Bugreport bugreport,
-                              std::map<std::string, fuchsia::mem::Buffer>* attachments) {
-  if (!bugreport.has_bugreport()) {
+void AddSnapshotAsAttachment(fuchsia::feedback::Snapshot snapshot,
+                             std::map<std::string, fuchsia::mem::Buffer>* attachments) {
+  if (!snapshot.has_archive()) {
     return;
   }
-  auto* bugreport_attachment = bugreport.mutable_bugreport();
-  (*attachments)[bugreport_attachment->key] = std::move(bugreport_attachment->value);
+  auto* snapshot_attachment = snapshot.mutable_archive();
+  (*attachments)[snapshot_attachment->key] = std::move(snapshot_attachment->value);
 }
 
-void AddBugreport(::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
-                  std::map<std::string, std::string>* annotations,
-                  std::map<std::string, fuchsia::mem::Buffer>* attachments) {
-  if (bugreport.is_error()) {
-    (*annotations)["debug.bugreport.error"] = ToReason(bugreport.error());
+void AddSnapshot(::fit::result<fuchsia::feedback::Snapshot, Error> snapshot,
+                 std::map<std::string, std::string>* annotations,
+                 std::map<std::string, fuchsia::mem::Buffer>* attachments) {
+  if (snapshot.is_error()) {
+    (*annotations)["debug.snapshot.error"] = ToReason(snapshot.error());
     return;
   }
 
-  if (bugreport.value().IsEmpty()) {
-    (*annotations)["debug.bugreport.empty"] = "true";
+  if (snapshot.value().IsEmpty()) {
+    (*annotations)["debug.snapshot.empty"] = "true";
     return;
   }
 
-  AddBugreportAnnotations(bugreport.value(), annotations);
+  AddSnapshotAnnotations(snapshot.value(), annotations);
 
-  AddBugreportAsAttachment(bugreport.take_value(), attachments);
+  AddSnapshotAsAttachment(snapshot.take_value(), attachments);
 }
 
 }  // namespace
 
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report,
-                                 ::fit::result<fuchsia::feedback::Bugreport, Error> bugreport,
+                                 ::fit::result<fuchsia::feedback::Snapshot, Error> snapshot,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
                                  const ErrorOr<std::string>& os_version, const Product& product) {
@@ -268,8 +268,8 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report,
   AddCrashServerAnnotations(program_name, current_time, device_id, os_version, product,
                             should_process, &annotations);
 
-  // Bugreport annotations and attachment common to all crash reports.
-  AddBugreport(std::move(bugreport), &annotations, &attachments);
+  // Snapshot annotations and attachment common to all crash reports.
+  AddSnapshot(std::move(snapshot), &annotations, &attachments);
 
   return Report::MakeReport(shortname, annotations, std::move(attachments), std::move(minidump));
 }
