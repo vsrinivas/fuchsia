@@ -260,6 +260,21 @@ zx_status_t Imx227Device::InitMipiCsi(uint8_t mode) {
   return status;
 }
 
+fit::result<int32_t, zx_status_t> Imx227Device::GetTemperature() {
+  std::lock_guard guard(lock_);
+  // Enable temperature control
+  zx_status_t status = Write8(kTempCtrlReg, 0x01);
+  if (status != ZX_OK) {
+    return fit::error(status);
+  }
+  auto result = Read8(kTempOutputReg);
+  if (result.is_error()) {
+    return result.take_error_result();
+  }
+  auto retval = static_cast<int32_t>(result.value());
+  return fit::ok(retval);
+}
+
 fit::result<uint32_t, zx_status_t> Imx227Device::GetLinesPerSecond() {
   auto result_hi =
       GetRegisterValueFromSequence(available_modes[current_mode_].idx, kLineLengthPckReg);

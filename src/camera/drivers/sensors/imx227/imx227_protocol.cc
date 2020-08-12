@@ -383,6 +383,14 @@ zx_status_t Imx227Device::CameraSensor2GetExtensionValue(uint64_t id,
       std::copy(std::begin(frame_rate_to_integration_time_lut),
                 std::end(frame_rate_to_integration_time_lut), out_value->frame_rate_info_value);
       break;
+    case TEMP: {
+      auto temp_result = GetTemperature();
+      if (temp_result.is_error()) {
+        return ZX_ERR_INTERNAL;
+      }
+      out_value->int_value = temp_result.value();
+      break;
+    }
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

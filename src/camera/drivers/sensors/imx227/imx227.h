@@ -182,6 +182,10 @@ class Imx227Device : public DeviceType,
   void ShutDown();
   bool ValidateSensorID() __TA_REQUIRES(lock_);
 
+  // Read sensor temperature
+  // Ranges between -20C and 80C
+  fit::result<int32_t, zx_status_t> GetTemperature();
+
   bool is_streaming_;
   uint8_t num_modes_;
   uint8_t current_mode_;

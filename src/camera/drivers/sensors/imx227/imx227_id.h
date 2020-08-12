@@ -25,6 +25,7 @@
 #define SENSOR_EXP_NUMBER             0x0011
 #define MODE                          0x0012
 #define FRAME_RATE_COARSE_INT_LUT     0x0013
+#define TEMP                          0x0014
 // clang-format on
 
 #endif  // SRC_CAMERA_DRIVERS_SENSORS_IMX227_IMX227_ID_H_
