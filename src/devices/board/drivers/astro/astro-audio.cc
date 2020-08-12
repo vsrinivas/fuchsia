@@ -85,12 +85,12 @@ static const device_fragment_part_t codec_fragment[] = {
 static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
 static const device_fragment_t tdm_i2s_fragments[] = {
+    {countof(enable_gpio_fragment), enable_gpio_fragment},
     {countof(codec_fragment), codec_fragment},
 };
 static const device_fragment_t codec_fragments[] = {
     {countof(i2c_fragment), i2c_fragment},
     {countof(fault_gpio_fragment), fault_gpio_fragment},
-    {countof(enable_gpio_fragment), enable_gpio_fragment},
 };
 
 // PDM input configurations
@@ -166,6 +166,9 @@ zx_status_t Astro::AudioInit() {
   gpio_impl_.SetAltFunction(S905D2_GPIOA(7), S905D2_GPIOA_7_PDM_DCLK_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOA(8), S905D2_GPIOA_8_PDM_DIN0_FN);
 
+  // Hardware Reset of the codec.
+  gpio_impl_.ConfigOut(S905D2_GPIOA(5), 0);
+  zx::nanosleep(zx::deadline_after(zx::msec(1)));
   gpio_impl_.ConfigOut(S905D2_GPIOA(5), 1);
 
   // Output devices.

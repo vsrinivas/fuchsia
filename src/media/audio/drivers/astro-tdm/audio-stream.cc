@@ -21,6 +21,7 @@ namespace astro {
 
 enum {
   FRAGMENT_PDEV,
+  FRAGMENT_ENABLE_GPIO,
   FRAGMENT_CODEC,
   FRAGMENT_COUNT,
 };
@@ -33,8 +34,11 @@ constexpr size_t kBytesPerSample = 2;
 constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
     kMaxSampleRate * kBytesPerSample * kMaxNumberOfChannels, PAGE_SIZE);
 
-AstroTdmStream::AstroTdmStream(zx_device_t* parent, bool is_input)
-    : SimpleAudioStream(parent, is_input) {
+AstroTdmStream::AstroTdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
+                               const ddk::GpioProtocolClient enable_gpio)
+    : SimpleAudioStream(parent, is_input),
+      pdev_(std::move(pdev)),
+      enable_gpio_(std::move(enable_gpio)) {
   dai_format_.number_of_channels = metadata_.number_of_channels;
   for (size_t i = 0; i < kMaxNumberOfChannels; ++i) {
     dai_format_.channels_to_use.push_back(1 << i);  // Use all channels.
@@ -197,7 +201,6 @@ zx_status_t AstroTdmStream::InitPDev() {
     }
   }
 
-  pdev_ = fragments[FRAGMENT_PDEV];
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
@@ -480,6 +483,9 @@ void AstroTdmStream::ShutdownHook() {
     // safe the codec so it won't throw clock errors when tdm bus shuts down
     codec_.Stop();
   }
+  if (enable_gpio_.is_valid()) {
+    enable_gpio_.Write(0);
+  }
   aml_audio_->Shutdown();
   pinned_ring_buffer_.Unpin();
 }
@@ -629,14 +635,42 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     return status;
   }
 
+  composite_protocol_t composite;
+  status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
+    return status;
+  }
+
+  zx_device_t* fragments[FRAGMENT_COUNT] = {};
+  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
+  // Either we have all fragments (for I2S) or we have only one fragment (for PCM).
+  if (metadata.tdm.codec != metadata::Codec::None) {
+    if (actual != countof(fragments)) {
+      zxlogf(ERROR, "%s could not get the correct number of fragments with codec %lu", __FILE__,
+             actual);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  } else {
+    if (actual != 1) {
+      zxlogf(ERROR, "%s could not get the correct number of fragments with no codec %lu", __FILE__,
+             actual);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  }
+
   if (metadata.is_input) {
-    auto stream = audio::SimpleAudioStream::Create<audio::astro::AstroTdmStream>(device, true);
+    auto stream = audio::SimpleAudioStream::Create<audio::astro::AstroTdmStream>(
+        device, true, fragments[FRAGMENT_PDEV], fragments[FRAGMENT_ENABLE_GPIO] ?
+        fragments[FRAGMENT_ENABLE_GPIO] : ddk::GpioProtocolClient());
     if (stream == nullptr) {
       return ZX_ERR_NO_MEMORY;
     }
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
   } else {
-    auto stream = audio::SimpleAudioStream::Create<audio::astro::AstroTdmStream>(device, false);
+    auto stream = audio::SimpleAudioStream::Create<audio::astro::AstroTdmStream>(
+        device, false, fragments[FRAGMENT_PDEV], fragments[FRAGMENT_ENABLE_GPIO] ?
+        fragments[FRAGMENT_ENABLE_GPIO] : ddk::GpioProtocolClient());
     if (stream == nullptr) {
       return ZX_ERR_NO_MEMORY;
     }

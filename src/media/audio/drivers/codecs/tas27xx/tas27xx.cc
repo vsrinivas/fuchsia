@@ -35,7 +35,6 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
 enum {
   FRAGMENT_I2C,
   FRAGMENT_FAULT_GPIO,
-  FRAGMENT_ENABLE_GPIO,
   FRAGMENT_COUNT,
 };
 
@@ -176,12 +175,6 @@ zx_status_t Tas27xx::SetRate(uint32_t rate) {
                                      (1 << 0)));
 }
 
-void Tas27xx::HardwareShutdown() {
-  ena_gpio_.Write(0);
-  DelayMs(1);
-  zxlogf(INFO, "tas27xx: Hardware Shutdown Successful\n");
-}
-
 zx::status<DriverIds> Tas27xx::Initialize() {
   // Make it safe to re-init an already running device
   auto status = Shutdown();
@@ -190,11 +183,8 @@ zx::status<DriverIds> Tas27xx::Initialize() {
     return zx::error(status);
   }
 
-  // Clean up and shutdown hardware in event of error
+  // Clean up and shutdown in event of error
   auto on_error = fbl::MakeAutoCall([this]() { Shutdown(); });
-
-  ena_gpio_.Write(1);
-  DelayMs(1);
 
   status = Reset();
   if (status != ZX_OK) {
@@ -329,7 +319,6 @@ zx_status_t Tas27xx::Shutdown() {
     irq_.destroy();
     thrd_join(thread_, NULL);
   }
-  HardwareShutdown();
   return ZX_OK;
 }
 
@@ -398,8 +387,7 @@ zx_status_t tas27xx_bind(void* ctx, zx_device_t* parent) {
   }
 
   auto dev = SimpleCodecServer::Create<Tas27xx>(parent, fragments[FRAGMENT_I2C],
-                                                fragments[FRAGMENT_FAULT_GPIO],
-                                                fragments[FRAGMENT_ENABLE_GPIO], false, false);
+                                                fragments[FRAGMENT_FAULT_GPIO], false, false);
 
   // devmgr is now in charge of the memory for dev.
   dev.release();

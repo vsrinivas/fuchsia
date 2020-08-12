@@ -7,6 +7,7 @@
 #include <lib/simple-codec/simple-codec-server.h>
 
 #include <mock-mmio-reg/mock-mmio-reg.h>
+#include <mock/ddktl/protocol/gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <zxtest/zxtest.h>
 
@@ -73,8 +74,9 @@ struct AmlTdmOutDeviceTest : public AmlTdmOutDevice {
 };
 
 struct AstroI2sOutTest : public AstroTdmStream {
-  AstroI2sOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region)
-      : AstroTdmStream(fake_ddk::kFakeParent, false) {
+  AstroI2sOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
+                  ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
+      : AstroTdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {
     codec_.SetProtocol(codec_protocol);
     metadata_.is_input = false;
     metadata_.number_of_channels = 2;
@@ -114,8 +116,9 @@ struct AstroI2sOutTest : public AstroTdmStream {
 };
 
 struct AstroPcmOutTest : public AstroI2sOutTest {
-  AstroPcmOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region)
-      : AstroI2sOutTest(codec_protocol, region) {
+  AstroPcmOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
+                  ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
+      : AstroI2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
     metadata_.tdm.type = metadata::TdmType::Pcm;
     metadata_.number_of_channels = 1;
   }
@@ -139,12 +142,17 @@ TEST(AstroTdm, InitializeI2sOut) {
   // TDM OUT CTRL1 FRDDR C with 16 bits per sample.
   mock[0x584].ExpectWrite(0x02000F20);
 
-  auto controller = audio::SimpleAudioStream::Create<AstroI2sOutTest>(&codec_proto, mock);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  auto controller = audio::SimpleAudioStream::Create<AstroI2sOutTest>(
+      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
+  enable_gpio.VerifyAndClear();
   controller->DdkRelease();
 }
 
@@ -166,12 +174,17 @@ TEST(AstroTdm, InitializePcmOut) {
   // TDM OUT CTRL1 FRDDR C with 16 bits per sample.
   mock[0x584].ExpectWrite(0x02000F20);
 
-  auto controller = audio::SimpleAudioStream::Create<AstroPcmOutTest>(&codec_proto, mock);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  auto controller = audio::SimpleAudioStream::Create<AstroPcmOutTest>(
+      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
+  enable_gpio.VerifyAndClear();
   controller->DdkRelease();
 }
 
@@ -196,7 +209,11 @@ TEST(AstroTdm, I2sOutChangeRate96K) {
   mock[0x00c].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
   mock[0x00c].ExpectRead(0x00000000).ExpectWrite(0x84000004);  // Enabled, HIFI PLL, set div to 4.
 
-  auto controller = audio::SimpleAudioStream::Create<AstroI2sOutTest>(&codec_proto, mock);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  auto controller = audio::SimpleAudioStream::Create<AstroI2sOutTest>(
+      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
@@ -246,6 +263,7 @@ TEST(AstroTdm, I2sOutChangeRate96K) {
   mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
+  enable_gpio.VerifyAndClear();
   controller->DdkRelease();
 }
 
@@ -261,8 +279,9 @@ struct AmlTdmInDeviceTest : public AmlTdmInDevice {
 };
 
 struct AstroI2sInTest : public AstroTdmStream {
-  AstroI2sInTest(ddk_mock::MockMmioRegRegion& region)
-      : AstroTdmStream(fake_ddk::kFakeParent, true) {
+  AstroI2sInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
+                 ddk::GpioProtocolClient enable_gpio)
+      : AstroTdmStream(fake_ddk::kFakeParent, true, std::move(pdev), std::move(enable_gpio)) {
     metadata_.is_input = true;
     metadata_.number_of_channels = 2;
     metadata_.bus = metadata::AmlBus::TDM_C;
@@ -300,7 +319,9 @@ struct AstroI2sInTest : public AstroTdmStream {
   }
 };
 struct AstroPcmInTest : public AstroI2sInTest {
-  AstroPcmInTest(ddk_mock::MockMmioRegRegion& region) : AstroI2sInTest(region) {
+  AstroPcmInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
+                 ddk::GpioProtocolClient enable_gpio)
+      : AstroI2sInTest(region, std::move(pdev), std::move(enable_gpio)) {
     metadata_.number_of_channels = 1;
     metadata_.tdm.type = metadata::TdmType::Pcm;
   }
@@ -319,12 +340,17 @@ TEST(AstroTdm, InitializeI2sIn) {
   // TDM IN CTRL config, I2S, source TDM IN C, bitoffset 4, 2 slots, 16 bits per slot.
   mock[0x380].ExpectWrite(0x0024001f);
 
-  auto controller = audio::SimpleAudioStream::Create<AstroI2sInTest>(mock);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  auto controller =
+      audio::SimpleAudioStream::Create<AstroI2sInTest>(mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
+  enable_gpio.VerifyAndClear();
   controller->DdkRelease();
 }
 
@@ -341,12 +367,17 @@ TEST(AstroTdm, InitializePcmIn) {
   // TDM IN CTRL config, TDM, source TDM IN C, bitoffset 4, 1 slot, 32 bits per slot.
   mock[0x380].ExpectWrite(0x0024001f);
 
-  auto controller = audio::SimpleAudioStream::Create<AstroPcmInTest>(mock);
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  auto controller =
+      audio::SimpleAudioStream::Create<AstroPcmInTest>(mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
+  enable_gpio.VerifyAndClear();
   controller->DdkRelease();
 }
 

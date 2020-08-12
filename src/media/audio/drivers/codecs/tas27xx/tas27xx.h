@@ -63,11 +63,10 @@ static constexpr uint8_t INT_MASK0_OVER_TEMP_ERROR = (1 << 0);
 class Tas27xx : public SimpleCodecServer {
  public:
   explicit Tas27xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio,
-                   ddk::GpioProtocolClient ena_gpio, bool vsense, bool isense)
+                   bool vsense, bool isense)
       : SimpleCodecServer(device),
         i2c_(i2c),
         fault_gpio_(fault_gpio),
-        ena_gpio_(ena_gpio),
         ena_vsens_(vsense),
         ena_isens_(isense) {}
   virtual ~Tas27xx() = default;
@@ -98,7 +97,6 @@ class Tas27xx : public SimpleCodecServer {
   zx::interrupt irq_;
   ddk::I2cChannel i2c_;
   const ddk::GpioProtocolClient fault_gpio_;
-  const ddk::GpioProtocolClient ena_gpio_;
   bool ena_vsens_ = false;
   bool ena_isens_ = false;
 
@@ -113,7 +111,6 @@ class Tas27xx : public SimpleCodecServer {
   void DelayMs(uint32_t ms) { zx_nanosleep(zx_deadline_after(ZX_MSEC(ms))); }
   zx_status_t SetRate(uint32_t rate);
   bool ValidGain(float gain);
-  void HardwareShutdown();
   zx_status_t UpdatePowerControl();
   zx_status_t GetTemperature(float* temperature);
   zx_status_t GetVbat(float* voltage);

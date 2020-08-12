@@ -30,7 +30,8 @@ namespace astro {
 
 class AstroTdmStream : public SimpleAudioStream {
  public:
-  AstroTdmStream(zx_device_t* parent, bool is_input);
+  AstroTdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
+                 const ddk::GpioProtocolClient enable_gpio);
 
  protected:
   zx_status_t Init() __TA_REQUIRES(domain_token()) override;
@@ -73,6 +74,7 @@ class AstroTdmStream : public SimpleAudioStream {
   fzl::PinnedVmo pinned_ring_buffer_;
 
   zx::bti bti_;
+  const ddk::GpioProtocolClient enable_gpio_;
 };
 
 }  // namespace astro
