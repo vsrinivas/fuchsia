@@ -7,8 +7,8 @@ use {
     fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client::{launcher, AppBuilder, Stdio},
-    fuchsia_inspect_contrib_transitional::reader::{ArchiveReader, Inspect},
-    fuchsia_inspect_transitional::testing::assert_inspect_tree,
+    fuchsia_inspect::testing::assert_inspect_tree,
+    fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect},
     fuchsia_zircon::DurationNum,
     std::{
         fs::{create_dir, create_dir_all, write, File},

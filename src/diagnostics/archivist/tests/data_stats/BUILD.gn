@@ -11,11 +11,11 @@ rustc_test("data_stats_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/inspect/rust/fuchsia-inspect:fuchsia-inspect-transitional",
-    "//src/lib/inspect/rust/fuchsia-inspect-contrib:fuchsia-inspect-contrib-transitional",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
