@@ -19,6 +19,8 @@
 #include <algorithm>
 #include <optional>
 
+#include <fbl/array.h>
+
 namespace elf_search {
 namespace {
 
@@ -243,7 +245,7 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
       continue;
     }
     Elf64_Phdr phdrs_buf[kMaxProgramHeaders];
-    auto phdrs = MakeArrayRef(phdrs_buf, ehdr.e_phnum);
+    auto phdrs = fbl::Span<const Elf64_Phdr>{phdrs_buf, ehdr.e_phnum};
     status = reader.ReadArray(map.base + ehdr.e_phoff, phdrs_buf, ehdr.e_phnum);
     if (status != ZX_OK) {
       continue;
@@ -289,13 +291,13 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
 
     // Loop though program headers looking for a build ID.
     uint8_t build_id_buf[kMaxBuildIDSize];
-    ArrayRef<uint8_t> build_id;
+    fbl::Span<const uint8_t> build_id;
     for (const auto& phdr : phdrs) {
       if (phdr.p_type == PT_NOTE) {
         size_t size;
         status = GetBuildID(&reader, map.base, phdr, build_id_buf, &size);
         if (status == ZX_OK && size != 0) {
-          build_id = MakeArrayRef(build_id_buf, size);
+          build_id = fbl::Span<const uint8_t>(build_id_buf, size);
           break;
         }
       }

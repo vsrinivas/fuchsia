@@ -26,7 +26,7 @@
 
 namespace {
 
-void WriteHeaders(const elf_search::ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
+void WriteHeaders(const fbl::Span<const Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
   const Elf64_Ehdr ehdr = {
       .e_ident =
           {
@@ -59,7 +59,7 @@ void WriteHeaders(const elf_search::ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& 
 
 // TODO(jakehehrlich): Switch all uses of uint8_t to std::byte once libc++ lands.
 
-void WriteBuildID(elf_search::ArrayRef<uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
+void WriteBuildID(fbl::Span<const uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
   uint8_t buf[64];
   const Elf64_Nhdr nhdr = {
       .n_namesz = sizeof(ELF_NOTE_GNU),
@@ -72,15 +72,15 @@ void WriteBuildID(elf_search::ArrayRef<uint8_t> build_id, const zx::vmo& vmo, ui
   note_size += sizeof(nhdr);
   memcpy(buf + note_size, ELF_NOTE_GNU, sizeof(ELF_NOTE_GNU));
   note_size += sizeof(ELF_NOTE_GNU);
-  memcpy(buf + note_size, build_id.get(), build_id.size());
+  memcpy(buf + note_size, build_id.data(), build_id.size());
   note_size += build_id.size();
   EXPECT_OK(vmo.write(buf, note_offset, note_size));
 }
 
 struct Module {
   fbl::StringPiece name;
-  elf_search::ArrayRef<Elf64_Phdr> phdrs;
-  elf_search::ArrayRef<uint8_t> build_id;
+  fbl::Span<const Elf64_Phdr> phdrs;
+  fbl::Span<const uint8_t> build_id;
   zx::vmo vmo;
 };
 
@@ -195,7 +195,8 @@ TEST(ElfSearchTest, ForEachModule) {
     }
     ++moduleCount;
     for (const auto& mod : mods) {
-      if (mod.build_id == info.build_id) {
+      if (mod.build_id.size() == info.build_id.size() &&
+          std::equal(mod.build_id.begin(), mod.build_id.end(), info.build_id.begin())) {
         ++matchCount;
         char name[ZX_MAX_NAME_LEN];
         zx_koid_t vmo_koid = 0;
