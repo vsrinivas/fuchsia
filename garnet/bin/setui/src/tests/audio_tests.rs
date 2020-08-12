@@ -10,9 +10,10 @@ use {
     crate::registry::device_storage::testing::*,
     crate::registry::device_storage::DeviceStorage,
     crate::switchboard::base::{
-        AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
+        AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
     crate::tests::fakes::audio_core_service::AudioCoreService,
+    crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::fakes::sound_player_service::SoundPlayerService,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -20,6 +21,7 @@ use {
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::*,
+    fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_component::server::NestedEnvironment,
     fuchsia_zircon::Status,
     futures::lock::Mutex,
@@ -59,11 +61,12 @@ async fn create_audio_test_env_with_failures(
         .unwrap()
 }
 
-// Used to store fake services for mocking dependencies and checking outputs.
+// Used to store fake services for mocking dependencies and checking input/outputs.
 // To add a new fake to these tests, add here, in create_services, and then use
 // in your test.
 struct FakeServices {
     audio_core: Arc<Mutex<AudioCoreService>>,
+    input_device_registry: Arc<Mutex<InputDeviceRegistryService>>,
 }
 
 fn get_default_stream(stream_type: AudioStreamType) -> AudioStream {
@@ -117,10 +120,20 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
     let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
+    let input_device_registry_service_handle =
+        Arc::new(Mutex::new(InputDeviceRegistryService::new()));
+    service_registry.lock().await.register_service(input_device_registry_service_handle.clone());
+
     let sound_player_service_handle = Arc::new(Mutex::new(SoundPlayerService::new()));
     service_registry.lock().await.register_service(sound_player_service_handle.clone());
 
-    (service_registry, FakeServices { audio_core: audio_core_service_handle })
+    (
+        service_registry,
+        FakeServices {
+            audio_core: audio_core_service_handle,
+            input_device_registry: input_device_registry_service_handle,
+        },
+    )
 }
 
 async fn create_environment(
@@ -256,6 +269,26 @@ async fn test_volume_rounding() {
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 }
 
+// Test to ensure mic input change events are received.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_audio_input() {
+    let (service_registry, fake_services) = create_services().await;
+
+    let (env, _) = create_environment(service_registry).await;
+
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    let buttons_event =
+        MediaButtonsEvent { volume: Some(1), mic_mute: Some(true), pause: Some(false) };
+    fake_services.input_device_registry.lock().await.send_media_button_event(buttons_event.clone());
+
+    let updated_settings = audio_proxy.watch().await.expect("watch completed");
+
+    let input = updated_settings.input.expect("Should have input settings");
+    let mic_mute = input.muted.expect("Should have mic mute value");
+    assert!(mic_mute);
+}
+
 /// Test that the audio settings are restored correctly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_restore() {
@@ -290,10 +323,27 @@ async fn test_volume_restore() {
     assert_eq!(stored_info, expected_info);
 }
 
+// Test to ensure mic input change events are received.
+// TODO(fxb/56537): Remove with switchover to input interface.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_bringup_without_input_registry() {
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle = Arc::new(Mutex::new(AudioCoreService::new()));
+    service_registry.lock().await.register_service(audio_core_service_handle.clone());
+
+    let (env, _) = create_environment(service_registry).await;
+
+    // At this point we should not crash.
+    assert!(env.connect_to_service::<AudioMarker>().is_ok());
+}
+
 // Ensure that we won't crash if audio core fails.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_audio_core() {
     let service_registry = ServiceRegistry::create();
+    let input_registry_service_handle = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
+    service_registry.lock().await.register_service(input_registry_service_handle.clone());
+
     let (env, _) = create_environment(service_registry).await;
 
     // At this point we should not crash.
@@ -352,6 +402,7 @@ async fn test_persisted_values_applied_at_start() {
                 user_volume_muted: false,
             },
         ],
+        input: AudioInputInfo { mic_mute: true },
         modified_timestamps: Some(create_default_modified_timestamps()),
     };
 

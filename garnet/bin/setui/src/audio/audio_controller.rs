@@ -48,7 +48,10 @@ impl VolumeController {
             client: client.clone(),
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
-            input_monitor: InputMonitor::create(client.clone(), vec![InputType::VolumeButtons]),
+            input_monitor: InputMonitor::create(
+                client.clone(),
+                vec![InputType::Microphone, InputType::VolumeButtons],
+            ),
             modified_timestamps: create_default_modified_timestamps(),
         }));
 
@@ -73,6 +76,9 @@ impl VolumeController {
     async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
         let mut audio_info = self.client.read().await;
         self.input_monitor.lock().await.ensure_monitor().await;
+
+        audio_info.input =
+            AudioInputInfo { mic_mute: self.input_monitor.lock().await.get_mute_state() };
         audio_info.modified_timestamps = Some(self.modified_timestamps.clone());
         Ok(audio_info)
     }

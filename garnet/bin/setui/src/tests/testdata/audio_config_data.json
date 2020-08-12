@@ -30,5 +30,8 @@
             "user_volume_level": 0.4,
             "user_volume_muted": false
         }
-    ]
+    ],
+    "input": {
+        "mic_mute": true
+    }
 }
