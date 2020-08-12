@@ -6,6 +6,7 @@ use crate::{
     common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
     directory::{
         common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
+        connection::util::OpenDirectory,
         entry::DirectoryEntry,
         entry_container::{AsyncGetEntry, Directory},
         read_dirents,
@@ -50,15 +51,16 @@ pub enum ConnectionState {
 pub trait DerivedConnection: Send + Sync {
     type Directory: BaseConnectionClient + ?Sized;
 
-    fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self;
+    fn new(scope: ExecutionScope, directory: OpenDirectory<Self::Directory>, flags: u32) -> Self;
 
     /// Initializes a directory connection, checking the flags and sending `OnOpen` event if
     /// necessary.  Then either runs this connection inside of the specified `scope` or, in case of
     /// an error, sends an appropriate `OnOpen` event (if requested) over the `server_end`
     /// connection.
+    /// If an error occurs, create_connection() must call close() on the directory.
     fn create_connection(
         scope: ExecutionScope,
-        directory: Arc<Self::Directory>,
+        directory: OpenDirectory<Self::Directory>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
@@ -97,7 +99,7 @@ where
     /// use.
     pub(in crate::directory) scope: ExecutionScope,
 
-    pub(in crate::directory) directory: Arc<Connection::Directory>,
+    pub(in crate::directory) directory: OpenDirectory<Connection::Directory>,
 
     /// Flags set on this connection when it was opened or cloned.
     pub(in crate::directory) flags: u32,
@@ -270,6 +272,7 @@ pub(in crate::directory) async fn handle_requests<Connection>(
             },
         }
     }
+    // The underlying directory will be closed automatically when the OpenDirectory is dropped.
 }
 
 impl<Connection> BaseConnection<Connection>
@@ -281,7 +284,7 @@ where
     /// `create_connection`, derived connections should use the [`create_connection`] call.
     pub(in crate::directory) fn new(
         scope: ExecutionScope,
-        directory: Arc<Connection::Directory>,
+        directory: OpenDirectory<Connection::Directory>,
         flags: u32,
     ) -> Self {
         BaseConnection { scope, directory, flags, seek: Default::default() }
@@ -300,7 +303,11 @@ where
                 self.handle_clone(flags, 0, object);
             }
             BaseDirectoryRequest::Close { responder } => {
-                responder.send(ZX_OK)?;
+                let status = match self.directory.close() {
+                    Ok(()) => Status::OK,
+                    Err(e) => e,
+                };
+                responder.send(status.into_raw())?;
                 return Ok(ConnectionState::Closed);
             }
             BaseDirectoryRequest::Describe { responder } => {
@@ -373,13 +380,7 @@ where
             }
         };
 
-        Connection::create_connection(
-            self.scope.clone(),
-            self.directory.clone(),
-            flags,
-            mode,
-            server_end,
-        );
+        self.directory.clone().open(self.scope.clone(), flags, mode, Path::empty(), server_end);
     }
 
     fn handle_open(

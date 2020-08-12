@@ -9,9 +9,12 @@ use crate::{
     common::send_on_open_with_error,
     directory::{
         common::new_connection_validate_flags,
-        connection::io1::{
-            handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
-            DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
+        connection::{
+            io1::{
+                handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
+                DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
+            },
+            util::OpenDirectory,
         },
         entry::DirectoryEntry,
     },
@@ -42,13 +45,13 @@ pub struct ImmutableConnection {
 impl DerivedConnection for ImmutableConnection {
     type Directory = dyn ImmutableConnectionClient;
 
-    fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self {
+    fn new(scope: ExecutionScope, directory: OpenDirectory<Self::Directory>, flags: u32) -> Self {
         ImmutableConnection { base: BaseConnection::<Self>::new(scope, directory, flags) }
     }
 
     fn create_connection(
         scope: ExecutionScope,
-        directory: Arc<Self::Directory>,
+        directory: OpenDirectory<Self::Directory>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
@@ -84,10 +87,10 @@ impl DerivedConnection for ImmutableConnection {
         let connection = Self::new(scope.clone(), directory, flags);
 
         let task = handle_requests::<Self>(requests, connection);
-        // If we failed to send the task to the executor, it is probably shut down or is in the
+        // If we fail to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently).  So there is nothing
-        // for us to do, but to ignore the request.  Connection will be closed when the connection
-        // object is dropped.
+        // for us to do - the connection will be closed automatically when the connection object is
+        // dropped.
         let _ = scope.spawn(Box::pin(task));
     }
 

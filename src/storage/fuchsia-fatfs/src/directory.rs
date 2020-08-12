@@ -32,7 +32,7 @@ use {
     vfs::{
         common::send_on_open_with_error,
         directory::{
-            connection::io1::DerivedConnection,
+            connection::{io1::DerivedConnection, util::OpenDirectory},
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
             entry_container::{AsyncGetEntry, Directory, MutableDirectory},
@@ -497,7 +497,11 @@ impl DirectoryEntry for FatDirectory {
     ) {
         if path.is_empty() {
             vfs::directory::mutable::connection::io1::MutableConnection::create_connection(
-                scope, self, flags, mode, server_end,
+                scope,
+                OpenDirectory::new(self),
+                flags,
+                mode,
+                server_end,
             );
         } else {
             let mut cur_entry = FatNode::Dir(self);
@@ -692,6 +696,10 @@ impl Directory for FatDirectory {
             creation_time,
             modification_time,
         })
+    }
+
+    fn close(&self) -> Result<(), Status> {
+        Ok(())
     }
 }
 

@@ -4,14 +4,17 @@
 
 use crate::{
     common::{inherit_rights_for_clone, send_on_open_with_error, GET_FLAGS_VISIBLE},
+    directory::entry::DirectoryEntry,
     execution_scope::ExecutionScope,
     file::{
         common::{
             new_connection_validate_flags, POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
             POSIX_READ_WRITE_PROTECTION_ATTRIBUTES, POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES,
         },
+        connection::util::OpenFile,
         File, SharingMode,
     },
+    path::Path,
 };
 
 use {
@@ -31,13 +34,13 @@ use {
 };
 
 /// Represents a FIDL connection to a file.
-pub struct FileConnection<T: File> {
+pub struct FileConnection<T: 'static + File> {
     /// Execution scope this connection and any async operations and connections it creates will
     /// use.
     scope: ExecutionScope,
 
     /// File this connection is associated with.
-    file: Arc<T>,
+    file: OpenFile<T>,
 
     /// Wraps a FIDL connection, providing messages coming from the client.
     requests: FileRequestStream,
@@ -89,7 +92,7 @@ impl<T: 'static + File> FileConnection<T> {
     /// connection initialization.
     pub fn create_connection(
         scope: ExecutionScope,
-        file: Arc<T>,
+        file: OpenFile<T>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
@@ -106,15 +109,14 @@ impl<T: 'static + File> FileConnection<T> {
             writable,
         );
         // If we failed to send the task to the executor, it is probably shut down or is in the
-        // process of shutting down (this is the only error state currently).  So there is nothing
-        // for us to do, but to ignore the open.  `server_end` will be closed when the object will
-        // be dropped - there seems to be no error to report there.
+        // process of shutting down (this is the only error state currently). `server_end` and the
+        // file will be closed when they're dropped - there seems to be no error to report there.
         let _ = scope.spawn(Box::pin(task));
     }
 
     async fn create_connection_task(
         scope: ExecutionScope,
-        file: Arc<T>,
+        file: OpenFile<T>,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
@@ -131,7 +133,7 @@ impl<T: 'static + File> FileConnection<T> {
             }
         };
 
-        match file.open(flags).await {
+        match File::open(file.as_ref(), flags).await {
             Ok(()) => (),
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
@@ -199,18 +201,13 @@ impl<T: 'static + File> FileConnection<T> {
 
             match state {
                 ConnectionState::Alive => (),
-                ConnectionState::Closed => {
-                    // We have already called `handle_close`, do not call it again.
-                    return;
-                }
+                ConnectionState::Closed => break,
                 ConnectionState::Dropped => break,
             }
         }
 
-        // If the connection has been closed by the peer or due some error we still need to call
-        // the `updated` callback, unless the `Close` message have been used.
-        // `ConnectionState::Closed` is handled above.
-        let _ = self.file.close().await;
+        // If the file is still open at this point, it will get closed when the OpenFile is
+        // dropped.
     }
 
     /// POSIX protection attributes are hard coded, as we are expecting them to be removed from the
@@ -309,15 +306,8 @@ impl<T: 'static + File> FileConnection<T> {
             }
         };
 
-        Self::create_connection(
-            self.scope.clone(),
-            self.file.clone(),
-            flags,
-            0,
-            server_end,
-            self.readable,
-            self.writable,
-        );
+        let file: Arc<dyn DirectoryEntry> = self.file.clone();
+        file.open(self.scope.clone(), flags, 0, Path::empty(), server_end);
     }
 
     async fn handle_get_attr(&mut self) -> (Status, NodeAttributes) {
@@ -631,6 +621,37 @@ mod tests {
         }
     }
 
+    impl DirectoryEntry for MockFile {
+        fn open(
+            self: Arc<Self>,
+            scope: ExecutionScope,
+            flags: u32,
+            mode: u32,
+            path: Path,
+            server_end: ServerEnd<NodeMarker>,
+        ) {
+            assert!(path.is_empty());
+
+            FileConnection::create_connection(
+                scope.clone(),
+                OpenFile::new(self.clone(), scope),
+                flags,
+                mode,
+                server_end.into_channel().into(),
+                true,
+                true,
+            );
+        }
+
+        fn entry_info(&self) -> crate::directory::entry::EntryInfo {
+            todo!();
+        }
+
+        fn can_hardlink(&self) -> bool {
+            todo!();
+        }
+    }
+
     /// Only the init operation will succeed, all others fail.
     fn only_allow_init(op: &FileOperation) -> Status {
         match op {
@@ -647,6 +668,7 @@ mod tests {
     struct TestEnv {
         pub file: Arc<MockFile>,
         pub proxy: FileProxy,
+        pub scope: ExecutionScope,
     }
 
     fn init_mock_file(callback: MockCallbackType, flags: u32) -> TestEnv {
@@ -656,8 +678,8 @@ mod tests {
 
         let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
         FileConnection::create_connection(
-            scope,
-            file.clone(),
+            scope.clone(),
+            OpenFile::new(file.clone(), scope.clone()),
             flags,
             0,
             server_end.into_channel().into(),
@@ -665,7 +687,7 @@ mod tests {
             true,
         );
 
-        TestEnv { file, proxy }
+        TestEnv { file, proxy, scope }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -742,6 +764,24 @@ mod tests {
         assert_eq!(
             *events,
             vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE }, FileOperation::Close {},]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_close_called_when_dropped() {
+        let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
+        let _ = env.proxy.sync().await;
+        std::mem::drop(env.proxy);
+        env.scope.shutdown();
+        env.scope.wait().await;
+        let events = env.file.operations.lock().unwrap();
+        assert_eq!(
+            *events,
+            vec![
+                FileOperation::Init { flags: OPEN_RIGHT_READABLE },
+                FileOperation::Sync,
+                FileOperation::Close,
+            ]
         );
     }
 

@@ -8,7 +8,7 @@
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::io1::DerivedConnection,
+        connection::{io1::DerivedConnection, util::OpenDirectory},
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         entry_container::{AsyncGetEntry, Directory},
@@ -158,7 +158,7 @@ where
                 if self.mutable {
                     MutableConnection::create_connection(
                         scope,
-                        self as Arc<dyn MutableConnectionClient>,
+                        OpenDirectory::new(self as Arc<dyn MutableConnectionClient>),
                         flags,
                         mode,
                         server_end,
@@ -166,7 +166,7 @@ where
                 } else {
                     ImmutableConnection::create_connection(
                         scope,
-                        self as Arc<dyn ImmutableConnectionClient>,
+                        OpenDirectory::new(self as Arc<dyn ImmutableConnectionClient>),
                         flags,
                         mode,
                         server_end,
@@ -310,6 +310,10 @@ where
             creation_time: 0,
             modification_time: 0,
         })
+    }
+
+    fn close(&self) -> Result<(), Status> {
+        Ok(())
     }
 }
 

@@ -322,7 +322,13 @@ impl DirectoryEntry for FatFile {
         connection::io1::FileConnection::<FatFile>::create_connection(
             // Note readable/writable do not override what's set in flags, they merely tell the
             // FileConnection that it's valid to open the file readable/writable.
-            scope, self, flags, mode, server_end, /*readable=*/ true, /*writable=*/ true,
+            scope.clone(),
+            connection::util::OpenFile::new(self, scope),
+            flags,
+            mode,
+            server_end,
+            /*readable=*/ true,
+            /*writable=*/ true,
         );
     }
 
