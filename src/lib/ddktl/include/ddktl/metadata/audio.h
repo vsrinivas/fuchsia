@@ -13,7 +13,7 @@ static constexpr uint32_t kMaxNumberOfExternalDelays = 8;
 enum class Codec : uint32_t {
   Tas27xx,
   Tas5782,
-  Tas5805,
+  Tas58xx,
   Tas5720,
 };
 

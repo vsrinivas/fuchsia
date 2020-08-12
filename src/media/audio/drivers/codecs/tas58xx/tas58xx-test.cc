@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "tas5805.h"
+#include "tas58xx.h"
 
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
-
-#include <thread>
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
@@ -17,8 +15,8 @@ namespace audio {
 
 static constexpr uint32_t kCodecTimeoutSecs = 1;
 
-struct Tas5805TestDevice : public Tas5805 {
-  explicit Tas5805TestDevice(const ddk::I2cChannel& i2c) : Tas5805(nullptr, i2c, false) {
+struct Tas58xxTestDevice : public Tas58xx {
+  explicit Tas58xxTestDevice(const ddk::I2cChannel& i2c) : Tas58xx(nullptr, i2c, false) {
     initialized_ = true;
   }
   zx_status_t CodecSetDaiFormat(dai_format_t* format) {
@@ -26,7 +24,7 @@ struct Tas5805TestDevice : public Tas5805 {
       sync_completion_t completion;
       zx_status_t status;
     } out;
-    Tas5805::CodecSetDaiFormat(
+    Tas58xx::CodecSetDaiFormat(
         format,
         [](void* ctx, zx_status_t s) {
           AsyncOut* out = reinterpret_cast<AsyncOut*>(ctx);
@@ -42,10 +40,10 @@ struct Tas5805TestDevice : public Tas5805 {
   }
 };
 
-TEST(Tas5805Test, GoodSetDai) {
+TEST(Tas58xxTest, GoodSetDai) {
   mock_i2c::MockI2c mock_i2c;
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805TestDevice device(std::move(i2c));
+  Tas58xxTestDevice device(std::move(i2c));
 
   uint32_t channels[] = {0, 1};
   dai_format_t format = {};
@@ -68,10 +66,10 @@ TEST(Tas5805Test, GoodSetDai) {
   mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas5805Test, BadSetDai) {
+TEST(Tas58xxTest, BadSetDai) {
   mock_i2c::MockI2c mock_i2c;
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805TestDevice device(std::move(i2c));
+  Tas58xxTestDevice device(std::move(i2c));
 
   // No format at all.
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.CodecSetDaiFormat(nullptr));
@@ -105,10 +103,10 @@ TEST(Tas5805Test, BadSetDai) {
   mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas5805Test, GetDai) {
+TEST(Tas58xxTest, GetDai) {
   mock_i2c::MockI2c mock_i2c;
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805TestDevice device(std::move(i2c));
+  Tas58xxTestDevice device(std::move(i2c));
   struct AsyncOut {
     sync_completion_t completion;
     zx_status_t status;
@@ -141,9 +139,14 @@ TEST(Tas5805Test, GetDai) {
   EXPECT_OK(sync_completion_wait(&out.completion, zx::sec(kCodecTimeoutSecs).get()));
 }
 
-TEST(Tas5805Test, GetInfo) {
-  ddk::I2cChannel unused_i2c;
-  Tas5805TestDevice device(std::move(unused_i2c));
+TEST(Tas58xxTest, GetInfo5805) {
+  mock_i2c::MockI2c mock_i2c;
+
+  // Get Info.
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});
+
+  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  Tas58xxTestDevice device(std::move(i2c));
 
   device.CodecGetInfo(
       [](void* ctx, const info_t* info) {
@@ -154,18 +157,36 @@ TEST(Tas5805Test, GetInfo) {
       nullptr);
 }
 
-TEST(Tas5805Test, BridgedMode) {
+TEST(Tas58xxTest, GetInfo5825) {
+  mock_i2c::MockI2c mock_i2c;
+
+  // Get Info.
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});
+
+  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  Tas58xxTestDevice device(std::move(i2c));
+
+  device.CodecGetInfo(
+      [](void* ctx, const info_t* info) {
+        EXPECT_EQ(strcmp(info->unique_id, ""), 0);
+        EXPECT_EQ(strcmp(info->manufacturer, "Texas Instruments"), 0);
+        EXPECT_EQ(strcmp(info->product_name, "TAS5825m"), 0);
+      },
+      nullptr);
+}
+
+TEST(Tas58xxTest, BridgedMode) {
   ddk::I2cChannel unused_i2c;
-  Tas5805TestDevice device(std::move(unused_i2c));
+  Tas58xxTestDevice device(std::move(unused_i2c));
 
   device.CodecIsBridgeable(
       [](void* ctx, bool supports_bridged_mode) { EXPECT_EQ(supports_bridged_mode, false); },
       nullptr);
 }
 
-TEST(Tas5805Test, GetGainFormat) {
+TEST(Tas58xxTest, GetGainFormat) {
   ddk::I2cChannel unused_i2c;
-  Tas5805TestDevice device(std::move(unused_i2c));
+  Tas58xxTestDevice device(std::move(unused_i2c));
 
   device.CodecGetGainFormat(
       [](void* ctx, const gain_format_t* format) {
@@ -177,9 +198,9 @@ TEST(Tas5805Test, GetGainFormat) {
       nullptr);
 }
 
-TEST(Tas5805Test, GetPlugState) {
+TEST(Tas58xxTest, GetPlugState) {
   ddk::I2cChannel unused_i2c;
-  Tas5805TestDevice device(std::move(unused_i2c));
+  Tas58xxTestDevice device(std::move(unused_i2c));
 
   device.CodecGetPlugState(
       [](void* ctx, const plug_state_t* state) {
@@ -189,7 +210,7 @@ TEST(Tas5805Test, GetPlugState) {
       nullptr);
 }
 
-TEST(Tas5805Test, Reset) {
+TEST(Tas58xxTest, Reset) {
   mock_i2c::MockI2c mock_i2c;
 
   mock_i2c
@@ -206,12 +227,12 @@ TEST(Tas5805Test, Reset) {
       .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805TestDevice device(std::move(i2c));
+  Tas58xxTestDevice device(std::move(i2c));
   device.ResetAndInitialize();
   mock_i2c.VerifyAndClear();
 }
 
-TEST(Tas5805Test, Pbtl) {
+TEST(Tas58xxTest, Pbtl) {
   mock_i2c::MockI2c mock_i2c;
 
   // Reset with PBTL mode on.
@@ -229,7 +250,7 @@ TEST(Tas5805Test, Pbtl) {
       .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805 device(nullptr, std::move(i2c), true);
+  Tas58xx device(nullptr, std::move(i2c), true);
   device.ResetAndInitialize();
   mock_i2c.VerifyAndClear();
 }

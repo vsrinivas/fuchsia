@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "tas5805.h"
+#include "tas58xx.h"
 
 #include <lib/device-protocol/i2c.h>
 
@@ -35,6 +35,7 @@ constexpr uint8_t kRegSapCtrl1Bits16bits       = 0x00;
 constexpr uint8_t kRegSapCtrl1Bits32bits       = 0x03;
 constexpr uint8_t kRegDeviceCtrl2BitsHiZ       = 0x02;
 constexpr uint8_t kRegDeviceCtrl2BitsPlay      = 0x03;
+constexpr uint8_t kRegDieId                    = 0x67;
 constexpr uint8_t kRegClearFaultBitsAnalog     = 0x80;
 // clang-format on
 
@@ -69,7 +70,7 @@ enum {
 
 namespace audio {
 
-zx_status_t Tas5805::ResetAndInitialize() {
+zx_status_t Tas58xx::ResetAndInitialize() {
   fbl::AutoLock lock(&lock_);
   // From the reference manual:
   // "9.5.3.1 Startup Procedures
@@ -119,24 +120,24 @@ zx_status_t Tas5805::ResetAndInitialize() {
   return ZX_OK;
 }
 
-zx_status_t Tas5805::Bind() {
+zx_status_t Tas58xx::Bind() {
   auto thunk = [](void* arg) -> int {
-    return reinterpret_cast<Tas5805*>(arg)->ResetAndInitialize();
+    return reinterpret_cast<Tas58xx*>(arg)->ResetAndInitialize();
   };
-  int rc = thrd_create_with_name(&thread_, thunk, this, "Tas5805-thread");
+  int rc = thrd_create_with_name(&thread_, thunk, this, "Tas58xx-thread");
   if (rc != thrd_success) {
     return ZX_ERR_INTERNAL;
   }
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx},
   };
-  return DdkAdd(ddk::DeviceAddArgs("tas5805").set_props(props));
+  return DdkAdd(ddk::DeviceAddArgs("tas58xx").set_props(props));
 }
 
-void Tas5805::Shutdown() { thrd_join(thread_, NULL); }
+void Tas58xx::Shutdown() { thrd_join(thread_, NULL); }
 
-zx_status_t Tas5805::Create(zx_device_t* parent) {
+zx_status_t Tas58xx::Create(zx_device_t* parent) {
   composite_protocol_t composite;
 
   auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
@@ -165,7 +166,7 @@ zx_status_t Tas5805::Create(zx_device_t* parent) {
   }
 
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<Tas5805>(new (&ac) Tas5805(parent, fragments[FRAGMENT_I2C], btl_mode));
+  auto dev = std::unique_ptr<Tas58xx>(new (&ac) Tas58xx(parent, fragments[FRAGMENT_I2C], btl_mode));
   if (!ac.check()) {
     zxlogf(ERROR, "%s Could not allocate memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
@@ -180,34 +181,46 @@ zx_status_t Tas5805::Create(zx_device_t* parent) {
   return ZX_OK;
 }
 
-void Tas5805::CodecReset(codec_reset_callback callback, void* cookie) {
+void Tas58xx::CodecReset(codec_reset_callback callback, void* cookie) {
   auto status = ResetAndInitialize();
   callback(cookie, status);
 }
 
-void Tas5805::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
-  info_t info;
+void Tas58xx::CodecGetInfo(codec_get_info_callback callback, void* cookie) {
+  info_t info = {};
   info.unique_id = "";
   info.manufacturer = "Texas Instruments";
-  info.product_name = "TAS5805m";
+  fbl::AutoLock lock(&lock_);
+  uint8_t die_id = 0;
+  zx_status_t status = ReadReg(kRegDieId, &die_id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s Failed to read DIE ID %d", __FILE__, status);
+  }
+  if (die_id == 0x95) {
+    printf("tas58xx: Found TAS5825m\n");
+    info.product_name = "TAS5825m";
+  } else if (die_id == 0x00) {
+    printf("tas58xx: Found TAS5805m\n");
+    info.product_name = "TAS5805m";
+  }
   callback(cookie, &info);
 }
 
-void Tas5805::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
+void Tas58xx::CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie) {
   callback(cookie, false);
 }
 
-void Tas5805::CodecSetBridgedMode(bool enable_bridged_mode,
+void Tas58xx::CodecSetBridgedMode(bool enable_bridged_mode,
                                   codec_set_bridged_mode_callback callback, void* cookie) {
   // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
   callback(cookie);
 }
 
-void Tas5805::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
+void Tas58xx::CodecGetDaiFormats(codec_get_dai_formats_callback callback, void* cookie) {
   callback(cookie, ZX_OK, &kSupportedDaiFormats, 1);
 }
 
-void Tas5805::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
+void Tas58xx::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format_callback callback,
                                 void* cookie) {
   if (!initialized_) {
     callback(cookie, ZX_ERR_UNAVAILABLE);
@@ -272,7 +285,7 @@ void Tas5805::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format
   callback(cookie, ZX_OK);
 }
 
-void Tas5805::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
+void Tas58xx::CodecGetGainFormat(codec_get_gain_format_callback callback, void* cookie) {
   gain_format_t format = {};
   format.type = GAIN_TYPE_DECIBELS;
   format.min_gain = kMinGain;
@@ -281,7 +294,7 @@ void Tas5805::CodecGetGainFormat(codec_get_gain_format_callback callback, void* 
   callback(cookie, &format);
 }
 
-void Tas5805::CodecSetGainState(const gain_state_t* gain_state,
+void Tas58xx::CodecSetGainState(const gain_state_t* gain_state,
                                 codec_set_gain_state_callback callback, void* cookie) {
   if (!initialized_) {
     zxlogf(ERROR, "%s Couldn't set gain, not initialized yet", __FILE__);
@@ -299,7 +312,7 @@ void Tas5805::CodecSetGainState(const gain_state_t* gain_state,
   callback(cookie);
 }
 
-void Tas5805::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
+void Tas58xx::CodecGetGainState(codec_get_gain_state_callback callback, void* cookie) {
   gain_state_t gain_state = {};
   gain_state.gain = current_gain_;
   gain_state.muted = false;
@@ -307,14 +320,14 @@ void Tas5805::CodecGetGainState(codec_get_gain_state_callback callback, void* co
   callback(cookie, &gain_state);
 }
 
-void Tas5805::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
+void Tas58xx::CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie) {
   plug_state_t plug_state = {};
   plug_state.hardwired = true;
   plug_state.plugged = true;
   callback(cookie, &plug_state);
 }
 
-zx_status_t Tas5805::WriteReg(uint8_t reg, uint8_t value) {
+zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buf[2];
   write_buf[0] = reg;
   write_buf[1] = value;
@@ -332,7 +345,7 @@ zx_status_t Tas5805::WriteReg(uint8_t reg, uint8_t value) {
 #endif
 }
 
-zx_status_t Tas5805::ReadReg(uint8_t reg, uint8_t* value) {
+zx_status_t Tas58xx::ReadReg(uint8_t reg, uint8_t* value) {
   auto status = i2c_.WriteReadSync(&reg, 1, value, 1);
   if (status != ZX_OK) {
     return status;
@@ -343,21 +356,21 @@ zx_status_t Tas5805::ReadReg(uint8_t reg, uint8_t* value) {
   return status;
 }
 
-zx_status_t tas5805_bind(void* ctx, zx_device_t* parent) { return Tas5805::Create(parent); }
+zx_status_t tas58xx_bind(void* ctx, zx_device_t* parent) { return Tas58xx::Create(parent); }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = tas5805_bind;
+  ops.bind = tas58xx_bind;
   return ops;
 }();
 
 }  // namespace audio
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(ti_tas5805, audio::driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(ti_tas58xx, audio::driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5805),
-ZIRCON_DRIVER_END(ti_tas5805)
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
+ZIRCON_DRIVER_END(ti_tas58xx)
     // clang-format on

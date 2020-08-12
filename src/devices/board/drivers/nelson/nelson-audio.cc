@@ -36,7 +36,7 @@ static const zx_bind_inst_t ref_out_codec_match[] = {
 static const zx_bind_inst_t p2_out_codec_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5805),  // For Nelson P2.
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),  // For Nelson P2.
 };
 static const zx_bind_inst_t ref_out_clk0_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
@@ -228,14 +228,14 @@ zx_status_t Nelson::AudioInit() {
     // in the codec itself.
 
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-                                          {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805}};
+                                          {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
     composite_device_desc_t codec_desc = {};
     codec_desc.props = props;
     codec_desc.props_count = countof(props);
     codec_desc.coresident_device_index = UINT32_MAX;
     codec_desc.fragments = p2_codec_fragments;
     codec_desc.fragments_count = countof(p2_codec_fragments);
-    status = DdkAddComposite("audio-tas5805", &codec_desc);
+    status = DdkAddComposite("audio-tas58xx", &codec_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;

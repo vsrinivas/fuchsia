@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5805_TAS5805_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5805_TAS5805_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS58XX_TAS58XX_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS58XX_TAS58XX_H_
 
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -23,15 +23,15 @@
 
 namespace audio {
 
-class Tas5805;
-using DeviceType = ddk::Device<Tas5805, ddk::UnbindableNew, ddk::Suspendable>;
+class Tas58xx;
+using DeviceType = ddk::Device<Tas58xx, ddk::UnbindableNew, ddk::Suspendable>;
 
-class Tas5805 : public DeviceType,  // Not final for unit tests.
-                public ddk::CodecProtocol<Tas5805, ddk::base_protocol> {
+class Tas58xx : public DeviceType,  // Not final for unit tests.
+                public ddk::CodecProtocol<Tas58xx, ddk::base_protocol> {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
-  explicit Tas5805(zx_device_t* device, const ddk::I2cChannel& i2c, bool btl_mode)
+  explicit Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c, bool btl_mode)
       : DeviceType(device), i2c_(i2c), btl_mode_(btl_mode) {}
 
   zx_status_t Bind();
@@ -90,4 +90,4 @@ class Tas5805 : public DeviceType,  // Not final for unit tests.
 };
 }  // namespace audio
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS5805_TAS5805_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS58XX_TAS58XX_H_

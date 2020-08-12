@@ -211,7 +211,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_TI_LP5036          0x05
 #define PDEV_PID_TI_TMP112          0x06
 #define PDEV_DID_TI_BACKLIGHT       0x01
-#define PDEV_DID_TI_TAS5805         0x02
+#define PDEV_DID_TI_TAS58xx         0x02
 #define PDEV_DID_TI_TAS5782         0x03
 #define PDEV_DID_TI_TAS2770         0x04
 #define PDEV_DID_TI_LED             0x05

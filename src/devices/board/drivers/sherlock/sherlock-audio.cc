@@ -103,7 +103,7 @@ zx_status_t Sherlock::AudioInit() {
   constexpr zx_bind_inst_t luis_codec_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-      BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5805),
+      BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
   };
 
   const device_fragment_part_t enable_gpio_fragment[] = {
@@ -271,7 +271,7 @@ zx_status_t Sherlock::AudioInit() {
     // in the codec itself.
 
     zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-                                {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805}};
+                                {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
 
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
@@ -279,7 +279,7 @@ zx_status_t Sherlock::AudioInit() {
     comp_desc.coresident_device_index = UINT32_MAX;
     comp_desc.fragments = luis_codec_fragments;
     comp_desc.fragments_count = countof(luis_codec_fragments);
-    status = DdkAddComposite("audio-tas5805", &comp_desc);
+    status = DdkAddComposite("audio-tas58xx", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
       return status;
@@ -315,7 +315,7 @@ zx_status_t Sherlock::AudioInit() {
   } else {                                        // Luis
     snprintf(metadata.product_name, sizeof(metadata.product_name), "luis");
     metadata.tdm.number_of_codecs = 1;
-    metadata.tdm.codecs[0] = metadata::Codec::Tas5805;
+    metadata.tdm.codecs[0] = metadata::Codec::Tas58xx;
     metadata.number_of_channels = 2;
     metadata.swaps = 0x10;
     metadata.lanes_enable_mask[0] = 3;

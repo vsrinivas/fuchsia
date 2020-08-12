@@ -67,7 +67,7 @@ static const zx_bind_inst_t mt8167s_out_codec_match[] = {
 static const zx_bind_inst_t cleo_out_codec_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5805),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
 };
 static const device_fragment_part_t in_i2c_fragment[] = {
     {std::size(root_match), root_match},
@@ -172,7 +172,7 @@ zx_status_t Mt8167::AudioInit() {
 
   metadata::Codec out_codec = metadata::Codec::Tas5782;  // Default to PDEV_PID_MEDIATEK_8167S_REF.
   if (board_info_.pid == PDEV_PID_CLEO) {
-    out_codec = metadata::Codec::Tas5805;
+    out_codec = metadata::Codec::Tas58xx;
   }
   pbus_metadata_t out_metadata[] = {
       {
@@ -326,7 +326,7 @@ zx_status_t Mt8167::AudioInit() {
         },
     };
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
-                                          {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805}};
+                                          {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
 
     const composite_device_desc_t comp_desc = {
         .props = props,
@@ -338,7 +338,7 @@ zx_status_t Mt8167::AudioInit() {
         .metadata_count = countof(codec_metadata),
     };
 
-    status = DdkAddComposite("audio-tas5805", &comp_desc);
+    status = DdkAddComposite("audio-tas58xx", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: DdkAddComposite failed %d", __FUNCTION__, status);
       return status;

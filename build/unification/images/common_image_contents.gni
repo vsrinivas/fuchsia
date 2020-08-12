@@ -330,7 +330,7 @@ if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     "//src/media/audio/drivers/codecs/max98373",
     "//src/media/audio/drivers/codecs/tas5720",
     "//src/media/audio/drivers/codecs/tas5782",
-    "//src/media/audio/drivers/codecs/tas5805",
+    "//src/media/audio/drivers/codecs/tas58xx",
     "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec",
     "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec",
     "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec",

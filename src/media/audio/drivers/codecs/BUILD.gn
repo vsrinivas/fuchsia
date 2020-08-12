@@ -10,6 +10,6 @@ group("tests") {
     "tas27xx:tests",
     "tas5720:tests",
     "tas5782:tests",
-    "tas5805:tests",
+    "tas58xx:tests",
   ]
 }
