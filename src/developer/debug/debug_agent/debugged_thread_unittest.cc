@@ -38,13 +38,6 @@ std::vector<uint8_t> CreateData(size_t length) {
   return data;
 }
 
-debug_ipc::Register CreateRegister(RegisterID id, size_t length) {
-  debug_ipc::Register reg;
-  reg.id = id;
-  reg.data = CreateData(length);
-  return reg;
-}
-
 bool FindRegister(const std::vector<Register>& regs, RegisterID id) {
   for (const auto& reg : regs) {
     if (reg.id == id)

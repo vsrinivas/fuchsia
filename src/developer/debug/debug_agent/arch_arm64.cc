@@ -115,14 +115,6 @@ using debug_ipc::RegisterID;
     status = WriteRegisterValue(reg, &regs->name); \
     break;
 
-debug_ipc::Register CreateRegister(RegisterID id, uint32_t length, const void* val_ptr) {
-  debug_ipc::Register reg;
-  reg.id = id;
-  const uint8_t* ptr = reinterpret_cast<const uint8_t*>(val_ptr);
-  reg.data.assign(ptr, ptr + length);
-  return reg;
-}
-
 zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &gen_regs, sizeof(gen_regs));
@@ -139,14 +131,12 @@ zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ipc::Regi
   if (status != ZX_OK)
     return status;
 
-  out.push_back(CreateRegister(RegisterID::kARMv8_fpcr, 4u, &vec_regs.fpcr));
-  out.push_back(CreateRegister(RegisterID::kARMv8_fpsr, 4u, &vec_regs.fpsr));
+  out.emplace_back(RegisterID::kARMv8_fpcr, vec_regs.fpcr);
+  out.emplace_back(RegisterID::kARMv8_fpsr, vec_regs.fpsr);
 
   auto base = static_cast<uint32_t>(RegisterID::kARMv8_v0);
-  for (size_t i = 0; i < 32; i++) {
-    auto reg_id = static_cast<RegisterID>(base + i);
-    out.push_back(CreateRegister(reg_id, 16u, &vec_regs.v[i]));
-  }
+  for (size_t i = 0; i < 32; i++)
+    out.emplace_back(static_cast<RegisterID>(base + i), 16u, &vec_regs.v[i]);
 
   return ZX_OK;
 }
@@ -169,13 +159,8 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
     auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr0_el1);
     auto bvr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbvr0_el1);
     for (size_t i = 0; i < debug_regs.hw_bps_count; i++) {
-      auto bcr_id = static_cast<RegisterID>(bcr_base + i);
-      out.push_back(CreateRegister(bcr_id, sizeof(debug_regs.hw_bps[i].dbgbcr),
-                                   &debug_regs.hw_bps[i].dbgbcr));
-
-      auto bvr_id = static_cast<RegisterID>(bvr_base + i);
-      out.push_back(CreateRegister(bvr_id, sizeof(debug_regs.hw_bps[i].dbgbvr),
-                                   &debug_regs.hw_bps[i].dbgbvr));
+      out.emplace_back(static_cast<RegisterID>(bcr_base + i), debug_regs.hw_bps[i].dbgbcr);
+      out.emplace_back(static_cast<RegisterID>(bvr_base + i), debug_regs.hw_bps[i].dbgbvr);
     }
   }
 
@@ -184,13 +169,8 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
     auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgwcr0_el1);
     auto bvr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgwvr0_el1);
     for (size_t i = 0; i < debug_regs.hw_bps_count; i++) {
-      auto bcr_id = static_cast<RegisterID>(bcr_base + i);
-      out.push_back(CreateRegister(bcr_id, sizeof(debug_regs.hw_wps[i].dbgwcr),
-                                   &debug_regs.hw_wps[i].dbgwcr));
-
-      auto bvr_id = static_cast<RegisterID>(bvr_base + i);
-      out.push_back(CreateRegister(bvr_id, sizeof(debug_regs.hw_wps[i].dbgwvr),
-                                   &debug_regs.hw_wps[i].dbgwvr));
+      out.emplace_back(static_cast<RegisterID>(bcr_base + i), debug_regs.hw_wps[i].dbgwcr);
+      out.emplace_back(static_cast<RegisterID>(bvr_base + i), debug_regs.hw_wps[i].dbgwvr);
     }
   }
 
@@ -199,10 +179,10 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
   //                what the actual settings are.
   //                This should be changed to get the actual values instead, but
   //                check in for now in order to continue.
-  out.push_back(CreateRegister(RegisterID::kARMv8_id_aa64dfr0_el1, 8u,
-                               &debug_regs.hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr));
-  out.push_back(CreateRegister(RegisterID::kARMv8_mdscr_el1, 8u,
-                               &debug_regs.hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr));
+  out.emplace_back(RegisterID::kARMv8_id_aa64dfr0_el1,
+                   debug_regs.hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr);
+  out.emplace_back(RegisterID::kARMv8_mdscr_el1,
+                   debug_regs.hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr);
 
   return ZX_OK;
 }
@@ -245,17 +225,15 @@ void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                      std::vector<debug_ipc::Register>& out) {
   // Add the X0-X29 registers.
   uint32_t base = static_cast<uint32_t>(RegisterID::kARMv8_x0);
-  for (int i = 0; i < 30; i++) {
-    RegisterID type = static_cast<RegisterID>(base + i);
-    out.push_back(CreateRegister(type, 8u, &input.r[i]));
-  }
+  for (int i = 0; i < 30; i++)
+    out.emplace_back(static_cast<RegisterID>(base + i), input.r[i]);
 
   // Add the named ones.
-  out.push_back(CreateRegister(RegisterID::kARMv8_lr, 8u, &input.lr));
-  out.push_back(CreateRegister(RegisterID::kARMv8_sp, 8u, &input.sp));
-  out.push_back(CreateRegister(RegisterID::kARMv8_pc, 8u, &input.pc));
-  out.push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8u, &input.cpsr));
-  out.push_back(CreateRegister(RegisterID::kARMv8_tpidr, 8u, &input.tpidr));
+  out.emplace_back(RegisterID::kARMv8_lr, input.lr);
+  out.emplace_back(RegisterID::kARMv8_sp, input.sp);
+  out.emplace_back(RegisterID::kARMv8_pc, input.pc);
+  out.emplace_back(RegisterID::kARMv8_cpsr, input.cpsr);
+  out.emplace_back(RegisterID::kARMv8_tpidr, input.tpidr);
 }
 
 zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,

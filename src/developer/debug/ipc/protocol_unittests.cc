@@ -584,10 +584,12 @@ TEST(Protocol, ThreadStatusReply) {
   initial.record.stack_amount = ThreadRecord::StackAmount::kFull;
   initial.record.frames.emplace_back(
       1234, 9875, 89236413,
-      std::vector<Register>{{RegisterID::kX64_rsi, 12}, {RegisterID::kX64_rdi, 0}});
+      std::vector<Register>{{RegisterID::kX64_rsi, static_cast<uint64_t>(12)},
+                            {RegisterID::kX64_rdi, static_cast<uint64_t>(0)}});
   initial.record.frames.emplace_back(
       71562341, 89236413, 0,
-      std::vector<Register>{{RegisterID::kX64_rsi, 11}, {RegisterID::kX64_rdi, 1}});
+      std::vector<Register>{{RegisterID::kX64_rsi, static_cast<uint64_t>(11u)},
+                            {RegisterID::kX64_rdi, static_cast<uint64_t>(1u)}});
 
   ThreadStatusReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -825,10 +827,10 @@ TEST(Protocol, ReadRegistersRequest) {
 TEST(Protocol, ReadRegistersReply) {
   ReadRegistersReply initial;
 
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_lr, 1));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_pc, 2));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_sp, 4));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_cpsr, 8));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_lr, 1));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_pc, 2));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_sp, 4));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_cpsr, 8));
 
   // Sanity check
   ASSERT_EQ(*(uint8_t*)&(initial.registers[0].data[0]), 0x01u);
@@ -853,11 +855,11 @@ TEST(Protocol, WriteRegistersRequest) {
   WriteRegistersRequest initial;
   initial.process_koid = 0x1234;
   initial.thread_koid = 0x5678;
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x0, 1));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x1, 2));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x2, 4));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x3, 8));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x4, 16));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x0, 1));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x1, 2));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x2, 4));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x3, 8));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x4, 16));
 
   WriteRegistersRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
@@ -878,8 +880,8 @@ TEST(Protocol, WriteRegistersRequest) {
 TEST(Protocol, WriteRegistersReply) {
   WriteRegistersReply initial = {};
   initial.status = 0x1234u;
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x0, 1));
-  initial.registers.push_back(CreateRegisterWithData(RegisterID::kARMv8_x1, 2));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x0, 1));
+  initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x1, 2));
 
   WriteRegistersReply second = {};
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));

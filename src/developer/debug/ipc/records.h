@@ -130,8 +130,26 @@ struct Register {
   Register() = default;
   Register(RegisterID rid, std::vector<uint8_t> d) : id(rid), data(std::move(d)) {}
 
-  // Constructs a 64-bit value for the current platform.
+  // Constructs from a size and a pointed-to data buffer in machine-endianness.
+  Register(RegisterID rid, size_t byte_size, const void* bytes) : id(rid) {
+    data.resize(byte_size);
+    memcpy(&data[0], bytes, byte_size);
+  }
+
+  // Constructs a sized value for the current platform.
   Register(RegisterID rid, uint64_t val) : id(rid) {
+    data.resize(sizeof(val));
+    memcpy(&data[0], &val, sizeof(val));
+  }
+  Register(RegisterID rid, uint32_t val) : id(rid) {
+    data.resize(sizeof(val));
+    memcpy(&data[0], &val, sizeof(val));
+  }
+  Register(RegisterID rid, uint16_t val) : id(rid) {
+    data.resize(sizeof(val));
+    memcpy(&data[0], &val, sizeof(val));
+  }
+  Register(RegisterID rid, uint8_t val) : id(rid) {
     data.resize(sizeof(val));
     memcpy(&data[0], &val, sizeof(val));
   }

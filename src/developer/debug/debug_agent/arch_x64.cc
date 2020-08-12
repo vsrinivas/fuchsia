@@ -80,14 +80,6 @@ using debug_ipc::RegisterID;
     status = WriteRegisterValue(reg, &regs->name); \
     break;
 
-inline debug_ipc::Register CreateRegister(RegisterID id, uint32_t length, const void* val_ptr) {
-  debug_ipc::Register reg;
-  reg.id = id;
-  const uint8_t* ptr = reinterpret_cast<const uint8_t*>(val_ptr);
-  reg.data.assign(ptr, ptr + length);
-  return reg;
-}
-
 zx_status_t ReadGeneralRegs(const zx::thread& thread, std::vector<debug_ipc::Register>& out) {
   zx_thread_state_general_regs gen_regs;
   zx_status_t status = thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &gen_regs, sizeof(gen_regs));
@@ -104,22 +96,22 @@ zx_status_t ReadFPRegs(const zx::thread& thread, std::vector<debug_ipc::Register
   if (status != ZX_OK)
     return status;
 
-  out.push_back(CreateRegister(RegisterID::kX64_fcw, 2u, &fp_regs.fcw));
-  out.push_back(CreateRegister(RegisterID::kX64_fsw, 2u, &fp_regs.fsw));
-  out.push_back(CreateRegister(RegisterID::kX64_ftw, 2u, &fp_regs.ftw));
-  out.push_back(CreateRegister(RegisterID::kX64_fop, 2u, &fp_regs.fop));
-  out.push_back(CreateRegister(RegisterID::kX64_fip, 2u, &fp_regs.fip));
-  out.push_back(CreateRegister(RegisterID::kX64_fdp, 2u, &fp_regs.fdp));
+  out.emplace_back(RegisterID::kX64_fcw, fp_regs.fcw);
+  out.emplace_back(RegisterID::kX64_fsw, fp_regs.fsw);
+  out.emplace_back(RegisterID::kX64_ftw, fp_regs.ftw);
+  out.emplace_back(RegisterID::kX64_fop, fp_regs.fop);
+  out.emplace_back(RegisterID::kX64_fip, fp_regs.fip);
+  out.emplace_back(RegisterID::kX64_fdp, fp_regs.fdp);
 
   // Each entry is 16 bytes long, but only 10 are actually used.
-  out.push_back(CreateRegister(RegisterID::kX64_st0, 16u, &fp_regs.st[0]));
-  out.push_back(CreateRegister(RegisterID::kX64_st1, 16u, &fp_regs.st[1]));
-  out.push_back(CreateRegister(RegisterID::kX64_st2, 16u, &fp_regs.st[2]));
-  out.push_back(CreateRegister(RegisterID::kX64_st3, 16u, &fp_regs.st[3]));
-  out.push_back(CreateRegister(RegisterID::kX64_st4, 16u, &fp_regs.st[4]));
-  out.push_back(CreateRegister(RegisterID::kX64_st5, 16u, &fp_regs.st[5]));
-  out.push_back(CreateRegister(RegisterID::kX64_st6, 16u, &fp_regs.st[6]));
-  out.push_back(CreateRegister(RegisterID::kX64_st7, 16u, &fp_regs.st[7]));
+  out.emplace_back(RegisterID::kX64_st0, 16u, &fp_regs.st[0]);
+  out.emplace_back(RegisterID::kX64_st1, 16u, &fp_regs.st[1]);
+  out.emplace_back(RegisterID::kX64_st2, 16u, &fp_regs.st[2]);
+  out.emplace_back(RegisterID::kX64_st3, 16u, &fp_regs.st[3]);
+  out.emplace_back(RegisterID::kX64_st4, 16u, &fp_regs.st[4]);
+  out.emplace_back(RegisterID::kX64_st5, 16u, &fp_regs.st[5]);
+  out.emplace_back(RegisterID::kX64_st6, 16u, &fp_regs.st[6]);
+  out.emplace_back(RegisterID::kX64_st7, 16u, &fp_regs.st[7]);
 
   return ZX_OK;
 }
@@ -130,13 +122,11 @@ zx_status_t ReadVectorRegs(const zx::thread& thread, std::vector<debug_ipc::Regi
   if (status != ZX_OK)
     return status;
 
-  out.push_back(CreateRegister(RegisterID::kX64_mxcsr, 4u, &vec_regs.mxcsr));
+  out.emplace_back(RegisterID::kX64_mxcsr, vec_regs.mxcsr);
 
   auto base = static_cast<uint32_t>(RegisterID::kX64_zmm0);
-  for (size_t i = 0; i < 32; i++) {
-    auto reg_id = static_cast<RegisterID>(base + i);
-    out.push_back(CreateRegister(reg_id, 64u, &vec_regs.zmm[i]));
-  }
+  for (size_t i = 0; i < 32; i++)
+    out.emplace_back(static_cast<RegisterID>(base + i), 64u, &vec_regs.zmm[i]);
 
   return ZX_OK;
 }
@@ -148,12 +138,12 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
   if (status != ZX_OK)
     return status;
 
-  out.push_back(CreateRegister(RegisterID::kX64_dr0, 8u, &debug_regs.dr[0]));
-  out.push_back(CreateRegister(RegisterID::kX64_dr1, 8u, &debug_regs.dr[1]));
-  out.push_back(CreateRegister(RegisterID::kX64_dr2, 8u, &debug_regs.dr[2]));
-  out.push_back(CreateRegister(RegisterID::kX64_dr3, 8u, &debug_regs.dr[3]));
-  out.push_back(CreateRegister(RegisterID::kX64_dr6, 8u, &debug_regs.dr6));
-  out.push_back(CreateRegister(RegisterID::kX64_dr7, 8u, &debug_regs.dr7));
+  out.emplace_back(RegisterID::kX64_dr0, debug_regs.dr[0]);
+  out.emplace_back(RegisterID::kX64_dr1, debug_regs.dr[1]);
+  out.emplace_back(RegisterID::kX64_dr2, debug_regs.dr[2]);
+  out.emplace_back(RegisterID::kX64_dr3, debug_regs.dr[3]);
+  out.emplace_back(RegisterID::kX64_dr6, debug_regs.dr6);
+  out.emplace_back(RegisterID::kX64_dr7, debug_regs.dr7);
 
   return ZX_OK;
 }
@@ -200,26 +190,26 @@ const int64_t kExceptionOffsetForSoftwareBreakpoint = 1;
 
 void SaveGeneralRegs(const zx_thread_state_general_regs& input,
                      std::vector<debug_ipc::Register>& out) {
-  out.push_back(CreateRegister(RegisterID::kX64_rax, 8u, &input.rax));
-  out.push_back(CreateRegister(RegisterID::kX64_rbx, 8u, &input.rbx));
-  out.push_back(CreateRegister(RegisterID::kX64_rcx, 8u, &input.rcx));
-  out.push_back(CreateRegister(RegisterID::kX64_rdx, 8u, &input.rdx));
-  out.push_back(CreateRegister(RegisterID::kX64_rsi, 8u, &input.rsi));
-  out.push_back(CreateRegister(RegisterID::kX64_rdi, 8u, &input.rdi));
-  out.push_back(CreateRegister(RegisterID::kX64_rbp, 8u, &input.rbp));
-  out.push_back(CreateRegister(RegisterID::kX64_rsp, 8u, &input.rsp));
-  out.push_back(CreateRegister(RegisterID::kX64_r8, 8u, &input.r8));
-  out.push_back(CreateRegister(RegisterID::kX64_r9, 8u, &input.r9));
-  out.push_back(CreateRegister(RegisterID::kX64_r10, 8u, &input.r10));
-  out.push_back(CreateRegister(RegisterID::kX64_r11, 8u, &input.r11));
-  out.push_back(CreateRegister(RegisterID::kX64_r12, 8u, &input.r12));
-  out.push_back(CreateRegister(RegisterID::kX64_r13, 8u, &input.r13));
-  out.push_back(CreateRegister(RegisterID::kX64_r14, 8u, &input.r14));
-  out.push_back(CreateRegister(RegisterID::kX64_r15, 8u, &input.r15));
-  out.push_back(CreateRegister(RegisterID::kX64_rip, 8u, &input.rip));
-  out.push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &input.rflags));
-  out.push_back(CreateRegister(RegisterID::kX64_fsbase, 8u, &input.fs_base));
-  out.push_back(CreateRegister(RegisterID::kX64_gsbase, 8u, &input.gs_base));
+  out.emplace_back(RegisterID::kX64_rax, input.rax);
+  out.emplace_back(RegisterID::kX64_rbx, input.rbx);
+  out.emplace_back(RegisterID::kX64_rcx, input.rcx);
+  out.emplace_back(RegisterID::kX64_rdx, input.rdx);
+  out.emplace_back(RegisterID::kX64_rsi, input.rsi);
+  out.emplace_back(RegisterID::kX64_rdi, input.rdi);
+  out.emplace_back(RegisterID::kX64_rbp, input.rbp);
+  out.emplace_back(RegisterID::kX64_rsp, input.rsp);
+  out.emplace_back(RegisterID::kX64_r8, input.r8);
+  out.emplace_back(RegisterID::kX64_r9, input.r9);
+  out.emplace_back(RegisterID::kX64_r10, input.r10);
+  out.emplace_back(RegisterID::kX64_r11, input.r11);
+  out.emplace_back(RegisterID::kX64_r12, input.r12);
+  out.emplace_back(RegisterID::kX64_r13, input.r13);
+  out.emplace_back(RegisterID::kX64_r14, input.r14);
+  out.emplace_back(RegisterID::kX64_r15, input.r15);
+  out.emplace_back(RegisterID::kX64_rip, input.rip);
+  out.emplace_back(RegisterID::kX64_rflags, input.rflags);
+  out.emplace_back(RegisterID::kX64_fsbase, input.fs_base);
+  out.emplace_back(RegisterID::kX64_gsbase, input.gs_base);
 }
 
 zx_status_t ReadRegisters(const zx::thread& thread, const debug_ipc::RegisterCategory& cat,

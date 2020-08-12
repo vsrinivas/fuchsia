@@ -9,15 +9,8 @@
 
 namespace debug_ipc {
 
-// Creates a register with the amount of data specified. The data will be zero.
-Register CreateRegister(RegisterID id, size_t length);
-
-// Creates a register with a data pattern within it.
-// The pattern will 0x010203 ... (little-endian).
-Register CreateRegisterWithData(RegisterID id, size_t length);
-
-// Create a register with an uint64_t as value.
-Register CreateUint64Register(RegisterID id, uint64_t value);
+// Creates a register with a data pattern within it. The pattern will 0x010203 ... (little-endian).
+Register CreateRegisterWithTestData(RegisterID id, size_t length);
 
 }  // namespace debug_ipc
 

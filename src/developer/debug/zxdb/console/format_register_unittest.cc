@@ -151,7 +151,7 @@ TEST(FormatRegisters, AllRegisters) {
   FillVectorRegisters(&registers);
 
   // Add mxcsr since that appears in a separate category.
-  registers.emplace_back(RegisterID::kX64_mxcsr, 0x1f80);
+  registers.emplace_back(RegisterID::kX64_mxcsr, static_cast<uint64_t>(0x1f80));
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;

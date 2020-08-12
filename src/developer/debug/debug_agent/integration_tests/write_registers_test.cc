@@ -168,7 +168,7 @@ TEST(WriteRegisterTest, BranchOnRAX) {
     WriteRegistersRequest write_reg_request;
     write_reg_request.process_koid = launch_reply.process_koid;
     write_reg_request.thread_koid = thread_notification.record.koid;
-    write_reg_request.registers.push_back(CreateUint64Register(RegisterID::kX64_rax, 1u));
+    write_reg_request.registers.emplace_back(RegisterID::kX64_rax, static_cast<uint64_t>(1u));
 
     WriteRegistersReply write_reg_reply;
     remote_api->OnWriteRegisters(write_reg_request, &write_reg_reply);

@@ -15,10 +15,10 @@ namespace arch {
 
 TEST(ArchArm64, WriteGeneralRegs) {
   std::vector<debug_ipc::Register> regs;
-  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_x0, 8));
-  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_x3, 8));
-  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_lr, 8));
-  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_pc, 8));
+  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_x0, 8));
+  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_x3, 8));
+  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_lr, 8));
+  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_pc, 8));
 
   zx_thread_state_general_regs_t out = {};
   zx_status_t res = WriteGeneralRegisters(regs, &out);
@@ -34,9 +34,9 @@ TEST(ArchArm64, WriteGeneralRegs) {
   EXPECT_EQ(out.pc, 0x0102030405060708u);
 
   regs.clear();
-  regs.push_back(CreateUint64Register(debug_ipc::RegisterID::kARMv8_x0, 0xaabb));
-  regs.push_back(CreateUint64Register(debug_ipc::RegisterID::kARMv8_x15, 0xdead));
-  regs.push_back(CreateUint64Register(debug_ipc::RegisterID::kARMv8_pc, 0xbeef));
+  regs.emplace_back(debug_ipc::RegisterID::kARMv8_x0, static_cast<uint64_t>(0xaabb));
+  regs.emplace_back(debug_ipc::RegisterID::kARMv8_x15, static_cast<uint64_t>(0xdead));
+  regs.emplace_back(debug_ipc::RegisterID::kARMv8_pc, static_cast<uint64_t>(0xbeef));
 
   res = WriteGeneralRegisters(regs, &out);
   ASSERT_EQ(res, ZX_OK) << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(res);
@@ -54,11 +54,11 @@ TEST(ArchArm64, InvalidWriteGeneralRegs) {
   std::vector<debug_ipc::Register> regs;
 
   // Invalid length.
-  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_v0, 4));
+  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_v0, 4));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 
   // Invalid (non-canonical) register.
-  regs.push_back(CreateRegisterWithData(debug_ipc::RegisterID::kARMv8_w3, 8));
+  regs.push_back(CreateRegisterWithTestData(debug_ipc::RegisterID::kARMv8_w3, 8));
   EXPECT_EQ(WriteGeneralRegisters(regs, &out), ZX_ERR_INVALID_ARGS);
 }
 
