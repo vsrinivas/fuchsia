@@ -14,8 +14,8 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-url",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",

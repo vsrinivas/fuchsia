@@ -8,8 +8,8 @@ rustc_test("ergonomic_inspect_tests") {
   source_root = "src/main.rs"
 
   deps = [
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect-derive",
+    "//src/lib/diagnostics/inspect/derive",
+    "//src/lib/diagnostics/inspect/rust",
   ]
 
   sources = [ "src/main.rs" ]

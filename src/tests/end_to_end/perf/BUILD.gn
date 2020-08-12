@@ -124,7 +124,7 @@ group("package_deps") {
   testonly = true
   public_deps = [
     "//src/connectivity/network/tests/benchmarks:netstack_benchmarks",
-    "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
+    "//src/lib/diagnostics/inspect/rust:benchmarks",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
     "//src/tests/microbenchmarks:fuchsia_microbenchmarks_perftestmode",

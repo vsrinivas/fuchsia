@@ -14,9 +14,9 @@ rustc_library("fidl-fuchsia-pkg-ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-url",
     "//src/lib/http-uri-ext",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:hex",

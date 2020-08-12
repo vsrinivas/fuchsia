@@ -7,7 +7,7 @@ import("//build/rust/rustc_test.gni")
 
 lib_deps = [
   "//src/diagnostics/lib/selectors",
-  "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
+  "//src/lib/diagnostics/inspect/node-hierarchy/rust",
   "//src/sys/lib/cm_json",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:lazy_static",

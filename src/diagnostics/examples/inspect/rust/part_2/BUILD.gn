@@ -17,7 +17,7 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
 
     # [START part_1_solution_build_dep]
-    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
 

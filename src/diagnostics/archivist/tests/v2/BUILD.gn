@@ -12,9 +12,9 @@ rustc_binary("stub_inspect_component") {
   edition = "2018"
   source_root = "components/stub_inspect_component.rs"
   deps = [
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -27,10 +27,10 @@ rustc_test("integration_tests_bin") {
   edition = "2018"
   deps = [
     "//src/diagnostics/lib/selectors",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/stdout-to-debuglog/rust:stdout-to-debuglog",
     "//src/sys/tools/cs:lib",

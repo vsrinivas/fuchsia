@@ -27,9 +27,9 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:thiserror",

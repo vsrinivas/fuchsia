@@ -23,10 +23,10 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/archivist/fidl:controller-rustc",
     "//src/lib/diagnostics/data/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/syslog/rust:syslog-listener",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -39,6 +39,6 @@ fuchsia_unittest_package("diagnostics-testing-tests") {
   manifest = "meta/diagnostics-testing-unittest.cmx"
   deps = [
     ":lib_test",
-    "//src/lib/inspect/rust/fuchsia-inspect:inspect_test_component",
+    "//src/lib/diagnostics/inspect/rust:inspect_test_component",
   ]
 }

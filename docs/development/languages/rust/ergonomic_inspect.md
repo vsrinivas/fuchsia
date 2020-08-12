@@ -1,11 +1,11 @@
 # Ergonomic Inspect
 
 This guide covers the usage of the
-[`fuchsia_inspect_derive`](/src/lib/inspect/rust/fuchsia-inspect-derive)
+[`fuchsia_inspect_derive`](/src/lib/diagnostics/inspect/derive)
 library, and assumes that you are familiar with
 [Inspect](/docs/development/inspect)
 and have basic experience with the
-[`fuchsia_inspect`](/src/lib/inspect/rust/fuchsia-inspect) library.
+[`fuchsia_inspect`](/src/lib/diagnostics/inspect/rust) library.
 
 ## Overview
 

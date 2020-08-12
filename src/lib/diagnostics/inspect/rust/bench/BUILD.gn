@@ -5,7 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
-package("rust_inspect_benchmarks") {
+package("rust-inspect-benchmarks") {
   testonly = true
 
   binaries = [
@@ -30,8 +30,8 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/mapped-vmo",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",

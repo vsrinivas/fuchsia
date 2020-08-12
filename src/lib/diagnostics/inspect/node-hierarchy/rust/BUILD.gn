@@ -1,0 +1,54 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("fuchsia-inspect-node-hierarchy") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/diagnostics/lib/selectors",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+  ]
+
+  sources = [
+    "src/lib.rs",
+    "src/serialization/deserialize.rs",
+    "src/serialization/mod.rs",
+    "src/serialization/serialize.rs",
+    "src/trie.rs",
+  ]
+}
+
+test_package("fuchsia-inspect-node-hierarchy-tests") {
+  deps = [ ":fuchsia-inspect-node-hierarchy_test" ]
+
+  tests = [
+    {
+      name = "fuchsia_inspect_node_hierarchy_lib_test"
+    },
+  ]
+}
+
+group("rust") {
+  deps = [ ":fuchsia-inspect-node-hierarchy" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia-inspect-node-hierarchy-tests" ]
+}

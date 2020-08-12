@@ -23,11 +23,11 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/diagnostics/data/rust",
+    "//src/lib/diagnostics/inspect/node-hierarchy/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect-node-hierarchy",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -42,6 +42,6 @@ fuchsia_unittest_package("diagnostics-reader-tests") {
   manifest = "meta/diagnostics-reader-unittest.cmx"
   deps = [
     ":lib_test",
-    "//src/lib/inspect/rust/fuchsia-inspect:inspect_test_component",
+    "//src/lib/diagnostics/inspect/rust:inspect_test_component",
   ]
 }

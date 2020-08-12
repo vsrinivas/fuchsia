@@ -41,7 +41,7 @@ use {
 #[derive(Debug)]
 enum Property {
     // The names StringProperty, IntLinearHistogramProperty, etc. are built by macros such as
-    // create_linear_histogram_property_fn! in src/lib/inspect/rust/fuchsia-inspect/src/lib.rs.
+    // create_linear_histogram_property_fn! in src/lib/diagnostics/inspect/rust/src/lib.rs.
     // You won't find them by searching the codebase; instead search that file for macro_rules!
     // and go from there.
     // They're documented in https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html.

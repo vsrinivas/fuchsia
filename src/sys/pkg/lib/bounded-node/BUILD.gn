@@ -13,8 +13,8 @@ rustc_library("bounded-node") {
   with_unit_tests = true
 
   deps = [
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/rust",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]

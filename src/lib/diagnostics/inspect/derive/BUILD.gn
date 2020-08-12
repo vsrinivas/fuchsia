@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+group("derive") {
+  deps = [ ":fuchsia-inspect-derive" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}
+
+rustc_library("fuchsia-inspect-derive") {
+  name = "fuchsia_inspect_derive"
+  version = "0.1.0"
+  edition = "2018"
+
+  deps = [
+    "macro",
+    "//src/lib/diagnostics/inspect/rust",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [
+    "src/inspect.rs",
+    "src/lib.rs",
+  ]
+}

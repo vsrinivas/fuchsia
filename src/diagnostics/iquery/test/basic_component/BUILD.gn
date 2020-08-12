@@ -9,9 +9,9 @@ rustc_binary("iquery_basic_component") {
   source_root = "main.rs"
 
   deps = [
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/inspect/rust/fuchsia-inspect",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

@@ -5,14 +5,14 @@
 group("tests") {
   testonly = true
   deps = [
-    "fuchsia-inspect:tests",
-    "fuchsia-inspect-contrib:tests",
-    "fuchsia-inspect-derive:tests",
-    "fuchsia-inspect-node-hierarchy:tests",
+    "contrib/rust:tests",
+    "derive:tests",
+    "node-hierarchy/rust:tests",
+    "rust:tests",
   ]
 }
 
 group("benchmarks") {
   testonly = true
-  deps = [ "fuchsia-inspect:benchmarks" ]
+  deps = [ "rust:benchmarks" ]
 }

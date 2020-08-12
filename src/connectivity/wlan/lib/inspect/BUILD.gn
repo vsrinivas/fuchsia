@@ -14,8 +14,8 @@ rustc_library("wlan-inspect") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//third_party/rust_crates:parking_lot",
   ]
 

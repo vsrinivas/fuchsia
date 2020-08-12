@@ -3,48 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-
-group("tests") {
-  testonly = true
-  deps = [ "tests" ]
-}
 
 rustc_library("fuchsia-inspect-derive-transitional") {
   version = "0.1.0"
   edition = "2018"
 
-  deps = [
-    "macro",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:paste",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = [ "//src/lib/diagnostics/inspect/derive" ]
 
-  sources = [
-    "src/inspect.rs",
-    "src/lib.rs",
-  ]
-}
-
-rustc_library("fuchsia-inspect-derive") {
-  name = "fuchsia_inspect_derive"
-  version = "0.1.0"
-  edition = "2018"
-
-  deps = [
-    "macro",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:paste",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [
-    "src/inspect.rs",
-    "src/lib.rs",
-  ]
+  sources = [ "src/lib.rs" ]
 }

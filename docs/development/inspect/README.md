@@ -157,7 +157,7 @@ about the component to the hub. For instance, appmgr exposes
   from `{Int,Uint,Double}ArrayValue` types. The array will be empty if
   the underlying array is not a specially formatted histogram.
 
-* {[Rust](/src/lib/inspect/rust/fuchsia-inspect)}
+* {[Rust](/src/lib/diagnostics/inspect/rust)}
 
   The Rust Inspect Library provides full [writing][rust-1] and
   [reading][rust-2] support for the Inspect File Format.

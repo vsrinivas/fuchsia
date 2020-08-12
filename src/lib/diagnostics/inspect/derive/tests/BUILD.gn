@@ -10,9 +10,9 @@ rustc_test("fuchsia_inspect_derive_tests") {
   source_root = "src/main.rs"
 
   deps = [
+    "//src/lib/diagnostics/inspect/derive",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-async",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect-derive",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde",
@@ -25,7 +25,7 @@ rustc_test("fuchsia_inspect_derive_import_tests") {
   edition = "2018"
   source_root = "src/import.rs"
 
-  deps = [ "//src/lib/inspect/rust/fuchsia-inspect-derive" ]
+  deps = [ "//src/lib/diagnostics/inspect/derive" ]
 
   sources = [ "src/import.rs" ]
 }
