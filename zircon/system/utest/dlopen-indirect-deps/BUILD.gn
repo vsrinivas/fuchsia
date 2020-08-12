@@ -27,9 +27,7 @@ test("dlopen-indirect-deps") {
 }
 
 shared_library("dlopen-indirect-deps-test-module") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
@@ -40,9 +38,7 @@ shared_library("dlopen-indirect-deps-test-module") {
 }
 
 shared_library("dlopen-indirect-deps-test-liba") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",
@@ -55,9 +51,7 @@ shared_library("dlopen-indirect-deps-test-liba") {
 }
 
 shared_library("dlopen-indirect-deps-test-libb") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   configs += [ "//build/unification/config:zircon-migrated" ]
   visibility = [
     ":*",

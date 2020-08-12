@@ -17,11 +17,6 @@ import("//build/unification/zbi/generated_resource.gni")
 import("//build/unification/zbi/resource.gni")
 
 test("runtests-utils") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -53,8 +48,7 @@ executable("publish-data-helper") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
 
-  # TODO(44278): restore to true when properly convert to GN idioms.
-  testonly = false
+  testonly = true
   visibility = [ ":*" ]
   sources = [ "helper/publish-data-helper.cc" ]
   deps = [
@@ -73,8 +67,7 @@ executable("profile-helper") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
 
-  # TODO(44278): restore to true when properly convert to GN idioms.
-  testonly = false
+  testonly = true
   visibility = [ ":*" ]
   sources = [ "helper/profile-helper.cc" ]
 
@@ -87,8 +80,7 @@ executable("profile-helper") {
 }
 
 resource("packaged-publish-data-helper") {
-  # TODO(44278): restore to true when properly convert to GN idioms.
-  testonly = false
+  testonly = true
   deps = [ ":publish-data-helper" ]
   outputs =
       [ "test/sys/runtests-utils-testdata/publish-data/publish-data-helper" ]
@@ -96,16 +88,14 @@ resource("packaged-publish-data-helper") {
 }
 
 resource("packaged-profile-helper") {
-  # TODO(44278): restore to true when properly convert to GN idioms.
-  testonly = false
+  testonly = true
   deps = [ ":profile-helper" ]
   outputs = [ "test/sys/runtests-utils-testdata/profile/profile-helper" ]
   sources = [ "$root_out_dir/profile-helper" ]
 }
 
 resource("packaged-raw-profile") {
-  # TODO(44278): restore to true when properly convert to GN idioms.
-  testonly = false
+  testonly = true
   outputs = [
     "test/sys/runtests-utils-testdata/profile/15822697145192797690.profraw",
   ]
@@ -113,8 +103,7 @@ resource("packaged-raw-profile") {
 }
 
 generated_resource("test-data") {
-  # TODO(44278): restore to true when properly convert to GN idioms.
-  testonly = false
+  testonly = true
   contents = [ "Hello world!" ]
   outputs = [ "test/sys/runtests-utils-testdata/test-data" ]
 }
@@ -142,8 +131,7 @@ template("runtests_test_script") {
   rebased_genfile = rebase_path(genfile)
 
   action("${target_name}.txt") {
-    # TODO(44278): restore to true when properly convert to GN idioms.
-    testonly = false
+    testonly = true
     script = "/bin/bash"
     args = [ "-c" ]
     shebang = "#!/boot/bin/sh"
@@ -152,8 +140,7 @@ template("runtests_test_script") {
   }
 
   resource("${target_name}") {
-    # TODO(44278): restore to true when properly convert to GN idioms.
-    testonly = false
+    testonly = true
     deps = [ ":${target_name}.txt" ]
     outputs =
         [ "test/sys/runtests-utils-testdata/${subdirectory}${target_name}" ]
@@ -233,8 +220,7 @@ runtests_test_script("test-inf-loop.sh") {
 }
 
 group("test-scripts") {
-  # TODO(44278): restore to true when properly convert to GN idioms.
-  testonly = false
+  testonly = true
   deps = [
     # Used by RunTestRootDir in fuchsia-run-test.cc
     ":test-root-dir.sh",

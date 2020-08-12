@@ -16,4 +16,5 @@ verify_zedboot_cmdline_params("verify_zedboot_cmdline_params_for_toulouse") {
     # Make sure netsvc is enabled since paving depends on it.
     "netsvc.disable=false",
   ]
+  testonly = true
 }

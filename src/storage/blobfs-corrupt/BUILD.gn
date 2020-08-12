@@ -18,7 +18,7 @@ executable("blobfs-corrupt") {
 }
 
 executable("blobfs-corrupt-test") {
-  testonly = false
+  testonly = true
   output_name = "blobfs-corrupt-test"
   sources = [ "test/corrupt_blob_test.cc" ]
   include_dirs = [ "." ]

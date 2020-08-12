@@ -94,6 +94,7 @@ group("ta") {
 migrated_zbi("zbi") {
   output_name = "zedboot"
   output_dir = root_out_dir
+  testonly = true
 
   deps = [
     ":kernel_cmdline",
@@ -136,6 +137,7 @@ if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
     output_name = "zedboot.zbi"
     deps = [ ":zbi" ]
+    testonly = true
 
     zbi_outputs = get_target_outputs(":zbi")
     zbi = [ zbi_outputs[0] ]
@@ -162,6 +164,7 @@ if (custom_signing_script != "") {
   vboot("signed") {
     output_name = "zedboot"
     deps = [ ":zbi" ]
+    testonly = true
     metadata = {
       images = [
         {
@@ -185,6 +188,7 @@ if (custom_signing_script != "") {
 if (use_vbmeta) {
   vbmeta("zedboot.vbmeta") {
     output_name = "zedboot"
+    testonly = true
     if (custom_signing_script != "") {
       deps = [ ":signed" ]
       zbi_outputs = get_target_outputs(":signed")
@@ -239,6 +243,7 @@ if (target_cpu != "arm64" && !use_vboot) {
     deps = [ ":zbi" ]
     zedboot_zbi_outputs = get_target_outputs(":zbi")
     zedboot = zedboot_zbi_outputs[0]
+    testonly = true
 
     metadata = {
       images = [
@@ -264,4 +269,5 @@ group("zedboot") {
       deps += [ ":zedboot.vbmeta" ]
     }
   }
+  testonly = true
 }

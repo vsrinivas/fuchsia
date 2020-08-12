@@ -33,14 +33,14 @@ if (toolchain_variant.instrumented) {
   # Instrumented variants will just never work for this code.  So
   # redirect to the default uninstrumented variant to compile this file.
   group("subprocess") {
+    testonly = true
     public_deps = [ ":subprocess(${toolchain_variant.base})" ]
   }
 } else {
   source_set("subprocess") {
     visibility = [ ":*" ]
 
-    # TODO(44278): Revert to true when converting this file to proper GN build idioms.
-    testonly = false
+    testonly = true
     sources = [
       "include/mini-process/mini-process.h",
       "subprocess.c",

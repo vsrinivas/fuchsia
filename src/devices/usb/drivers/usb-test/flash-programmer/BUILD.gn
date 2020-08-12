@@ -21,9 +21,7 @@ driver_module("flash-programmer") {
     }
   }
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   sources = [ "flash-programmer.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.usb",

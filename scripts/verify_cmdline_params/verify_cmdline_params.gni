@@ -16,6 +16,7 @@ template("verify_zedboot_cmdline_params") {
   in = "$root_out_dir/zedboot.zbi"
   out = "$root_out_dir/verify_zedboot_cmdline_params_" + target_name + ".empty"
   action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
     script = "//scripts/verify_cmdline_params/verify_cmdline_params.sh"
     sources = [ in ]
     deps = [ "//build/images/zedboot:zbi" ]

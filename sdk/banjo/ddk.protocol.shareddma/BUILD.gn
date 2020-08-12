@@ -5,7 +5,5 @@
 import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.shareddma") {
-  # TODO(44278): remove this.
-  testonly = false
   sources = [ "shareddma.banjo" ]
 }

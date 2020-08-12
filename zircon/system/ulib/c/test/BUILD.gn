@@ -29,11 +29,6 @@ default_stack_size_cases = [
 
 foreach(case, default_stack_size_cases) {
   test("default-stack-size-${case.name}") {
-    # Dependent manifests unfortunately cannot be marked as `testonly`.
-    # TODO(44278): Remove when converting this file to proper GN build idioms.
-    if (is_fuchsia) {
-      testonly = false
-    }
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
     }
@@ -67,19 +62,12 @@ executable("debugdata-test-helper") {
     }
   }
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Flip back to true.
-  testonly = false
+  testonly = true
   sources = [ "debugdata-test-helper.cc" ]
   deps = [ "//zircon/public/lib/zx" ]
 }
 
 test("debugdata") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -111,11 +99,6 @@ test("debugdata") {
 }
 
 test("posix-clocks") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -135,11 +118,6 @@ test("posix-clocks") {
 }
 
 test("atexit") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",

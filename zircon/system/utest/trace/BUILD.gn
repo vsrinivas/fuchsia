@@ -16,6 +16,7 @@ import("//build/test.gni")
 
 # Common pieces.
 source_set("common") {
+  testonly = true
   visibility = [ ":*" ]
   sources = [
     "engine_tests.cc",
@@ -56,11 +57,6 @@ source_set("common") {
 
 # Version of test that uses libtrace-engine.so.
 test("trace") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -80,11 +76,6 @@ test("trace") {
 
 # And again using libtrace-engine.a.
 test("trace-static-engine") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }

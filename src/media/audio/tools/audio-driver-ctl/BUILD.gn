@@ -49,9 +49,6 @@ executable("bin") {
 }
 
 test("test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "audio-test"
   sources = [

@@ -16,8 +16,7 @@ import("//build/test.gni")
 import("//build/unification/zbi/generated_resource.gni")
 
 generated_resource("zxcrypt_config.txt") {
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
 
   outputs = [ "config/zxcrypt" ]
 
@@ -25,9 +24,6 @@ generated_resource("zxcrypt_config.txt") {
 }
 
 test("fs-recovery") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "recovery.cc" ]
   deps = [

@@ -15,9 +15,6 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 
 test("dlfcn") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "dlfcn.c" ]
   deps = [
@@ -38,9 +35,7 @@ test("dlfcn") {
 loadable_module("test-dso-no-note") {
   visibility = [ ":*" ]
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Revert to true when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   sources = [ "test-dso-no-note.cc" ]
   configs += [ ":no-build-id" ]
 }

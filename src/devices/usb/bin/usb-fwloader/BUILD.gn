@@ -5,9 +5,7 @@
 executable("usb-fwloader") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   sources = [ "usb-fwloader.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",

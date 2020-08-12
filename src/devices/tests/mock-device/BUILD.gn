@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 
 driver_module("mock-device") {
   test = true
+  testonly = true
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,9 +36,7 @@ driver_module("mock-device") {
 }
 
 fidl("fuchsia.device.mock") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   sources = [ "mock-device.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

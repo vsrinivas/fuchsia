@@ -25,6 +25,7 @@ group("test") {
 
 # Common pieces of the unittest.
 source_set("test-common") {
+  testonly = true
   visibility = [ ":*" ]
   sources = [ "event_vthread_tests.cc" ]
   deps = [

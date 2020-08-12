@@ -73,19 +73,13 @@ template("banjo_c_target") {
   # Define a separate target for mocks to avoid requiring all Banjo users to
   # link to the C++ standard library.
   source_set("${main_target_name}_mock") {
+    testonly = true
+
     forward_variables_from(invoker,
                            [
                              "deps",
                              "visibility",
-                             "testonly",
                            ])
-
-    if (!defined(testonly)) {
-      # Only mark this set as testonly if the parent library hasn't been
-      # explicitly tagged with testonly already.
-      # TODO(44278): always mark testonly once unification is complete.
-      testonly = true
-    }
 
     public = [ ddktl_mock_header ]
 

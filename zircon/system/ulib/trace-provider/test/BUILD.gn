@@ -15,18 +15,11 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 
 group("test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Restore to true when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   deps = [ ":provider-test" ]
 }
 
 test("provider-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }

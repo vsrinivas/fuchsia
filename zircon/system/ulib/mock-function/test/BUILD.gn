@@ -19,9 +19,6 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 
 test("mock-function-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mock-function-test"
   sources = [ "mock-function-test.cc" ]

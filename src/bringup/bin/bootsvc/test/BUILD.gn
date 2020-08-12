@@ -9,11 +9,6 @@ import("//build/unification/zbi/zbi_input.gni")
 import("//zircon/public/gn/test/zbi_test_success.gni")
 
 test("bootsvc-unit-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -43,9 +38,7 @@ executable("bootsvc-integration-test") {
     }
   }
 
-  # TODO(44278): Revert to true when converting this file to proper GN build
-  # idioms.
-  testonly = false
+  testonly = true
   defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
   sources = [ "integration-test.cc" ]
   deps = [

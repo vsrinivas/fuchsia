@@ -45,12 +45,8 @@ template("test") {
   executable(target_name) {
     original_target_name = target_name
     forward_variables_from(invoker, "*")
+    testonly = true
 
-    # TODO(44278): always force `testonly` once all ZN tests are moved to
-    # packages.
-    if (!defined(testonly)) {
-      testonly = true
-    }
     if (is_linux || is_mac) {
       deps += [ ":${target_name}_spec" ]
     }

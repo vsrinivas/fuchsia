@@ -15,9 +15,6 @@ assert(!defined(zx) || zx != "/",
 import("//build/test.gni")
 
 test("minfs-micro-benchmark") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "block-device-utils.cc",

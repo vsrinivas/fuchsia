@@ -8,6 +8,7 @@ import("//build/test/test_package.gni")
 import("//build/fuzzing/fuzzer.gni")
 
 source_set("shared") {
+  testonly = true
   sources = [
     "ftl-shell.cc",
     "ndm-ram-driver.cc",

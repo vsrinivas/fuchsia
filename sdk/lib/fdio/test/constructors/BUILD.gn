@@ -24,11 +24,6 @@ group("constructors") {
 # This bogus test is necessary to have the verification run in the variant
 # toolchain.
 test("fdio-constructor") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -59,9 +54,7 @@ link_output_rspfile("fdio-rspfile") {
 }
 
 toolchain_utils_action("no-static-ctor") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Restore to true when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   script = "no-static-ctor.sh"
   utils = [ "readelf" ]
   outputs = [ "$target_out_dir/$target_name" ]

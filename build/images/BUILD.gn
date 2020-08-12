@@ -568,6 +568,7 @@ generated_file("zxcrypt_config.txt") {
 }
 
 group("fuchsia_contents") {
+  testonly = true
   deps = [
     "//build/unification/future/images:fuchsia_kernel_cmdline",
     "//build/unification/future/images:ta",

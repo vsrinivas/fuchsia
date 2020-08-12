@@ -57,6 +57,7 @@ driver_module("xhci") {
 }
 
 source_set("test-libs") {
+  testonly = true
   public_deps = [
     "//sdk/banjo/ddk.protocol.acpi",
     "//sdk/banjo/ddk.protocol.composite",
@@ -111,11 +112,6 @@ test("xhci-unittest") {
 }
 
 test("xhci-core-unittest") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [
       "//build/unification/config:zircon-migrated",
@@ -140,11 +136,6 @@ test("xhci-core-unittest") {
 }
 
 test("xhci-event-ring-unittest") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -169,11 +160,6 @@ test("xhci-event-ring-unittest") {
 }
 
 test("xhci-transfer-ring-unittest") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }

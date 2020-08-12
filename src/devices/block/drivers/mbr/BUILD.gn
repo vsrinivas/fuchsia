@@ -36,9 +36,6 @@ driver_module("mbr") {
 }
 
 test("mbr-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "mbr-test"
   sources = [

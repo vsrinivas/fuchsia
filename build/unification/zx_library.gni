@@ -90,11 +90,6 @@ template("zx_library") {
 
     forward_variables_from(extra_target_args, "*")
 
-    # Binaries depending on migrated libraries cannot be marked as testonly, and
-    # therefore neither can the libraries themselves.
-    # See fxb/44278 for more info.
-    testonly = false
-
     if (defined(invoker.sdk_headers)) {
       public = []
       foreach(header, invoker.sdk_headers) {

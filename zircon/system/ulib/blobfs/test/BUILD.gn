@@ -65,8 +65,7 @@ config("test-utils-headers") {
 }
 
 source_set("test-utils") {
-  # TODO(44278): revert to true.
-  testonly = false
+  testonly = true
   sources = [
     "blob_utils.cc",
     "blob_utils.h",
@@ -86,9 +85,6 @@ source_set("test-utils") {
 }
 
 test("blobfs-unit") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   fdio_config = [ "//build/config/fuchsia:fdio_config" ]
   if (configs + fdio_config - fdio_config != configs) {
@@ -158,8 +154,7 @@ test("blobfs-host") {
 }
 
 source_set("integration-fixtures") {
-  # TODO(44278): revert to true.
-  testonly = false
+  testonly = true
   sources = [ "integration/blobfs_fixtures.cc" ]
   deps = [
     ":test-utils",
@@ -175,9 +170,6 @@ source_set("integration-fixtures") {
 test("blobfs-integration") {
   output_name = "blobfs-integration-test"
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   fdio_config = [ "//build/config/fuchsia:fdio_config" ]
   if (configs + fdio_config - fdio_config != configs) {
@@ -226,8 +218,7 @@ test("blobfs-integration") {
 }
 
 source_set("load-generator") {
-  # TODO(44278): revert to true.
-  testonly = false
+  testonly = true
   sources = [ "integration/load_generator.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -262,9 +253,6 @@ blobfs_large_integration_test("use-second-bitmap") {
 test("blobfs-integration-paged") {
   output_name = "blobfs-integration-paged-test"
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   fdio_config = [ "//build/config/fuchsia:fdio_config" ]
   if (configs + fdio_config - fdio_config != configs) {

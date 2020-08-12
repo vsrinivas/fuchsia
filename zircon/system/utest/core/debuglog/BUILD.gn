@@ -16,9 +16,7 @@ assert(!defined(zx) || zx != "/",
 source_set("unified-only") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   sources = [ "debuglog.cc" ]
   deps = [
     "//zircon/public/lib/fbl",

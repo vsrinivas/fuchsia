@@ -5,7 +5,5 @@
 import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.gpio") {
-  # Remove after build unification, see b/44278
-  testonly = false
   sources = [ "gpio.banjo" ]
 }

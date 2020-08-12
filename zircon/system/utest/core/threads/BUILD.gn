@@ -15,9 +15,7 @@ assert(!defined(zx) || zx != "/",
 source_set("threads") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   sources = [
     "register-set.cc",
     "threads.cc",
@@ -36,9 +34,7 @@ source_set("threads") {
 source_set("thread-functions") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  testonly = false
+  testonly = true
   visibility = [ ":*" ]
   sources = [ "thread-functions/thread-functions.cc" ]
   configs += [ "//build/config:no_sanitizers" ]

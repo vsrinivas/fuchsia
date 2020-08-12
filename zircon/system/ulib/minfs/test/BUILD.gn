@@ -25,11 +25,6 @@ group("test") {
 }
 
 test("minfs-unit") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -88,8 +83,7 @@ test("minfs-unit") {
 }
 
 source_set("integration-fixtures") {
-  # TODO(44278): revert to true.
-  testonly = false
+  testonly = true
   sources = [
     "integration/minfs_fixtures.cc",
     "integration/utils.cc",
@@ -105,11 +99,6 @@ source_set("integration-fixtures") {
 }
 
 test("minfs-integration") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -152,11 +141,6 @@ test("minfs-integration") {
 }
 
 test("minfs-power") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -189,11 +173,6 @@ test("minfs-power") {
 }
 
 test("minfs-host") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }

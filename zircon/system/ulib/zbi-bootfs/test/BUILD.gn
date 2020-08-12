@@ -27,11 +27,6 @@ group("test") {
 }
 
 test("zbi-bootfs-test") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
@@ -58,8 +53,7 @@ resource("generated-lz4f-zbi") {
   outputs = [ "testdata/zbi-bootfs/generated-lz4f.zbi" ]
   deps = [ ":generated-lz4f" ]
 
-  # TODO(44278): Restore to true when converting this file to GN build idioms.
-  testonly = false
+  testonly = true
 }
 
 resource("generated-zstd-zbi") {
@@ -67,16 +61,14 @@ resource("generated-zstd-zbi") {
   outputs = [ "testdata/zbi-bootfs/generated-zstd.zbi" ]
   deps = [ ":generated-zstd" ]
 
-  # TODO(44278): Restore to true when converting this file to GN build idioms.
-  testonly = false
+  testonly = true
 }
 
 # Generate zbi images for tests.
 migrated_zbi("generated-zstd") {
   compress = "zstd"
 
-  # TODO(44278): Restore to true when converting this file to GN build idioms.
-  testonly = false
+  testonly = true
   cpu = ""
   deps = [ ":create-zbi-image" ]
 }
@@ -84,15 +76,13 @@ migrated_zbi("generated-zstd") {
 migrated_zbi("generated-lz4f") {
   compress = "lz4f"
 
-  # TODO(44278): Restore to true when converting this file to GN build idioms.
-  testonly = false
+  testonly = true
   cpu = ""
   deps = [ ":create-zbi-image" ]
 }
 
 zbi_input("create-zbi-image") {
-  # TODO(44278): Restore to true when converting this file to GN build idioms.
-  testonly = false
+  testonly = true
   sources = [ "//zircon/system/ulib/zbi-bootfs/test/payload/" ]
 }
 

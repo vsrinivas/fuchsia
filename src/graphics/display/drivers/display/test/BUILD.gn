@@ -34,6 +34,7 @@ test("display-core-unittests") {
 
 static_library("base") {
   configs += [ "//build/config:all_source" ]
+  testonly = true
   sources = [
     "base.cc",
     "fidl_client.cc",
