@@ -348,5 +348,6 @@ unw_create_fuchsia(zx_handle_t process, zx_handle_t thread,
 void
 unw_destroy_fuchsia(unw_fuchsia_info_t* info)
 {
+    unwi_invalidate_as_edi(&info->edi);
     free (info);
 }

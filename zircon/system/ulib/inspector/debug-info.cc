@@ -193,6 +193,7 @@ __EXPORT void inspector_print_stack_trace(FILE* out, zx_handle_t process, zx_han
   inspector::decoded_registers decoded = inspector::decode_registers(regs);
   inspector_print_backtrace_markup(out, process, thread, dso_list, decoded.pc, decoded.sp,
                                    decoded.fp, use_libunwind);
+  inspector_dso_free_list(dso_list);
 }
 
 __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
@@ -227,8 +228,8 @@ __EXPORT void inspector_print_debug_info(FILE* out, zx_handle_t process_handle,
 
   // Check if the process is on an exception.
   zx_exception_report_t report;
-  if (thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr, nullptr)
-      == ZX_OK) {
+  if (thread->get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), nullptr,
+                       nullptr) == ZX_OK) {
     // The thread is in a valid exception state.
     if (!ZX_EXCP_IS_ARCH(report.header.type) && report.header.type != ZX_EXCP_POLICY_ERROR) {
       return;
