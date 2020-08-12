@@ -186,10 +186,12 @@ in human-readable symbolic form.
   {{{symbol:foobar}}}
   ```
 
-* `{{{pc:%p}}}`
+* `{{{pc:%p}}}`, `{{{pc:%p:ra}}}`, `{{{pc:%p:pc}}}`
 
   Here `%p` is the memory address of a code location.
   It might be presented as a function name and source location.
+  The second two forms distinguish the kind of code location, as
+  described in detail for `bt` elements below.
 
   Examples:
 
@@ -210,7 +212,7 @@ in human-readable symbolic form.
   {{{data:0xffffffff9abcdef0}}}
   ```
 
-* `{{{bt:%u:%p}}}`
+* `{{{bt:%u:%p}}}`, `{{{bt:%u:%p:ra}}}`, `{{{bt:%u:%p:pc}}}`
 
   This represents one frame in a backtrace.  It usually appears on a
   line by itself (surrounded only by whitespace), in a sequence of such
@@ -225,26 +227,58 @@ in human-readable symbolic form.
   frame zero's call frame, to two for the caller of frame one, etc.
   `%p` is the memory address of a code location.
 
-  In frames after frame zero, this code location identifies a call site.
-  Some emitters may subtract one byte or one instruction length from the
-  actual return address for the call site, with the intent that the
-  address logged can be translated directly to a source location for the
-  call site and not for the apparent return site thereafter (which can
-  be confusing).  It's recommended that emitters _not_ do this, so that
-  each frame's code location is the exact return address given to its
-  callee and e.g. could be highlighted in instruction-level disassembly.
-  The symbolizing filter can do the adjustment to the address it
-  translates into a source location.  Assuming that a call instruction
-  is longer than one byte on all supported machines, applying the
-  "subtract one byte" adjustment a second time still results in an
-  address somewhere in the call instruction, so a little sloppiness here
-  does no harm.
+  Code locations in a backtrace come from two distinct sources.  Most
+  backtrace frames describe a return address code location, i.e. the
+  instruction immediately after a call instruction.  This is the location of
+  code that has yet to run, since the function called there has not yet
+  returned.  Hence the code location of actual interest is usually the call
+  site itself rather than the return address, i.e. one instruction earlier.
+  When presenting the source location for a return address frame, the
+  symbolizing filter will subtract one byte or one instruction length from the
+  actual return address for the call site, with the intent that the address
+  logged can be translated directly to a source location for the call site and
+  not for the apparent return site thereafter (which can be confusing).  When
+  inlined functions are involved, the call site and the return site can appear
+  to be in different functions at entirely unrelated source locations rather
+  than just a line away, making the confusion of showing the return site
+  rather the call site quite severe.
+
+  Often the first frame in a backtrace ("frame zero") identifies the precise
+  code location of a fault, trap, or asynchronous interrupt rather than a
+  return address.  At other times, even the first frame is actually a return
+  address (for example, backtraces collected at the time of an object
+  allocation and reported later when the allocated object is used or misused).
+  When a system supports in-thread trap handling, there may also be frames
+  after the first that represent a precise interrupted code location rather
+  than a return address, presented as the "caller" of a trap handler function
+  (for example, signal handlers in POSIX systems).
+
+  Return address frames are identified by the `:ra` suffix.
+  Precise code location frames are identified by the `:pc` suffix.
+
+  Traditional practice has often been to collect backtraces as simple address
+  lists, losing the distinction between return address code locations and
+  precise code locations.  Some such code applies the "subtract one"
+  adjustment described above to the address values before reporting them, and
+  it's not always clear or consistent whether this adjustment has been applied
+  or not.  These ambiguous cases are supported by the `bt` and `pc` forms with
+  no `:ra` or `:pc` suffix, which indicate it's unclear which sort of code
+  location this is.  However, it's highly recommended that all emitters use
+  the suffixed forms and deliver address values with no adjustments applied.
+  When traditional practice has been ambiguous, the majority of cases seem to
+  have been of printing addresses that are return address code locations and
+  printing them without adjustment.  So the symbolizing filter will usually
+  apply the "subtract one byte" adjustment to an address printed without a
+  disambiguating suffix.  Assuming that a call instruction is longer than one
+  byte on all supported machines, applying the "subtract one byte" adjustment
+  a second time still results in an address somewhere in the call instruction,
+  so a little sloppiness here often does little or no harm.
 
   Examples:
 
   ```
-  {{{bt:0:0x12345678}}}
-  {{{bt:1:0xffffffff9abcdef0}}}
+  {{{bt:0:0x12345678:pc}}}
+  {{{bt:1:0xffffffff9abcdef0:ra}}}
   ```
 
 * `{{{hexdict:...}}}`
