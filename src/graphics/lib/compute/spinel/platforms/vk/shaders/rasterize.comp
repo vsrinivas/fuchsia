@@ -2155,39 +2155,10 @@ main()
           const vec2 gm = fm * neg_xy_src;
           const vec2 g1 = f1 * neg_xy_src;
 
-#if 0
-          //
-          // FIXME(allanmac): I'd prefer to use this branchless select
-          // but this results in a codegen issue with Mali Bifrost8 R19-R24.
-          //
-
           // exchange
           const vec2 h0 = { is_xchg_src ? g0.y : g0.x, is_xchg_src ? g0.x : g0.y };
           const vec2 hm = { is_xchg_src ? gm.y : gm.x, is_xchg_src ? gm.x : gm.y };
           const vec2 h1 = { is_xchg_src ? g1.y : g1.x, is_xchg_src ? g1.x : g1.y };
-#else
-          //
-          // FIXME(allanmac): Workaround for Mali Bifrost8 on R19-R24
-          //
-
-          // exchange
-          vec2 h0 = g0, hm = gm, h1 = g1;
-
-          if (is_xchg_src)
-            {
-              const float t0 = h0.x;
-              h0.x           = h0.y;
-              h0.y           = t0;
-
-              const float tm = hm.x;
-              hm.x           = hm.y;
-              hm.y           = tm;
-
-              const float t1 = h1.x;
-              h1.x           = h1.y;
-              h1.y           = t1;
-            }
-#endif
 
           //
           // append XY/TTS values to SMEM
