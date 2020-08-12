@@ -4,7 +4,8 @@
 
 use crate::gpio::facade::GpioFacade;
 use crate::gpio::types::{
-    ConfigInRequest, ConfigOutRequest, GpioMethod, ReadRequest, WriteRequest,
+    ConfigInRequest, ConfigOutRequest, GpioMethod, ReadRequest, SetDriveStrengthRequest,
+    WriteRequest,
 };
 use crate::server::Facade;
 use anyhow::Error;
@@ -33,6 +34,11 @@ impl Facade for GpioFacade {
 
             GpioMethod::Write(WriteRequest { pin, value }) => {
                 let result = self.write(pin, value).await?;
+                Ok(to_value(result)?)
+            }
+
+            GpioMethod::SetDriveStrength(SetDriveStrengthRequest { pin, ds_ua }) => {
+                let result = self.set_drive_strength(pin, ds_ua).await?;
                 Ok(to_value(result)?)
             }
 

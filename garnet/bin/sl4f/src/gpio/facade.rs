@@ -98,6 +98,17 @@ impl GpioFacade {
             ),
         }
     }
+
+    pub async fn set_drive_strength(&self, pin: u32, ds_ua: u64) -> Result<u64, Error> {
+        let tag = "gpiofacade::set_drive_strength";
+        match self.get_proxy(pin)?.set_drive_strength(ds_ua).await? {
+            Ok(ds) => Ok(ds),
+            Err(e) => fx_err_and_bail!(
+                &with_line!(tag),
+                format_err!("could not set drive strength of gpio pin: {:?}", e)
+            ),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -165,6 +176,16 @@ mod tests {
             })
         }
 
+        fn expect_set_drive_strength(self, _pin: u32, ds: u64, res: Result<u64, i32>) -> Self {
+            self.push(move |req| match req {
+                GpioRequest::SetDriveStrength { ds_ua, responder } => {
+                    assert_eq!(ds, ds_ua);
+                    responder.send(&mut res.map(Into::into)).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
         fn build(self) -> (GpioFacade, impl Future<Output = ()>) {
             let (proxy, mut stream) =
                 fidl::endpoints::create_proxy_and_stream::<GpioMarker>().unwrap();
@@ -219,6 +240,17 @@ mod tests {
         let (facade, gpio) = MockGpioBuilder::new().expect_write(0, 15, Ok(())).build();
         let test = async move {
             assert_matches!(facade.write(0, 15).await, Ok(_));
+        };
+
+        join!(gpio, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn set_drive_strength_ok() {
+        let (facade, gpio) =
+            MockGpioBuilder::new().expect_set_drive_strength(0, 2000, Ok(2000)).build();
+        let test = async move {
+            assert_matches!(facade.set_drive_strength(0, 2000).await, Ok(ds) if ds == 2000);
         };
 
         join!(gpio, test);

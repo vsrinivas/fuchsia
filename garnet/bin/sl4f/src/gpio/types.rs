@@ -60,11 +60,18 @@ pub struct WriteRequest {
     pub value: u8,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct SetDriveStrengthRequest {
+    pub pin: u32,
+    pub ds_ua: u64,
+}
+
 pub enum GpioMethod {
     ConfigIn(ConfigInRequest),
     ConfigOut(ConfigOutRequest),
     Read(ReadRequest),
     Write(WriteRequest),
+    SetDriveStrength(SetDriveStrengthRequest),
     UndefinedFunc,
 }
 
@@ -76,6 +83,9 @@ impl TryFrom<(&str, serde_json::value::Value)> for GpioMethod {
             "ConfigOut" => Ok(GpioMethod::ConfigOut(serde_json::from_value(input.1)?)),
             "Read" => Ok(GpioMethod::Read(serde_json::from_value(input.1)?)),
             "Write" => Ok(GpioMethod::Write(serde_json::from_value(input.1)?)),
+            "SetDriveStrength" => {
+                Ok(GpioMethod::SetDriveStrength(serde_json::from_value(input.1)?))
+            }
             _ => Ok(GpioMethod::UndefinedFunc),
         }
     }
