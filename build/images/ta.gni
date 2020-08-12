@@ -9,12 +9,6 @@ declare_args() {
   # Source absolute path to the prebuilt TA images.
   ta_path = ""
 
-  # UUID of TAs to include in the Fuchsia build.
-  fuchsia_ta_uuids = []
-
-  # UUID of TAs to include in the Zedboot build.
-  zedboot_ta_uuids = []
-
   # UUID of TAs to include in the Recovery build.
   recovery_ta_uuids = []
 

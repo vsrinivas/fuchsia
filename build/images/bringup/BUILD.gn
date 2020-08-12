@@ -65,7 +65,6 @@ migrated_zbi("bringup") {
     ":devmgr_config",
     ":system_package.manifest_args",
     "//build/unification/future/images:fuchsia_kernel_cmdline",
-    "//build/unification/future/images:ta",
     "//build/unification/zbi:kernel",
   ]
   deps += product_bootfs_labels + board_bootfs_labels

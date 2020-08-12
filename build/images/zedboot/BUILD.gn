@@ -8,7 +8,6 @@ import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/manifest.gni")
-import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/images/zxcrypt.gni")
@@ -76,20 +75,6 @@ zbi_input("kernel_cmdline") {
   sources = zedboot_cmdline_files
 }
 
-ta_deps = []
-foreach(ta_uuid, zedboot_ta_uuids) {
-  resource("ta_$ta_uuid") {
-    sources = [ "${ta_path}/${ta_uuid}${ta_src_suffix}" ]
-    outputs = [ "lib/firmware/${ta_uuid}${ta_dest_suffix}" ]
-  }
-
-  ta_deps += [ ":ta_$ta_uuid" ]
-}
-
-group("ta") {
-  deps = ta_deps
-}
-
 # Note: This output is also used by a script in //scripts/verify_cmdline_params.
 migrated_zbi("zbi") {
   output_name = "zedboot"
@@ -98,7 +83,6 @@ migrated_zbi("zbi") {
 
   deps = [
     ":kernel_cmdline",
-    ":ta",
     "//build/unification/future/images:zxcrypt",
     "//build/unification/zbi:kernel",
     "//src/sys/installer:bin",

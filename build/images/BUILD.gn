@@ -19,7 +19,6 @@ import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
 import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
-import("//build/images/ta.gni")
 import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
@@ -571,7 +570,6 @@ group("fuchsia_contents") {
   testonly = true
   deps = [
     "//build/unification/future/images:fuchsia_kernel_cmdline",
-    "//build/unification/future/images:ta",
     "//build/unification/future/images:zxcrypt",
     "//build/unification/zbi:kernel",
   ]
