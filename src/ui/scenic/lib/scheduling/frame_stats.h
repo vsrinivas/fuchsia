@@ -21,8 +21,7 @@ namespace scheduling {
 // FrameTiming::Timestamps. Used for debug data, i.e. inspect.
 class FrameStats {
  public:
-  FrameStats(inspect::Node inspect_node,
-             std::shared_ptr<cobalt::CobaltLogger> cobalt_logger);
+  FrameStats(inspect::Node inspect_node, std::shared_ptr<cobalt::CobaltLogger> cobalt_logger);
 
   void RecordFrame(FrameTimings::Timestamps timestamps, zx::duration display_vsync_interval);
 
@@ -34,6 +33,66 @@ class FrameStats {
   static constexpr size_t kNumFramesToReport = 200;
   static constexpr size_t kNumDroppedFramesToReport = 50;
   static constexpr size_t kNumDelayedFramesToReport = 50;
+  static constexpr size_t kNumMinutesHistory = 10;
+
+  struct HistoryStats {
+    // The key for this history.
+    // Calculated by truncating the frame timestamp (to minutes).
+    //
+    // This denotes the interval for the following measurements.
+    uint64_t key;
+
+    // The total number of frames that attempted rendering during the interval.
+    uint64_t total_frames;
+
+    // The total number of frames that were successfully rendered during the interval.
+    uint64_t rendered_frames;
+
+    // The number of rendered frames that were delayed during the interval.
+    uint64_t delayed_rendered_frames;
+
+    // The total amount of time spent rendering the rendered frames during the interval.
+    zx::duration render_time;
+
+    // The total amount of time spent rendering just the delayed frames during the interval.
+    zx::duration delayed_frame_render_time;
+
+    // The total number of frames that were dropped during the interval.
+    uint64_t dropped_frames;
+
+    HistoryStats& operator+=(const HistoryStats& other) {
+      key = std::max(key, other.key);
+      total_frames += other.total_frames;
+      rendered_frames += other.rendered_frames;
+      delayed_rendered_frames += other.delayed_rendered_frames;
+      render_time += other.render_time;
+      delayed_frame_render_time += other.delayed_frame_render_time;
+      dropped_frames += other.dropped_frames;
+
+      return *this;
+    }
+
+    template <typename T>
+    void RecordToNode(inspect::Node* node, T* list) const {
+      node->CreateUint("minute_key", key, list);
+      node->CreateInt("total_frames", total_frames, list);
+      node->CreateInt("rendered_frames", rendered_frames, list);
+      node->CreateInt("delayed_rendered_frames", delayed_rendered_frames, list);
+      node->CreateInt("render_time_ns", render_time.get(), list);
+      node->CreateInt("delayed_frame_render_time_ns", delayed_frame_render_time.get(), list);
+      node->CreateInt("dropped_frames", dropped_frames, list);
+      if (rendered_frames) {
+        node->CreateInt("Average Time Per Frame (ms)", render_time.to_msecs() / rendered_frames,
+                        list);
+        node->CreateInt("Average Frames Per Second", zx::sec(1) / (render_time / rendered_frames),
+                        list);
+      }
+      if (delayed_rendered_frames) {
+        node->CreateInt("Average Time Per Delayed Frame (ms)",
+                        delayed_frame_render_time.to_msecs() / delayed_rendered_frames, list);
+      }
+    }
+  };
 
   // TODO(SCN-1501) Record all frame times to VMO, separate from Inspect.
   static void FrameTimingsOutputToCsv(const std::deque<const FrameTimings::Timestamps>& timestamps,
@@ -44,8 +103,10 @@ class FrameStats {
       std::function<zx::duration(const FrameTimings::Timestamps&)> duration_func,
       uint32_t percentile);
 
+  void AddHistory(const HistoryStats& stats);
   void RecordDroppedFrame(const FrameTimings::Timestamps timestamps);
   void RecordDelayedFrame(const FrameTimings::Timestamps timestamps);
+  void RecordOnTimeFrame(const FrameTimings::Timestamps timestamps);
 
   void ReportStats(inspect::Inspector* insp) const;
 
@@ -72,6 +133,9 @@ class FrameStats {
   std::deque<const FrameTimings::Timestamps> frame_times_;
   std::deque<const FrameTimings::Timestamps> dropped_frames_;
   std::deque<const FrameTimings::Timestamps> delayed_frames_;
+
+  // Ring buffer of stats for the last kNumMinutesHistory minutes of frame timings.
+  std::deque<HistoryStats> history_stats_;
 
   inspect::Node inspect_node_;
   inspect::LazyNode inspect_frame_stats_dump_;

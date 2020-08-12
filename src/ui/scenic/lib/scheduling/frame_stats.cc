@@ -27,6 +27,12 @@ using cobalt_registry::kScenicRenderTimeIntBucketsStepSize;
 
 namespace scheduling {
 
+namespace {
+uint64_t TimestampsToMinuteKey(const FrameTimings::Timestamps& timestamps) {
+  return timestamps.latch_point_time.get() / zx::min(1).get();
+}
+}  // anonymous namespace
+
 FrameStats::FrameStats(inspect::Node inspect_node,
                        std::shared_ptr<cobalt::CobaltLogger> cobalt_logger)
     : inspect_node_(std::move(inspect_node)), cobalt_logger_(std::move(cobalt_logger)) {
@@ -61,6 +67,7 @@ void FrameStats::RecordFrame(FrameTimings::Timestamps timestamps,
     RecordDelayedFrame(timestamps);
     cobalt_delayed_frame_times_histogram_[latch_to_actual_presentation_bucket_index]++;
   } else {
+    RecordOnTimeFrame(timestamps);
     cobalt_on_time_frame_times_histogram_[latch_to_actual_presentation_bucket_index]++;
   }
   frame_times_.push_front(timestamps);
@@ -81,6 +88,11 @@ void FrameStats::RecordDroppedFrame(const FrameTimings::Timestamps timestamps) {
   if (dropped_frames_.size() > kNumDroppedFramesToReport) {
     dropped_frames_.pop_back();
   }
+  AddHistory(HistoryStats{
+      .key = TimestampsToMinuteKey(timestamps),
+      .total_frames = 1,
+      .dropped_frames = 1,
+  });
 }
 
 void FrameStats::RecordDelayedFrame(const FrameTimings::Timestamps timestamps) {
@@ -88,6 +100,42 @@ void FrameStats::RecordDelayedFrame(const FrameTimings::Timestamps timestamps) {
   delayed_frames_.push_front(timestamps);
   if (delayed_frames_.size() > kNumDelayedFramesToReport) {
     delayed_frames_.pop_back();
+  }
+  AddHistory(HistoryStats{
+      .key = TimestampsToMinuteKey(timestamps),
+      .total_frames = 1,
+      .rendered_frames = 1,
+      .delayed_rendered_frames = 1,
+      .render_time = timestamps.actual_presentation_time - timestamps.latch_point_time,
+      .delayed_frame_render_time =
+          timestamps.actual_presentation_time - timestamps.latch_point_time,
+  });
+}
+
+void FrameStats::RecordOnTimeFrame(const FrameTimings::Timestamps timestamps) {
+  AddHistory(HistoryStats{
+      .key = TimestampsToMinuteKey(timestamps),
+      .total_frames = 1,
+      .rendered_frames = 1,
+      .render_time = timestamps.actual_presentation_time - timestamps.latch_point_time,
+  });
+}
+
+void FrameStats::AddHistory(const HistoryStats& stats) {
+  // Ensure we truncated the timestamp to minutes instead of nanoseconds.
+  FX_DCHECK(stats.key < 1000000000LU);
+
+  HistoryStats* target = nullptr;
+  if (!history_stats_.empty() && history_stats_.back().key == stats.key) {
+    target = &history_stats_.back();
+  } else {
+    target = &history_stats_.emplace_back(HistoryStats{.key = stats.key});
+  }
+
+  (*target) += stats;
+
+  while (history_stats_.size() > kNumMinutesHistory) {
+    history_stats_.pop_front();
   }
 }
 
@@ -251,6 +299,28 @@ void FrameStats::ReportStats(inspect::Inspector* insp) const {
         "Mean Total Frame Latency (95 percentile)",
         kUSecsToMSecs * CalculateMeanDuration(delayed_frames_, latency, 95).to_usecs(), insp);
 
+    insp->emplace(std::move(node));
+  }
+
+  {
+    inspect::Node node = insp->GetRoot().CreateChild("frame_history");
+
+    inspect::Node minutes_ago_node = node.CreateChild("minutes_ago");
+    size_t minutes_ago = 0;
+    HistoryStats total = {};
+    for (auto it = history_stats_.rbegin(); it != history_stats_.rend(); ++it, ++minutes_ago) {
+      total += *it;
+      inspect::Node cur = minutes_ago_node.CreateChild(std::to_string(minutes_ago));
+      it->RecordToNode(&cur, insp);
+      insp->emplace(std::move(cur));
+    }
+
+    auto total_node = node.CreateChild("total");
+    total.RecordToNode(&total_node, insp);
+
+    insp->emplace(std::move(total_node));
+
+    insp->emplace(std::move(minutes_ago_node));
     insp->emplace(std::move(node));
   }
 }
