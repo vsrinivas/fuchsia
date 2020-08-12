@@ -20,6 +20,8 @@
 
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
+#include <ktl/unique_ptr.h>
 #include <lk/init.h>
 
 #ifndef CONSOLE_ENABLE_HISTORY
@@ -672,18 +674,37 @@ int console_run_script(const char* string) { return console_run_script_etc(strin
 int console_run_script_locked(const char* string) { return console_run_script_etc(string, true); }
 
 static int cmd_help(int argc, const cmd_args* argv, uint32_t flags) {
-  printf("command list:\n");
+  auto print_cmds = [&flags](auto begin, auto end) {
+    // Filter out commands based on if we're called at normal or panic time.
+    const uint8_t availability_mask = (flags & CMD_FLAG_PANIC) ? CMD_AVAIL_PANIC : CMD_AVAIL_NORMAL;
 
-  /* filter out commands based on if we're called at normal or panic time */
-  uint8_t availability_mask = (flags & CMD_FLAG_PANIC) ? CMD_AVAIL_PANIC : CMD_AVAIL_NORMAL;
-
-  for (const cmd* curr_cmd = __start_commands; curr_cmd != __stop_commands; ++curr_cmd) {
-    if ((availability_mask & curr_cmd->availability_mask) == 0) {
-      // Skip commands that aren't available in the current shell.
-      continue;
+    printf("command list:\n");
+    for (auto it = begin; it != end; ++it) {
+      const cmd& curr_cmd = *it;
+      if ((availability_mask & curr_cmd.availability_mask) == 0) {
+        continue;
+      }
+      if (curr_cmd.help_str)
+        printf("\t%-16s: %s\n", curr_cmd.cmd_str, curr_cmd.help_str);
     }
-    if (curr_cmd->help_str)
-      printf("\t%-16s: %s\n", curr_cmd->cmd_str, curr_cmd->help_str);
+  };
+
+  // If we're not panicking (and are free to allocate memory), sort the
+  // commands alphabetically before printing.
+  if (flags & CMD_FLAG_PANIC) {
+    print_cmds(__start_commands, __stop_commands);
+  } else {
+    const size_t num_cmds = __stop_commands - __start_commands;
+    fbl::AllocChecker ac;
+    auto cmds = ktl::make_unique<cmd[]>(&ac, num_cmds);
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+    memcpy(cmds.get(), __start_commands, num_cmds * sizeof(cmd));
+    ktl::stable_sort(cmds.get(), cmds.get() + num_cmds, [](const cmd& cmd1, const cmd& cmd2) {
+      return strcmp(cmd1.cmd_str, cmd2.cmd_str) < 0;
+    });
+    print_cmds(cmds.get(), cmds.get() + num_cmds);
   }
 
   return 0;
