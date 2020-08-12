@@ -122,7 +122,7 @@ zx_status_t Device::ConfigureCapabilities() {
   zx_status_t st;
   if (caps_.msix) {
     auto& msix = *caps_.msix;
-    st = msix.Init(GetBar(msix.table_bar()), GetBar(msix.pba_bar()));
+    st = msix.Init(bars()[msix.table_bar()], bars()[msix.pba_bar()]);
     if (st != ZX_OK) {
       zxlogf(ERROR, "Failed to initialize MSI-X: %d", st);
       return st;

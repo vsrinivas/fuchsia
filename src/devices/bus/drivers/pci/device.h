@@ -174,9 +174,18 @@ class Device : public PciDeviceType,
   uint8_t func_id() const { return cfg_->bdf().function_id; }
   uint32_t bar_count() const { return bar_count_; }
   const Capabilities& capabilities() const { return caps_; }
-  const BarInfo& GetBar(uint8_t bar_id) const __TA_REQUIRES(dev_lock_) {
+  BarInfo GetBar(uint8_t bar_id) const __TA_EXCLUDES(dev_lock_) {
     ZX_DEBUG_ASSERT(bar_id < bar_count_);
-    return bars_[bar_id];
+    fbl::AutoLock dev_lock(&dev_lock_);
+
+    auto& bar = bars_[bar_id];
+    BarInfo out_bar = {.size = bar.size,
+                       .address = bar.address,
+                       .bar_id = bar.bar_id,
+                       .is_mmio = bar.is_mmio,
+                       .is_64bit = bar.is_64bit,
+                       .is_prefetchable = bar.is_prefetchable};
+    return out_bar;
   }
 
   // A packed version of the BDF addr used for BTI identifiers by the IOMMU implementation.
@@ -240,7 +249,7 @@ class Device : public PciDeviceType,
 
   // Info about the BARs computed and cached during the initial setup/probe,
   // indexed by starting BAR register index.
-  std::array<BarInfo, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
+  std::array<Bar, PCI_MAX_BAR_REGS>& bars() __TA_REQUIRES(dev_lock_) { return bars_; }
   UpstreamNode* upstream() __TA_REQUIRES(dev_lock_) { return upstream_; }
   BusDeviceInterface* bdi() __TA_REQUIRES(dev_lock_) { return bdi_; }
   // An upstream node will outlive its downstream devices
@@ -255,9 +264,9 @@ class Device : public PciDeviceType,
   // Probes a BAR's configuration. If it is already allocated it will try to
   // reserve the existing address window for it so that devices configured by system
   // firmware can be maintained as much as possible.
-  zx_status_t ProbeBar(uint32_t bar_id) __TA_REQUIRES(dev_lock_);
+  zx_status_t ProbeBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
   // Allocates address space for a BAR if it does not already exist.
-  zx_status_t AllocateBar(uint32_t bar_id) __TA_REQUIRES(dev_lock_);
+  zx_status_t AllocateBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
   // Called a device to configure (probe/allocate) its BARs
   zx_status_t ConfigureBarsLocked() __TA_REQUIRES(dev_lock_);
   // Called by an UpstreamNode to configure the BARs of a device downstream.
@@ -281,7 +290,7 @@ class Device : public PciDeviceType,
   const std::unique_ptr<Config> cfg_;  // Pointer to the device's config interface.
   UpstreamNode* upstream_ __TA_GUARDED(dev_lock_);  // The upstream node in the device graph.
   BusDeviceInterface* bdi_ __TA_GUARDED(dev_lock_);
-  std::array<BarInfo, PCI_MAX_BAR_REGS> bars_ __TA_GUARDED(dev_lock_) = {};
+  std::array<Bar, PCI_MAX_BAR_REGS> bars_ __TA_GUARDED(dev_lock_) = {};
   const uint32_t bar_count_;
 
   const bool is_bridge_;  // True if this device is also a bridge

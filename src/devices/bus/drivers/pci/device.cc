@@ -226,7 +226,7 @@ zx_status_t Device::EnableBusMaster(bool enabled) {
   return upstream_->EnableBusMasterUpstream(enabled);
 }
 
-zx_status_t Device::ProbeBar(uint32_t bar_id) {
+zx_status_t Device::ProbeBar(uint8_t bar_id) {
   if (bar_id >= bar_count_) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -234,7 +234,7 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
   // If we hit an issue, or a BAR reads as all zeroes then we will bail out
   // and set the size of it to 0. This will result in us not using it further
   // during allocation.
-  BarInfo& bar_info = bars_[bar_id];
+  Bar& bar_info = bars_[bar_id];
   auto cleanup = fbl::MakeAutoCall([&bar_info] { bar_info.size = 0; });
   uint32_t bar_val = cfg_->Read(Config::kBar(bar_id));
 
@@ -329,13 +329,13 @@ zx_status_t Device::ProbeBar(uint32_t bar_id) {
   return ZX_OK;
 }
 
-zx_status_t Device::AllocateBar(uint32_t bar_id) {
+zx_status_t Device::AllocateBar(uint8_t bar_id) {
   ZX_DEBUG_ASSERT(upstream_);
   ZX_DEBUG_ASSERT(bar_id < bar_count_);
 
   zx_status_t status;
   PciAllocator* allocator;
-  BarInfo& bar_info = bars_[bar_id];
+  Bar& bar_info = bars_[bar_id];
   // TODO(cja): It's possible that we may have an unlikely configuration of a prefetchable
   // window that starts below 4GB, ends above 4GB and then has a prefetchable 32bit BAR. If
   // that BAR already had an address we would request it here and be fine, but if it didn't
@@ -365,6 +365,10 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
              bar_info.bar_id, bar_info.address, status);
       bar_info.address = 0;
     }
+
+    zxlogf(TRACE, "%s failed to preserve BAR %u address %lx, reallocating: %d", cfg_->addr(),
+           bar_info.bar_id, bar_info.address, status);
+    bar_info.address = 0;
   }
 
   // If we had no address, or we failed to preseve the address, then it's time

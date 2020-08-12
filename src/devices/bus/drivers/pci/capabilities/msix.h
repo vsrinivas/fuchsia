@@ -69,7 +69,7 @@ class MsixCapability : public Capability {
     pba_offset_ = pba.offset();
   }
 
-  zx_status_t Init(const BarInfo& tbar, const BarInfo& pbar) {
+  zx_status_t Init(const Bar& tbar, const Bar& pbar) {
     if (inited_) {
       return ZX_ERR_BAD_STATE;
     }
