@@ -15,7 +15,7 @@
 #include "../audio-stream.h"
 
 namespace audio {
-namespace astro {
+namespace aml_g12 {
 
 namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
 
@@ -75,10 +75,10 @@ struct AmlTdmOutDeviceTest : public AmlTdmOutDevice {
       : AmlTdmOutDevice(std::move(mmio), clk_src, tdm, ddr, mclk, fifo_depth, version) {}
 };
 
-struct AstroI2sOutTest : public AstroTdmStream {
-  AstroI2sOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
-                  ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
-      : AstroTdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {
+struct AmlG12I2sOutTest : public AmlG12TdmStream {
+  AmlG12I2sOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
+                   ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
+      : AmlG12TdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {
     codecs_.push_back(SimpleCodecClient());
     codecs_[0].SetProtocol(codec_protocol);
     metadata_.is_input = false;
@@ -120,7 +120,7 @@ struct AstroI2sOutTest : public AstroTdmStream {
   }
 };
 
-TEST(AstroTdm, InitializeI2sOut) {
+TEST(AmlG12Tdm, InitializeI2sOut) {
   fake_ddk::Bind tester;
 
   auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
@@ -141,7 +141,7 @@ TEST(AstroTdm, InitializeI2sOut) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
-  auto controller = audio::SimpleAudioStream::Create<AstroI2sOutTest>(
+  auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
       &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
@@ -152,10 +152,10 @@ TEST(AstroTdm, InitializeI2sOut) {
   controller->DdkRelease();
 }
 
-struct AstroPcmOutTest : public AstroI2sOutTest {
-  AstroPcmOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
-                  ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
-      : AstroI2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
+struct AmlG12PcmOutTest : public AmlG12I2sOutTest {
+  AmlG12PcmOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
+                   ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
+      : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
     metadata_.number_of_channels = 1;
     metadata_.lanes_enable_mask[0] = 1;
     metadata_.tdm.type = metadata::TdmType::Pcm;
@@ -163,7 +163,7 @@ struct AstroPcmOutTest : public AstroI2sOutTest {
   }
 };
 
-TEST(AstroTdm, InitializePcmOut) {
+TEST(AmlG12Tdm, InitializePcmOut) {
   fake_ddk::Bind tester;
 
   auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
@@ -184,7 +184,7 @@ TEST(AstroTdm, InitializePcmOut) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
-  auto controller = audio::SimpleAudioStream::Create<AstroPcmOutTest>(
+  auto controller = audio::SimpleAudioStream::Create<AmlG12PcmOutTest>(
       &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
@@ -195,7 +195,7 @@ TEST(AstroTdm, InitializePcmOut) {
   controller->DdkRelease();
 }
 
-TEST(AstroTdm, I2sOutChangeRate96K) {
+TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   fake_ddk::Bind tester;
 
   auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
@@ -224,7 +224,7 @@ TEST(AstroTdm, I2sOutChangeRate96K) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
-  auto controller = audio::SimpleAudioStream::Create<AstroI2sOutTest>(
+  auto controller = audio::SimpleAudioStream::Create<AmlG12I2sOutTest>(
       &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
@@ -279,7 +279,7 @@ TEST(AstroTdm, I2sOutChangeRate96K) {
   controller->DdkRelease();
 }
 
-TEST(AstroTdm, EnableAndMuteChannels) {
+TEST(AmlG12Tdm, EnableAndMuteChannels) {
   fake_ddk::Bind tester;
 
   struct AmlTdmOutDeviceMuteTest : public AmlTdmOutDevice {
@@ -297,10 +297,11 @@ TEST(AstroTdm, EnableAndMuteChannels) {
     uint32_t last_enable_mask_[kMaxLanes] = {};
     uint32_t last_mute_mask_[kMaxLanes] = {};
   };
-  struct AstroTdmStreamOutMuteTest : public AstroI2sOutTest {
-    AstroTdmStreamOutMuteTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
-                              ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
-        : AstroI2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
+  struct AmlG12TdmStreamOutMuteTest : public AmlG12I2sOutTest {
+    AmlG12TdmStreamOutMuteTest(codec_protocol_t* codec_protocol,
+                               ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
+                               ddk::GpioProtocolClient enable_gpio)
+        : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
       metadata_.number_of_channels = 2;
       metadata_.lanes_enable_mask[0] = 3;  // L + R tweeters.
       metadata_.lanes_enable_mask[1] = 3;  // Woofer in lane 1.
@@ -319,7 +320,7 @@ TEST(AstroTdm, EnableAndMuteChannels) {
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
-  auto controller = audio::SimpleAudioStream::Create<AstroTdmStreamOutMuteTest>(
+  auto controller = audio::SimpleAudioStream::Create<AmlG12TdmStreamOutMuteTest>(
       &codec_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
@@ -419,10 +420,10 @@ struct AmlTdmInDeviceTest : public AmlTdmInDevice {
       : AmlTdmInDevice(std::move(mmio), clk_src, tdm, ddr, mclk, fifo_depth, version) {}
 };
 
-struct AstroI2sInTest : public AstroTdmStream {
-  AstroI2sInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
-                 ddk::GpioProtocolClient enable_gpio)
-      : AstroTdmStream(fake_ddk::kFakeParent, true, std::move(pdev), std::move(enable_gpio)) {
+struct AmlG12I2sInTest : public AmlG12TdmStream {
+  AmlG12I2sInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
+                  ddk::GpioProtocolClient enable_gpio)
+      : AmlG12TdmStream(fake_ddk::kFakeParent, true, std::move(pdev), std::move(enable_gpio)) {
     metadata_.is_input = true;
     metadata_.mClockDivFactor = 10;
     metadata_.sClockDivFactor = 25;
@@ -463,17 +464,17 @@ struct AstroI2sInTest : public AstroTdmStream {
   }
 };
 
-struct AstroPcmInTest : public AstroI2sInTest {
-  AstroPcmInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
-                 ddk::GpioProtocolClient enable_gpio)
-      : AstroI2sInTest(region, std::move(pdev), std::move(enable_gpio)) {
+struct AmlG12PcmInTest : public AmlG12I2sInTest {
+  AmlG12PcmInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
+                  ddk::GpioProtocolClient enable_gpio)
+      : AmlG12I2sInTest(region, std::move(pdev), std::move(enable_gpio)) {
     metadata_.number_of_channels = 1;
     metadata_.lanes_enable_mask[0] = 1;
     metadata_.tdm.type = metadata::TdmType::Pcm;
   }
 };
 
-TEST(AstroTdm, InitializeI2sIn) {
+TEST(AmlG12Tdm, InitializeI2sIn) {
   fake_ddk::Bind tester;
 
   constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
@@ -490,7 +491,7 @@ TEST(AstroTdm, InitializeI2sIn) {
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
   auto controller =
-      audio::SimpleAudioStream::Create<AstroI2sInTest>(mock, unused_pdev, enable_gpio.GetProto());
+      audio::SimpleAudioStream::Create<AmlG12I2sInTest>(mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   mock.VerifyAll();
@@ -500,7 +501,7 @@ TEST(AstroTdm, InitializeI2sIn) {
   controller->DdkRelease();
 }
 
-TEST(AstroTdm, InitializePcmIn) {
+TEST(AmlG12Tdm, InitializePcmIn) {
   fake_ddk::Bind tester;
 
   constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
@@ -517,7 +518,7 @@ TEST(AstroTdm, InitializePcmIn) {
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
   auto controller =
-      audio::SimpleAudioStream::Create<AstroPcmInTest>(mock, unused_pdev, enable_gpio.GetProto());
+      audio::SimpleAudioStream::Create<AmlG12PcmInTest>(mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   mock.VerifyAll();
@@ -527,5 +528,5 @@ TEST(AstroTdm, InitializePcmIn) {
   controller->DdkRelease();
 }
 
-}  // namespace astro
+}  // namespace aml_g12
 }  // namespace audio

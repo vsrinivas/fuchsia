@@ -4,7 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 
-driver_module("astro-tdm") {
+driver_module("aml-g12-tdm") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",

@@ -18,7 +18,7 @@
 #include <fbl/auto_call.h>
 
 namespace audio {
-namespace astro {
+namespace aml_g12 {
 
 enum {
   FRAGMENT_PDEV,
@@ -42,15 +42,15 @@ constexpr size_t kBytesPerSample = 2;
 constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
     kMaxSampleRate * kBytesPerSample * kMaxNumberOfChannels, PAGE_SIZE);
 
-AstroTdmStream::AstroTdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
-                               const ddk::GpioProtocolClient enable_gpio)
+AmlG12TdmStream::AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
+                                 const ddk::GpioProtocolClient enable_gpio)
     : SimpleAudioStream(parent, is_input),
       pdev_(std::move(pdev)),
       enable_gpio_(std::move(enable_gpio)) {
   InitDaiFormats();  // For default configuration in HW initialization.
 }
 
-zx_status_t AstroTdmStream::InitHW() {
+zx_status_t AmlG12TdmStream::InitHW() {
   zx_status_t status;
 
   // Shut down the SoC audio peripherals (tdm/dma)
@@ -180,7 +180,7 @@ zx_status_t AstroTdmStream::InitHW() {
   return ZX_OK;
 }
 
-void AstroTdmStream::InitDaiFormats() {
+void AmlG12TdmStream::InitDaiFormats() {
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     dai_formats_[i].sample_format = SAMPLE_FORMAT_PCM_SIGNED;
     dai_formats_[i].frame_rate = kMinSampleRate;
@@ -208,7 +208,7 @@ void AstroTdmStream::InitDaiFormats() {
   channels_to_use_ = std::numeric_limits<uint64_t>::max();  // Enable all.
 }
 
-zx_status_t AstroTdmStream::InitPDev() {
+zx_status_t AmlG12TdmStream::InitPDev() {
   composite_protocol_t composite;
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
@@ -369,7 +369,7 @@ zx_status_t AstroTdmStream::InitPDev() {
   return ZX_OK;
 }
 
-zx_status_t AstroTdmStream::SetCodecsGainState(GainState state) {
+zx_status_t AmlG12TdmStream::SetCodecsGainState(GainState state) {
   if (metadata_.tdm.number_of_codecs) {
     for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
       auto state2 = state;
@@ -380,7 +380,7 @@ zx_status_t AstroTdmStream::SetCodecsGainState(GainState state) {
   return ZX_OK;
 }
 
-zx_status_t AstroTdmStream::Init() {
+zx_status_t AmlG12TdmStream::Init() {
   zx_status_t status;
 
   status = InitPDev();
@@ -466,7 +466,7 @@ zx_status_t AstroTdmStream::Init() {
 }
 
 // Timer handler for sending out position notifications
-void AstroTdmStream::ProcessRingNotification() {
+void AmlG12TdmStream::ProcessRingNotification() {
   ScopedToken t(domain_token());
   if (us_per_notification_) {
     notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
@@ -483,7 +483,7 @@ void AstroTdmStream::ProcessRingNotification() {
   NotifyPosition(resp);
 }
 
-zx_status_t AstroTdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
+zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = aml_audio_->fifo_depth();
   for (size_t i = 0; i < metadata_.tdm.number_of_external_delays; ++i) {
     if (metadata_.tdm.external_delays[i].frequency == req.frames_per_second) {
@@ -533,7 +533,7 @@ zx_status_t AstroTdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& req
   return ZX_OK;
 }
 
-void AstroTdmStream::ShutdownHook() {
+void AmlG12TdmStream::ShutdownHook() {
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     // safe the codec so it won't throw clock errors when tdm bus shuts down
     codecs_[i].Stop();
@@ -545,7 +545,7 @@ void AstroTdmStream::ShutdownHook() {
   pinned_ring_buffer_.Unpin();
 }
 
-zx_status_t AstroTdmStream::SetGain(const audio_proto::SetGainReq& req) {
+zx_status_t AmlG12TdmStream::SetGain(const audio_proto::SetGainReq& req) {
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     // Modify parts of the gain state we have received in the request.
     GainState gain({.gain_db = req.gain + metadata_.tdm.codecs_delta_gains[i],
@@ -565,8 +565,8 @@ zx_status_t AstroTdmStream::SetGain(const audio_proto::SetGainReq& req) {
   return ZX_OK;
 }
 
-zx_status_t AstroTdmStream::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
-                                      uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
+zx_status_t AmlG12TdmStream::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
+                                       uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
   uint32_t rb_frames = static_cast<uint32_t>(pinned_ring_buffer_.region(0).size) / frame_size_;
 
   if (req.min_ring_buffer_frames > rb_frames) {
@@ -586,7 +586,7 @@ zx_status_t AstroTdmStream::GetBuffer(const audio_proto::RingBufGetBufferReq& re
   return ZX_OK;
 }
 
-zx_status_t AstroTdmStream::Start(uint64_t* out_start_time) {
+zx_status_t AmlG12TdmStream::Start(uint64_t* out_start_time) {
   *out_start_time = aml_audio_->Start();
 
   uint32_t notifs = LoadNotificationsPerRing();
@@ -608,7 +608,7 @@ zx_status_t AstroTdmStream::Start(uint64_t* out_start_time) {
   return ZX_OK;
 }
 
-zx_status_t AstroTdmStream::Stop() {
+zx_status_t AmlG12TdmStream::Stop() {
   for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
     // Set mute to true.
     codecs_[i].SetGainState(
@@ -622,7 +622,7 @@ zx_status_t AstroTdmStream::Stop() {
   return ZX_OK;
 }
 
-zx_status_t AstroTdmStream::AddFormats() {
+zx_status_t AmlG12TdmStream::AddFormats() {
   fbl::AllocChecker ac;
   supported_formats_.reserve(1, &ac);
   if (!ac.check()) {
@@ -645,7 +645,7 @@ zx_status_t AstroTdmStream::AddFormats() {
   return ZX_OK;
 }
 
-zx_status_t AstroTdmStream::InitBuffer(size_t size) {
+zx_status_t AmlG12TdmStream::InitBuffer(size_t size) {
   // Make sure the DMA is stopped before releasing quarantine.
   aml_audio_->Stop();
   // Make sure that all reads/writes have gone through.
@@ -702,7 +702,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
   }
 
   if (metadata.is_input) {
-    auto stream = audio::SimpleAudioStream::Create<audio::astro::AstroTdmStream>(
+    auto stream = audio::SimpleAudioStream::Create<audio::aml_g12::AmlG12TdmStream>(
         device, true, fragments[FRAGMENT_PDEV],
         fragments[FRAGMENT_ENABLE_GPIO] ? fragments[FRAGMENT_ENABLE_GPIO]
                                         : ddk::GpioProtocolClient());
@@ -711,7 +711,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     }
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
   } else {
-    auto stream = audio::SimpleAudioStream::Create<audio::astro::AstroTdmStream>(
+    auto stream = audio::SimpleAudioStream::Create<audio::aml_g12::AmlG12TdmStream>(
         device, false, fragments[FRAGMENT_PDEV],
         fragments[FRAGMENT_ENABLE_GPIO] ? fragments[FRAGMENT_ENABLE_GPIO]
                                         : ddk::GpioProtocolClient());
@@ -731,11 +731,11 @@ static constexpr zx_driver_ops_t driver_ops = []() {
   return ops;
 }();
 
-}  // namespace astro
+}  // namespace aml_g12
 }  // namespace audio
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_tdm, audio::astro::driver_ops, "aml-tdm", "0.1", 5)
+ZIRCON_DRIVER_BEGIN(aml_tdm, audio::aml_g12::driver_ops, "aml-tdm", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_TDM),

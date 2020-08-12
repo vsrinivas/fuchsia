@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_AUDIO_STREAM_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_AUDIO_STREAM_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_AUDIO_STREAM_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_AUDIO_STREAM_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -26,12 +26,12 @@
 #include <soc/aml-common/aml-tdm-audio.h>
 
 namespace audio {
-namespace astro {
+namespace aml_g12 {
 
-class AstroTdmStream : public SimpleAudioStream {
+class AmlG12TdmStream : public SimpleAudioStream {
  public:
-  AstroTdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
-                 const ddk::GpioProtocolClient enable_gpio);
+  AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
+                  const ddk::GpioProtocolClient enable_gpio);
 
  protected:
   zx_status_t Init() __TA_REQUIRES(domain_token()) override;
@@ -55,7 +55,7 @@ class AstroTdmStream : public SimpleAudioStream {
   metadata::AmlConfig metadata_ = {};
 
  private:
-  friend class fbl::RefPtr<AstroTdmStream>;
+  friend class fbl::RefPtr<AmlG12TdmStream>;
 
   static constexpr uint8_t kFifoDepth = 0x20;
 
@@ -67,7 +67,7 @@ class AstroTdmStream : public SimpleAudioStream {
   uint32_t us_per_notification_ = 0;
   DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};
 
-  async::TaskClosureMethod<AstroTdmStream, &AstroTdmStream::ProcessRingNotification> notify_timer_
+  async::TaskClosureMethod<AmlG12TdmStream, &AmlG12TdmStream::ProcessRingNotification> notify_timer_
       __TA_GUARDED(domain_token()){this};
 
   ddk::PDev pdev_;
@@ -80,7 +80,7 @@ class AstroTdmStream : public SimpleAudioStream {
   uint64_t channels_to_use_;
 };
 
-}  // namespace astro
+}  // namespace aml_g12
 }  // namespace audio
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_AUDIO_STREAM_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_AML_G12_TDM_AUDIO_STREAM_H_

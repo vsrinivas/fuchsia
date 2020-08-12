@@ -6,7 +6,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
-executable("astro-tdm-test-bin") {
+executable("aml-g12-tdm-test-bin") {
   configs += [ "//build/config:all_source" ]
   testonly = true
   sources = [
@@ -41,9 +41,9 @@ executable("astro-tdm-test-bin") {
 }
 
 fuchsia_unittest_package("test-package") {
-  package_name = "astro-tdm-test"
-  executable_path = "bin/astro-tdm-test-bin"
-  deps = [ ":astro-tdm-test-bin" ]
+  package_name = "aml-g12-tdm-test"
+  executable_path = "bin/aml-g12-tdm-test-bin"
+  deps = [ ":aml-g12-tdm-test-bin" ]
   test_specs = {
     environments = basic_envs
   }

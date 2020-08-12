@@ -10,8 +10,8 @@ group("tests") {
   testonly = true
   deps = [
     "alc5663:tests",
+    "aml-g12-tdm:tests",
     "astro-pdm-input:tests",
-    "astro-tdm:tests",
     "codecs:tests",
     "intel-hda:tests",
     "sherlock-pdm-input:tests",
