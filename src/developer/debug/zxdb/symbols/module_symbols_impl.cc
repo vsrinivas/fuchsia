@@ -78,6 +78,12 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
 // mode.
 bool SameFileLine(const llvm::DWARFDebugLine::Row& reference,
                   const llvm::DWARFDebugLine::Row& candidate, bool greedy) {
+  // EndSequence entries don't have files or lines associated with them, it's just a marker. The
+  // table will report the previous line's file+line as a side-effect fo the way it's encoded, so
+  // explicitly fail matching for these.
+  if (reference.EndSequence || candidate.EndSequence)
+    return false;
+
   if (greedy && candidate.Line == 0)
     return true;
   return reference.File == candidate.File && reference.Line == candidate.Line;
@@ -224,7 +230,7 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
          SameFileLine(rows[found_row_index], rows[first_row_index - 1], greedy)) {
     first_row_index--;
   }
-  uint32_t last_row_index = found_row_index;
+  uint32_t last_row_index = found_row_index;  // Inclusive.
   while (last_row_index < rows.size() - 1 &&
          SameFileLine(rows[found_row_index], rows[last_row_index + 1], greedy)) {
     last_row_index++;
@@ -245,6 +251,12 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
 
   if (!build_dir_.empty()) {
     compilation_dir = build_dir_;
+  }
+
+  if (rows[first_row_index].Line == 0) {
+    // Line 0 entries get no file name nor compilation dir to avoid a FileLine assert.
+    file_name.clear();
+    compilation_dir.clear();
   }
 
   LineDetails result(FileLine(file_name, compilation_dir, rows[first_row_index].Line));
