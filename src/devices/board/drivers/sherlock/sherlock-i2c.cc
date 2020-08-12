@@ -46,7 +46,50 @@ static const pbus_irq_t i2c_irqs[] = {
     },
 };
 
-static i2c_channel_t i2c_channels[] = {
+static const i2c_channel_t luis_i2c_channels[] = {
+    // Backlight I2C
+    {
+        .bus_id = SHERLOCK_I2C_3,
+        .address = 0x2C,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // Touch screen I2C
+    {
+        .bus_id = SHERLOCK_I2C_2,
+        .address = 0x38,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // Codec
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x4c,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // IMX227 Camera Sensor
+    {
+        .bus_id = SHERLOCK_I2C_3,
+        .address = 0x1a,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+    // Light Sensor
+    {
+        .bus_id = SHERLOCK_I2C_A0_0,
+        .address = 0x39,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
+};
+
+static const i2c_channel_t sherlock_i2c_channels[] = {
     // Backlight I2C
     {
         .bus_id = SHERLOCK_I2C_3,
@@ -105,28 +148,21 @@ static i2c_channel_t i2c_channels[] = {
     },
 };
 
-static const pbus_metadata_t i2c_metadata[] = {
+static const pbus_metadata_t sherlock_i2c_metadata[] = {
     {
         .type = DEVICE_METADATA_I2C_CHANNELS,
-        .data_buffer = &i2c_channels,
-        .data_size = sizeof(i2c_channels),
+        .data_buffer = &sherlock_i2c_channels,
+        .data_size = sizeof(sherlock_i2c_channels),
     },
 };
 
-static pbus_dev_t i2c_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "gpio";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_AMLOGIC_I2C;
-  dev.mmio_list = i2c_mmios;
-  dev.mmio_count = countof(i2c_mmios);
-  dev.irq_list = i2c_irqs;
-  dev.irq_count = countof(i2c_irqs);
-  dev.metadata_list = i2c_metadata;
-  dev.metadata_count = countof(i2c_metadata);
-  return dev;
-}();
+static const pbus_metadata_t luis_i2c_metadata[] = {
+    {
+        .type = DEVICE_METADATA_I2C_CHANNELS,
+        .data_buffer = &luis_i2c_channels,
+        .data_size = sizeof(luis_i2c_channels),
+    },
+};
 
 zx_status_t Sherlock::I2cInit() {
   pdev_board_info_t info;
@@ -151,12 +187,25 @@ zx_status_t Sherlock::I2cInit() {
   gpio_impl_.SetAltFunction(T931_GPIOA(14), 2);
   gpio_impl_.SetAltFunction(T931_GPIOA(15), 2);
 
-  // Camera sensor for Luis
-  if (info.pid == PDEV_PID_LUIS) {
-    i2c_channels[5].address = 0x1a;
-  }
+  pbus_dev_t dev = {};
+  dev.name = "gpio";
+  dev.vid = PDEV_VID_AMLOGIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_AMLOGIC_I2C;
+  dev.mmio_list = i2c_mmios;
+  dev.mmio_count = countof(i2c_mmios);
+  dev.irq_list = i2c_irqs;
+  dev.irq_count = countof(i2c_irqs);
 
-  status = pbus_.DeviceAdd(&i2c_dev);
+  if (info.pid == PDEV_PID_SHERLOCK) {
+    dev.metadata_list = sherlock_i2c_metadata;
+    dev.metadata_count = countof(sherlock_i2c_metadata);
+  } else {
+    dev.metadata_list = luis_i2c_metadata;
+    dev.metadata_count = countof(luis_i2c_metadata);
+  };
+
+  status = pbus_.DeviceAdd(&dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

@@ -466,7 +466,9 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
 }
 
 TEST_F(DeviceEnumerationTest, LuisTest) {
-  static const char* kDevicePaths[] = {"dwc2/dwc2/usb-peripheral/function-000/rndis-function"};
+  static const char* kDevicePaths[] = {"dwc2/dwc2/usb-peripheral/function-000/rndis-function",
+                                       "sys/platform/05:04:16/sherlock-audio-in",
+                                       "luis-i2s-audio-out"};
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
