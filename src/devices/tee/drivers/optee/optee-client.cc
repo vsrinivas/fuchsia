@@ -809,8 +809,8 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
   // Load the trusted app into a VMO
   size_t ta_size;
   zx::vmo ta_vmo;
-  zx_status_t status =
-      load_firmware(controller_->zxdev(), ta_path.data(), ta_vmo.reset_and_get_address(), &ta_size);
+  zx_status_t status = load_firmware(controller_->GetDevice(), ta_path.data(),
+                                     ta_vmo.reset_and_get_address(), &ta_size);
 
   if (status != ZX_OK) {
     if (status == ZX_ERR_NOT_FOUND) {

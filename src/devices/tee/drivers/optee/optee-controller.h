@@ -35,16 +35,28 @@ namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
 class OpteeClient;
 class OpteeDeviceInfo;
 
-class OpteeController;
-using OpteeControllerBase = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable,
-                                        ddk::Suspendable, ddk::UnbindableNew>;
-class OpteeController : public OpteeControllerBase,
-                        public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
-                        public fuchsia_hardware_tee::DeviceConnector::Interface {
+class OpteeControllerBase {
  public:
   using RpcHandler = fbl::Function<zx_status_t(const RpcFunctionArgs&, RpcFunctionResult*)>;
 
-  explicit OpteeController(zx_device_t* parent) : OpteeControllerBase(parent) {}
+  virtual OsInfo GetOsInfo() const = 0;
+  virtual uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
+  virtual SharedMemoryManager::DriverMemoryPool* driver_pool() const = 0;
+  virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
+  virtual zx_status_t RpmbConnectServer(::zx::channel server) const  = 0;
+  virtual const GetOsRevisionResult& os_revision() const = 0;
+  virtual zx_device_t* GetDevice() const = 0;
+};
+
+class OpteeController;
+using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable,
+                                              ddk::Suspendable, ddk::UnbindableNew>;
+class OpteeController : public OpteeControllerBase,
+                        public DeviceType,
+                        public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
+                        public fuchsia_hardware_tee::DeviceConnector::Interface {
+ public:
+  explicit OpteeController(zx_device_t* parent) : DeviceType(parent) {}
 
   OpteeController(const OpteeController&) = delete;
   OpteeController& operator=(const OpteeController&) = delete;
@@ -72,19 +84,23 @@ class OpteeController : public OpteeControllerBase,
 
   // TODO(44664): Once all clients are transitioned off of the old TEE connection model, remove this
   // function.
-  OsInfo GetOsInfo() const;
+  OsInfo GetOsInfo() const override;
 
-  uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler);
+  uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
 
-  SharedMemoryManager::DriverMemoryPool* driver_pool() const {
+  SharedMemoryManager::DriverMemoryPool* driver_pool() const override {
     return shared_memory_manager_->driver_pool();
   }
 
-  SharedMemoryManager::ClientMemoryPool* client_pool() const {
+  SharedMemoryManager::ClientMemoryPool* client_pool() const override {
     return shared_memory_manager_->client_pool();
   }
 
-  zx_status_t RpmbConnectServer(::zx::channel server) const {
+  zx_device_t* GetDevice() const override {
+    return zxdev();
+  }
+
+  zx_status_t RpmbConnectServer(::zx::channel server) const override {
     if (!server.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -97,7 +113,7 @@ class OpteeController : public OpteeControllerBase,
     return ZX_OK;
   }
 
-  const GetOsRevisionResult& os_revision() const { return os_revision_; }
+  const GetOsRevisionResult& os_revision() const override { return os_revision_; }
 
   // Should only be used for testing.
   const zx::pmt& pmt() const { return pmt_; }

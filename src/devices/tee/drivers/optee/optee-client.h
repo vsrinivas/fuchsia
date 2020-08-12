@@ -48,9 +48,9 @@ class OpteeClient : public OpteeClientBase,
                     public fuchsia_tee::Device::Interface,
                     public fuchsia_tee::Application::Interface {
  public:
-  explicit OpteeClient(OpteeController* controller, zx::channel provider_channel,
+  explicit OpteeClient(OpteeControllerBase* controller, zx::channel provider_channel,
                        std::optional<Uuid> application_uuid, bool use_old_api)
-      : OpteeClientBase(controller->zxdev()),
+      : OpteeClientBase(controller->GetDevice()),
         controller_(controller),
         provider_channel_(std::move(provider_channel)),
         application_uuid_(std::move(application_uuid)) {}
@@ -259,7 +259,7 @@ class OpteeClient : public OpteeClientBase,
   zx_status_t HandleRpcCommandFileSystemRemoveFile(RemoveFileFileSystemRpcMessage* message);
   zx_status_t HandleRpcCommandFileSystemRenameFile(RenameFileFileSystemRpcMessage* message);
 
-  OpteeController* controller_;
+  OpteeControllerBase* controller_;
   SharedMemoryList allocated_shared_memory_;
   std::atomic<uint64_t> next_file_system_object_id_{1};
 
