@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 source_set("platform") {
-  deps = [ "//third_party/openthread:lib-ot-core" ]
-
   sources = [
     "alarm.cc",
     "entropy.cc",
@@ -35,6 +33,7 @@ source_set("platform") {
   public_deps = [
     "//src/lib/json_parser",
     "//third_party/modp_b64",
+    "//third_party/openthread:lib-ot-core",
     "//zircon/public/lib/zx",
   ]
 }
