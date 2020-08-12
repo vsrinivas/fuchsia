@@ -19,6 +19,9 @@ Entry = collections.namedtuple('Entry', ['source', 'destination', 'label'])
 # as the source files are identical.
 # This is mostly use to soft-transition zbi contents.
 DUPLICATION_EXCEPTIONS = [
+    # TODO(57360): remove exception after transitioning zxcrypt config from
+    # build argument to board label.
+    'config/zxcrypt',
 ]
 
 
