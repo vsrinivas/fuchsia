@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/unification/zbi/generated_resource.gni")
+
+# The various targets in this file represent zxcrypt configuration files added
+# to the boot partition of ZBI files as `config/zxcrypt`, for consumption by
+# fshost and the paver, respectively.
+#
+# The configuration file specifies from where the system should obtain the
+# zxcrypt master key to the system data partition.
+
+# The device should use an all-0's master key, as we lack support for any
+# secure on-device storage.
+generated_resource("null") {
+  outputs = [ "config/zxcrypt" ]
+  contents = "null"
+}
+
+# The device is required to have a Trusted Execution Environment (TEE) which
+# includes the "keysafe" Trusted Application (associated with the KMS service).
+# The zxcrypt master key should be derived from a per-device key accessible
+# only to trusted apps running in the TEE.
+generated_resource("tee") {
+  outputs = [ "config/zxcrypt" ]
+  contents = "tee"
+}
+
+# The device will attempt to use keys from the TEE if available, but will fall
+# back to using the null key if the key from the TEE does not work, or if the
+# TEE is not functional on this device.
+generated_resource("tee-opportunistic") {
+  outputs = [ "config/zxcrypt" ]
+  contents = "tee-opportunistic"
+}
+
+# The device will require the use of a key from the TEE for new volume
+# creation, but will continue to try both a TEE-sourced key and the null key
+# when unsealing volumes.
+generated_resource("tee-transitional") {
+  outputs = [ "config/zxcrypt" ]
+  contents = "tee-transitional"
+}
