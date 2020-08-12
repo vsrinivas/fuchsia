@@ -312,6 +312,7 @@ fuchsia_test_package("component-manager-tests") {
   ]
   deps = [
     ":component_manager_tests_invalid_manifest",
+    "src/elf_runner/tests:run-indefinitely",
     "//examples/components/basic:hello-world",
     "//examples/components/basic:lifecycle-full",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",

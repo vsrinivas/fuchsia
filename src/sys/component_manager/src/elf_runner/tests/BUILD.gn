@@ -40,6 +40,17 @@ rustc_binary("immediate_exit") {
   sources = [ "immediate_exit_component.rs" ]
 }
 
+rustc_binary("run-indefinitely") {
+  name = "run_indefinitely"
+  edition = 2018
+  source_root = "run_indefinitely.rs"
+  sources = [ "run_indefinitely.rs" ]
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+}
+
 rustc_binary("rendezvous_exit") {
   name = "rendezvous_exit"
   edition = "2018"

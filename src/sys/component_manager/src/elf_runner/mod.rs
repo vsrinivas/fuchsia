@@ -319,7 +319,7 @@ impl ElfRunner {
         &self,
         start_info: fcrunner::ComponentStartInfo,
         checker: &ScopedPolicyChecker,
-    ) -> Result<Option<(ElfComponent, Process)>, ElfRunnerError> {
+    ) -> Result<Option<ElfComponent>, ElfRunnerError> {
         let resolved_url =
             runner::get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
@@ -434,14 +434,12 @@ impl ElfRunner {
             .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
             .raw_koid();
         self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-        Ok(Some((
-            ElfComponent::new(
-                runtime_dir,
-                Job::from(component_job),
-                lifecycle_client,
-                program_config.main_process_critical,
-            ),
+        Ok(Some(ElfComponent::new(
+            runtime_dir,
+            Job::from(component_job),
             process,
+            lifecycle_client,
+            program_config.main_process_critical,
         )))
     }
 }
@@ -527,13 +525,20 @@ impl ElfProgramConfig {
 
 /// Structure representing a running elf component.
 struct ElfComponent {
-    /// namespace directory for this component, kept just as a reference to
-    /// keep the namespace alive
+    /// Namespace directory for this component, kept just as a reference to
+    /// keep the namespace alive.
     _runtime_dir: RuntimeDirectory,
 
-    /// job in which the underlying process is running.
+    /// Job in which the underlying process that represents the component is
+    /// running.
     job: Arc<Job>,
 
+    /// Process made for the program binary defined for this component.
+    process: Process,
+
+    /// Client end of the channel given to an ElfComponent which says it
+    /// implements the Lifecycle protocol. If the component does not implement
+    /// the protocol, this will be None.
     lifecycle_channel: Option<LifecycleProxy>,
 
     /// We need to remember if we marked the main process as critical, because if we're asked to
@@ -545,10 +550,11 @@ impl ElfComponent {
     pub fn new(
         _runtime_dir: RuntimeDirectory,
         job: Job,
+        process: Process,
         lifecycle_channel: Option<LifecycleProxy>,
         main_process_critical: bool,
     ) -> Self {
-        Self { _runtime_dir, job: Arc::new(job), lifecycle_channel, main_process_critical }
+        Self { _runtime_dir, job: Arc::new(job), process, lifecycle_channel, main_process_critical }
     }
 }
 
@@ -621,7 +627,7 @@ impl Runner for ScopedElfRunner {
         // execution context.
         let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
         match self.runner.start_component(start_info, &self.checker).await {
-            Ok(Some((elf_component, process))) => {
+            Ok(Some(elf_component)) => {
                 let (epitaph_tx, epitaph_rx) = oneshot::channel::<ChannelEpitaph>();
                 // This function waits for something from the channel and
                 // returns it or Error::Internal if the channel is closed
@@ -635,10 +641,30 @@ impl Runner for ScopedElfRunner {
                         .into()
                 });
 
+                let proc_copy = Process::from(
+                    match elf_component.process.as_handle_ref().duplicate(zx::Rights::SAME_RIGHTS) {
+                        Ok(copy) => copy,
+                        Err(e) => {
+                            runner::component::report_start_error(
+                                zx::Status::from_raw(
+                                    i32::try_from(
+                                        fcomp::Error::InstanceCannotStart.into_primitive(),
+                                    )
+                                    .unwrap(),
+                                ),
+                                format!("Component process failed to clone: {}", e),
+                                &resolved_url,
+                                server_end,
+                            );
+                            return;
+                        }
+                    },
+                );
+
                 // Spawn a future that watches for the process to exit
                 fasync::Task::spawn(async move {
                     let _ = fasync::OnSignals::new(
-                        &process.as_handle_ref(),
+                        &proc_copy.as_handle_ref(),
                         zx::Signals::PROCESS_TERMINATED,
                     )
                     .await;
@@ -646,7 +672,7 @@ impl Runner for ScopedElfRunner {
                     // TODO (fxb/57024) If we create an epitaph that indicates
                     // intentional, non-zero exit, use that for all non-0 exit
                     // codes.
-                    let exit_status: ChannelEpitaph = match process.info() {
+                    let exit_status: ChannelEpitaph = match proc_copy.info() {
                         Ok(ProcessInfo { return_code: 0, .. }) => {
                             zx::Status::OK.try_into().unwrap()
                         }
@@ -735,6 +761,7 @@ mod tests {
     use {
         super::*,
         crate::{config::RuntimeConfig, model::moniker::AbsoluteMoniker},
+        fdio,
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_component as fcomp, fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::DirectoryProxy,
@@ -743,7 +770,7 @@ mod tests {
         io_util,
         matches::assert_matches,
         runner::component::Controllable,
-        std::{convert::TryFrom, task::Poll},
+        std::{convert::TryFrom, ffi::CString, task::Poll},
     };
 
     // Rust's test harness does not allow passing through arbitrary arguments, so to get coverage
@@ -855,6 +882,41 @@ mod tests {
         }
     }
 
+    fn create_dummy_process(job: &Job, raw_path: &str, name_for_builtin: &str) -> Process {
+        if !should_use_builtin_process_launcher() {
+            fdio::spawn(
+                job,
+                fdio::SpawnOptions::CLONE_ALL,
+                &CString::new(raw_path).expect("could not make cstring"),
+                &[&CString::new(raw_path).expect("could not make cstring")],
+            )
+            .expect("failed to spawn process")
+        } else {
+            let (process, _vmar) = job
+                .create_child_process(name_for_builtin.as_bytes())
+                .expect("could not create process");
+            process
+        }
+    }
+
+    fn make_default_elf_component(lifecycle_client: Option<LifecycleProxy>) -> (Job, ElfComponent) {
+        let job = job_default().create_child_job().expect("failed to make child job");
+        let dummy_process = create_dummy_process(&job, "/pkg/bin/run_indefinitely", "dummy");
+        let job_copy = Job::from(
+            job.as_handle_ref()
+                .duplicate(zx::Rights::SAME_RIGHTS)
+                .expect("job handle duplication failed"),
+        );
+        let component = ElfComponent::new(
+            TreeBuilder::empty_dir().build(),
+            job_copy,
+            dummy_process,
+            lifecycle_client,
+            false,
+        );
+        (job, component)
+    }
+
     // TODO(fsamuel): A variation of this is used in a couple of places. We should consider
     // refactoring this into a test util file.
     async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
@@ -946,30 +1008,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_kill_component() -> Result<(), Error> {
-        let job = job_default().create_child_job()?;
+        let (job, component) = make_default_elf_component(None);
 
-        // create a nested job as empty job can't be killed for some reason.
-        let _child_job = job.create_child_job()?;
-
-        let job_copy = Job::from(
-            job.as_handle_ref()
-                .duplicate(zx::Rights::SAME_RIGHTS)
-                .expect("job handle duplication failed"),
-        );
-
-        let component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None, false);
-
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(!job_info.exited);
 
         component.kill().await;
 
-        let h = job_copy.as_handle_ref();
+        let h = job.as_handle_ref();
         fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
             .await
             .expect("failed waiting for termination signal");
 
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(job_info.exited);
         Ok(())
     }
@@ -979,22 +1030,9 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("Unable to create new executor");
         let (lifecycle_client, lifecycle_server) =
             fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
+        let (job, mut component) = make_default_elf_component(Some(lifecycle_client));
 
-        let job = job_default().create_child_job()?;
-
-        // create a nested job as empty job can't be killed for some reason.
-        let _child_job = job.create_child_job()?;
-
-        let job_copy = Job::from(
-            job.as_handle_ref()
-                .duplicate(zx::Rights::SAME_RIGHTS)
-                .expect("job handle duplication failed"),
-        );
-
-        let mut component =
-            ElfComponent::new(TreeBuilder::empty_dir().build(), job, Some(lifecycle_client), false);
-
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(!job_info.exited);
 
         // Ask the runner to stop the component, it returns a future which
@@ -1023,7 +1061,7 @@ mod tests {
         }
 
         // Check that the runner killed the job hosting the exited component.
-        let h = job_copy.as_handle_ref();
+        let h = job.as_handle_ref();
         let termination_fut = async move {
             fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
                 .await
@@ -1031,7 +1069,7 @@ mod tests {
         };
         exec.run_singlethreaded(termination_fut);
 
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(job_info.exited);
         Ok(())
     }
@@ -1040,64 +1078,42 @@ mod tests {
     /// equivalent to killing a component directly.
     #[fasync::run_singlethreaded(test)]
     async fn test_stop_component_without_lifecycle() -> Result<(), Error> {
-        let job = job_default().create_child_job()?;
+        let (job, mut component) = make_default_elf_component(None);
 
-        // create a nested job as empty job can't be killed for some reason.
-        let _child_job = job.create_child_job()?;
-
-        let job_copy = Job::from(
-            job.as_handle_ref()
-                .duplicate(zx::Rights::SAME_RIGHTS)
-                .expect("job handle duplication failed"),
-        );
-
-        let mut component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None, false);
-
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(!job_info.exited);
 
         component.stop().await;
 
-        let h = job_copy.as_handle_ref();
+        let h = job.as_handle_ref();
         fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
             .await
             .expect("failed waiting for termination signal");
 
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(job_info.exited);
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_stop_component_with_closed_lifecycle() -> Result<(), Error> {
-        let job = job_default().create_child_job()?;
         let (lifecycle_client, lifecycle_server) =
             fidl::endpoints::create_proxy_and_stream::<LifecycleMarker>()?;
-        // Create a nested job as empty job can't be killed for some reason.
-        let _child_job = job.create_child_job()?;
+        let (job, mut component) = make_default_elf_component(Some(lifecycle_client));
 
-        let job_copy = Job::from(
-            job.as_handle_ref()
-                .duplicate(zx::Rights::SAME_RIGHTS)
-                .expect("job handle duplication failed"),
-        );
-
-        let mut component =
-            ElfComponent::new(TreeBuilder::empty_dir().build(), job, Some(lifecycle_client), false);
-
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(!job_info.exited);
 
         // Close the lifecycle channel
         drop(lifecycle_server);
         component.stop().await;
 
-        let h = job_copy.as_handle_ref();
+        let h = job.as_handle_ref();
         fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
             .await
             .expect("failed waiting for termination signal");
 
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(job_info.exited);
         Ok(())
     }
@@ -1105,30 +1121,19 @@ mod tests {
     /// Dropping the component should kill the job hosting it.
     #[fasync::run_singlethreaded(test)]
     async fn test_drop() -> Result<(), Error> {
-        let job = job_default().create_child_job()?;
+        let (job, component) = make_default_elf_component(None);
 
-        // create a nested job as empty job can't be killed for some reason.
-        let _child_job = job.create_child_job()?;
-
-        let job_copy = Job::from(
-            job.as_handle_ref()
-                .duplicate(zx::Rights::SAME_RIGHTS)
-                .expect("job handle duplication failed"),
-        );
-
-        let component = ElfComponent::new(TreeBuilder::empty_dir().build(), job, None, false);
-
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(!job_info.exited);
 
         drop(component);
 
-        let h = job_copy.as_handle_ref();
+        let h = job.as_handle_ref();
         fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
             .await
             .expect("failed waiting for termination signal");
 
-        let job_info = job_copy.info()?;
+        let job_info = job.info()?;
         assert!(job_info.exited);
         Ok(())
     }
