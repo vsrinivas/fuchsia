@@ -19,9 +19,9 @@ syslog_backend::LogState* SetState(syslog_backend::LogState* new_state);
 
 syslog_backend::LogState* GetState();
 
-uint32_t GetDropped();
+uint32_t GetAndResetDropped();
 
-void IncrementDropped();
+void AddDropped(uint32_t count);
 
 zx_koid_t GetCurrentThreadKoid();
 

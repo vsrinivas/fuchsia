@@ -40,6 +40,30 @@ class LogValue {
 
   operator bool() const { return !fit::holds_alternative<std::nullptr_t>(value_); }
 
+  const std::string* string_value() const {
+    if (fit::holds_alternative<std::string>(value_)) {
+      return &fit::get<std::string>(value_);
+    }
+
+    return nullptr;
+  }
+
+  const int64_t* int_value() const {
+    if (fit::holds_alternative<int64_t>(value_)) {
+      return &fit::get<int64_t>(value_);
+    }
+
+    return nullptr;
+  }
+
+  const std::vector<LogField>* fields() const {
+    if (fit::holds_alternative<std::vector<LogField>>(value_)) {
+      return &fit::get<std::vector<LogField>>(value_);
+    }
+
+    return nullptr;
+  }
+
  private:
   fit::variant<std::nullptr_t, std::string, int64_t, std::vector<LogValue>, std::vector<LogField>>
       value_;
@@ -50,6 +74,9 @@ class LogField {
   LogField(std::string key, LogValue value) : key_(std::move(key)), value_(std::move(value)) {}
 
   std::string ToString() const;
+
+  const std::string& key() const { return key_; }
+  const LogValue& value() const { return value_; }
 
  private:
   std::string key_;

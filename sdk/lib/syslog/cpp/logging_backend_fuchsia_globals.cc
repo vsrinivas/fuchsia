@@ -50,9 +50,9 @@ EXPORT
 syslog_backend::LogState* GetState() { return state.load(); }
 
 EXPORT
-uint32_t GetDropped() { return dropped_count.load(std::memory_order_relaxed); }
+uint32_t GetAndResetDropped() { return dropped_count.exchange(0, std::memory_order_relaxed); }
 
 EXPORT
-void IncrementDropped() { dropped_count.fetch_add(1, std::memory_order_relaxed); }
+void AddDropped(uint32_t count) { dropped_count.fetch_add(count, std::memory_order_relaxed); }
 
 }  // extern "C"

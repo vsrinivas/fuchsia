@@ -23,12 +23,80 @@ namespace syslog_backend {
 namespace {
 
 const size_t kMaxTags = 4;  // Legacy from ulib/syslog. Might be worth rethinking.
+const char kMessageFieldName[] = "message";
+const char kPidFieldName[] = "pid";
+const char kTidFieldName[] = "tid";
+const char kDroppedLogsFieldName[] = "dropped_logs";
+const char kTagFieldName[] = "tag";
+const char kFileFieldName[] = "file";
+const char kLineFieldName[] = "line";
 
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
+}
+
+template <typename T>
+std::string FullMessageString(const char* condition, const T& msg);
+
+template <>
+std::string FullMessageString(const char* condition, const std::string& msg) {
+  std::ostringstream stream;
+
+  if (condition)
+    stream << "Check failed: " << condition << ". ";
+
+  stream << msg;
+  return stream.str();
+}
+
+template <>
+std::string FullMessageString(const char* condition, const syslog::LogValue& msg) {
+  return FullMessageString(condition, msg.ToString());
+}
+
+void WriteValueToRecordWithKey(::fuchsia::diagnostics::stream::Record* record,
+                               const std::string& key, const syslog::LogValue& value) {
+  auto& message = record->arguments.emplace_back();
+  message.name = key;
+
+  if (!value) {
+    return;
+  }
+
+  if (auto string_value = value.string_value()) {
+    message.value.WithText(std::string(*string_value));
+  } else if (auto int_value = value.int_value()) {
+    message.value.WithSignedInt(int64_t(*int_value));
+  } else {
+    // TODO(57571): LogValue also supports lists and nested objects, which Record doesn't. It does
+    // NOT support unsigned values, or floats, which Record does.
+    message.value.WithText(value.ToString());
+  }
+}
+
+template <typename T>
+void WriteMessageToRecord(::fuchsia::diagnostics::stream::Record* record, const T& msg);
+
+template <>
+void WriteMessageToRecord(::fuchsia::diagnostics::stream::Record* record, const std::string& msg) {
+  auto& message = record->arguments.emplace_back();
+  message.name = kMessageFieldName;
+  message.value.WithText(std::string(msg));
+}
+
+template <>
+void WriteMessageToRecord(::fuchsia::diagnostics::stream::Record* record,
+                          const syslog::LogValue& msg) {
+  if (auto fields = msg.fields()) {
+    for (const auto& field : *fields) {
+      WriteValueToRecordWithKey(record, field.key(), field.value());
+    }
+  } else {
+    WriteValueToRecordWithKey(record, "message", msg);
+  }
 }
 
 }  // namespace
@@ -40,37 +108,22 @@ class LogState {
                   const std::initializer_list<std::string>& tags);
   static const LogState& Get();
 
-  std::ofstream& file() const {
-    static std::ofstream invalid_file;
-
-    if (fit::holds_alternative<std::ofstream>(descriptor_)) {
-      return fit::get<std::ofstream>(descriptor_);
-    }
-
-    return invalid_file;
-  }
-
-  const zx::socket& socket() const {
-    static zx::socket invalid;
-
-    if (fit::holds_alternative<zx::socket>(descriptor_)) {
-      return fit::get<zx::socket>(descriptor_);
-    }
-
-    return invalid;
-  }
-
-  zx_koid_t pid() const { return pid_; }
-
   syslog::LogSeverity min_severity() const { return min_severity_; }
 
-  const std::string& tag_str() const { return tag_str_; }
-
-  const std::string* tags() const { return tags_; }
-  size_t num_tags() const { return num_tags_; }
+  template <typename T>
+  void WriteLog(syslog::LogSeverity severity, const char* file_name, int line, const char* tag,
+                const char* condition, const T& msg) const;
 
  private:
   LogState(const syslog::LogSettings& settings, const std::initializer_list<std::string>& tags);
+
+  template <typename T>
+  bool WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
+                        syslog::LogSeverity severity, const char* file_name, int line,
+                        const char* tag, const char* condition, const T& msg) const;
+  bool WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
+                      syslog::LogSeverity severity, const char* file_name, int line,
+                      const char* tag, const char* condition, const std::string& msg) const;
 
   syslog::LogSeverity min_severity_;
   zx_koid_t pid_;
@@ -79,6 +132,117 @@ class LogState {
   std::string tag_str_;
   size_t num_tags_ = 0;
 };
+
+template <typename T>
+bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid,
+                                zx_koid_t tid, syslog::LogSeverity severity, const char* file_name,
+                                int line, const char* tag, const char* condition,
+                                const T& msg) const {
+  ::fuchsia::diagnostics::stream::Record record;
+  record.severity = ::fuchsia::diagnostics::Severity(severity);
+  record.timestamp = time;
+
+  auto& pid_arg = record.arguments.emplace_back();
+  pid_arg.name = kPidFieldName;
+  pid_arg.value.WithUnsignedInt(uint64_t(pid));
+
+  auto& tid_arg = record.arguments.emplace_back();
+  tid_arg.name = kTidFieldName;
+  tid_arg.value.WithUnsignedInt(uint64_t(tid));
+
+  auto dropped_count = GetAndResetDropped();
+
+  if (dropped_count) {
+    auto& dropped = record.arguments.emplace_back();
+    dropped.name = kDroppedLogsFieldName;
+    dropped.value.WithUnsignedInt(dropped_count);
+  }
+
+  for (size_t i = 0; i < num_tags_; i++) {
+    auto& tag_arg = record.arguments.emplace_back();
+    tag_arg.name = kTagFieldName;
+    tag_arg.value.WithText(std::string(tags_[i]));
+  }
+
+  if (tag) {
+    auto& tag_arg = record.arguments.emplace_back();
+    tag_arg.name = kTagFieldName;
+    tag_arg.value.WithText(tag);
+  }
+
+  // TODO(56051): Enable this everywhere once doing so won't spam everything.
+  if (severity >= syslog::LOG_ERROR) {
+    auto& file = record.arguments.emplace_back();
+    file.name = kFileFieldName;
+    file.value.WithText(std::string(file_name));
+
+    auto& line_arg = record.arguments.emplace_back();
+    line_arg.name = kLineFieldName;
+    line_arg.value.WithUnsignedInt(uint64_t(line));
+  }
+
+  WriteMessageToRecord(&record, msg);
+
+  std::vector<uint8_t> encoded;
+  streams::log_record(record, &encoded);
+
+  auto status = socket->write(0, encoded.data(), encoded.size(), nullptr);
+  if (status != ZX_OK) {
+    AddDropped(dropped_count + 1);
+  }
+
+  return status != ZX_ERR_BAD_STATE && status != ZX_ERR_PEER_CLOSED &&
+         severity != syslog::LOG_FATAL;
+}
+
+bool LogState::WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
+                              syslog::LogSeverity severity, const char* file_name, int line,
+                              const char* tag, const char* condition,
+                              const std::string& msg) const {
+  auto& file = *file_ptr;
+  file << "[" << std::setw(5) << std::setfill('0') << time / 1000000000UL << "." << std::setw(6)
+       << (time / 1000UL) % 1000000UL << std::setw(0) << "][" << pid << "][" << tid << "][";
+
+  auto& tag_str = tag_str_;
+  file << tag_str;
+
+  if (tag) {
+    if (!tag_str.empty()) {
+      file << ", ";
+    }
+
+    file << tag;
+  }
+
+  file << "] ";
+
+  switch (severity) {
+    case syslog::LOG_TRACE:
+      file << "TRACE";
+      break;
+    case syslog::LOG_DEBUG:
+      file << "DEBUG";
+      break;
+    case syslog::LOG_INFO:
+      file << "INFO";
+      break;
+    case syslog::LOG_WARNING:
+      file << "WARNING";
+      break;
+    case syslog::LOG_ERROR:
+      file << "ERROR";
+      break;
+    case syslog::LOG_FATAL:
+      file << "FATAL";
+      break;
+    default:
+      file << "VLOG(" << (syslog::LOG_INFO - severity) << ")";
+  }
+
+  file << ": [" << file_name << "(" << line << ")] " << msg << std::endl;
+
+  return severity != syslog::LOG_FATAL;
+}
 
 const LogState& LogState::Get() {
   auto state = GetState();
@@ -159,6 +323,38 @@ LogState::LogState(const syslog::LogSettings& settings,
   }
 }
 
+template <typename T>
+void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, int line,
+                        const char* tag, const char* condition, const T& msg) const {
+  zx_koid_t tid = GetCurrentThreadKoid();
+  zx_time_t time = zx_clock_get_monotonic();
+
+  // Cached getter for a stringified version of the log message, so we stringify at most once.
+  auto msg_str = [as_str = std::string(), condition, &msg]() mutable -> const std::string& {
+    if (as_str.empty()) {
+      as_str = FullMessageString(condition, msg);
+    }
+
+    return as_str;
+  };
+
+  if (fit::holds_alternative<std::ofstream>(descriptor_)) {
+    auto& file = fit::get<std::ofstream>(descriptor_);
+    if (WriteLogToFile(&file, time, pid_, tid, severity, file_name, line, tag, condition,
+                       msg_str())) {
+      return;
+    }
+  } else if (fit::holds_alternative<zx::socket>(descriptor_)) {
+    auto& socket = fit::get<zx::socket>(descriptor_);
+    if (WriteLogToSocket(&socket, time, pid_, tid, severity, file_name, line, tag, condition,
+                         msg)) {
+      return;
+    }
+  }
+
+  std::cerr << msg_str() << std::endl;
+}
+
 void SetLogSettings(const syslog::LogSettings& settings) { LogState::Set(settings); }
 
 void SetLogSettings(const syslog::LogSettings& settings,
@@ -168,130 +364,14 @@ void SetLogSettings(const syslog::LogSettings& settings,
 
 syslog::LogSeverity GetMinLogLevel() { return LogState::Get().min_severity(); }
 
-void WriteLogValue(syslog::LogSeverity severity, const char* file, int line, const char* tag,
+void WriteLogValue(syslog::LogSeverity severity, const char* file_name, int line, const char* tag,
                    const char* condition, const syslog::LogValue& msg) {
-  WriteLog(severity, file, line, tag, condition, msg.ToString());
+  LogState::Get().WriteLog(severity, file_name, line, tag, condition, msg);
 }
 
-void WriteLog(syslog::LogSeverity severity, const char* fname, int line, const char* tag,
+void WriteLog(syslog::LogSeverity severity, const char* file_name, int line, const char* tag,
               const char* condition, const std::string& msg) {
-  const LogState& state = LogState::Get();
-  std::ostringstream stream;
-  zx_time_t time = zx_clock_get_monotonic();
-  zx_koid_t pid = state.pid();
-  zx_koid_t tid = GetCurrentThreadKoid();
-
-  if (condition)
-    stream << "Check failed: " << condition << ". ";
-
-  stream << msg;
-
-  if (auto& file = state.file(); file.is_open()) {
-    file << "[" << std::setw(5) << std::setfill('0') << time / 1000000000UL << "." << std::setw(6)
-         << (time / 1000UL) % 1000000UL << std::setw(0) << "][" << pid << "][" << tid << "][";
-
-    auto& tag_str = state.tag_str();
-    file << tag_str;
-
-    if (tag) {
-      if (!tag_str.empty()) {
-        file << ", ";
-      }
-
-      file << tag;
-    }
-
-    file << "] ";
-
-    switch (severity) {
-      case syslog::LOG_TRACE:
-        file << "TRACE";
-        break;
-      case syslog::LOG_DEBUG:
-        file << "DEBUG";
-        break;
-      case syslog::LOG_INFO:
-        file << "INFO";
-        break;
-      case syslog::LOG_WARNING:
-        file << "WARNING";
-        break;
-      case syslog::LOG_ERROR:
-        file << "ERROR";
-        break;
-      case syslog::LOG_FATAL:
-        file << "FATAL";
-        break;
-      default:
-        file << "VLOG(" << (syslog::LOG_INFO - severity) << ")";
-    }
-
-    file << ": [" << fname << "(" << line << ")] " << stream.str() << std::endl;
-
-    // See comment below.
-    // TODO(samans)
-    if (severity != syslog::LOG_FATAL) {
-      return;
-    }
-  } else if (auto& socket = state.socket()) {
-    ::fuchsia::diagnostics::stream::Record record;
-    record.severity = ::fuchsia::diagnostics::Severity(severity);
-    record.timestamp = time;
-
-    auto& pid_arg = record.arguments.emplace_back();
-    pid_arg.name = "pid";
-    pid_arg.value.WithUnsignedInt(uint64_t(pid));
-
-    auto& tid_arg = record.arguments.emplace_back();
-    tid_arg.name = "tid";
-    tid_arg.value.WithUnsignedInt(uint64_t(tid));
-
-    auto& dropped = record.arguments.emplace_back();
-    dropped.name = "num_dropped";
-    dropped.value.WithUnsignedInt(GetDropped());
-
-    for (size_t i = 0; i < state.num_tags(); i++) {
-      auto& tag_arg = record.arguments.emplace_back();
-      tag_arg.name = "tag";
-      tag_arg.value.WithText(std::string(state.tags()[i]));
-    }
-
-    if (tag) {
-      auto& tag_arg = record.arguments.emplace_back();
-      tag_arg.name = "tag";
-      tag_arg.value.WithText(tag);
-    }
-
-    auto& msg = record.arguments.emplace_back();
-    msg.name = "message";
-    msg.value.WithText(stream.str());
-
-    auto& file = record.arguments.emplace_back();
-    file.name = "file";
-    file.value.WithText(std::string(fname));
-
-    auto& line_arg = record.arguments.emplace_back();
-    line_arg.name = "line";
-    line_arg.value.WithUnsignedInt(uint64_t(line));
-
-    std::vector<uint8_t> encoded;
-    streams::log_record(record, &encoded);
-
-    auto status = socket.write(0, encoded.data(), encoded.size(), nullptr);
-    if (status != ZX_OK) {
-      IncrementDropped();
-    }
-
-    // Write fatal logs to stderr as well because death tests sometimes verify a certain log message
-    // was printed prior to the crash.
-    // TODO(samans): Convert tests to not depend on stderr. https://fxbug.dev/49593
-    if (status != ZX_ERR_BAD_STATE && status != ZX_ERR_PEER_CLOSED &&
-        severity != syslog::LOG_FATAL) {
-      return;
-    }
-  }
-
-  std::cerr << stream.str() << std::endl;
+  LogState::Get().WriteLog(severity, file_name, line, tag, condition, msg);
 }
 
 }  // namespace syslog_backend
