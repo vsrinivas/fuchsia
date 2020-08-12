@@ -10,6 +10,7 @@
 #include <memory>
 
 #include <ddk/binding.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/i2c.h>
@@ -98,11 +99,11 @@ zx_status_t Tas5805::ResetAndInitialize() {
 
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
-  constexpr uint8_t kDefaultsEnd[][2] = {
+  const uint8_t kDefaultsEnd[][2] = {
       {kRegSelectPage, 0x00},
       {kRegSelectbook, 0x00},
-      // TODO(andresoportus): Configure bridging (e.g. PBTL) from outside this driver.
-      {kRegDeviceCtrl1, kRegDeviceCtrl1BitsPbtlMode | kRegDeviceCtrl1Bits1SpwMode},
+      {kRegDeviceCtrl1, static_cast<uint8_t>((btl_mode_ ? kRegDeviceCtrl1BitsPbtlMode : 0) |
+                                             kRegDeviceCtrl1Bits1SpwMode)},
       {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
       {kRegSelectPage, 0x00},
       {kRegSelectbook, 0x00},
@@ -152,8 +153,19 @@ zx_status_t Tas5805::Create(zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  actual = 0;
+  bool btl_mode = false;
+  status =
+      device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &btl_mode, sizeof(btl_mode), &actual);
+  if (status != ZX_OK) {
+    zxlogf(DEBUG, "%s device_get_metadata failed %d", __FILE__, status);
+  }
+  if (sizeof(btl_mode) != actual) {
+    btl_mode = false;
+  }
+
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<Tas5805>(new (&ac) Tas5805(parent, fragments[FRAGMENT_I2C]));
+  auto dev = std::unique_ptr<Tas5805>(new (&ac) Tas5805(parent, fragments[FRAGMENT_I2C], btl_mode));
   if (!ac.check()) {
     zxlogf(ERROR, "%s Could not allocate memory", __FILE__);
     return ZX_ERR_NO_MEMORY;
@@ -314,17 +326,21 @@ zx_status_t Tas5805::WriteReg(uint8_t reg, uint8_t value) {
     printf("Could not I2C write %d\n", status);
     return status;
   }
-  uint8_t buffer = 0;
-  status = i2c_.ReadSync(reg, &buffer, 1);
-  if (status != ZX_OK) {
-    printf("Could not I2C read %d\n", status);
-    return status;
-  }
-  printf("Read register just written 0x%02X, value 0x%02X\n", reg, buffer);
   return ZX_OK;
 #else
   return i2c_.WriteSync(write_buf, 2);
 #endif
+}
+
+zx_status_t Tas5805::ReadReg(uint8_t reg, uint8_t* value) {
+  auto status = i2c_.WriteReadSync(&reg, 1, value, 1);
+  if (status != ZX_OK) {
+    return status;
+  }
+#ifdef TRACE_I2C
+  printf("Read register 0x%02X, value %02X\n", reg, *value);
+#endif
+  return status;
 }
 
 zx_status_t tas5805_bind(void* ctx, zx_device_t* parent) { return Tas5805::Create(parent); }

@@ -7,14 +7,18 @@
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
 
+#include <thread>
+
+#include <ddk/binding.h>
+#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {
 
 static constexpr uint32_t kCodecTimeoutSecs = 1;
 
-struct Tas5805Test : public Tas5805 {
-  explicit Tas5805Test(zx_device_t* device, const ddk::I2cChannel& i2c) : Tas5805(device, i2c) {
+struct Tas5805TestDevice : public Tas5805 {
+  explicit Tas5805TestDevice(const ddk::I2cChannel& i2c) : Tas5805(nullptr, i2c, false) {
     initialized_ = true;
   }
   zx_status_t CodecSetDaiFormat(dai_format_t* format) {
@@ -41,7 +45,7 @@ struct Tas5805Test : public Tas5805 {
 TEST(Tas5805Test, GoodSetDai) {
   mock_i2c::MockI2c mock_i2c;
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805Test device(nullptr, std::move(i2c));
+  Tas5805TestDevice device(std::move(i2c));
 
   uint32_t channels[] = {0, 1};
   dai_format_t format = {};
@@ -67,7 +71,7 @@ TEST(Tas5805Test, GoodSetDai) {
 TEST(Tas5805Test, BadSetDai) {
   mock_i2c::MockI2c mock_i2c;
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805Test device(nullptr, std::move(i2c));
+  Tas5805TestDevice device(std::move(i2c));
 
   // No format at all.
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, device.CodecSetDaiFormat(nullptr));
@@ -104,7 +108,7 @@ TEST(Tas5805Test, BadSetDai) {
 TEST(Tas5805Test, GetDai) {
   mock_i2c::MockI2c mock_i2c;
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805 device(nullptr, std::move(i2c));
+  Tas5805TestDevice device(std::move(i2c));
   struct AsyncOut {
     sync_completion_t completion;
     zx_status_t status;
@@ -139,7 +143,7 @@ TEST(Tas5805Test, GetDai) {
 
 TEST(Tas5805Test, GetInfo) {
   ddk::I2cChannel unused_i2c;
-  Tas5805 device(nullptr, std::move(unused_i2c));
+  Tas5805TestDevice device(std::move(unused_i2c));
 
   device.CodecGetInfo(
       [](void* ctx, const info_t* info) {
@@ -152,7 +156,7 @@ TEST(Tas5805Test, GetInfo) {
 
 TEST(Tas5805Test, BridgedMode) {
   ddk::I2cChannel unused_i2c;
-  Tas5805 device(nullptr, std::move(unused_i2c));
+  Tas5805TestDevice device(std::move(unused_i2c));
 
   device.CodecIsBridgeable(
       [](void* ctx, bool supports_bridged_mode) { EXPECT_EQ(supports_bridged_mode, false); },
@@ -161,7 +165,7 @@ TEST(Tas5805Test, BridgedMode) {
 
 TEST(Tas5805Test, GetGainFormat) {
   ddk::I2cChannel unused_i2c;
-  Tas5805 device(nullptr, std::move(unused_i2c));
+  Tas5805TestDevice device(std::move(unused_i2c));
 
   device.CodecGetGainFormat(
       [](void* ctx, const gain_format_t* format) {
@@ -175,7 +179,7 @@ TEST(Tas5805Test, GetGainFormat) {
 
 TEST(Tas5805Test, GetPlugState) {
   ddk::I2cChannel unused_i2c;
-  Tas5805 device(nullptr, std::move(unused_i2c));
+  Tas5805TestDevice device(std::move(unused_i2c));
 
   device.CodecGetPlugState(
       [](void* ctx, const plug_state_t* state) {
@@ -187,6 +191,7 @@ TEST(Tas5805Test, GetPlugState) {
 
 TEST(Tas5805Test, Reset) {
   mock_i2c::MockI2c mock_i2c;
+
   mock_i2c
       .ExpectWriteStop({0x00, 0x00})   // Page 0.
       .ExpectWriteStop({0x7f, 0x00})   // book 0.
@@ -194,15 +199,39 @@ TEST(Tas5805Test, Reset) {
       .ExpectWriteStop({0x01, 0x11})   // Reset.
       .ExpectWriteStop({0x00, 0x00})   // Page 0.
       .ExpectWriteStop({0x7f, 0x00})   // book 0.
-      .ExpectWriteStop({0x02, 0x05})   // Normal modulation, mono.
+      .ExpectWriteStop({0x02, 0x01})   // Normal modulation, mono, no PBTL.
       .ExpectWriteStop({0x03, 0x03})   // Play,
       .ExpectWriteStop({0x00, 0x00})   // Page 0.
       .ExpectWriteStop({0x7f, 0x00})   // book 0.
       .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
-  Tas5805 device(nullptr, std::move(i2c));
+  Tas5805TestDevice device(std::move(i2c));
   device.ResetAndInitialize();
   mock_i2c.VerifyAndClear();
 }
+
+TEST(Tas5805Test, Pbtl) {
+  mock_i2c::MockI2c mock_i2c;
+
+  // Reset with PBTL mode on.
+  mock_i2c
+      .ExpectWriteStop({0x00, 0x00})   // Page 0.
+      .ExpectWriteStop({0x7f, 0x00})   // book 0.
+      .ExpectWriteStop({0x03, 0x02})   // HiZ, Enables DSP.
+      .ExpectWriteStop({0x01, 0x11})   // Reset.
+      .ExpectWriteStop({0x00, 0x00})   // Page 0.
+      .ExpectWriteStop({0x7f, 0x00})   // book 0.
+      .ExpectWriteStop({0x02, 0x05})   // Normal modulation, mono, PBTL.
+      .ExpectWriteStop({0x03, 0x03})   // Play,
+      .ExpectWriteStop({0x00, 0x00})   // Page 0.
+      .ExpectWriteStop({0x7f, 0x00})   // book 0.
+      .ExpectWriteStop({0x78, 0x80});  // Clear analog fault.
+
+  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  Tas5805 device(nullptr, std::move(i2c), true);
+  device.ResetAndInitialize();
+  mock_i2c.VerifyAndClear();
+}
+
 }  // namespace audio

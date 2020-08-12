@@ -317,6 +317,14 @@ zx_status_t Mt8167::AudioInit() {
       return status;
     }
   } else {
+    bool btl_mode = true;
+    const device_metadata_t codec_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data = &btl_mode,
+            .length = sizeof(btl_mode),
+        },
+    };
     constexpr zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5805}};
 
@@ -326,8 +334,8 @@ zx_status_t Mt8167::AudioInit() {
         .fragments = cleo_codec_fragments,
         .fragments_count = countof(cleo_codec_fragments),
         .coresident_device_index = UINT32_MAX,
-        .metadata_list = nullptr,
-        .metadata_count = 0,
+        .metadata_list = codec_metadata,
+        .metadata_count = countof(codec_metadata),
     };
 
     status = DdkAddComposite("audio-tas5805", &comp_desc);
