@@ -58,8 +58,10 @@ success("FlexibleBitsKnownValue") {
 }
 
 success("FlexibleBitsUnknownValue") {
-    // TODO(fxb/7847): Implement flexible bits in Rust, HLCPP, and LLCPP.
-    bindings_denylist = [rust,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible bits
+    // NOTE: Go does not validate bits so passes this test, but does not yet fully
+    // implement flexible bits
+    bindings_denylist = [dart,rust,cpp,llcpp],
     value = FlexibleBitsStruct {
         b: 0xffffffff,
     },
@@ -71,8 +73,10 @@ success("FlexibleBitsUnknownValue") {
 }
 
 success("FlexibleBitsUint64UnknownValue") {
-    // TODO(fxb/7847): Implement flexible bits in Rust, HLCPP, and LLCPP.
-    bindings_denylist = [rust,cpp,llcpp],
+    // TODO(fxb/7847): Implement flexible bits
+    // NOTE: Go does not validate bits so passes this test, but does not yet fully
+    // implement flexible bits
+    bindings_denylist = [dart,rust,cpp,llcpp],
     value = FlexibleBitsUint64Struct {
         b: 0x0102030405060708,
     },
