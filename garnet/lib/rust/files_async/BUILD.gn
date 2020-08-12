@@ -21,6 +21,7 @@ rustc_library("files_async") {
   test_deps = [
     "//garnet/lib/rust/io_util",
     "//src/lib/storage/vfs/rust:vfs",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:tempfile",

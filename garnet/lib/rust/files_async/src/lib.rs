@@ -235,9 +235,26 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
 /// takes longer than the given `timeout` duration.
 pub async fn readdir_with_timeout(
     dir: &DirectoryProxy,
-    timeout_duration: zx::Duration,
+    timeout: zx::Duration,
 ) -> Result<Vec<DirEntry>, Error> {
-    readdir(&dir).on_timeout(timeout_duration.after_now(), || Err(Error::Timeout)).await
+    readdir(&dir).on_timeout(timeout.after_now(), || Err(Error::Timeout)).await
+}
+
+/// Returns `true` if an entry with the specified name exists in the given directory.
+pub async fn dir_contains(dir: &DirectoryProxy, name: &str) -> Result<bool, Error> {
+    Ok(readdir(&dir).await?.iter().any(|e| e.name == name))
+}
+
+/// Returns `true` if an entry with the specified name exists in the given directory.
+///
+/// Timesout if reading the directory's entries takes longer than the given `timeout`
+/// duration.
+pub async fn dir_contains_with_timeout(
+    dir: &DirectoryProxy,
+    name: &str,
+    timeout: zx::Duration,
+) -> Result<bool, Error> {
+    Ok(readdir_with_timeout(&dir, timeout).await?.iter().any(|e| e.name == name))
 }
 
 fn parse_dir_entries(mut buf: &[u8]) -> Vec<Result<DirEntry, DecodeDirentError>> {
@@ -344,6 +361,7 @@ fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Err
 mod tests {
     use {
         super::*,
+        anyhow::Context as _,
         fuchsia_async as fasync,
         fuchsia_zircon::DurationNum,
         futures::{channel::oneshot, stream::StreamExt},
@@ -467,6 +485,96 @@ mod tests {
                 ]
             );
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_dir_contains() -> Result<(), anyhow::Error> {
+        let (dir_client, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let dir = pseudo_directory! {
+            "afile" => read_only_static(""),
+            "zzz" => read_only_static(""),
+            "subdir" => pseudo_directory! {
+                "ignored" => read_only_static(""),
+            },
+        };
+        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        let () = dir.open(
+            scope,
+            fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
+            0,
+            vfs::path::Path::empty(),
+            ServerEnd::new(server_end.into_channel()),
+        );
+
+        for file in &["afile", "zzz", "subdir"] {
+            assert!(dir_contains(&dir_client, file)
+                .await
+                .with_context(|| format!("error checking if dir contains {}", file))?);
+        }
+
+        assert!(!dir_contains(&dir_client, "notin")
+            .await
+            .context("error checking if dir contains notin")?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_dir_contains_with_timeout_err() {
+        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        executor.set_fake_time(fasync::Time::from_nanos(0));
+
+        let fut = async move {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            dir_contains_with_timeout(&dir, "notin", 0.nanos()).await
+        };
+
+        pin_utils::pin_mut!(fut);
+        let mut i = 1;
+        let result = loop {
+            executor.wake_main_future();
+            match executor.run_one_step(&mut fut) {
+                Some(Poll::Ready(x)) => break x,
+                None => panic!("Executor stalled"),
+                Some(Poll::Pending) => {
+                    executor.set_fake_time(fasync::Time::from_nanos(10 * i));
+                    i += 1;
+                }
+            }
+        };
+
+        matches::assert_matches!(result, Err(Error::Timeout));
+    }
+
+    #[test]
+    fn test_dir_contains_with_timeout_ok() {
+        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        executor.set_fake_time(fasync::Time::from_nanos(0));
+
+        let fut = async move {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            let first = dir_contains_with_timeout(&dir, "notin", 1.nanos())
+                .await
+                .context("error checking dir contains notin");
+            let second = dir_contains_with_timeout(&dir, "a", 1.nanos())
+                .await
+                .context("error checking dir contains a");
+            (first, second)
+        };
+
+        pin_utils::pin_mut!(fut);
+        let result = loop {
+            executor.wake_main_future();
+            match executor.run_one_step(&mut fut) {
+                Some(Poll::Ready(x)) => break x,
+                None => panic!("Executor stalled"),
+                Some(Poll::Pending) => {}
+            }
+        };
+
+        matches::assert_matches!(result, (Ok(false), Ok(true)));
     }
 
     #[fasync::run_singlethreaded(test)]
