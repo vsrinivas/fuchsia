@@ -429,7 +429,7 @@ TEST_F(DataProviderTest, GetSnapshot_NoDataOnEmptyAllowlists) {
   EXPECT_FALSE(snapshot.has_archive());
   EXPECT_TRUE(snapshot.has_annotations());
   EXPECT_THAT(snapshot.annotations(), UnorderedElementsAreArray({
-                                          MatchesAnnotation("debug.pool-size", "1"),
+                                          MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "1"),
                                       }));
 }
 

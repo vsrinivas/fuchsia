@@ -183,15 +183,18 @@ TEST_F(SnapshotRequestManagerTest, SetsPoolSizeAnnotation) {
   ASSERT_TRUE(context2.snapshot.has_annotations());
   ASSERT_TRUE(context3.snapshot.has_annotations());
 
-  EXPECT_THAT(context1.snapshot.annotations(), UnorderedElementsAreArray({
-                                                   MatchesAnnotation(kAnnotationDebugPoolSize, "2"),
-                                               }));
-  EXPECT_THAT(context2.snapshot.annotations(), UnorderedElementsAreArray({
-                                                   MatchesAnnotation(kAnnotationDebugPoolSize, "2"),
-                                               }));
-  EXPECT_THAT(context3.snapshot.annotations(), UnorderedElementsAreArray({
-                                                   MatchesAnnotation(kAnnotationDebugPoolSize, "1"),
-                                               }));
+  EXPECT_THAT(context1.snapshot.annotations(),
+              UnorderedElementsAreArray({
+                  MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "2"),
+              }));
+  EXPECT_THAT(context2.snapshot.annotations(),
+              UnorderedElementsAreArray({
+                  MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "2"),
+              }));
+  EXPECT_THAT(context3.snapshot.annotations(),
+              UnorderedElementsAreArray({
+                  MatchesAnnotation(kAnnotationDebugSnapshotPoolSize, "1"),
+              }));
 }
 
 }  // namespace

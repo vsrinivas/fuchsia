@@ -61,7 +61,7 @@ void SnapshotRequestManager::Respond(uint64_t id, Snapshot snapshot) {
       (snapshot.has_annotations() &&
        snapshot.annotations().size() < fuchsia::feedback::MAX_NUM_ANNOTATIONS_PROVIDED)) {
     snapshot.mutable_annotations()->push_back(fuchsia::feedback::Annotation{
-        .key = kAnnotationDebugPoolSize,
+        .key = kAnnotationDebugSnapshotPoolSize,
         .value = std::to_string(pool->callbacks.size()),
     });
   }
