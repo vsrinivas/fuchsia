@@ -49,7 +49,7 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   SimpleCodecClient codec_;
   std::unique_ptr<AmlTdmDevice> aml_audio_;
-  metadata::Tdm tdm_config_ = {};
+  metadata::AmlConfig metadata_ = {};
 
  private:
   friend class fbl::RefPtr<AstroAudioStreamOut>;

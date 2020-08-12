@@ -12,22 +12,23 @@
 
 // static
 std::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
-                                                   aml_tdm_out_t tdm_dev, aml_frddr_t frddr_dev,
-                                                   aml_tdm_mclk_t mclk, AmlVersion version) {
+                                                   aml_tdm_out_t tdm, aml_frddr_t frddr,
+                                                   aml_tdm_mclk_t mclk,
+                                                   metadata::AmlVersion version) {
   // FRDDR A has 256 64-bit lines in the FIFO, B and C have 128.
   uint32_t fifo_depth = 128 * 8;  // in bytes.
-  if (frddr_dev == FRDDR_A) {
+  if (frddr == FRDDR_A) {
     fifo_depth = 256 * 8;
   }
 
   fbl::AllocChecker ac;
-  auto tdm = std::unique_ptr<AmlTdmDevice>(
-      new (&ac) AmlTdmDevice(std::move(mmio), src, tdm_dev, frddr_dev, mclk, fifo_depth, version));
+  auto dev = std::unique_ptr<AmlTdmDevice>(
+      new (&ac) AmlTdmDevice(std::move(mmio), src, tdm, frddr, mclk, fifo_depth, version));
   if (!ac.check()) {
     return nullptr;
   }
 
-  return tdm;
+  return dev;
 }
 
 void AmlTdmDevice::Initialize() {
@@ -37,10 +38,10 @@ void AmlTdmDevice::Initialize() {
 
   zx_off_t mclk_a = {};
   switch (version_) {
-    case AmlVersion::kS905D2G:
+    case metadata::AmlVersion::kS905D2G:
       mclk_a = EE_AUDIO_MCLK_A_CTRL;
       break;
-    case AmlVersion::kS905D3G:
+    case metadata::AmlVersion::kS905D3G:
       mclk_a = EE_AUDIO_MCLK_A_CTRL_D3G;
       break;
   }
@@ -64,10 +65,10 @@ void AmlTdmDevice::Initialize() {
   // ack delay = 0
   // set destination tdm block and enable that selection
   switch (version_) {
-    case AmlVersion::kS905D2G:
+    case metadata::AmlVersion::kS905D2G:
       mmio_.Write32(tdm_ch_ | (1 << 3), GetFrddrOffset(FRDDR_CTRL0_OFFS));
       break;
-    case AmlVersion::kS905D3G:
+    case metadata::AmlVersion::kS905D3G:
       mmio_.Write32(tdm_ch_ | (1 << 4), GetFrddrOffset(FRDDR_CTRL2_OFFS_D3G));
       break;
   }
@@ -94,10 +95,10 @@ void AmlTdmDevice::Initialize() {
   // corresponds to pad 0, TDM_OUT_B to pad 1, and TDM_OUT_C to pad 2.
   uint32_t pad1 = {};
   switch (version_) {
-    case AmlVersion::kS905D2G:
+    case metadata::AmlVersion::kS905D2G:
       pad1 = EE_AUDIO_MST_PAD_CTRL1;
       break;
-    case AmlVersion::kS905D3G:
+    case metadata::AmlVersion::kS905D3G:
       pad1 = EE_AUDIO_MST_PAD_CTRL1_D3G;
       break;
   }
@@ -123,10 +124,10 @@ zx_status_t AmlTdmDevice::SetMclkDiv(uint32_t div) {
 
   zx_off_t mclk_a = {};
   switch (version_) {
-    case AmlVersion::kS905D2G:
+    case metadata::AmlVersion::kS905D2G:
       mclk_a = EE_AUDIO_MCLK_A_CTRL;
       break;
-    case AmlVersion::kS905D3G:
+    case metadata::AmlVersion::kS905D3G:
       mclk_a = EE_AUDIO_MCLK_A_CTRL_D3G;
       break;
   }
@@ -177,20 +178,20 @@ zx_status_t AmlTdmDevice::SetMClkPad(aml_tdm_mclk_pad_t mclk_pad) {
   switch (mclk_pad) {
     case MCLK_PAD_0:
       switch (version_) {
-        case AmlVersion::kS905D2G:
+        case metadata::AmlVersion::kS905D2G:
           mmio_.Write32(mclk_ch_, EE_AUDIO_MST_PAD_CTRL0);
           break;
-        case AmlVersion::kS905D3G:
+        case metadata::AmlVersion::kS905D3G:
           mmio_.Write32((mclk_ch_ << 8) | (1 << 15), EE_AUDIO_MST_PAD_CTRL0);  // Bit 15 to enable.
           break;
       }
       break;
     case MCLK_PAD_1:
       switch (version_) {
-        case AmlVersion::kS905D2G:
+        case metadata::AmlVersion::kS905D2G:
           mmio_.Write32(mclk_ch_ << 4, EE_AUDIO_MST_PAD_CTRL0);
           break;
-        case AmlVersion::kS905D3G:
+        case metadata::AmlVersion::kS905D3G:
           mmio_.Write32((mclk_ch_ << 24) | (1 << 31), EE_AUDIO_MST_PAD_CTRL0);  // Bit 31 to enable.
           break;
       }
@@ -234,11 +235,11 @@ zx_status_t AmlTdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
 void AmlTdmDevice::ConfigTdmOutSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
                                     uint8_t bits_per_sample, uint8_t mix_mask) {
   switch (version_) {
-    case AmlVersion::kS905D2G: {
+    case metadata::AmlVersion::kS905D2G: {
       uint32_t reg0 = bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (mix_mask << 20);
       mmio_.Write32(reg0, GetTdmOffset(TDMOUT_CTRL0_OFFS));
     } break;
-    case AmlVersion::kS905D3G: {
+    case metadata::AmlVersion::kS905D3G: {
       uint32_t reg0 =
           bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (1 << 31);  // Bit 31 to enable.
       mmio_.Write32(reg0, GetTdmOffset(TDMOUT_CTRL0_OFFS));

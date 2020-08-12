@@ -9,6 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/metadata/audio.h>
+#include <soc/aml-common/aml-audio.h>
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -171,9 +172,11 @@ zx_status_t Astro::AudioInit() {
   // Output devices.
   // Add PCM TDM.
   {
-    metadata::Tdm metadata = {};
-    metadata.type = metadata::TdmType::Pcm;
-    metadata.codec = metadata::Codec::None;
+    metadata::AmlConfig metadata = {};
+    metadata.bus = metadata::AmlBus::TDM_A;
+    metadata.version = metadata::AmlVersion::kS905D2G;
+    metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.tdm.codec = metadata::Codec::None;
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
@@ -218,9 +221,11 @@ zx_status_t Astro::AudioInit() {
       return status;
     }
 
-    metadata::Tdm metadata = {};
-    metadata.type = metadata::TdmType::I2s;
-    metadata.codec = metadata::Codec::Tas27xx;
+    metadata::AmlConfig metadata = {};
+    metadata.bus = metadata::AmlBus::TDM_B;
+    metadata.version = metadata::AmlVersion::kS905D2G;
+    metadata.tdm.type = metadata::TdmType::I2s;
+    metadata.tdm.codec = metadata::Codec::Tas27xx;
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,

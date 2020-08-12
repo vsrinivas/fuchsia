@@ -127,7 +127,7 @@ zx_status_t NelsonAudioStreamIn::InitPDev() {
   }
 
   lib_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL, 7, 499, TODDR_B,
-                              AmlVersion::kS905D3G);
+                              metadata::AmlVersion::kS905D3G);
   if (lib_ == nullptr) {
     zxlogf(ERROR, "%s failed to create audio device", __FUNCTION__);
     return ZX_ERR_NO_MEMORY;

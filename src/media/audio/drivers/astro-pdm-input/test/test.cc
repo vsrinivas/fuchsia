@@ -39,13 +39,13 @@ struct TestAmlPdmDevice : public AmlPdmDevice {
         fbl::Array(new ddk_mock::MockMmioReg[n_registers], n_registers);
     static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.data(), sizeof(uint32_t),
                                                      n_registers);
-    return std::make_unique<TestAmlPdmDevice>(unused_region.GetMmioBuffer(),
-                                              unused_region.GetMmioBuffer(), HIFI_PLL, 3, 249,
-                                              TODDR_B, kTestFifoDepth, AmlVersion::kS905D2G);
+    return std::make_unique<TestAmlPdmDevice>(
+        unused_region.GetMmioBuffer(), unused_region.GetMmioBuffer(), HIFI_PLL, 3, 249, TODDR_B,
+        kTestFifoDepth, metadata::AmlVersion::kS905D2G);
   }
   TestAmlPdmDevice(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio,
                    ee_audio_mclk_src_t clk_src, uint32_t sysclk_div, uint32_t dclk_div,
-                   aml_toddr_t toddr, uint32_t fifo_depth, AmlVersion version)
+                   aml_toddr_t toddr, uint32_t fifo_depth, metadata::AmlVersion version)
       : AmlPdmDevice(std::move(pdm_mmio), std::move(audio_mmio), clk_src, sysclk_div, dclk_div,
                      toddr, fifo_depth, version) {}
   void ConfigPdmIn(uint8_t channels_mask) override { channels_mask_ = channels_mask; }

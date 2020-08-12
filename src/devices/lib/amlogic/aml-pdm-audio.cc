@@ -54,11 +54,9 @@ static const uint32_t lpf2osr64[] = {
 constexpr uint32_t kLpf2osr64Len = static_cast<uint32_t>(countof(lpf2osr64));
 
 // static
-std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
-                                                   ddk::MmioBuffer audio_mmio,
-                                                   ee_audio_mclk_src_t pdm_clk_src,
-                                                   uint32_t sysclk_div, uint32_t dclk_div,
-                                                   aml_toddr_t toddr_dev, AmlVersion version) {
+std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(
+    ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio, ee_audio_mclk_src_t pdm_clk_src,
+    uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr_dev, metadata::AmlVersion version) {
   // TODDR A has 256 64-bit lines in the FIFO, B and C have 128.
   uint32_t fifo_depth = 128 * 8;  // in bytes.
   if (toddr_dev == TODDR_A) {
@@ -84,7 +82,7 @@ std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
 void AmlPdmDevice::InitRegs() {
   // Setup toddr block
   switch (version_) {
-    case AmlVersion::kS905D2G:
+    case metadata::AmlVersion::kS905D2G:
       audio_mmio_.Write32((0x02 << 13) |    // Right justified 16-bit
                               (31 << 8) |   // msb position of data out of pdm
                               (16 << 3) |   // lsb position of data out of pdm
@@ -94,7 +92,7 @@ void AmlPdmDevice::InitRegs() {
                               (0x02 << 8),                 // STATUS2 source is ddr position
                           GetToddrOffset(TODDR_CTRL1_OFFS));
       break;
-    case AmlVersion::kS905D3G:
+    case metadata::AmlVersion::kS905D3G:
       audio_mmio_.Write32((0x02 << 13) |   // Right justified 16-bit
                               (31 << 8) |  // msb position of data out of pdm
                               (16 << 3),   // lsb position of data out of pdm

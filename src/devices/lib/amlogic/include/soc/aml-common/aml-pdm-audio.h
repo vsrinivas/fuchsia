@@ -22,10 +22,10 @@ class AmlPdmDevice {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlPdmDevice);
 
-  static std::unique_ptr<AmlPdmDevice> Create(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio,
-                                              ee_audio_mclk_src_t pdm_clk_src, uint32_t sclk_div,
-                                              uint32_t dclk_div, aml_toddr_t toddr_dev,
-                                              AmlVersion version = AmlVersion::kS905D2G);
+  static std::unique_ptr<AmlPdmDevice> Create(
+      ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio, ee_audio_mclk_src_t pdm_clk_src,
+      uint32_t sclk_div, uint32_t dclk_div, aml_toddr_t toddr_dev,
+      metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   // Sets the buffer/length pointers for dma engine
   //  must resize in lower 32-bits of address space
@@ -69,7 +69,7 @@ class AmlPdmDevice {
  protected:
   AmlPdmDevice(ddk::MmioBuffer pdm_mmio, ddk::MmioBuffer audio_mmio, ee_audio_mclk_src_t clk_src,
                uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr, uint32_t fifo_depth,
-               AmlVersion version)
+               metadata::AmlVersion version)
       : fifo_depth_(fifo_depth),
         toddr_ch_(toddr),
         clk_src_(clk_src),
@@ -119,7 +119,7 @@ class AmlPdmDevice {
   const zx_off_t toddr_base_;  // base offset of frddr ch used by this instance
   const ddk::MmioBuffer pdm_mmio_;
   const ddk::MmioBuffer audio_mmio_;
-  const AmlVersion version_;
+  const metadata::AmlVersion version_;
 };
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_PDM_AUDIO_H_

@@ -22,10 +22,9 @@ class AmlTdmDevice {
   static constexpr int32_t kSclkDivBits = 10;
   static constexpr int32_t kLRclkDivBits = 10;
 
-  static std::unique_ptr<AmlTdmDevice> Create(ddk::MmioBuffer mmio, ee_audio_mclk_src_t src,
-                                              aml_tdm_out_t tdm_dev, aml_frddr_t frddr_dev,
-                                              aml_tdm_mclk_t mclk,
-                                              AmlVersion version = AmlVersion::kS905D2G);
+  static std::unique_ptr<AmlTdmDevice> Create(
+      ddk::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_tdm_out_t tdm, aml_frddr_t frddr,
+      aml_tdm_mclk_t mclk, metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   // Configure an mclk channel divider
   zx_status_t SetMclkDiv(uint32_t div);
@@ -73,7 +72,8 @@ class AmlTdmDevice {
  protected:
   // Protected for unit test.
   AmlTdmDevice(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
-               aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth, AmlVersion version)
+               aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
+               metadata::AmlVersion version)
       : fifo_depth_(fifo_depth),
         tdm_ch_(tdm),
         frddr_ch_(frddr),
@@ -94,7 +94,7 @@ class AmlTdmDevice {
   const zx_off_t frddr_base_;  // base offset of frddr ch used by this instance
   const zx_off_t tdm_base_;    // base offset of our tdmout block
   const ddk::MmioBuffer mmio_;
-  const AmlVersion version_;
+  const metadata::AmlVersion version_;
   friend class std::default_delete<AmlTdmDevice>;
 
   /* Get the register block offset for our ddr block */

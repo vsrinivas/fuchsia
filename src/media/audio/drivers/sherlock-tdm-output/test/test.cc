@@ -79,10 +79,11 @@ struct AmlTdmDeviceTest : public AmlTdmDevice {
     static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.data(), sizeof(uint32_t),
                                                      n_registers);
     return std::make_unique<T>(unused_region.GetMmioBuffer(), HIFI_PLL, TDM_OUT_C, FRDDR_A, MCLK_C,
-                               0, AmlVersion::kS905D2G);
+                               0, metadata::AmlVersion::kS905D2G);
   }
   AmlTdmDeviceTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
-                   aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth, AmlVersion version)
+                   aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
+                   metadata::AmlVersion version)
       : AmlTdmDevice(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
   void Initialize() override { initialize_called_++; }
   void Shutdown() override { shutdown_called_++; }
@@ -146,7 +147,7 @@ TEST(SherlockAudioStreamOutTest, MuteChannels) {
   struct AmlTdmDeviceMuteTest : public AmlTdmDeviceTest {
     AmlTdmDeviceMuteTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
                          aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
-                         AmlVersion version)
+                         metadata::AmlVersion version)
         : AmlTdmDeviceTest(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
     zx_status_t ConfigTdmOutLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override {
       if (lane >= kMaxLanes) {
@@ -576,7 +577,7 @@ TEST(SherlockAudioStreamOutTest, SetRate) {
   codecs[0] = std::make_unique<Tas5720GainTest>(mock_i2c0.GetProto());
   codecs[1] = std::make_unique<Tas5720GainTest>(mock_i2c1.GetProto());
   codecs[2] = std::make_unique<Tas5720GainTest>(mock_i2c2.GetProto());
-  Tas5720* codecs_raw[3]; // Alive for the duration of the test.
+  Tas5720* codecs_raw[3];  // Alive for the duration of the test.
   codecs_raw[0] = codecs[0].get();
   codecs_raw[1] = codecs[1].get();
   codecs_raw[2] = codecs[2].get();

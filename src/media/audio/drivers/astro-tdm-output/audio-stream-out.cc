@@ -56,7 +56,7 @@ zx_status_t AstroAudioStreamOut::InitHW() {
   aml_audio_->Initialize();
   // Setup TDM.
 
-  switch (tdm_config_.type) {
+  switch (metadata_.tdm.type) {
     case metadata::TdmType::I2s:
       // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample.
       // Note: 3 bit offest places msb of sample one sclk period after edge of fsync
@@ -100,7 +100,7 @@ zx_status_t AstroAudioStreamOut::InitHW() {
 
   // 48kHz: sclk=76.8MHz/25 = 3.072MHz, 3.072MHz/64=48kkHz
   // 96kHz: sclk=153.6MHz/25 = 6.144MHz, 6.144MHz/64=96kHz
-  switch (tdm_config_.type) {
+  switch (metadata_.tdm.type) {
     case metadata::TdmType::I2s:
       // lrduty = 32 sclk cycles (write 31) for i2s
       // invert sclk = true = sclk is rising edge in middle of bit for i2s
@@ -139,14 +139,14 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
 
   auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get composite protocol");
+    zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
     return status;
   }
 
   size_t actual = 0;
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &tdm_config_,
-                               sizeof(metadata::Tdm), &actual);
-  if (status != ZX_OK || sizeof(metadata::Tdm) != actual) {
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
+                               sizeof(metadata::AmlConfig), &actual);
+  if (status != ZX_OK || sizeof(metadata::AmlConfig) != actual) {
     zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
@@ -154,19 +154,18 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   zx_device_t* fragments[FRAGMENT_COUNT] = {};
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   // Either we have all fragments (for I2S) or we have only one fragment (for PCM).
-  switch (tdm_config_.type) {
-    case metadata::TdmType::I2s:
-      if (actual != countof(fragments)) {
-        zxlogf(ERROR, "could not get the correct number of fragments for I2S %lu", actual);
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      break;
-    case metadata::TdmType::Pcm:
-      if (actual != 1) {
-        zxlogf(ERROR, "could not get the correct number of fragments for PCM %lu", actual);
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      break;
+  if (metadata_.tdm.codec != metadata::Codec::None) {
+    if (actual != countof(fragments)) {
+      zxlogf(ERROR, "%s could not get the correct number of fragments with codec %lu", __FILE__,
+             actual);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  } else {
+    if (actual != 1) {
+      zxlogf(ERROR, "%s could not get the correct number of fragments with no codec %lu", __FILE__,
+             actual);
+      return ZX_ERR_NOT_SUPPORTED;
+    }
   }
 
   pdev_ = fragments[FRAGMENT_PDEV];
@@ -180,7 +179,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return status;
   }
 
-  if (tdm_config_.codec != metadata::Codec::None) {
+  if (metadata_.tdm.codec != metadata::Codec::None) {
     status = codec_.SetProtocol(fragments[FRAGMENT_CODEC]);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s could set protocol - %d", __func__, status);
@@ -193,22 +192,30 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
   if (status != ZX_OK) {
     return status;
   }
-
-  switch (tdm_config_.type) {
-    case metadata::TdmType::I2s:
-      aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B);
-      if (aml_audio_ == nullptr) {
-        zxlogf(ERROR, "%s failed to create TDM device", __func__);
-        return ZX_ERR_NO_MEMORY;
-      }
+  aml_tdm_out_t tdm = {};
+  aml_frddr_t ddr = {};
+  aml_tdm_mclk_t mclk = {};
+  switch (metadata_.bus) {
+    case metadata::AmlBus::TDM_A:
+      tdm = TDM_OUT_A;
+      ddr = FRDDR_A;
+      mclk = MCLK_A;
       break;
-    case metadata::TdmType::Pcm:
-      aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_A, FRDDR_A, MCLK_A);
-      if (aml_audio_ == nullptr) {
-        zxlogf(ERROR, "%s failed to create PCM device", __func__);
-        return ZX_ERR_NO_MEMORY;
-      }
+    case metadata::AmlBus::TDM_B:
+      tdm = TDM_OUT_B;
+      ddr = FRDDR_B;
+      mclk = MCLK_B;
       break;
+    case metadata::AmlBus::TDM_C:
+      tdm = TDM_OUT_C;
+      ddr = FRDDR_C;
+      mclk = MCLK_C;
+      break;
+  }
+  aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, tdm, ddr, mclk, metadata_.version);
+  if (aml_audio_ == nullptr) {
+    zxlogf(ERROR, "%s failed to create TDM device", __func__);
+    return ZX_ERR_NO_MEMORY;
   }
 
   // Initialize the ring buffer
@@ -231,7 +238,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return status;
   }
 
-  if (tdm_config_.codec != metadata::Codec::None) {
+  if (metadata_.tdm.codec != metadata::Codec::None) {
     auto info = codec_.GetInfo();
     if (info.is_error())
       return info.error_value();
@@ -281,7 +288,7 @@ zx_status_t AstroAudioStreamOut::Init() {
   }
 
   // Set our gain capabilities.
-  if (tdm_config_.codec != metadata::Codec::None) {
+  if (metadata_.tdm.codec != metadata::Codec::None) {
     auto gain = codec_.GetGainState();
     if (gain.is_error()) {
       return gain.error_value();
@@ -313,7 +320,7 @@ zx_status_t AstroAudioStreamOut::Init() {
     cur_gain_state_.can_agc = false;
   }
 
-  switch (tdm_config_.type) {
+  switch (metadata_.tdm.type) {
     case metadata::TdmType::I2s:
       snprintf(device_name_, sizeof(device_name_), "astro-audio-i2s-out");
       unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
@@ -352,7 +359,7 @@ void AstroAudioStreamOut::ProcessRingNotification() {
 
 zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = aml_audio_->fifo_depth();
-  switch (tdm_config_.type) {
+  switch (metadata_.tdm.type) {
     case metadata::TdmType::I2s:
       // Report our external delay based on the chosen frame rate.  Note that these
       // delays were measured on Astro hardware, and should be pretty good, but they
@@ -380,7 +387,7 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
   }
 
   if (req.frames_per_second != dai_format_.frame_rate) {
-    if (tdm_config_.codec != metadata::Codec::None) {
+    if (metadata_.tdm.codec != metadata::Codec::None) {
       // Put codec in safe state for rate change
       auto status = codec_.Stop();
       if (status != ZX_OK) {
@@ -395,8 +402,8 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
       dai_format_.frame_rate = last_rate;
       return status;
     }
-    if (tdm_config_.codec != metadata::Codec::None) {
-      auto status = codec_.SetDaiFormat(dai_format_);
+    if (metadata_.tdm.codec != metadata::Codec::None) {
+      status = codec_.SetDaiFormat(dai_format_);
       if (status != ZX_OK) {
         dai_format_.frame_rate = last_rate;
         return status;
@@ -411,7 +418,7 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
 }
 
 void AstroAudioStreamOut::ShutdownHook() {
-  if (tdm_config_.codec != metadata::Codec::None) {
+  if (metadata_.tdm.codec != metadata::Codec::None) {
     // safe the codec so it won't throw clock errors when tdm bus shuts down
     codec_.Stop();
   }
@@ -420,7 +427,7 @@ void AstroAudioStreamOut::ShutdownHook() {
 }
 
 zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
-  if (tdm_config_.codec != metadata::Codec::None) {
+  if (metadata_.tdm.codec != metadata::Codec::None) {
     // Modify parts of the gain state we have received in the request.
     GainState gain({.gain_db = req.gain,
                     .muted = cur_gain_state_.cur_mute,
@@ -478,7 +485,7 @@ zx_status_t AstroAudioStreamOut::Start(uint64_t* out_start_time) {
   } else {
     us_per_notification_ = 0;
   }
-  if (tdm_config_.codec != metadata::Codec::None) {
+  if (metadata_.tdm.codec != metadata::Codec::None) {
     // Restore mute to cur_gain_state_.cur_mute (we set it to true in Stop below).
     codec_.SetGainState({.gain_db = cur_gain_state_.cur_gain,
                          .muted = cur_gain_state_.cur_mute,
@@ -488,7 +495,7 @@ zx_status_t AstroAudioStreamOut::Start(uint64_t* out_start_time) {
 }
 
 zx_status_t AstroAudioStreamOut::Stop() {
-  if (tdm_config_.codec != metadata::Codec::None) {
+  if (metadata_.tdm.codec != metadata::Codec::None) {
     // Set mute to true.
     codec_.SetGainState({.gain_db = cur_gain_state_.cur_gain,
                          .muted = true,

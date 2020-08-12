@@ -63,10 +63,11 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
 struct AmlTdmDeviceTest : public AmlTdmDevice {
   static std::unique_ptr<AmlTdmDeviceTest> Create(ddk_mock::MockMmioRegRegion& region) {
     return std::make_unique<AmlTdmDeviceTest>(region.GetMmioBuffer(), HIFI_PLL, TDM_OUT_C, FRDDR_C,
-                                              MCLK_C, 0, AmlVersion::kS905D2G);
+                                              MCLK_C, 0, metadata::AmlVersion::kS905D2G);
   }
   AmlTdmDeviceTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
-                   aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth, AmlVersion version)
+                   aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
+                   metadata::AmlVersion version)
       : AmlTdmDevice(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
 };
 
@@ -74,8 +75,8 @@ struct AstroAudioStreamOutTest : public AstroAudioStreamOut {
   AstroAudioStreamOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region)
       : AstroAudioStreamOut(fake_ddk::kFakeParent) {
     codec_.SetProtocol(codec_protocol);
-    tdm_config_.type = metadata::TdmType::I2s;
-    tdm_config_.codec = metadata::Codec::Tas27xx;
+    metadata_.tdm.type = metadata::TdmType::I2s;
+    metadata_.tdm.codec = metadata::Codec::Tas27xx;
     aml_audio_ = AmlTdmDeviceTest::Create(region);
   }
 
