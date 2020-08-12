@@ -231,18 +231,6 @@ From //vdso/vdso.gni:7
 
 From //system/ulib/fidl/BUILD.zircon.gn:8
 
-### fidlc_deprecate_c_unions
-
-**Current value (from the default):** `false`
-
-From //tools/fidl/BUILD.zircon.gn:7
-
-### fidlc_union_not_simple
-
-**Current value (from the default):** `false`
-
-From //tools/fidl/BUILD.zircon.gn:6
-
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
 found.  If this is "", then the behavior depends on $use_prebuilt_gcc.

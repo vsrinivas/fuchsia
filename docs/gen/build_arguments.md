@@ -194,7 +194,7 @@ required for the filesystem.
 From //build/images/fvm.gni:41
 
 ### board_bootfs_labels
-A list of bootfs manifest labels to include in the ZBI.
+A list of binary labels to include in the ZBI.
 
 **Current value (from the default):** `[]`
 
@@ -277,6 +277,13 @@ any kind of stable contract for users of the archive.
 **Current value (from the default):** `[]`
 
 From //build/images/args.gni:125
+
+### board_zedboot_bootfs_labels
+A list of binary labels to include in the zedboot ZBI.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:27
 
 ### board_zedboot_cmdline_args
 List of kernel command line arguments to bake into the zedboot image that are
@@ -437,6 +444,13 @@ From //src/camera/bin/camera-gym/BUILD.gn:11
 
 From //src/camera/bin/camera-gym/BUILD.gn:12
 
+### camera_policy_allow_replacement_connections
+TODO(fxbug.dev/58063): Restore camera default exclusivity policy.
+
+**Current value (from the default):** `true`
+
+From //src/camera/bin/device/BUILD.gn:10
+
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
 If true, base_packages and cache_packages are checked against dependencies
@@ -538,13 +552,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/94b7e45210a74b1eeb2cff981540312c9aaf58ed/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0cccdc0b7ec32bd31e789b3945a08c04ef775834/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/94b7e45210a74b1eeb2cff981540312c9aaf58ed/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0cccdc0b7ec32bd31e789b3945a08c04ef775834/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -571,7 +585,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/bc47ee76071deb5a1662741ce58efd9cc7e279b9/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#19)
 
 ### dart_force_product
 Forces all Dart and Flutter apps to build in a specific configuration that
@@ -579,14 +593,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/bc47ee76071deb5a1662741ce58efd9cc7e279b9/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/bc47ee76071deb5a1662741ce58efd9cc7e279b9/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#35)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -814,7 +828,7 @@ From //build/images/args.gni:50
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/bc47ee76071deb5a1662741ce58efd9cc7e279b9/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enables/Disables flutter driver using '--args=flutter_driver_enabled=[true/false]'
@@ -829,14 +843,14 @@ From //build/testing/flutter_driver.gni:9
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/bc47ee76071deb5a1662741ce58efd9cc7e279b9/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/bc47ee76071deb5a1662741ce58efd9cc7e279b9/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/58d8a9eb60a0c6089fabb75579b8f585b49f415f/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1037,7 +1051,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:37
+From //products/bringup.gni:39
 
 **Overridden from the default:** `[]`
 
@@ -1045,7 +1059,7 @@ From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:37
+From //products/bringup.gni:39
 
 **Overridden from the default:** `[]`
 
@@ -1754,7 +1768,7 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 From //src/graphics/lib/magma/gnbuild/magma.gni:32
 
 ### product_bootfs_labels
-A list of bootfs_manifest labels to include in ZBIs built for this product.
+A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/security/policy:component_manager_policy_bootfs"]`
 
@@ -1771,6 +1785,26 @@ From //products/bringup.gni:23
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
+
+### product_zedboot_bootfs_labels
+A list of binary labels to include in the zedboot ZBI built for this
+product.
+
+**Current value for `target_cpu = "arm64"`:** `["//src/security/policy:component_manager_policy_bootfs"]`
+
+From //products/bringup.gni:25
+
+**Overridden from the default:** `[]`
+
+From //build/product.gni:11
+
+**Current value for `target_cpu = "x64"`:** `["//src/security/policy:component_manager_policy_bootfs"]`
+
+From //products/bringup.gni:25
+
+**Overridden from the default:** `[]`
+
+From //build/product.gni:11
 
 ### prototype_account_transfer
 Whether or not prototype account transfer is enabled.
