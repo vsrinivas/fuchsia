@@ -10,6 +10,8 @@ use futures::lock;
 use std::{cell, sync};
 use thiserror::Error;
 
+/// AttachError denotes a broken data acquisition invariant, such as when a
+/// mutex is held during attachment.
 #[derive(Error, Debug)]
 #[error("could not attach to inspect: {:?}", .msg)]
 pub struct AttachError {
@@ -44,6 +46,11 @@ pub trait Inspect {
     /// Therefore it is recommended to attach to inspect immediately after
     /// initialization, although not within constructors. Whether or not
     /// to use inspect should usually be a choice of the caller.
+    ///
+    /// NOTE: Implementors should avoid returning AttachError whenever
+    /// possible. It is reserved for irrecoverable invariant violations
+    /// (see above). Invalid data structure invariants are not attachment
+    /// errors and should instead be ignored and optionally logged.
     fn iattach(self, parent: &Node, name: impl AsRef<str>) -> Result<(), AttachError>;
 }
 
