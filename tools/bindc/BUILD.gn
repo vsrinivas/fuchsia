@@ -37,5 +37,8 @@ install_host_tools("host") {
 
 group("tests") {
   testonly = true
-  deps = [ ":bin_test($host_toolchain)" ]
+  deps = [
+    ":bin_test($host_toolchain)",
+    "./examples:tests",
+  ]
 }

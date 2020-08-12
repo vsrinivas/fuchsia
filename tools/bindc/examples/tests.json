@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Protocol",
+    "expected": "abort",
+    "device": {
+      "deprecated.BIND_PROTOCOL": "deprecated.bluetooth.BIND_PROTOCOL.DEVICE"
+    }
+  },
+
+  {
+    "name": "Vendor",
+    "expected": "abort",
+    "device": {
+      "deprecated.BIND_PROTOCOL": "deprecated.usb.BIND_PROTOCOL.DEVICE",
+      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.GOOGLE"
+    }
+  },
+
+  {
+    "name": "Intel",
+    "expected": "match",
+    "device": {
+      "deprecated.BIND_PROTOCOL": "deprecated.usb.BIND_PROTOCOL.DEVICE",
+      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.INTEL",
+      "deprecated.BIND_USB_CLASS": "deprecated.usb.BIND_USB_CLASS.AUDIO"
+    }
+  },
+
+  {
+    "name": "Realtek",
+    "expected": "match",
+    "device": {
+      "deprecated.BIND_PROTOCOL": "deprecated.usb.BIND_PROTOCOL.DEVICE",
+      "deprecated.BIND_USB_VID": "deprecated.usb.BIND_USB_VID.REALTEK",
+      "deprecated.BIND_USB_CLASS": "deprecated.usb.BIND_USB_CLASS.COMM"
+    }
+  }
+]
