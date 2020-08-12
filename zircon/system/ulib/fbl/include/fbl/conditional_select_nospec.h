@@ -5,7 +5,7 @@
 #ifndef FBL_CONDITIONAL_SELECT_NOSPEC_H_
 #define FBL_CONDITIONAL_SELECT_NOSPEC_H_
 
-#include <zircon/assert.h>
+#include <sys/types.h>
 
 namespace fbl {
 

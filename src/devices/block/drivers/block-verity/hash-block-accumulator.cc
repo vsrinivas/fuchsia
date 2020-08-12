@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include <digest/digest.h>
+#include <zircon/assert.h>
 
 namespace block_verity {
 

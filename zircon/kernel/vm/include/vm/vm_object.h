@@ -8,7 +8,6 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_H_
 
 #include <align.h>
-#include <assert.h>
 #include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/thread_annotations.h>

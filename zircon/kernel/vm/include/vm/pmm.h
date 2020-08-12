@@ -8,7 +8,6 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_
 
-#include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_DATA_STRUCTS_H_
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_DATA_STRUCTS_H_
 
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <fbl/alloc_checker.h>

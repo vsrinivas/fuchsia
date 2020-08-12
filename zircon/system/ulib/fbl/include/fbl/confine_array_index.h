@@ -5,7 +5,6 @@
 #ifndef FBL_CONFINE_ARRAY_INDEX_H_
 #define FBL_CONFINE_ARRAY_INDEX_H_
 
-#include <zircon/assert.h>
 #include <stddef.h>
 
 namespace fbl {

@@ -9,7 +9,6 @@
 #include <new>
 #include <utility>
 #include <stddef.h>
-#include <zircon/assert.h>
 
 namespace fbl {
 

@@ -5,6 +5,7 @@
 #ifndef DISK_INSPECTOR_COMMON_TYPES_H_
 #define DISK_INSPECTOR_COMMON_TYPES_H_
 
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <fbl/string.h>
