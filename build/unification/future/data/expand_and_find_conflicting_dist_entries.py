@@ -8,11 +8,18 @@
 
 import argparse
 import collections
+import filecmp
 import functools
 import json
 import sys
 
 Entry = collections.namedtuple('Entry', ['source', 'destination', 'label'])
+
+# List of destination paths for which conflicting entries are acceptable as long
+# as the source files are identical.
+# This is mostly use to soft-transition zbi contents.
+DUPLICATION_EXCEPTIONS = [
+]
 
 
 def expand(items):
@@ -33,6 +40,13 @@ def expand(items):
     return [Entry(**e) for e in entries]
 
 
+def sources_are_different(entries):
+    '''Returns true if the given entries do not all point to identical source
+       files.'''
+    sources = [entry.source for entry in entries]
+    return any(not filecmp.cmp(sources[0], f) for f in sources[1:])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -49,6 +63,23 @@ def main():
         d: set(e for e in entries if e.destination == d) for d in set(
             e.destination for e in entries)
     }
+
+    # Filter entries for which is is ok to have duplication if the sources are
+    # the same.
+    for exception in DUPLICATION_EXCEPTIONS:
+        if not exception in entries_by_dest:
+            continue
+        duplicates = list(entries_by_dest[exception])
+        if sources_are_different(duplicates):
+            # Treat this as a normal conflict.
+            continue
+        # This is an exception! Select the first entry as canon, and remove
+        # the others.
+        canon = duplicates[0]
+        entries_by_dest[exception] = set([canon])
+        for entry in duplicates[1:]:
+            entries.remove(entry)
+
     conflicts = {d: e for d, e in entries_by_dest.items() if len(e) > 1}
     # Only report a conflict if the source files differ.
     # TODO(45680): remove this additional filtering when dependency trees are
