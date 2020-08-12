@@ -294,7 +294,7 @@ zx_status_t Directory::DirentCallbackAttemptRename(fbl::RefPtr<Directory> vndir,
   }
   if (args->type != de->type) {
     // cannot rename directory to file (or vice versa)
-    return ZX_ERR_NOT_DIR;
+    return args->type == kMinfsTypeDir ? ZX_ERR_NOT_DIR : ZX_ERR_NOT_FILE;
   }
   if ((status = vn->CanUnlink()) != ZX_OK) {
     // if we cannot unlink the target, we cannot rename the target

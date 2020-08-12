@@ -18,10 +18,11 @@ use crate::error::FatfsError;
 use crate::file::File;
 use crate::fs::{DiskSlice, FileSystem, FsIoAdapter, OemCpConverter, ReadWriteSeek};
 use crate::time::{Date, DateTime, TimeProvider};
+use std::cell::{RefCell, RefMut};
 
-pub(crate) enum DirRawStream<'a, IO: ReadWriteSeek, TP, OCC> {
-    File(Option<File<'a, IO, TP, OCC>>),
-    Root(DiskSlice<FsIoAdapter<'a, IO, TP, OCC>>),
+pub(crate) enum DirRawStream<'fs, IO: ReadWriteSeek, TP, OCC> {
+    File(Option<File<'fs, IO, TP, OCC>>),
+    Root(DiskSlice<FsIoAdapter<'fs, IO, TP, OCC>>),
 }
 
 impl<IO: ReadWriteSeek, TP, OCC> DirRawStream<'_, IO, TP, OCC> {
@@ -57,16 +58,6 @@ impl<IO: ReadWriteSeek, TP, OCC> DirRawStream<'_, IO, TP, OCC> {
         match self {
             DirRawStream::File(file) => file.as_ref().map_or(true, |f| f.is_deleted()),
             DirRawStream::Root(_) => false,
-        }
-    }
-}
-
-// Note: derive cannot be used because of invalid bounds. See: https://github.com/rust-lang/rust/issues/26925
-impl<IO: ReadWriteSeek, TP, OCC> Clone for DirRawStream<'_, IO, TP, OCC> {
-    fn clone(&self) -> Self {
-        match self {
-            DirRawStream::File(file) => DirRawStream::File(file.clone()),
-            DirRawStream::Root(raw) => DirRawStream::Root(raw.clone()),
         }
     }
 }
@@ -124,8 +115,8 @@ fn split_path<'a>(path: &'a str) -> (&'a str, Option<&'a str>) {
     (comp, rest_opt)
 }
 
-enum DirEntryOrShortName<'a, IO: ReadWriteSeek, TP, OCC> {
-    DirEntry(DirEntry<'a, IO, TP, OCC>),
+enum DirEntryOrShortName<'fs, IO: ReadWriteSeek, TP, OCC> {
+    DirEntry(DirEntry<'fs, IO, TP, OCC>),
     ShortName([u8; SFN_SIZE]),
 }
 
@@ -133,34 +124,34 @@ enum DirEntryOrShortName<'a, IO: ReadWriteSeek, TP, OCC> {
 ///
 /// This struct is created by the `open_dir` or `create_dir` methods on `Dir`.
 /// The root directory is returned by the `root_dir` method on `FileSystem`.
-pub struct Dir<'a, IO: ReadWriteSeek, TP, OCC> {
-    stream: DirRawStream<'a, IO, TP, OCC>,
-    fs: &'a FileSystem<IO, TP, OCC>,
+pub struct Dir<'fs, IO: ReadWriteSeek, TP, OCC> {
+    stream: RefCell<DirRawStream<'fs, IO, TP, OCC>>,
+    fs: &'fs FileSystem<IO, TP, OCC>,
     is_root: bool,
 }
 
-impl<'a, IO: ReadWriteSeek, TP, OCC> Dir<'a, IO, TP, OCC> {
+impl<'fs, IO: ReadWriteSeek, TP, OCC> Dir<'fs, IO, TP, OCC> {
     pub(crate) fn new(
-        stream: DirRawStream<'a, IO, TP, OCC>,
-        fs: &'a FileSystem<IO, TP, OCC>,
+        stream: DirRawStream<'fs, IO, TP, OCC>,
+        fs: &'fs FileSystem<IO, TP, OCC>,
         is_root: bool,
     ) -> Self {
-        Dir { stream, fs, is_root }
+        Dir { stream: RefCell::new(stream), fs, is_root }
     }
 
     /// Creates directory entries iterator.
-    pub fn iter(&self) -> DirIter<'a, IO, TP, OCC> {
-        DirIter::new(self.stream.clone(), self.fs, true)
+    pub fn iter<'a>(&'a self) -> DirIter<'a, 'fs, IO, TP, OCC> {
+        DirIter::new(&self.stream, self.fs, true)
     }
 }
 
-impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, TP, OCC> {
+impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'fs, IO, TP, OCC> {
     fn find_entry(
         &self,
         name: &str,
         is_dir: Option<bool>,
         mut short_name_gen: Option<&mut ShortNameGenerator>,
-    ) -> io::Result<DirEntry<'a, IO, TP, OCC>> {
+    ) -> io::Result<DirEntry<'fs, IO, TP, OCC>> {
         for r in self.iter() {
             let e = r?;
             // compare name ignoring case
@@ -181,8 +172,8 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         Err(io::Error::new(ErrorKind::NotFound, "No such file or directory"))
     }
 
-    pub(crate) fn find_volume_entry(&self) -> io::Result<Option<DirEntry<'a, IO, TP, OCC>>> {
-        for r in DirIter::new(self.stream.clone(), self.fs, false) {
+    pub(crate) fn find_volume_entry(&self) -> io::Result<Option<DirEntry<'fs, IO, TP, OCC>>> {
+        for r in DirIter::new(&self.stream, self.fs, false) {
             let e = r?;
             if e.data.is_volume() {
                 return Ok(Some(e));
@@ -195,7 +186,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         &self,
         name: &str,
         is_dir: Option<bool>,
-    ) -> io::Result<DirEntryOrShortName<'a, IO, TP, OCC>> {
+    ) -> io::Result<DirEntryOrShortName<'fs, IO, TP, OCC>> {
         let mut short_name_gen = ShortNameGenerator::new(name);
         loop {
             let r = self.find_entry(name, is_dir, Some(&mut short_name_gen));
@@ -215,7 +206,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
 
     /// Set modification datetime for this directory.
     pub fn set_created(&mut self, date_time: DateTime) {
-        match self.stream.entry_mut() {
+        match self.stream.borrow_mut().entry_mut() {
             Some(e) => e.set_created(date_time),
             None => {}
         }
@@ -223,7 +214,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
 
     /// Set access date for this directory.
     pub fn set_accessed(&mut self, date: Date) {
-        match self.stream.entry_mut() {
+        match self.stream.borrow_mut().entry_mut() {
             Some(e) => e.set_accessed(date),
             None => {}
         }
@@ -231,7 +222,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
 
     /// Set modification datetime for this directory.
     pub fn set_modified(&mut self, date_time: DateTime) {
-        match self.stream.entry_mut() {
+        match self.stream.borrow_mut().entry_mut() {
             Some(e) => e.set_modified(date_time),
             None => {}
         }
@@ -239,7 +230,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
 
     /// Get the access time of this directory.
     pub fn accessed(&self) -> Date {
-        match self.stream.entry() {
+        match self.stream.borrow().entry() {
             Some(ref e) => e.inner().accessed(),
             None => Date::decode(0),
         }
@@ -247,7 +238,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
 
     /// Get the creation time of this directory.
     pub fn created(&self) -> DateTime {
-        match self.stream.entry() {
+        match self.stream.borrow().entry() {
             Some(ref e) => e.inner().created(),
             None => DateTime::decode(0, 0, 0),
         }
@@ -255,7 +246,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
 
     /// Get the modification time of this directory.
     pub fn modified(&self) -> DateTime {
-        match self.stream.entry() {
+        match self.stream.borrow().entry() {
             Some(ref e) => e.inner().modified(),
             None => DateTime::decode(0, 0, 0),
         }
@@ -277,7 +268,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
     /// Opens existing file.
     ///
     /// `path` is a '/' separated file path relative to self directory.
-    pub fn open_file(&self, path: &str) -> io::Result<File<'a, IO, TP, OCC>> {
+    pub fn open_file(&self, path: &str) -> io::Result<File<'fs, IO, TP, OCC>> {
         trace!("open_file {}", path);
         // traverse path
         let (name, rest_opt) = split_path(path);
@@ -294,14 +285,14 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
     ///
     /// `path` is a '/' separated file path relative to self directory.
     /// File is never truncated when opening. It can be achieved by calling `File::truncate` method after opening.
-    pub fn create_file(&self, path: &str) -> io::Result<File<'a, IO, TP, OCC>> {
+    pub fn create_file(&self, path: &str) -> io::Result<File<'fs, IO, TP, OCC>> {
         trace!("create_file {}", path);
         // traverse path
         let (name, rest_opt) = split_path(path);
         if let Some(rest) = rest_opt {
             return self.find_entry(name, Some(true), None)?.to_dir().create_file(rest);
         }
-        if self.stream.is_deleted() {
+        if self.stream.borrow().is_deleted() {
             return Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"));
         }
         // this is final filename in the path
@@ -328,7 +319,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         if let Some(rest) = rest_opt {
             return self.find_entry(name, Some(true), None)?.to_dir().create_dir(rest);
         }
-        if self.stream.is_deleted() {
+        if self.stream.borrow().is_deleted() {
             return Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"));
         }
         // this is final filename in the path
@@ -402,15 +393,29 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
             self.fs.free_cluster_chain(n)?;
         }
         // free long and short name entries
-        let mut stream = self.stream.clone();
+        let mut stream = self.stream.borrow_mut();
         stream.seek(SeekFrom::Start(e.offset_range.0 as u64))?;
         let num = (e.offset_range.1 - e.offset_range.0) as usize / DIR_ENTRY_SIZE as usize;
         for _ in 0..num {
-            let mut data = DirEntryData::deserialize(&mut stream)?;
+            let mut data = DirEntryData::deserialize(&mut *stream)?;
             trace!("removing dir entry {:?}", data);
             data.set_deleted();
             stream.seek(SeekFrom::Current(-(DIR_ENTRY_SIZE as i64)))?;
-            data.serialize(&mut stream)?;
+            data.serialize(&mut *stream)?;
+        }
+        Ok(())
+    }
+
+    fn unlink_file_on_disk(&self, offset_range: (u64, u64)) -> io::Result<()> {
+        let mut stream = self.stream.borrow_mut();
+        stream.seek(io::SeekFrom::Start(offset_range.0))?;
+        let num = (offset_range.1 - offset_range.0) as usize / DIR_ENTRY_SIZE as usize;
+        for _ in 0..num {
+            let mut data = DirEntryData::deserialize(&mut *stream)?;
+            trace!("removing dir entry {:?}", data);
+            data.set_deleted();
+            stream.seek(SeekFrom::Current(-(DIR_ENTRY_SIZE as i64)))?;
+            data.serialize(&mut *stream)?;
         }
         Ok(())
     }
@@ -421,25 +426,11 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
     /// but continuing to use the file is legal. It will be completely removed from the filesystem
     /// once it is dropped.
     pub fn unlink_file(&self, file: &mut File<IO, TP, OCC>) -> io::Result<()> {
-        file.mark_deleted();
-        let mut stream = self.stream.clone();
-        // Note that we have to treat the file's "real" direntry specially, as we want to keep
-        // track within the in-memory file that it is being deleted.
         let entry = file
-            .editor_mut()
+            .editor()
             .ok_or(io::Error::new(ErrorKind::InvalidInput, "Can't delete file with no dirent"))?;
-        entry.set_deleted();
-        entry.flush(self.fs)?;
-
-        stream.seek(io::SeekFrom::Start(entry.offset_range.0))?;
-        let num = (entry.offset_range.1 - entry.offset_range.0) as usize / DIR_ENTRY_SIZE as usize;
-        for _ in 0..num - 1 {
-            let mut data = DirEntryData::deserialize(&mut stream)?;
-            trace!("removing dir entry {:?}", data);
-            data.set_deleted();
-            stream.seek(SeekFrom::Current(-(DIR_ENTRY_SIZE as i64)))?;
-            data.serialize(&mut stream)?;
-        }
+        self.unlink_file_on_disk(entry.offset_range)?;
+        file.mark_deleted();
         Ok(())
     }
 
@@ -451,7 +442,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         if !dir.is_empty()? {
             return Err(io::Error::new(ErrorKind::Other, FatfsError::DirectoryNotEmpty));
         }
-        match dir.stream {
+        match &mut *dir.stream.borrow_mut() {
             DirRawStream::File(ref mut option) => {
                 if let Some(mut file) = option.take() {
                     self.unlink_file(&mut file)?;
@@ -499,6 +490,64 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         self.rename_internal(src_path, dst_dir, dst_path)
     }
 
+    /// Same as rename, but supports renaming over an existing file.
+    pub fn rename_over_file(
+        &self,
+        src_path: &str,
+        dst_dir: &Dir<IO, TP, OCC>,
+        dst_path: &str,
+        file: &mut File<IO, TP, OCC>,
+    ) -> io::Result<()> {
+        let transaction = self.fs.begin_transaction().unwrap();
+        let entry = file
+            .editor()
+            .ok_or(io::Error::new(ErrorKind::InvalidInput, "Can't delete file with no dirent"))?;
+        dst_dir.unlink_file_on_disk(entry.offset_range)?;
+        self.rename(src_path, dst_dir, dst_path)?;
+        self.fs.commit(transaction)?;
+        file.mark_deleted();
+        Ok(())
+    }
+
+    /// Same as rename but supports renaming over an existing directory (which must be empty).
+    pub fn rename_over_dir(
+        &self,
+        src_path: &str,
+        dst_dir: &Dir<IO, TP, OCC>,
+        dst_path: &str,
+        dir: &mut Dir<IO, TP, OCC>,
+    ) -> io::Result<()> {
+        let transaction = self.fs.begin_transaction().unwrap();
+        if !dir.is_empty()? {
+            return Err(io::Error::new(ErrorKind::Other, FatfsError::DirectoryNotEmpty));
+        }
+        let file;
+        let mut stream = dir.stream.borrow_mut();
+        match &mut *stream {
+            DirRawStream::File(ref mut option) => {
+                file = option.as_mut().ok_or(io::Error::new(ErrorKind::NotFound, "Not found"))?;
+                let entry = file.editor().ok_or(io::Error::new(
+                    ErrorKind::InvalidInput,
+                    "Can't delete file with no dirent",
+                ))?;
+                dst_dir.unlink_file_on_disk(entry.offset_range)?;
+                if let Some(cluster) = file.first_cluster() {
+                    self.fs.free_cluster_chain(cluster)?;
+                }
+            }
+            DirRawStream::Root(_) => {
+                return Err(io::Error::new(
+                    ErrorKind::InvalidInput,
+                    "Root directory is not child of any directory",
+                ))
+            }
+        };
+        self.rename(src_path, dst_dir, dst_path)?;
+        self.fs.commit(transaction)?;
+        file.mark_deleted_and_purged();
+        Ok(())
+    }
+
     fn rename_internal(
         &self,
         src_name: &str,
@@ -506,7 +555,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         dst_name: &str,
     ) -> io::Result<()> {
         trace!("rename_internal {} {}", src_name, dst_name);
-        if dst_dir.stream.is_deleted() {
+        if dst_dir.stream.borrow().is_deleted() {
             return Err(io::Error::new(
                 ErrorKind::NotFound,
                 "Destination directory has been deleted",
@@ -535,15 +584,17 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
             DirEntryOrShortName::ShortName(short_name) => short_name,
         };
         // free long and short name entries
-        let mut stream = self.stream.clone();
-        stream.seek(SeekFrom::Start(e.offset_range.0 as u64))?;
-        let num = (e.offset_range.1 - e.offset_range.0) as usize / DIR_ENTRY_SIZE as usize;
-        for _ in 0..num {
-            let mut data = DirEntryData::deserialize(&mut stream)?;
-            trace!("removing LFN entry {:?}", data);
-            data.set_deleted();
-            stream.seek(SeekFrom::Current(-(DIR_ENTRY_SIZE as i64)))?;
-            data.serialize(&mut stream)?;
+        {
+            let mut stream = self.stream.borrow_mut();
+            stream.seek(SeekFrom::Start(e.offset_range.0 as u64))?;
+            let num = (e.offset_range.1 - e.offset_range.0) as usize / DIR_ENTRY_SIZE as usize;
+            for _ in 0..num {
+                let mut data = DirEntryData::deserialize(&mut *stream)?;
+                trace!("removing LFN entry {:?}", data);
+                data.set_deleted();
+                stream.seek(SeekFrom::Current(-(DIR_ENTRY_SIZE as i64)))?;
+                data.serialize(&mut *stream)?;
+            }
         }
         // save new directory entry
         let sfn_entry = e.data.renamed(short_name);
@@ -568,13 +619,17 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         Ok(())
     }
 
-    fn find_free_entries(&self, num_entries: usize) -> io::Result<DirRawStream<'a, IO, TP, OCC>> {
-        let mut stream = self.stream.clone();
+    fn find_free_entries(
+        &self,
+        num_entries: usize,
+    ) -> io::Result<RefMut<'_, DirRawStream<'fs, IO, TP, OCC>>> {
+        let mut stream = self.stream.borrow_mut();
+        stream.seek(io::SeekFrom::Start(0))?;
         let mut first_free = 0;
         let mut num_free = 0;
         let mut i = 0;
         loop {
-            let raw_entry = DirEntryData::deserialize(&mut stream)?;
+            let raw_entry = DirEntryData::deserialize(&mut *stream)?;
             if raw_entry.is_end() {
                 // first unused entry - all remaining space can be used
                 if num_free == 0 {
@@ -629,7 +684,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         &self,
         lfn_utf16: &LfnBuffer,
         short_name: &[u8; SFN_SIZE],
-    ) -> io::Result<(DirRawStream<'a, IO, TP, OCC>, u64)> {
+    ) -> io::Result<(RefMut<'_, DirRawStream<'fs, IO, TP, OCC>>, u64)> {
         // get short name checksum
         let lfn_chsum = lfn_checksum(short_name);
         // create LFN entries generator
@@ -640,7 +695,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         let start_pos = stream.seek(io::SeekFrom::Current(0))?;
         // write LFN entries before SFN entry
         for lfn_entry in lfn_iter {
-            lfn_entry.serialize(&mut stream)?;
+            lfn_entry.serialize(&mut *stream)?;
         }
         Ok((stream, start_pos))
     }
@@ -649,7 +704,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         &self,
         name: &str,
         raw_entry: DirFileEntryData,
-    ) -> io::Result<DirEntry<'a, IO, TP, OCC>> {
+    ) -> io::Result<DirEntry<'fs, IO, TP, OCC>> {
         trace!("write_entry {}", name);
         // check if name doesn't contain unsupported characters
         let long_name_required = validate_long_name(name, raw_entry.name())?;
@@ -669,8 +724,10 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
             (stream, start_pos, LfnBuffer::new())
         };
         // write short name entry
-        raw_entry.serialize(&mut stream)?;
-        self.fs.commit(transaction)?;
+        raw_entry.serialize(&mut *stream)?;
+        if let Some(transaction) = transaction {
+            self.fs.commit(transaction)?;
+        }
         let end_pos = stream.seek(io::SeekFrom::Current(0))?;
         let abs_pos = stream.abs_pos().map(|p| p - DIR_ENTRY_SIZE);
         // return new logical entry descriptor
@@ -690,39 +747,46 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Dir<'a, IO, T
         if self.is_root {
             None
         } else {
-            self.stream.first_cluster()
+            self.stream.borrow().first_cluster()
         }
     }
-}
 
-// Note: derive cannot be used because of invalid bounds. See: https://github.com/rust-lang/rust/issues/26925
-impl<IO: ReadWriteSeek, TP: TimeProvider, OCC: OemCpConverter> Clone for Dir<'_, IO, TP, OCC> {
-    fn clone(&self) -> Self {
-        Self { stream: self.stream.clone(), fs: self.fs, is_root: self.is_root }
+    /// Flushes the directory entry in the parent if not the root.
+    pub fn flush_dir_entry(&mut self) -> std::io::Result<()> {
+        match &mut *self.stream.borrow_mut() {
+            DirRawStream::File(Some(file)) => file.flush_dir_entry(),
+            DirRawStream::File(None) => {
+                Err(io::Error::new(ErrorKind::NotFound, "Directory has been deleted"))
+            }
+            DirRawStream::Root(_) => {
+                Err(io::Error::new(ErrorKind::Other, "Cannot flush root directroy entry"))
+            }
+        }
     }
 }
 
 /// An iterator over the directory entries.
 ///
 /// This struct is created by the `iter` method on `Dir`.
-pub struct DirIter<'a, IO: ReadWriteSeek, TP, OCC> {
-    stream: DirRawStream<'a, IO, TP, OCC>,
-    fs: &'a FileSystem<IO, TP, OCC>,
+pub struct DirIter<'a, 'fs, IO: ReadWriteSeek, TP, OCC> {
+    stream: &'a RefCell<DirRawStream<'fs, IO, TP, OCC>>,
+    fs: &'fs FileSystem<IO, TP, OCC>,
     skip_volume: bool,
     err: bool,
 }
 
-impl<'a, IO: ReadWriteSeek, TP, OCC> DirIter<'a, IO, TP, OCC> {
+impl<'a, 'fs, IO: ReadWriteSeek, TP, OCC> DirIter<'a, 'fs, IO, TP, OCC> {
     fn new(
-        stream: DirRawStream<'a, IO, TP, OCC>,
-        fs: &'a FileSystem<IO, TP, OCC>,
+        stream: &'a RefCell<DirRawStream<'fs, IO, TP, OCC>>,
+        fs: &'fs FileSystem<IO, TP, OCC>,
         skip_volume: bool,
     ) -> Self {
+        stream.borrow_mut().seek(SeekFrom::Start(0)).unwrap();
         DirIter { stream, fs, skip_volume, err: false }
     }
 }
 
-impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'a, IO, TP, OCC> {
+impl<'fs, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'_, 'fs, IO, TP, OCC> {
     fn should_ship_entry(&self, raw_entry: &DirEntryData) -> bool {
         if raw_entry.is_deleted() {
             return true;
@@ -733,13 +797,14 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'a, IO, TP, OCC> {
         }
     }
 
-    fn read_dir_entry(&mut self) -> io::Result<Option<DirEntry<'a, IO, TP, OCC>>> {
+    fn read_dir_entry(&mut self) -> io::Result<Option<DirEntry<'fs, IO, TP, OCC>>> {
         trace!("read_dir_entry");
         let mut lfn_builder = LongNameBuilder::new();
-        let mut offset = self.stream.seek(SeekFrom::Current(0))?;
+        let mut stream = self.stream.borrow_mut();
+        let mut offset = stream.seek(SeekFrom::Current(0))?;
         let mut begin_offset = offset;
         loop {
-            let raw_entry = DirEntryData::deserialize(&mut self.stream)?;
+            let raw_entry = DirEntryData::deserialize(&mut *stream)?;
             offset += DIR_ENTRY_SIZE;
             // Check if this is end of dir
             if raw_entry.is_end() {
@@ -755,7 +820,7 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'a, IO, TP, OCC> {
             match raw_entry {
                 DirEntryData::File(data) => {
                     // Get entry position on volume
-                    let abs_pos = self.stream.abs_pos().map(|p| p - DIR_ENTRY_SIZE);
+                    let abs_pos = stream.abs_pos().map(|p| p - DIR_ENTRY_SIZE);
                     // Check if LFN checksum is valid
                     lfn_builder.validate_chksum(data.name());
                     // Return directory entry
@@ -781,20 +846,8 @@ impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC> DirIter<'a, IO, TP, OCC> {
     }
 }
 
-// Note: derive cannot be used because of invalid bounds. See: https://github.com/rust-lang/rust/issues/26925
-impl<IO: ReadWriteSeek, TP, OCC> Clone for DirIter<'_, IO, TP, OCC> {
-    fn clone(&self) -> Self {
-        Self {
-            stream: self.stream.clone(),
-            fs: self.fs,
-            err: self.err,
-            skip_volume: self.skip_volume,
-        }
-    }
-}
-
-impl<'a, IO: ReadWriteSeek, TP: TimeProvider, OCC> Iterator for DirIter<'a, IO, TP, OCC> {
-    type Item = io::Result<DirEntry<'a, IO, TP, OCC>>;
+impl<'b, IO: ReadWriteSeek, TP: TimeProvider, OCC> Iterator for DirIter<'_, 'b, IO, TP, OCC> {
+    type Item = io::Result<DirEntry<'b, IO, TP, OCC>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.err {

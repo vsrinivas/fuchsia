@@ -225,7 +225,7 @@ zx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece ol
     }
     if (olddn->IsDirectory() != targetdn->IsDirectory()) {
       // Cannot rename files to directories (and vice versa)
-      return ZX_ERR_NOT_DIR;
+      return olddn->IsDirectory() ? ZX_ERR_NOT_DIR : ZX_ERR_NOT_FILE;
     } else if ((r = targetdn->CanUnlink()) != ZX_OK) {
       return r;
     }

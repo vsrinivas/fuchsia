@@ -568,9 +568,12 @@ impl<IO: ReadWriteSeek, TP, OCC> FileSystem<IO, TP, OCC> {
         Dir::new(root_rdr, self, true)
     }
 
-    pub(crate) fn begin_transaction(&self) -> Transaction<'_, IO, TP, OCC> {
-        self.disk.borrow_mut().begin_transaction();
-        Transaction::new(self)
+    pub(crate) fn begin_transaction(&self) -> Option<Transaction<'_, IO, TP, OCC>> {
+        if self.disk.borrow_mut().begin_transaction() {
+            Some(Transaction::new(self))
+        } else {
+            None
+        }
     }
 
     pub(crate) fn commit(&self, mut transaction: Transaction<'_, IO, TP, OCC>) -> io::Result<()> {

@@ -8,8 +8,7 @@ use {
     std::{ops::Deref, sync::Arc},
 };
 
-/// This struct is a RAII wrapper around a directory that will call close() on it unless the
-/// succeed() function is called.
+/// This struct is a RAII wrapper around a directory that will call close() on it when dropped.
 pub struct OpenDirectory<T: Directory + ?Sized> {
     directory: Option<Arc<T>>,
 }

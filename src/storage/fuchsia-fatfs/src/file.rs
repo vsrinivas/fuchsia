@@ -5,8 +5,9 @@ use {
     crate::{
         directory::FatDirectory,
         filesystem::{FatFilesystem, FatFilesystemInner},
+        node::Node,
         refs::FatfsFileRef,
-        types::{Dir, File},
+        types::File,
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
     },
     async_trait::async_trait,
@@ -61,11 +62,16 @@ fn seek_for_write(file: &mut File<'_>, offset: u64) -> Result<(), Status> {
     Ok(())
 }
 
+struct FatFileData {
+    name: String,
+    parent: Option<Arc<FatDirectory>>,
+}
+
 /// Represents a single file on the disk.
 pub struct FatFile {
     file: UnsafeCell<FatfsFileRef>,
-    parent: RwLock<Option<Arc<FatDirectory>>>,
     filesystem: Arc<FatFilesystem>,
+    data: RwLock<FatFileData>,
 }
 
 // The only member that isn't `Sync + Send` is the `file` member.
@@ -80,53 +86,24 @@ impl FatFile {
         file: FatfsFileRef,
         parent: Arc<FatDirectory>,
         filesystem: Arc<FatFilesystem>,
+        name: String,
     ) -> Arc<Self> {
         Arc::new(FatFile {
             file: UnsafeCell::new(file),
-            parent: RwLock::new(Some(parent)),
             filesystem,
+            data: RwLock::new(FatFileData { parent: Some(parent), name }),
         })
     }
 
     /// Borrow the underlying Fatfs File mutably.
-    fn borrow_file_mut<'a>(
-        &'a self,
-        fs: &'a FatFilesystemInner,
-    ) -> Result<&'a mut File<'a>, Status> {
+    pub(crate) fn borrow_file_mut<'a>(&self, fs: &'a FatFilesystemInner) -> Option<&mut File<'a>> {
         // Safe because the file is protected by the lock on fs.
-        unsafe { self.file.get().as_mut() }.unwrap().borrow_mut(fs).ok_or(Status::UNAVAILABLE)
+        unsafe { self.file.get().as_mut() }.unwrap().borrow_mut(fs)
     }
 
-    fn borrow_file<'a>(&'a self, fs: &'a FatFilesystemInner) -> Result<&'a File<'a>, Status> {
+    pub fn borrow_file<'a>(&self, fs: &'a FatFilesystemInner) -> Result<&File<'a>, Status> {
         // Safe because the file is protected by the lock on fs.
-        unsafe { self.file.get().as_ref() }.unwrap().borrow(fs).ok_or(Status::UNAVAILABLE)
-    }
-
-    /// Flush to disk and invalidate the reference that's contained within this FatFile.
-    /// Any operations on the file will return Status::UNAVAILABLE until it is re-attached.
-    pub fn detach(&self, fs: &FatFilesystemInner) {
-        // Safe because we hold the fs lock.
-        let file = unsafe { self.file.get().as_mut() }.unwrap();
-        // This causes a flush to disk when the underlying fatfs File is dropped.
-        file.take(fs);
-    }
-
-    /// Attach to the given parent and re-open the underlying `FatfsFileRef` this file represents.
-    pub fn attach(
-        &self,
-        new_parent: Arc<FatDirectory>,
-        name: &str,
-        fs: &FatFilesystemInner,
-    ) -> Result<(), Status> {
-        let mut parent = self.parent.write().unwrap();
-        parent.replace(new_parent);
-        let entry = parent.as_ref().unwrap().find_child(fs, name)?.ok_or(Status::NOT_FOUND)?;
-        // Safe because we have a reference to the FatFilesystem.
-        let file_ref = unsafe { FatfsFileRef::from(entry.to_file()) };
-        // Safe because we hold the fs lock.
-        let file = unsafe { self.file.get().as_mut() }.unwrap();
-        *file = file_ref;
-        Ok(())
+        unsafe { self.file.get().as_ref() }.unwrap().borrow(fs).ok_or(Status::BAD_HANDLE)
     }
 
     async fn write_or_append(
@@ -135,7 +112,7 @@ impl FatFile {
         content: &[u8],
     ) -> Result<(u64, u64), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock)?;
+        let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
         let mut file_offset = match offset {
             Some(offset) => {
                 seek_for_write(file, offset)?;
@@ -154,34 +131,66 @@ impl FatFile {
         }
         Ok((total_written as u64, file_offset))
     }
+}
 
-    /// Mark this file as deleted, and remove its dirent from the parent directory,
-    /// without actually deleting the file. The caller must remove this file from any caches.
-    pub fn remove_from(&self, fs: &FatFilesystemInner, dir: &Dir<'_>) -> Result<(), Status> {
-        // Detach from our parent.
-        self.parent.write().unwrap().take();
+impl Node for FatFile {
+    /// Flush to disk and invalidate the reference that's contained within this FatFile.
+    /// Any operations on the file will return Status::BAD_HANDLE until it is re-attached.
+    fn detach(&self, fs: &FatFilesystemInner) {
+        // Safe because we hold the fs lock.
+        let file = unsafe { self.file.get().as_mut() }.unwrap();
+        // This causes a flush to disk when the underlying fatfs File is dropped.
+        file.take(fs);
+    }
 
-        // Remove the direntry from the on-disk directory.
-        let file = self.borrow_file_mut(fs)?;
-        dir.unlink_file(file).map_err(fatfs_error_to_status)
+    /// Attach to the given parent and re-open the underlying `FatfsFileRef` this file represents.
+    fn attach(
+        &self,
+        new_parent: Arc<FatDirectory>,
+        name: &str,
+        fs: &FatFilesystemInner,
+    ) -> Result<(), Status> {
+        let mut data = self.data.write().unwrap();
+        data.name = name.to_owned();
+        // Safe because we hold the fs lock.
+        let file = unsafe { self.file.get().as_mut() }.unwrap();
+        // Safe because we have a reference to the FatFilesystem.
+        unsafe { file.reopen(fs, &new_parent, name)? };
+        data.parent.replace(new_parent);
+        Ok(())
+    }
+
+    fn did_delete(&self) {
+        self.data.write().unwrap().parent.take();
+    }
+
+    fn open_ref(&self, fs_lock: &FatFilesystemInner) -> Result<(), Status> {
+        let data = self.data.read().unwrap();
+        let file_ref = unsafe { self.file.get().as_mut() }.unwrap();
+        unsafe { file_ref.open(&fs_lock, data.parent.as_deref(), &data.name) }
+    }
+
+    /// Close the underlying FatfsFileRef, regardless of the number of open connections.
+    fn shut_down(&self, fs: &FatFilesystemInner) -> Result<(), Status> {
+        unsafe { self.file.get().as_mut() }.unwrap().take(fs);
+        Ok(())
+    }
+
+    fn flush_dir_entry(&self, fs: &FatFilesystemInner) -> Result<(), Status> {
+        if let Some(file) = self.borrow_file_mut(fs) {
+            file.flush_dir_entry().map_err(fatfs_error_to_status)?
+        }
+        Ok(())
+    }
+
+    fn close_ref(&self, fs: &FatFilesystemInner) {
+        unsafe { self.file.get().as_mut() }.unwrap().close(fs);
     }
 }
 
 impl Debug for FatFile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FatFile").field("parent", &self.parent).finish()
-    }
-}
-
-impl Drop for FatFile {
-    fn drop(&mut self) {
-        // We need to drop the underlying Fatfs `File` while holding the filesystem lock,
-        // to make sure that it's able to flush, etc. before getting dropped.
-        let fs_lock = self.filesystem.lock().unwrap();
-
-        // Safe because fs_lock guarantees we are the only place trying to access this file.
-        // If the file has been deleted, fatfs will free its clusters automatically.
-        unsafe { self.file.get().as_mut() }.unwrap().take(&fs_lock);
+        f.debug_struct("FatFile").field("name", &self.data.read().unwrap().name).finish()
     }
 }
 
@@ -193,7 +202,7 @@ impl VfsFile for FatFile {
 
     async fn read_at(&self, offset: u64, count: u64) -> Result<Vec<u8>, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock)?;
+        let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
         let real_offset =
             file.seek(std::io::SeekFrom::Start(offset)).map_err(fatfs_error_to_status)?;
@@ -226,7 +235,7 @@ impl VfsFile for FatFile {
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock)?;
+        let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
         seek_for_write(file, length)?;
         file.truncate().map_err(fatfs_error_to_status)?;
         Ok(())
@@ -267,7 +276,7 @@ impl VfsFile for FatFile {
     #[allow(deprecated)]
     async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock)?;
+        let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
         let needs_flush = flags
             & (fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME | fio::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME);
@@ -292,12 +301,13 @@ impl VfsFile for FatFile {
     }
 
     async fn close(&self) -> Result<(), Status> {
+        self.close_ref(&self.filesystem.lock().unwrap());
         Ok(())
     }
 
     async fn sync(&self) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let file = self.borrow_file_mut(&fs_lock)?;
+        let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
         file.flush().map_err(fatfs_error_to_status)?;
         Ok(())
@@ -313,11 +323,19 @@ impl DirectoryEntry for FatFile {
         path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        if !path.is_empty() {
-            server_end
-                .close_with_epitaph(Status::NOT_DIR)
-                .unwrap_or_else(|e| fx_log_err!("Failing failed: {:?}", e));
-            return;
+        let status = if !path.is_empty() {
+            Err(Status::NOT_DIR)
+        } else {
+            self.open_ref(&self.filesystem.lock().unwrap())
+        };
+        match status {
+            Ok(_) => {}
+            Err(e) => {
+                server_end
+                    .close_with_epitaph(e)
+                    .unwrap_or_else(|e| fx_log_err!("Failing failed: {:?}", e));
+                return;
+            }
         }
         connection::io1::FileConnection::<FatFile>::create_connection(
             // Note readable/writable do not override what's set in flags, they merely tell the
@@ -347,7 +365,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            node::FatNode,
+            node::{Closer, FatNode},
             tests::{TestDiskContents, TestFatDisk},
         },
         fuchsia_async as fasync,
@@ -356,24 +374,47 @@ mod tests {
     const TEST_DISK_SIZE: u64 = 2048 << 10; // 2048K
     const TEST_FILE_CONTENT: &str = "test file contents";
 
-    fn get_test_file() -> Arc<FatFile> {
-        let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
-        let structure = TestDiskContents::dir().add_child("test_file", TEST_FILE_CONTENT.into());
-        structure.create(&disk.root_dir());
+    struct TestFile(Arc<FatFile>);
 
-        let fs = disk.into_fatfs();
-        let dir = fs.get_fatfs_root();
-        let file = match dir.open_child("test_file", 0, 0).expect("Open to succeed") {
-            FatNode::File(f) => f,
-            val => panic!("Unexpected value {:?}", val),
-        };
+    impl TestFile {
+        fn new() -> Self {
+            let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
+            let structure =
+                TestDiskContents::dir().add_child("test_file", TEST_FILE_CONTENT.into());
+            structure.create(&disk.root_dir());
 
-        file
+            let fs = disk.into_fatfs();
+            let dir = fs.get_fatfs_root();
+            let mut closer = Closer::new(&fs.filesystem());
+            dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
+            closer.add(FatNode::Dir(dir.clone()));
+            let file =
+                match dir.open_child("test_file", 0, 0, &mut closer).expect("Open to succeed") {
+                    FatNode::File(f) => f,
+                    val => panic!("Unexpected value {:?}", val),
+                };
+            file.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
+            TestFile(file)
+        }
+    }
+
+    impl Drop for TestFile {
+        fn drop(&mut self) {
+            self.0.close_ref(&self.0.filesystem.lock().unwrap());
+        }
+    }
+
+    impl std::ops::Deref for TestFile {
+        type Target = Arc<FatFile>;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_at() {
-        let file = get_test_file();
+        let file = TestFile::new();
         // Note: fatfs incorrectly casts u64 to i64, which causes this value to wrap
         // around and become negative, which causes seek() in read_at() to fail.
         // The error is not particularly important, because fat has a maximum 32-bit file size.
@@ -385,7 +426,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_attrs() {
-        let file = get_test_file();
+        let file = TestFile::new();
         let attrs = file.get_attrs().await.expect("get_attrs succeeds");
         assert_eq!(attrs.mode, 0);
         assert_eq!(attrs.id, INO_UNKNOWN);

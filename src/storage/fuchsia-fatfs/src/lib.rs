@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{directory::FatDirectory, filesystem::FatFilesystem},
+    crate::{directory::FatDirectory, filesystem::FatFilesystem, node::Node},
     anyhow::Error,
     fatfs::{FsOptions, ReadWriteSeek},
     fuchsia_zircon::Status,
@@ -41,6 +41,11 @@ impl FatFs {
         self.root.clone()
     }
 
+    #[cfg(test)]
+    pub fn filesystem(&self) -> &FatFilesystem {
+        return &self.inner;
+    }
+
     /// Get the root directory of this filesystem.
     pub fn get_root(&self) -> Arc<dyn DirectoryEntry> {
         self.root.clone()
@@ -54,6 +59,7 @@ impl FatFs {
         // If there are any open nodes in the filesystem, this will fail, as they will
         // also have a reference to `self.root` (via their parents), so as long as this succeeds
         // we can safely shut down the filesystem.
+        self.root.shut_down(&self.inner.lock().unwrap())?;
         std::mem::drop(Arc::try_unwrap(self.root).map_err(|_| Status::UNAVAILABLE)?);
         // Now, unwrap the FatFilesystem. All references to it should've been dropped when
         // we dropped `self.root`.

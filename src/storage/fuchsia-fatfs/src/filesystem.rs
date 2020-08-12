@@ -4,6 +4,7 @@
 use {
     crate::{
         directory::{FatDirectory, InsensitiveStringRef},
+        node::{Closer, FatNode, Node},
         refs::FatfsDirRef,
         types::{Dir, FileSystem},
         util::fatfs_error_to_status,
@@ -76,10 +77,9 @@ impl FatFilesystem {
     /// FatDirectories will exist.
     /// We only call it from new() and from_filesystem().
     fn root_dir(self: Arc<Self>) -> Arc<FatDirectory> {
-        let clone = self.clone();
-        let fs_lock = clone.inner.lock().unwrap();
-        let dir = unsafe { FatfsDirRef::from(fs_lock.root_dir()) };
-        FatDirectory::new(dir, None, self)
+        // We start with an empty FatfsDirRef and an open_count of zero.
+        let dir = FatfsDirRef::empty();
+        FatDirectory::new(dir, None, self, "/".to_owned())
     }
 
     /// Try and lock the underlying filesystem. Returns a LockResult, see `Mutex::lock`.
@@ -92,8 +92,8 @@ impl FatFilesystem {
         // This is safe because we hold the only reference to `inner`, so there are no stray
         // references to fatfs Dir or Files.
         let arc = unsafe { Pin::into_inner_unchecked(self.inner) };
-        let mutex = Arc::try_unwrap(arc).map_err(|_| Status::UNAVAILABLE)?;
-        let inner = mutex.into_inner().map_err(|_| Status::UNAVAILABLE)?;
+        let mutex = Arc::try_unwrap(arc).map_err(|_| Status::BAD_HANDLE)?;
+        let inner = mutex.into_inner().map_err(|_| Status::BAD_HANDLE)?;
         inner.shut_down()
     }
 
@@ -103,48 +103,148 @@ impl FatFilesystem {
     fn rename_internal(
         &self,
         filesystem: &FatFilesystemInner,
-        src_dir: Arc<FatDirectory>,
+        src_dir: &Arc<FatDirectory>,
         src_name: &str,
-        dst_dir: Arc<FatDirectory>,
+        dst_dir: &Arc<FatDirectory>,
         dst_name: &str,
+        existing: ExistingRef<'_, '_>,
     ) -> Result<(), Status> {
         // We're ready to go: remove the entry from the source cache, and close the reference to
         // the underlying file (this ensures all pending writes, etc. have been flushed).
         // We remove the entry with rename() below, and hold the filesystem lock so nothing will
         // put the entry back in the cache. After renaming we also re-attach the entry to its
         // parent.
-        let cache_entry = src_dir.remove_child(&filesystem, &src_name);
 
         // Do the rename.
         let src_fatfs_dir = src_dir.borrow_dir(&filesystem)?;
         let dst_fatfs_dir = dst_dir.borrow_dir(&filesystem)?;
-        let result =
-            src_fatfs_dir.rename(src_name, &dst_fatfs_dir, dst_name).map_err(fatfs_error_to_status);
-        if let Err(e) = result {
-            // TODO(fxb/56239): We are potentially serving connections to a node that is no longer
-            // "on" the filesystem at this point.
-            // We need to handle this more gracefully. Ideally we'd change fatfs to make rename
-            // atomic, so there's no risk of this "in-between" state.
-            // Failing that, we should at least make sure that if the src is a directory we
-            // recursively delete all of its children.
-            // For now, we hope that the entry is still there, and if not just give up on it -
-            // the Fat{File,Directory} will return Status::UNAVAILABLE to all requests.
-            if let Some(cache_entry) = cache_entry {
-                src_dir.add_child(&filesystem, src_name.to_owned(), cache_entry)?;
-            }
-            return Err(e);
-        }
 
-        if let Some(cache_entry) = cache_entry {
-            // We just renamed here, and the rename would've failed if there was an
-            // existing entry there.
-            dst_dir
-                .add_child(&filesystem, dst_name.to_owned(), cache_entry)
-                .unwrap_or_else(|e| panic!("Rename failed, but fatfs says it didn't? - {:?}", e));
+        match existing {
+            ExistingRef::None => {
+                src_fatfs_dir
+                    .rename(src_name, &dst_fatfs_dir, dst_name)
+                    .map_err(fatfs_error_to_status)?;
+            }
+            ExistingRef::File(file) => {
+                src_fatfs_dir
+                    .rename_over_file(src_name, &dst_fatfs_dir, dst_name, file)
+                    .map_err(fatfs_error_to_status)?;
+            }
+            ExistingRef::Dir(dir) => {
+                src_fatfs_dir
+                    .rename_over_dir(src_name, &dst_fatfs_dir, dst_name, dir)
+                    .map_err(fatfs_error_to_status)?;
+            }
         }
 
         src_dir.did_remove(src_name);
         dst_dir.did_add(dst_name);
+
+        // TODO: do the watcher event for existing.
+
+        Ok(())
+    }
+
+    /// Helper for rename which returns FatNodes that need to be dropped without the fs lock held.
+    fn rename_locked(
+        &self,
+        filesystem: &FatFilesystemInner,
+        src_dir: &Arc<FatDirectory>,
+        src_name: &str,
+        dst_dir: &Arc<FatDirectory>,
+        dst_name: &str,
+        src_is_dir: bool,
+        closer: &mut Closer<'_>,
+    ) -> Result<(), Status> {
+        // Renaming a file to itself is trivial, but we do it after we've checked that the file
+        // exists and that src and dst have the same type.
+        if Arc::ptr_eq(&src_dir, &dst_dir)
+            && (&src_name as &dyn InsensitiveStringRef) == (&dst_name as &dyn InsensitiveStringRef)
+        {
+            if src_name != dst_name {
+                // Cases don't match - we don't unlink, but we still need to fix the file's LFN.
+                return self.rename_internal(
+                    &filesystem,
+                    src_dir,
+                    src_name,
+                    dst_dir,
+                    dst_name,
+                    ExistingRef::None,
+                );
+            }
+            return Ok(());
+        }
+
+        if let Some(src_node) = src_dir.cache_get(src_name) {
+            // We can't move a directory into itself.
+            if let FatNode::Dir(ref dir) = src_node {
+                if Arc::ptr_eq(&dir, &dst_dir) {
+                    return Err(Status::INVALID_ARGS);
+                }
+            }
+            src_node.flush_dir_entry(filesystem)?;
+        }
+
+        let mut dir;
+        let mut file;
+        let mut existing_node = dst_dir.cache_get(dst_name);
+        let existing = match existing_node {
+            None => {
+                dst_dir.open_ref(filesystem)?;
+                closer.add(FatNode::Dir(dst_dir.clone()));
+                match dst_dir.find_child(filesystem, dst_name)? {
+                    Some(ref dir_entry) => {
+                        if dir_entry.is_dir() {
+                            dir = Some(dir_entry.to_dir());
+                            ExistingRef::Dir(dir.as_mut().unwrap())
+                        } else {
+                            file = Some(dir_entry.to_file());
+                            ExistingRef::File(file.as_mut().unwrap())
+                        }
+                    }
+                    None => ExistingRef::None,
+                }
+            }
+            Some(ref mut node) => {
+                node.open_ref(filesystem)?;
+                closer.add(node.clone());
+                match node {
+                    FatNode::Dir(ref mut node_dir) => {
+                        ExistingRef::Dir(node_dir.borrow_dir_mut(filesystem).unwrap())
+                    }
+                    FatNode::File(ref mut node_file) => {
+                        ExistingRef::File(node_file.borrow_file_mut(filesystem).unwrap())
+                    }
+                }
+            }
+        };
+
+        match existing {
+            ExistingRef::File(_) => {
+                if src_is_dir {
+                    return Err(Status::NOT_DIR);
+                }
+            }
+            ExistingRef::Dir(_) => {
+                if !src_is_dir {
+                    return Err(Status::NOT_FILE);
+                }
+            }
+            ExistingRef::None => {}
+        }
+
+        self.rename_internal(&filesystem, src_dir, src_name, dst_dir, dst_name, existing)?;
+
+        if let Some(_) = existing_node {
+            dst_dir.cache_remove(&filesystem, &dst_name).unwrap().did_delete();
+        }
+
+        // We suceeded in renaming, so now move the nodes around.
+        if let Some(node) = src_dir.remove_child(&filesystem, &src_name) {
+            dst_dir
+                .add_child(&filesystem, dst_name.to_owned(), node)
+                .unwrap_or_else(|e| panic!("Rename failed, but fatfs says it didn't? - {:?}", e));
+        }
 
         Ok(())
     }
@@ -168,6 +268,7 @@ impl FilesystemRename for FatFilesystem {
         let src_name = src_path.peek().unwrap();
         let dst_name = dst_path.peek().unwrap();
 
+        let mut closer = Closer::new(&self);
         let filesystem = self.inner.lock().unwrap();
 
         // Figure out if src is a directory.
@@ -179,50 +280,27 @@ impl FilesystemRename for FatFilesystem {
         }
         let src_is_dir = entry.unwrap().is_dir();
         if (dst_path.is_dir() || src_path.is_dir()) && !src_is_dir {
-            // The caller wanted a directory (src or dst), but src is not a directory. This is an error.
+            // The caller wanted a directory (src or dst), but src is not a directory. This is
+            // an error.
             return Err(Status::NOT_DIR);
         }
 
-        // Renaming a file to itself is trivial, but we do it after we've checked that the file
-        // exists and that src and dst have the same type.
-        if Arc::ptr_eq(&src_dir, &dst_dir)
-            && (&src_name as &dyn InsensitiveStringRef) == (&dst_name as &dyn InsensitiveStringRef)
-        {
-            if src_name != dst_name {
-                // Cases don't match - we don't unlink, but we still need to fix the file's LFN.
-                return self.rename_internal(&filesystem, src_dir, src_name, dst_dir, dst_name);
-            }
-            return Ok(());
-        }
-
-        // Make sure destination is a directory, if needed.
-        if let Some(entry) = dst_dir.find_child(&filesystem, &dst_name)? {
-            if entry.is_dir() {
-                // Try to rename over directory. The src must be a directory, and dst must be empty.
-                let dir = entry.to_dir();
-                if !src_is_dir {
-                    return Err(Status::NOT_DIR);
-                }
-
-                if !dir.is_empty().map_err(fatfs_error_to_status)? {
-                    // Can't rename directory onto non-empty directory.
-                    return Err(Status::NOT_EMPTY);
-                }
-
-                // TODO(fxb/56239) allow this path once we support overwriting.
-                return Err(Status::ALREADY_EXISTS);
-            } else {
-                if src_is_dir {
-                    // We were expecting dst to be a directory, but it wasn't.
-                    return Err(Status::NOT_DIR);
-                }
-                // TODO(fxb/56239) allow this path once we support overwriting.
-                return Err(Status::ALREADY_EXISTS);
-            }
-        }
-
-        self.rename_internal(&filesystem, src_dir, src_name, dst_dir, dst_name)
+        self.rename_locked(
+            &filesystem,
+            &src_dir,
+            src_name,
+            &dst_dir,
+            dst_name,
+            src_is_dir,
+            &mut closer,
+        )
     }
 }
 
 impl Filesystem for FatFilesystem {}
+
+pub(crate) enum ExistingRef<'a, 'b> {
+    None,
+    File(&'a mut crate::types::File<'b>),
+    Dir(&'a mut crate::types::Dir<'b>),
+}

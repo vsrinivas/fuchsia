@@ -109,7 +109,7 @@ TEST_P(WatcherTest, Add) {
   }
 
   // Clean up
-  ASSERT_EQ(unlink(GetPath("dir/bar").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("dir/bar").c_str()), 0) << errno;
 
   // There shouldn't be anything else sitting around on the channel
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
@@ -117,7 +117,7 @@ TEST_P(WatcherTest, Add) {
   // The fd is still owned by "dir".
   caller.release().release();
   ASSERT_EQ(closedir(dir), 0);
-  ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0);
+  ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0) << errno;
 }
 
 TEST_P(WatcherTest, Existing) {
@@ -235,7 +235,7 @@ TEST_P(WatcherTest, Removed) {
   // The fd is still owned by "dir".
   caller.release().release();
   ASSERT_EQ(closedir(dir), 0);
-  ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0);
+  ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0) << errno;
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, WatcherTest, testing::ValuesIn(AllTestFilesystems()),

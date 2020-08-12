@@ -328,7 +328,7 @@ TEST_P(RenameTest, RenameFileOverDirFails) {
   ASSERT_EQ(rename(src.c_str(), dst.c_str()), -1);
   ASSERT_EQ(errno, ENOTDIR);
   ASSERT_EQ(rename(src.c_str(), GetPath("a/c").c_str()), -1);
-  ASSERT_EQ(errno, ENOTDIR);
+  ASSERT_EQ(errno, EISDIR);
 }
 
 TEST_P(RenameTest, RenameFileOverNonexistantDirPathFails) {

@@ -444,15 +444,11 @@ impl DirEntryEditor {
         &self.data
     }
 
-    /// Mark the DirEntry as deleted. Once a flush() has written this to disk, any future flushes()
-    /// will be no-ops.
-    pub(crate) fn set_deleted(&mut self) {
-        if !self.data.is_deleted() {
-            self.data.set_deleted();
-            // Bypass maybe_set_dirty() here, because we want to write the deleted flag out to
-            // disk.
-            self.dirty = true;
-        }
+    /// Marks an entry as deleted, but assumes that something else has updated the entry.
+    pub(crate) fn mark_deleted(&mut self) {
+        assert!(!self.data.is_deleted());
+        self.data.set_deleted();
+        self.dirty = false;
     }
 
     pub(crate) fn set_first_cluster(&mut self, first_cluster: Option<u32>, fat_type: FatType) {

@@ -33,9 +33,14 @@ impl<T: Seek + Write> TransactionManager<T> {
         self.inner
     }
 
-    pub fn begin_transaction(&mut self) {
-        assert!(!self.active);
-        self.active = true;
+    #[must_use]
+    pub fn begin_transaction(&mut self) -> bool {
+        if self.active {
+            false
+        } else {
+            self.active = true;
+            true
+        }
     }
 
     pub fn commit(&mut self) -> Result<()> {
@@ -188,7 +193,7 @@ mod tests {
     #[test]
     fn test_read_part_transaction_part_inner() {
         let mut manager = TransactionManager::new(Cursor::new(vec![55; 100]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.write(&[1, 2, 3]).expect("write failed"), 3);
         assert_eq!(manager.seek(SeekFrom::Start(10)).expect("seek failed"), 10);
         assert_eq!(manager.write(&[4, 5, 6]).expect("write failed"), 3);
@@ -202,7 +207,7 @@ mod tests {
     #[test]
     fn test_write_extend_entry() {
         let mut manager = TransactionManager::new(Cursor::new(vec![55; 100]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.write(&[1, 2, 3]).expect("write failed"), 3);
         assert_eq!(manager.seek(SeekFrom::Start(10)).expect("seek failed"), 10);
         assert_eq!(manager.write(&[4, 5, 6]).expect("write failed"), 3);
@@ -216,7 +221,7 @@ mod tests {
     #[test]
     fn test_write_existing_entry_encompasses_write() {
         let mut manager = TransactionManager::new(Cursor::new(vec![55; 100]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.write(&[1, 2, 3]).expect("write failed"), 3);
         assert_eq!(manager.seek(SeekFrom::Start(10)).expect("seek failed"), 10);
         assert_eq!(manager.write(&[4, 5, 6, 7, 8, 9]).expect("write failed"), 6);
@@ -231,7 +236,7 @@ mod tests {
     #[test]
     fn test_write_partial_overlap_and_extension() {
         let mut manager = TransactionManager::new(Cursor::new(vec![55; 100]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.write(&[1, 2, 3]).expect("write failed"), 3);
         assert_eq!(manager.seek(SeekFrom::Start(10)).expect("seek failed"), 10);
         assert_eq!(manager.write(&[4, 5, 6, 7, 8, 9]).expect("write failed"), 6);
@@ -246,7 +251,7 @@ mod tests {
     #[test]
     fn test_write_no_overlap() {
         let mut manager = TransactionManager::new(Cursor::new(vec![55; 100]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.write(&[1, 2, 3]).expect("write failed"), 3);
         assert_eq!(manager.seek(SeekFrom::Start(8)).expect("seek failed"), 8);
         assert_eq!(manager.write(&[4, 5, 6]).expect("write failed"), 3);
@@ -261,7 +266,7 @@ mod tests {
     #[test]
     fn test_trim_following_entries() {
         let mut manager = TransactionManager::new(Cursor::new(vec![55; 100]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.seek(SeekFrom::Start(2)).expect("seek failed"), 2);
         assert_eq!(manager.write(&[1, 2, 3]).expect("write failed"), 3);
         assert_eq!(manager.seek(SeekFrom::Current(1)).expect("seek failed"), 6);
@@ -277,7 +282,7 @@ mod tests {
     #[test]
     fn test_revert_transaction() {
         let mut manager = TransactionManager::new(Cursor::new(vec![1, 2, 3, 4, 5, 6]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.write(&[7, 8, 9]).expect("write failed"), 3);
         manager.revert();
         assert_eq!(manager.seek(SeekFrom::Start(1)).expect("seek failed"), 1);
@@ -289,7 +294,7 @@ mod tests {
     #[test]
     fn test_commit_transaction() {
         let mut manager = TransactionManager::new(Cursor::new(vec![55; 10]));
-        manager.begin_transaction();
+        assert!(manager.begin_transaction());
         assert_eq!(manager.write(&[1, 2]).expect("write failed"), 2);
         assert_eq!(manager.seek(SeekFrom::Current(1)).expect("seek failed"), 3);
         assert_eq!(manager.write(&[3, 4]).expect("write failed"), 2);

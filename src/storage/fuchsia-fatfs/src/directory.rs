@@ -5,7 +5,7 @@ use {
     crate::{
         file::FatFile,
         filesystem::{FatFilesystem, FatFilesystemInner},
-        node::{FatNode, WeakFatNode},
+        node::{Closer, FatNode, Node, WeakFatNode},
         refs::{FatfsDirRef, FatfsFileRef},
         types::{Dir, DirEntry},
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
@@ -67,6 +67,8 @@ struct FatDirectoryData {
     /// True if this directory has been deleted.
     deleted: bool,
     watchers: Watchers,
+    /// Name of this directory. TODO: we should be able to change to HashSet.
+    name: String,
 }
 
 // Whilst it's tempting to use the unicase crate, at time of writing, it had its own case tables,
@@ -163,6 +165,7 @@ impl FatDirectory {
         dir: FatfsDirRef,
         parent: Option<Arc<FatDirectory>>,
         filesystem: Arc<FatFilesystem>,
+        name: String,
     ) -> Arc<Self> {
         Arc::new(FatDirectory {
             dir: UnsafeCell::new(dir),
@@ -172,24 +175,19 @@ impl FatDirectory {
                 children: HashMap::new(),
                 deleted: false,
                 watchers: Watchers::new(),
+                name,
             }),
         })
     }
 
     /// Borrow the underlying fatfs `Dir` that corresponds to this directory.
-    pub(crate) fn borrow_dir<'a>(
-        &'a self,
-        fs: &'a FatFilesystemInner,
-    ) -> Result<&'a Dir<'a>, Status> {
-        unsafe { self.dir.get().as_ref() }.unwrap().borrow(fs).ok_or(Status::UNAVAILABLE)
+    pub(crate) fn borrow_dir<'a>(&self, fs: &'a FatFilesystemInner) -> Result<&Dir<'a>, Status> {
+        unsafe { self.dir.get().as_ref() }.unwrap().borrow(fs).ok_or(Status::BAD_HANDLE)
     }
 
     /// Borrow the underlying fatfs `Dir` that corresponds to this directory.
-    pub(crate) fn borrow_dir_mut<'a>(
-        &'a self,
-        fs: &'a FatFilesystemInner,
-    ) -> Result<&'a mut Dir<'a>, Status> {
-        unsafe { self.dir.get().as_mut() }.unwrap().borrow_mut(fs).ok_or(Status::UNAVAILABLE)
+    pub(crate) fn borrow_dir_mut<'a>(&self, fs: &'a FatFilesystemInner) -> Option<&mut Dir<'a>> {
+        unsafe { self.dir.get().as_mut() }.unwrap().borrow_mut(fs)
     }
 
     /// Gets a child directory entry from the underlying fatfs implementation.
@@ -198,6 +196,9 @@ impl FatDirectory {
         fs: &'a FatFilesystemInner,
         name: &str,
     ) -> Result<Option<DirEntry<'a>>, Status> {
+        if self.data.read().unwrap().deleted {
+            return Ok(None);
+        }
         let dir = self.borrow_dir(fs)?;
         for entry in dir.iter().into_iter() {
             let entry = entry?;
@@ -234,16 +235,16 @@ impl FatDirectory {
         // We only add back to the cache if the above succeeds, otherwise we have no
         // interest in serving more connections to a file that doesn't exist.
         let mut data = self.data.write().unwrap();
-        assert!(
-            data.children.insert(InsensitiveString(name), child.downgrade()).is_none(),
-            "conflicting cache entries with the same name"
-        );
+        // TODO: need to delete cache entries somewhere.
+        if let Some(node) = data.children.insert(InsensitiveString(name), child.downgrade()) {
+            assert!(node.upgrade().is_none(), "conflicting cache entries with the same name")
+        }
         Ok(())
     }
 
     /// Remove a child entry from the cache, if it exists. The caller must hold the fs lock, as
     /// otherwise another thread could immediately add the entry back to the cache.
-    fn cache_remove(&self, _fs: &FatFilesystemInner, name: &str) -> Option<FatNode> {
+    pub(crate) fn cache_remove(&self, _fs: &FatFilesystemInner, name: &str) -> Option<FatNode> {
         let mut data = self.data.write().unwrap();
         data.children.remove(&name as &dyn InsensitiveStringRef).and_then(|entry| entry.upgrade())
     }
@@ -256,49 +257,38 @@ impl FatDirectory {
         data.children.get(&name as &dyn InsensitiveStringRef).and_then(|entry| entry.upgrade())
     }
 
-    /// Flush to disk and invalidate the reference that's contained within this FatDir.
-    /// Any operations on the directory will return Status::UNAVAILABLE until it is re-attached.
-    pub fn detach(&self, fs: &FatFilesystemInner) {
-        // Safe because we hold the fs lock.
-        let dir = unsafe { self.dir.get().as_mut() }.unwrap();
-        // This causes a flush to disk when the underlying fatfs Dir is dropped.
-        dir.take(fs);
-    }
+    fn lookup(
+        self: &Arc<Self>,
+        flags: u32,
+        mode: u32,
+        mut path: Path,
+        closer: &mut Closer<'_>,
+    ) -> Result<FatNode, Status> {
+        let mut cur_entry = FatNode::Dir(self.clone());
 
-    /// Re-open the underlying `FatfsDirRef` this directory represents, and attach to the given
-    /// parent.
-    pub fn attach(
-        &self,
-        new_parent: Arc<FatDirectory>,
-        name: &str,
-        fs: &FatFilesystemInner,
-    ) -> Result<(), Status> {
-        let mut data = self.data.write().unwrap();
-        assert!(data.parent.replace(new_parent).is_some());
+        while !path.is_empty() {
+            let (child_flags, child_mode) = if path.is_single_component() {
+                (flags, mode)
+            } else {
+                (OPEN_FLAG_DIRECTORY, MODE_TYPE_DIRECTORY)
+            };
 
-        let dir_ref = if let Some(parent) = data.parent.as_ref() {
-            let entry = parent.find_child(fs, name)?.ok_or(Status::NOT_FOUND)?;
-            // Safe because we have a reference to the FatFilesystem.
-            unsafe { FatfsDirRef::from(entry.to_dir()) }
-        } else {
-            // Safe because we have a reference to the FatFilesystem.
-            unsafe { FatfsDirRef::from(fs.root_dir()) }
-        };
+            match cur_entry {
+                FatNode::Dir(entry) => {
+                    cur_entry = entry.clone().open_child(
+                        &path.next().unwrap().to_owned(),
+                        child_flags,
+                        child_mode,
+                        closer,
+                    )?;
+                }
+                FatNode::File(_) => {
+                    return Err(Status::NOT_DIR);
+                }
+            };
+        }
 
-        // Safe because we hold the fs lock.
-        let dir = unsafe { self.dir.get().as_mut().unwrap() };
-        *dir = dir_ref;
-        Ok(())
-    }
-
-    pub fn remove_from(&self, fs: &FatFilesystemInner, parent: &Dir<'_>) -> Result<(), Status> {
-        let dir = self.borrow_dir_mut(fs)?;
-        parent.unlink_dir(dir).map_err(fatfs_error_to_status)?;
-
-        let mut data = self.data.write().unwrap();
-        data.parent.take();
-        data.deleted = true;
-        Ok(())
+        Ok(cur_entry)
     }
 
     /// Open a child entry with the given name.
@@ -308,22 +298,18 @@ impl FatDirectory {
     /// * OPEN_FLAG_DIRECTORY
     /// * OPEN_FLAG_NOT_DIRECTORY
     pub(crate) fn open_child(
-        self: Arc<Self>,
+        self: &Arc<Self>,
         name: &str,
         flags: u32,
         mode: u32,
+        closer: &mut Closer<'_>,
     ) -> Result<FatNode, Status> {
+        let fs_lock = self.filesystem.lock().unwrap();
         // First, check the cache.
         if let Some(entry) = self.cache_get(name) {
             check_open_flags_for_existing_entry(flags)?;
-            return Ok(entry);
-        };
-
-        let fs_lock = self.filesystem.lock().unwrap();
-        // Check the cache again in case we lost the race for the fs_lock.
-        if let Some(entry) = self.cache_get(name) {
-            check_open_flags_for_existing_entry(flags)?;
-            return Ok(entry);
+            entry.open_ref(&fs_lock)?;
+            return Ok(closer.add(entry));
         };
 
         let mut created = false;
@@ -337,16 +323,22 @@ impl FatDirectory {
                     // Safe because we give the FatDirectory a FatFilesystem which ensures that the
                     // FatfsDirRef will not outlive its FatFilesystem.
                     let dir_ref = unsafe { FatfsDirRef::from(entry.to_dir()) };
-                    FatNode::Dir(FatDirectory::new(
+                    closer.add(FatNode::Dir(FatDirectory::new(
                         dir_ref,
                         Some(self.clone()),
                         self.filesystem.clone(),
-                    ))
+                        name.to_owned(),
+                    )))
                 } else {
                     // Safe because we give the FatFile a FatFilesystem which ensures that the
                     // FatfsFileRef will not outlive its FatFilesystem.
                     let file_ref = unsafe { FatfsFileRef::from(entry.to_file()) };
-                    FatNode::File(FatFile::new(file_ref, self.clone(), self.filesystem.clone()))
+                    closer.add(FatNode::File(FatFile::new(
+                        file_ref,
+                        self.clone(),
+                        self.filesystem.clone(),
+                        name.to_owned(),
+                    )))
                 }
             } else if flags & OPEN_FLAG_CREATE != 0 {
                 // Child entry does not exist, but we've been asked to create it.
@@ -359,17 +351,23 @@ impl FatDirectory {
                     // Safe because we give the FatDirectory a FatFilesystem which ensures that the
                     // FatfsDirRef will not outlive its FatFilesystem.
                     let dir_ref = unsafe { FatfsDirRef::from(dir) };
-                    FatNode::Dir(FatDirectory::new(
+                    closer.add(FatNode::Dir(FatDirectory::new(
                         dir_ref,
                         Some(self.clone()),
                         self.filesystem.clone(),
-                    ))
+                        name.to_owned(),
+                    )))
                 } else {
                     let file = dir.create_file(name).map_err(fatfs_error_to_status)?;
                     // Safe because we give the FatFile a FatFilesystem which ensures that the
                     // FatfsFileRef will not outlive its FatFilesystem.
                     let file_ref = unsafe { FatfsFileRef::from(file) };
-                    FatNode::File(FatFile::new(file_ref, self.clone(), self.filesystem.clone()))
+                    closer.add(FatNode::File(FatFile::new(
+                        file_ref,
+                        self.clone(),
+                        self.filesystem.clone(),
+                        name.to_owned(),
+                    )))
                 }
             } else {
                 // Not creating, and no existing entry => not found.
@@ -402,19 +400,75 @@ impl FatDirectory {
     }
 }
 
-impl Debug for FatDirectory {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("FatDirectory").field("parent", &self.data.read().unwrap().parent).finish()
+impl Node for FatDirectory {
+    /// Flush to disk and invalidate the reference that's contained within this FatDir.
+    /// Any operations on the directory will return Status::BAD_HANDLE until it is re-attached.
+    fn detach(&self, fs: &FatFilesystemInner) {
+        // Safe because we hold the fs lock.
+        let dir = unsafe { self.dir.get().as_mut() }.unwrap();
+        // This causes a flush to disk when the underlying fatfs Dir is dropped.
+        dir.take(fs);
+    }
+
+    /// Re-open the underlying `FatfsDirRef` this directory represents, and attach to the given
+    /// parent.
+    fn attach(
+        &self,
+        new_parent: Arc<FatDirectory>,
+        name: &str,
+        fs: &FatFilesystemInner,
+    ) -> Result<(), Status> {
+        let mut data = self.data.write().unwrap();
+        data.name = name.to_owned();
+
+        // Safe because we hold the fs lock.
+        let dir = unsafe { self.dir.get().as_mut().unwrap() };
+        // Safe because we have a reference to the FatFilesystem.
+        unsafe { dir.reopen(fs, Some(&new_parent), name)? };
+
+        assert!(data.parent.replace(new_parent).is_some());
+        Ok(())
+    }
+
+    fn did_delete(&self) {
+        let mut data = self.data.write().unwrap();
+        data.parent.take();
+        data.deleted = true;
+    }
+
+    fn open_ref(&self, fs: &FatFilesystemInner) -> Result<(), Status> {
+        let data = self.data.read().unwrap();
+        let dir_ref = unsafe { self.dir.get().as_mut() }.unwrap();
+
+        unsafe { dir_ref.open(&fs, data.parent.as_ref(), &data.name) }
+    }
+
+    fn shut_down(&self, fs: &FatFilesystemInner) -> Result<(), Status> {
+        unsafe { self.dir.get().as_mut() }.unwrap().take(fs);
+        let mut data = self.data.write().unwrap();
+        for (_, child) in data.children.drain() {
+            if let Some(child) = child.upgrade() {
+                child.shut_down(fs)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn flush_dir_entry(&self, fs: &FatFilesystemInner) -> Result<(), Status> {
+        if let Some(ref mut dir) = self.borrow_dir_mut(fs) {
+            dir.flush_dir_entry().map_err(fatfs_error_to_status)?;
+        }
+        Ok(())
+    }
+
+    fn close_ref(&self, fs: &FatFilesystemInner) {
+        unsafe { self.dir.get().as_mut() }.unwrap().close(fs);
     }
 }
 
-impl Drop for FatDirectory {
-    fn drop(&mut self) {
-        // We need to drop the underlying Fatfs `Dir` while holding the filesystem lock,
-        // to make sure that it's able to flush, etc. before getting dropped.
-        let fs_lock = self.filesystem.lock().unwrap();
-        // Safe because we hold fs_lock.
-        unsafe { self.dir.get().as_mut() }.unwrap().take(&fs_lock);
+impl Debug for FatDirectory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FatDirectory").field("parent", &self.data.read().unwrap().parent).finish()
     }
 }
 
@@ -425,42 +479,54 @@ impl MutableDirectory for FatDirectory {
 
     fn unlink(&self, path: Path) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let parent = self.borrow_dir(&fs_lock)?;
         let name = path.peek().unwrap();
-        if let Some(FatNode::File(_)) = self.cache_get(&name) {
-            if path.is_dir() {
-                return Err(Status::NOT_DIR);
-            }
-        }
-        match self.cache_remove(&fs_lock, &name) {
-            Some(entry) => {
-                // The file or directory is already open elsewhere, so we remove the direntry but
-                // don't delete the cluster chain that it actually occupies.
-                match entry {
-                    FatNode::File(file) => file.remove_from(&fs_lock, parent),
-                    FatNode::Dir(dir) => dir.remove_from(&fs_lock, parent),
+        let parent = self.borrow_dir(&fs_lock)?;
+        let mut existing_node = self.cache_get(&name);
+        let mut done = false;
+        match existing_node {
+            Some(FatNode::File(ref mut file)) => {
+                if path.is_dir() {
+                    return Err(Status::NOT_DIR);
+                }
+                if let Some(file) = file.borrow_file_mut(&fs_lock) {
+                    parent.unlink_file(file).map_err(fatfs_error_to_status)?;
+                    done = true;
                 }
             }
-            // The file is not currently open by anyone, so it's safe to remove directly.
+            Some(FatNode::Dir(ref mut dir)) => {
+                if let Some(dir) = dir.borrow_dir_mut(&fs_lock) {
+                    parent.unlink_dir(dir).map_err(fatfs_error_to_status)?;
+                    done = true;
+                }
+            }
             None => {
-                let dir = self.borrow_dir(&fs_lock)?;
                 if path.is_dir() {
-                    // Make sure the on-disk thing is a dir too.
                     let entry = self.find_child(&fs_lock, &name)?;
                     if !entry.ok_or(Status::NOT_FOUND)?.is_dir() {
                         return Err(Status::NOT_DIR);
                     }
                 }
-                dir.remove(&name).map_err(fatfs_error_to_status)
             }
-        }?;
+        }
+        if !done {
+            parent.remove(&name).map_err(fatfs_error_to_status)?;
+        }
+        if existing_node.is_some() {
+            self.cache_remove(&fs_lock, &name);
+        }
+        match existing_node {
+            Some(FatNode::File(ref mut file)) => file.did_delete(),
+            Some(FatNode::Dir(ref mut dir)) => dir.did_delete(),
+            None => {}
+        }
+
         self.data.write().unwrap().watchers.send_event(&mut SingleNameEventProducer::removed(name));
         Ok(())
     }
 
     fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
-        let dir = self.borrow_dir_mut(&fs_lock)?;
+        let dir = self.borrow_dir_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
         if flags & fio::NODE_ATTRIBUTE_FLAG_CREATION_TIME != 0 {
             dir.set_created(unix_to_dos_time(attrs.creation_time));
@@ -492,53 +558,28 @@ impl DirectoryEntry for FatDirectory {
         scope: ExecutionScope,
         flags: u32,
         mode: u32,
-        mut path: Path,
+        path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        if path.is_empty() {
-            vfs::directory::mutable::connection::io1::MutableConnection::create_connection(
-                scope,
-                OpenDirectory::new(self),
-                flags,
-                mode,
-                server_end,
-            );
-        } else {
-            let mut cur_entry = FatNode::Dir(self);
-            while !path.is_empty() {
-                let (child_flags, child_mode) = if path.is_single_component() {
-                    (flags, mode)
-                } else {
-                    (OPEN_FLAG_DIRECTORY, MODE_TYPE_DIRECTORY)
-                };
-
-                match cur_entry {
-                    FatNode::Dir(entry) => {
-                        let result = entry.clone().open_child(
-                            &path.next().unwrap().to_owned(),
-                            child_flags,
-                            child_mode,
-                        );
-                        match result {
-                            Ok(val) => cur_entry = val,
-                            Err(e) => {
-                                send_on_open_with_error(flags, server_end, e);
-                                return;
-                            }
-                        }
-                    }
-                    FatNode::File(_) => {
-                        send_on_open_with_error(flags, server_end, Status::NOT_DIR);
-                        return;
-                    }
-                };
+        let mut closer = Closer::new(&self.filesystem);
+        match self.lookup(flags, mode, path, &mut closer) {
+            Err(e) => send_on_open_with_error(flags, server_end, e),
+            Ok(FatNode::Dir(entry)) => {
+                entry
+                    .open_ref(&self.filesystem.lock().unwrap())
+                    .expect("entry should already be open");
+                vfs::directory::mutable::connection::io1::MutableConnection::create_connection(
+                    scope,
+                    OpenDirectory::new(entry),
+                    flags,
+                    mode,
+                    server_end,
+                );
             }
-
-            match cur_entry {
-                FatNode::Dir(entry) => entry.clone().open(scope, flags, mode, path, server_end),
-                FatNode::File(entry) => entry.clone().open(scope, flags, mode, path, server_end),
-            };
-        }
+            Ok(FatNode::File(entry)) => {
+                entry.clone().open(scope, flags, mode, Path::empty(), server_end);
+            }
+        };
     }
 
     fn entry_info(&self) -> EntryInfo {
@@ -553,7 +594,8 @@ impl DirectoryEntry for FatDirectory {
 #[async_trait]
 impl Directory for FatDirectory {
     fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
-        match self.clone().open_child(&name, 0, 0) {
+        let mut closer = Closer::new(&self.filesystem);
+        match self.open_child(&name, 0, 0, &mut closer) {
             Ok(FatNode::Dir(child)) => {
                 AsyncGetEntry::Immediate(Ok(child as Arc<dyn DirectoryEntry>))
             }
@@ -699,6 +741,7 @@ impl Directory for FatDirectory {
     }
 
     fn close(&self) -> Result<(), Status> {
+        self.close_ref(&self.filesystem.lock().unwrap());
         Ok(())
     }
 }
@@ -709,6 +752,7 @@ mod tests {
     use {
         super::*,
         crate::tests::{TestDiskContents, TestFatDisk},
+        scopeguard::defer,
         vfs::directory::dirents_sink::{AppendResult, Sealed},
     };
 
@@ -722,6 +766,8 @@ mod tests {
 
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
+        dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
+        defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) }
         if let AsyncGetEntry::Immediate { 0: entry } = dir.clone().get_entry("test_file".to_owned())
         {
             let entry = entry.expect("Getting test file");
@@ -792,6 +838,9 @@ mod tests {
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
 
+        dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
+        defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) }
+
         let (pos, sealed) = futures::executor::block_on(
             dir.clone().read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(4))),
         )
@@ -830,6 +879,9 @@ mod tests {
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
 
+        dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
+        defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) }
+
         let (_, sealed) = futures::executor::block_on(
             dir.read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(30))),
         )
@@ -854,6 +906,10 @@ mod tests {
 
         let fs = disk.into_fatfs();
         let dir = fs.get_fatfs_root();
+
+        dir.open_ref(&fs.filesystem().lock().unwrap()).expect("open_ref failed");
+        defer! { dir.close_ref(&fs.filesystem().lock().unwrap()) }
+
         let (pos, sealed) = futures::executor::block_on(
             dir.clone().read_dirents(&TraversalPosition::Start, Box::new(DummySink::new(1))),
         )

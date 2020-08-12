@@ -80,7 +80,7 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
         }
     }
 
-    fn flush_dir_entry(&mut self) -> io::Result<()> {
+    pub fn flush_dir_entry(&mut self) -> io::Result<()> {
         if let Some(ref mut e) = self.entry {
             e.flush(self.fs)?;
         }
@@ -156,7 +156,16 @@ impl<'a, IO: ReadWriteSeek, TP, OCC> File<'a, IO, TP, OCC> {
     /// dirent is being deleted but the actual file clusters are being left as-is.
     pub(crate) fn mark_deleted(&mut self) {
         if let Some(ref mut e) = self.entry {
-            e.set_deleted();
+            e.mark_deleted();
+        }
+    }
+
+    /// Avoid writing any more updates to the file's dirent. This should be called if the file's
+    /// dirent is being deleted but the actual file clusters are being left as-is.
+    pub(crate) fn mark_deleted_and_purged(&mut self) {
+        if let Some(ref mut e) = self.entry {
+            e.mark_deleted();
+            self.first_cluster.take();
         }
     }
 
@@ -266,19 +275,6 @@ impl<IO: ReadWriteSeek, TP, OCC> Drop for File<'_, IO, TP, OCC> {
                         .map_err(|e| error!("free_cluster_chain failed {}", e));
                 }
             }
-        }
-    }
-}
-
-// Note: derive cannot be used because of invalid bounds. See: https://github.com/rust-lang/rust/issues/26925
-impl<IO: ReadWriteSeek, TP, OCC> Clone for File<'_, IO, TP, OCC> {
-    fn clone(&self) -> Self {
-        File {
-            first_cluster: self.first_cluster,
-            current_cluster: self.current_cluster,
-            offset: self.offset,
-            entry: self.entry.clone(),
-            fs: self.fs,
         }
     }
 }
