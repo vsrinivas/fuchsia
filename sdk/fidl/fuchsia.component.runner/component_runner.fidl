@@ -124,6 +124,8 @@ table ComponentStartInfo {
 /// resources attributed to the component before closing the connection.
 ///
 /// The following epitaphs may be sent by the server on error:
+/// - `ZX_OK`: The component exited successfully, typically because the
+///   component was asked to stop or it decided independently to exit.
 /// - `INVALID_ARGUMENTS`:
 ///     * `start_info.resolved_url` is not supported by this
 ///       runner;
@@ -135,10 +137,7 @@ table ComponentStartInfo {
 ///   lack of resources.
 /// - `INTERNAL`: An unexpected internal runner error was encountered.
 /// - `INSTANCE_DIED`: The component instance was started but
-///   subsequently terminated, possibly because it crashed or possibly
-///   because it exited voluntarily.
-/// - `ZX_OK`: The component instance was successfully terminated without
-///   error.
+///   subsequently terminated with an error.
 /// - Other status codes (e.g. `ZX_ERR_PEER_CLOSED`) may indicate a failure
 ///   of the component runner itself. The component manager may respond to such
 ///   failures by terminating the component runner's job to ensure system

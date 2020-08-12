@@ -13,7 +13,8 @@ use {
     async_trait::async_trait,
     clonable_error::ClonableError,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
+    fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_process as fproc,
     fidl_fuchsia_process_lifecycle::{LifecycleMarker, LifecycleProxy},
@@ -21,11 +22,17 @@ use {
     fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{duplicate_utc_clock_handle, job_default, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, AsHandleRef, Clock, HandleBased, Job, Process, Task},
-    futures::future::{AbortHandle, Abortable, BoxFuture, FutureExt},
+    fuchsia_zircon::{
+        self as zx, AsHandleRef, Clock, HandleBased, Job, Process, ProcessInfo, Task,
+    },
+    futures::{
+        channel::oneshot,
+        future::{BoxFuture, FutureExt},
+    },
     log::{error, warn},
+    runner::component::{ChannelEpitaph, Controllable},
     std::convert::TryFrom,
-    std::{path::Path, sync::Arc},
+    std::{convert::TryInto, path::Path, sync::Arc},
     thiserror::Error,
     vfs::{
         directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
@@ -546,7 +553,7 @@ impl ElfComponent {
 }
 
 #[async_trait]
-impl runner::component::Controllable for ElfComponent {
+impl Controllable for ElfComponent {
     async fn kill(mut self) {
         if self.main_process_critical {
             warn!("killing a component with 'main_process_critical', so this will also kill component_manager and all of its components");
@@ -615,7 +622,18 @@ impl Runner for ScopedElfRunner {
         let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
         match self.runner.start_component(start_info, &self.checker).await {
             Ok(Some((elf_component, process))) => {
-                let (handle, registration) = AbortHandle::new_pair();
+                let (epitaph_tx, epitaph_rx) = oneshot::channel::<ChannelEpitaph>();
+                // This function waits for something from the channel and
+                // returns it or Error::Internal if the channel is closed
+                let epitaph_fn = Box::pin(async move {
+                    epitaph_rx
+                        .await
+                        .unwrap_or_else(|_| {
+                            warn!("epitaph oneshot channel closed unexpectedly");
+                            fcomp::Error::Internal.into()
+                        })
+                        .into()
+                });
 
                 // Spawn a future that watches for the process to exit
                 fasync::Task::spawn(async move {
@@ -624,32 +642,36 @@ impl Runner for ScopedElfRunner {
                         zx::Signals::PROCESS_TERMINATED,
                     )
                     .await;
-                    handle.abort();
+                    // Process exit code '0' is considered a clean return.
+                    // TODO (fxb/57024) If we create an epitaph that indicates
+                    // intentional, non-zero exit, use that for all non-0 exit
+                    // codes.
+                    let exit_status: ChannelEpitaph = match process.info() {
+                        Ok(ProcessInfo { return_code: 0, .. }) => {
+                            zx::Status::OK.try_into().unwrap()
+                        }
+                        Ok(_) => fcomp::Error::InstanceDied.into(),
+                        // TODO(jmatt) log? Try again? Why would this fail?
+                        Err(e) => {
+                            warn!("Unable to query process info: {}", e);
+                            fcomp::Error::Internal.into()
+                        }
+                    };
+                    let _ = epitaph_tx.send(exit_status);
                 })
                 .detach();
 
-                // Create a future which owns and serves the controller channel
-                // and can be aborted if the process exits. Aborting the
-                // future causes the channel to be dropped and closed.
-                let abortable_future = Abortable::new(
-                    // This future completes when the
-                    // Controller is told to stop/kill the component.
-                    async move {
-                        let server_stream = server_end.into_stream().expect("failed to convert");
-                        runner::component::Controller::new(elf_component, server_stream)
-                            .serve()
-                            .await
-                            .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
-                    },
-                    registration,
-                );
-
-                fasync::Task::spawn(async {
-                    // TODO(fxb/53413) Currently we don't care whether this was
-                    // aborted or completed on its own. In the future we should
-                    // set an epitaph on the controller channel if the process
-                    // exited.
-                    let _ = abortable_future.await;
+                // Create a future which owns and serves the controller
+                // channel. The `epitaph_fn` future completes when the
+                // component's main process exits. The controller then sets the
+                // epitaph on the controller channel, closes it, and stops
+                // serving the protocol.
+                fasync::Task::spawn(async move {
+                    let server_stream = server_end.into_stream().expect("failed to convert");
+                    runner::component::Controller::new(elf_component, server_stream)
+                        .serve(epitaph_fn)
+                        .await
+                        .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
                 })
                 .detach();
             }
@@ -714,14 +736,14 @@ mod tests {
         super::*,
         crate::{config::RuntimeConfig, model::moniker::AbsoluteMoniker},
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
-        fidl_fuchsia_data as fdata,
+        fidl_fuchsia_component as fcomp, fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::DirectoryProxy,
-        fuchsia_async as fasync,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::prelude::*,
         io_util,
         matches::assert_matches,
         runner::component::Controllable,
-        std::task::Poll,
+        std::{convert::TryFrom, task::Poll},
     };
 
     // Rust's test harness does not allow passing through arbitrary arguments, so to get coverage
@@ -1196,7 +1218,6 @@ mod tests {
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
-
         runner.start(start_info, server_controller).await;
 
         // Runtime dir won't exist if the component failed to start.
@@ -1204,7 +1225,21 @@ mod tests {
         assert!(process_id > 0);
         // Component controller should get shutdown normally; no ACCESS_DENIED epitaph.
         controller.kill().expect("kill failed");
-        assert_matches!(controller.take_event_stream().try_next().await, Ok(None));
+
+        // We expect the event stream to have closed, which is reported as an
+        // error and the value of the error should match the epitaph for a
+        // process that was killed.
+        match controller.take_event_stream().try_next().await {
+            Err(fidl::Error::ClientChannelClosed { status, .. }) => {
+                assert_eq!(
+                    status,
+                    zx::Status::from_raw(
+                        i32::try_from(fcomp::Error::InstanceDied.into_primitive()).unwrap()
+                    )
+                );
+            }
+            other => panic!("Expected channel closed error, got {:?}", other),
+        }
 
         Ok(())
     }

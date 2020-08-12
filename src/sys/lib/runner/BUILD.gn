@@ -14,6 +14,7 @@ rustc_library("runner") {
 
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -31,6 +32,7 @@ rustc_library("runner") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:thiserror",
   ]
 

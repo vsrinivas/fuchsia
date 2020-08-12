@@ -12,12 +12,13 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::job_default,
     fuchsia_syslog::fx_log_err,
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, AsHandleRef},
     futures::future::abortable,
     futures::{future::BoxFuture, prelude::*},
     runner::component::ComponentNamespace,
     std::{
-        convert::TryFrom,
+        boxed::Box,
+        convert::{TryFrom, TryInto},
         mem,
         ops::Deref,
         path::Path,
@@ -252,7 +253,12 @@ where
     let (component, outgoing_dir) = Component::new(start_info)?;
     let component = Arc::new(component);
 
-    let job_dup = component
+    let job_runtime_dup = component
+        .job
+        .duplicate_handle(zx::Rights::SAME_RIGHTS)
+        .map_err(ComponentError::DuplicateJob)?;
+
+    let job_watch_dup = component
         .job
         .duplicate_handle(zx::Rights::SAME_RIGHTS)
         .map_err(ComponentError::DuplicateJob)?;
@@ -279,8 +285,12 @@ where
     let (fut, abortable_handle) = abortable(fs.collect::<()>());
 
     let url = component.url.clone();
-    let component_runtime =
-        ComponentRuntime::new(abortable_handle, suite_server_abortable_handles, job_dup, component);
+    let component_runtime = ComponentRuntime::new(
+        abortable_handle,
+        suite_server_abortable_handles,
+        job_runtime_dup,
+        component,
+    );
 
     let resolved_url = url.clone();
     fasync::Task::local(async move {
@@ -295,8 +305,18 @@ where
         ComponentError::Fidl("failed to convert server end to controller".to_owned(), e)
     })?;
     let controller = runner::component::Controller::new(component_runtime, controller_stream);
+
+    let epitaph_fut = Box::pin(async move {
+        // Just return 'OK' here. Any actual errors will be handled through
+        // the test protocol.
+        let _ =
+            fasync::OnSignals::new(&job_watch_dup.as_handle_ref(), zx::Signals::TASK_TERMINATED)
+                .await;
+        zx::Status::OK.try_into().unwrap()
+    });
+
     fasync::Task::local(async move {
-        if let Err(e) = controller.serve().await {
+        if let Err(e) = controller.serve(epitaph_fut).await {
             fx_log_err!("test '{}' controller ended with error: {:?}", resolved_url, e);
         }
     })
