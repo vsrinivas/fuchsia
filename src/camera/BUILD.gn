@@ -29,6 +29,10 @@ group("service") {
 group("tools") {
 }
 
+group("factory-tools") {
+  deps = [ "bin/factory:camera-factory" ]
+}
+
 group("tests") {
   testonly = true
 
