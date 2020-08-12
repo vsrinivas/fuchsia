@@ -92,6 +92,15 @@ class GpioDevice : public GpioDeviceType,
       completer.ReplyError(status);
     }
   }
+  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync completer) {
+    uint64_t actual = 0;
+    zx_status_t status = GpioSetDriveStrength(ds_ua, &actual);
+    if (status == ZX_OK) {
+      completer.ReplySuccess(actual);
+    } else {
+      completer.ReplyError(status);
+    }
+  }
 
  private:
   const ddk::GpioImplProtocolClient gpio_ TA_GUARDED(lock_);

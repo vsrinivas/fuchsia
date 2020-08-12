@@ -4,30 +4,9 @@
 
 #include "gpioutil.h"
 
-template <typename T, typename ReturnType>
-zx::status<ReturnType> GetStatus(const T& result) {
-  if (result.status() != ZX_OK) {
-    return zx::error(result.status());
-  }
-  if (result->result.has_invalid_tag()) {
-    return zx::error(result->result.err());
-  }
-  return zx::ok(result->result.response().value);
-}
-
-template <typename T>
-zx::status<> GetStatus(const T& result) {
-  if (result.status() != ZX_OK) {
-    return zx::error(result.status());
-  }
-  if (result->result.has_invalid_tag()) {
-    return zx::error(result->result.err());
-  }
-  return zx::ok();
-}
-
 int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
-              ::llcpp::fuchsia::hardware::gpio::GpioFlags* in_flag, uint8_t* out_value) {
+              ::llcpp::fuchsia::hardware::gpio::GpioFlags* in_flag, uint8_t* out_value,
+              uint64_t* ds_ua) {
   if (argc < 3) {
     return -1;
   }
@@ -35,6 +14,7 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   *write_value = 0;
   *in_flag = ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL;
   *out_value = 0;
+  *ds_ua = 0;
   unsigned long flag = 0;
   switch (argv[1][0]) {
     case 'r':
@@ -69,6 +49,14 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
       }
       *out_value = static_cast<uint8_t>(std::stoul(argv[3]));
       break;
+    case 'd':
+      *func = SetDriveStrength;
+
+      if (argc < 4) {
+        return -1;
+      }
+      *ds_ua = static_cast<uint64_t>(std::stoull(argv[3]));
+      break;
     default:
       *func = Invalid;
       return -1;
@@ -79,40 +67,48 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
 
 int ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient client, GpioFunc func,
                uint8_t write_value, ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag,
-               uint8_t out_value) {
+               uint8_t out_value, uint64_t ds_ua) {
   switch (func) {
     case Read: {
-      zx::status<uint8_t> result =
-          GetStatus<::llcpp::fuchsia::hardware::gpio::Gpio::ResultOf::Read, uint8_t>(client.Read());
-      if (result.is_error()) {
+      auto result = client.Read();
+      if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not read GPIO\n");
         return -2;
       }
-      printf("GPIO Value: %u\n", result.value());
+      printf("GPIO Value: %u\n", result->result.response().value);
       break;
     }
     case Write: {
-      zx::status<> result = GetStatus(client.Write(write_value));
-      if (result.is_error()) {
+      auto result = client.Write(write_value);
+      if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not write to GPIO\n");
         return -2;
       }
       break;
     }
     case ConfigIn: {
-      zx::status<> result = GetStatus(client.ConfigIn(in_flag));
-      if (result.is_error()) {
+      auto result = client.ConfigIn(in_flag);
+      if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not configure GPIO as input\n");
         return -2;
       }
       break;
     }
     case ConfigOut: {
-      zx::status<> result = GetStatus(client.ConfigOut(out_value));
-      if (result.is_error()) {
+      auto result = client.ConfigOut(out_value);
+      if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
         printf("Could not configure GPIO as output\n");
         return -2;
       }
+      break;
+    }
+    case SetDriveStrength: {
+      auto result = client.SetDriveStrength(ds_ua);
+      if ((result.status() != ZX_OK) || result->result.has_invalid_tag()) {
+        printf("Could not set GPIO drive strength\n");
+        return -2;
+      }
+      printf("Set drive strength to %lu\n", result->result.response().actual_ds_ua);
       break;
     }
     default:

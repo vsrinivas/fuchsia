@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/gpio/llcpp/fidl.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
-#include <zircon/status.h>
 
 static void usage() {
   printf("usage:\n");
@@ -21,13 +20,15 @@ static void usage() {
   printf("                         2 - GPIO_NO_PULL\n");
   printf("    gpioutil o DEVICE initial_value     [Config GPIO as OUT with <initial_value>]\n\n");
   printf(
+      "    gpioutil d DEVICE uA                [Set GPIO Drive Strength to <uA> (microAmperes)]\n");
+  printf(
       "     * DEVICE is path to device. Sample: "
       "/dev/sys/platform/05:04:1/aml-axg-gpio/gpio-<pin>,\n");
   printf("       where <pin> corresponds to the pin number calculated for it. For example, see\n");
   printf("       calculation in lib/amlogic/include/soc/aml-t931/t931-gpio.h\n");
 }
 
-enum GpioFunc { Read = 0, Write = 1, ConfigIn = 2, ConfigOut = 3, Invalid = 4 };
+enum GpioFunc { Read, Write, ConfigIn, ConfigOut, SetDriveStrength, Invalid };
 
 template <typename T, typename ReturnType>
 zx::status<ReturnType> GetStatus(const T& result);
@@ -37,10 +38,11 @@ zx::status<> GetStatus(const T& result);
 
 // Parse the command line arguments in |argv|
 int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
-              ::llcpp::fuchsia::hardware::gpio::GpioFlags* in_flag, uint8_t* out_value);
+              ::llcpp::fuchsia::hardware::gpio::GpioFlags* in_flag, uint8_t* out_value,
+              uint64_t* ds_ua);
 
 int ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient client, GpioFunc func,
                uint8_t write_value, ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag,
-               uint8_t out_value);
+               uint8_t out_value, uint64_t ds_ua);
 
 #endif  // SRC_DEVICES_GPIO_BIN_GPIOUTIL_GPIOUTIL_H_

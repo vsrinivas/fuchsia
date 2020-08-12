@@ -53,17 +53,29 @@ class FakeGpio : public Gpio::Interface {
     mock_write_.Call();
     completer.ReplySuccess();
   }
+  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync completer) {
+    if (ds_ua != 2000) {
+      completer.ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+    mock_set_drive_strength_.Call();
+    completer.ReplySuccess(2000);
+  }
 
   mock_function::MockFunction<zx_status_t>& MockConfigIn() { return mock_config_in_; }
   mock_function::MockFunction<zx_status_t>& MockConfigOut() { return mock_config_out_; }
   mock_function::MockFunction<zx_status_t>& MockRead() { return mock_read_; }
   mock_function::MockFunction<zx_status_t>& MockWrite() { return mock_write_; }
+  mock_function::MockFunction<zx_status_t>& MockSetDriveStrength() {
+    return mock_set_drive_strength_;
+  }
 
  private:
   mock_function::MockFunction<zx_status_t> mock_config_in_;
   mock_function::MockFunction<zx_status_t> mock_config_out_;
   mock_function::MockFunction<zx_status_t> mock_read_;
   mock_function::MockFunction<zx_status_t> mock_write_;
+  mock_function::MockFunction<zx_status_t> mock_set_drive_strength_;
 };
 
 class GpioUtilTest : public zxtest::Test {
@@ -83,6 +95,7 @@ class GpioUtilTest : public zxtest::Test {
     gpio_->MockConfigOut().VerifyAndClear();
     gpio_->MockRead().VerifyAndClear();
     gpio_->MockWrite().VerifyAndClear();
+    gpio_->MockSetDriveStrength().VerifyAndClear();
 
     loop_->Shutdown();
   }
@@ -99,17 +112,20 @@ TEST_F(GpioUtilTest, ReadTest) {
 
   GpioFunc func;
   uint8_t write_value, out_value;
+  uint64_t ds_ua;
   ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
-  EXPECT_EQ(ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value),
-            0);
+  EXPECT_EQ(
+      ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
+      0);
   EXPECT_EQ(func, 0);
   EXPECT_EQ(write_value, 0);
   EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 0);
+  EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockRead().ExpectCall(ZX_OK);
   EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
-                       write_value, in_flag, out_value),
+                       write_value, in_flag, out_value, ds_ua),
             0);
 }
 
@@ -119,17 +135,20 @@ TEST_F(GpioUtilTest, WriteTest) {
 
   GpioFunc func;
   uint8_t write_value, out_value;
+  uint64_t ds_ua;
   ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
-  EXPECT_EQ(ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value),
-            0);
+  EXPECT_EQ(
+      ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
+      0);
   EXPECT_EQ(func, 1);
   EXPECT_EQ(write_value, 7);
   EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 0);
+  EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockWrite().ExpectCall(ZX_OK);
   EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
-                       write_value, in_flag, out_value),
+                       write_value, in_flag, out_value, ds_ua),
             0);
 }
 
@@ -139,17 +158,20 @@ TEST_F(GpioUtilTest, ConfigInTest) {
 
   GpioFunc func;
   uint8_t write_value, out_value;
+  uint64_t ds_ua;
   ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
-  EXPECT_EQ(ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value),
-            0);
+  EXPECT_EQ(
+      ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
+      0);
   EXPECT_EQ(func, 2);
   EXPECT_EQ(write_value, 0);
   EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 0);
+  EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockConfigIn().ExpectCall(ZX_OK);
   EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
-                       write_value, in_flag, out_value),
+                       write_value, in_flag, out_value, ds_ua),
             0);
 }
 
@@ -159,17 +181,43 @@ TEST_F(GpioUtilTest, ConfigOutTest) {
 
   GpioFunc func;
   uint8_t write_value, out_value;
+  uint64_t ds_ua;
   ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
-  EXPECT_EQ(ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value),
-            0);
+  EXPECT_EQ(
+      ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
+      0);
   EXPECT_EQ(func, 3);
   EXPECT_EQ(write_value, 0);
   EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL);
   EXPECT_EQ(out_value, 3);
+  EXPECT_EQ(ds_ua, 0);
 
   gpio_->MockConfigOut().ExpectCall(ZX_OK);
   EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
-                       write_value, in_flag, out_value),
+                       write_value, in_flag, out_value, ds_ua),
+            0);
+}
+
+TEST_F(GpioUtilTest, SetDriveStrengthTest) {
+  int argc = 4;
+  const char* argv[] = {"gpioutil", "d", "some_path", "2000"};
+
+  GpioFunc func;
+  uint8_t write_value, out_value;
+  uint64_t ds_ua;
+  ::llcpp::fuchsia::hardware::gpio::GpioFlags in_flag;
+  EXPECT_EQ(
+      ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
+      0);
+  EXPECT_EQ(func, 4);
+  EXPECT_EQ(write_value, 0);
+  EXPECT_EQ(in_flag, ::llcpp::fuchsia::hardware::gpio::GpioFlags::NO_PULL);
+  EXPECT_EQ(out_value, 0);
+  EXPECT_EQ(ds_ua, 2000);
+
+  gpio_->MockSetDriveStrength().ExpectCall(ZX_OK);
+  EXPECT_EQ(ClientCall(::llcpp::fuchsia::hardware::gpio::Gpio::SyncClient(std::move(client_)), func,
+                       write_value, in_flag, out_value, ds_ua),
             0);
 }
 

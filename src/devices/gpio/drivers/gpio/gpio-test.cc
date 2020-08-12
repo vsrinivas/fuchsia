@@ -81,6 +81,11 @@ TEST_F(GpioTest, TestFidlAll) {
   gpio_impl_.ExpectConfigOut(ZX_OK, 0, 5);
   auto result_out = client.ConfigOut(5);
   EXPECT_OK(result_out.status());
+
+  gpio_impl_.ExpectSetDriveStrength(ZX_OK, 0, 2000, 2000);
+  auto result_drivestrength = client.SetDriveStrength(2000);
+  EXPECT_OK(result_drivestrength.status());
+  EXPECT_EQ(result_drivestrength->result.response().actual_ds_ua, 2000);
 }
 
 TEST_F(GpioTest, TestBanjoSetDriveStrength) {

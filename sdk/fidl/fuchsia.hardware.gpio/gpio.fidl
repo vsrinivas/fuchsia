@@ -26,4 +26,9 @@ protocol Gpio {
 
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
     Write(uint8 value) -> () error zx.status;
+
+    /// Sets the drive strength of the GPIO.
+    /// actual_ds_ua is always >= ds_ua. If ds_ua is larger than max value, the drive strength will be set to the max value.
+    /// Return error if unable to set drive strength. actual_ds_ua is not set in this case.
+    SetDriveStrength(uint64 ds_ua) -> (uint64 actual_ds_ua) error zx.status;
 };
