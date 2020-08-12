@@ -100,6 +100,15 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
             }
 
             Prop::Net(PropNet::NetworkName) => {
+                // Get a mutable version of our value so we can
+                // remove any trailing zeros.
+                let mut value = value;
+
+                // Skip trailing zeros.
+                while value.last() == Some(&0) {
+                    value = &value[..value.len() - 1];
+                }
+
                 let mut driver_state = self.driver_state.lock();
 
                 if Some(true)
