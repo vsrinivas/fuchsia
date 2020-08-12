@@ -50,10 +50,26 @@ template("modular_config_validate") {
 #     configuration file from `/config/data/foo.config`.
 #     Default: startup.config
 #
+#   for_pkg (optional)
+#     The destination package that will contain the configuration file.
+#     Default: basemgr
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 template("modular_config") {
+  assert(defined(invoker.config), "config must be defined for $target_name")
+
+  output_name = "startup.config"
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+
+  for_pkg = "basemgr"
+  if (defined(invoker.for_pkg)) {
+    for_pkg = invoker.for_pkg
+  }
+
   modular_config_validate(target_name + "_validate") {
     forward_variables_from(invoker,
                            [
@@ -65,27 +81,25 @@ template("modular_config") {
     config = invoker.config
   }
 
-  config_data(target_name + "_basemgr.config") {
-    for_pkg = "sysmgr"
-    sources = [ "//src/modular/build/modular_config/basemgr.config" ]
-    outputs = [ "basemgr.config" ]
-  }
-
-  # By default, add the sysmgr config to automatically launch basemgr.cmx,
-  # unless the invoker explicitly disables this with
-  # launch_basemgr_on_boot = false.
   config_data_deps = [ ":${invoker.target_name}_validate" ]
-  if (launch_basemgr_on_boot) {
-    config_data_deps += [ ":" + target_name + "_basemgr.config" ]
-  }
 
-  output_name = "startup.config"
-  if (defined(invoker.output_name)) {
-    output_name = invoker.output_name
+  if (for_pkg == "basemgr") {
+    config_data(target_name + "_basemgr.config") {
+      for_pkg = "sysmgr"
+      sources = [ "//src/modular/build/modular_config/basemgr.config" ]
+      outputs = [ "basemgr.config" ]
+    }
+
+    # By default, add the sysmgr config to automatically launch basemgr.cmx,
+    # unless the invoker explicitly disables this with
+    # launch_basemgr_on_boot = false.
+    if (launch_basemgr_on_boot) {
+      config_data_deps += [ ":" + target_name + "_basemgr.config" ]
+    }
   }
 
   config_data(invoker.target_name) {
-    for_pkg = "basemgr"
+    for_pkg = for_pkg
     sources = [ rebase_path(invoker.config) ]
     outputs = [ output_name ]
 
