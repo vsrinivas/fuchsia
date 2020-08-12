@@ -33,7 +33,9 @@ namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 enum {
   kFragmentPdev,
   kFragmentSysmem,
-  kFragmentCount,
+  kFragmentRequiredCount,
+  kFragmentRpmbOptional = kFragmentRequiredCount,  // This fragment is optional.
+  kFragmentMaxCount,
 };
 
 constexpr TEEC_UUID kOpteeOsUuid = {
@@ -276,10 +278,10 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
-  zx_device_t* fragments[kFragmentCount];
+  zx_device_t* fragments[kFragmentMaxCount];
   size_t actual;
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != countof(fragments)) {
+  if (actual < kFragmentRequiredCount) {
     LOG(ERROR, "unable to composite_get_fragments()");
     return ZX_ERR_INTERNAL;
   }
@@ -294,6 +296,16 @@ zx_status_t OpteeController::Bind() {
   if (status != ZX_OK) {
     LOG(ERROR, "unable to get sysmem protocol");
     return status;
+  }
+
+  if (actual > kFragmentRpmbOptional) {
+    rpmb_protocol_t rpmb_proto;
+    status = device_get_protocol(fragments[kFragmentRpmbOptional], ZX_PROTOCOL_RPMB, &rpmb_proto);
+    if (status != ZX_OK) {
+      LOG(ERROR, "unable to get rpmb protocol");
+      return status;
+    }
+    rpmb_protocol_client_ = ddk::RpmbProtocolClient(&rpmb_proto);
   }
 
   static constexpr uint32_t kTrustedOsSmcIndex = 0;

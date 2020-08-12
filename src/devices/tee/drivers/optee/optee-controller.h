@@ -18,6 +18,7 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/rpmb.h>
 #include <ddktl/protocol/tee.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -83,6 +84,19 @@ class OpteeController : public OpteeControllerBase,
     return shared_memory_manager_->client_pool();
   }
 
+  zx_status_t RpmbConnectServer(::zx::channel server) const {
+    if (!server.is_valid()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (!rpmb_protocol_client_.is_valid()) {
+      return ZX_ERR_UNAVAILABLE;
+    }
+
+    rpmb_protocol_client_.ConnectServer(std::move(server));
+    return ZX_OK;
+  }
+
   const GetOsRevisionResult& os_revision() const { return os_revision_; }
 
   // Should only be used for testing.
@@ -98,6 +112,7 @@ class OpteeController : public OpteeControllerBase,
 
   pdev_protocol_t pdev_proto_ = {};
   sysmem_protocol_t sysmem_proto_ = {};
+  ddk::RpmbProtocolClient rpmb_protocol_client_ = {};
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
   GetOsRevisionResult os_revision_;

@@ -166,15 +166,32 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   sysmem_protocol_t proto_;
 };
 
+class FakeRpmb : public ddk::RpmbProtocol<FakeRpmb> {
+ public:
+  FakeRpmb() : proto_({&rpmb_protocol_ops_, this}) {}
+
+  const rpmb_protocol_t* proto() const { return &proto_; }
+  void RpmbConnectServer(zx::channel server) { call_cnt++; }
+
+  int get_call_count() const { return call_cnt; }
+
+  void reset() { call_cnt = 0; }
+
+ private:
+  rpmb_protocol_t proto_;
+  int call_cnt = 0;
+};
+
 class FakeDdkOptee : public zxtest::Test {
  public:
   void SetUp() override {
-    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[3], 3);
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[4], 4);
     protocols[0] = {ZX_PROTOCOL_COMPOSITE,
                     *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
     protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
     protocols[2] = {ZX_PROTOCOL_SYSMEM,
                     *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_.proto())};
+    protocols[3] = {ZX_PROTOCOL_RPMB, *reinterpret_cast<const fake_ddk::Protocol*>(rpmb_.proto())};
     ddk_.SetProtocols(std::move(protocols));
   }
 
@@ -189,6 +206,7 @@ class FakeDdkOptee : public zxtest::Test {
   FakeComposite composite_{fake_ddk::kFakeParent};
   FakePDev pdev_;
   FakeSysmem sysmem_;
+  FakeRpmb rpmb_;
 
   // Fake ddk must be destroyed before optee because it may be executing messages against optee on
   // another thread.
@@ -207,6 +225,20 @@ TEST_F(FakeDdkOptee, PmtUnpinned) {
   optee_.DdkSuspend(ddk::SuspendTxn{fake_ddk::kFakeDevice, DEV_POWER_STATE_DCOLD, false,
                                     DEVICE_SUSPEND_REASON_REBOOT});
   EXPECT_FALSE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
+}
+
+TEST_F(FakeDdkOptee, RpmbTest) {
+  EXPECT_EQ(optee_.Bind(), ZX_OK);
+
+  rpmb_.reset();
+
+  zx::channel client, server;
+  EXPECT_EQ(optee_.RpmbConnectServer(std::move(server)), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(rpmb_.get_call_count(), 0);
+
+  EXPECT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+  EXPECT_EQ(optee_.RpmbConnectServer(std::move(server)), ZX_OK);
+  EXPECT_EQ(rpmb_.get_call_count(), 1);
 }
 
 }  // namespace

@@ -63,12 +63,20 @@ constexpr zx_bind_inst_t root_match[] = {
 constexpr zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
+constexpr zx_bind_inst_t rpmb_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RPMB),
+};
 constexpr device_fragment_part_t sysmem_fragment[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
+constexpr device_fragment_part_t rpmb_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(rpmb_match), rpmb_match},
+};
 constexpr device_fragment_t fragments[] = {
     {countof(sysmem_fragment), sysmem_fragment},
+    {countof(rpmb_fragment), rpmb_fragment},
 };
 
 zx_status_t Sherlock::TeeInit() {

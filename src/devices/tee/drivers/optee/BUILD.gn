@@ -18,6 +18,7 @@ source_set("optee_lib") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_llcpp",
     "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/mmio",
