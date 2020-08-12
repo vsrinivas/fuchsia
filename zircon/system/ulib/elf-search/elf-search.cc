@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <optional>
 
+namespace elf_search {
 namespace {
 
 // This is a reasonable upper limit on the number of program headers that are
@@ -326,3 +327,5 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
 
   return ZX_OK;
 }
+
+}  // namespace elf_search

@@ -26,7 +26,7 @@
 
 namespace {
 
-void WriteHeaders(const ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
+void WriteHeaders(const elf_search::ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
   const Elf64_Ehdr ehdr = {
       .e_ident =
           {
@@ -40,7 +40,7 @@ void WriteHeaders(const ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
               [EI_OSABI] = ELFOSABI_NONE,
           },
       .e_type = ET_DYN,
-      .e_machine = kNativeElfMachine,
+      .e_machine = elf_search::kNativeElfMachine,
       .e_version = EV_CURRENT,
       .e_entry = 0,
       .e_phoff = sizeof(Elf64_Ehdr),
@@ -59,7 +59,7 @@ void WriteHeaders(const ArrayRef<Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
 
 // TODO(jakehehrlich): Switch all uses of uint8_t to std::byte once libc++ lands.
 
-void WriteBuildID(ArrayRef<uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
+void WriteBuildID(elf_search::ArrayRef<uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
   uint8_t buf[64];
   const Elf64_Nhdr nhdr = {
       .n_namesz = sizeof(ELF_NOTE_GNU),
@@ -79,8 +79,8 @@ void WriteBuildID(ArrayRef<uint8_t> build_id, const zx::vmo& vmo, uint64_t note_
 
 struct Module {
   fbl::StringPiece name;
-  ArrayRef<Elf64_Phdr> phdrs;
-  ArrayRef<uint8_t> build_id;
+  elf_search::ArrayRef<Elf64_Phdr> phdrs;
+  elf_search::ArrayRef<uint8_t> build_id;
   zx::vmo vmo;
 };
 
@@ -187,7 +187,7 @@ TEST(ElfSearchTest, ForEachModule) {
 
   // Now loop though everything, checking module info along the way.
   uint32_t matchCount = 0, moduleCount = 0;
-  zx_status_t status = ForEachModule(process, [&](const ModuleInfo& info) {
+  zx_status_t status = elf_search::ForEachModule(process, [&](const elf_search::ModuleInfo& info) {
     for (const auto& mod : ignored_mods) {
       if (info.name == mod) {
         return;

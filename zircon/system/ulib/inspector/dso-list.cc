@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <elf-search.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -10,14 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <elf-search.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "inspector/inspector.h"
 #include "dso-list-impl.h"
+#include "inspector/inspector.h"
 #include "utils-impl.h"
 
 #define rdebug_off_lmap offsetof(struct r_debug, r_map)
@@ -144,35 +143,36 @@ __EXPORT inspector_dsoinfo_t* inspector_dso_lookup(inspector_dsoinfo_t* dso_list
 
 __EXPORT void inspector_print_markup_context(FILE* f, zx_handle_t process) {
   fprintf(f, "{{{reset}}}\n");
-  ForEachModule(*zx::unowned_process{process}, [f, count = 0u](const ModuleInfo& info) mutable {
-    unsigned int module_id = count++;
-    // Print out the module first.
-    fprintf(f, "{{{module:%#x:%s:elf:", module_id, info.name.begin());
-    for (uint8_t byte : info.build_id) {
-      fprintf(f, "%02x", byte);
-    }
-    fprintf(f, "}}}\n");
-    // Now print out the various segments.
-    for (const auto& phdr : info.phdrs) {
-      if (phdr.p_type != PT_LOAD) {
-        continue;
-      }
-      uintptr_t start = phdr.p_vaddr & -PAGE_SIZE;
-      uintptr_t end = (phdr.p_vaddr + phdr.p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
-      fprintf(f, "{{{mmap:%#" PRIxPTR ":%#" PRIxPTR ":load:%#x:", info.vaddr + start, end - start,
-              module_id);
-      if (phdr.p_flags & PF_R) {
-        fprintf(f, "%c", 'r');
-      }
-      if (phdr.p_flags & PF_W) {
-        fprintf(f, "%c", 'w');
-      }
-      if (phdr.p_flags & PF_X) {
-        fprintf(f, "%c", 'x');
-      }
-      fprintf(f, ":%#" PRIxPTR "}}}\n", start);
-    }
-  });
+  elf_search::ForEachModule(
+      *zx::unowned_process{process}, [f, count = 0u](const elf_search::ModuleInfo& info) mutable {
+        unsigned int module_id = count++;
+        // Print out the module first.
+        fprintf(f, "{{{module:%#x:%s:elf:", module_id, info.name.begin());
+        for (uint8_t byte : info.build_id) {
+          fprintf(f, "%02x", byte);
+        }
+        fprintf(f, "}}}\n");
+        // Now print out the various segments.
+        for (const auto& phdr : info.phdrs) {
+          if (phdr.p_type != PT_LOAD) {
+            continue;
+          }
+          uintptr_t start = phdr.p_vaddr & -PAGE_SIZE;
+          uintptr_t end = (phdr.p_vaddr + phdr.p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
+          fprintf(f, "{{{mmap:%#" PRIxPTR ":%#" PRIxPTR ":load:%#x:", info.vaddr + start,
+                  end - start, module_id);
+          if (phdr.p_flags & PF_R) {
+            fprintf(f, "%c", 'r');
+          }
+          if (phdr.p_flags & PF_W) {
+            fprintf(f, "%c", 'w');
+          }
+          if (phdr.p_flags & PF_X) {
+            fprintf(f, "%c", 'x');
+          }
+          fprintf(f, ":%#" PRIxPTR "}}}\n", start);
+        }
+      });
 }
 
 __EXPORT void inspector_dso_print_list(FILE* f, inspector_dsoinfo_t* dso_list) {

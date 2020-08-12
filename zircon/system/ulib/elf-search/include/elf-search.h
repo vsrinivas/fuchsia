@@ -2,14 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ELF_SEARCH_H_
+#define ELF_SEARCH_H_
 
 #include <elf.h>
+#include <lib/zx/process.h>
+#include <stdint.h>
+
 #include <fbl/array.h>
 #include <fbl/function.h>
 #include <fbl/string_piece.h>
-#include <lib/zx/process.h>
-#include <stdint.h>
+
+namespace elf_search {
+
+#if defined(__aarch64__)
+constexpr Elf64_Half kNativeElfMachine = EM_AARCH64;
+#elif defined(__x86_64__)
+constexpr Elf64_Half kNativeElfMachine = EM_X86_64;
+#endif
 
 // TODO(jakehehrlich): Replace ArrayRef here with something more like std::span
 // in fbl.
@@ -70,11 +80,9 @@ struct ModuleInfo {
   ArrayRef<Elf64_Phdr> phdrs;
 };
 
-#if defined(__aarch64__)
-constexpr Elf64_Half kNativeElfMachine = EM_AARCH64;
-#elif defined(__x86_64__)
-constexpr Elf64_Half kNativeElfMachine = EM_X86_64;
-#endif
-
 using ModuleAction = fbl::Function<void(const ModuleInfo&)>;
 extern zx_status_t ForEachModule(const zx::process&, ModuleAction);
+
+}  // namespace elf_search
+
+#endif  // ELF_SEARCH_H_
