@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/cksum.h>
+#include <sys/mman.h>
+#include <zircon/errors.h>
 
 #include <fs/journal/format.h>
 #include <fs/journal/initializer.h>
@@ -21,12 +23,12 @@ void InitJournalBlock(fbl::Span<uint8_t> block) {
 
 }  // namespace
 
-zx_status_t MakeJournal(uint64_t journal_blocks, WriteBlockFn WriteBlock) {
+zx_status_t MakeJournal(uint64_t journal_blocks, const WriteBlocksFn& WriteBlocks) {
   uint8_t block[kJournalBlockSize];
   fbl::Span<uint8_t> buffer(block, sizeof(block));
   InitJournalBlock(buffer);
 
-  auto status = WriteBlock(buffer, 0);
+  auto status = WriteBlocks(buffer, 0, 1);
   if (status != ZX_OK) {
     return status;
   }
@@ -37,13 +39,18 @@ zx_status_t MakeJournal(uint64_t journal_blocks, WriteBlockFn WriteBlock) {
   static_assert(fs::kJournalMetadataBlocks == 1, "Uninitialized blocks in journal");
 
   // Clear the journal from disk.
-  memset(block, 0, sizeof(block));
+  uint64_t block_count = journal_blocks - kJournalMetadataBlocks;
+  size_t map_length = kJournalBlockSize * block_count;
+  void* blocks = mmap(nullptr, map_length, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+  if (blocks == MAP_FAILED) {
+    return ZX_ERR_NO_MEMORY;
+  }
 
-  for (uint32_t i = fs::kJournalMetadataBlocks; i < journal_blocks; i++) {
-    status = WriteBlock(buffer, i);
-    if (status != ZX_OK) {
-      return status;
-    }
+  fbl::Span<const uint8_t> buffers(static_cast<const uint8_t*>(blocks), map_length);
+  status = WriteBlocks(buffers, kJournalMetadataBlocks, block_count);
+
+  if (munmap(blocks, map_length) != 0) {
+    return ZX_ERR_NO_MEMORY;
   }
 
   return status;

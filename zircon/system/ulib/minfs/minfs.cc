@@ -1605,13 +1605,23 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
     bc->Writeblk(kFvmSuperblockBackup, &info);
   }
 
-  fs::WriteBlockFn write_block_fn = [bc, info](fbl::Span<const uint8_t> buffer,
-                                               uint64_t block_offset) {
-    ZX_ASSERT(block_offset < JournalBlocks(info));
-    ZX_ASSERT(buffer.size() == info.BlockSize());
-    return bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info) + block_offset), buffer.data());
+  fs::WriteBlocksFn write_blocks_fn = [bc, info](fbl::Span<const uint8_t> buffer,
+                                                 uint64_t block_offset, uint64_t block_count) {
+    ZX_ASSERT((block_count + block_offset) <= JournalBlocks(info));
+    ZX_ASSERT(buffer.size() >= (block_count * info.BlockSize()));
+    auto data = buffer.data();
+    while (block_count > 0) {
+      auto status = bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info) + block_offset), data);
+      if (status != ZX_OK) {
+        return status;
+      }
+      block_offset = safemath::CheckAdd(block_offset, 1).ValueOrDie();
+      block_count = safemath::CheckSub(block_count, 1).ValueOrDie();
+      data += info.BlockSize();
+    }
+    return ZX_OK;
   };
-  ZX_ASSERT(fs::MakeJournal(JournalBlocks(info), write_block_fn) == ZX_OK);
+  ZX_ASSERT(fs::MakeJournal(JournalBlocks(info), write_blocks_fn) == ZX_OK);
 
 #ifdef __Fuchsia__
   fvm_cleanup.cancel();

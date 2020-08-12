@@ -9,11 +9,12 @@
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
-#include <storage/buffer/array_buffer.h>
 #include <disk_inspector/buffer_factory.h>
 #include <fs/journal/format.h>
 #include <fs/journal/initializer.h>
 #include <fs/transaction/legacy_transaction_handler.h>
+#include <safemath/checked_math.h>
+#include <storage/buffer/array_buffer.h>
 #include <zxtest/zxtest.h>
 
 namespace blobfs {
@@ -117,15 +118,16 @@ void CreateFakeBlobfsHandler(std::unique_ptr<FakeTransactionHandler>* handler) {
   memset(device->Data(NodeMapStartBlock(superblock)), 0, nodemap_length);
 
   // Journal.
-  fs::WriteBlockFn write_block_fn = [&device, &superblock](fbl::Span<const uint8_t> buffer,
-                                                           uint64_t block_offset) {
-    ZX_ASSERT(block_offset < JournalBlocks(superblock));
-    ZX_ASSERT(buffer.size() == kBlobfsBlockSize);
-    memcpy(device->Data(JournalStartBlock(superblock) + block_offset), buffer.data(),
-           kBlobfsBlockSize);
+  fs::WriteBlocksFn write_blocks_fn = [&device, &superblock](fbl::Span<const uint8_t> buffer,
+                                                             uint64_t block_offset,
+                                                             uint64_t block_count) {
+    uint64_t size = safemath::CheckMul<uint64_t>(block_count, kBlobfsBlockSize).ValueOrDie();
+    ZX_ASSERT((block_offset + block_count) <= JournalBlocks(superblock));
+    ZX_ASSERT(buffer.size() >= size);
+    memcpy(device->Data(JournalStartBlock(superblock) + block_offset), buffer.data(), size);
     return ZX_OK;
   };
-  ASSERT_OK(fs::MakeJournal(JournalBlocks(superblock), write_block_fn));
+  ASSERT_OK(fs::MakeJournal(JournalBlocks(superblock), write_blocks_fn));
 
   *handler = std::make_unique<FakeTransactionHandler>(std::move(device));
 }

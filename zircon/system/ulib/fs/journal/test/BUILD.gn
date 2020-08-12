@@ -52,6 +52,7 @@ test("journal-unit") {
   ]
   deps = [
     "//zircon/public/lib/cksum",
+    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

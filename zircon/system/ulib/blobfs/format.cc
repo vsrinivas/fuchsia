@@ -14,6 +14,7 @@
 #include <fs/journal/initializer.h>
 #include <fs/trace.h>
 #include <fvm/client.h>
+#include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
 
 namespace blobfs {
@@ -159,14 +160,19 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   // Write the journal.
 
   auto base_offset = superblock_blocks + blockmap_blocks + nodemap_blocks;
-  fs::WriteBlockFn write_block_fn = [&vmo, &superblock, base_offset](
-                                        fbl::Span<const uint8_t> buffer, uint64_t block_offset) {
-    ZX_ASSERT(block_offset < JournalBlocks(superblock));
-    ZX_ASSERT(buffer.size() == kBlobfsBlockSize);
-    return vmo.write(buffer.data(), (base_offset + block_offset) * kBlobfsBlockSize,
-                     kBlobfsBlockSize);
+  fs::WriteBlocksFn write_blocks_fn = [&vmo, &superblock, base_offset](
+                                          fbl::Span<const uint8_t> buffer, uint64_t block_offset,
+                                          uint64_t block_count) {
+    uint64_t offset =
+        safemath::CheckMul<uint64_t>(safemath::CheckAdd(base_offset, block_offset).ValueOrDie(),
+                                     kBlobfsBlockSize)
+            .ValueOrDie();
+    uint64_t size = safemath::CheckMul<uint64_t>(block_count, kBlobfsBlockSize).ValueOrDie();
+    ZX_ASSERT((block_offset + block_count) <= JournalBlocks(superblock));
+    ZX_ASSERT(buffer.size() >= size);
+    return vmo.write(buffer.data(), offset, size);
   };
-  status = fs::MakeJournal(journal_blocks, write_block_fn);
+  status = fs::MakeJournal(journal_blocks, write_blocks_fn);
   if (status != ZX_OK) {
     return status;
   }

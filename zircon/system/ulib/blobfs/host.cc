@@ -332,13 +332,13 @@ int Mkfs(int fd, uint64_t block_count) {
 
   // All in-memory structures have been created successfully. Dump everything to disk.
   // Initialize on-disk journal.
-  fs::WriteBlockFn write_block_fn = [fd, info](fbl::Span<const uint8_t> buffer,
-                                               uint64_t block_offset) {
-    ZX_ASSERT(block_offset < JournalBlocks(info));
-    ZX_ASSERT(buffer.size() == kBlobfsBlockSize);
-    return WriteBlock(fd, JournalStartBlock(info) + block_offset, buffer.data());
+  fs::WriteBlocksFn write_blocks_fn = [fd, info](fbl::Span<const uint8_t> buffer,
+                                                 uint64_t block_offset, uint64_t block_count) {
+    ZX_ASSERT((block_offset + block_count) <= JournalBlocks(info));
+    ZX_ASSERT(buffer.size() >= (block_count * kBlobfsBlockSize));
+    return WriteBlocks(fd, JournalStartBlock(info) + block_offset, block_count, buffer.data());
   };
-  status = fs::MakeJournal(JournalBlocks(info), write_block_fn);
+  status = fs::MakeJournal(JournalBlocks(info), write_blocks_fn);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to write journal block\n");
     return -1;

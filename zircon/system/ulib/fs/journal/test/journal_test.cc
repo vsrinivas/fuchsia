@@ -17,6 +17,7 @@
 #include <fs/journal/initializer.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
+#include <safemath/checked_math.h>
 #include <zxtest/zxtest.h>
 
 namespace fs {
@@ -121,9 +122,9 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   void CreateDiskVmos();
 
   // Access the "disk-based" version of each buffer.
-  const zx::vmo& journal() { return disk_buffers_.journal_vmo; }
-  const zx::vmo& writeback() { return disk_buffers_.writeback_vmo; }
-  const zx::vmo& info() { return disk_buffers_.info_vmo; }
+  const zx::vmo& journal() const { return disk_buffers_.journal_vmo; }
+  const zx::vmo& writeback() const { return disk_buffers_.writeback_vmo; }
+  const zx::vmo& info() const { return disk_buffers_.info_vmo; }
 
   // storage::VmoidRegistry interface:
 
@@ -249,11 +250,12 @@ class MockTransactionHandler final : public fs::TransactionHandler {
   using TransactionCallback =
       fit::function<zx_status_t(const std::vector<storage::BufferedOperation>& requests)>;
 
-  MockTransactionHandler(MockVmoidRegistry* registry, TransactionCallback* callbacks = nullptr,
-                         size_t transactions_expected = 0)
+  explicit MockTransactionHandler(MockVmoidRegistry* registry,
+                                  TransactionCallback* callbacks = nullptr,
+                                  size_t transactions_expected = 0)
       : registry_(registry), callbacks_(callbacks), transactions_expected_(transactions_expected) {}
 
-  ~MockTransactionHandler() { EXPECT_EQ(transactions_expected_, transactions_seen_); }
+  ~MockTransactionHandler() override { EXPECT_EQ(transactions_expected_, transactions_seen_); }
 
   // TransactionHandler interface:
 
@@ -2739,22 +2741,27 @@ TEST_F(JournalTest, WriteMetadataWithBadBlockCountFails) {
 }
 
 zx_status_t MakeJournalHelper(uint8_t* dest_buffer, uint64_t blocks, uint64_t block_size) {
-  fs::WriteBlockFn write_block_fn = [dest_buffer, blocks, block_size](
-                                        fbl::Span<const uint8_t> buffer, uint64_t block_offset) {
-    EXPECT_EQ(buffer.size(), kJournalBlockSize);
+  fs::WriteBlocksFn write_blocks_fn = [dest_buffer, blocks, block_size](
+                                          fbl::Span<const uint8_t> buffer, uint64_t block_offset,
+                                          uint64_t block_count) {
+    EXPECT_GE(buffer.size(), block_count * block_size);
 
-    if ((kJournalBlockSize * (block_offset + 1)) > (blocks * block_size)) {
+    uint64_t max_offset =
+        safemath::CheckMul(safemath::CheckAdd(block_offset, block_count).ValueOrDie(),
+                           kJournalBlockSize)
+            .ValueOrDie();
+    uint64_t device_max_offset = safemath::CheckMul(blocks, block_size).ValueOrDie();
+
+    if (device_max_offset < max_offset) {
       return ZX_ERR_IO_OVERRUN;
     }
-
-    for (uint64_t i = 0; i < block_size; i++) {
-      dest_buffer[(block_offset * block_size) + i] = buffer[i];
-    }
+    std::memcpy(&dest_buffer[block_offset * block_size], buffer.data(),
+                block_count * kJournalBlockSize);
 
     return ZX_OK;
   };
 
-  return fs::MakeJournal(blocks, write_block_fn);
+  return fs::MakeJournal(blocks, write_blocks_fn);
 }
 
 TEST(MakeJournal, ValidArgs) {
