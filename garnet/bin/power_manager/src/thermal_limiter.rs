@@ -97,25 +97,31 @@ impl<'a, 'b> ThermalLimiterBuilder<'a, 'b> {
 /// Internal analogue of fthermal::TripPoint that uses ThermalLoad for its fields.
 #[derive(Clone, Debug)]
 struct TripPoint {
-    low: ThermalLoad,
-    high: ThermalLoad,
+    deactivate_below: ThermalLoad,
+    activate_at: ThermalLoad,
 }
 
 impl TripPoint {
-    fn new(low: u32, high: u32) -> TripPoint {
-        TripPoint { low: ThermalLoad(low), high: ThermalLoad(high) }
+    fn new(deactivate_below: u32, activate_at: u32) -> TripPoint {
+        TripPoint {
+            deactivate_below: ThermalLoad(deactivate_below),
+            activate_at: ThermalLoad(activate_at),
+        }
     }
 }
 
 impl From<fthermal::TripPoint> for TripPoint {
     fn from(tp: fthermal::TripPoint) -> TripPoint {
-        TripPoint::new(tp.low, tp.high)
+        TripPoint::new(tp.deactivate_below, tp.activate_at)
     }
 }
 
 impl Into<fthermal::TripPoint> for TripPoint {
     fn into(self: Self) -> fthermal::TripPoint {
-        fthermal::TripPoint { low: self.low.0, high: self.high.0 }
+        fthermal::TripPoint {
+            deactivate_below: self.deactivate_below.0,
+            activate_at: self.activate_at.0,
+        }
     }
 }
 
@@ -152,8 +158,8 @@ impl ClientEntry {
         inspect_node.record_uint("actor_type", actor_type as u64);
         for (i, trip_point) in trip_points.iter().enumerate() {
             let node = inspect_node.create_child(format!("trip_point_{:03}", i));
-            node.record_uint("low", trip_point.low.0.into());
-            node.record_uint("high", trip_point.high.0.into());
+            node.record_uint("deactivate_below", trip_point.deactivate_below.0.into());
+            node.record_uint("activate_at", trip_point.activate_at.0.into());
             inspect_node.record(node);
         }
         ClientEntry {
@@ -186,18 +192,21 @@ impl ClientEntry {
     /// Since the current state is `current_state`, we know that the active trip points upon input
     /// are `trip_points[i]` for `i < current_state`.
     ///
-    /// An active trip point becomes inactive if `thermal_load < trip_point.low`, whereas an
-    /// inactive trip point remains inactive if `thermal_load < trip_point.high`. The output thermal
-    /// state is the index of the first inactive trip point, or `len(trip_points)` if all trip
-    /// points are active.
+    /// An active trip point becomes inactive if `thermal_load < trip_point.deactivate_below`,
+    /// whereas an inactive trip point remains inactive if `thermal_load < trip_point.activate_at`.
+    /// The output thermal state is the index of the first inactive trip point, or
+    /// `len(trip_points)` if all trip points are active.
     fn determine_thermal_state(
         current_state: u32,
         thermal_load: ThermalLoad,
         trip_points: &Vec<TripPoint>,
     ) -> u32 {
         for (i, trip_point) in trip_points.iter().enumerate() {
-            let threshold =
-                if (i as u32) < current_state { trip_point.low } else { trip_point.high };
+            let threshold = if (i as u32) < current_state {
+                trip_point.deactivate_below
+            } else {
+                trip_point.activate_at
+            };
             if thermal_load < threshold {
                 return i as u32;
             }
@@ -258,11 +267,14 @@ impl ThermalLimiter {
                                 "ThermalLimiter::handle_subscribe",
                                 fuchsia_trace::Scope::Thread
                             );
-                            // A TripPoint with low == high is equivalent to the older style of
-                            // trip point with a single thermal load specified.
+                            // A TripPoint with deactivate_below == activate_at is equivalent to the
+                            // older style of trip point with a single thermal load specified.
                             let trip_points: Vec<fthermal::TripPoint> = trip_points
                                 .into_iter()
-                                .map(|val| fthermal::TripPoint { low: val, high: val })
+                                .map(|val| fthermal::TripPoint {
+                                    deactivate_below: val,
+                                    activate_at: val,
+                                })
                                 .collect();
                             let mut result = self
                                 .handle_new_client(actor.into_proxy()?, actor_type, trip_points)
@@ -335,16 +347,16 @@ impl ThermalLimiter {
         );
         // trip_points must:
         //  - have length in the range [1 - MAX_TRIP_POINT_COUNT]
-        //  - have `low` <= `high`
-        //  - be monotonically increasing: `high[i]` < `low[i+1]`
+        //  - have `deactivate_below` <= `activate_at`
+        //  - be monotonically increasing: `activate_at[i]` < `deactivate_below[i+1]`
         //  - have values in the range [1 - MAX_THERMAL_LOAD]
         let trip_points_len = trip_points.len() as u32;
         if trip_points_len < 1
             || trip_points_len > fthermal::MAX_TRIP_POINT_COUNT
-            || !trip_points.iter().all(|p| p.low <= p.high)
-            || !trip_points.windows(2).all(|w| w[0].high < w[1].low)
-            || trip_points.first().unwrap().low < 1
-            || trip_points.last().unwrap().high > MAX_THERMAL_LOAD.0
+            || !trip_points.iter().all(|p| p.deactivate_below <= p.activate_at)
+            || !trip_points.windows(2).all(|w| w[0].activate_at < w[1].deactivate_below)
+            || trip_points.first().unwrap().deactivate_below < 1
+            || trip_points.last().unwrap().activate_at > MAX_THERMAL_LOAD.0
         {
             return Err(fthermal::Error::InvalidArguments);
         }
@@ -629,22 +641,22 @@ pub mod tests {
         failure_trip_points.push(vec![]);
 
         // More than fthermal::MAX_TRIP_POINT_COUNT trip points. Note that, depending on the value
-        // of fthermal::MAX_THERMAL_LOAD, this may also violate the max allowed high value of a trip
-        // point. Regardless, this case will fail.
+        // of fthermal::MAX_THERMAL_LOAD, this may also violate the max allowed activate_at value of
+        // a trip point. Regardless, this case will fail.
         let range = 1..=fthermal::MAX_TRIP_POINT_COUNT + 1;
         failure_trip_points.push(make_trip_points(range.clone().zip(range).collect::<Vec<_>>()));
 
-        // low > high
+        // deactivate_below > activate_at
         failure_trip_points.push(make_trip_points([(4, 3)]));
 
         // overlapping trip point boundaries
         failure_trip_points.push(make_trip_points([(7, 10), (9, 13)]));
         failure_trip_points.push(make_trip_points([(7, 10), (10, 13)]));
 
-        // low value of 0
+        // deactivate_below value of 0
         failure_trip_points.push(make_trip_points([(0, 1)]));
 
-        // high value greater than MAX_THERMAL_LOAD
+        // activate_at value greater than MAX_THERMAL_LOAD
         failure_trip_points.push(make_trip_points([(1, MAX_THERMAL_LOAD.0 + 1)]));
 
         for trip_points in failure_trip_points {
@@ -839,8 +851,8 @@ pub mod tests {
                             proxy: inspect::testing::AnyProperty,
                             actor_type: actor_type as u64,
                             trip_point_000: {
-                                low: 47u64,
-                                high: 53u64,
+                                deactivate_below: 47u64,
+                                activate_at: 53u64,
                             },
                             thermal_state: 0u64
                         }

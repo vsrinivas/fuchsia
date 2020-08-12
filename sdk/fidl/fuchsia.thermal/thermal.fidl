@@ -30,18 +30,17 @@ const uint32 MAX_TRIP_POINT_COUNT = 100;
 const uint32 MAX_THERMAL_LOAD = 100;
 
 /// Configuration for a single trip point. The trip point will be activated when the thermal load
-/// is greater than or equal to `high`, and deactivated when it is less than `low`.
+/// is greater than or equal to `activate_at`, and deactivated when it is less than
+/// `deactivate_below`.
 ///
-/// `low` must be less than or equal to `high` as specified by
-/// [fuchsia.thermal/Controller.Subscribe2]. Hysteresis is achieved by setting `low < high`.
+/// See [fuchsia.thermal/Controller.Subscribe2] for the relationship between trip points and thermal
+/// states.
 struct TripPoint {
-    /// The next-lowest (less limited) thermal state will be activated when thermal load is less
-    /// than `low`.
-    uint32 low;
+    /// The trip point will be deactivated when thermal load drops below this value.
+    uint32 deactivate_below;
 
-    /// The next-highest (more limited) thermal state will be activated when thermal load is
-    /// greater than or equal to `high`.
-    uint32 high;
+    /// The trip point will be activated when thermal load is greater than or equal to this value.
+    uint32 activate_at;
 };
 
 /// A protocol providing the API for a client service to subscribe to receive thermal state updates.
@@ -77,9 +76,10 @@ protocol Controller {
     /// The current thermal state will be sent immediately, with all subsequent state changes
     /// occuring based on the changing system thermal load and specified `trip_points`.
     ///
-    /// A TripPoint is activated when the thermal load is >= to its `high` value and deactivated
-    /// when the thermal load drops below its `low` value. The Actor's thermal state is set to 1
-    /// greater than the index of the highest active thermal state, or 0 if none are active.
+    /// A TripPoint is activated when the thermal load is greater than or equal to its `activate_at`
+    /// value and deactivated when the thermal load drops below its `deactivate_below` value. The
+    /// Actor's thermal state is set to 1 greater than the index of the highest active trip point,
+    /// or 0 if none are active.
     ///
     /// + request `actor` a [fuchsia.thermal/Actor] proxy to handle the SetThermalState callbacks
     /// + request `actor_type` a [fuchsia.thermal/ActorType] value to indicate the type of
