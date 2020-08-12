@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#### DEPRECATED
 #### CATEGORY=Run, inspect and debug
 ### Obtain and parse a bugreport from a connected target.
 
@@ -16,6 +17,8 @@
 ##
 ## If no directory is supplied, a unique one will be generated.
 ##
+## Please use fx snapshot instead. Same outcome, just not deprecated.
+##
 ## Usage: fx bugreport [(--output-directory|-o)] <DIRECTORY>] -- <TARGET ARGS>
 ##
 ##    --output-directory    (Optional) Directory where the files will be stored.
@@ -24,83 +27,8 @@
 ##    <TARGET ARGS>         Arguments to be passed to the bugreport client within
 ##                          the target.
 
-# Load environment helpers.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-fx-config-read
 
-# Flag Parsing.
-output_dir=
-is_output_dir_provided=false
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --help|-h)
-      fx-command-help
-      exit 0
-      ;;
-    --output-directory|-o)
-      shift
-      output_dir="$1"
-      is_output_dir_provided=true
-      ;;
-    --)
-      shift
-      break   # Remaining flags are passed on to the target.
-      ;;
-    *)
-      fx-error "Invalid flag $1"
-      exit 1
-  esac
-  shift
-done
-
-# Check the validity of the output file.
-if [[ "${is_output_dir_provided}" == "true" ]]; then
-  if [[ -z "${output_dir}" ]]; then
-    fx-error "No output directory provided."
-    exit 1
-  fi
-
-  if [[ ! -d "${output_dir}" ]]; then
-    fx-error "Path provided is not a directory."
-    exit 1
-  fi
-fi
-
-# If no output directory is supplied, generate a unique one according to time.
-if [[ -z "${output_dir}" ]]; then
-  # Generate an output directory.
-  # Format is /tmp/bugreports/report_<YearMonthDay_HourMinuteSecond>
-  uuid=`date +"%Y%m%d_%H%M%S"`
-  output_dir="/tmp/bugreports/report_${uuid}"
-  mkdir -p "${output_dir}"
-  if [[ "$?" -ne 0 ]]; then
-    rm -rf "${output_dir}"  # Just in case.
-    fx-error "Failed to create output directory ${output_dir}."
-    fx-error "Check errors or provide your own with --output-directory. See --help for more details."
-    exit 1
-  fi
-fi
-
-# At this point, we know that we have a valid output directory.
-
-error_bringing_report=
-tempfile="/tmp/__bugreport_temp"
-output_file="${output_dir}/bugreport.zip"
-# Obtain the bug report and store it in a temporary location.
-fx-command-run shell bugreport "${@}" > "${output_file}"
-if [ "$?" -ne 0 ]; then
-  fx-error "Could not obtain bugreport from target."
-  error_bringing_report=true
-else
-  echo "Exported ${output_file}"
-fi
-
-if [[ ! -z "${error_bringing_report}" ]]; then
-  # Do error cleanup.
-  rm -f "${output_file}"
-  if [[ "${is_output_dir_provided}" == "false" ]]; then
-    rm -rf "${output_dir}"
-  fi
-  exit 1
-fi
+fx-warn "Consider fx snapshot. fx bugreport is being deprecated and will take longer and longer."
+fx-command-run snapshot "$@"
+exit $?

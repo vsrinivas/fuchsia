@@ -1,0 +1,108 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### Obtain and parse a snapshot from a connected target.
+
+## Connects to a running target and obtains a snapshot that contains useful
+## information for debugging a target.
+##
+## Information supplied includes:
+## - Build information and annotations.
+## - Kernel and System logs.
+## - Inspect Data.
+##
+## If no directory is supplied, a unique one will be generated.
+##
+## Usage: fx snapshot [(--output-directory|-o)] <DIRECTORY>] -- <TARGET ARGS>
+##
+##    --output-directory    (Optional) Directory where the files will be stored.
+##                          Must be an existing directory.
+##
+##    <TARGET ARGS>         Arguments to be passed to the bugreport client within
+##                          the target.
+
+# Load environment helpers.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+# Flag Parsing.
+output_dir=
+is_output_dir_provided=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help|-h)
+      fx-command-help
+      exit 0
+      ;;
+    --output-directory|-o)
+      shift
+      output_dir="$1"
+      is_output_dir_provided=true
+      ;;
+    --)
+      shift
+      break   # Remaining flags are passed on to the target.
+      ;;
+    *)
+      fx-error "Invalid flag $1"
+      exit 1
+  esac
+  shift
+done
+
+# Check the validity of the output file.
+if [[ "${is_output_dir_provided}" == "true" ]]; then
+  if [[ -z "${output_dir}" ]]; then
+    fx-error "No output directory provided."
+    exit 1
+  fi
+
+  if [[ ! -d "${output_dir}" ]]; then
+    fx-error "Path provided is not a directory."
+    exit 1
+  fi
+fi
+
+# If no output directory is supplied, generate a unique one according to time.
+if [[ -z "${output_dir}" ]]; then
+  # Generate an output directory.
+  # Format is /tmp/snapshots/<YearMonthDay_HourMinuteSecond>
+  uuid=`date +"%Y%m%d_%H%M%S"`
+  output_dir="/tmp/snapshots/${uuid}"
+  mkdir -p "${output_dir}"
+  if [[ "$?" -ne 0 ]]; then
+    rm -rf "${output_dir}"  # Just in case.
+    fx-error "Failed to create output directory ${output_dir}."
+    fx-error "Check errors or provide your own with --output-directory. See --help for more details."
+    exit 1
+  fi
+fi
+
+# At this point, we know that we have a valid output directory.
+
+error_bringing_snapshot=
+tempfile="/tmp/__snapshot_temp"
+# TODO(50926): use "snapshot.zip" after announcement.
+output_file="${output_dir}/bugreport.zip"
+# Obtain the snapshot and store it in a temporary location.
+# TODO(50926): switch to "snapshot" when shell binary is renamed.
+fx-command-run shell bugreport "${@}" > "${output_file}"
+if [ "$?" -ne 0 ]; then
+  fx-error "Could not obtain snapshot from target."
+  error_bringing_snapshot=true
+else
+  echo "Exported ${output_file}"
+fi
+
+if [[ ! -z "${error_bringing_snapshot}" ]]; then
+  # Do error cleanup.
+  rm -f "${output_file}"
+  if [[ "${is_output_dir_provided}" == "false" ]]; then
+    rm -rf "${output_dir}"
+  fi
+  exit 1
+fi

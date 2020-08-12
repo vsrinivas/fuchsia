@@ -39,6 +39,7 @@ per-file set-relay=tamird@google.com
 per-file setup-usb-ethernet=cjn@google.com
 per-file smoke-test=shayba@google.com,scottmg@google.com,surajmalhotra@google.com
 per-file smoke-test.fx=scottmg@google.com,shayba@google.com
+per-file snapshot=frousseau@google.com
 per-file sniff=porce@google.com
 per-file symbol-index=dangyi@google.com,frousseau@google.com
 per-file sync-from-stem=scottmg@google.com
