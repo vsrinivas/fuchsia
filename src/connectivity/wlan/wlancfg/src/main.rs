@@ -9,10 +9,8 @@ mod client;
 mod config_management;
 mod legacy;
 mod mode_management;
-mod util;
-
-#[cfg(test)]
 mod regulatory_manager;
+mod util;
 
 use {
     crate::{
@@ -27,15 +25,17 @@ use {
             iface_manager::{IfaceManager, IfaceManagerApi},
             phy_manager::PhyManager,
         },
+        regulatory_manager::RegulatoryManager,
     },
     anyhow::{format_err, Context as _, Error},
+    fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::prelude::*,
     futures::{
-        self, channel::mpsc, future::try_join, lock::Mutex, prelude::*, select, TryFutureExt,
+        self, channel::mpsc, future::try_join3, lock::Mutex, prelude::*, select, TryFutureExt,
     },
     log::{error, info},
     pin_utils::pin_mut,
@@ -205,6 +205,9 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
+    let regulatory_svc =
+        fuchsia_component::client::connect_to_service::<RegulatoryRegionWatcherMarker>()
+            .context("failed to connect to regulatory region service")?;
 
     let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
     let network_selector = Arc::new(NetworkSelector::new(Arc::clone(&saved_networks)));
@@ -226,6 +229,12 @@ fn main() -> Result<(), Error> {
         saved_networks.clone(),
         client_event_sender,
     )));
+    let regulatory_manager = RegulatoryManager::new(
+        regulatory_svc,
+        wlan_svc.clone(),
+        phy_manager.clone(),
+        iface_manager.clone(),
+    );
 
     let legacy_client = shim::IfaceRef::new();
     let listener = device::Listener::new(
@@ -249,11 +258,14 @@ fn main() -> Result<(), Error> {
         client_event_receiver,
     );
 
-    let fut = watcher_proxy
+    let dev_watcher_fut = watcher_proxy
         .take_event_stream()
         .try_for_each(|evt| device::handle_event(&listener, evt).map(Ok))
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
-    executor.run_singlethreaded(try_join(fidl_fut, fut)).map(|_: (Void, Void)| ())
+    let regulatory_fut = regulatory_manager.run();
+    executor
+        .run_singlethreaded(try_join3(fidl_fut, regulatory_fut, dev_watcher_fut))
+        .map(|_: (Void, (), Void)| ())
 }
