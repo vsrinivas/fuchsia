@@ -207,7 +207,7 @@ class View {
   /// consumed and take_error() cannot be called again until another begin() or
   /// iterator::operator++() call has been made.
   [[nodiscard]] fitx::result<Error> take_error() {
-    decltype(error_) result = std::move(error_);
+    ErrorState result = std::move(error_);
     error_ = Taken{};
     if (std::holds_alternative<Error>(result)) {
       return fitx::error{std::move(std::get<Error>(result))};
@@ -489,14 +489,7 @@ class View {
   struct Unused {};
   struct NoError {};
   struct Taken {};
-  enum ErrorState {
-    kUnused,
-    kOk,
-    kTaken,
-  };
-  std::variant<Unused, NoError, Error, Taken> error_;
-  storage_type storage_;
-  uint32_t limit_ = 0;
+  using ErrorState = std::variant<Unused, NoError, Error, Taken>;
 
   void StartIteration() {
     ZX_ASSERT_MSG(!std::holds_alternative<Error>(error_),
@@ -511,6 +504,10 @@ class View {
                         "Fail in Unused: missing zbitl::View::StartIteration() call?");
     error_ = std::move(error);
   }
+
+  storage_type storage_;
+  ErrorState error_;
+  uint32_t limit_ = 0;
 };
 
 // Deduction guide: View v(T{}) instantiates View<T>.
