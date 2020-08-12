@@ -11,63 +11,63 @@
 #include <zircon/compiler.h>
 
 #include <array>
+#include <list>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include <gpt/gpt.h>
+#include <src/lib/uuid/uuid.h>
 
 namespace gpt {
 
-// Since the human-readable representation of a GUID is the following format,
-// ordered little-endian, it is useful to group a GUID into these
-// appropriately-sized groups.
-struct guid_t {
-  uint32_t data1;
-  uint16_t data2;
-  uint16_t data3;
-  uint8_t data4[8];
-};
-static_assert(sizeof(guid_t) == GPT_GUID_LEN, "unexpected guid_t size");
+// Whether to use the new or legacy partition scheme.
+enum class PartitionScheme { kNew, kLegacy };
 
 // Number of GUID_.*[STRING|VALUE|NAME] pairs
-constexpr uint8_t kKnownGuidEntries = 27;
+constexpr uint8_t kKnownGuidEntries = 41;
 
 class GuidProperties {
  public:
-  GuidProperties(const char* name, const char* str, const uint8_t guid[GPT_GUID_LEN]) {
-    ZX_ASSERT(strlen(name) < sizeof(name_));
-    ZX_ASSERT(strlen(str) == sizeof(str_) - 1);
-    strncpy(name_, name, sizeof(name_));
-    strncpy(str_, str, sizeof(str_) - 1);
-    memcpy(guid_, guid, GPT_GUID_LEN);
-  }
+  GuidProperties(std::string_view name, uuid::Uuid type_guid, PartitionScheme scheme)
+      : name_(name), type_guid_(std::move(type_guid)), scheme_(scheme) {}
 
-  const char* name() const { return name_; }
+  // The GPT partition name.
+  std::string_view name() const { return name_; }
 
-  const char* str() const { return str_; }
+  // The GPT partition type GUID.
+  const uuid::Uuid& type_guid() const { return type_guid_; }
 
-  const uint8_t* guid() const { return guid_; }
+  // Whether this entry belongs to the legacy or new partition scheme.
+  PartitionScheme scheme() const { return scheme_; }
 
  private:
-  char name_[(GPT_NAME_LEN / 2) + 1];
-  char str_[kGuidStrLength];
-  uint8_t guid_[GPT_GUID_LEN];
+  std::string_view name_;
+  uuid::Uuid type_guid_;
+  PartitionScheme scheme_;
 };
 
 class KnownGuid {
  public:
   using NameTable = std::array<GuidProperties, kKnownGuidEntries>;
 
-  // Given a known guid name, like "fuchsia-blob", converts it
-  // it's guid_t equivalent. On failure, returns false.
-  static bool NameToGuid(const char* name, uint8_t* out);
+  // Returns all GuidProperties matching the given criteria.
+  static std::list<const GuidProperties*> Find(std::optional<std::string_view> name,
+                                               std::optional<uuid::Uuid> type_guid,
+                                               std::optional<PartitionScheme> scheme);
 
-  // Converts a known guid_t value to it's name.
-  // If there exists no name for the guid, returns nullptr.
-  static const char* GuidToName(const uint8_t* guid);
-
-  // Converts a known guid str, like "2967380E-134C-4CBB-B6DA-17E7CE1CA45D",
-  // to a name "fuchsia-blob".
-  // If there exists no name for the guid, returns nullptr.
-  static const char* GuidStrToName(const char* str);
+  // Returns a string describing the given type GUID.
+  //
+  // If the type GUID uniquely identifies a partition, that partition name will
+  // be returned. If the type GUID is shared between slotted partitions e.g.
+  // zircon_{a,b,r}, then something like "zircon_*" will be returned.
+  //
+  // This string should only be used for logging and informational purposes,
+  // it may not correspond to an actual name in the GPT.
+  //
+  // Returns empty string if no match was found.
+  static std::string TypeDescription(const uuid::Uuid& type_guid);
+  static std::string TypeDescription(const uint8_t* type_guid);
 
   using const_iterator = NameTable::const_iterator;
 

@@ -25,10 +25,12 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <string>
 
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <gpt/c/gpt.h>
+#include <gpt/guid.h>
 #include <pretty/hexdump.h>
 #include <storage-metrics/block-metrics.h>
 
@@ -66,7 +68,6 @@ static char* size_to_cstring(char* str, size_t maxlen, uint64_t size) {
 typedef struct blkinfo {
   char path[128];
   char topo[1024];
-  char guid[GPT_GUID_STRLEN];
   char label[fuchsia_partition::NAME_LENGTH + 1];
   char sizestr[6];
 } blkinfo_t;
@@ -96,7 +97,6 @@ static int cmd_list_blk(void) {
   auto cleanup = fbl::MakeAutoCall([&dir]() { closedir(dir); });
 
   blkinfo_t info;
-  const char* type;
   printf("%-3s %-4s %-16s %-20s %-6s %s\n", "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE");
 
   while ((de = readdir(dir)) != NULL) {
@@ -104,7 +104,6 @@ static int cmd_list_blk(void) {
       continue;
     }
     memset(&info, 0, sizeof(blkinfo_t));
-    type = NULL;
     snprintf(info.path, sizeof(info.path), "%s/%s", DEV_BLOCK, de->d_name);
     fbl::unique_fd fd(open(info.path, O_RDONLY));
     if (!fd) {
@@ -123,10 +122,10 @@ static int cmd_list_blk(void) {
                       info_resp->info->block_size * info_resp->info->block_count);
     }
 
+    std::string type;
     auto guid_resp = fuchsia_partition::Partition::Call::GetTypeGuid(caller.channel());
     if (guid_resp.ok() && guid_resp->status == ZX_OK && guid_resp->guid) {
-      uint8_to_guid_string(info.guid, guid_resp->guid->value.data());
-      type = gpt_guid_to_type(info.guid);
+      type = gpt::KnownGuid::TypeDescription(guid_resp->guid->value.data());
     }
 
     auto name_resp = fuchsia_partition::Partition::Call::GetName(caller.channel());
@@ -149,7 +148,7 @@ static int cmd_list_blk(void) {
     if (block_info.flags & BLOCK_FLAG_BOOTPART) {
       strlcat(flags, "BP ", sizeof(flags));
     }
-    printf("%-3s %4s %-16s %-20s %-6s %s\n", de->d_name, info.sizestr, type ? type : "", info.label,
+    printf("%-3s %4s %-16s %-20s %-6s %s\n", de->d_name, info.sizestr, type.c_str(), info.label,
            flags, info.topo);
   }
   return 0;
@@ -163,13 +162,11 @@ static int cmd_list_skip_blk(void) {
     return -1;
   }
   blkinfo_t info;
-  const char* type;
   while ((de = readdir(dir)) != NULL) {
     if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
       continue;
     }
     memset(&info, 0, sizeof(blkinfo_t));
-    type = NULL;
     snprintf(info.path, sizeof(info.path), "%s/%s", DEV_SKIP_BLOCK, de->d_name);
     fbl::unique_fd fd(open(info.path, O_RDONLY));
     if (!fd) {
@@ -180,16 +177,16 @@ static int cmd_list_skip_blk(void) {
 
     populate_topo_path(*caller.channel(), &info);
 
+    std::string type;
     auto result = fuchsia_skipblock::SkipBlock::Call::GetPartitionInfo(caller.channel());
     if (result.ok() && result->status == ZX_OK) {
       size_to_cstring(
           info.sizestr, sizeof(info.sizestr),
           result->partition_info.block_size_bytes * result->partition_info.partition_block_count);
-      uint8_to_guid_string(info.guid, result->partition_info.partition_guid.data());
-      type = gpt_guid_to_type(info.guid);
+      type = gpt::KnownGuid::TypeDescription(result->partition_info.partition_guid.data());
     }
 
-    printf("%-3s %4s %-16s %-20s %-6s %s\n", de->d_name, info.sizestr, type ? type : "", "", "",
+    printf("%-3s %4s %-16s %-20s %-6s %s\n", de->d_name, info.sizestr, type.c_str(), "", "",
            info.topo);
   }
   closedir(dir);

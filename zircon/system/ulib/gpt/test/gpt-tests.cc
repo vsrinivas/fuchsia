@@ -4,12 +4,14 @@
 
 #include "gpt-tests.h"
 
+#include <ctype.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/cksum.h>
 #include <lib/fdio/cpp/caller.h>
 #include <zircon/assert.h>
 
 #include <memory>
+#include <optional>
 
 #include <fbl/auto_call.h>
 #include <gpt/gpt.h>
@@ -27,11 +29,13 @@ namespace gpt {
 namespace {
 
 using gpt::GptDevice;
-using gpt::guid_t;
 using gpt::KnownGuid;
 
-constexpr guid_t kGuid = {0x0, 0x1, 0x2, {0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa}};
 constexpr uint64_t kHoleSize = 10;
+
+uuid::Uuid TestGuid(uint32_t id) {
+  return uuid::Uuid(uuid::RawUuid{id, 0x10, 0x20, 0x30, 0x40, {1, 2, 3, 4, 5, 6}});
+}
 
 // Return a copy of the input variable.
 //
@@ -47,7 +51,9 @@ constexpr uint64_t kHoleSize = 10;
 //
 //  we cannot directly call "Bar(foo->b)", but can call "Bar(Unpack(foo->b))".
 template <typename T>
-inline T Unpack(T val) { return val; }
+inline T Unpack(T val) {
+  return val;
+}
 
 // generate a random number between [0, max)
 uint64_t random_length(uint64_t max) { return (rand_r(&gRandSeed) % max); }
@@ -111,12 +117,12 @@ class Partitions {
   // Returns true if the partition p exists in partitions_.
   bool Find(const gpt_partition_t* p, uint32_t* out_index) const;
 
-  // Changes gpt_partition_t.type. One of the fields in the guid_t
-  // is increamented.
+  // Changes gpt_partition_t.type. One of the fields in the GUID
+  // is incremented.
   void ChangePartitionType(uint32_t partition_index);
 
-  // Changes gpt_partition_t.guid. One of the fields in the guid_t
-  // is increamented.
+  // Changes gpt_partition_t.guid. One of the fields in the GUID
+  // is incremented.
   void ChangePartitionGuid(uint32_t partition_index);
 
   // Sets the visibility attribute of the partition
@@ -148,7 +154,6 @@ Partitions::Partitions(uint32_t count, uint64_t first, uint64_t last) {
   ZX_ASSERT(count > 0);
   ZX_ASSERT(count <= gpt::kPartitionCount);
   partition_count_ = count;
-  guid_t guid = kGuid;
 
   uint64_t part_first = first, part_last;
   uint64_t part_max_len = (last - first) / partition_count_;
@@ -157,9 +162,9 @@ Partitions::Partitions(uint32_t count, uint64_t first, uint64_t last) {
   memset(partitions_, 0, sizeof(partitions_));
   for (uint32_t i = 0; i < partition_count_; i++) {
     part_last = part_first + random_length(part_max_len);
-    guid.data1 = i;
-    memcpy(partitions_[i].type, &guid, sizeof(partitions_[i].type));
-    memcpy(partitions_[i].guid, &guid, sizeof(partitions_[i].type));
+    uuid::Uuid guid = TestGuid(i);
+    memcpy(partitions_[i].type, guid.bytes(), sizeof(partitions_[i].type));
+    memcpy(partitions_[i].guid, guid.bytes(), sizeof(partitions_[i].type));
     partitions_[i].first = part_first;
     partitions_[i].last = part_last;
     partitions_[i].flags = 0;
@@ -255,16 +260,16 @@ bool Partitions::Find(const gpt_partition_t* p, uint32_t* out_index) const {
   return false;
 }
 
-void IncrementGuid(guid_t* g) { g->data3++; }
+void IncrementGuid(uint8_t* guid) { guid[6]++; }
 
 void Partitions::ChangePartitionGuid(uint32_t partition_index) {
   ASSERT_LT(partition_index, partition_count_);
-  IncrementGuid(reinterpret_cast<guid_t*>(partitions_[partition_index].guid));
+  IncrementGuid(partitions_[partition_index].guid);
 }
 
 void Partitions::ChangePartitionType(uint32_t partition_index) {
   ASSERT_LT(partition_index, partition_count_);
-  IncrementGuid(reinterpret_cast<guid_t*>(partitions_[partition_index].type));
+  IncrementGuid(partitions_[partition_index].type);
 }
 
 void Partitions::SetPartitionVisibility(uint32_t partition_index, bool visible) {
@@ -449,6 +454,17 @@ uint64_t GptMinimumBlockCount(uint64_t block_size) {
   return block_count + 1;
 }
 
+// Returns a copy of |str| with any hex values converted to uppercase.
+std::string HexToUpper(std::string str) {
+  for (char& ch : str) {
+    if (ch >= 'a' && ch <= 'f') {
+      ch -= 'a';
+      ch += 'A';
+    }
+  }
+  return str;
+}
+
 }  // namespace
 
 // Creates "partitions->GetCount()"" number of partitions on GPT.
@@ -588,8 +604,6 @@ void RemoveAllPartitions(LibGptTest* libGptTest, uint32_t total_partitions, bool
 }
 
 void SetPartitionTypeTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
-  guid_t before, after;
-
   libGptTest->PrepDisk(sync);
 
   Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
@@ -604,24 +618,22 @@ void SetPartitionTypeTestHelper(LibGptTest* libGptTest, uint32_t total_partition
 
   // Keep a backup copy of GptDevice's partition type
   const gpt_partition_t* p = libGptTest->GetPartition(index);
-  memcpy(&before, p->type, sizeof(before));
+  uuid::Uuid before(p->type);
 
   // Change the type in GptDevice
   EXPECT_OK(libGptTest->SetPartitionType(index, partitions.GetPartition(index)->type));
 
   // Get the changes
   p = libGptTest->GetPartition(index);
-  memcpy(&after, p->type, sizeof(after));
+  uuid::Uuid after(p->type);
 
   // The type should have changed by now in GptDevice
-  EXPECT_NE(memcmp(&before, &after, sizeof(before)), 0);
+  EXPECT_NE(before, after);
 
   PartitionVerify(libGptTest, &partitions);
 }
 
 void SetPartitionGuidTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync) {
-  guid_t before, after;
-
   libGptTest->PrepDisk(sync);
 
   Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
@@ -636,17 +648,17 @@ void SetPartitionGuidTestHelper(LibGptTest* libGptTest, uint32_t total_partition
 
   // Keep a backup copy of GptDevice's partition ID
   const gpt_partition_t* p = libGptTest->GetPartition(index);
-  memcpy(&before, p->guid, sizeof(before));
+  uuid::Uuid before(p->guid);
 
   // Change the guid in GptDevice
   EXPECT_OK(libGptTest->SetPartitionGuid(index, partitions.GetPartition(index)->guid));
 
   // Get the changes
   p = libGptTest->GetPartition(index);
-  memcpy(&after, p->guid, sizeof(after));
+  uuid::Uuid after(p->guid);
 
   // The guid should have changed by now in GptDevice
-  EXPECT_NE(memcmp(&before, &after, sizeof(before)), 0);
+  EXPECT_NE(before, after);
 
   PartitionVerify(libGptTest, &partitions);
 }
@@ -1308,93 +1320,183 @@ TEST(MakeProtectiveMbr, PartitionSize) {
   EXPECT_EQ(Unpack(MakeProtectiveMbr(0x10'abcd'1234).partitions[0].num_sectors), 0xffff'ffff);
 }
 
-// KnownGuid is statically built. Verify that there are no double entries for
-// human friendly GUID name.
-TEST(KnownGuidTest, UniqueName) {
+// KnownGuid is statically built. Verify name uniqueness within each scheme.
+TEST(KnownGuidTest, CheckNames) {
   for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
     for (auto j = i + 1; j != KnownGuid::end(); j++) {
-      EXPECT_NE(strcmp(i->name(), j->name()), 0);
+      // Old and new partition scheme sometimes share names, but in this case
+      // the type GUID and scheme must be different.
+      if (i->name() == j->name()) {
+        EXPECT_NE(i->type_guid(), j->type_guid());
+        EXPECT_NE(i->scheme(), j->scheme());
+      }
     }
   }
 }
 
-// KnownGuid is statically built. Verify that there are no double entries for
-// GUID.
-TEST(KnownGuidTest, UniqueGuid) {
+// KnownGuid is statically built. Verify type GUID uniqueness except when
+// shared by slotted partitions.
+TEST(KnownGuidTest, CheckTypeGuids) {
   for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
     for (auto j = i + 1; j != KnownGuid::end(); j++) {
-      EXPECT_NE(memcmp(i->guid(), j->guid(), sizeof(guid_t)), 0);
+      // Slotted partitions can share a type GUID.
+      if (i->type_guid() == j->type_guid()) {
+        // Names should differ only by the slot suffix character.
+        EXPECT_EQ(i->name().substr(0, i->name().size() - 1),
+                  j->name().substr(0, j->name().size() - 1));
+
+        // Only the new partitioning scheme uses shared type GUIDs.
+        EXPECT_EQ(i->scheme(), PartitionScheme::kNew);
+        EXPECT_EQ(j->scheme(), PartitionScheme::kNew);
+      }
     }
   }
 }
 
-// KnownGuid is statically built. Verify that there are no double entries for
-// human friendly GUID string.
-TEST(KnownGuidTest, UniqueStr) {
+TEST(KnownGuidTest, FindByTypeGuid) {
+  std::list<const GuidProperties*> matches;
+
+  // Legacy partition scheme.
+  matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GUID_INSTALL_VALUE), std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->name(), "fuchsia-install");
+
+  matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GUID_BOOTLOADER_VALUE), std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->name(), "bootloader");
+
+  matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GUID_ZIRCON_B_VALUE), std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->name(), "zircon-b");
+
+  // New patition scheme.
+  matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GPT_DURABLE_BOOT_TYPE_GUID), std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->name(), "durable_boot");
+
+  matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GPT_FVM_TYPE_GUID), std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->name(), "fvm");
+
+  matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GPT_BOOTLOADER_ABR_TYPE_GUID), std::nullopt);
+  EXPECT_EQ(matches.size(), 3);
+  EXPECT_EQ(matches.front()->name(), "bootloader_a");
+  EXPECT_EQ((++matches.front())->name(), "bootloader_b");
+  EXPECT_EQ(matches.back()->name(), "bootloader_r");
+
+  // Unknown type GUID.
+  matches = KnownGuid::Find(std::nullopt, TestGuid(0), std::nullopt);
+  EXPECT_TRUE(matches.empty());
+}
+
+TEST(KnownGuidTest, FindByName) {
+  std::list<const GuidProperties*> matches;
+
+  // Legacy partition scheme.
+  matches = KnownGuid::Find("fuchsia-system", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GUID_SYSTEM_VALUE));
+
+  matches = KnownGuid::Find("misc", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GUID_ABR_META_VALUE));
+
+  // vbmeta_{a,b,r} partitions exist in both legacy and new schemes.
+  matches = KnownGuid::Find("vbmeta_a", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 2);
+  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GUID_VBMETA_A_VALUE));
+  EXPECT_EQ(matches.front()->scheme(), PartitionScheme::kLegacy);
+  EXPECT_EQ(matches.back()->type_guid(), uuid::Uuid(GPT_VBMETA_ABR_TYPE_GUID));
+  EXPECT_EQ(matches.back()->scheme(), PartitionScheme::kNew);
+
+  // New partition scheme.
+  matches = KnownGuid::Find("durable", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GPT_DURABLE_TYPE_GUID));
+
+  // Unknown partition name.
+  matches = KnownGuid::Find("unknown_name", std::nullopt, std::nullopt);
+  EXPECT_TRUE(matches.empty());
+}
+
+TEST(KnownGuidTest, FindByPartitionScheme) {
+  ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kLegacy).size(), 27);
+  ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kNew).size(), 14);
+}
+
+TEST(KnownGuidTest, FindByAll) {
+  std::list<const GuidProperties*> matches;
+
+  // Legacy partition scheme.
+  matches =
+      KnownGuid::Find("fuchsia-system", uuid::Uuid(GUID_SYSTEM_VALUE), PartitionScheme::kLegacy);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->name(), "fuchsia-system");
+  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GUID_SYSTEM_VALUE));
+  EXPECT_EQ(matches.front()->scheme(), PartitionScheme::kLegacy);
+
+  // New partition scheme.
+  matches = KnownGuid::Find("factory", uuid::Uuid(GPT_FACTORY_TYPE_GUID), PartitionScheme::kNew);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(matches.front()->name(), "factory");
+  EXPECT_EQ(matches.front()->type_guid(), uuid::Uuid(GPT_FACTORY_TYPE_GUID));
+  EXPECT_EQ(matches.front()->scheme(), PartitionScheme::kNew);
+
+  // Both schemes have a "factory" partition, but mix-and-match of the new type
+  // GUID and old scheme should return nothing.
+  matches = KnownGuid::Find("factory", uuid::Uuid(GPT_FACTORY_TYPE_GUID), PartitionScheme::kLegacy);
+  EXPECT_TRUE(matches.empty());
+}
+
+// Type GUID string validation to make sure endianness is handled correctly.
+TEST(KnownGuidTest, TypeGuidStrings) {
+  std::list<const GuidProperties*> matches;
+
+  // Legacy partition scheme.
+  matches = KnownGuid::Find("cros-firmware", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(HexToUpper(matches.front()->type_guid().ToString()),
+            "CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3");
+
+  matches = KnownGuid::Find("fuchsia-fvm", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(HexToUpper(matches.front()->type_guid().ToString()),
+            "41D0E340-57E3-954E-8C1E-17ECAC44CFF5");
+
+  // New partition scheme.
+  matches = KnownGuid::Find("factory_boot", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(HexToUpper(matches.front()->type_guid().ToString()),
+            "10B8DBAA-D2BF-42A9-98C6-A7C5DB3701E7");
+
+  matches = KnownGuid::Find("bootloader_r", std::nullopt, std::nullopt);
+  EXPECT_EQ(matches.size(), 1);
+  EXPECT_EQ(HexToUpper(matches.front()->type_guid().ToString()),
+            "FE8A2634-5E2E-46BA-99E3-3A192091A350");
+}
+
+TEST(KnownGuidTest, TypeDescription) {
+  // Legacy partition scheme.
+  EXPECT_EQ(KnownGuid::TypeDescription(GUID_ZIRCON_A_VALUE), "zircon-a");
+  EXPECT_EQ(KnownGuid::TypeDescription(GUID_FVM_VALUE), "fuchsia-fvm");
+
+  // New partition scheme.
+  EXPECT_EQ(KnownGuid::TypeDescription(GPT_FACTORY_BOOT_TYPE_GUID), "factory_boot");
+  EXPECT_EQ(KnownGuid::TypeDescription(GPT_ZIRCON_ABR_TYPE_GUID), "zircon_*");
+
+  // Unknown partition.
+  EXPECT_EQ(KnownGuid::TypeDescription(TestGuid(0)), "");
+}
+
+// Make sure all known GUID entries have a valid TypeDescription.
+TEST(KnownGuidTest, AllHaveTypeDescription) {
   for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
-    for (auto j = i + 1; j != KnownGuid::end(); j++) {
-      EXPECT_NE(strcmp(i->str(), j->str()), 0);
-    }
+    std::string description = KnownGuid::TypeDescription(i->type_guid());
+    // Shouldn't be empty, and shouldn't just be "*" which would indicate
+    // something went wrong with the prefix matcher.
+    EXPECT_FALSE(description.empty());
+    EXPECT_NE(description, "*");
   }
-}
-
-// KnownGuid is statically built. Verify that there are no wrong entries for GUID to
-// string conversion.
-TEST(KnownGuidTest, KnownGuidToStr) {
-  char str[GPT_NAME_LEN];
-  bool pass = true;
-  for (auto i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
-    uint8_to_guid_string(str, i->guid());
-    if (strcmp(i->str(), str) != 0) {
-      printf("for %s: %s and %s don't match\n", i->name(), i->str(), str);
-      pass = false;
-    }
-  }
-
-  EXPECT_TRUE(pass);
-}
-
-// Litmus test for Guid to human friendly Name conversions
-TEST(KnownGuidTest, GuidToName) {
-  uint8_t install[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
-  auto res = KnownGuid::GuidToName(install);
-  EXPECT_EQ(strcmp(res, "fuchsia-install"), 0);
-
-  uint8_t bl[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
-  res = KnownGuid::GuidToName(bl);
-  EXPECT_EQ(strcmp(res, "bootloader"), 0);
-
-  uint8_t zb[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
-  res = KnownGuid::GuidToName(zb);
-  EXPECT_EQ(strcmp(res, "zircon-b"), 0);
-}
-
-// Litmus test for Guid to human friendly Name conversions
-TEST(KnownGuidTest, NameToGuid) {
-  uint8_t guid[GPT_GUID_LEN];
-
-  uint8_t sys[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-  EXPECT_TRUE(KnownGuid::NameToGuid("fuchsia-system", guid));
-  EXPECT_EQ(memcmp(guid, sys, GPT_GUID_LEN), 0);
-
-  uint8_t factory[GPT_GUID_LEN] = GUID_FACTORY_CONFIG_VALUE;
-  EXPECT_TRUE(KnownGuid::NameToGuid("factory", guid));
-  EXPECT_EQ(memcmp(guid, factory, GPT_GUID_LEN), 0);
-
-  uint8_t vbmeta_a[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
-  EXPECT_TRUE(KnownGuid::NameToGuid("vbmeta_a", guid), "vbmeta_a not found");
-  EXPECT_EQ(memcmp(guid, vbmeta_a, GPT_GUID_LEN), 0);
-}
-
-// Litmus test for guid str to name conversions
-TEST(KnownGuidTest, GuidStrToName) {
-  EXPECT_EQ(
-      strcmp(KnownGuid::GuidStrToName("CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3"), "cros-firmware"), 0);
-
-  EXPECT_EQ(strcmp(KnownGuid::GuidStrToName("3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC"), "cros-rootfs"),
-            0);
-  EXPECT_EQ(strcmp(KnownGuid::GuidStrToName("41D0E340-57E3-954E-8C1E-17ECAC44CFF5"), "fuchsia-fvm"),
-            0);
 }
 
 TEST(InitializePrimaryHeader, BlockSizeTooSmall) {
@@ -1418,7 +1520,6 @@ TEST(InitializePrimaryHeader, BlockCountEqualsMinimumRequired) {
 
 TEST(InitializePrimaryHeader, CheckFields) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  guid_t zero_guid = {};
 
   ASSERT_EQ(header.magic, kMagicNumber);
   ASSERT_EQ(header.revision, kRevision);
@@ -1430,7 +1531,7 @@ TEST(InitializePrimaryHeader, CheckFields) {
   ASSERT_EQ(header.last, header.backup - EntryArrayBlockCount(kBlockSize) - 1);
 
   // Guid can be anything but all zeros
-  ASSERT_NE(memcmp(header.guid, &zero_guid, sizeof(guid_t)), 0);
+  ASSERT_NE(uuid::Uuid(header.guid), uuid::Uuid());
   ASSERT_EQ(header.entries, header.current + 1);
   ASSERT_EQ(header.entries_count, kPartitionCount);
   ASSERT_EQ(header.entries_size, kEntrySize);

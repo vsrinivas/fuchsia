@@ -16,6 +16,7 @@
 #include <fbl/vector.h>
 #include <fvm/format.h>
 #include <fvm/fvm-check.h>
+#include <gpt/guid.h>
 
 namespace fvm {
 
@@ -290,11 +291,9 @@ bool Checker::CheckFVM(const FvmInfo& info) const {
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     const uint32_t slices = vpart_table[i].slices;
     if (slices != 0) {
-      char guid_string[GPT_GUID_STRLEN];
-      uint8_to_guid_string(guid_string, vpart_table[i].type);
       logger_.Log("Partition %zu allocated\n", i);
       logger_.Log("  Has %u slices allocated\n", slices);
-      logger_.Log("  Type: %s\n", gpt_guid_to_type(guid_string));
+      logger_.Log("  Type: %s\n", gpt::KnownGuid::TypeDescription(vpart_table[i].type).c_str());
       logger_.Log("  Name: %s\n", vpart_table[i].name().c_str());
     }
   }

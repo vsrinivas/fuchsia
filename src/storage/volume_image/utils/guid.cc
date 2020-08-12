@@ -91,10 +91,13 @@ constexpr char GetHex(uint8_t value) {
 // Returns the numeric value of |hex|.
 //
 // Precondition:
-//  * |hex| is either a digit(0-9) or [A-F].
+//  * |hex| is either a digit(0-9) or [a-fA-F].
 uint8_t GetValue(char hex) {
   constexpr uint8_t kHexAlphaOffset = 0xA;
-  if (hex > '9') {
+  if (hex >= 'a') {
+    return hex - 'a' + kHexAlphaOffset;
+  }
+  if (hex >= 'A') {
     return hex - 'A' + kHexAlphaOffset;
   }
   return hex - '0';

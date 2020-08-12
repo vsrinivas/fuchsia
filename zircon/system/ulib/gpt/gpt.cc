@@ -26,6 +26,7 @@
 #include <gpt/guid.h>
 #include <mbr/mbr.h>
 #include <range/range.h>
+#include <src/lib/uuid/uuid.h>
 
 #include "gpt.h"
 
@@ -129,6 +130,17 @@ int compare(const void* ls, const void* rs) {
   return (l->first < r->first) ? -1 : 1;
 }
 
+// Returns a copy of |str| with any hex values converted to uppercase.
+std::string HexToUpper(std::string str) {
+  for (char& ch : str) {
+    if (ch >= 'a' && ch <= 'f') {
+      ch -= 'a';
+      ch += 'A';
+    }
+  }
+  return str;
+}
+
 }  // namespace
 
 __BEGIN_CDECLS
@@ -188,15 +200,8 @@ bool gpt_is_factory_guid(uint8_t* guid, ssize_t len) {
 }
 
 void uint8_to_guid_string(char* dst, const uint8_t* src) {
-  // memcpy'd rather than casting src in-place for alignment (for ubsan).
-  guid_t guid;
-  memcpy(&guid, src, sizeof(guid_t));
-  sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid.data1, guid.data2,
-          guid.data3, guid.data4[0], guid.data4[1], guid.data4[2], guid.data4[3], guid.data4[4],
-          guid.data4[5], guid.data4[6], guid.data4[7]);
+  strcpy(dst, HexToUpper(uuid::Uuid(src).ToString()).c_str());
 }
-
-const char* gpt_guid_to_type(const char* guid) { return gpt::KnownGuid::GuidStrToName(guid); }
 
 __END_CDECLS
 
@@ -320,9 +325,9 @@ fit::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry) {
 }
 
 fit::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry) {
-  guid_t zero_guid = {};
-  bool guid_valid = memcmp(entry->guid, &zero_guid, sizeof(zero_guid)) != 0;
-  bool type_valid = memcmp(entry->type, &zero_guid, sizeof(zero_guid)) != 0;
+  uuid::Uuid zero_guid;
+  bool guid_valid = (uuid::Uuid(entry->guid) != zero_guid);
+  bool type_valid = (uuid::Uuid(entry->type) != zero_guid);
   bool range_valid = (entry->first != 0) && (entry->first <= entry->last);
 
   if (!guid_valid && !type_valid && !range_valid) {

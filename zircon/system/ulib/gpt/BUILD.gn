@@ -32,6 +32,7 @@ zx_library("gpt") {
     ]
     deps = [
       "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+      "//src/lib/uuid",
       "//zircon/public/lib/cksum",
       "//zircon/public/lib/fit",
       "//zircon/system/ulib/mbr",

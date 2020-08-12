@@ -46,9 +46,6 @@ bool gpt_is_factory_guid(uint8_t* guid, ssize_t len);
 
 void gpt_set_debug_output_enabled(bool enabled);
 
-// Return the human-readable version of the type GUID.
-const char* gpt_guid_to_type(const char* guid);
-
 // Sort an array of gpt_partition_t pointers in-place based on the values of
 // gpt_partition_t->first.
 void gpt_sort_partitions(gpt_partition_t** partitions, size_t count);

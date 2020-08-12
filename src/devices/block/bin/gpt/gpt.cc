@@ -23,7 +23,9 @@
 #include <gpt/guid.h>
 
 using gpt::GptDevice;
+using gpt::GuidProperties;
 using gpt::KnownGuid;
+using gpt::PartitionScheme;
 
 namespace {
 
@@ -75,10 +77,13 @@ int Usage(zx_status_t ret) {
   printf("\n");
   printf("Known partition types are:\n");
   for (KnownGuid::const_iterator i = KnownGuid::begin(); i != KnownGuid::end(); i++) {
-    printf("        %s\n", i->name());
+    printf("        %.*s%s\n", static_cast<int>(i->name().size()), i->name().data(),
+           i->scheme() == PartitionScheme::kLegacy ? " [legacy]" : "");
   }
-  printf("The option --live-dangerously may be passed in front of any command\n");
-  printf("to skip the write confirmation prompt.\n");
+  printf("The following options may be passed in front of any command:\n");
+  printf("  --live-dangerously: skip the write confirmation prompt\n");
+  printf("  --legacy-scheme: use the legacy partitioning scheme\n");
+  printf("  --new-scheme: use the new partitioning scheme\n");
 
   return status_to_retcode(ret);
 }
@@ -104,7 +109,7 @@ char* CrosFlagsToCString(char* dst, size_t dst_len, uint64_t flags) {
 }
 
 char* FlagsToCString(char* dst, size_t dst_len, const uint8_t* guid, uint64_t flags) {
-  if (gpt_cros_is_kernel_guid(guid, sizeof(gpt::guid_t))) {
+  if (gpt_cros_is_kernel_guid(guid, GPT_GUID_LEN)) {
     return CrosFlagsToCString(dst, dst_len, flags);
   } else {
     snprintf(dst, dst_len, "0x%016" PRIx64, flags);
@@ -438,13 +443,15 @@ zx_status_t AdjustPartition(const char* dev, uint32_t idx_part, uint64_t start, 
 }
 
 /*
- * Edit a partition, changing either its type or ID GUID. path_device should be
- * the path to the device where the GPT can be read. idx_part should be the
- * index of the partition in the GPT that you want to change. guid should be the
- * string/human-readable form of the GUID and should be 36 characters plus a
- * null terminator.
+ * Edit a partition, changing either its type or ID GUID.
+ *
+ * dev:         path to the device where the GPT can be read.
+ * idx_part:    index of the partition in the GPT that you want to change.
+ * type_or_id:  which GUID to change, either "type" or "id".
+ * guid:        GUID to assign.
  */
-zx_status_t EditPartition(const char* dev, uint32_t idx_part, char* type_or_id, char* guid_name) {
+zx_status_t EditPartition(const char* dev, uint32_t idx_part, char* type_or_id,
+                          const uint8_t* guid) {
   zx_status_t rc;
 
   std::unique_ptr<GptDevice> gpt = Init(dev);
@@ -452,16 +459,14 @@ zx_status_t EditPartition(const char* dev, uint32_t idx_part, char* type_or_id, 
     return ZX_ERR_INTERNAL;
   }
 
-  uint8_t guid_bytes[GPT_GUID_LEN];
-  if (!KnownGuid::NameToGuid(guid_name, guid_bytes) && !ParseGuid(guid_name, guid_bytes)) {
-    fprintf(stderr, "GUID could not be parsed.\n");
+  if (!guid) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (!strcmp(type_or_id, "type")) {
-    rc = gpt->SetPartitionType(idx_part, guid_bytes);
+    rc = gpt->SetPartitionType(idx_part, guid);
   } else if (!strcmp(type_or_id, "id")) {
-    rc = gpt->SetPartitionGuid(idx_part, guid_bytes);
+    rc = gpt->SetPartitionGuid(idx_part, guid);
   } else {
     fprintf(stderr, "Invalid arguments to edit partition");
     return Usage(ZX_ERR_INVALID_ARGS);
@@ -667,6 +672,31 @@ int64_t ParseSize(char* s) {
   return v;
 }
 
+// Looks up the type GUID for the given partition name.
+//
+// |scheme| is only necessary for names which have both new and legacy mappings
+// such as "vbmeta_a".
+//
+// Returns the GUID if exactly one was found, otherwise returns nullptr and logs
+// an error.
+const uint8_t* GetTypeGuid(const char* name, std::optional<PartitionScheme> scheme) {
+  std::list<const GuidProperties*> matches = KnownGuid::Find(name, std::nullopt, scheme);
+
+  if (matches.empty()) {
+    fprintf(stderr, "GUID lookup failed: unknown partition '%s'\n", name);
+    return nullptr;
+  }
+
+  if (matches.size() > 1) {
+    fprintf(stderr,
+            "GUID lookup failed: partition '%s' has multiple mappings, please specify a scheme\n",
+            name);
+    return nullptr;
+  }
+
+  return matches.front()->type_guid().bytes();
+}
+
 // TODO(raggi): this should eventually get moved into ulib/gpt.
 // Align finds the next block at or after base that is aligned to a physical
 // block boundary. The gpt specification requires that all partitions are
@@ -682,7 +712,7 @@ uint64_t Align(uint64_t base, uint64_t logical, uint64_t physical) {
 
 // Repartition expects argv to start with the disk path and be followed by
 // triples of name, type and size.
-zx_status_t Repartition(int argc, char** argv) {
+zx_status_t Repartition(int argc, char** argv, std::optional<PartitionScheme> scheme) {
   const char* dev = argv[0];
   uint64_t logical, free_space;
   std::unique_ptr<GptDevice> gpt = Init(dev);
@@ -747,9 +777,8 @@ zx_status_t Repartition(int argc, char** argv) {
 
       uint64_t byte_size = sizes[i];
 
-      uint8_t type[GPT_GUID_LEN];
-      if (!KnownGuid::NameToGuid(guid_name, type) && !ParseGuid(guid_name, type)) {
-        fprintf(stderr, "GUID could not be parsed: %s\n", guid_name);
+      const uint8_t* type = GetTypeGuid(guid_name, scheme);
+      if (!type) {
         return ZX_ERR_INVALID_ARGS;
       }
 
@@ -785,13 +814,26 @@ int main(int argc, char** argv) {
   bin_name = argv[0];
   const char* cmd;
   uint32_t idx_part;
+  std::optional<PartitionScheme> scheme;
 
-  if (argc > 1) {
+  while (argc > 1) {
     if (!strcmp(argv[1], "--live-dangerously")) {
       confirm_writes = false;
-      argc--;
-      argv++;
+    } else if (!strcmp(argv[1], "--legacy-scheme")) {
+      if (scheme) {
+        return Usage(ZX_OK);
+      }
+      scheme = PartitionScheme::kLegacy;
+    } else if (!strcmp(argv[1], "--new-scheme")) {
+      if (scheme) {
+        return Usage(ZX_OK);
+      }
+      scheme = PartitionScheme::kNew;
+    } else {
+      break;
     }
+    argc--;
+    argv++;
   }
 
   if (argc == 1) {
@@ -836,7 +878,7 @@ int main(int argc, char** argv) {
     if (ReadPartitionIndex(argv[2], &idx_part) != ZX_OK) {
       return Usage(ZX_OK);
     }
-    if (EditPartition(argv[5], idx_part, argv[3], argv[4]) != ZX_OK) {
+    if (EditPartition(argv[5], idx_part, argv[3], GetTypeGuid(argv[4], scheme)) != ZX_OK) {
       return 1;
     }
   } else if (!strcmp(cmd, "edit_cros")) {
@@ -883,7 +925,7 @@ int main(int argc, char** argv) {
     if (argc % 3 != 0) {
       return Usage(ZX_OK);
     }
-    return Repartition(argc - 2, &argv[2]);
+    return Repartition(argc - 2, &argv[2], scheme);
   } else {
     return Usage(ZX_OK);
   }

@@ -7,45 +7,12 @@
 
 namespace gpt {
 
-// GUID_*_VALUE are brace-enclosed values {1, 2,..}. Function arguments
-// cannot be brace-enclosed initializer. So here we convert VALUE to a
-// constexpr
-#define GUID_MAKE_ARRAY(name) \
-  constexpr uint8_t GUID_##name##_ARRAY[GPT_GUID_LEN] = GUID_##name##_VALUE
-
-GUID_MAKE_ARRAY(EMPTY);
-GUID_MAKE_ARRAY(EFI);
-GUID_MAKE_ARRAY(SYSTEM);
-GUID_MAKE_ARRAY(DATA);
-GUID_MAKE_ARRAY(INSTALL);
-GUID_MAKE_ARRAY(BLOB);
-GUID_MAKE_ARRAY(FVM);
-GUID_MAKE_ARRAY(ZIRCON_A);
-GUID_MAKE_ARRAY(ZIRCON_B);
-GUID_MAKE_ARRAY(ZIRCON_R);
-GUID_MAKE_ARRAY(SYS_CONFIG);
-GUID_MAKE_ARRAY(FACTORY_CONFIG);
-GUID_MAKE_ARRAY(BOOTLOADER);
-GUID_MAKE_ARRAY(TEST);
-GUID_MAKE_ARRAY(VBMETA_A);
-GUID_MAKE_ARRAY(VBMETA_B);
-GUID_MAKE_ARRAY(VBMETA_R);
-GUID_MAKE_ARRAY(ABR_META);
-GUID_MAKE_ARRAY(CROS_KERNEL);
-GUID_MAKE_ARRAY(CROS_ROOTFS);
-GUID_MAKE_ARRAY(CROS_RESERVED);
-GUID_MAKE_ARRAY(CROS_FIRMWARE);
-GUID_MAKE_ARRAY(CROS_DATA);
-GUID_MAKE_ARRAY(BIOS);
-GUID_MAKE_ARRAY(EMMC_BOOT1);
-GUID_MAKE_ARRAY(EMMC_BOOT2);
-GUID_MAKE_ARRAY(LINUX_FILESYSTEM_DATA);
-
 #define GUID_NAMETAB(name) \
-  GuidProperties(GUID_##name##_NAME, GUID_##name##_STRING, GUID_##name##_ARRAY)
+  GuidProperties(GUID_##name##_NAME, uuid::Uuid(GUID_##name##_VALUE), PartitionScheme::kLegacy)
 
 // clang-format off
 std::array<GuidProperties, kKnownGuidEntries> const KnownGuid::nametab_ = {{
+    // Legacy GUID definitions - each entry has its own type GUID.
     GUID_NAMETAB(EMPTY),
     GUID_NAMETAB(EFI),
     GUID_NAMETAB(SYSTEM),
@@ -73,51 +40,79 @@ std::array<GuidProperties, kKnownGuidEntries> const KnownGuid::nametab_ = {{
     GUID_NAMETAB(EMMC_BOOT1),
     GUID_NAMETAB(EMMC_BOOT2),
     GUID_NAMETAB(LINUX_FILESYSTEM_DATA),
+
+    // New GUID definitions - slotted partitions share a type GUID.
+    GuidProperties(GPT_BOOTLOADER_A_NAME, GPT_BOOTLOADER_ABR_TYPE_GUID, PartitionScheme::kNew),
+    GuidProperties(GPT_BOOTLOADER_B_NAME, GPT_BOOTLOADER_ABR_TYPE_GUID, PartitionScheme::kNew),
+    GuidProperties(GPT_BOOTLOADER_R_NAME, GPT_BOOTLOADER_ABR_TYPE_GUID, PartitionScheme::kNew),
+    GuidProperties(GPT_DURABLE_NAME,      GPT_DURABLE_TYPE_GUID,        PartitionScheme::kNew),
+    GuidProperties(GPT_DURABLE_BOOT_NAME, GPT_DURABLE_BOOT_TYPE_GUID,   PartitionScheme::kNew),
+    GuidProperties(GPT_FACTORY_NAME,      GPT_FACTORY_TYPE_GUID,        PartitionScheme::kNew),
+    GuidProperties(GPT_FACTORY_BOOT_NAME, GPT_FACTORY_BOOT_TYPE_GUID,   PartitionScheme::kNew),
+    GuidProperties(GPT_FVM_NAME,          GPT_FVM_TYPE_GUID,            PartitionScheme::kNew),
+    GuidProperties(GPT_VBMETA_A_NAME,     GPT_VBMETA_ABR_TYPE_GUID,     PartitionScheme::kNew),
+    GuidProperties(GPT_VBMETA_B_NAME,     GPT_VBMETA_ABR_TYPE_GUID,     PartitionScheme::kNew),
+    GuidProperties(GPT_VBMETA_R_NAME,     GPT_VBMETA_ABR_TYPE_GUID,     PartitionScheme::kNew),
+    GuidProperties(GPT_ZIRCON_A_NAME,     GPT_ZIRCON_ABR_TYPE_GUID,     PartitionScheme::kNew),
+    GuidProperties(GPT_ZIRCON_B_NAME,     GPT_ZIRCON_ABR_TYPE_GUID,     PartitionScheme::kNew),
+    GuidProperties(GPT_ZIRCON_R_NAME,     GPT_ZIRCON_ABR_TYPE_GUID,     PartitionScheme::kNew),
 }};
 // clang-format on
 
-// Match keywords (like GUID_SYSTEM_NAME) and convert them to their
-// corresponding byte sequences. 'out' should point to a GPT_GUID_LEN array.
-// Return false if no match if found.
-bool KnownGuid::NameToGuid(const char* name, uint8_t* out) {
-  if (name == NULL) {
-    return false;
-  }
-
-  for (auto const& guidp : nametab_) {
-    if (!strcmp(name, guidp.name())) {
-      memcpy(out, guidp.guid(), GPT_GUID_LEN);
-      return true;
+std::list<const GuidProperties*> KnownGuid::Find(std::optional<std::string_view> name,
+                                                 std::optional<uuid::Uuid> type_guid,
+                                                 std::optional<PartitionScheme> scheme) {
+  std::list<const GuidProperties*> result;
+  for (const GuidProperties& properties : nametab_) {
+    if ((!name || *name == properties.name()) &&
+        (!type_guid || *type_guid == properties.type_guid()) &&
+        (!scheme || *scheme == properties.scheme())) {
+      result.push_back(&properties);
     }
   }
-
-  return false;
+  return result;
 }
 
-const char* KnownGuid::GuidToName(const uint8_t* guid) {
-  if (guid == NULL) {
-    return nullptr;
-  }
+namespace {
 
-  for (auto const& guidp : nametab_) {
-    if (memcmp(guidp.guid(), guid, sizeof(guid_t)) == 0) {
-      return guidp.name();
+// Returns the longest common prefix between |a| and |b|.
+std::string_view CommonPrefix(std::string_view a, std::string_view b) {
+  const int end = std::min(a.size(), b.size());
+  for (int i = 0; i < end; ++i) {
+    if (a[i] != b[i]) {
+      return std::string_view(a.data(), i);
     }
   }
-  return nullptr;
+  return std::string_view(a.data(), end);
 }
 
-const char* KnownGuid::GuidStrToName(const char* str) {
-  if (str == NULL) {
-    return nullptr;
+}  // namespace
+
+std::string KnownGuid::TypeDescription(const uuid::Uuid& type_guid) {
+  auto matches = Find(std::nullopt, type_guid, std::nullopt);
+
+  // No matches: return empty string.
+  if (matches.empty()) {
+    return "";
   }
 
-  for (auto const& guidp : nametab_) {
-    if (strcmp(guidp.str(), str) == 0) {
-      return guidp.name();
-    }
+  // One match: just return the partition name directly.
+  if (matches.size() == 1) {
+    return std::string(matches.front()->name());
   }
-  return nullptr;
+
+  // Multiple matches: use the longest common prefix.
+  std::string_view prefix = matches.front()->name();
+  for (auto iter = ++matches.begin(); iter != matches.end(); ++iter) {
+    prefix = CommonPrefix(prefix, (*iter)->name());
+  }
+
+  // Return "<prefix>*".
+  return std::string(prefix) + "*";
+}
+
+std::string KnownGuid::TypeDescription(const uint8_t* type_guid) {
+  return TypeDescription(uuid::Uuid(type_guid));
 }
 
 }  // namespace gpt
