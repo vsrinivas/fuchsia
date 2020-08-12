@@ -54,6 +54,8 @@ zx_library("amlogic") {
     "a113-clocks.c",
     "aml-pdm-audio.cc",
     "aml-tdm-audio.cc",
+    "aml-tdm-in-audio.cc",
+    "aml-tdm-out-audio.cc",
     "s905d2-hiu.c",
     "s905d2-pll-rates.c",
   ]

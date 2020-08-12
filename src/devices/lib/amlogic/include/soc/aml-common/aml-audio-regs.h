@@ -66,9 +66,13 @@ __BEGIN_CDECLS
 #define EE_AUDIO_MST_F_SCLK_CTRL0     0x0068
 #define EE_AUDIO_MST_F_SCLK_CTRL1     0x006c
 
-#define EE_AUDIO_CLK_TDMOUT_A_CTL     0x0090
-#define EE_AUDIO_CLK_TDMOUT_B_CTL     0x0094
-#define EE_AUDIO_CLK_TDMOUT_C_CTL     0x0098
+#define EE_AUDIO_CLK_TDMOUT_A_CTL     (0x0024 << 2)
+#define EE_AUDIO_CLK_TDMOUT_B_CTL     (0x0025 << 2)
+#define EE_AUDIO_CLK_TDMOUT_C_CTL     (0x0026 << 2)
+
+#define EE_AUDIO_CLK_TDMIN_A_CTL      (0x0020 << 2)
+#define EE_AUDIO_CLK_TDMIN_B_CTL      (0x0021 << 2)
+#define EE_AUDIO_CLK_TDMIN_C_CTL      (0x0022 << 2)
 
 #define EE_AUDIO_CLK_PDMIN_CTRL0      0x00ac
 #define EE_AUDIO_CLK_PDMIN_CTRL1      0x00b0
@@ -130,6 +134,25 @@ __BEGIN_CDECLS
 #define EE_AUDIO_TDMOUT_C_CTRL0         (0x160 << 2)
 
 
+//TDMIN control regs (common to three separate units)
+#define TDMIN_CTRL_OFFS      (0x00 << 2)
+#define TDMIN_SWAP_OFFS      (0x01 << 2)
+#define TDMIN_MASK0_OFFS     (0x02 << 2)
+#define TDMIN_MASK1_OFFS     (0x03 << 2)
+#define TDMIN_MASK2_OFFS     (0x04 << 2)
+#define TDMIN_MASK3_OFFS     (0x05 << 2)
+#define TDMIN_STAT_OFFS      (0x06 << 2)
+#define TDMIN_MUTE_VAL_OFFS  (0x07 << 2)
+#define TDMIN_MUTE0_OFFS     (0x08 << 2)
+#define TDMIN_MUTE1_OFFS     (0x09 << 2)
+#define TDMIN_MUTE2_OFFS     (0x0a << 2)
+#define TDMIN_MUTE3_OFFS     (0x0b << 2)
+
+#define EE_AUDIO_TDMIN_A_CTRL0         (0xc0 << 2)
+#define EE_AUDIO_TDMIN_B_CTRL0         (0xd0 << 2)
+#define EE_AUDIO_TDMIN_C_CTRL0         (0xe0 << 2)
+
+
 //Audio clock gating masks
 #define EE_AUDIO_CLK_GATE_ARB        (1 << 0)
 #define EE_AUDIO_CLK_GATE_PDM        (1 << 1)
@@ -178,6 +201,12 @@ typedef enum {
     TDM_OUT_B,
     TDM_OUT_C
 } aml_tdm_out_t;
+
+typedef enum {
+    TDM_IN_A = 0,
+    TDM_IN_B,
+    TDM_IN_C
+} aml_tdm_in_t;
 
 typedef enum {
     FRDDR_A = 0,

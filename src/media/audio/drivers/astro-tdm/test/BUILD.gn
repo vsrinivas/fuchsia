@@ -6,11 +6,11 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
-executable("astro-audio-out-test-bin") {
+executable("astro-tdm-test-bin") {
   configs += [ "//build/config:all_source" ]
   testonly = true
   sources = [
-    "../audio-stream-out.cc",
+    "../audio-stream.cc",
     "test.cc",
   ]
   deps = [
@@ -40,9 +40,10 @@ executable("astro-audio-out-test-bin") {
   ]
 }
 
-fuchsia_unittest_package("astro-audio-out-test") {
-  executable_path = "bin/astro-audio-out-test-bin"
-  deps = [ ":astro-audio-out-test-bin" ]
+fuchsia_unittest_package("test-package") {
+  package_name = "astro-tdm-test"
+  executable_path = "bin/astro-tdm-test-bin"
+  deps = [ ":astro-tdm-test-bin" ]
   test_specs = {
     environments = basic_envs
   }

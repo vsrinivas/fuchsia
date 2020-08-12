@@ -11,7 +11,7 @@ group("tests") {
   deps = [
     "alc5663:tests",
     "astro-pdm-input:tests",
-    "astro-tdm-output:tests",
+    "astro-tdm:tests",
     "codecs:tests",
     "intel-hda:tests",
     "sherlock-pdm-input:tests",

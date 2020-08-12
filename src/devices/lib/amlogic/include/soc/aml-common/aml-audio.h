@@ -21,6 +21,8 @@ enum class AmlBus : uint32_t {
 };
 
 struct AmlConfig {
+  bool is_input;
+  uint8_t number_of_channels;
   AmlBus bus;
   AmlVersion version;
   Tdm tdm;

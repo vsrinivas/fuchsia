@@ -95,13 +95,13 @@ zx_status_t NelsonAudioStreamOut::InitHW() {
   // Setup TDM.
 
   // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample (works for 32 in codec), no mixing.
-  lib_->ConfigTdmOutSlot(3, 1, 31, 15, 0);
+  lib_->ConfigTdmSlot(3, 1, 31, 15, 0);
 
   // Lane0 right channel.
-  lib_->ConfigTdmOutSwaps(0x00000010);
+  lib_->ConfigTdmSwaps(0x00000010);
 
   // Lane 0, unmask first 2 slots (0x00000003),
-  auto status = lib_->ConfigTdmOutLane(0, 0x00000003, 0);
+  auto status = lib_->ConfigTdmLane(0, 0x00000003, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane %d", __FILE__, status);
     return status;
@@ -185,8 +185,8 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
     return status;
   }
 
-  lib_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B,
-                              metadata::AmlVersion::kS905D3G);
+  lib_ = AmlTdmOutDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B,
+                                 metadata::AmlVersion::kS905D3G);
   if (lib_ == nullptr) {
     zxlogf(ERROR, "%s failed to create audio device", __FILE__);
     return ZX_ERR_NO_MEMORY;

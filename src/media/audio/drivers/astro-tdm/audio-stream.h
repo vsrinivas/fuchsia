@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
-#define SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_AUDIO_STREAM_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_AUDIO_STREAM_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -28,9 +28,9 @@
 namespace audio {
 namespace astro {
 
-class AstroAudioStreamOut : public SimpleAudioStream {
+class AstroTdmStream : public SimpleAudioStream {
  public:
-  AstroAudioStreamOut(zx_device_t* parent);
+  AstroTdmStream(zx_device_t* parent, bool is_input);
 
  protected:
   zx_status_t Init() __TA_REQUIRES(domain_token()) override;
@@ -52,7 +52,7 @@ class AstroAudioStreamOut : public SimpleAudioStream {
   metadata::AmlConfig metadata_ = {};
 
  private:
-  friend class fbl::RefPtr<AstroAudioStreamOut>;
+  friend class fbl::RefPtr<AstroTdmStream>;
 
   static constexpr uint8_t kFifoDepth = 0x20;
 
@@ -64,8 +64,8 @@ class AstroAudioStreamOut : public SimpleAudioStream {
   uint32_t us_per_notification_ = 0;
   DaiFormat dai_format_ = {};
 
-  async::TaskClosureMethod<AstroAudioStreamOut, &AstroAudioStreamOut::ProcessRingNotification>
-      notify_timer_ __TA_GUARDED(domain_token()){this};
+  async::TaskClosureMethod<AstroTdmStream, &AstroTdmStream::ProcessRingNotification> notify_timer_
+      __TA_GUARDED(domain_token()){this};
 
   ddk::PDev pdev_;
 
@@ -78,4 +78,4 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 }  // namespace astro
 }  // namespace audio
 
-#endif  // SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_ASTRO_TDM_AUDIO_STREAM_H_

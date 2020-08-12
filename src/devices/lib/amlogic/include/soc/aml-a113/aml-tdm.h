@@ -14,7 +14,7 @@ typedef enum { MCLK_A, MCLK_B, MCLK_C, MCLK_D, MCLK_E, MCLK_F } aml_tdm_mclk_t;
 
 typedef enum { TDM_OUT_A, TDM_OUT_B, TDM_OUT_C } aml_tdm_out_t;
 
-typedef enum { TDM_IN_A, TDM_IN_B, TDM_IN_C, TDM_IN_LB } aml_tdm_in_t;
+typedef enum { TDM_IN_A, TDM_IN_B, TDM_IN_C } aml_tdm_in_t;
 
 typedef struct {
   uint32_t ctl0;

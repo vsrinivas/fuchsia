@@ -17,8 +17,8 @@
 #include "astro-gpios.h"
 #include "astro.h"
 
-// TODO(52506): Re-enable when fxb/54011 is resolved.
-//#define ENABLE_BT_PCM
+// TODO(52506): Re-enable when 54011 is resolved.
+//#define ENABLE_BT
 
 namespace astro {
 
@@ -81,7 +81,7 @@ static const device_fragment_part_t codec_fragment[] = {
     {countof(codec_match), codec_match},
 };
 
-#ifdef ENABLE_BT_PCM
+#ifdef ENABLE_BT
 static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
 static const device_fragment_t tdm_i2s_fragments[] = {
@@ -150,12 +150,12 @@ zx_status_t Astro::AudioInit() {
   gpio_impl_.SetDriveStrength(S905D2_GPIOA(2), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D2_GPIOA(3), ua, nullptr);
 
-#ifdef ENABLE_BT_PCM
+#ifdef ENABLE_BT
   // PCM pin assignments.
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(8), 1);
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(9), 1);
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(10), 1);
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(11), 1);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(8), S905D2_GPIOX_8_TDMA_DIN1_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_8_TDMA_D0_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(10), S905D2_GPIOX_10_TDMA_FS_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(11), S905D2_GPIOX_11_TDMA_SCLK_FN);
   gpio_impl_.SetDriveStrength(S905D2_GPIOX(8), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D2_GPIOX(9), ua, nullptr);
   gpio_impl_.SetDriveStrength(S905D2_GPIOX(10), ua, nullptr);
@@ -168,11 +168,19 @@ zx_status_t Astro::AudioInit() {
 
   gpio_impl_.ConfigOut(S905D2_GPIOA(5), 1);
 
-#ifdef ENABLE_BT_PCM
   // Output devices.
-  // Add PCM TDM.
+#ifdef ENABLE_BT
+  // Add TDM OUT for BT.
   {
+    const pbus_bti_t pcm_out_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_BT_OUT,
+        },
+    };
     metadata::AmlConfig metadata = {};
+    metadata.is_input = false;
+    metadata.number_of_channels = 1;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::Pcm;
@@ -192,8 +200,8 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
-    tdm_dev.bti_list = tdm_btis;
-    tdm_dev.bti_count = countof(tdm_btis);
+    tdm_dev.bti_list = pcm_out_btis;
+    tdm_dev.bti_count = countof(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
@@ -204,7 +212,7 @@ zx_status_t Astro::AudioInit() {
     }
   }
 #endif
-  // Add I2S TDM.
+  // Add TDM OUT to the codec.
   {
     zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, kCodecVid},
                                 {BIND_PLATFORM_DEV_DID, 0, kCodecDid}};
@@ -222,6 +230,8 @@ zx_status_t Astro::AudioInit() {
     }
 
     metadata::AmlConfig metadata = {};
+    metadata.is_input = false;
+    metadata.number_of_channels = 1;
     metadata.bus = metadata::AmlBus::TDM_B;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.tdm.type = metadata::TdmType::I2s;
@@ -254,6 +264,48 @@ zx_status_t Astro::AudioInit() {
   }
 
   // Input devices.
+#ifdef ENABLE_BT
+  // Add TDM IN for BT.
+  {
+    const pbus_bti_t pcm_in_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_BT_IN,
+        },
+    };
+    metadata::AmlConfig metadata = {};
+    metadata.is_input = true;
+    metadata.number_of_channels = 1;
+    metadata.bus = metadata::AmlBus::TDM_A;
+    metadata.version = metadata::AmlVersion::kS905D2G;
+    metadata.tdm.type = metadata::TdmType::Pcm;
+    metadata.tdm.codec = metadata::Codec::None;
+    pbus_metadata_t tdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &metadata,
+            .data_size = sizeof(metadata),
+        },
+    };
+    pbus_dev_t tdm_dev = {};
+    tdm_dev.name = "astro-pcm-audio-in";
+    tdm_dev.vid = PDEV_VID_AMLOGIC;
+    tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
+    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.mmio_list = audio_mmios;
+    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.bti_list = pcm_in_btis;
+    tdm_dev.bti_count = countof(pcm_in_btis);
+    tdm_dev.metadata_list = tdm_metadata;
+    tdm_dev.metadata_count = countof(tdm_metadata);
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
+                                      UINT32_MAX);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
+      return status;
+    }
+  }
+#endif
   status = pbus_.DeviceAdd(&pdm_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: PDM DeviceAdd failed: %d", __FILE__, status);

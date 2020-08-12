@@ -194,7 +194,7 @@ common_image_contents = [
   "//src/graphics/drivers/aml-gpu",
   "//src/media/audio/bin/ihda",
   "//src/media/audio/drivers/astro-pdm-input",
-  "//src/media/audio/drivers/astro-tdm-output",
+  "//src/media/audio/drivers/astro-tdm",
   "//src/media/audio/drivers/codecs/tas27xx",
   "//src/media/audio/drivers/usb-audio",
   "//src/media/audio/tools/audio-driver-ctl:bin",

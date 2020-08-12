@@ -70,7 +70,7 @@ struct Tas5720GainTest : Tas5720 {
   zx_status_t Init(std::optional<uint8_t> slot, uint32_t rate) override { return ZX_OK; }
 };
 
-struct AmlTdmDeviceTest : public AmlTdmDevice {
+struct AmlTdmDeviceTest : public AmlTdmOutDevice {
   template <typename T>
   static std::unique_ptr<T> Create() {
     constexpr size_t n_registers = 4096;  // big enough.
@@ -84,7 +84,7 @@ struct AmlTdmDeviceTest : public AmlTdmDevice {
   AmlTdmDeviceTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
                    aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
                    metadata::AmlVersion version)
-      : AmlTdmDevice(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
+      : AmlTdmOutDevice(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
   void Initialize() override { initialize_called_++; }
   void Shutdown() override { shutdown_called_++; }
   size_t initialize_called_ = 0;
@@ -149,7 +149,7 @@ TEST(SherlockAudioStreamOutTest, MuteChannels) {
                          aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
                          metadata::AmlVersion version)
         : AmlTdmDeviceTest(std::move(mmio), clk_src, tdm, frddr, mclk, fifo_depth, version) {}
-    zx_status_t ConfigTdmOutLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override {
+    zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override {
       if (lane >= kMaxLanes) {
         return ZX_ERR_INTERNAL;
       }

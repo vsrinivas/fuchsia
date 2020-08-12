@@ -89,19 +89,19 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
   // -3072MHz/64 = 48KHz.
 
   // 5 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, enable mix L+R on lane 1.
-  aml_audio_->ConfigTdmOutSlot(5, 1, 31, 15, (1 << 1));
+  aml_audio_->ConfigTdmSlot(5, 1, 31, 15, (1 << 1));
 
   // Lane 0 L channel set to FRDDR slot 2.
   // Lane 0 R channel set to FRDDR slot 3.
   // Lane 1 L channel set to FRDDR slot 0. Mixed with R, see ConfigTdmOutSlot above.
   // Lane 1 R channel set to FRDDR slot 1. Mixed with L, see ConfigTdmOutSlot above.
-  aml_audio_->ConfigTdmOutSwaps(0x00001032);
+  aml_audio_->ConfigTdmSwaps(0x00001032);
 
   // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 2 & 3).
   uint32_t mute_slots = (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
                             ? (~static_cast<uint32_t>(channels_to_use_bitmask_)) & 3
                             : 0;
-  status = aml_audio_->ConfigTdmOutLane(0, 0x00000003, mute_slots);
+  status = aml_audio_->ConfigTdmLane(0, 0x00000003, mute_slots);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane0 %d", __FILE__, status);
     return status;
@@ -111,7 +111,7 @@ zx_status_t SherlockAudioStreamOut::InitHW() {
   mute_slots = (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
                    ? ((~static_cast<uint32_t>(channels_to_use_bitmask_)) & 0xc) >> 2
                    : 0;
-  status = aml_audio_->ConfigTdmOutLane(1, 0x00000003, mute_slots);
+  status = aml_audio_->ConfigTdmLane(1, 0x00000003, mute_slots);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not configure TDM out lane1 %d", __FILE__, status);
     return status;
@@ -208,7 +208,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   if (status != ZX_OK) {
     return status;
   }
-  aml_audio_ = AmlTdmDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_C, FRDDR_A, MCLK_C);
+  aml_audio_ = AmlTdmOutDevice::Create(*std::move(mmio), HIFI_PLL, TDM_OUT_C, FRDDR_A, MCLK_C);
   if (aml_audio_ == nullptr) {
     zxlogf(ERROR, "%s failed to create tdm device", __func__);
     return ZX_ERR_NO_MEMORY;

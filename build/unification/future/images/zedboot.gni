@@ -203,7 +203,7 @@ zedboot_deps += [
   "//src/graphics/drivers/aml-gpu",
   "//src/media/audio/drivers/alc5663",
   "//src/media/audio/drivers/astro-pdm-input",
-  "//src/media/audio/drivers/astro-tdm-output",
+  "//src/media/audio/drivers/astro-tdm",
   "//src/media/audio/drivers/codecs/tas27xx",
   "//src/media/audio/drivers/usb-audio",
   "//src/power/shutdown-shim",
