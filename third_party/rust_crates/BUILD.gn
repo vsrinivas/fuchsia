@@ -20,7 +20,7 @@ group("argh") {
   deps = [ ":argh-v0_1_3" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("async-std") {
     deps = [ ":async-std-v1_6_0" ]
   }
@@ -53,7 +53,7 @@ group("byteorder") {
   deps = [ ":byteorder-v1_3_1" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("bytes") {
     deps = [ ":bytes-v0_5_4" ]
   }
@@ -86,22 +86,22 @@ group("csv") {
   deps = [ ":csv-v1_1_3" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("ct-logs") {
     deps = [ ":ct-logs-v0_6_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("data-encoding") {
     deps = [ ":data-encoding-v2_1_2" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("derivative") {
     deps = [ ":derivative-v2_1_1($host_toolchain)" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("derp") {
     deps = [ ":derp-v0_0_13" ]
   }
@@ -110,12 +110,12 @@ group("difference") {
   deps = [ ":difference-v2_0_0" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("euclid") {
     deps = [ ":euclid-v0_20_7" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("eui48") {
     deps = [ ":eui48-v0_4_6" ]
   }
@@ -128,7 +128,7 @@ group("flate2") {
   deps = [ ":flate2-v1_0_14" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("freetype") {
     deps = [ ":freetype-v0_4_1" ]
   }
@@ -153,7 +153,7 @@ group("futures-util") {
   deps = [ ":futures-util-v0_3_5" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("getopts") {
     deps = [ ":getopts-v0_2_18" ]
   }
@@ -162,7 +162,7 @@ group("glob") {
   deps = [ ":glob-v0_3_0" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("handlebars") {
     deps = [ ":handlebars-v2_0_0-beta_2" ]
   }
@@ -175,32 +175,32 @@ group("hex") {
   deps = [ ":hex-v0_3_2" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("home") {
     deps = [ ":home-v0_5_3" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("http") {
     deps = [ ":http-v0_2_1" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("hyper") {
     deps = [ ":hyper-v0_13_6" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("hyper-rustls") {
     deps = [ ":hyper-rustls-v0_20_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("id_tree") {
     deps = [ ":id_tree-v1_5_0" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("indoc") {
     deps = [ ":indoc-v0_3_3" ]
   }
@@ -209,7 +209,7 @@ group("itertools") {
   deps = [ ":itertools-v0_8_0" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("itoa") {
     deps = [ ":itoa-v0_4_3" ]
   }
@@ -230,7 +230,7 @@ group("libm") {
   deps = [ ":libm-v0_2_1" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("lipsum") {
     deps = [ ":lipsum-v0_6_0" ]
   }
@@ -271,7 +271,7 @@ group("num") {
   deps = [ ":num-v0_2_0" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("num-bigint") {
     deps = [ ":num-bigint-v0_2_2" ]
   }
@@ -292,12 +292,12 @@ group("once_cell") {
   deps = [ ":once_cell-v1_4_0" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("openat") {
     deps = [ ":openat-v0_1_17" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("owning_ref") {
     deps = [ ":owning_ref-v0_4_0" ]
   }
@@ -326,12 +326,12 @@ group("pest_generator") {
   deps = [ ":pest_generator-v2_1_3" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("petgraph") {
     deps = [ ":petgraph-v0_5_1" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("pin-project") {
     deps = [ ":pin-project-v0_4_17" ]
   }
@@ -344,7 +344,7 @@ group("png") {
   deps = [ ":png-v0_14_0" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("pretty") {
     deps = [ ":pretty-v0_5_2" ]
   }
@@ -353,7 +353,7 @@ group("pretty_assertions") {
   deps = [ ":pretty_assertions-v0_5_1" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("prettytable-rs") {
     deps = [ ":prettytable-rs-v0_8_0" ]
   }
@@ -362,12 +362,12 @@ group("proc-macro-hack") {
   deps = [ ":proc-macro-hack-v0_5_15($host_toolchain)" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("proc-macro-nested") {
     deps = [ ":proc-macro-nested-v0_1_4" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("proc-macro2") {
     deps = [ ":proc-macro2-v1_0_9" ]
   }
@@ -380,12 +380,12 @@ group("proptest-derive") {
   deps = [ ":proptest-derive-v0_1_1($host_toolchain)" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("pulldown-cmark") {
     deps = [ ":pulldown-cmark-v0_6_0" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("quote") {
     deps = [ ":quote-v1_0_2" ]
   }
@@ -402,7 +402,7 @@ group("rand_os") {
   deps = [ ":rand_os-v0_1_2" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rand_xorshift") {
     deps = [ ":rand_xorshift-v0_1_1" ]
   }
@@ -435,47 +435,47 @@ group("rust-crypto") {
   deps = [ ":rust-crypto-v0_2_36" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_common") {
     deps = [ ":rust_icu_common-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_sys") {
     deps = [ ":rust_icu_sys-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_ucal") {
     deps = [ ":rust_icu_ucal-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_udat") {
     deps = [ ":rust_icu_udat-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_udata") {
     deps = [ ":rust_icu_udata-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_uenum") {
     deps = [ ":rust_icu_uenum-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_uloc") {
     deps = [ ":rust_icu_uloc-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_ustring") {
     deps = [ ":rust_icu_ustring-v0_3_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rust_icu_utext") {
     deps = [ ":rust_icu_utext-v0_3_0" ]
   }
@@ -488,12 +488,12 @@ group("rustc-hash") {
   deps = [ ":rustc-hash-v1_0_1" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rustls") {
     deps = [ ":rustls-v0_17_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("rusttype") {
     deps = [ ":rusttype-v0_7_5" ]
   }
@@ -526,17 +526,17 @@ group("serde_json5") {
   deps = [ ":serde_json5-v0_1_0" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("serde_repr") {
     deps = [ ":serde_repr-v0_1_3($host_toolchain)" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("signal-hook") {
     deps = [ ":signal-hook-v0_1_13" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("simplelog") {
     deps = [ ":simplelog-v0_7_5" ]
   }
@@ -545,12 +545,12 @@ group("slab") {
   deps = [ ":slab-v0_4_2" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("smallvec") {
     deps = [ ":smallvec-v0_6_13" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("smol") {
     deps = [ ":smol-v0_1_11" ]
   }
@@ -571,17 +571,17 @@ group("structopt") {
   deps = [ ":structopt-v0_2_14" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("syn") {
     deps = [ ":syn-v1_0_21" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("synstructure") {
     deps = [ ":synstructure-v0_12_1" ]
   }
 }
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("tar") {
     deps = [ ":tar-v0_4_25" ]
   }
@@ -594,7 +594,7 @@ group("termion") {
   deps = [ ":termion-v1_5_3" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("termios") {
     deps = [ ":termios-v0_3_2" ]
   }
@@ -603,7 +603,7 @@ group("test-case") {
   deps = [ ":test-case-v1_0_0($host_toolchain)" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("textwrap") {
     deps = [ ":textwrap-v0_11_0" ]
   }
@@ -612,7 +612,7 @@ group("thiserror") {
   deps = [ ":thiserror-v1_0_9" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("time") {
     deps = [ ":time-v0_1_42" ]
   }
@@ -621,12 +621,12 @@ group("timebomb") {
   deps = [ ":timebomb-v0_1_2" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("tokio") {
     deps = [ ":tokio-v0_2_21" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("tokio-rustls") {
     deps = [ ":tokio-rustls-v0_13_1" ]
   }
@@ -647,12 +647,12 @@ group("tracing-subscriber") {
   deps = [ ":tracing-subscriber-v0_2_7" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("trust-dns-proto") {
     deps = [ ":trust-dns-proto-v0_19_2" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("trust-dns-resolver") {
     deps = [ ":trust-dns-resolver-v0_19_2" ]
   }
@@ -669,22 +669,22 @@ group("unicase") {
   deps = [ ":unicase-v2_5_1" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("unicode-normalization") {
     deps = [ ":unicode-normalization-v0_1_8" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("unicode-segmentation") {
     deps = [ ":unicode-segmentation-v1_2_1" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("unicode-width") {
     deps = [ ":unicode-width-v0_1_5" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("untrusted") {
     deps = [ ":untrusted-v0_7_0" ]
   }
@@ -693,7 +693,7 @@ group("url") {
   deps = [ ":url-v2_1_0" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("utf8parse") {
     deps = [ ":utf8parse-v0_1_1" ]
   }
@@ -706,22 +706,22 @@ group("valico") {
   deps = [ ":valico-v2_4_2" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("vk-sys") {
     deps = [ ":vk-sys-v0_4_0" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("void") {
     deps = [ ":void-v1_0_2" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("vte") {
     deps = [ ":vte-v0_3_3" ]
   }
 }
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("walkdir") {
     deps = [ ":walkdir-v2_3_1" ]
   }
@@ -730,7 +730,7 @@ group("wasm-bindgen") {
   deps = [ ":wasm-bindgen-v0_2_60" ]
 }
 
-if (is_fuchsia) {
+if (current_os == "fuchsia") {
   group("webpki") {
     deps = [ ":webpki-v0_21_0" ]
   }
@@ -739,7 +739,7 @@ group("xml-rs") {
   deps = [ ":xml-rs-v0_8_0" ]
 }
 
-if (!is_fuchsia) {
+if (!(current_os == "fuchsia")) {
   group("zip") {
     deps = [ ":zip-v0_5_5" ]
   }
@@ -1210,7 +1210,7 @@ rust_library("backtrace-v0_3_42") {
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
   ]
-  if (is_fuchsia) {
+  if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:libunwind" ]
   }
 
@@ -5515,7 +5515,7 @@ rust_library("rand-v0_4_6") {
     deps += [ ":rand_core-v0_3_1" ]
     deps += [ ":rdrand-v0_4_0" ]
   }
-  if (is_fuchsia) {
+  if (current_os == "fuchsia") {
     deps += [ ":fuchsia-cprng-v0_1_1" ]
   }
   if (true) {
@@ -5552,7 +5552,7 @@ rust_library("rand-v0_5_6") {
   if (false) {
     deps += [ ":cloudabi-v0_0_3" ]
   }
-  if (is_fuchsia) {
+  if (current_os == "fuchsia") {
     deps += [ ":fuchsia-cprng-v0_1_1" ]
   }
   if (true) {
@@ -5859,7 +5859,7 @@ rust_library("rand_jitter-v0_1_3") {
 
   deps = []
   deps += [ ":rand_core-v0_4_0" ]
-  if (is_mac || false) {
+  if (current_os == "mac" || false) {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {
@@ -5894,7 +5894,7 @@ rust_library("rand_os-v0_1_2") {
   if (false) {
     deps += [ ":cloudabi-v0_0_3" ]
   }
-  if (is_fuchsia) {
+  if (current_os == "fuchsia") {
     deps += [ ":fuchsia-cprng-v0_1_1" ]
   }
   if (true) {
@@ -6290,10 +6290,10 @@ rust_library("ring-v0_16_12") {
   if (false && false && false && false) {
     deps += [ ":web-sys-v0_3_36" ]
   }
-  if (false || false || is_linux || false || false || false) {
+  if (false || false || current_os == "linux" || false || false || false) {
     deps += [ ":lazy_static-v1_4_0" ]
   }
-  if (false || is_linux) {
+  if (false || current_os == "linux") {
     deps += [ ":libc-v0_2_74" ]
   }
   if (false) {

@@ -20,7 +20,7 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
             if c == ')' {
                 paren_count -= 1;
                 if paren_count == 0 {
-                    return Ok(format!("!{}", cfg_to_gn_conditional(&section[..idx])?));
+                    return Ok(format!("!({})", cfg_to_gn_conditional(&section[..idx])?));
                 }
             } else if c == '(' {
                 paren_count += 1;
@@ -66,11 +66,11 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
         }
         Ok(format!("({})", accum.join(" && ")))
     } else if cfg == "target_os = \"fuchsia\"" {
-        Ok(String::from("is_fuchsia"))
+        Ok(String::from("current_os == \"fuchsia\""))
     } else if cfg == "target_os = \"macos\"" {
-        Ok(String::from("is_mac"))
+        Ok(String::from("current_os == \"mac\""))
     } else if cfg == "target_os = \"linux\"" {
-        Ok(String::from("is_linux"))
+        Ok(String::from("current_os == \"linux\""))
     } else if cfg == "unix" {
         // all our platforms are unix
         Ok(String::from("true"))
@@ -105,28 +105,28 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
 fn basic_fuchsia() {
     let cfg_str = r#"cfg(target_os = "fuchsia")"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap();
-    assert_eq!(output, "is_fuchsia");
+    assert_eq!(output, "current_os == \"fuchsia\"");
 }
 
 #[test]
 fn conditonal_any() {
     let cfg_str = r#"cfg(any(target_os = "fuchsia", target_os = "macos"))"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap();
-    assert_eq!(output, "(is_fuchsia || is_mac)");
+    assert_eq!(output, "(current_os == \"fuchsia\" || current_os == \"mac\")");
 }
 
 #[test]
 fn conditonal_all() {
     let cfg_str = r#"cfg(all(target_os = "fuchsia", target_os = "macos"))"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap();
-    assert_eq!(output, "(is_fuchsia && is_mac)");
+    assert_eq!(output, "(current_os == \"fuchsia\" && current_os == \"mac\")");
 }
 
 #[test]
 fn conditonal_all_not() {
     let cfg_str = r#"cfg(all(target_os = "fuchsia", not(target_os = "macos")))"#;
     let output = cfg_to_gn_conditional(cfg_str).unwrap();
-    assert_eq!(output, "(is_fuchsia && !is_mac)");
+    assert_eq!(output, "(current_os == \"fuchsia\" && !(current_os == \"mac\"))");
 }
 
 #[test]
