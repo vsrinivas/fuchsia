@@ -51,6 +51,9 @@ protocol Control {
     /// The default brightness curve will be used if the table is empty.
     /// The connection will be closed if table errors are detected.
     SetBrightnessTable(BrightnessTable table);
+
+    /// Gets the maximum supported backlight brightness in nits, if known.
+    GetMaxAbsoluteBrightness() -> (float64 max_brightness) error zx.status;
 };
 
 /// A tuple representing a point on the auto-brightness curve

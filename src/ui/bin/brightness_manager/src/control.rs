@@ -12,6 +12,7 @@ use fidl_fuchsia_ui_brightness::{
 };
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
+use fuchsia_zircon::sys::ZX_ERR_NOT_SUPPORTED;
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::channel::mpsc::UnboundedSender;
 use futures::future::{AbortHandle, Abortable};
@@ -247,6 +248,23 @@ impl Control {
                     Err(e) => fx_log_err!("Watch adjustment failed due to err {}.", e),
                 }
             }
+            BrightnessControlRequest::GetMaxAbsoluteBrightness { responder } => {
+                let result = self.get_max_absolute_brightness();
+                match result.await {
+                    Ok(value) => {
+                        if let Err(e) = responder.send(&mut Ok(value)) {
+                            fx_log_err!("Failed to reply to GetMaxAbsoluteBrightness: {}", e);
+                        }
+                    }
+                    Err(e) => {
+                        fx_log_err!("Failed to get max absolute brightness: {}", e);
+
+                        if let Err(e) = responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED)) {
+                            fx_log_err!("Failed to reply to GetMaxAbsoluteBrightness: {}", e);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -303,9 +321,15 @@ impl Control {
         fasync::Task::spawn(
             Abortable::new(
                 async move {
+                    let backlight = backlight.clone();
                     let max_brightness = {
+                        let backlight = backlight.clone();
                         let backlight = backlight.lock().await;
-                        backlight.get_max_absolute_brightness()
+                        let max_result = backlight.get_max_absolute_brightness();
+                        match max_result.await {
+                            Ok(max_value) => max_value,
+                            Err(_e) => 250.0,
+                        }
                     };
                     // initialize to an impossible number
                     let mut last_value: i32 = -1;
@@ -457,6 +481,11 @@ impl Control {
         hanging_get_lock
             .watch(WatcherAdjustmentResponder { watcher_adjustment_responder: responder })?;
         Ok(())
+    }
+
+    async fn get_max_absolute_brightness(&mut self) -> Result<f64, Error> {
+        let backlight = self.backlight.lock().await;
+        backlight.get_max_absolute_brightness().await
     }
 }
 
@@ -724,8 +753,8 @@ mod tests {
             Ok(())
         }
 
-        fn get_max_absolute_brightness(&self) -> f64 {
-            self.max_brightness
+        async fn get_max_absolute_brightness(&self) -> Result<f64, Error> {
+            Ok(self.max_brightness)
         }
     }
 
@@ -1216,5 +1245,12 @@ mod tests {
         futures::pin_mut!(func_fut4);
         let value = exec.run_singlethreaded(&mut func_fut4);
         assert_eq!(cmp_float(0.6, value.unwrap() as f32), true);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_max_absolute_brightness() {
+        let mut control = generate_control_struct().await;
+        let max_brightness = control.get_max_absolute_brightness().await;
+        assert_eq!(250.0, max_brightness.unwrap());
     }
 }

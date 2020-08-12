@@ -24,36 +24,23 @@ fn open_backlight() -> Result<BacklightProxy, Error> {
 
 pub struct Backlight {
     proxy: BacklightProxy,
-    max_brightness: f64,
 }
 
 impl Backlight {
     pub async fn new() -> Result<Backlight, Error> {
         let proxy = open_backlight()?;
 
-        let connection_result = proxy.get_max_absolute_brightness().await;
-        let max_brightness_value = match connection_result {
-            Ok(max_brightness_result) => {
-                let max_value = match max_brightness_result {
-                    Ok(value) => value,
-                    Err(e) => {
-                        println!("Didn't get the max_brightness back, got err {}", e);
-                        250.0
-                    }
-                };
-                max_value
-            }
-            Err(e) => {
-                println!("Didn't connect correctly, got err {}", e);
-                250.0
-            }
-        };
-
-        Ok(Backlight { proxy, max_brightness: max_brightness_value })
+        Ok(Backlight { proxy })
     }
 
-    pub fn get_max_absolute_brightness(&self) -> f64 {
-        self.max_brightness
+    pub async fn get_max_absolute_brightness(&self) -> Result<f64, Error> {
+        let connection_result = self.proxy.get_max_absolute_brightness().await;
+        let connection = connection_result
+            .map_err(|e| anyhow::format_err!("Didn't connect correctly, got err {}", e))?;
+        let max_brightness: f64 = connection.map_err(|e| {
+            anyhow::format_err!("Didn't get the max_brightness back, got err {}", e)
+        })?;
+        Ok(max_brightness)
     }
 
     async fn get(&self) -> Result<f64, Error> {
@@ -80,7 +67,7 @@ impl Backlight {
 pub trait BacklightControl: Send {
     async fn get_brightness(&self) -> Result<f64, Error>;
     fn set_brightness(&mut self, value: f64) -> Result<(), Error>;
-    fn get_max_absolute_brightness(&self) -> f64;
+    async fn get_max_absolute_brightness(&self) -> Result<f64, Error>;
 }
 
 #[async_trait]
@@ -91,8 +78,8 @@ impl BacklightControl for Backlight {
     fn set_brightness(&mut self, value: f64) -> Result<(), Error> {
         self.set(value)
     }
-    fn get_max_absolute_brightness(&self) -> f64 {
-        self.get_max_absolute_brightness()
+    async fn get_max_absolute_brightness(&self) -> Result<f64, Error> {
+        self.get_max_absolute_brightness().await
     }
 }
 
@@ -107,7 +94,7 @@ mod tests {
     fn mock_backlight() -> (Backlight, BacklightRequestStream) {
         let (proxy, backlight_stream) =
             fidl::endpoints::create_proxy_and_stream::<BacklightMarker>().unwrap();
-        (Backlight { proxy, max_brightness: 1000.0_f64 }, backlight_stream)
+        (Backlight { proxy }, backlight_stream)
     }
 
     async fn mock_device_set(mut reqs: BacklightRequestStream) -> BacklightCommand {
@@ -133,6 +120,14 @@ mod tests {
                 fx_log_info!("====== got GetStateNormalized");
                 let response = backlight_command;
                 let _ = responder.send(&mut Ok(response));
+            }
+            Ok(fidl_fuchsia_hardware_backlight::DeviceRequest::GetMaxAbsoluteBrightness {
+                responder,
+            }) => {
+                fx_log_info!("====== GetMaxAbsoluteBrightness");
+                if let Err(e) = responder.send(&mut Ok(250.0)) {
+                    panic!("Failed to reply to GetMaxAbsoluteBrightness: {}", e);
+                }
             }
             request => panic!("====== Unexpected request: {:?}", request),
         }
@@ -213,5 +208,22 @@ mod tests {
         // Assert
         assert_eq!(backlight_command.backlight_on, true);
         assert_eq!(backlight_command.brightness, 0.55);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_max_absolute_brightness() {
+        // Setup
+        let (mock, backlight_stream) = mock_backlight();
+        let backlight_fut = mock_device_get(
+            backlight_stream,
+            BacklightCommand { backlight_on: false, brightness: 0.04 },
+        );
+
+        // Act
+        let mock_fut = mock.get_max_absolute_brightness();
+        let (max_brightness, _) = future::join(mock_fut, backlight_fut).await;
+
+        // Assert
+        assert_eq!(max_brightness.unwrap(), 250.0);
     }
 }
