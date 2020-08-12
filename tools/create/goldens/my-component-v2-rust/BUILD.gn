@@ -35,6 +35,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
+
+  sources = [ "src/main.rs" ]
 }
 
 fuchsia_component("component") {
