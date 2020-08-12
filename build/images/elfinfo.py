@@ -45,6 +45,8 @@ DT_RELRSZ = 35
 DT_RELR = 36
 DT_PLTREL = 20
 DT_SONAME = 14
+DT_RELACOUNT = 0x6ffffff9
+DT_RELCOUNT = 0x6ffffffa
 NT_GNU_BUILD_ID = 3
 SHT_SYMTAB = 2
 SHF_ALLOC = 2
@@ -309,6 +311,7 @@ elf_sizes = namedtuple(
         'rel',                      # DT_RELSZ (+ DT_PLTRELSZ if matching)
         'rela',                     # DT_RELASZ (+ DT_PLTRELSZ if matching)
         'relr',                     # DT_RELRSZ
+        'relcount',                 # DT_RELCOUNT + DT_RELACOUNT
         'relro',                    # PT_GNU_RELRO p_memsz
         'code',                     # executable segment p_filesz
         'data',                     # writable segment p_filesz
@@ -597,6 +600,11 @@ def get_elf_info(filename, match_notes=False):
                 relsz += pltrelsz
         return relsz
 
+    def get_relcount(dyn):
+        if dyn is None:
+            return 0
+        return (dyn_get(dyn, DT_RELCOUNT) or 0) + (dyn_get(dyn, DT_RELACOUNT) or 0)
+
     def get_cpu():
         return ELF_MACHINE_TO_CPU.get(ehdr.e_machine)
 
@@ -702,7 +710,8 @@ def get_elf_info(filename, match_notes=False):
                           bss=get_bss_size(),
                           rel=get_relsz(dyn, DT_REL, DT_RELSZ),
                           rela=get_relsz(dyn, DT_RELA, DT_RELASZ),
-                          relr=get_relsz(dyn, DT_RELR, DT_RELRSZ)),
+                          relr=get_relsz(dyn, DT_RELR, DT_RELRSZ),
+                          relcount=get_relcount(dyn)),
                 get_cpu(), get_matching_notes(), get_build_id(),
                 get_stripped(), get_interp(), *get_soname_and_needed(dyn))
             info.elf = elf
